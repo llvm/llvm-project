@@ -41,9 +41,13 @@ class SPIRVGlobalRegistry {
 
   // map a Function to its definition (as a machine instruction operand)
   DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
+  DenseMap<const MachineInstr *, const Function *> FunctionToInstrRev;
   // map function pointer (as a machine instruction operand) to the used
   // Function
   DenseMap<const MachineOperand *, const Function *> InstrToFunction;
+  // Maps Functions to their calls (in a form of the machine instruction,
+  // OpFunctionCall) that happened before the definition is available
+  DenseMap<const Function *, SmallVector<MachineInstr *>> ForwardCalls;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -171,6 +175,7 @@ public:
     auto ResReg = FunctionToInstr.find(ResF->second);
     return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
   }
+
   // Map a Function to a machine instruction that represents the function
   // definition.
   const MachineInstr *getFunctionDefinition(const Function *F) {
@@ -179,17 +184,46 @@ public:
     auto MOIt = FunctionToInstr.find(F);
     return MOIt == FunctionToInstr.end() ? nullptr : MOIt->second->getParent();
   }
+
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const Function *getFunctionByDefinition(const MachineInstr *MI) {
+    if (!MI)
+      return nullptr;
+    auto FIt = FunctionToInstrRev.find(MI);
+    return FIt == FunctionToInstrRev.end() ? nullptr : FIt->second;
+  }
+
   // map function pointer (as a machine instruction operand) to the used
   // Function
   void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
     InstrToFunction[MO] = F;
   }
+
   // map a Function to its definition (as a machine instruction)
   void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
     FunctionToInstr[F] = MO;
+    FunctionToInstrRev[MO->getParent()] = F;
   }
+
   // Return true if any OpConstantFunctionPointerINTEL were generated
   bool hasConstFunPtr() { return !InstrToFunction.empty(); }
+
+  // Add a record about forward function call.
+  void addForwardCall(const Function *F, MachineInstr *MI) {
+    auto It = ForwardCalls.find(F);
+    if (It == ForwardCalls.end())
+      ForwardCalls[F] = {MI};
+    else
+      It->second.push_back(MI);
+  }
+
+  // Map a Function to the vector of machine instructions that represents
+  // forward function calls or to nullptr if not found.
+  SmallVector<MachineInstr *> *getForwardCalls(const Function *F) {
+    auto It = ForwardCalls.find(F);
+    return It == ForwardCalls.end() ? nullptr : &It->second;
+  }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
