@@ -4,6 +4,6 @@
 void fn() {
 };
 
-// CHECK: define void {{.*}}fn{{.*}}()
+// CHECK: define{{.*| }}void {{.*}}fn{{.*}}()
 // CHECK-SAME: #[[Attr:[0-9]+]]
 // CHECK: attributes #[[Attr]] = { {{[^}]*}}convergent{{[^}]*}} }
