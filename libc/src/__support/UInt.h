@@ -244,18 +244,30 @@ LIBC_INLINE constexpr bool is_negative(cpp::array<word, N> &array) {
 enum Direction { LEFT, RIGHT };
 
 // A bitwise shift on an array of elements.
+// TODO: Make the result UB when 'offset' is greater or equal to the number of
+// bits in 'array'. This will allow for better code performance.
 template <Direction direction, bool is_signed, typename word, size_t N>
-LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
+LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
+                                                size_t offset) {
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
   constexpr size_t TOTAL_BITS = N * WORD_BITS;
   if (offset == 0)
-    return;
-  if (offset >= TOTAL_BITS) {
-    array = {};
-    return;
+    return array;
+  if (offset >= TOTAL_BITS)
+    return {};
+#ifdef LIBC_TYPES_HAS_INT128
+  if constexpr (TOTAL_BITS == 128) {
+    using type = cpp::conditional_t<is_signed, __int128_t, __uint128_t>;
+    auto tmp = cpp::bit_cast<type>(array);
+    if constexpr (direction == LEFT)
+      tmp <<= offset;
+    else if constexpr (direction == RIGHT)
+      tmp >>= offset;
+    return cpp::bit_cast<cpp::array<word, N>>(tmp);
   }
+#endif
   const bool is_neg = is_signed && is_negative(array);
-  const auto at = [&](size_t index) -> int {
+  constexpr auto at = [](size_t index) -> int {
     // reverse iteration when direction == LEFT.
     if constexpr (direction == LEFT)
       return int(N) - int(index) - 1;
@@ -272,10 +284,11 @@ LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
+  cpp::array<word, N> out = {};
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
-    word &dst = array[at(index)];
+    word &dst = out[at(index)];
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == RIGHT)
@@ -283,6 +296,7 @@ LIBC_INLINE constexpr void shift(cpp::array<word, N> &array, size_t offset) {
     else if constexpr (direction == LEFT)
       dst = (part1 << bit_offset) | (part2 >> (WORD_BITS - bit_offset));
   }
+  return out;
 }
 
 #define DECLARE_COUNTBIT(NAME, INDEX_EXPR)                                     \
@@ -746,25 +760,21 @@ struct BigInt {
   }
 
   LIBC_INLINE constexpr BigInt &operator<<=(size_t s) {
-    multiword::shift<multiword::LEFT, SIGNED>(val, s);
+    val = multiword::shift<multiword::LEFT, SIGNED>(val, s);
     return *this;
   }
 
   LIBC_INLINE constexpr BigInt operator<<(size_t s) const {
-    BigInt result(*this);
-    result <<= s;
-    return result;
+    return BigInt(multiword::shift<multiword::LEFT, SIGNED>(val, s));
   }
 
   LIBC_INLINE constexpr BigInt &operator>>=(size_t s) {
-    multiword::shift<multiword::RIGHT, SIGNED>(val, s);
+    val = multiword::shift<multiword::RIGHT, SIGNED>(val, s);
     return *this;
   }
 
   LIBC_INLINE constexpr BigInt operator>>(size_t s) const {
-    BigInt result(*this);
-    result >>= s;
-    return result;
+    return BigInt(multiword::shift<multiword::RIGHT, SIGNED>(val, s));
   }
 
 #define DEFINE_BINOP(OP)                                                       \
