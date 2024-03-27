@@ -223,10 +223,9 @@ define i64 @three_dimensional_middle(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-NEXT:    // Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    // => This Loop Header: Depth=2
 ; CHECK-NEXT:    // Child Loop BB3_3 Depth 3
-; CHECK-NEXT:    lsl x12, x11, #3
+; CHECK-NEXT:    ldr x13, [x1, x11, lsl #3]
+; CHECK-NEXT:    ldr x12, [x10, x11, lsl #3]
 ; CHECK-NEXT:    mov x14, x4
-; CHECK-NEXT:    ldr x13, [x1, x12]
-; CHECK-NEXT:    ldr x12, [x10, x12]
 ; CHECK-NEXT:    ldr w13, [x13]
 ; CHECK-NEXT:  .LBB3_3: // %for.body8
 ; CHECK-NEXT:    // Parent Loop BB3_1 Depth=1

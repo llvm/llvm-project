@@ -6907,10 +6907,8 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
       MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
-  // It's better to avoid folding and recomputing shifts when we don't have a
-  // fastpath.
-  if (!STI.hasAddrLSLFast())
-    return false;
+  // FIXME: Consider checking HasAddrLSLSlow14 and HasALULSLFast as
+  // appropriate.
 
   // We have a fastpath, so folding a shift in and potentially computing it
   // many times may be beneficial. Check if this is only used in memory ops.
