@@ -10,7 +10,7 @@
 
 ## We can use the DYLD_CHAINED_IMPORT import format if 0 <= ADDEND <= 255 bytes.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o --defsym ADDEND=0
-# RUN: %lld -lSystem -dylib %t/main.o -L%t -ldylib -fixup_chains -o %t/out
+# RUN: %lld -lSystem -dylib %t/main.o -L%t -ldylib -fixup_chains -o %t/out -dead_strip
 # RUN: llvm-objdump --macho --chained-fixups --dyld-info %t/out | \
 # RUN:     FileCheck %s -D#OUTLINE=0 -D#ADDEND=0 -D#%x,REBASE=0x1000 --check-prefixes=IMPORT,COMMON
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o --defsym ADDEND=255
