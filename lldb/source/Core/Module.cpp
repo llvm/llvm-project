@@ -1009,6 +1009,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
         m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symfile = true;
+        if (m_unwind_table)
+          m_unwind_table->Update();
       }
     }
   }
