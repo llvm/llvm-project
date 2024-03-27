@@ -1517,7 +1517,7 @@ class Base(unittest.TestCase):
                 "DYLIB_NAME": lib_name,
                 "CFLAGS_EXTRAS": "%s -I%s "
                 % (stdflag, os.path.join(os.environ["LLDB_SRC"], "include")),
-                "LD_EXTRAS": "-shared -l%s\liblldb.lib" % lib_dir,
+                "LD_EXTRAS": "-shared -l%s\\liblldb.lib" % lib_dir,
             }
         else:
             d = {

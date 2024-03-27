@@ -43,7 +43,7 @@ class BuiltinType(Type):
         return self.bitFieldSize is not None
 
     def isPaddingBitField(self):
-        return self.bitFieldSize is 0
+        return self.bitFieldSize == 0
 
     def getBitFieldSize(self):
         assert self.isBitField()

@@ -24,7 +24,7 @@ output = open(sys.argv[2], "w")
 # it would kill old computers
 buffer = input.readline()
 while buffer != "":
-    if re.compile('label(\s*)=(\s*)"\s%tmp(.\w*)*(\s*)"').search(buffer):
+    if re.compile(r'label(\s*)=(\s*)"\s%tmp(.\w*)*(\s*)"').search(buffer):
         # skip next line, write neither this line nor the next
         buffer = input.readline()
     else:

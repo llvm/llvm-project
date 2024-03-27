@@ -71,12 +71,12 @@ class TlsGlobalTestCase(TestBase):
         self.expect(
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 88"],
+            patterns=[r"\(int\) \$.* = 88"],
         )
         self.expect(
             "expr var_shared",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 66"],
+            patterns=[r"\(int\) \$.* = 66"],
         )
 
         # Continue on the main thread
@@ -102,10 +102,10 @@ class TlsGlobalTestCase(TestBase):
         self.expect(
             "expr var_static",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 44"],
+            patterns=[r"\(int\) \$.* = 44"],
         )
         self.expect(
             "expr var_shared",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(int\) \$.* = 33"],
+            patterns=[r"\(int\) \$.* = 33"],
         )

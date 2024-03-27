@@ -20,7 +20,7 @@ class TestDumpOso(lldbtest.TestBase):
             oso_dict = {}
             for oso_entry in symfile_entry["separate-debug-info-files"]:
                 oso_dict[oso_entry["oso_path"]] = oso_entry
-            result[symfile_entry["symfile"]] = oso_dict
+            result[symfile_entry[r"symfile"]] = oso_dict
         return result
 
     @skipIfRemote
@@ -93,11 +93,11 @@ class TestDumpOso(lldbtest.TestBase):
         self.expect(
             "target modules dump separate-debug-info",
             patterns=[
-                "Symbol file: .*?a\.out",
-                'Type: "oso"',
-                "Mod Time\s+Err\s+Oso Path",
-                "0x[a-zA-Z0-9]{16}\s+.*main\.o",
-                "0x[a-zA-Z0-9]{16}\s+.*foo\.o",
+                r"Symbol file: .*?a\.out",
+                r'Type: "oso"',
+                r"Mod Time\s+Err\s+Oso Path",
+                r"0x[a-zA-Z0-9]{16}\s+.*main\.o",
+                r"0x[a-zA-Z0-9]{16}\s+.*foo\.o",
             ],
         )
 
@@ -119,11 +119,11 @@ class TestDumpOso(lldbtest.TestBase):
         self.expect(
             "target modules dump separate-debug-info",
             patterns=[
-                "Symbol file: .*?a\.out",
-                'Type: "oso"',
-                "Mod Time\s+Err\s+Oso Path",
-                "0x[a-zA-Z0-9]{16}\s+E\s+.*main\.o",
-                "0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.o",
+                r"Symbol file: .*?a\.out",
+                r'Type: "oso"',
+                r"Mod Time\s+Err\s+Oso Path",
+                r"0x[a-zA-Z0-9]{16}\s+E\s+.*main\.o",
+                r"0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.o",
             ],
         )
 
