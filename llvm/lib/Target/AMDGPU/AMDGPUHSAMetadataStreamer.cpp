@@ -173,14 +173,18 @@ std::string MetadataStreamerMsgPackV4::getTypeName(Type *Ty,
 }
 
 msgpack::ArrayDocNode
-MetadataStreamerMsgPackV4::getWorkGroupDimensions(MDNode *Node) const {
+MetadataStreamerMsgPackV4::getWorkGroupDimensions(const Function &Func,
+                                                  MDNode *Node) const {
   auto Dims = HSAMetadataDoc->getArrayNode();
-  if (Node->getNumOperands() != 3)
+  if (Node->getNumOperands() != 3 && !Func.hasFnAttribute("sycl-module-id"))
     return Dims;
 
   for (auto &Op : Node->operands())
     Dims.push_back(Dims.getDocument()->getNode(
         uint64_t(mdconst::extract<ConstantInt>(Op)->getZExtValue())));
+  for (unsigned I = Dims.size(); I < 3; ++I)
+    Dims.push_back(Dims.getDocument()->getNode(1));
+
   return Dims;
 }
 
@@ -233,9 +237,9 @@ void MetadataStreamerMsgPackV4::emitKernelAttrs(const Function &Func,
                                                 msgpack::MapDocNode Kern) {
 
   if (auto Node = Func.getMetadata("reqd_work_group_size"))
-    Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
+    Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Func, Node);
   if (auto Node = Func.getMetadata("work_group_size_hint"))
-    Kern[".workgroup_size_hint"] = getWorkGroupDimensions(Node);
+    Kern[".workgroup_size_hint"] = getWorkGroupDimensions(Func, Node);
   if (auto Node = Func.getMetadata("vec_type_hint")) {
     Kern[".vec_type_hint"] = Kern.getDocument()->getNode(
         getTypeName(
