@@ -940,7 +940,7 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
 
       GOFFSection GoffSec = GOFFSection(PR.EsdId, PR.EsdId, SD.EsdId);
       SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.getName().equals(".ppa2list")) {
+    } else if (Section.isPPA2Offset()) {
       StringRef EDSectionName = "C_@@QPPA2";
       StringRef PRSectionName = ".&ppa2";
       GOFFSymbol SD = RootSD;
@@ -958,7 +958,7 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
 
       GOFFSection GoffSec = GOFFSection(PR.EsdId, PR.EsdId, SD.EsdId);
       SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.getName().equals("B_IDRL")) {
+    } else if (Section.isB_IDRL()) {
       GOFFSymbol SD = RootSD;
       GOFFSymbol ED = createEDSymbol("B_IDRL", SD.EsdId, Layout.getSectionAddressSize(&Section),
                                      GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Module,
