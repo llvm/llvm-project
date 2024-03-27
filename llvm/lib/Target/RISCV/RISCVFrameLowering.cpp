@@ -554,8 +554,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
       FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
-    // stack space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // stack space. Align the stack size down to a multiple of 16. This is
+    // needed for RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     FirstFrameSetup->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
@@ -776,8 +778,10 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
       MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
-    // space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // space. Align the stack size down to a multiple of 16. This is needed for
+    // RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     MBBI->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
