@@ -151,10 +151,9 @@ static cl::opt<bool> EnableVectorFCopySignExtendRound(
         "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 
 static cl::opt<bool>
-AddLoadBack("combiner-add-load-back", cl::Hidden,
-            cl::desc("When combining a load are new nodes added back in"),
-            cl::init(true));
-
+    AddLoadBack("combiner-add-load-back", cl::Hidden,
+                cl::desc("When combining a load are new nodes added back in"),
+                cl::init(true));
 
 namespace {
 
