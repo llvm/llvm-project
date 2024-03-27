@@ -26,7 +26,7 @@ enum ^E;
 )cpp");
 }
 
-TEST_F(ScopifyEnumTest, ApplyTest) {
+TEST_F(ScopifyEnumTest, ApplyTestWithPrefix) {
   std::string Original = R"cpp(
 enum ^E { EV1, EV2, EV3 };
 enum E;
@@ -39,13 +39,41 @@ E func(E in)
 }
 )cpp";
   std::string Expected = R"cpp(
-enum class E { EV1, EV2, EV3 };
+enum class E { V1, V2, V3 };
 enum class E;
 E func(E in)
 {
-  E out = E::EV1;
-  if (in == E::EV2)
-    out = E::EV3;
+  E out = E::V1;
+  if (in == E::V2)
+    out = E::V3;
+  return out;
+}
+)cpp";
+  FileName = "Test.cpp";
+  SCOPED_TRACE(Original);
+  EXPECT_EQ(apply(Original), Expected);
+}
+
+TEST_F(ScopifyEnumTest, ApplyTestWithoutPrefix) {
+  std::string Original = R"cpp(
+enum ^E { V1, V2, V3 };
+enum E;
+E func(E in)
+{
+  E out = V1;
+  if (in == V2)
+    out = E::V3;
+  return out;
+}
+)cpp";
+  std::string Expected = R"cpp(
+enum class E { V1, V2, V3 };
+enum class E;
+E func(E in)
+{
+  E out = E::V1;
+  if (in == E::V2)
+    out = E::V3;
   return out;
 }
 )cpp";
