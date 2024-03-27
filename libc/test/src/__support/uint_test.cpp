@@ -137,6 +137,11 @@ TYPED_TEST(LlvmLibcUIntClassTest, Division, Types) {
   ASSERT_SAME(create<T>(ZERO) / create<T>(ONE), create<T>(ZERO));
   ASSERT_SAME(create<T>(MAX) / create<T>(ONE), create<T>(MAX));
   ASSERT_SAME(create<T>(MAX) / create<T>(MAX), create<T>(ONE));
+  ASSERT_SAME(create<T>(ONE) / create<T>(ONE), create<T>(ONE));
+  if constexpr (T::SIGNED) {
+    // Special case found by fuzzing.
+    ASSERT_SAME(create<T>(MIN) / create<T>(MIN), create<T>(ONE));
+  }
   // - unsigned : 0xff / 0x02 = 0x7f
   // -   signed : 0xef / 0x02 = 0x77
   ASSERT_SAME(create<T>(MAX) / create<T>(TWO), (create<T>(MAX) >> 1));
