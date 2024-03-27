@@ -123,6 +123,35 @@ static void validatePtrTypes(const SPIRVSubtarget &STI,
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
+// Insert a bitcast before the function call instruction to keep SPIR-V code
+// valid when there is a type mismatch between actual and expected types of an
+// argument:
+// %formal = OpFunctionParameter %formal_type
+// ...
+// %res = OpFunctionCall %ty %fun %actual ...
+// implies that %actual is of %formal_type, and in case of opaque pointers.
+// We may need to insert a bitcast to ensure this.
+void validateFunCall(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                     SPIRVGlobalRegistry &GR, MachineInstr &I) {
+  unsigned OpIdx = 2;
+  const GlobalValue *GV = I.getOperand(OpIdx++).getGlobal();
+  const Function *F = dyn_cast<Function>(GV);
+  MachineInstr *FI = const_cast<MachineInstr *>(GR.getFunctionDefinition(F));
+  if (FI && FI->getOpcode() == SPIRV::OpFunction) {
+    for (FI = FI->getNextNode();
+         FI && FI->getOpcode() == SPIRV::OpFunctionParameter;
+         FI = FI->getNextNode(), OpIdx++) {
+      SPIRVType *PtrType = MRI->getVRegDef(FI->getOperand(1).getReg());
+      SPIRVType *ElemType =
+          PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+              ? GR.getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+              : nullptr;
+      if (ElemType)
+        validatePtrTypes(STI, MRI, GR, I, ElemType, OpIdx);
+    }
+  }
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
@@ -144,6 +173,11 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         // OpStore ptr %Op, <Obj> implies that %Op points to the <Obj>'s type
         validatePtrTypes(STI, MRI, GR, MI,
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()), 0);
+        break;
+      case SPIRV::OpFunctionCall:
+        // %res = OpFunctionCall %ty %fun %arg1 ...
+        if (MI.getNumOperands() > 3)
+          validateFunCall(STI, MRI, GR, MI);
         break;
       // ensure that LLVM IR bitwise instructions result in logical SPIR-V
       // instructions when applied to bool type

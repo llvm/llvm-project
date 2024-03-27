@@ -131,9 +131,7 @@ public:
 
   // Deduced element types of untyped pointers and composites:
   // - Add a record to the map of deduced element types.
-  void addDeducedElementType(Value *Val, Type *Ty) {
-    DeducedElTys[Val] = Ty;
-  }
+  void addDeducedElementType(Value *Val, Type *Ty) { DeducedElTys[Val] = Ty; }
   // - Find a record in the map of deduced element types.
   Type *findDeducedElementType(const Value *Val) {
     auto It = DeducedElTys.find(Val);
@@ -172,6 +170,14 @@ public:
       return nullptr;
     auto ResReg = FunctionToInstr.find(ResF->second);
     return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
+  }
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const MachineInstr *getFunctionDefinition(const Function *F) {
+    if (!F)
+      return nullptr;
+    auto MOIt = FunctionToInstr.find(F);
+    return MOIt == FunctionToInstr.end() ? nullptr : MOIt->second->getParent();
   }
   // map function pointer (as a machine instruction operand) to the used
   // Function

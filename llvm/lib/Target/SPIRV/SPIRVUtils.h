@@ -142,8 +142,7 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   return nullptr;
 }
 
-inline
-Type *reconstructFunctionType(Function *F) {
+inline Type *reconstructFunctionType(Function *F) {
   SmallVector<Type *> ArgTys;
   for (unsigned i = 0; i < F->arg_size(); ++i)
     ArgTys.push_back(F->getArg(i)->getType());

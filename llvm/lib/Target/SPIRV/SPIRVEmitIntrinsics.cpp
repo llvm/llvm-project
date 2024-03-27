@@ -965,9 +965,11 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
     Argument *Arg = F->getArg(OpIdx);
-    if (isUntypedPointerTy(Arg->getType()) &&
-        !GR->findDeducedElementType(Arg)) {
-      Type *ElemTy = nullptr;
+    if (!isUntypedPointerTy(Arg->getType()))
+      continue;
+
+    Type *ElemTy = GR->findDeducedElementType(Arg);
+    if (!ElemTy) {
       if (hasPointeeTypeAttr(Arg) &&
           (ElemTy = getPointeeTypeByAttr(Arg)) != nullptr) {
         GR->addDeducedElementType(Arg, ElemTy);
