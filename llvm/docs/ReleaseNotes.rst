@@ -42,6 +42,11 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
 * ...
 
 Update on required toolchains to build LLVM

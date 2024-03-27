@@ -87,6 +87,7 @@
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
+#include "llvm/Transforms/Utils/IRNormalizer.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <optional>
@@ -1057,6 +1058,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // AMDGPULibCalls::fold_sincos.)
   if (ClRelinkBuiltinBitcodePostop)
     MPM.addPass(LinkInModulesPass(BC, false));
+
+  MPM.addPass(createModuleToFunctionPassAdaptor(IRNormalizerPass()));
 
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in
