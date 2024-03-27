@@ -2628,7 +2628,11 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::PrintOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  // We don't really care about mutability here, but `getTarget` now
+  // unconditionally casts to a specific type before verification could run
+  // here.
+  if (!getTargetMutable().empty())
+    onlyReadsHandle(getTargetMutable()[0].get(), effects);
   onlyReadsPayload(effects);
 
   // There is no resource for stderr file descriptor, so just declare print
