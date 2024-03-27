@@ -1245,10 +1245,13 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the table of sub-register index sizes.
   OS << "static const TargetRegisterInfo::SubRegCoveredBits "
         "SubRegIdxRangeTable[] = {\n";
-  OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
-  for (const auto &Idx : SubRegIndices) {
-    OS << "  { " << Idx.Offset << ", " << Idx.Size << " },\t// "
-       << Idx.getName() << "\n";
+  for (unsigned M = 0; M < NumModes; ++M) {
+    OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
+    for (const auto &Idx : SubRegIndices) {
+      const SubRegRange &Range = Idx.Range.get(M);
+      OS << "  { " << Range.Offset << ", " << Range.Size << " },\t// "
+         << Idx.getName() << "\n";
+    }
   }
   OS << "};\n\n";
 
@@ -1864,7 +1867,13 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
     OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
     OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
-    OS << "\tOffset, Size: " << SRI.Offset << ", " << SRI.Size << '\n';
+    OS << "\tOffset: {";
+    for (unsigned M = 0; M != NumModes; ++M)
+      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Offset;
+    OS << " }\n\tSize: {";
+    for (unsigned M = 0; M != NumModes; ++M)
+      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Size;
+    OS << " }\n";
   }
 
   for (const CodeGenRegister &R : RegBank.getRegisters()) {
