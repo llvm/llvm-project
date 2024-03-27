@@ -79,8 +79,7 @@ DeviceTy::~DeviceTy() {
 llvm::Error DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   int32_t Ret = 0;
-  if (RTL->init_requires)
-    Ret = RTL->init_requires(PM->getRequirements());
+  Ret = RTL->init_requires(PM->getRequirements());
   if (Ret != OFFLOAD_SUCCESS)
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -154,8 +153,6 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
-    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                 AsyncInfo);
 }
@@ -176,8 +173,6 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  if (!RTL->data_retrieve_async || !RTL->synchronize)
-    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
 }
@@ -196,7 +191,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
+  if (!AsyncInfo) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
@@ -206,9 +201,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  if (!RTL->data_notify_mapped)
-    return OFFLOAD_SUCCESS;
-
   DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
      DPxPTR(HstPtr), Size);
 
@@ -220,9 +212,6 @@ int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  if (!RTL->data_notify_unmapped)
-    return OFFLOAD_SUCCESS;
-
   DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
@@ -242,70 +231,46 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 
 // Run region on device
 bool DeviceTy::printDeviceInfo() {
-  if (!RTL->print_device_info)
-    return false;
   RTL->print_device_info(RTLDeviceID);
   return true;
 }
 
 // Whether data can be copied to DstDevice directly
 bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL || !RTL->is_data_exchangable)
+  if (RTL != DstDevice.RTL)
     return false;
 
   if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return (RTL->data_exchange != nullptr) ||
-           (RTL->data_exchange_async != nullptr);
-
+    return true;
   return false;
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  if (RTL->synchronize)
-    return RTL->synchronize(RTLDeviceID, AsyncInfo);
-  return OFFLOAD_SUCCESS;
+  return RTL->synchronize(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  if (RTL->query_async)
-    return RTL->query_async(RTLDeviceID, AsyncInfo);
-
-  return synchronize(AsyncInfo);
+  return RTL->query_async(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
-  if (RTL->create_event)
-    return RTL->create_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->create_event(RTLDeviceID, Event);
 }
 
 int32_t DeviceTy::recordEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  if (RTL->record_event)
-    return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
 }
 
 int32_t DeviceTy::waitEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  if (RTL->wait_event)
-    return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
 }
 
 int32_t DeviceTy::syncEvent(void *Event) {
-  if (RTL->sync_event)
-    return RTL->sync_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->sync_event(RTLDeviceID, Event);
 }
 
 int32_t DeviceTy::destroyEvent(void *Event) {
-  if (RTL->create_event)
-    return RTL->destroy_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->destroy_event(RTLDeviceID, Event);
 }
 
 void DeviceTy::dumpOffloadEntries() {
@@ -321,7 +286,5 @@ void DeviceTy::dumpOffloadEntries() {
 }
 
 bool DeviceTy::useAutoZeroCopy() {
-  if (RTL->use_auto_zero_copy)
-    return RTL->use_auto_zero_copy(RTLDeviceID);
-  return false;
+  return RTL->use_auto_zero_copy(RTLDeviceID);
 }
