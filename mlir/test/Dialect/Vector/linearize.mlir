@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize | FileCheck %s --check-prefixes=ALL,DEFAULT
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128 | FileCheck %s --check-prefixes=ALL,BW-128
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s --check-prefixes=ALL,DEFAULT
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128  -verify-diagnostics | FileCheck %s --check-prefixes=ALL,BW-128
 // RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=0 | FileCheck %s --check-prefixes=ALL,BW-0
 
 // ALL-LABEL: test_linearize
@@ -100,9 +100,9 @@ func.func @test_tensor_no_linearize(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf3
 
 // -----
 
-// ALL-LABEL:   func.func @test_1_scalable_dim(
+// ALL-LABEL:   func.func @test_scalable_linearize(
 // ALL-SAME:    %[[ARG_0:.*]]: vector<2x[4]xf32>) -> vector<2x[4]xf32> {
-func.func @test_1_scalable_dim(%arg0: vector<2x[4]xf32>) -> vector<2x[4]xf32> {
+func.func @test_scalable_linearize(%arg0: vector<2x[4]xf32>) -> vector<2x[4]xf32> {
   // DEFAULT:  %[[SC:.*]] = vector.shape_cast %[[ARG_0]] : vector<2x[4]xf32> to vector<[8]xf32>
   // DEFAULT:  %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<[8]xf32>
   // BW-128:  %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<2x[4]xf32>
@@ -126,9 +126,9 @@ func.func @test_1_scalable_dim(%arg0: vector<2x[4]xf32>) -> vector<2x[4]xf32> {
 
 // -----
 
-// ALL-LABEL:   func.func @test_2_scalable_dims(
+// ALL-LABEL:   func.func @test_scalable_no_linearize(
 // ALL-SAME:     %[[VAL_0:.*]]: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
-func.func @test_2_scalable_dims(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
+func.func @test_scalable_no_linearize(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
   // ALL: %[[CST:.*]] = arith.constant dense<2.000000e+00> : vector<[2]x[2]xf32>
   %0 = arith.constant dense<[[2., 2.], [2., 2.]]> : vector<[2]x[2]xf32>
 
@@ -140,4 +140,15 @@ func.func @test_2_scalable_dims(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf3
 
   // ALL: return %[[RES]] : vector<[2]x[2]xf32>
   return %2 : vector<[2]x[2]xf32>
+}
+
+// -----
+
+func.func @test_scalable_no_lineariz(%arg0: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
+  // expected-error@+1 {{failed to legalize operation 'arith.constant' that was explicitly marked illegal}}
+  %0 = arith.constant dense<[[1., 1.], [3., 3.]]> : vector<2x[2]xf32>
+  %1 = math.sin %arg0 : vector<2x[2]xf32>
+  %2 = arith.addf %0, %1 : vector<2x[2]xf32>
+
+  return %2 : vector<2x[2]xf32>
 }

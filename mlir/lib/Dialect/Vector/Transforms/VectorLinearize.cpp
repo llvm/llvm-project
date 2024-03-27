@@ -52,7 +52,8 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
 
     if (resType.isScalable() && !isa<SplatElementsAttr>(constOp.getValue()))
       return rewriter.notifyMatchFailure(
-          loc, "Cannot linearize a constant scalable vector that's not a splt");
+          loc,
+          "Cannot linearize a constant scalable vector that's not a splat");
 
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
