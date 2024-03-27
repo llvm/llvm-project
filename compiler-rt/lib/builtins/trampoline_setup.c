@@ -41,3 +41,30 @@ COMPILER_RT_ABI void __trampoline_setup(uint32_t *trampOnStack,
   __clear_cache(trampOnStack, &trampOnStack[10]);
 }
 #endif // __powerpc__ && !defined(__powerpc64__)
+
+// The AArch64 compiler generates calls to __trampoline_setup() when creating
+// trampoline functions on the stack for use with nested functions.
+// This function creates a custom 20-byte trampoline function on the stack
+// which loads x18 with a pointer to the outer function's locals
+// and then jumps to the target nested function.
+
+#if __aarch64__
+COMPILER_RT_ABI void __trampoline_setup(uint32_t *trampOnStack,
+                                        int trampSizeAllocated,
+                                        const void *realFunc, void *localsPtr) {
+  // should never happen, but if compiler did not allocate
+  // enough space on stack for the trampoline, abort
+  if (trampSizeAllocated < 20)
+    compilerrt_abort();
+
+  // create trampoline
+  trampOnStack[0] = 0x580000b1; // ldr x17, realFunc
+  trampOnStack[1] = 0x580000d2; // ldr x18, localsPtr
+  trampOnStack[2] = 0xd61f0220; // br x17
+  trampOnStack[3] = (uint32_t)realFunc;
+  trampOnStack[4] = (uint32_t)localsPtr;
+
+  // clear instruction cache
+  __clear_cache(trampOnStack, &trampOnStack[10]);
+}
+#endif // __aarch64__
