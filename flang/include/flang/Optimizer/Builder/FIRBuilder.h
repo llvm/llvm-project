@@ -80,9 +80,9 @@ public:
   }
 
   FirOpBuilder(FirOpBuilder &&other)
-      : OpBuilder(other), OpBuilder::Listener(), kindMap{std::move(
-                                                     other.kindMap)},
-        fastMathFlags{other.fastMathFlags}, symbolTable{other.symbolTable} {
+      : OpBuilder(other), OpBuilder::Listener(),
+        kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
+        symbolTable{other.symbolTable} {
     setListener(this);
   }
 
