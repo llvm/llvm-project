@@ -1,6 +1,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROF_H_
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
@@ -252,18 +253,26 @@ struct Frame {
   }
 };
 
+// A type representing the index into the table of call stacks.
+using CallStackId = uint64_t;
+
 // Holds allocation information in a space efficient format where frames are
 // represented using unique identifiers.
 struct IndexedAllocationInfo {
   // The dynamic calling context for the allocation in bottom-up (leaf-to-root)
   // order. Frame contents are stored out-of-line.
+  // TODO: Remove once we fully transition to CSId.
   llvm::SmallVector<FrameId> CallStack;
+  // Conceptually the same as above.  We are going to keep both CallStack and
+  // CallStackId while we are transitioning from CallStack to CallStackId.
+  CallStackId CSId = 0;
   // The statistics obtained from the runtime for the allocation.
   PortableMemInfoBlock Info;
 
   IndexedAllocationInfo() = default;
-  IndexedAllocationInfo(ArrayRef<FrameId> CS, const MemInfoBlock &MB)
-      : CallStack(CS.begin(), CS.end()), Info(MB) {}
+  IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
+                        const MemInfoBlock &MB)
+      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize() const {
@@ -622,6 +631,21 @@ public:
     return Frame::deserialize(D);
   }
 };
+
+// Compute a CallStackId for a given call stack.
+CallStackId hashCallStack(ArrayRef<FrameId> CS);
+
+// Verify that each CallStackId is computed with hashCallStack.  This function
+// is intended to help transition from CallStack to CSId in
+// IndexedAllocationInfo.
+void verifyIndexedMemProfRecord(const IndexedMemProfRecord &Record);
+
+// Verify that each CallStackId is computed with hashCallStack.  This function
+// is intended to help transition from CallStack to CSId in
+// IndexedAllocationInfo.
+void verifyFunctionProfileData(
+    const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>
+        &FunctionProfileData);
 } // namespace memprof
 } // namespace llvm
 
