@@ -44234,6 +44234,12 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = GetLegalExtract(SrcOp, ExtractVT, ExtractIdx))
     return DAG.getZExtOrTrunc(V, dl, VT);
 
+  if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT && ExtractVT == SrcVT &&
+      SrcOp.getValueType() == SrcVT)
+    if (SDValue V =
+            combineExtractFromVectorLoad(N, SrcOp, ExtractIdx, dl, DAG, DCI))
+      return V;
+
   return SDValue();
 }
 
