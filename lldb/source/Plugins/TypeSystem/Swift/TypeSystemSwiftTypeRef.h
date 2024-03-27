@@ -327,6 +327,9 @@ public:
   CompilerType CreateGenericTypeParamType(unsigned int depth,
                                     unsigned int index) override;
 
+  /// Create a __C imported struct type.
+  CompilerType CreateClangStructType(llvm::StringRef name);
+
   /// Builds a bound generic struct demangle tree with the name, module name,
   /// and the struct's elements.
   static swift::Demangle::NodePointer CreateBoundGenericStruct(

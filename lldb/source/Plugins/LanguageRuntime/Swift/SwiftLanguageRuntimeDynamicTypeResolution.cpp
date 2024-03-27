@@ -331,9 +331,12 @@ public:
     auto ts = swift_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!ts)
       return nullptr;
-    CompilerType clang_type;
-    bool is_imported =
-        ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
+    bool is_imported = true;
+    CompilerType clang_type =
+        m_runtime.LookupAnonymousClangType(mangled.AsCString());
+    if (!clang_type)
+      is_imported =
+          ts->IsImportedType(swift_type.GetOpaqueQualType(), &clang_type);
     if (!is_imported || !clang_type) {
       HEALTH_LOG("[LLDBTypeInfoProvider] Could not find clang debug type info "
                  "for {0}",
@@ -373,8 +376,20 @@ public:
               "[LLDBTypeInfoProvider] bitfield support is not yet implemented");
           continue;
         }
-        CompilerType swift_type =
-            typesystem.ConvertClangTypeToSwiftType(field_type);
+        CompilerType swift_type;
+        if (field_type.IsAnonymousType()) {
+          // Store anonymous tuples in a side table, to solve the
+          // problem that they cannot be looked up by name.
+          static unsigned m_num_anonymous_clang_types = 0;
+          std::string unique_swift_name(field_type.GetTypeName());
+          llvm::raw_string_ostream(unique_swift_name)
+              << '#' << m_num_anonymous_clang_types++;
+          swift_type = typesystem.CreateClangStructType(unique_swift_name);
+          auto *key = swift_type.GetMangledTypeName().AsCString();
+          m_runtime.RegisterAnonymousClangType(key, field_type);
+        } else {
+          swift_type = typesystem.ConvertClangTypeToSwiftType(field_type);
+        }
         auto *typeref = m_runtime.GetTypeRef(swift_type, &typesystem);
         swift::reflection::FieldInfo field_info = {
             name, (unsigned)bit_offset_ptr / 8, 0, typeref,
@@ -385,6 +400,18 @@ public:
     return m_runtime.emplaceClangTypeInfo(clang_type, size, bit_align, fields);
   }
 };
+
+void SwiftLanguageRuntimeImpl::RegisterAnonymousClangType(
+    const char *key, CompilerType clang_type) {
+  const std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
+  m_anonymous_clang_types.insert({key, clang_type});
+}
+
+CompilerType
+SwiftLanguageRuntimeImpl::LookupAnonymousClangType(const char *key) {
+  const std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
+  return m_anonymous_clang_types.lookup(key);
+}
 
 std::optional<const swift::reflection::TypeInfo *>
 SwiftLanguageRuntimeImpl::lookupClangTypeInfo(CompilerType clang_type) {
