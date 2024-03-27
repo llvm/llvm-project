@@ -398,9 +398,9 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
   return DeletionKind::Keep;
 }
 
-bool LLVM::DbgDeclareOp::requiresVisitingMutatedDefs() { return true; }
+bool LLVM::DbgDeclareOp::requiresAmendingMutatedDefs() { return true; }
 
-void LLVM::DbgDeclareOp::visitMutatedDefs(
+void LLVM::DbgDeclareOp::amendMutatedDefs(
     ArrayRef<std::pair<Operation *, Value>> definitions,
     RewriterBase &rewriter) {
   for (auto [op, value] : definitions) {

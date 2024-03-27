@@ -555,7 +555,7 @@ void MemorySlotPromoter::removeBlockingUses() {
 
   llvm::SmallVector<Operation *> toErase;
   llvm::SmallVector<std::pair<Operation *, Value>> mutatedDefinitions;
-  llvm::SmallVector<PromotableOpInterface> visitMutatedDefinitions;
+  llvm::SmallVector<PromotableOpInterface> toAmend;
   for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
@@ -580,12 +580,12 @@ void MemorySlotPromoter::removeBlockingUses() {
     if (toPromoteBasic.removeBlockingUses(info.userToBlockingUses[toPromote],
                                           rewriter) == DeletionKind::Delete)
       toErase.push_back(toPromote);
-    if (toPromoteBasic.requiresVisitingMutatedDefs())
-      visitMutatedDefinitions.push_back(toPromoteBasic);
+    if (toPromoteBasic.requiresAmendingMutatedDefs())
+      toAmend.push_back(toPromoteBasic);
   }
-  for (PromotableOpInterface op : visitMutatedDefinitions) {
+  for (PromotableOpInterface op : toAmend) {
     rewriter.setInsertionPointAfter(op);
-    op.visitMutatedDefs(mutatedDefinitions, rewriter);
+    op.amendMutatedDefs(mutatedDefinitions, rewriter);
   }
 
   for (Operation *toEraseOp : toErase)
