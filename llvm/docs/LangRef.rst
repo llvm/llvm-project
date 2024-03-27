@@ -12815,10 +12815,11 @@ Variable argument support is defined in LLVM with the
 functions. These functions are related to the similarly named macros
 defined in the ``<stdarg.h>`` header file.
 
-All of these functions operate on arguments that use a target-specific
+All of these functions take as arguments pointers to a target-specific
 value type "``va_list``". The LLVM assembly language reference manual
 does not define what this type is, so all transformations should be
-prepared to handle these functions regardless of the type used.
+prepared to handle these functions regardless of the type used. The intrinsics
+are overloaded, and can be used for pointers to different address spaces.
 
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
@@ -12835,24 +12836,24 @@ variable argument handling intrinsic functions are used.
     define i32 @test(i32 %X, ...) {
       ; Initialize variable argument processing
       %ap = alloca %struct.va_list
-      call void @llvm.va_start(ptr %ap)
+      call void @llvm.va_start.p0(ptr %ap)
 
       ; Read a single integer argument
       %tmp = va_arg ptr %ap, i32
 
       ; Demonstrate usage of llvm.va_copy and llvm.va_end
       %aq = alloca ptr
-      call void @llvm.va_copy(ptr %aq, ptr %ap)
-      call void @llvm.va_end(ptr %aq)
+      call void @llvm.va_copy.p0(ptr %aq, ptr %ap)
+      call void @llvm.va_end.p0(ptr %aq)
 
       ; Stop processing of arguments.
-      call void @llvm.va_end(ptr %ap)
+      call void @llvm.va_end.p0(ptr %ap)
       ret i32 %tmp
     }
 
-    declare void @llvm.va_start(ptr)
-    declare void @llvm.va_copy(ptr, ptr)
-    declare void @llvm.va_end(ptr)
+    declare void @llvm.va_start.p0(ptr)
+    declare void @llvm.va_copy.p0(ptr, ptr)
+    declare void @llvm.va_end.p0(ptr)
 
 .. _int_va_start:
 
@@ -12864,7 +12865,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_start(ptr <arglist>)
+      declare void @llvm.va_start.p0(ptr <arglist>)
+      declare void @llvm.va_start.p5(ptr addrspace(5) <arglist>)
 
 Overview:
 """""""""
@@ -12896,7 +12898,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_end(ptr <arglist>)
+      declare void @llvm.va_end.p0(ptr <arglist>)
+      declare void @llvm.va_end.p5(ptr addrspace(5) <arglist>)
 
 Overview:
 """""""""
@@ -12929,7 +12932,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_copy(ptr <destarglist>, ptr <srcarglist>)
+      declare void @llvm.va_copy.p0(ptr <destarglist>, ptr <srcarglist>)
+      declare void @llvm.va_copy.p5(ptr addrspace(5) <destarglist>, ptr addrspace(5) <srcarglist>)
 
 Overview:
 """""""""
@@ -12942,6 +12946,7 @@ Arguments:
 
 The first argument is a pointer to a ``va_list`` element to initialize.
 The second argument is a pointer to a ``va_list`` element to copy from.
+The address spaces of the two arguments must match.
 
 Semantics:
 """"""""""
