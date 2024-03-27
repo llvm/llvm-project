@@ -12733,20 +12733,13 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
-static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
+static SDValue transformAddShlImm(SDValue N0, SDValue N1, SDLoc DL,
+                                  SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba extension.
-  if (!Subtarget.hasStdExtZba())
-    return SDValue();
 
-  // Skip for vector types and larger types.
-  EVT VT = N->getValueType(0);
-  if (VT.isVector() || VT.getSizeInBits() > Subtarget.getXLen())
-    return SDValue();
+  EVT VT = N0.getValueType();
 
   // The two operand nodes must be SHL and have no other use.
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
   if (N0->getOpcode() != ISD::SHL || N1->getOpcode() != ISD::SHL ||
       !N0->hasOneUse() || !N1->hasOneUse())
     return SDValue();
@@ -12768,13 +12761,52 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Build nodes.
-  SDLoc DL(N);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NA0 =
       DAG.getNode(ISD::SHL, DL, VT, NL, DAG.getConstant(Diff, DL, VT));
   SDValue NA1 = DAG.getNode(ISD::ADD, DL, VT, NA0, NS);
   return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
+}
+
+// Generalized form of above which looks through one level of add
+// reassociation for oppurtunities.
+static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  // Perform this optimization only in the zba extension.
+  if (!Subtarget.hasStdExtZba())
+    return SDValue();
+
+  // Skip for vector types and larger types.
+  EVT VT = N->getValueType(0);
+  if (VT.isVector() || VT.getSizeInBits() > Subtarget.getXLen())
+    return SDValue();
+
+  // We're look for two SHL nodes in the add tree with all nodes
+  // involved having no other use.
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0->getOpcode() != ISD::SHL)
+    std::swap(N0, N1);
+
+  if (SDValue Res = transformAddShlImm(N0, N1, SDLoc(N), DAG, Subtarget))
+    return Res;
+
+  if (N0->getOpcode() != ISD::SHL || N1->getOpcode() != ISD::ADD ||
+      !N1->hasOneUse())
+    return SDValue();
+
+  // Allow reassociation for a 3-argument add
+  SDLoc DL(N1);
+  SDValue A = N1->getOperand(0);
+  SDValue B = N1->getOperand(1);
+  if (SDValue Res = transformAddShlImm(N0, A, SDLoc(N), DAG, Subtarget))
+    return DAG.getNode(ISD::ADD, DL, VT, Res, B);
+
+  if (SDValue Res = transformAddShlImm(N0, B, SDLoc(N), DAG, Subtarget))
+    return DAG.getNode(ISD::ADD, DL, VT, Res, A);
+
+  return SDValue();
 }
 
 // Combine a constant select operand into its use:
