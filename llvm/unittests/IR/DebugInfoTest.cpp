@@ -237,6 +237,9 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
 // Duplicate of above test, but in DbgVariableRecord representation.
 TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   LLVMContext C;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       %b = add i16 %a, 1, !dbg !11
@@ -262,10 +265,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
-  M->convertToNewDbgValues();
 
   // Find the DbgVariableRecords using %b.
   SmallVector<DbgValueInst *, 2> DVIs;
@@ -1044,10 +1044,6 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
 TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
 
-  // For the purpose of this test, set and un-set the command line option
-  // corresponding to UseNewDbgInfoFormat.
-  UseNewDbgInfoFormat = true;
-
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
@@ -1076,6 +1072,11 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
     !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
+
+  // For the purpose of this test, set and un-set the command line option
+  // corresponding to UseNewDbgInfoFormat, but only after parsing, to ensure
+  // that the IR starts off in the old format.
+  UseNewDbgInfoFormat = true;
 
   // Check that the conversion routines and utilities between dbg.value
   // debug-info format and DbgVariableRecords works.
