@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -2633,8 +2634,18 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
   }
 
   llvm::outs() << "]]]\n";
-  for (Operation *target : state.getPayloadOps(getTarget()))
-    llvm::outs() << *target << "\n";
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    OpPrintingFlags printFlags;
+    if (getAssumeVerified().value_or(false))
+      printFlags.assumeVerified();
+    if (getUseLocalScope().value_or(false))
+      printFlags.skipRegions();
+    if (getSkipRegions().value_or(false))
+      printFlags.skipRegions();
+
+    target->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
+  }
 
   return DiagnosedSilenceableFailure::success();
 }
