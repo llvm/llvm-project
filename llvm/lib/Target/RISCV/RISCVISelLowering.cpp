@@ -20876,55 +20876,53 @@ unsigned RISCVTargetLowering::getMinimumJumpTableEntries() const {
   return Subtarget.getMinimumJumpTableEntries();
 }
 
-void RVVArgDispatcher::constructArgInfos(Type *Ty, bool &FirstMaskAssigned) {
+void RVVArgDispatcher::constructArgInfos(ArrayRef<Type *> TypeList) {
   const DataLayout &DL = MF->getDataLayout();
   const Function &F = MF->getFunction();
   LLVMContext &Context = F.getContext();
 
-  StructType *STy = dyn_cast<StructType>(Ty);
-  if (STy && STy->containsHomogeneousScalableVectorTypes()) {
-    Type *ElemTy = STy->getTypeAtIndex(0U);
-    EVT VT = TLI->getValueType(DL, ElemTy);
-    MVT RegisterVT =
-        TLI->getRegisterTypeForCallingConv(Context, F.getCallingConv(), VT);
-
-    RVVArgInfos.push_back({STy->getNumElements(), RegisterVT, false});
-  } else {
-    SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(*TLI, DL, Ty, ValueVTs);
-
-    for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
-         ++Value) {
-      EVT VT = ValueVTs[Value];
+  bool FirstVMaskAssigned = false;
+  for (Type *Ty : TypeList) {
+    StructType *STy = dyn_cast<StructType>(Ty);
+    if (STy && STy->containsHomogeneousScalableVectorTypes()) {
+      Type *ElemTy = STy->getTypeAtIndex(0U);
+      EVT VT = TLI->getValueType(DL, ElemTy);
       MVT RegisterVT =
           TLI->getRegisterTypeForCallingConv(Context, F.getCallingConv(), VT);
-      unsigned NumRegs =
-          TLI->getNumRegistersForCallingConv(Context, F.getCallingConv(), VT);
 
-      // Skip non-RVV register type
-      if (!RegisterVT.isVector())
-        continue;
+      RVVArgInfos.push_back({STy->getNumElements(), RegisterVT, false});
+    } else {
+      SmallVector<EVT, 4> ValueVTs;
+      ComputeValueVTs(*TLI, DL, Ty, ValueVTs);
 
-      if (RegisterVT.isFixedLengthVector())
-        RegisterVT = TLI->getContainerForFixedLengthVector(RegisterVT);
+      for (unsigned Value = 0, NumValues = ValueVTs.size(); Value != NumValues;
+           ++Value) {
+        EVT VT = ValueVTs[Value];
+        MVT RegisterVT =
+            TLI->getRegisterTypeForCallingConv(Context, F.getCallingConv(), VT);
+        unsigned NumRegs =
+            TLI->getNumRegistersForCallingConv(Context, F.getCallingConv(), VT);
 
-      if (!FirstMaskAssigned && RegisterVT.getVectorElementType() == MVT::i1) {
-        RVVArgInfos.push_back({1, RegisterVT, true});
-        FirstMaskAssigned = true;
-      } else {
-        RVVArgInfos.push_back({1, RegisterVT, false});
+        // Skip non-RVV register type
+        if (!RegisterVT.isVector())
+          continue;
+
+        if (RegisterVT.isFixedLengthVector())
+          RegisterVT = TLI->getContainerForFixedLengthVector(RegisterVT);
+
+        if (!FirstVMaskAssigned &&
+            RegisterVT.getVectorElementType() == MVT::i1) {
+          RVVArgInfos.push_back({1, RegisterVT, true});
+          FirstVMaskAssigned = true;
+        } else {
+          RVVArgInfos.push_back({1, RegisterVT, false});
+        }
+
+        RVVArgInfos.insert(RVVArgInfos.end(), --NumRegs,
+                           {1, RegisterVT, false});
       }
-
-      RVVArgInfos.insert(RVVArgInfos.end(), --NumRegs, {1, RegisterVT, false});
     }
   }
-}
-
-void RVVArgDispatcher::constructArgInfos(
-    const SmallVectorImpl<Type *> &TypeList) {
-  bool FirstVMaskAssigned = false;
-  for (Type *Ty : TypeList)
-    constructArgInfos(Ty, FirstVMaskAssigned);
 }
 
 void RVVArgDispatcher::allocatePhysReg(unsigned NF, unsigned LMul,

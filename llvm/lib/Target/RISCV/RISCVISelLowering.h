@@ -16,7 +16,6 @@
 
 #include "RISCV.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -1038,16 +1037,8 @@ public:
   };
 
   RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   SmallVectorImpl<Type *> &TypeList)
+                   ArrayRef<Type *> TypeList)
       : MF(MF), TLI(TLI) {
-    constructArgInfos(TypeList);
-    compute();
-  }
-
-  RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   Type *Ty)
-      : MF(MF), TLI(TLI) {
-    SmallVector<Type *, 4> TypeList = {Ty};
     constructArgInfos(TypeList);
     compute();
   }
@@ -1063,8 +1054,7 @@ private:
 
   unsigned CurIdx = 0;
 
-  void constructArgInfos(const SmallVectorImpl<Type *> &TypeList);
-  void constructArgInfos(Type *Ty, bool &FirstMaskAssigned);
+  void constructArgInfos(ArrayRef<Type *> TypeList);
   void compute();
   void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
                        unsigned StartReg = 0);
