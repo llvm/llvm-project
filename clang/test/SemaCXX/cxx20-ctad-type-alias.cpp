@@ -273,5 +273,9 @@ class Foo {};
 template <template<typename> typename TTP>
 using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
 
+template <class T>
+class Container {};
+Bar t = Foo<K<Container>>();
+
 Bar s = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}}
-}
+} // namespace test20
