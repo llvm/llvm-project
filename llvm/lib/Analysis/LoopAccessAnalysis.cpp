@@ -1917,6 +1917,74 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
+static bool isAffectedByLoop(const SCEV *Expr, const Loop *L,
+                             ScalarEvolution &SE) {
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec)
+    return false;
+
+  if (AddRec->getLoop() == L)
+    return true;
+
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(SE);
+  return isAffectedByLoop(Start, L, SE) || isAffectedByLoop(Step, L, SE);
+}
+
+// Consider the following case:
+//
+// for (int j = 0; j < 256; j++)    // Loop j
+//   for (int i = j+1; i < 256; i++)// Loop i
+//     a[i] -= aa[j][i] * a[j];
+//
+// Given that SCEV of &a[j] is {@a,+,4}<Loop j>, a[j] will be treated as scalar
+// when vectorizing Loop i. If the accessing size of a[j] <= Dist(a[j], a[i]),
+// there is no overlapped and can be vectorized.
+//
+// In this case, accessing size of a[j] is 4 byte(float) and Dist(a[j], a[i])
+// is {4,+,4} which bring the minimum distance as 4.
+//
+// Return true if Dist is equal or greater than the accessing size of Src.
+static bool isSrcNoOverlap(const SCEV *Src, Instruction *AInst,
+                           const SCEV *Dist, const Loop *InnermostLoop,
+                           ScalarEvolution &SE) {
+  // If the Src is not affected by InnermostLoop, when vectorizing
+  // InnermostLoop, Src will be treated as scalar instead of widening to vector.
+  if (isAffectedByLoop(Src, InnermostLoop, SE))
+    return false;
+
+  if (!isa<SCEVAddRecExpr>(Dist))
+    return false;
+
+  auto *Diff = cast<SCEVAddRecExpr>(Dist);
+
+  if (Diff->getLoop() != InnermostLoop)
+    return false;
+
+  if (!isa<SCEVConstant>(Diff->getStart()))
+    return false;
+
+  if (!isa<SCEVConstant>(Diff->getStepRecurrence(SE)))
+    return false;
+
+  const SCEVConstant *DiffInc = cast<SCEVConstant>(Diff->getStepRecurrence(SE));
+  if (DiffInc->getAPInt().isNegative())
+    return false;
+
+  // If the step of Diff is positve and the Start of diff is constant,
+  // we can get the minimum diff between Src and Dst.
+  const SCEVConstant *MinDiff = cast<SCEVConstant>(Diff->getStart());
+
+  // If we get here, Src won't be vectorized, so we only need to consider the
+  // scalar load/store size. If the minimum diff between Src and Dst is equal
+  // or greater than the load/store size, there is no overlapped.
+  if (MinDiff->getAPInt().getSExtValue() >=
+      getLoadStoreType(AInst)->getScalarSizeInBits() / 8)
+    return true;
+
+  return false;
+}
+
 // Get the dependence distance, stride, type size in whether i is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
@@ -1978,6 +2046,9 @@ getDependenceDistanceStrideAndSize(
       isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
+
+  if (isSrcNoOverlap(Src, AInst, Dist, InnermostLoop, SE))
+    return MemoryDepChecker::Dependence::NoDep;
 
   // Need accesses with constant stride. We don't want to vectorize
   // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
