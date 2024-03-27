@@ -238,7 +238,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     InterfaceMethod<[{
         Visits all the mutated definitions by a store operation.
 
-        This method will only be called after all blocking issues haven been
+        This method will only be called after all blocking uses have been
         scheduled for removal and if `requiresVisitingMutatedDefs` returned
         true.
 
