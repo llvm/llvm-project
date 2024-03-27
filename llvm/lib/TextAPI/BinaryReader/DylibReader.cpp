@@ -434,8 +434,7 @@ DylibReader::get(MemoryBufferRef Buffer) {
   return convertToInterfaceFile(*SlicesOrErr);
 }
 
-static void DWARFErrorHandler(Error err) { /**/
-}
+static void DWARFErrorHandler(Error Err) { /**/ }
 
 static SymbolToSourceLocMap
 accumulateLocs(MachOObjectFile &Obj,
