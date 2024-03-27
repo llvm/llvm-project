@@ -514,7 +514,7 @@ uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   const uint8_t *EsdRecord = getSectionEdEsdRecord(Sec);
   GOFF::ESDAlignment Pow2Alignment;
   ESDRecord::getAlignment(EsdRecord, Pow2Alignment);
-  return 1 << static_cast<uint64_t>(Pow2Alignment);
+  return 1ULL << static_cast<uint64_t>(Pow2Alignment);
 }
 
 bool GOFFObjectFile::isSectionText(DataRefImpl Sec) const {
