@@ -7,7 +7,27 @@
     store <vscale x 1 x i8> %b, ptr %pa, align 1
     ret void
   }
-
+ 
+  define <vscale x 2 x i8> @vload_nx2i8(ptr %pa) {
+    %va = load <vscale x 2 x i8>, ptr %pa, align 2
+    ret <vscale x 2 x i8> %va
+  }
+  
+  define <vscale x 4 x i8> @vload_nx4i8(ptr %pa) {
+    %va = load <vscale x 4 x i8>, ptr %pa, align 4
+    ret <vscale x 4 x i8> %va
+  }
+  
+  define <vscale x 8 x i8> @vload_nx8i8(ptr %pa) {
+    %va = load <vscale x 8 x i8>, ptr %pa, align 8
+    ret <vscale x 8 x i8> %va
+  }
+  
+  define <vscale x 16 x i8> @vload_nx16i8(ptr %pa) {
+    %va = load <vscale x 16 x i8>, ptr %pa, align 16
+    ret <vscale x 16 x i8> %va
+  }
+  
 ...
 ---
 name:            vstore_nx1i8
@@ -26,5 +46,53 @@ body:             |
     %1:_(<vscale x 1 x s8>) = COPY $v8
     G_STORE %1(<vscale x 1 x s8>), %0(p0) :: (store (<vscale x 1 x s8>) into %ir.pa)
     PseudoRET
+
+...
+---
+name:            vload_nx2i8
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $x10
+  
+    %0:_(p0) = COPY $x10
+    %1:_(<vscale x 2 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 2 x s8>) from %ir.pa)
+    $v8 = COPY %1(<vscale x 2 x s8>)
+    PseudoRET implicit $v8
+
+...
+---
+name:            vload_nx4i8
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $x10
+  
+    %0:_(p0) = COPY $x10
+    %1:_(<vscale x 4 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 4 x s8>) from %ir.pa)
+    $v8 = COPY %1(<vscale x 4 x s8>)
+    PseudoRET implicit $v8
+
+...
+---
+name:            vload_nx8i8
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $x10
+  
+    %0:_(p0) = COPY $x10
+    %1:_(<vscale x 8 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 8 x s8>) from %ir.pa)
+    $v8 = COPY %1(<vscale x 8 x s8>)
+    PseudoRET implicit $v8
+
+...
+---
+name:            vload_nx16i8
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $x10
+  
+    %0:_(p0) = COPY $x10
+    %1:_(<vscale x 16 x s8>) = G_LOAD %0(p0) :: (load (<vscale x 16 x s8>) from %ir.pa)
+    $v8m2 = COPY %1(<vscale x 16 x s8>)
+    PseudoRET implicit $v8m2
 
 ...
