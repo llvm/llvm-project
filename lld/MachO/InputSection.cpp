@@ -281,6 +281,7 @@ ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
   Section &section =
       *make<Section>(/*file=*/nullptr, segName, sectName, flags, /*addr=*/0);
   auto isec = make<ConcatInputSection>(section, data, align);
+  isec->live = true;
   section.subsections.push_back({0, isec});
   return isec;
 }
