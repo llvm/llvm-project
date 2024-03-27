@@ -337,7 +337,7 @@ genOpenMPReduction(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OmpClauseList &clauseList) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  List<Clause> clauses{makeList(clauseList, semaCtx)};
+  List<Clause> clauses{makeClauses(clauseList, semaCtx)};
 
   for (const Clause &clause : clauses) {
     if (const auto &reductionClause =
@@ -1461,7 +1461,7 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
 
   if (const auto *objectList{
           Fortran::parser::Unwrap<Fortran::parser::OmpObjectList>(spec.u)}) {
-    ObjectList objects{makeList(*objectList, semaCtx)};
+    ObjectList objects{makeObjects(*objectList, semaCtx)};
     // Case: declare target(func, var1, var2)
     gatherFuncAndVarSyms(objects, mlir::omp::DeclareTargetCaptureClause::to,
                          symbolAndClause);
