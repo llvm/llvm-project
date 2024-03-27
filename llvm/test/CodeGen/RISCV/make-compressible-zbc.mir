@@ -232,24 +232,25 @@ name:            store_common_ptr_i8
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $x10
+    liveins: $x16
 
     ; CHECK-LABEL: name: store_common_ptr_i8
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 1
-    ; CHECK-NEXT: SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 3
-    ; CHECK-NEXT: SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 5
-    ; CHECK-NEXT: SB killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 1
+    ; CHECK-NEXT: $x11 = ADDI $x16, 0
+    ; CHECK-NEXT: SB killed renamable $x10, $x11, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 3
+    ; CHECK-NEXT: SB killed renamable $x10, $x11, 0 :: (volatile store (s8) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 5
+    ; CHECK-NEXT: SB killed renamable $x10, killed $x11, 0 :: (volatile store (s8) into %ir.p)
     ; CHECK-NEXT: PseudoRET
-    renamable $x16 = ADDI $x0, 1
-    SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    renamable $x16 = ADDI $x0, 3
-    SB killed renamable $x16, renamable $x10, 0 :: (volatile store (s8) into %ir.p)
-    renamable $x16 = ADDI $x0, 5
-    SB killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x10 = ADDI $x0, 1
+    SB killed renamable $x10, renamable $x16, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x10 = ADDI $x0, 3
+    SB killed renamable $x10, renamable $x16, 0 :: (volatile store (s8) into %ir.p)
+    renamable $x10 = ADDI $x0, 5
+    SB killed renamable $x10, killed renamable $x16, 0 :: (volatile store (s8) into %ir.p)
     PseudoRET
 
 ...
@@ -258,24 +259,25 @@ name:            store_common_ptr_i16
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
-    liveins: $x10
+    liveins: $x16
 
     ; CHECK-LABEL: name: store_common_ptr_i16
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 1
-    ; CHECK-NEXT: SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 3
-    ; CHECK-NEXT: SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    ; CHECK-NEXT: renamable $x16 = ADDI $x0, 5
-    ; CHECK-NEXT: SH killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 1
+    ; CHECK-NEXT: $x11 = ADDI $x16, 0
+    ; CHECK-NEXT: SH killed renamable $x10, $x11, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 3
+    ; CHECK-NEXT: SH killed renamable $x10, $x11, 0 :: (volatile store (s16) into %ir.p)
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 5
+    ; CHECK-NEXT: SH killed renamable $x10, killed $x11, 0 :: (volatile store (s16) into %ir.p)
     ; CHECK-NEXT: PseudoRET
-    renamable $x16 = ADDI $x0, 1
-    SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    renamable $x16 = ADDI $x0, 3
-    SH killed renamable $x16, renamable $x10, 0 :: (volatile store (s16) into %ir.p)
-    renamable $x16 = ADDI $x0, 5
-    SH killed renamable $x16, killed renamable $x10, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x10 = ADDI $x0, 1
+    SH killed renamable $x10, renamable $x16, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x10 = ADDI $x0, 3
+    SH killed renamable $x10, renamable $x16, 0 :: (volatile store (s16) into %ir.p)
+    renamable $x10 = ADDI $x0, 5
+    SH killed renamable $x10, killed renamable $x16, 0 :: (volatile store (s16) into %ir.p)
     PseudoRET
 
 ...
