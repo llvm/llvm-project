@@ -242,10 +242,11 @@ struct VPTransformState {
   ElementCount VF;
   unsigned UF;
 
-  /// If EVL is not nullptr, then EVL must be a valid value set during plan
-  /// transformation, possibly a default value = whole vector register length.
-  /// EVL is created only if TTI prefers predicated vectorization, thus if EVL
-  /// is not nullptr it also implies preference for predicated vectorization.
+  /// If EVL (Explicit Vector Length) is not nullptr, then EVL must be a valid
+  /// value set during plan transformation, possibly a default value = whole
+  /// vector register length. EVL is created only if TTI prefers predicated
+  /// vectorization, thus if EVL is not nullptr it also implies preference for
+  /// predicated vectorization.
   /// TODO: this is a temporarily solution, the EVL must be explicitly used by
   /// the recipes and must be removed here.
   VPValue *EVL = nullptr;
@@ -2510,7 +2511,7 @@ public:
   ~VPEVLBasedIVPHIRecipe() override = default;
 
   VPEVLBasedIVPHIRecipe *clone() override {
-    return new VPEVLBasedIVPHIRecipe(getOperand(0), getDebugLoc());
+    llvm_unreachable("cloning not implemented yet");
   }
 
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
