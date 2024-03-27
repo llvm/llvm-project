@@ -10,6 +10,48 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
 
+typedef enum BatchMemOpType {
+  STREAM_WAIT_VALUE_32 = 0x1,
+  STREAM_WRITE_VALUE_32 = 0x2,
+  STREAM_WAIT_VALUE_64 = 0x4,
+  STREAM_WRITE_VALUE_64 = 0x5,
+  STREAM_MEM_OP_BARRIER = 0x6,            // Currently not supported
+  STREAM_MEM_OP_FLUSH_REMOTE_WRITES = 0x3 // Currently not supported
+} BatchMemOpType;
+
+typedef union streamBatchMemOpParams_union {
+  BatchMemOpType operation;
+  struct streamMemOpWaitValueParams_t{
+    BatchMemOpType operation;
+    atomic_ulong* address;
+    union {
+      uint value;
+      ulong value64;
+    };
+    uint flags;
+    atomic_ulong* alias; // Not valid for AMD backend
+  } waitValue;
+  struct streamMemOpWriteValueParams_t{
+    BatchMemOpType operation;
+    atomic_ulong* address;
+    union {
+      uint value;
+      ulong value64;
+    };
+    uint flags;
+    atomic_ulong* alias; // Not valid for AMD backend
+  } writeValue;
+  struct streamMemOpFlushRemoteWritesParams_t{ // Currently not supported
+    BatchMemOpType operation;
+    uint flags;
+  } flushRemoteWrites;
+  struct streamMemOpMemoryBarrierParams_t{ // Currently not supported
+    BatchMemOpType operation;
+    uint flags;
+  } memoryBarrier;
+  ulong pad[6];
+} BatchMemOpParams;
+
 
 static const uint SplitCount = 3;
 
@@ -756,5 +798,35 @@ __amd_streamOpsWait(
       break;
     }
 }
-#endif
 
+// The kernel calling this function must be launched with 'count' workgroups each of size 1
+__attribute__((always_inline)) void
+__amd_batchMemOp(__global BatchMemOpParams* param,
+                 uint count) {
+
+  ulong id = get_global_id(0);
+
+  switch (param[id].operation) {
+    case STREAM_WAIT_VALUE_32:
+      __amd_streamOpsWait((__global atomic_uint*)param[id].waitValue.address, NULL,
+                          (uint)param[id].waitValue.value, (uint)param[id].waitValue.flags,
+                          (ulong)~0UL);
+      break;
+    case STREAM_WRITE_VALUE_32:
+      __amd_streamOpsWrite((__global atomic_uint*)param[id].writeValue.address, NULL,
+                           (uint)param[id].writeValue.value);
+      break;
+    case STREAM_WAIT_VALUE_64:
+      __amd_streamOpsWait(NULL, (__global atomic_ulong*)param[id].waitValue.address,
+                          (ulong)param[id].waitValue.value64, (uint)param[id].waitValue.flags,
+                          (ulong)~0UL);
+      break;
+    case STREAM_WRITE_VALUE_64:
+      __amd_streamOpsWrite(NULL, (__global atomic_ulong*)param[id].writeValue.address,
+                           (ulong)param[id].writeValue.value64);
+      break;
+    default:
+      break;
+  }
+}
+#endif
