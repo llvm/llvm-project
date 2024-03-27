@@ -12935,6 +12935,7 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
+// mul (zext, zext) -> zext (mul (zext, zext))
 //
 // where the sum of the extend widths match, and the the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
@@ -13379,6 +13380,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG) {
     SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N0, MulOper);
     return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
   }
+
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
 
   return SDValue();
 }
