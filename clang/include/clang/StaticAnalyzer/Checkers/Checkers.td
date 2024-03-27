@@ -908,7 +908,7 @@ def PaddingChecker : Checker<"Padding">,
                   "24",
                   Released>
   ]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end: "padding"
 
