@@ -1221,47 +1221,6 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   }
 }
 
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI) {
-  IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  amdhsa::kernel_descriptor_t KD;
-  memset(&KD, 0, sizeof(KD));
-
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
-                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
-  if (Version.Major >= 12) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
-  } else {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
-  }
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
-                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
-  if (Version.Major >= 10) {
-    AMDHSA_BITS_SET(KD.kernel_code_properties,
-                    amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-                    STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
-                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
-  }
-  if (AMDGPU::isGFX90A(*STI)) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
-                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
-  }
-  return KD;
-}
-
 bool isGroupSegment(const GlobalValue *GV) {
   return GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }
