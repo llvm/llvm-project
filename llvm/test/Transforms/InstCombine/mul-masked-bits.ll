@@ -214,9 +214,8 @@ define i64 @scalar_mul_bit_x0_y0_uses(i64 %x, i64 %y) {
 define i64 @scalar_mul_bit_x0_y1(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_y1(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[DOTNOT]], i64 0, i64 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[TMP1]], i64 [[AND2]], i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -228,9 +227,8 @@ define i64 @scalar_mul_bit_x0_y1(i64 %x, i64 %y) {
 define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_yC(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[DOTNOT]], i64 0, i64 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[TMP1]], i64 [[AND2]], i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
