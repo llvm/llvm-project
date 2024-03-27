@@ -276,6 +276,10 @@ bool mlir::tensor::preservesStaticInformation(Type source, Type target) {
   if (sourceType.getRank() != targetType.getRank())
     return false;
 
+  // Requires same encoding.
+  if (sourceType.getEncoding() != targetType.getEncoding())
+    return false;
+
   // If cast is towards more static sizes along any dimension, don't fold.
   for (auto t : llvm::zip(sourceType.getShape(), targetType.getShape())) {
     if (!ShapedType::isDynamic(std::get<0>(t)) &&
