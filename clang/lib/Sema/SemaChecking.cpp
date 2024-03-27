@@ -5236,7 +5236,6 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_fetch_and_andlp:
   case PPC::BI__builtin_ppc_fetch_and_orlp:
   case PPC::BI__builtin_ppc_fetch_and_swaplp:
-  case PPC::BI__builtin_ppc_rldimi:
     return true;
   }
   return false;
