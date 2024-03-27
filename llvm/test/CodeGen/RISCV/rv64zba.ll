@@ -1282,6 +1282,96 @@ define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
   ret i32 %1
 }
 
+define i64 @sh6_sh3_add1(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
+; RV64I-LABEL: sh6_sh3_add1:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh6_sh3_add1:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %shl = shl i64 %z, 3
+  %shl1 = shl i64 %y, 6
+  %add = add nsw i64 %shl1, %shl
+  %add2 = add nsw i64 %add, %x
+  ret i64 %add2
+}
+
+define i64 @sh6_sh3_add2(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
+; RV64I-LABEL: sh6_sh3_add2:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh6_sh3_add2:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    slli a1, a1, 6
+; RV64ZBA-NEXT:    add a0, a1, a0
+; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %shl = shl i64 %z, 3
+  %shl1 = shl i64 %y, 6
+  %add = add nsw i64 %shl1, %x
+  %add2 = add nsw i64 %add, %shl
+  ret i64 %add2
+}
+
+define i64 @sh6_sh3_add3(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
+; RV64I-LABEL: sh6_sh3_add3:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh6_sh3_add3:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+entry:
+  %shl = shl i64 %z, 3
+  %shl1 = shl i64 %y, 6
+  %add = add nsw i64 %shl1, %shl
+  %add2 = add nsw i64 %x, %add
+  ret i64 %add2
+}
+
+define i64 @sh6_sh3_add4(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
+; RV64I-LABEL: sh6_sh3_add4:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 6
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh6_sh3_add4:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    slli a1, a1, 6
+; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+entry:
+  %shl = shl i64 %z, 3
+  %shl1 = shl i64 %y, 6
+  %add = add nsw i64 %x, %shl
+  %add2 = add nsw i64 %add, %shl1
+  ret i64 %add2
+}
+
 ; Make sure we use sext.h+slli+srli for Zba+Zbb.
 ; FIXME: The RV64I and Zba only cases can be done with only 3 shifts.
 define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
