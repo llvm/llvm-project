@@ -3039,7 +3039,7 @@ readEntries(typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
   chunk.hashValues.reserve(secData.hdr.NameCount);
   secData.namedEntries.reserve(secData.hdr.NameCount);
   // Calculate the Entry Offsets, create initial records.
-  for (uint32_t i = 0; i < secData.hdr.NameCount; ++i) {
+  for (uint32_t i = 0, e = secData.hdr.NameCount; i != e; ++i) {
     // Get string value
     typename DebugNamesSection<ELFT>::NamedEntry stringEntry;
     stringEntry.entryOffset =
