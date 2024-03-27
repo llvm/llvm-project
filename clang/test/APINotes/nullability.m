@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules  -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 
 // Test with Swift version 3.0. This should only affect the few APIs that have an entry in the 3.0 tables.
 
@@ -20,7 +20,9 @@ int main() {
 
   [a setNonnullAInstance: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
   [A setNonnullAInstance: 0]; // no warning
-  
+  a.nonnullAInstance = 0; // expected-warning{{null passed to a callee that requires a non-null argument}}
+  A* _Nonnull aPtr = a.nonnullAInstance; // no warning
+
   [a setNonnullAClass: 0]; // no warning
   [A setNonnullAClass: 0]; // expected-warning{{null passed to a callee that requires a non-null argument}}
 
