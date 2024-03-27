@@ -221,7 +221,7 @@ static cl::opt<bool> EnableLoopHeaderDuplication(
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 // TODO: turn on and remove flag
 static cl::opt<bool> EnablePGOForceFunctionAttrs(
