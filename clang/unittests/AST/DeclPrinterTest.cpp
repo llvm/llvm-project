@@ -1391,7 +1391,7 @@ TEST(DeclPrinter, TestCXXRecordDecl17) {
                                       "struct X {};"
                                       "Z<X> A;",
                                       "A", "Z<X> A"));
-  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl18) {
@@ -1402,7 +1402,7 @@ TEST(DeclPrinter, TestCXXRecordDecl18) {
                                       "struct Y{};"
                                       "Y<Z<X>, 2> B;",
                                       "B", "Y<Z<X>, 2> B"));
-  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl19) {
@@ -1413,7 +1413,7 @@ TEST(DeclPrinter, TestCXXRecordDecl19) {
                                       "struct Y{};"
                                       "Y<Z<X>, 2> B;",
                                       "B", "Y<Z<X>, 2> B"));
-  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
 }
 TEST(DeclPrinter, TestCXXRecordDecl20) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
@@ -1432,7 +1432,7 @@ TEST(DeclPrinter, TestCXXRecordDecl20) {
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl21) {
@@ -1452,7 +1452,7 @@ TEST(DeclPrinter, TestCXXRecordDecl21) {
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {
