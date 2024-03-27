@@ -18,6 +18,8 @@
 
 #include "CGCleanup.h"
 #include "CodeGenFunction.h"
+#include "EHScopeStack.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -488,6 +490,28 @@ void CodeGenFunction::PopCleanupBlocks(
   }
 }
 
+void CodeGenFunction::AddDeferredCleanups(DeferredCleanupStack &Cleanups,
+                                          size_t OldSize) {
+  for (size_t I = OldSize, E = Cleanups.size(); I != E;) {
+    // Alignment should be guaranteed by the vptrs in the individual cleanups.
+    assert((I % alignof(DeferredCleanupHeader) == 0) &&
+           "misaligned cleanup stack entry");
+
+    DeferredCleanupHeader &Header =
+        reinterpret_cast<DeferredCleanupHeader &>(Cleanups[I]);
+    I += sizeof(Header);
+
+    EHStack.pushCopyOfCleanup(Header.getKind(), &Cleanups[I], Header.getSize());
+    I += Header.getSize();
+
+    if (Header.isConditional()) {
+      Address ActiveFlag = reinterpret_cast<Address &>(Cleanups[I]);
+      initFullExprCleanupWithFlag(ActiveFlag);
+      I += sizeof(ActiveFlag);
+    }
+  }
+}
+
 /// Pops cleanup blocks until the given savepoint is reached, then add the
 /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
 void CodeGenFunction::PopCleanupBlocks(
@@ -495,30 +519,8 @@ void CodeGenFunction::PopCleanupBlocks(
     std::initializer_list<llvm::Value **> ValuesToReload) {
   PopCleanupBlocks(Old, ValuesToReload);
 
-  // Move our deferred cleanups onto the EH stack.
-  for (size_t I = OldLifetimeExtendedSize,
-              E = LifetimeExtendedCleanupStack.size(); I != E; /**/) {
-    // Alignment should be guaranteed by the vptrs in the individual cleanups.
-    assert((I % alignof(LifetimeExtendedCleanupHeader) == 0) &&
-           "misaligned cleanup stack entry");
-
-    LifetimeExtendedCleanupHeader &Header =
-        reinterpret_cast<LifetimeExtendedCleanupHeader&>(
-            LifetimeExtendedCleanupStack[I]);
-    I += sizeof(Header);
-
-    EHStack.pushCopyOfCleanup(Header.getKind(),
-                              &LifetimeExtendedCleanupStack[I],
-                              Header.getSize());
-    I += Header.getSize();
-
-    if (Header.isConditional()) {
-      Address ActiveFlag =
-          reinterpret_cast<Address &>(LifetimeExtendedCleanupStack[I]);
-      initFullExprCleanupWithFlag(ActiveFlag);
-      I += sizeof(ActiveFlag);
-    }
-  }
+  // Move our deferred lifetime-extended cleanups onto the EH stack.
+  AddDeferredCleanups(LifetimeExtendedCleanupStack, OldLifetimeExtendedSize);
   LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
 }
 
@@ -1101,6 +1103,13 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   if (!HaveInsertPoint())
     return;
+
+  // If we are emitting a branch in a partial expression, add deferred cleanups
+  // to EHStack, which would otherwise have only been emitted after the full
+  // expression.
+  RunCleanupsScope BranchInExprCleanups(*this);
+  if (Dest.isValid())
+    AddDeferredCleanups(BranchInExprCleanupStack, Dest.getBranchInExprDepth());
 
   // Create the branch.
   llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
