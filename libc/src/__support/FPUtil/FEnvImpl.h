@@ -11,7 +11,6 @@
 
 #include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 #include <fenv.h>
