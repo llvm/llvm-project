@@ -601,8 +601,9 @@ declare !dbg !1 void @declaration()
 
 ; CHECK: #di_subprogram = #llvm.di_subprogram<
 ; CHECK-NOT: id = distinct
+; CHECK-NOT: subprogramFlags =
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")

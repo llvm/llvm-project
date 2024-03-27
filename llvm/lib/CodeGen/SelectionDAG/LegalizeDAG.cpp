@@ -386,17 +386,13 @@ SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
                                                              SDValue Val,
                                                              SDValue Idx,
                                                              const SDLoc &dl) {
-  SDValue Tmp1 = Vec;
-  SDValue Tmp2 = Val;
-  SDValue Tmp3 = Idx;
-
   // If the target doesn't support this, we have to spill the input vector
   // to a temporary stack slot, update the element, then reload it.  This is
   // badness.  We could also load the value into a vector register (either
   // with a "move to register" or "extload into register" instruction, then
   // permute it into place, if the idx is a constant and if the idx is
   // supported by the target.
-  EVT VT    = Tmp1.getValueType();
+  EVT VT    = Vec.getValueType();
   EVT EltVT = VT.getVectorElementType();
   SDValue StackPtr = DAG.CreateStackTemporary(VT);
 
@@ -404,14 +400,14 @@ SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
 
   // Store the vector.
   SDValue Ch = DAG.getStore(
-      DAG.getEntryNode(), dl, Tmp1, StackPtr,
+      DAG.getEntryNode(), dl, Vec, StackPtr,
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
 
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Tmp3);
+  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Idx);
 
   // Store the scalar value.
   Ch = DAG.getTruncStore(
-      Ch, dl, Tmp2, StackPtr2,
+      Ch, dl, Val, StackPtr2,
       MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT);
   // Load the updated vector.
   return DAG.getLoad(VT, dl, Ch, StackPtr, MachinePointerInfo::getFixedStack(
