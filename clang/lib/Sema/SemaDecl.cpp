@@ -11653,7 +11653,7 @@ static bool CheckMultiVersionAdditionalDecl(
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   MultiVersionKind NewMVKind = NewFD->getMultiVersionKind();
-  MultiVersionKind OldMVKind = OldFD->getMultiVersionKind();
+  [[maybe_unused]] MultiVersionKind OldMVKind = OldFD->getMultiVersionKind();
 
   ParsedTargetAttr NewParsed;
   if (NewTA) {
