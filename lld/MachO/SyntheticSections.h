@@ -720,7 +720,9 @@ private:
   // The runtime identifies relative method lists via this magic value
   static constexpr uint32_t relMethodHeaderFlag = 0x80000000;
   // In the method list header, the first 2 bytes are the size of struct
-  static constexpr uint32_t m_structSizeMask = 0xFFFF;
+  static constexpr uint32_t structSizeMask = 0x0000FFFF;
+  // In the method list header, the last 2 bytes are the flags for the struct
+  static constexpr uint32_t structFlagsMask = 0xFFFF0000;
   // Relative method lists have 4 byte alignment as all data in the InputSection
   // is 4 byte
   static constexpr uint32_t relativeOffsetSize = sizeof(uint32_t);

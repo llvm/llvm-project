@@ -16,7 +16,7 @@
 CHK_REL:       Contents of (__DATA_CONST,__objc_classlist) section
 CHK_REL-NEXT:  _OBJC_CLASS_$_MyClass
 CHK_REL:       baseMethods
-CHK_REL-NEXT:  entsize 24 (relative)
+CHK_REL-NEXT:  entsize 12 (relative)
 CHK_REL-NEXT:  count 3
 CHK_REL-NEXT:   name 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}}) instance_method_00
 CHK_REL-NEXT:  types 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}}) v16@0:8
@@ -31,7 +31,7 @@ CHK_REL-NEXT:    imp 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}}) -[MyClass instance_method
 CHK_REL:       Meta Class
 CHK_REL-NEXT:  isa 0x{{[0-9a-f]*}} _OBJC_METACLASS_$_MyClass
 CHK_REL:       baseMethods 0x{{[0-9a-f]*}} (struct method_list_t *)
-CHK_REL-NEXT:  entsize 24 (relative)
+CHK_REL-NEXT:  entsize 12 (relative)
 CHK_REL-NEXT:  count 3
 CHK_REL-NEXT:   name 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  class_method_00
 CHK_REL-NEXT:  types 0x{{[0-9a-f]*}} (0x{{[0-9a-f]*}})  v16@0:8

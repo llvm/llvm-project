@@ -1990,8 +1990,7 @@ void ObjCMethListSection::setUp() {
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
-    uint32_t structSize = structSizeAndFlags & m_structSizeMask;
-
+    uint32_t originalStructSize = structSizeAndFlags & structSizeMask;
     // Method name is immediately after header
     uint32_t methodNameOff = methodListHeaderSize;
 
@@ -2008,7 +2007,7 @@ void ObjCMethListSection::setUp() {
         ObjCSelRefsHelper::makeSelRef(methname);
 
       // Jump to method name offset in next struct
-      methodNameOff += structSize;
+      methodNameOff += originalStructSize;
     }
   }
 }
@@ -2137,8 +2136,15 @@ ObjCMethListSection::writeRelativeMethodList(const ConcatInputSection *isec,
   // value flag
   uint32_t structSizeAndFlags = 0, structCount = 0;
   readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
-  structSizeAndFlags |= relMethodHeaderFlag;
-  writeMethodListHeader(buf, structSizeAndFlags, structCount);
+  // Set the struct size for the relative method list
+  uint32_t relativeStructSizeAndFlags =
+      (relativeOffsetSize * pointersPerStruct) & structSizeMask;
+  // Carry over the old flags from the input struct
+  relativeStructSizeAndFlags |= structSizeAndFlags & structFlagsMask;
+  // Set the relative method list flag
+  relativeStructSizeAndFlags |= relMethodHeaderFlag;
+
+  writeMethodListHeader(buf, relativeStructSizeAndFlags, structCount);
 
   assert(methodListHeaderSize +
                  (structCount * pointersPerStruct * target->wordSize) ==
