@@ -60,6 +60,9 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
+
   /// Return the cost of materializing an immediate for a value operand of
   /// a store instruction.
   InstructionCost getStoreImmCost(Type *VecTy, TTI::OperandValueInfo OpInfo,
