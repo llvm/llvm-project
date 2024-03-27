@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/DylibVerifier.h"
+#include "DiagnosticBuilderWrappers.h"
 #include "clang/InstallAPI/FrontendRecords.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "llvm/Demangle/Demangle.h"
@@ -176,6 +177,22 @@ void DylibVerifier::addSymbol(const Record *R, SymbolContext &SymCtx,
 bool DylibVerifier::shouldIgnoreObsolete(const Record *R, SymbolContext &SymCtx,
                                          const Record *DR) {
   return SymCtx.FA->Avail.isObsoleted();
+}
+
+bool DylibVerifier::shouldIgnoreReexport(const Record *R,
+                                         SymbolContext &SymCtx) const {
+  if (Reexports.empty())
+    return false;
+
+  for (const InterfaceFile &Lib : Reexports) {
+    if (!Lib.hasTarget(Ctx.Target))
+      continue;
+    if (auto Sym =
+            Lib.getSymbol(SymCtx.Kind, SymCtx.SymbolName, SymCtx.ObjCIFKind))
+      if ((*Sym)->hasTarget(Ctx.Target))
+        return true;
+  }
+  return false;
 }
 
 bool DylibVerifier::compareObjCInterfaceSymbols(const Record *R,
@@ -380,6 +397,11 @@ DylibVerifier::Result DylibVerifier::verifyImpl(Record *R,
         !SymCtx.FA->Avail.isObsoleted()) {
       addSymbol(R, SymCtx);
     }
+    return Ctx.FrontendState;
+  }
+
+  if (shouldIgnoreReexport(R, SymCtx)) {
+    updateState(Result::Ignore);
     return Ctx.FrontendState;
   }
 
@@ -700,6 +722,180 @@ DylibVerifier::Result DylibVerifier::verifyRemainingSymbols() {
     Slice->visit(*this);
   }
   return getState();
+}
+
+bool DylibVerifier::verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
+                                      const BinaryAttrs &ProvidedBA,
+                                      const LibAttrs &ProvidedReexports,
+                                      const LibAttrs &ProvidedClients,
+                                      const LibAttrs &ProvidedRPaths,
+                                      const FileType &FT) {
+  assert(!Dylib.empty() && "Need dylib to verify.");
+
+  // Pickup any load commands that can differ per slice to compare.
+  TargetList DylibTargets;
+  LibAttrs DylibReexports;
+  LibAttrs DylibClients;
+  LibAttrs DylibRPaths;
+  for (const std::shared_ptr<RecordsSlice> &RS : Dylib) {
+    DylibTargets.push_back(RS->getTarget());
+    const BinaryAttrs &BinInfo = RS->getBinaryAttrs();
+    for (const StringRef LibName : BinInfo.RexportedLibraries)
+      DylibReexports[LibName].set(DylibTargets.back().Arch);
+    for (const StringRef LibName : BinInfo.AllowableClients)
+      DylibClients[LibName].set(DylibTargets.back().Arch);
+    // Compare attributes that are only representable in >= TBD_V5.
+    if (FT >= FileType::TBD_V5)
+      for (const StringRef Name : BinInfo.RPaths)
+        DylibRPaths[Name].set(DylibTargets.back().Arch);
+  }
+
+  // Check targets first.
+  ArchitectureSet ProvidedArchs = mapToArchitectureSet(ProvidedTargets);
+  ArchitectureSet DylibArchs = mapToArchitectureSet(DylibTargets);
+  if (ProvidedArchs != DylibArchs) {
+    Ctx.Diag->Report(diag::err_architecture_mismatch)
+        << ProvidedArchs << DylibArchs;
+    return false;
+  }
+  auto ProvidedPlatforms = mapToPlatformVersionSet(ProvidedTargets);
+  auto DylibPlatforms = mapToPlatformVersionSet(DylibTargets);
+  if (ProvidedPlatforms != DylibPlatforms) {
+    const bool DiffMinOS =
+        mapToPlatformSet(ProvidedTargets) == mapToPlatformSet(DylibTargets);
+    if (DiffMinOS)
+      Ctx.Diag->Report(diag::warn_platform_mismatch)
+          << ProvidedPlatforms << DylibPlatforms;
+    else {
+      Ctx.Diag->Report(diag::err_platform_mismatch)
+          << ProvidedPlatforms << DylibPlatforms;
+      return false;
+    }
+  }
+
+  // Because InstallAPI requires certain attributes to match across architecture
+  // slices, take the first one to compare those with.
+  const BinaryAttrs &DylibBA = (*Dylib.begin())->getBinaryAttrs();
+
+  if (ProvidedBA.InstallName != DylibBA.InstallName) {
+    Ctx.Diag->Report(diag::err_install_name_mismatch)
+        << ProvidedBA.InstallName << DylibBA.InstallName;
+    return false;
+  }
+
+  if (ProvidedBA.CurrentVersion != DylibBA.CurrentVersion) {
+    Ctx.Diag->Report(diag::err_current_version_mismatch)
+        << ProvidedBA.CurrentVersion << DylibBA.CurrentVersion;
+    return false;
+  }
+
+  if (ProvidedBA.CompatVersion != DylibBA.CompatVersion) {
+    Ctx.Diag->Report(diag::err_compatibility_version_mismatch)
+        << ProvidedBA.CompatVersion << DylibBA.CompatVersion;
+    return false;
+  }
+
+  if (ProvidedBA.AppExtensionSafe != DylibBA.AppExtensionSafe) {
+    Ctx.Diag->Report(diag::err_appextension_safe_mismatch)
+        << (ProvidedBA.AppExtensionSafe ? "true" : "false")
+        << (DylibBA.AppExtensionSafe ? "true" : "false");
+    return false;
+  }
+
+  if (!DylibBA.TwoLevelNamespace) {
+    Ctx.Diag->Report(diag::err_no_twolevel_namespace);
+    return false;
+  }
+
+  if (ProvidedBA.OSLibNotForSharedCache != DylibBA.OSLibNotForSharedCache) {
+    Ctx.Diag->Report(diag::err_shared_cache_eligiblity_mismatch)
+        << (ProvidedBA.OSLibNotForSharedCache ? "true" : "false")
+        << (DylibBA.OSLibNotForSharedCache ? "true" : "false");
+    return false;
+  }
+
+  if (ProvidedBA.ParentUmbrella.empty() && !DylibBA.ParentUmbrella.empty()) {
+    Ctx.Diag->Report(diag::err_parent_umbrella_missing)
+        << "installAPI option" << DylibBA.ParentUmbrella;
+    return false;
+  }
+
+  if (!ProvidedBA.ParentUmbrella.empty() && !DylibBA.ParentUmbrella.empty()) {
+    Ctx.Diag->Report(diag::err_parent_umbrella_missing)
+        << "binary file" << ProvidedBA.ParentUmbrella;
+    return false;
+  }
+
+  if ((!ProvidedBA.ParentUmbrella.empty()) &&
+      (ProvidedBA.ParentUmbrella != DylibBA.ParentUmbrella)) {
+    Ctx.Diag->Report(diag::err_parent_umbrella_mismatch)
+        << ProvidedBA.ParentUmbrella << DylibBA.ParentUmbrella;
+    return false;
+  }
+
+  auto CompareLibraries = [&](const LibAttrs &Provided, const LibAttrs &Dylib,
+                              unsigned DiagID_missing, unsigned DiagID_mismatch,
+                              bool Fatal = true) {
+    if (Provided == Dylib)
+      return true;
+
+    for (const llvm::StringMapEntry<ArchitectureSet> &PAttr : Provided) {
+      const auto DAttrIt = Dylib.find(PAttr.getKey());
+      if (DAttrIt == Dylib.end()) {
+        Ctx.Diag->Report(DiagID_missing) << "binary file" << PAttr;
+        if (Fatal)
+          return false;
+      }
+
+      if (PAttr.getValue() != DAttrIt->getValue()) {
+        Ctx.Diag->Report(DiagID_mismatch) << PAttr << *DAttrIt;
+        if (Fatal)
+          return false;
+      }
+    }
+
+    for (const llvm::StringMapEntry<ArchitectureSet> &DAttr : Dylib) {
+      const auto PAttrIt = Provided.find(DAttr.getKey());
+      if (PAttrIt == Provided.end()) {
+        Ctx.Diag->Report(DiagID_missing) << "installAPI option" << DAttr;
+        if (!Fatal)
+          continue;
+        return false;
+      }
+
+      if (PAttrIt->getValue() != DAttr.getValue()) {
+        if (Fatal)
+          llvm_unreachable("this case was already covered above.");
+      }
+    }
+    return true;
+  };
+
+  if (!CompareLibraries(ProvidedReexports, DylibReexports,
+                        diag::err_reexported_libraries_missing,
+                        diag::err_reexported_libraries_mismatch))
+    return false;
+
+  if (!CompareLibraries(ProvidedClients, DylibClients,
+                        diag::err_allowable_clients_missing,
+                        diag::err_allowable_clients_mismatch))
+    return false;
+
+  if (FT >= FileType::TBD_V5) {
+    // Ignore rpath differences if building an asan variant, since the
+    //   compiler injects additional paths.
+    // FIXME: Building with sanitizers does not always change the install
+    //   name, so this is not a foolproof solution.
+    if (!ProvidedBA.InstallName.ends_with("_asan")) {
+      if (!CompareLibraries(ProvidedRPaths, DylibRPaths,
+                            diag::warn_rpaths_missing,
+                            diag::warn_rpaths_mismatch,
+                            /*Fatal=*/false))
+        return true;
+    }
+  }
+
+  return true;
 }
 
 } // namespace installapi

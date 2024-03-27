@@ -663,6 +663,7 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
+def err_missing_sysroot : Error<"no such sysroot directory: '%0'">; 
 def err_drv_darwin_sdk_missing_arclite : Error<
   "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
 
