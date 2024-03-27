@@ -442,7 +442,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           llvm::reverse(llvm::make_range(Begin, End)), [&](MachineInstr &MI) {
             // Flag any instruction (other than the copy we are
             // currently rewriting) that defs EFLAGS.
-            return &MI != CopyI && MI.findRegisterDefOperand(X86::EFLAGS);
+            return &MI != CopyI &&
+                   MI.findRegisterDefOperand(X86::EFLAGS, nullptr);
           });
     };
     auto HasEFLAGSClobberPath = [&](MachineBasicBlock *BeginMBB,
@@ -500,7 +501,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
       auto DefIt = llvm::find_if(
           llvm::reverse(llvm::make_range(TestMBB->instr_begin(), TestPos)),
           [&](MachineInstr &MI) {
-            return MI.findRegisterDefOperand(X86::EFLAGS);
+            return MI.findRegisterDefOperand(X86::EFLAGS, nullptr);
           });
       if (DefIt.base() != TestMBB->instr_begin()) {
         dbgs() << "  Using EFLAGS defined by: ";
@@ -562,9 +563,10 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         }
 
-        MachineOperand *FlagUse = MI.findRegisterUseOperand(X86::EFLAGS);
+        MachineOperand *FlagUse =
+            MI.findRegisterUseOperand(X86::EFLAGS, nullptr);
         if (!FlagUse) {
-          if (MI.findRegisterDefOperand(X86::EFLAGS)) {
+          if (MI.findRegisterDefOperand(X86::EFLAGS, nullptr)) {
             // If EFLAGS are defined, it's as-if they were killed. We can stop
             // scanning here.
             //
@@ -615,7 +617,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           rewriteCopy(MI, *FlagUse, CopyDefI);
         } else {
           // We assume all other instructions that use flags also def them.
-          assert(MI.findRegisterDefOperand(X86::EFLAGS) &&
+          assert(MI.findRegisterDefOperand(X86::EFLAGS, nullptr) &&
                  "Expected a def of EFLAGS for this instruction!");
 
           // NB!!! Several arithmetic instructions only *partially* update
@@ -734,7 +736,7 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
 
     // Stop scanning when we see the first definition of the EFLAGS as prior to
     // this we would potentially capture the wrong flag state.
-    if (MI.findRegisterDefOperand(X86::EFLAGS))
+    if (MI.findRegisterDefOperand(X86::EFLAGS, nullptr))
       break;
   }
   return CondRegs;
@@ -914,7 +916,7 @@ void X86FlagsCopyLoweringPass::rewriteCondJmp(
   // Rewrite the jump to use the !ZF flag from the test, and kill its use of
   // flags afterward.
   JmpI.getOperand(1).setImm(Inverted ? X86::COND_E : X86::COND_NE);
-  JmpI.findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+  JmpI.findRegisterUseOperand(X86::EFLAGS, nullptr)->setIsKill(true);
   LLVM_DEBUG(dbgs() << "    fixed jCC: "; JmpI.dump());
 }
 

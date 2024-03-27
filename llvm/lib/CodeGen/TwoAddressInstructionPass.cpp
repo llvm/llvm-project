@@ -339,7 +339,7 @@ bool TwoAddressInstructionPass::isPlainlyKilled(const MachineInstr *MI,
     });
   }
 
-  return MI->killsRegister(Reg);
+  return MI->killsRegister(Reg, nullptr);
 }
 
 /// Test if the register used by the given operand is killed by the operand's
@@ -1355,8 +1355,10 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                           << "2addr:    NEW INST: " << *NewMIs[1]);
 
         // Transform the instruction, now that it no longer has a load.
-        unsigned NewDstIdx = NewMIs[1]->findRegisterDefOperandIdx(regA);
-        unsigned NewSrcIdx = NewMIs[1]->findRegisterUseOperandIdx(regB);
+        unsigned NewDstIdx =
+            NewMIs[1]->findRegisterDefOperandIdx(regA, nullptr);
+        unsigned NewSrcIdx =
+            NewMIs[1]->findRegisterUseOperandIdx(regB, nullptr);
         MachineBasicBlock::iterator NewMI = NewMIs[1];
         bool TransformResult =
           tryInstructionTransform(NewMI, mi, NewSrcIdx, NewDstIdx, Dist, true);
@@ -1371,19 +1373,19 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
               if (MO.isReg() && MO.getReg().isVirtual()) {
                 if (MO.isUse()) {
                   if (MO.isKill()) {
-                    if (NewMIs[0]->killsRegister(MO.getReg()))
+                    if (NewMIs[0]->killsRegister(MO.getReg(), nullptr))
                       LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[0]);
                     else {
-                      assert(NewMIs[1]->killsRegister(MO.getReg()) &&
+                      assert(NewMIs[1]->killsRegister(MO.getReg(), nullptr) &&
                              "Kill missing after load unfold!");
                       LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[1]);
                     }
                   }
                 } else if (LV->removeVirtualRegisterDead(MO.getReg(), MI)) {
-                  if (NewMIs[1]->registerDefIsDead(MO.getReg()))
+                  if (NewMIs[1]->registerDefIsDead(MO.getReg(), nullptr))
                     LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[1]);
                   else {
-                    assert(NewMIs[0]->registerDefIsDead(MO.getReg()) &&
+                    assert(NewMIs[0]->registerDefIsDead(MO.getReg(), nullptr) &&
                            "Dead flag missing after load unfold!");
                     LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[0]);
                   }

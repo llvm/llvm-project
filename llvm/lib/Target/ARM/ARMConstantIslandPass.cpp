@@ -1937,7 +1937,7 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
 
     // If the conditional branch doesn't kill CPSR, then CPSR can be liveout
     // so this transformation is not safe.
-    if (!Br.MI->killsRegister(ARM::CPSR))
+    if (!Br.MI->killsRegister(ARM::CPSR, nullptr))
       return false;
 
     Register PredReg;

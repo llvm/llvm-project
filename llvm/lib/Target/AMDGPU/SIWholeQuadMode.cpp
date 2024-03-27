@@ -1525,10 +1525,10 @@ void SIWholeQuadMode::lowerCopyInstrs() {
         MI->getOperand(0).setIsEarlyClobber(false);
         LIS->createAndComputeVirtRegInterval(Reg);
       }
-      int Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
+      int Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC, nullptr);
       while (Index >= 0) {
         MI->removeOperand(Index);
-        Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
+        Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC, nullptr);
       }
       MI->setDesc(TII->get(AMDGPU::COPY));
       LLVM_DEBUG(dbgs() << "  -> " << *MI);

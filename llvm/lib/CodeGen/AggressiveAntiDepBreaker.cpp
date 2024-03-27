@@ -231,9 +231,9 @@ bool AggressiveAntiDepBreaker::IsImplicitDefUse(MachineInstr &MI,
 
   MachineOperand *Op = nullptr;
   if (MO.isDef())
-    Op = MI.findRegisterUseOperand(Reg, true);
+    Op = MI.findRegisterUseOperand(Reg, nullptr, true);
   else
-    Op = MI.findRegisterDefOperand(Reg);
+    Op = MI.findRegisterDefOperand(Reg, nullptr);
 
   return(Op && Op->isImplicit());
 }
@@ -679,7 +679,7 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
       // defines 'NewReg' via an early-clobber operand.
       for (const auto &Q : make_range(RegRefs.equal_range(Reg))) {
         MachineInstr *UseMI = Q.second.Operand->getParent();
-        int Idx = UseMI->findRegisterDefOperandIdx(NewReg, false, true, TRI);
+        int Idx = UseMI->findRegisterDefOperandIdx(NewReg, TRI, false, true);
         if (Idx == -1)
           continue;
 
@@ -846,7 +846,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
           continue;
         } else {
           // No anti-dep breaking for implicit deps
-          MachineOperand *AntiDepOp = MI.findRegisterDefOperand(AntiDepReg);
+          MachineOperand *AntiDepOp =
+              MI.findRegisterDefOperand(AntiDepReg, nullptr);
           assert(AntiDepOp && "Can't find index for defined register operand");
           if (!AntiDepOp || AntiDepOp->isImplicit()) {
             LLVM_DEBUG(dbgs() << " (implicit)\n");

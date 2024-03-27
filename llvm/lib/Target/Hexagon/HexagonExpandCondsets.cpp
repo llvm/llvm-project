@@ -779,7 +779,8 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
     // Check if this instruction can be ignored, i.e. if it is predicated
     // on the complementary condition.
     if (PredValid && HII->isPredicated(*MI)) {
-      if (MI->readsRegister(PredR) && (Cond != HII->isPredicatedTrue(*MI)))
+      if (MI->readsRegister(PredR, nullptr) &&
+          (Cond != HII->isPredicatedTrue(*MI)))
         continue;
     }
 
@@ -937,7 +938,8 @@ void HexagonExpandCondsets::renameInRange(RegisterRef RO, RegisterRef RN,
     // on the opposite condition.
     if (!HII->isPredicated(MI))
       continue;
-    if (!MI.readsRegister(PredR) || (Cond != HII->isPredicatedTrue(MI)))
+    if (!MI.readsRegister(PredR, nullptr) ||
+        (Cond != HII->isPredicatedTrue(MI)))
       continue;
 
     for (auto &Op : MI.operands()) {
@@ -1007,7 +1009,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
     // By default assume that the instruction executes on the same condition
     // as TfrI (Exec_Then), and also on the opposite one (Exec_Else).
     unsigned Exec = Exec_Then | Exec_Else;
-    if (PredValid && HII->isPredicated(MI) && MI.readsRegister(PredR))
+    if (PredValid && HII->isPredicated(MI) && MI.readsRegister(PredR, nullptr))
       Exec = (Cond == HII->isPredicatedTrue(MI)) ? Exec_Then : Exec_Else;
 
     for (auto &Op : MI.operands()) {

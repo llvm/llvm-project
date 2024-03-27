@@ -633,7 +633,7 @@ bool SystemZElimCompare::fuseCompareOperations(
     RegMask = MBBI->getOperand(3).getRegMask();
 
   // Clear out all current operands.
-  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, false, TRI);
+  int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, TRI, false);
   assert(CCUse >= 0 && "BRC/BCR must use CC");
   Branch->removeOperand(CCUse);
   // Remove regmask (sibcall).
@@ -707,11 +707,11 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC, nullptr)) {
       CCUsers.clear();
       CompleteCCUsers = true;
     }
-    if (MI.readsRegister(SystemZ::CC) && CompleteCCUsers)
+    if (MI.readsRegister(SystemZ::CC, nullptr) && CompleteCCUsers)
       CCUsers.push_back(&MI);
   }
   return Changed;

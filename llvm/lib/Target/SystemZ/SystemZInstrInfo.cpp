@@ -938,8 +938,8 @@ static LogicOp interpretAndImmediate(unsigned Opcode) {
 }
 
 static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
-  if (OldMI->registerDefIsDead(SystemZ::CC)) {
-    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
+  if (OldMI->registerDefIsDead(SystemZ::CC, nullptr)) {
+    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC, nullptr);
     if (CCDef != nullptr)
       CCDef->setIsDead(true);
   }
@@ -1034,7 +1034,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
         .addFrameIndex(FrameIndex)
         .addImm(0)
         .addImm(MI.getOperand(2).getImm());
-      BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
+      BuiltMI->findRegisterDefOperand(SystemZ::CC, nullptr)->setIsDead(true);
       CCLiveRange->createDeadDef(MISlot, LIS->getVNInfoAllocator());
       return BuiltMI;
     }
@@ -1195,7 +1195,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   unsigned NumOps = MI.getNumExplicitOperands();
   int MemOpcode = SystemZ::getMemOpcode(Opcode);
   if (MemOpcode == -1 ||
-      (CCLiveAtMI && !MI.definesRegister(SystemZ::CC) &&
+      (CCLiveAtMI && !MI.definesRegister(SystemZ::CC, nullptr) &&
        get(MemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)))
     return nullptr;
 
@@ -1303,9 +1303,9 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       MIB.addImm(CCValid);
       MIB.addImm(NeedsCommute ? CCMask ^ CCValid : CCMask);
     }
-    if (MIB->definesRegister(SystemZ::CC) &&
-        (!MI.definesRegister(SystemZ::CC) ||
-         MI.registerDefIsDead(SystemZ::CC))) {
+    if (MIB->definesRegister(SystemZ::CC, nullptr) &&
+        (!MI.definesRegister(SystemZ::CC, nullptr) ||
+         MI.registerDefIsDead(SystemZ::CC, nullptr))) {
       MIB->addRegisterDead(SystemZ::CC, TRI);
       if (CCLiveRange)
         CCLiveRange->createDeadDef(MISlot, LIS->getVNInfoAllocator());
@@ -1861,14 +1861,14 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   bool CCLive = true;
   SmallVector<MachineInstr *, 4> CCUsers;
   for (MachineInstr &MI : llvm::make_range(std::next(MBBI), MBB->end())) {
-    if (MI.readsRegister(SystemZ::CC)) {
+    if (MI.readsRegister(SystemZ::CC, nullptr)) {
       unsigned Flags = MI.getDesc().TSFlags;
       if ((Flags & SystemZII::CCMaskFirst) || (Flags & SystemZII::CCMaskLast))
         CCUsers.push_back(&MI);
       else
         return false;
     }
-    if (MI.definesRegister(SystemZ::CC)) {
+    if (MI.definesRegister(SystemZ::CC, nullptr)) {
       CCLive = false;
       break;
     }

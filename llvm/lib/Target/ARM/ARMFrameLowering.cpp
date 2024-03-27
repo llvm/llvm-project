@@ -1873,7 +1873,7 @@ skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
   case 1:
   case 2:
   case 4:
-    assert(MI->killsRegister(ARM::R4) && "Missed kill flag");
+    assert(MI->killsRegister(ARM::R4, nullptr) && "Missed kill flag");
     ++MI;
   }
   return MI;

@@ -869,7 +869,7 @@ static void dumpMachineInstrRangeWithSlotIndex(MachineBasicBlock::iterator B,
     // destination that is marked as an early clobber, print the
     // early-clobber slot index.
     if (VReg) {
-      MachineOperand *MO = I->findRegisterDefOperand(VReg);
+      MachineOperand *MO = I->findRegisterDefOperand(VReg, nullptr);
       if (MO && MO->isEarlyClobber())
         Idx = Idx.getRegSlot(true);
     }

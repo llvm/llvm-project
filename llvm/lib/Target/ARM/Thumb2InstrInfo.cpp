@@ -552,7 +552,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
 
     Register PredReg;
     if (Offset == 0 && getInstrPredicate(MI, PredReg) == ARMCC::AL &&
-        !MI.definesRegister(ARM::CPSR)) {
+        !MI.definesRegister(ARM::CPSR, nullptr)) {
       // Turn it into a move.
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);

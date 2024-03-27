@@ -299,7 +299,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
   if (I == MBB->end())
     return nullptr;
   // The terminator must be controlled by the flags.
-  if (!I->readsRegister(AArch64::NZCV)) {
+  if (!I->readsRegister(AArch64::NZCV, nullptr)) {
     switch (I->getOpcode()) {
     case AArch64::CBZW:
     case AArch64::CBZX:

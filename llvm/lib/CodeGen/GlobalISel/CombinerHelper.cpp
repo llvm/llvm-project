@@ -2749,8 +2749,8 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
     // %5:_(s8), %6:_(s8), %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4:_(<4 x s8>)
     // I1 and I2 are different instructions but produce same values,
     // %1 and %6 are same, %1 and %7 are not the same value.
-    return I1->findRegisterDefOperandIdx(InstAndDef1->Reg) ==
-           I2->findRegisterDefOperandIdx(InstAndDef2->Reg);
+    return I1->findRegisterDefOperandIdx(InstAndDef1->Reg, nullptr) ==
+           I2->findRegisterDefOperandIdx(InstAndDef2->Reg, nullptr);
   }
   return false;
 }

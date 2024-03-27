@@ -814,7 +814,7 @@ void ModuloScheduleExpander::splitLifetimes(MachineBasicBlock *KernelBB,
         unsigned SplitReg = 0;
         for (auto &BBJ : make_range(MachineBasicBlock::instr_iterator(MI),
                                     KernelBB->instr_end()))
-          if (BBJ.readsRegister(Def)) {
+          if (BBJ.readsRegister(Def, nullptr)) {
             // We split the lifetime when we find the first use.
             if (SplitReg == 0) {
               SplitReg = MRI.createVirtualRegister(MRI.getRegClass(Def));
@@ -829,7 +829,7 @@ void ModuloScheduleExpander::splitLifetimes(MachineBasicBlock *KernelBB,
         // Search through each of the epilog blocks for any uses to be renamed.
         for (auto &Epilog : EpilogBBs)
           for (auto &I : *Epilog)
-            if (I.readsRegister(Def))
+            if (I.readsRegister(Def, nullptr))
               I.substituteRegister(Def, SplitReg, 0, *TRI);
         break;
       }
@@ -1673,7 +1673,8 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
     // we don't need the phi anymore.
     if (getStage(Def) == Stage) {
       Register PhiReg = MI.getOperand(0).getReg();
-      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg()) != -1);
+      assert(Def->findRegisterDefOperandIdx(MI.getOperand(1).getReg(),
+                                            nullptr) != -1);
       MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
       MI.getOperand(0).setReg(PhiReg);
       PhiToDelete.push_back(&MI);
@@ -1899,7 +1900,7 @@ Register
 PeelingModuloScheduleExpander::getEquivalentRegisterIn(Register Reg,
                                                        MachineBasicBlock *BB) {
   MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
-  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg);
+  unsigned OpIdx = MI->findRegisterDefOperandIdx(Reg, nullptr);
   return BlockMIs[{BB, CanonicalMIs[MI]}]->getOperand(OpIdx).getReg();
 }
 

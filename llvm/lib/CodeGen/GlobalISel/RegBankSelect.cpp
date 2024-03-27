@@ -420,7 +420,8 @@ void RegBankSelect::tryAvoidingSplit(
       // If the next terminator uses Reg, this means we have
       // to split right after MI and thus we need a way to ask
       // which outgoing edges are affected.
-      assert(!Next->readsRegister(Reg) && "Need to split between terminators");
+      assert(!Next->readsRegister(Reg, nullptr) &&
+             "Need to split between terminators");
     // We will split all the edges and repair there.
   } else {
     // This is a virtual register defined by a terminator.

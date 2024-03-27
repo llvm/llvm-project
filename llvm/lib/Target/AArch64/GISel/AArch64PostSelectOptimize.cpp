@@ -199,10 +199,10 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
 
   for (auto &II : instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
     bool NZCVDead = LRU.available(AArch64::NZCV);
-    if (NZCVDead && II.definesRegister(AArch64::NZCV)) {
+    if (NZCVDead && II.definesRegister(AArch64::NZCV, nullptr)) {
       // The instruction defines NZCV, but NZCV is dead.
       unsigned NewOpc = getNonFlagSettingVariant(II.getOpcode());
-      int DeadNZCVIdx = II.findRegisterDefOperandIdx(AArch64::NZCV);
+      int DeadNZCVIdx = II.findRegisterDefOperandIdx(AArch64::NZCV, nullptr);
       if (DeadNZCVIdx != -1) {
         if (NewOpc) {
           // If there is an equivalent non-flag-setting op, we convert.

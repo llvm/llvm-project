@@ -82,7 +82,8 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::FRM)) {
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.readsRegister(RISCV::FRM, nullptr)) {
       // Restore FRM before unknown operations.
       if (SavedFRM.isValid())
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
@@ -92,7 +93,7 @@ bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
       continue;
     }
 
-    assert(!MI.modifiesRegister(RISCV::FRM) &&
+    assert(!MI.modifiesRegister(RISCV::FRM, nullptr) &&
            "Expected that MI could not modify FRM.");
 
     int FRMIdx = RISCVII::getFRMOpNum(MI.getDesc());

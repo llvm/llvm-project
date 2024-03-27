@@ -229,8 +229,8 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         assert(DefInstr &&
                "There must be a definition for a new virtual register");
         DepthOp = InstrDepth[II->second];
-        int DefIdx = DefInstr->findRegisterDefOperandIdx(MO.getReg());
-        int UseIdx = InstrPtr->findRegisterUseOperandIdx(MO.getReg());
+        int DefIdx = DefInstr->findRegisterDefOperandIdx(MO.getReg(), nullptr);
+        int UseIdx = InstrPtr->findRegisterUseOperandIdx(MO.getReg(), nullptr);
         LatencyOp = TSchedModel.computeOperandLatency(DefInstr, DefIdx,
                                                       InstrPtr, UseIdx);
       } else {
@@ -241,8 +241,10 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
           DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
           if (!isTransientMI(DefInstr))
             LatencyOp = TSchedModel.computeOperandLatency(
-                DefInstr, DefInstr->findRegisterDefOperandIdx(MO.getReg()),
-                InstrPtr, InstrPtr->findRegisterUseOperandIdx(MO.getReg()));
+                DefInstr,
+                DefInstr->findRegisterDefOperandIdx(MO.getReg(), nullptr),
+                InstrPtr,
+                InstrPtr->findRegisterUseOperandIdx(MO.getReg(), nullptr));
         }
       }
       IDepth = std::max(IDepth, DepthOp + LatencyOp);
@@ -280,8 +282,8 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     unsigned LatencyOp = 0;
     if (UseMO && BlockTrace.isDepInTrace(*Root, *UseMO)) {
       LatencyOp = TSchedModel.computeOperandLatency(
-          NewRoot, NewRoot->findRegisterDefOperandIdx(MO.getReg()), UseMO,
-          UseMO->findRegisterUseOperandIdx(MO.getReg()));
+          NewRoot, NewRoot->findRegisterDefOperandIdx(MO.getReg(), nullptr),
+          UseMO, UseMO->findRegisterUseOperandIdx(MO.getReg(), nullptr));
     } else {
       LatencyOp = TSchedModel.computeInstrLatency(NewRoot);
     }

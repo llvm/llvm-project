@@ -171,7 +171,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   if (A->getOpcode() == AndN2)
     MaskValue = ~MaskValue;
 
-  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC)) {
+  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC, nullptr)) {
     if (!MI.killsRegister(CondReg, TRI)) {
       // Replace AND with MOV
       if (MaskValue == 0) {
@@ -235,7 +235,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
         TII->get(IsVCCZ ? AMDGPU::S_CBRANCH_EXECZ : AMDGPU::S_CBRANCH_EXECNZ));
   }
 
-  MI.removeOperand(MI.findRegisterUseOperandIdx(CondReg, false /*Kill*/, TRI));
+  MI.removeOperand(MI.findRegisterUseOperandIdx(CondReg, TRI, false /*Kill*/));
   MI.addImplicitDefUseOperands(*MBB.getParent());
 
   return true;

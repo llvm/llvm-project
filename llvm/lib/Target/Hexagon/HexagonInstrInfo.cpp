@@ -3517,7 +3517,7 @@ unsigned HexagonInstrInfo::getCompoundOpcode(const MachineInstr &GA,
       (GB.getOpcode() != Hexagon::J2_jumptnew))
     return -1u;
   Register DestReg = GA.getOperand(0).getReg();
-  if (!GB.readsRegister(DestReg))
+  if (!GB.readsRegister(DestReg, nullptr))
     return -1u;
   if (DestReg != Hexagon::P0 && DestReg != Hexagon::P1)
     return -1u;
@@ -4334,7 +4334,7 @@ std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
   if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(DefMO.getReg())) {
-        int Idx = DefMI.findRegisterDefOperandIdx(SR, false, false, &HRI);
+        int Idx = DefMI.findRegisterDefOperandIdx(SR, &HRI, false, false);
         if (Idx != -1) {
           DefIdx = Idx;
           break;
@@ -4345,7 +4345,7 @@ std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
     const MachineOperand &UseMO = UseMI.getOperand(UseIdx);
     if (UseMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(UseMO.getReg())) {
-        int Idx = UseMI.findRegisterUseOperandIdx(SR, false, &HRI);
+        int Idx = UseMI.findRegisterUseOperandIdx(SR, &HRI, false);
         if (Idx != -1) {
           UseIdx = Idx;
           break;

@@ -409,7 +409,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     if (!MI)
       continue;
 
-    int OpNo = MI->findRegisterDefOperandIdx(Reg);
+    int OpNo = MI->findRegisterDefOperandIdx(Reg, nullptr);
     assert(OpNo != -1 && "Couldn't find register");
 
     // If this is a sign extending operation we don't need to look any further.

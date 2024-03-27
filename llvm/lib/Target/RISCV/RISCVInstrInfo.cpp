@@ -239,7 +239,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
     } else if (MBBI->getNumDefs()) {
       // Check all the instructions which will change VL.
       // For example, vleff has implicit def VL.
-      if (MBBI->modifiesRegister(RISCV::VL))
+      if (MBBI->modifiesRegister(RISCV::VL, nullptr))
         return false;
 
       // Only converting whole register copies to vmv.v.v when the defining
@@ -3271,8 +3271,8 @@ RISCV::isRVVSpillForZvlsseg(unsigned Opcode) {
 }
 
 bool RISCV::isFaultFirstLoad(const MachineInstr &MI) {
-  return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
-         !MI.isInlineAsm();
+  return MI.getNumExplicitDefs() == 2 &&
+         MI.modifiesRegister(RISCV::VL, nullptr) && !MI.isInlineAsm();
 }
 
 bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {

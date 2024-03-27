@@ -666,18 +666,18 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
   bool MustMove = false, HasUser = false;
   MachineOperand *VPNOTOperandKiller = nullptr;
   for (; Iter != MBB.end(); ++Iter) {
-    if (MachineOperand *MO =
-            Iter->findRegisterUseOperand(VPNOTOperand, /*isKill*/ true)) {
+    if (MachineOperand *MO = Iter->findRegisterUseOperand(VPNOTOperand, nullptr,
+                                                          /*isKill*/ true)) {
       // If we find the operand that kills the VPNOTOperand's result, save it.
       VPNOTOperandKiller = MO;
     }
 
-    if (Iter->findRegisterUseOperandIdx(Reg) != -1) {
+    if (Iter->findRegisterUseOperandIdx(Reg, nullptr) != -1) {
       MustMove = true;
       continue;
     }
 
-    if (Iter->findRegisterUseOperandIdx(VPNOTResult) == -1)
+    if (Iter->findRegisterUseOperandIdx(VPNOTResult, nullptr) == -1)
       continue;
 
     HasUser = true;
@@ -731,7 +731,7 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
       // If we already have a VCCRValue, and this is a VPNOT on VCCRValue, we've
       // found what we were looking for.
       if (VCCRValue && Iter->getOpcode() == ARM::MVE_VPNOT &&
-          Iter->findRegisterUseOperandIdx(VCCRValue) != -1) {
+          Iter->findRegisterUseOperandIdx(VCCRValue, nullptr) != -1) {
         // Move the VPNOT closer to its first user if needed, and ignore if it
         // has no users.
         if (!MoveVPNOTBeforeFirstUser(MBB, Iter, VCCRValue))
@@ -763,7 +763,8 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
     for (; Iter != End; ++Iter) {
       bool IsInteresting = false;
 
-      if (MachineOperand *MO = Iter->findRegisterUseOperand(VCCRValue)) {
+      if (MachineOperand *MO =
+              Iter->findRegisterUseOperand(VCCRValue, nullptr)) {
         IsInteresting = true;
 
         // - If the instruction is a VPNOT, it can be removed, and we can just
@@ -795,7 +796,7 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
         // If the instr uses OppositeVCCRValue, make it use LastVPNOTResult
         // instead as they contain the same value.
         if (MachineOperand *MO =
-                Iter->findRegisterUseOperand(OppositeVCCRValue)) {
+                Iter->findRegisterUseOperand(OppositeVCCRValue, nullptr)) {
           IsInteresting = true;
 
           // This is pointless if LastVPNOTResult == OppositeVCCRValue.
@@ -856,7 +857,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   for (MachineInstr &Instr : MBB.instrs()) {
     if (PrevVCMP) {
       if (MachineOperand *MO = Instr.findRegisterUseOperand(
-              PrevVCMP->getOperand(0).getReg(), /*isKill*/ true)) {
+              PrevVCMP->getOperand(0).getReg(), nullptr, /*isKill*/ true)) {
         // If we come accross the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;

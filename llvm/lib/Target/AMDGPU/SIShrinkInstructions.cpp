@@ -1014,7 +1014,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
       // Copy deadness from the old explicit vcc def to the new implicit def.
       if (SDst && SDst->isDead())
-        Inst32->findRegisterDefOperand(VCCReg)->setIsDead();
+        Inst32->findRegisterDefOperand(VCCReg, nullptr)->setIsDead();
 
       MI.eraseFromParent();
       foldImmediates(*Inst32);

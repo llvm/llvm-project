@@ -34165,10 +34165,10 @@ static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
                               MachineBasicBlock *BB) {
   // Scan forward through BB for a use/def of EFLAGS.
   for (const MachineInstr &mi : llvm::make_range(std::next(Itr), BB->end())) {
-    if (mi.readsRegister(X86::EFLAGS))
+    if (mi.readsRegister(X86::EFLAGS, nullptr))
       return true;
     // If we found a def, we can stop searching.
-    if (mi.definesRegister(X86::EFLAGS))
+    if (mi.definesRegister(X86::EFLAGS, nullptr))
       return false;
   }
 
@@ -34754,7 +34754,7 @@ X86TargetLowering::EmitLoweredCascadedSelect(MachineInstr &FirstCMOV,
   // If the EFLAGS register isn't dead in the terminator, then claim that it's
   // live into the sink and copy blocks.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  if (!SecondCascadedCMOV.killsRegister(X86::EFLAGS) &&
+  if (!SecondCascadedCMOV.killsRegister(X86::EFLAGS, nullptr) &&
       !checkAndUpdateEFLAGSKill(SecondCascadedCMOV, ThisMBB, TRI)) {
     SecondInsertedMBB->addLiveIn(X86::EFLAGS);
     SinkMBB->addLiveIn(X86::EFLAGS);
@@ -34910,7 +34910,7 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
   // If the EFLAGS register isn't dead in the terminator, then claim that it's
   // live into the sink and copy blocks.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  if (!LastCMOV->killsRegister(X86::EFLAGS) &&
+  if (!LastCMOV->killsRegister(X86::EFLAGS, nullptr) &&
       !checkAndUpdateEFLAGSKill(LastCMOV, ThisMBB, TRI)) {
     FalseMBB->addLiveIn(X86::EFLAGS);
     SinkMBB->addLiveIn(X86::EFLAGS);
@@ -36489,10 +36489,10 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // four operand definitions that are E[ABCD] registers. We skip them and
     // then insert the LEA.
     MachineBasicBlock::reverse_iterator RMBBI(MI.getReverseIterator());
-    while (RMBBI != BB->rend() && (RMBBI->definesRegister(X86::EAX) ||
-                                   RMBBI->definesRegister(X86::EBX) ||
-                                   RMBBI->definesRegister(X86::ECX) ||
-                                   RMBBI->definesRegister(X86::EDX))) {
+    while (RMBBI != BB->rend() && (RMBBI->definesRegister(X86::EAX, nullptr) ||
+                                   RMBBI->definesRegister(X86::EBX, nullptr) ||
+                                   RMBBI->definesRegister(X86::ECX, nullptr) ||
+                                   RMBBI->definesRegister(X86::EDX, nullptr))) {
       ++RMBBI;
     }
     MachineBasicBlock::iterator MBBI(RMBBI);

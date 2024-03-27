@@ -723,7 +723,7 @@ bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
 
   // If the source instruction was killing the source register before the
   // merge, unset the isKill marker given the live range has been extended.
-  int UIdx = ValSEndInst->findRegisterUseOperandIdx(IntB.reg(), true);
+  int UIdx = ValSEndInst->findRegisterUseOperandIdx(IntB.reg(), nullptr, true);
   if (UIdx != -1) {
     ValSEndInst->getOperand(UIdx).setIsKill(false);
   }
@@ -848,7 +848,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     return { false, false };
   // If DefMI is a two-address instruction then commuting it will change the
   // destination register.
-  int DefIdx = DefMI->findRegisterDefOperandIdx(IntA.reg());
+  int DefIdx = DefMI->findRegisterDefOperandIdx(IntA.reg(), nullptr);
   assert(DefIdx != -1);
   unsigned UseOpIdx;
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))

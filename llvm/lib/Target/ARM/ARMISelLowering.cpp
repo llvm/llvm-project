@@ -11796,9 +11796,9 @@ static bool checkAndUpdateCPSRKill(MachineBasicBlock::iterator SelectItr,
   MachineBasicBlock::iterator miI(std::next(SelectItr));
   for (MachineBasicBlock::iterator miE = BB->end(); miI != miE; ++miI) {
     const MachineInstr& mi = *miI;
-    if (mi.readsRegister(ARM::CPSR))
+    if (mi.readsRegister(ARM::CPSR, nullptr))
       return false;
-    if (mi.definesRegister(ARM::CPSR))
+    if (mi.definesRegister(ARM::CPSR, nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -12157,7 +12157,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Check whether CPSR is live past the tMOVCCr_pseudo.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    if (!MI.killsRegister(ARM::CPSR) &&
+    if (!MI.killsRegister(ARM::CPSR, nullptr) &&
         !checkAndUpdateCPSRKill(MI, thisMBB, TRI)) {
       copy0MBB->addLiveIn(ARM::CPSR);
       sinkMBB->addLiveIn(ARM::CPSR);

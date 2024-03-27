@@ -80,13 +80,13 @@ FunctionPass *llvm::createWebAssemblyRegStackify() {
 // the expression stack.
 static void imposeStackOrdering(MachineInstr *MI) {
   // Write the opaque VALUE_STACK register.
-  if (!MI->definesRegister(WebAssembly::VALUE_STACK))
+  if (!MI->definesRegister(WebAssembly::VALUE_STACK, nullptr))
     MI->addOperand(MachineOperand::CreateReg(WebAssembly::VALUE_STACK,
                                              /*isDef=*/true,
                                              /*isImp=*/true));
 
   // Also read the opaque VALUE_STACK register.
-  if (!MI->readsRegister(WebAssembly::VALUE_STACK))
+  if (!MI->readsRegister(WebAssembly::VALUE_STACK, nullptr))
     MI->addOperand(MachineOperand::CreateReg(WebAssembly::VALUE_STACK,
                                              /*isDef=*/false,
                                              /*isImp=*/true));
@@ -371,8 +371,8 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
     Register Reg = MO.getReg();
 
     // If the register is dead here and at Insert, ignore it.
-    if (MO.isDead() && Insert->definesRegister(Reg) &&
-        !Insert->readsRegister(Reg))
+    if (MO.isDead() && Insert->definesRegister(Reg, nullptr) &&
+        !Insert->readsRegister(Reg, nullptr))
       continue;
 
     if (Reg.isPhysical()) {
@@ -864,7 +864,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         if (WebAssembly::isArgument(DefI->getOpcode()))
           continue;
 
-        MachineOperand *Def = DefI->findRegisterDefOperand(Reg);
+        MachineOperand *Def = DefI->findRegisterDefOperand(Reg, nullptr);
         assert(Def != nullptr);
 
         // Decide which strategy to take. Prefer to move a single-use value

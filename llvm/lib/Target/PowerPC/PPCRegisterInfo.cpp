@@ -1013,8 +1013,8 @@ void PPCRegisterInfo::lowerCRRestore(MachineBasicBlock::iterator II,
 
   Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
   Register DestReg = MI.getOperand(0).getReg();
-  assert(MI.definesRegister(DestReg) &&
-    "RESTORE_CR does not define its destination");
+  assert(MI.definesRegister(DestReg, nullptr) &&
+         "RESTORE_CR does not define its destination");
 
   addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ),
                               Reg), FrameIndex);
@@ -1175,8 +1175,8 @@ void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,
 
   Register Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
   Register DestReg = MI.getOperand(0).getReg();
-  assert(MI.definesRegister(DestReg) &&
-    "RESTORE_CRBIT does not define its destination");
+  assert(MI.definesRegister(DestReg, nullptr) &&
+         "RESTORE_CRBIT does not define its destination");
 
   addFrameReference(BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LWZ8 : PPC::LWZ),
                               Reg), FrameIndex);
@@ -1363,7 +1363,7 @@ void PPCRegisterInfo::lowerACCRestore(MachineBasicBlock::iterator II,
   DebugLoc DL = MI.getDebugLoc();
 
   Register DestReg = MI.getOperand(0).getReg();
-  assert(MI.definesRegister(DestReg) &&
+  assert(MI.definesRegister(DestReg, nullptr) &&
          "RESTORE_ACC does not define its destination");
 
   bool IsPrimed = PPC::ACCRCRegClass.contains(DestReg);
@@ -1491,7 +1491,7 @@ void PPCRegisterInfo::lowerQuadwordRestore(MachineBasicBlock::iterator II,
   DebugLoc DL = MI.getDebugLoc();
 
   Register DestReg = MI.getOperand(0).getReg();
-  assert(MI.definesRegister(DestReg) &&
+  assert(MI.definesRegister(DestReg, nullptr) &&
          "RESTORE_QUADWORD does not define its destination");
 
   Register Reg = PPC::X0 + (DestReg - PPC::G8p0) * 2;

@@ -163,7 +163,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     MachineInstr &I = *It;
     assert(!I.isTerminator() && "Spurious terminator");
     // Check if there is any use of NZCV between CMP and Bcc.
-    if (I.readsRegister(AArch64::NZCV))
+    if (I.readsRegister(AArch64::NZCV, nullptr))
       return nullptr;
     switch (I.getOpcode()) {
     // cmp is an alias for subs with a dead destination register.

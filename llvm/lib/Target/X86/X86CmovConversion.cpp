@@ -355,7 +355,7 @@ bool X86CmovConverterPass::collectCmovCandidates(
       FoundNonCMOVInst = true;
       // Check if this instruction define EFLAGS, to determine end of processed
       // range, as there would be no more instructions using current EFLAGS def.
-      if (I.definesRegister(X86::EFLAGS)) {
+      if (I.definesRegister(X86::EFLAGS, nullptr)) {
         // Check if current processed CMOV-group should not be skipped and add
         // it as a CMOV-group-candidate.
         if (!SkipGroup)
@@ -582,7 +582,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 }
 
 static bool checkEFLAGSLive(MachineInstr *MI) {
-  if (MI->killsRegister(X86::EFLAGS))
+  if (MI->killsRegister(X86::EFLAGS, nullptr))
     return false;
 
   // The EFLAGS operand of MI might be missing a kill marker.
@@ -592,9 +592,9 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
 
   // Scan forward through BB for a use/def of EFLAGS.
   for (auto I = std::next(ItrMI), E = BB->end(); I != E; ++I) {
-    if (I->readsRegister(X86::EFLAGS))
+    if (I->readsRegister(X86::EFLAGS, nullptr))
       return true;
-    if (I->definesRegister(X86::EFLAGS))
+    if (I->definesRegister(X86::EFLAGS, nullptr))
       return false;
   }
 

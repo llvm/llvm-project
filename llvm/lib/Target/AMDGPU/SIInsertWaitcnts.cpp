@@ -2280,12 +2280,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
-          Inst.definesRegister(AMDGPU::VCC_HI)) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO, nullptr) ||
+          Inst.definesRegister(AMDGPU::VCC_HI, nullptr)) {
         // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
         if (!ST->partialVCCWritesUpdateVCCZ())
           VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC)) {
+      } else if (Inst.definesRegister(AMDGPU::VCC, nullptr)) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:

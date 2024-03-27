@@ -906,7 +906,7 @@ public:
                                         unsigned &DefOperandIdx) {
       if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
         if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
-          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def);
+          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def, nullptr);
           return Unmerge;
         }
       }

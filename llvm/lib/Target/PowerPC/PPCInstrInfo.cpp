@@ -2111,7 +2111,8 @@ bool PPCInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB)
-    if (MI.definesRegister(PPC::CTR) || MI.definesRegister(PPC::CTR8))
+    if (MI.definesRegister(PPC::CTR, nullptr) ||
+        MI.definesRegister(PPC::CTR8, nullptr))
       return true;
   return false;
 }
@@ -2717,19 +2718,19 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MI->setDesc(NewDesc);
 
     for (MCPhysReg ImpDef : NewDesc.implicit_defs()) {
-      if (!MI->definesRegister(ImpDef)) {
+      if (!MI->definesRegister(ImpDef, nullptr)) {
         MI->addOperand(*MI->getParent()->getParent(),
                        MachineOperand::CreateReg(ImpDef, true, true));
       }
     }
     for (MCPhysReg ImpUse : NewDesc.implicit_uses()) {
-      if (!MI->readsRegister(ImpUse)) {
+      if (!MI->readsRegister(ImpUse, nullptr)) {
         MI->addOperand(*MI->getParent()->getParent(),
                        MachineOperand::CreateReg(ImpUse, false, true));
       }
     }
   }
-  assert(MI->definesRegister(PPC::CR0) &&
+  assert(MI->definesRegister(PPC::CR0, nullptr) &&
          "Record-form instruction does not define cr0?");
 
   // Modify the condition code of operands in OperandsToUpdate.
@@ -2779,7 +2780,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
   bool SrcRegHasOtherUse = false;
   MachineInstr *SrcMI = getDefMIPostRA(SrcReg, CmpMI, SrcRegHasOtherUse);
-  if (!SrcMI || !SrcMI->definesRegister(SrcReg))
+  if (!SrcMI || !SrcMI->definesRegister(SrcReg, nullptr))
     return false;
 
   MachineOperand RegMO = CmpMI.getOperand(0);
@@ -2792,7 +2793,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
   bool IsCRRegKilled = false;
   if (!isRegElgibleForForwarding(RegMO, *SrcMI, CmpMI, false, IsCRRegKilled,
                                  SeenUseOfCRReg) ||
-      SrcMI->definesRegister(CRReg) || SeenUseOfCRReg)
+      SrcMI->definesRegister(CRReg, nullptr) || SeenUseOfCRReg)
     return false;
 
   int SrcMIOpc = SrcMI->getOpcode();
@@ -2809,7 +2810,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
       .addReg(CRReg, RegState::ImplicitDefine);
   SrcMI->clearRegisterDeads(CRReg);
 
-  assert(SrcMI->definesRegister(PPC::CR0) &&
+  assert(SrcMI->definesRegister(PPC::CR0, nullptr) &&
          "Record-form instruction does not define cr0?");
 
   LLVM_DEBUG(dbgs() << "with: ");
@@ -3279,7 +3280,7 @@ void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
   // result its number of explicit operands may be changed, thus the begin of
   // implicit operand is changed.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, false, TRI);
+  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, TRI, false);
   if (UseOpIdx >= 0) {
     MachineOperand &MO = MI.getOperand(UseOpIdx);
     if (MO.isImplicit())

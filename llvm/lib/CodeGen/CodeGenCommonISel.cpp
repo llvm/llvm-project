@@ -260,7 +260,7 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
       continue;
     }
 
-    int UseMOIdx = DbgMI->findRegisterUseOperandIdx(DefMO->getReg());
+    int UseMOIdx = DbgMI->findRegisterUseOperandIdx(DefMO->getReg(), nullptr);
     assert(UseMOIdx != -1 && DbgMI->hasDebugOperandForReg(DefMO->getReg()) &&
            "Must use salvaged instruction as its location");
 

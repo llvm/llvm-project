@@ -1577,7 +1577,7 @@ bool PeepholeOptimizer::findTargetRecurrence(
     return false;
 
   MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
-  unsigned Idx = MI.findRegisterUseOperandIdx(Reg);
+  unsigned Idx = MI.findRegisterUseOperandIdx(Reg, nullptr);
 
   // Only interested in recurrences whose instructions have only one def, which
   // is a virtual register.

@@ -326,7 +326,7 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
           for (unsigned j = 0; j < 2; ++j) {
             // Look at the two new MI's in reverse order.
             MachineInstr *NewMI = NewMIs[j];
-            if (!NewMI->readsRegister(Reg))
+            if (!NewMI->readsRegister(Reg, nullptr))
               continue;
             LV->addVirtualRegisterKilled(Reg, *NewMI);
             if (VI.removeKill(MI))
@@ -1732,7 +1732,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
   // or some other super-register.
-  int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD);
+  int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD, nullptr);
   if (ImpDefIdx != -1)
     MI.removeOperand(ImpDefIdx);
 
@@ -2085,7 +2085,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // Calls don't actually change the stack pointer, even if they have imp-defs.
   // No ARM calling conventions change the stack pointer. (X86 calling
   // conventions sometimes do).
-  if (!MI.isCall() && MI.definesRegister(ARM::SP))
+  if (!MI.isCall() && MI.definesRegister(ARM::SP, nullptr))
     return true;
 
   return false;
@@ -4137,7 +4137,7 @@ static const MachineInstr *getBundledDefMI(const TargetRegisterInfo *TRI,
 
   int Idx = -1;
   while (II->isInsideBundle()) {
-    Idx = II->findRegisterDefOperandIdx(Reg, false, true, TRI);
+    Idx = II->findRegisterDefOperandIdx(Reg, TRI, false, true);
     if (Idx != -1)
       break;
     --II;
@@ -4161,7 +4161,7 @@ static const MachineInstr *getBundledUseMI(const TargetRegisterInfo *TRI,
   // FIXME: This doesn't properly handle multiple uses.
   int Idx = -1;
   while (II != E && II->isInsideBundle()) {
-    Idx = II->findRegisterUseOperandIdx(Reg, false, TRI);
+    Idx = II->findRegisterUseOperandIdx(Reg, TRI, false);
     if (Idx != -1)
       break;
     if (II->getOpcode() != ARM::t2IT)
@@ -5361,7 +5361,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
   case ARM::VMOVv2i32:
   case ARM::VMOVv2f32:
   case ARM::VMOVv1i64:
-    UseOp = MI.findRegisterUseOperandIdx(Reg, false, TRI);
+    UseOp = MI.findRegisterUseOperandIdx(Reg, TRI, false);
     break;
 
     // Explicitly reads the dependency.
@@ -6092,7 +6092,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
 bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
                                                  int64_t Fixup,
                                                  bool Updt) const {
-  int SPIdx = MI->findRegisterUseOperandIdx(ARM::SP);
+  int SPIdx = MI->findRegisterUseOperandIdx(ARM::SP, nullptr);
   unsigned AddrMode = (MI->getDesc().TSFlags & ARMII::AddrModeMask);
   if (SPIdx < 0)
     // No SP operand
