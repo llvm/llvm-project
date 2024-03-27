@@ -3011,6 +3011,13 @@ def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
   let Documentation = [PreserveNoneDocs];
 }
 
+def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vector_cc">,
+                  C23<"riscv", "vector_cc">,
+                  Clang<"riscv_vector_cc">];
+ let Documentation = [RISCVVectorCCDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
