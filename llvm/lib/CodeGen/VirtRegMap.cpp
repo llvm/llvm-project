@@ -16,9 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "LiveDebugVariables.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
