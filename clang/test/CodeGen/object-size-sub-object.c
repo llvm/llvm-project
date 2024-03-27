@@ -48,7 +48,7 @@ size_t ret;
 // CHECK-NEXT:    ret i64 [[TMP1]]
 //
 size_t test1(struct test_struct *p, int idx) {
-  return __bdos(p); // 216
+  return __bdos(p); // -1
 }
 
 // CHECK-LABEL: define dso_local i64 @test2(
@@ -296,8 +296,6 @@ struct stest14 {
 // CHECK-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    ret i64 -1
 //
 size_t test14(struct stest14 *p, int idx) {

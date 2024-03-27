@@ -1055,8 +1055,13 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
 namespace {
 
-struct ObjectSizeVisitor
+class ObjectSizeVisitor
     : public ConstStmtVisitor<ObjectSizeVisitor, const Expr *> {
+  bool SkipASE;
+
+public:
+  ObjectSizeVisitor(bool SkipASE = false) : SkipASE(SkipASE) {}
+
   const Expr *Visit(const Expr *E) {
     return ConstStmtVisitor<ObjectSizeVisitor, const Expr *>::Visit(E);
   }
@@ -1065,7 +1070,9 @@ struct ObjectSizeVisitor
 
   const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
   const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
-  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) { return E; }
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return SkipASE ? Visit(E->getBase()) : E;
+  }
 
   const Expr *VisitCastExpr(const CastExpr *E) {
     return Visit(E->getSubExpr());
@@ -1083,7 +1090,7 @@ struct ObjectSizeVisitor
 
 } // end anonymous namespace
 
-/// Return the last FieldDecl in the struct.
+/// getLastDecl - Return the last FieldDecl in the struct.
 static const FieldDecl *getLastDecl(const RecordDecl *RD) {
   const Decl *LastDecl = nullptr;
   for (const Decl *D : RD->decls())
@@ -1111,25 +1118,6 @@ static const FieldDecl *getLastDecl(const RecordDecl *RD) {
 /// intrinsic. This avoids the complication in conveying the sub-object's
 /// information to the backend. This calculation works for an N-dimentional
 /// array.
-///
-/// Note that this function supports only Row-Major arrays. The generalized
-/// calculation of the offset of an element in Row-Major form:
-///
-///                     .-          -.
-///               d     |    d       |
-///              ---    |  -----     |
-///     offset = \      |   | |      |
-///              /      |   | |  N_j |  m_i
-///              ---    |   | |      |
-///             i = 1   | j = i + 1  |
-///                     `-          -'
-///
-/// where d is the number of dimensions; m_i is the index of an element in
-/// dimension i; and N_i is the size of dimention i.
-///
-/// Examples:
-///     2D: offset = m_2 + (N_2 * m_1)
-///     3D: offset = m_3 + (N_3 * m_2) + (N_3 * N_2 * m_1)
 llvm::Value *
 CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
                                              llvm::IntegerType *ResType) {
@@ -1137,43 +1125,43 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     // Only support sub-object calculation.
     return nullptr;
 
-  const Expr *ObjectBase = ObjectSizeVisitor().Visit(E);
-  if (!ObjectBase)
+  const Expr *ObjectRef = ObjectSizeVisitor().Visit(E);
+  if (!ObjectRef)
     return nullptr;
 
-  // Collect the sizes and indices from the array.
-  ASTContext &Ctx = getContext();
-  SmallVector<std::pair<Value *, Value *>, 4> Dims;
-  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(ObjectBase)) {
-    const Expr *Base = ASE;
-    const Expr *Idx = ASE->getIdx();
+  QualType ObjectRefType = ObjectRef->getType();
+  if (ObjectRefType->isPointerType())
+    ObjectRefType = ObjectRefType->getPointeeType();
 
-    if (Idx->HasSideEffects(Ctx))
-      return nullptr;
+  // Collect the base and index from the array.
+  QualType ObjectBaseRefTy;
+  const Expr *ArrayIdx = nullptr;
 
-    uint64_t BaseSize = Ctx.getTypeSizeInChars(Base->getType()).getQuantity();
-    Value *IdxSize = EmitScalarExpr(Idx);
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(ObjectRef)) {
+    ArrayIdx = ASE->getIdx()->IgnoreParenImpCasts();
 
-    Dims.emplace_back(std::make_pair(
-        Builder.CreateIntCast(Builder.getInt64(BaseSize), ResType,
-                              /*isSigned=*/true),
-        Builder.CreateIntCast(IdxSize, ResType, /*isSigned=*/true)));
-
-    ObjectBase = ASE->getBase()->IgnoreParenImpCasts();
+    const Expr *ArrayRefBase = ASE->getBase()->IgnoreParenImpCasts();
+    if (isa<ArraySubscriptExpr>(ArrayRefBase)) {
+      ObjectBaseRefTy = ArrayRefBase->getType();
+      if (ObjectBaseRefTy->isPointerType())
+        ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
+    }
   }
 
-  if (Dims.empty())
-    return nullptr;
-
-  // Rerun the visitor to find the base object: MemberExpr or DeclRefExpr.
-  ObjectBase = ObjectSizeVisitor().Visit(ObjectBase);
-  if (!ObjectBase)
+  ASTContext &Ctx = getContext();
+  if (!ArrayIdx || ArrayIdx->HasSideEffects(Ctx))
     return nullptr;
 
   // Check to see if the Decl is a flexible array member. Processing of the
   // 'counted_by' attribute is done by now. So we don't have any information on
   // its size, so return MAX_INT.
-  if (const auto *ME = dyn_cast<MemberExpr>(ObjectBase)) {
+  //
+  // Rerun the visitor to find the base expr: MemberExpr or DeclRefExpr.
+  ObjectRef = ObjectSizeVisitor(true).Visit(ObjectRef);
+  if (!ObjectRef)
+    return nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(ObjectRef)) {
     if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
       const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
           getLangOpts().getStrictFlexArraysLevel();
@@ -1188,19 +1176,38 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  uint64_t ObjectSize =
-      Ctx.getTypeSizeInChars(ObjectBase->getType()).getQuantity();
+  if (ObjectBaseRefTy.isNull()) {
+    ObjectBaseRefTy = ObjectRef->getType();
+    if (ObjectBaseRefTy->isPointerType())
+      ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
+  }
 
-  // Generate the calculation.
-  Value *Offset = Builder.CreateMul(Dims.front().first, Dims.front().second);
-  for (auto Dim : llvm::drop_begin(Dims))
-    Offset =
-        Builder.CreateAdd(Offset, Builder.CreateMul(Dim.first, Dim.second));
+  // Generate the calculation:
+  //
+  //     S Object[n_1][n_2]...[n_m]; /* M-dimentional array */
+  //
+  //     ObjectRef = Object[n_1]...[n_x]; /* 0 < x < m */
+  //     ObjectBaseRef = Object[n_1]...[n_{x-1}];
+  //
+  //     ArrayRefSize = sizeof( typeof( ObjectRef ) );
+  //     ArrayRefBaseSize = sizeof( typeof( ObjectBaseRef ) );
+  //
+  //     Size = ArrayRefSize - (ArrayRefBaseSize * ArrayIdx);
+  //     return Size > 0 ? Size : 0;
+  //
+  Value *ArrayRefSize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(ObjectRefType).getQuantity(),
+      /*isSigned=*/true);
+  Value *ArrayRefBaseSize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(ObjectBaseRefTy).getQuantity(),
+      /*isSigned=*/true);
 
-  Value *Res =
-      Builder.CreateSub(Builder.CreateIntCast(Builder.getInt64(ObjectSize),
-                                              ResType, /*isSigned=*/true),
-                        Offset);
+  Value *Res = EmitScalarExpr(ArrayIdx);
+
+  Res = Builder.CreateIntCast(Res, ResType, /*isSigned=*/true);
+  Res =
+      Builder.CreateSub(ArrayRefBaseSize, Builder.CreateMul(ArrayRefSize, Res));
+
   return Builder.CreateSelect(Builder.CreateIsNotNeg(Res), Res,
                               ConstantInt::get(ResType, 0, /*isSigned=*/true));
 }
