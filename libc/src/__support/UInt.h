@@ -41,24 +41,24 @@ template <> struct half_width<__uint128_t> : cpp::type_identity<uint64_t> {};
 template <typename T> using half_width_t = typename half_width<T>::type;
 
 // An array of two elements that can be used in multiword operations.
-template <typename T> struct Double final : cpp::array<T, 2> {
+template <typename T> struct DoubleWide final : cpp::array<T, 2> {
   using UP = cpp::array<T, 2>;
   using UP::UP;
-  LIBC_INLINE constexpr Double(T lo, T hi) : UP({lo, hi}) {}
+  LIBC_INLINE constexpr DoubleWide(T lo, T hi) : UP({lo, hi}) {}
 };
 
-// Converts an unsigned value into a Double<half_width_t<T>>.
+// Converts an unsigned value into a DoubleWide<half_width_t<T>>.
 template <typename T> LIBC_INLINE constexpr auto split(T value) {
   static_assert(cpp::is_unsigned_v<T>);
-  return cpp::bit_cast<Double<half_width_t<T>>>(value);
+  return cpp::bit_cast<DoubleWide<half_width_t<T>>>(value);
 }
 
-// The low part of a Double value.
-template <typename T> LIBC_INLINE constexpr T lo(const Double<T> &value) {
+// The low part of a DoubleWide value.
+template <typename T> LIBC_INLINE constexpr T lo(const DoubleWide<T> &value) {
   return value[0];
 }
-// The high part of a Double value.
-template <typename T> LIBC_INLINE constexpr T hi(const Double<T> &value) {
+// The high part of a DoubleWide value.
+template <typename T> LIBC_INLINE constexpr T hi(const DoubleWide<T> &value) {
   return value[1];
 }
 // The low part of an unsigned value.
@@ -70,9 +70,9 @@ template <typename T> LIBC_INLINE constexpr half_width_t<T> hi(T value) {
   return hi(split(value));
 }
 
-// Returns 'a' times 'b' in a Double<word>. Cannot overflow by construction.
+// Returns 'a' times 'b' in a DoubleWide<word>. Cannot overflow by construction.
 template <typename word>
-LIBC_INLINE constexpr Double<word> mul2(word a, word b) {
+LIBC_INLINE constexpr DoubleWide<word> mul2(word a, word b) {
   if constexpr (cpp::is_same_v<word, uint8_t>) {
     return split<uint16_t>(uint16_t(a) * uint16_t(b));
   } else if constexpr (cpp::is_same_v<word, uint16_t>) {
@@ -122,7 +122,7 @@ LIBC_INLINE constexpr Double<word> mul2(word a, word b) {
     hi_digit = add_with_carry<word>(hi_digit, shiftr(step2), carry);
     lo_digit = add_with_carry<word>(lo_digit, shiftl(step3), no_carry, &carry);
     hi_digit = add_with_carry<word>(hi_digit, shiftr(step3), carry);
-    return Double<word>(lo_digit, hi_digit);
+    return DoubleWide<word>(lo_digit, hi_digit);
   }
 }
 
