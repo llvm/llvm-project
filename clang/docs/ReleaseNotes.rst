@@ -626,6 +626,10 @@ Sanitizers
   manually disable potentially noisy signed integer overflow checks with
   ``-fno-sanitize=signed-integer-overflow``
 
+- ``-fsanitize=cfi -fsanitize-cfi-cross-dso`` (cross-DSO CFI instrumentation)
+  now generates the ``__cfi_check`` function with proper target-specific
+  attributes, for example allowing unwind table generation.
+
 Python Binding Changes
 ----------------------
 
