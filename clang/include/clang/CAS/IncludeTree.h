@@ -462,16 +462,24 @@ public:
     bool InferSubmodules : 1;
     bool InferExplicitSubmodules : 1;
     bool InferExportWildcard : 1;
+    bool UseExportAsModuleLinkName: 1;
     ModuleFlags()
         : IsFramework(false), IsExplicit(false), IsExternC(false),
           IsSystem(false), InferSubmodules(false),
-          InferExplicitSubmodules(false), InferExportWildcard(false) {}
+          InferExplicitSubmodules(false), InferExportWildcard(false),
+          UseExportAsModuleLinkName(false) {}
   };
 
   ModuleFlags getFlags() const;
 
   /// The name of the current (sub)module.
-  StringRef getName() const { return dataAfterFlags(); }
+  StringRef getName() const {
+    return dataAfterFlags().split('\0').first;
+  }
+
+  StringRef getExportAsModule() const {
+    return dataAfterFlags().split('\0').second;
+  }
 
   size_t getNumSubmodules() const;
 
@@ -505,7 +513,7 @@ public:
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
   static Expected<Module> create(ObjectStore &DB, StringRef ModuleName,
-                                 ModuleFlags Flags,
+                                 StringRef ExportAs, ModuleFlags Flags,
                                  ArrayRef<ObjectRef> Submodules,
                                  std::optional<ObjectRef> ExportList,
                                  std::optional<ObjectRef> LinkLibraries);

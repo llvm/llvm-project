@@ -585,6 +585,8 @@ static Expected<Module *> makeIncludeTreeModule(CompilerInstance &CI,
   M->InferSubmodules = Flags.InferSubmodules;
   M->InferExplicitSubmodules = Flags.InferExplicitSubmodules;
   M->InferExportWildcard = Flags.InferExportWildcard;
+  M->UseExportAsModuleLinkName = Flags.UseExportAsModuleLinkName;
+  M->ExportAsModule = Mod.getExportAsModule();
 
   auto ExportList = Mod.getExports();
   if (!ExportList)

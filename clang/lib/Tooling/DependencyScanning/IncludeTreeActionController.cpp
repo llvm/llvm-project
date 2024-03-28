@@ -546,6 +546,7 @@ getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
   Flags.InferSubmodules = M->InferSubmodules;
   Flags.InferExplicitSubmodules = M->InferExplicitSubmodules;
   Flags.InferExportWildcard = M->InferExportWildcard;
+  Flags.UseExportAsModuleLinkName = M->UseExportAsModuleLinkName;
 
   bool GlobalWildcardExport = false;
   SmallVector<ITModule::ExportList::Export> Exports;
@@ -579,8 +580,8 @@ getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
     LinkLibraries = LL->getRef();
   }
 
-  return ITModule::create(DB, M->Name, Flags, Submodules, ExportList,
-                          LinkLibraries);
+  return ITModule::create(DB, M->Name, M->ExportAsModule, Flags, Submodules,
+                          ExportList, LinkLibraries);
 }
 
 Expected<cas::IncludeTreeRoot>

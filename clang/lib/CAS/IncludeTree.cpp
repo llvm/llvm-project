@@ -333,6 +333,7 @@ static constexpr uint16_t ModuleFlagInferExplicitSubmodules = 1 << 5;
 static constexpr uint16_t ModuleFlagInferInferExportWildcard = 1 << 6;
 static constexpr uint16_t ModuleFlagHasExports = 1 << 7;
 static constexpr uint16_t ModuleFlagHasLinkLibraries = 1 << 8;
+static constexpr uint16_t ModuleFlagUseExportAsModuleLinkName = 1 << 9;
 
 IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
   uint16_t Raw = rawFlags();
@@ -344,6 +345,7 @@ IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
   Flags.InferSubmodules = Raw & ModuleFlagInferSubmodules;
   Flags.InferExplicitSubmodules = Raw & ModuleFlagInferExplicitSubmodules;
   Flags.InferExportWildcard = Raw & ModuleFlagInferInferExportWildcard;
+  Flags.UseExportAsModuleLinkName = Raw & ModuleFlagUseExportAsModuleLinkName;
   return Flags;
 }
 
@@ -372,12 +374,14 @@ llvm::Error IncludeTree::Module::forEachSubmodule(
 
 Expected<IncludeTree::Module>
 IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
-                            ModuleFlags Flags, ArrayRef<ObjectRef> Submodules,
+                            StringRef ExportAs, ModuleFlags Flags,
+                            ArrayRef<ObjectRef> Submodules,
                             std::optional<ObjectRef> ExportList,
                             std::optional<ObjectRef> LinkLibraries) {
   // Data:
   // - 2 bytes for Flags
-  // - ModuleName (String)
+  // - ModuleName (String, null-terminated)
+  // - (optional) ExportAsModule
   // Refs:
   // - Submodules (IncludeTreeModule)
   // - (optional) ExportList
@@ -402,6 +406,8 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
     RawFlags |= ModuleFlagHasExports;
   if (LinkLibraries)
     RawFlags |= ModuleFlagHasLinkLibraries;
+  if (Flags.UseExportAsModuleLinkName)
+    RawFlags |= ModuleFlagUseExportAsModuleLinkName;
 
   SmallString<64> Buffer;
   llvm::raw_svector_ostream BufOS(Buffer);
@@ -409,6 +415,8 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
   Writer.write(RawFlags);
 
   Buffer.append(ModuleName);
+  Buffer.append(StringRef("\0", 1));
+  Buffer.append(ExportAs);
 
   SmallVector<ObjectRef> Refs(Submodules);
   if (ExportList)
@@ -727,6 +735,9 @@ llvm::Error IncludeTree::Module::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (Flags.IsSystem)
     OS << " (system)";
   OS << '\n';
+  auto ExportAs = getExportAsModule();
+  if (!ExportAs.empty())
+    OS << " export_as " << ExportAs << "\n";
   if (Flags.InferSubmodules) {
     if (Flags.InferExplicitSubmodules)
       OS << "  explicit module *";
