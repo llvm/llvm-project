@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // This file contains template classes that represent OpenMP clauses, as
-// described in the OpenMP API specification v5.2.
+// described in the OpenMP API specification.
 //
 // The general structure of any specific clause class is that it is either
 // empty, or it consists of a single data member, which can take one of these
