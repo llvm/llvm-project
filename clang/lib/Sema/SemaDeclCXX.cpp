@@ -18674,11 +18674,16 @@ bool Sema::DefineUsedVTables() {
 
     bool DefineVTable = true;
 
-    // If this class has a key function, but that key function is
-    // defined in another translation unit, we don't need to emit the
-    // vtable even though we're using it.
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
-    if (KeyFunction && !KeyFunction->hasBody()) {
+    // V-tables for non-template classes with an owning module are always
+    // uniquely emitted in that module.
+    if (Class->getOwningModule() &&
+        Class->getOwningModule()->isInterfaceOrPartition())
+      DefineVTable = true;
+    else if (KeyFunction && !KeyFunction->hasBody()) {
+      // If this class has a key function, but that key function is
+      // defined in another translation unit, we don't need to emit the
+      // vtable even though we're using it.
       // The key function is in another translation unit.
       DefineVTable = false;
       TemplateSpecializationKind TSK =

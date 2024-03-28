@@ -2274,7 +2274,10 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
 
   // Lazily load the key function to avoid deserializing every method so we can
   // compute it.
-  if (WasDefinition) {
+  //
+  // The key function in named module is meaningless.
+  if (WasDefinition && (!D->getOwningModule() ||
+                        !D->getOwningModule()->isInterfaceOrPartition())) {
     DeclID KeyFn = readDeclID();
     if (KeyFn && D->isCompleteDefinition())
       // FIXME: This is wrong for the ARM ABI, where some other module may have
@@ -3234,6 +3237,14 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   if (auto *ES = D->getASTContext().getExternalSource())
     if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
       return true;
+
+  // The dynamic class defined in a named module is interesting.
+  // The code generator needs to emit its vtable there.
+  if (const auto *Class = dyn_cast<CXXRecordDecl>(D))
+    return Class->getOwningModule() &&
+           Class->getOwningModule()->isInterfaceOrPartition() &&
+           Class->getOwningModule() == Ctx.getCurrentNamedModule() &&
+           Class->getDefinition() && Class->isDynamicClass();
 
   return false;
 }
