@@ -37,8 +37,8 @@
 
 // CHECK: Macro Definitions:
 // CHECK-DAG: REDEFINE
-// CHECK-DAG: FUNC_Macro
-// CHECK-DAG: CONSTANT
+// CHECK-DAG: FUNC_Macro(X) (X+1)
+// CHECK-DAG: CONSTANT 43
 // CHECK-DAG: FOO
 // CHECK-NEXT: ===
 
@@ -46,8 +46,8 @@
 #include "foo.h"
 #undef REDEFINE
 // CHECK: Macro Definitions:
-// CHECK-DAG: CONSTANT
-// CHECK-DAG: FUNC_Macro
+// CHECK-DAG: CONSTANT 43
+// CHECK-DAG: FUNC_Macro(X) (X+1)
 // CHECK-DAG: FOO
 // CHECK-NEXT: ===
 

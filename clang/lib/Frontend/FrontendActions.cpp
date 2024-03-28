@@ -925,15 +925,44 @@ void DumpModuleInfoAction::ExecuteAction() {
 
     // Emit the macro definitions in the module file so that we can know how
     // much definitions in the module file quickly.
-    // TODO: Emit the macro definition bodies completely.
     if (auto FilteredMacros = llvm::make_filter_range(
             R->getPreprocessor().macros(),
             [](const auto &Macro) { return Macro.first->isFromAST(); });
         !FilteredMacros.empty()) {
       Out << "   Macro Definitions:\n";
       for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
-           FilteredMacros)
-        Out << "     " << Macro.first->getName() << "\n";
+           FilteredMacros) {
+        SourceManager &SM = PP.getSourceManager();
+        clang::MacroInfo *MacroInfo = PP.getMacroInfo(Macro.first);
+        if (MacroInfo) {
+          bool isInvalid = true;
+          const char *ContentStrPtr =
+              SM.getCharacterData(MacroInfo->getDefinitionLoc(), &isInvalid);
+          if (!isInvalid) {
+            int ContentLength = 0;
+            while (!(*(ContentStrPtr + ContentLength) == '\n') ||
+                   *(ContentStrPtr + ContentLength - 1) == '\\') {
+              ContentLength++;
+            }
+            std::string MacroContent =
+                std::string(ContentStrPtr, ContentLength);
+            // Replace '\\\n' with space
+            size_t pos = 0;
+            while ((pos = MacroContent.find("\\\n", pos)) !=
+                   std::string::npos) {
+              MacroContent.replace(pos, 2, " ");
+            }
+            // Merge spaces
+            auto new_end = std::unique(
+                MacroContent.begin(), MacroContent.end(),
+                [](char a, char b) { return a == ' ' && b == ' '; });
+            MacroContent.erase(new_end, MacroContent.end());
+            Out << "     " << MacroContent << '\n';
+          }
+        } else {
+          Out << "     " << Macro.first->getName() << "\n";
+        }
+      }
     }
 
     // Now let's print out any modules we did not see as part of the Primary.
