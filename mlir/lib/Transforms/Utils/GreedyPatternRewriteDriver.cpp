@@ -377,7 +377,7 @@ private:
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
   /// simplifications.
-  void addOperandsToWorklist(Operation* op);
+  void addOperandsToWorklist(Operation *op);
 
   /// Notify the driver that the given block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
@@ -688,7 +688,7 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation* op) {
+void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
   for (Value operand : op->getOperands()) {
     // If this operand was only used by the op under consideration, we re-add
     // the operation that defined it to the worklist. Indeed, if the op is about
@@ -697,8 +697,10 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation* op) {
     // TODO: if the operand has a single use besides the op under consideration,
     // there may be further canonicalization opportunities, so it should be
     // added to the worklist.
-    if (!operand) continue;
-    if (!llvm::all_of(operand.getUsers(), [&op](auto u) { return u == op; })) continue;
+    if (!operand)
+      continue;
+    if (!llvm::all_of(operand.getUsers(), [&op](auto u) { return u == op; }))
+      continue;
     if (auto *defOp = operand.getDefiningOp())
       addToWorklist(defOp);
   }
