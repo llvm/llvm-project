@@ -72,7 +72,7 @@ struct Configuration {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  bool isStatic = false;
+  bool isStatic = true;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;
