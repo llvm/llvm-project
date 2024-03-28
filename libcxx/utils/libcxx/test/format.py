@@ -281,7 +281,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             for test in self._generateGenTest(testSuite, pathInSuite, litConfig, localConfig):
                 yield test
         else:
-            print(f"{localConfig.substitutions=}")
             yield lit.Test.Test(testSuite, pathInSuite, localConfig)
 
     def execute(self, test, litConfig):
