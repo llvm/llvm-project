@@ -4379,7 +4379,8 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
     NNAttr = getNonNullAttr(AC.getDecl(), PVD, ArgType, ArgNo);
 
   bool CanCheckNullability = false;
-  if (SanOpts.has(SanitizerKind::NullabilityArg) && !NNAttr && PVD) {
+  if (SanOpts.has(SanitizerKind::NullabilityArg) && !NNAttr && PVD &&
+      !PVD->getType()->isRecordType()) {
     auto Nullability = PVD->getType()->getNullability();
     CanCheckNullability = Nullability &&
                           *Nullability == NullabilityKind::NonNull &&
