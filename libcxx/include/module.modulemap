@@ -1733,7 +1733,10 @@ module std_private_ranges_transform_view             [system] {
 }
 module std_private_ranges_view_interface             [system] { header "__ranges/view_interface.h" }
 module std_private_ranges_views                      [system] { header "__ranges/views.h" }
-module std_private_ranges_zip_view                   [system] { header "__ranges/zip_view.h" }
+module std_private_ranges_zip_view                   [system] {
+  header "__ranges/zip_view.h"
+  export std_private_utility_pair
+}
 
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
 
@@ -1813,7 +1816,10 @@ module std_private_tuple_sfinae_helpers   [system] { header "__tuple/sfinae_help
 module std_private_tuple_tuple_element    [system] { header "__tuple/tuple_element.h" }
 module std_private_tuple_tuple_fwd        [system] { header "__fwd/tuple.h" }
 module std_private_tuple_tuple_indices    [system] { header "__tuple/tuple_indices.h" }
-module std_private_tuple_tuple_like       [system] { header "__tuple/tuple_like.h" }
+module std_private_tuple_tuple_like       [system] {
+  header "__tuple/tuple_like.h"
+  export *
+}
 module std_private_tuple_tuple_like_ext   [system] { header "__tuple/tuple_like_ext.h" }
 module std_private_tuple_tuple_size       [system] { header "__tuple/tuple_size.h" }
 module std_private_tuple_tuple_types      [system] { header "__tuple/tuple_types.h" }

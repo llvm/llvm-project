@@ -440,7 +440,9 @@ private:
        tuple<_Args1...>& __first_args,
        tuple<_Args2...>& __second_args,
        __tuple_indices<_I1...>,
-       __tuple_indices<_I2...>);
+       __tuple_indices<_I2...>)
+      : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
+        second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 #endif
 };
 
