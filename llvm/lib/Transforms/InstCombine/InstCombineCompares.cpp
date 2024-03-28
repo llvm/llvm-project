@@ -7361,6 +7361,29 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
 
+    // These transform works when C is negative.
+    // X s< X^C, X s<= X^C, X u> X^C, X u>= X^C  --> X s< 0
+    // X s> X^C, X s>= X^C, X u< X^C, X u<= X^C  --> X s>= 0
+    const APInt *C;
+    if (match(Op0, m_c_Xor(m_Specific(Op1), m_APInt(C))) && C->isNegative()) {
+      CmpInst::Predicate NewPred;
+      Pred = ICmpInst::getStrictPredicate(Pred);
+      switch (Pred) {
+      default:
+        llvm_unreachable("not a valid predicate");
+      case ICmpInst::ICMP_SLT:
+      case ICmpInst::ICMP_UGT:
+        NewPred = ICmpInst::ICMP_SLT;
+        break;
+      case ICmpInst::ICMP_SGT:
+      case ICmpInst::ICMP_ULT:
+        NewPred = ICmpInst::ICMP_SGE;
+        break;
+      }
+      Constant *Const = Constant::getNullValue(Op0->getType());
+      return new ICmpInst(NewPred, Op0, Const);
+    }
+
     Instruction *AddI = nullptr;
     if (match(&I, m_UAddWithOverflow(m_Value(X), m_Value(Y),
                                      m_Instruction(AddI))) &&
