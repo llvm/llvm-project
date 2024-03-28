@@ -1375,9 +1375,7 @@ void macho::createSyntheticSections() {
       segment_names::data, section_names::data, S_REGULAR,
       ArrayRef<uint8_t>{arr, target->wordSize},
       /*align=*/target->wordSize);
-  // References from dyld are not visible to us, so ensure this section is
-  // always treated as live.
-  in.imageLoaderCache->live = true;
+  assert(in.imageLoaderCache->live);
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;
