@@ -54,3 +54,9 @@ double3 test_ceil_double3(double3 p0) { return ceil(p0); }
 // CHECK: define noundef <4 x double> @
 // CHECK: call <4 x double> @llvm.ceil.v4f64(
 double4 test_ceil_double4(double4 p0) { return ceil(p0); }
+
+int test_ceil_int(int p0)
+{
+    return ceil(p0);
+
+}

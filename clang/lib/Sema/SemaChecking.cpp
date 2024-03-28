@@ -2239,34 +2239,27 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return true;
     ICEArguments &= ~(1 << ArgNo);
   }
-  // if the call has the elementwise attribute, then
-  // make sure that an elementwise expr is emitted.
+  // If the call has the elementwise attribute, then
+  // set up the call to the correct element type.
+  // We need the switch statement below because 
+  // certain builtins have certain restrictions.
   if (FDecl->hasAttr<ElementwiseBuiltinAliasAttr>()) {
     switch (FDecl->getNumParams()) {
     case 1: {
       if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
-        return ExprError();
-
-      QualType ArgTy = TheCall->getArg(0)->getType();
-      if (checkFPMathBuiltinElementType(
-              *this, TheCall->getArg(0)->getBeginLoc(), ArgTy, 1))
-        return ExprError();
+        return ExprError();     
       break;
     }
     case 2: {
       if (SemaBuiltinElementwiseMath(TheCall))
-        return ExprError();
-
-      QualType ArgTy = TheCall->getArg(0)->getType();
-      if (checkFPMathBuiltinElementType(
-              *this, TheCall->getArg(0)->getBeginLoc(), ArgTy, 1) ||
-          checkFPMathBuiltinElementType(
-              *this, TheCall->getArg(1)->getBeginLoc(), ArgTy, 2))
-        return ExprError();
+        return ExprError();      
       break;
     }
     case 3: {
-      if (SemaBuiltinElementwiseTernaryMath(TheCall))
+      if (SemaBuiltinElementwiseTernaryMath(
+              TheCall,
+              /*CheckForFloatArgs*/
+              TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
         return ExprError();
       break;
     }
