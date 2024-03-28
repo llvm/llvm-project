@@ -347,9 +347,19 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
         // probabilities as if there are only 0-trip and 1-trip cases.
         ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
       }
+    } else {
+      // Theoretically, if the loop body must be executed at least once, the
+      // backedge count must be not less than exit count. However the branch
+      // weight collected by sampling-based PGO may be not very accurate due to
+      // sampling. Therefore this workaround is required here to avoid underflow
+      // of unsigned in following update of branch weight.
+      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+        OrigLoopBackedgeWeight = OrigLoopExitWeight;
     }
+    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
     ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
     EnterWeight = ExitWeight1;
+    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
     LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
   } else if (OrigLoopExitWeight == 0) {
     if (OrigLoopBackedgeWeight == 0) {
