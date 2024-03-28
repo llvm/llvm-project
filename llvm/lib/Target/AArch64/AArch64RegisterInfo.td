@@ -1004,6 +1004,27 @@ let Namespace = "AArch64" in {
   def psub1 : SubRegIndex<16, -1>;
 }
 
+class PPRorPNRClass : RegisterClass<
+                                  "AArch64",
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
+                                  (add PPR, PNR)> {
+  let Size = 16;
+}
+
+class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addPPRorPNRRegOperands";
+  let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
+}
+
+def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
+def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
+
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;
 

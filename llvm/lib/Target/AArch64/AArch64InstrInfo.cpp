@@ -4818,13 +4818,9 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
       assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
-      if (SrcReg.isVirtual()) {
-        auto NewSrcReg =
-            MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
-        BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), NewSrcReg)
-            .addReg(SrcReg);
-        SrcReg = NewSrcReg;
-      } else
+      if (SrcReg.isVirtual())
+        MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::PPRRegClass);
+      else
         SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
@@ -5003,7 +4999,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
              "Unexpected register load without SVE2p1 or SME2");
       PNRReg = DestReg;
       if (DestReg.isVirtual())
-        DestReg = MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
+        MF.getRegInfo().constrainRegClass(DestReg, &AArch64::PPRRegClass);
       else
         DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::LDR_PXI;
