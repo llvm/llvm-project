@@ -787,6 +787,19 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   const Align Alignment = getGVAlignment(GV, DL);
 
+  // Identify globals with "SanitizedPaddedGlobal" attribute and extract
+  // the actual global variable size.
+  uint64_t ActualSize = 0;
+  if (GV->hasAttribute(Attribute::SanitizedPaddedGlobal)) {
+    StructType *ST = dyn_cast<StructType>(GV->getValueType());
+    if (ST && ST->getNumElements() == 2) {
+      auto *ET0 = ST->getElementType(0);
+      if (ET0 && isa<ArrayType>(ST->getElementType(1))) {
+        ActualSize = DL.getTypeAllocSize(ET0);
+      }
+    }
+  }
+
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
                        HI.TimerGroupName, HI.TimerGroupDescription,
@@ -897,6 +910,18 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   MCSymbol *EmittedInitSym = GVSym;
 
+  if (GV->hasAttribute(Attribute::SanitizedPaddedGlobal)) {
+    OutStreamer->switchSection(TheSection);
+    emitLinkage(GV, EmittedInitSym);
+    OutStreamer->emitLabel(EmittedInitSym);
+    if (MAI->hasDotTypeDotSizeDirective())
+      OutStreamer->emitELFSize(EmittedInitSym,
+                               MCConstantExpr::create(ActualSize, OutContext));
+    EmittedInitSym = OutContext.getOrCreateSymbol(
+        GVSym->getName() + Twine("__sanitized_padded_global"));
+    emitVisibility(EmittedInitSym, GV->getVisibility(), !GV->isDeclaration());
+  }
+
   OutStreamer->switchSection(TheSection);
 
   emitLinkage(GV, EmittedInitSym);
@@ -904,7 +929,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   OutStreamer->emitLabel(EmittedInitSym);
   MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
-  if (LocalAlias != EmittedInitSym)
+  if ((LocalAlias != EmittedInitSym) &&
+      !GV->hasAttribute(Attribute::SanitizedPaddedGlobal))
     OutStreamer->emitLabel(LocalAlias);
 
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
