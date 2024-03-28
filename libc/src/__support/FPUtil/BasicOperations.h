@@ -191,8 +191,8 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     //            |   Bit 63   | Bits 62-0 |
     // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
     //            |            |           | (−1)**s × m × 2**−16382
-    // All Other  |   Zero     | Anything  | Unnormal, Value =
-    //  Values    |            |           | (−1)**s × m × 2**−16382
+    // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
+    //  Values    |            |           |
     bool bit63 = sx.get_implicit_bit();
     UInt128 mantissa = sx.get_explicit_mantissa();
     bool bit62 = static_cast<bool>((mantissa & (1ULL << 62)) >> 62);
@@ -203,11 +203,10 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
           cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
           raise_except_if_required(FE_INVALID);
           return 1;
-        } else {
-          cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
-          raise_except_if_required(FE_INVALID);
-          return 1;
         }
+        cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+        raise_except_if_required(FE_INVALID);
+        return 1;
       } else if (!bit63 && bit62) {
         cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
         raise_except_if_required(FE_INVALID);
@@ -221,9 +220,11 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
         cx = x;
     } else if (exponent == 0 && bit63)
       cx = FPBits<T>::make_value(mantissa, 0).get_val();
-    else if (exponent != 0 && !bit63)
-      cx = FPBits<T>::make_value(mantissa, 0).get_val();
-    else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
+    else if (exponent != 0 && !bit63) {
+      cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+      raise_except_if_required(FE_INVALID);
+      return 1;
+    } else if (LIBC_UNLIKELY(sx.is_signaling_nan())) {
       cx =
           FPBits<T>::quiet_nan(sx.sign(), sx.get_explicit_mantissa()).get_val();
       raise_except_if_required(FE_INVALID);

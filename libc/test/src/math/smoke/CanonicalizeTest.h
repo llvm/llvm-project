@@ -135,44 +135,38 @@ public:
 
       // Exponent   |       Significand      | Meaning
       //            |   Bit 63   | Bits 62-0 |
-      // All Other  |   Zero     | Anything  | Unnormal, Value =
-      //  Values    |            |           | (−1)**s × m × 2**−16382
+      // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
+      //  Values    |            |           |
 
       FPBits test5_1(UInt128(0x0000000000000001));
       const T test5_1_val = test5_1.get_val();
-      TEST_SPECIAL(cx, test5_1_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_1.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_1_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       FPBits test5_2(UInt128(0x0000004270000001));
       const T test5_2_val = test5_2.get_val();
-      TEST_SPECIAL(cx, test5_2_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_2.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_2_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       FPBits test5_3(UInt128(0x0000000008261001));
       const T test5_3_val = test5_3.get_val();
-      TEST_SPECIAL(cx, test5_3_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_3.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_3_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       FPBits test5_4(UInt128(0x0000002816000000));
       const T test5_4_val = test5_4.get_val();
-      TEST_SPECIAL(cx, test5_4_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_4.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_4_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       FPBits test5_5(UInt128(0x0000004270000001));
       const T test5_5_val = test5_5.get_val();
-      TEST_SPECIAL(cx, test5_5_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_5.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_5_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       FPBits test5_6(UInt128(0x0000000008261001));
       const T test5_6_val = test5_6.get_val();
-      TEST_SPECIAL(cx, test5_6_val, 0, 0);
-      EXPECT_FP_EQ(
-          cx, FPBits::make_value(test5_6.get_explicit_mantissa(), 0).get_val());
+      TEST_SPECIAL(cx, test5_6_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
     }
   }
 
