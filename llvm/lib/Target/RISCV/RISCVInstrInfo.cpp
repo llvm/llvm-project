@@ -2050,6 +2050,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RVKRNUM_2_14:
           Ok = Imm >= 2 && Imm <= 14;
           break;
+        case RISCVOp::OPERAND_SPIMM:
+          Ok = (Imm & 0xf) == 0;
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
