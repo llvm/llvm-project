@@ -1990,6 +1990,19 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   }
 }
 
+void TextNodeDumper::VisitCXXDeductionGuideDecl(
+    const CXXDeductionGuideDecl *D) {
+  VisitFunctionDecl(D);
+  switch (D->getDeductionCandidateKind()) {
+  case DeductionCandidate::Normal:
+  case DeductionCandidate::Copy:
+    return;
+  case DeductionCandidate::Aggregate:
+    OS << " aggregate ";
+    break;
+  }
+}
+
 void TextNodeDumper::VisitLifetimeExtendedTemporaryDecl(
     const LifetimeExtendedTemporaryDecl *D) {
   OS << " extended by ";
