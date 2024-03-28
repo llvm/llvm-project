@@ -51,8 +51,3 @@ else()
   libomptarget_say("Not generating NVIDIA tests, no supported devices detected."
                    " Use 'LIBOMPTARGET_FORCE_NVIDIA_TESTS' to override.")
 endif()
-
-# Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.cuda PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")

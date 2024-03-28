@@ -3064,10 +3064,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // HSA functions from now on, e.g., hsa_shut_down.
     Initialized = true;
 
-#ifdef OMPT_SUPPORT
-    ompt::connectLibrary();
-#endif
-
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
     if (auto Err = Plugin::check(
@@ -3154,6 +3150,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
@@ -3387,8 +3385,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-GenericPluginTy *PluginTy::createPlugin() { return new AMDGPUPluginTy(); }
-
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   hsa_status_t ResultCode = static_cast<hsa_status_t>(Code);
@@ -3476,3 +3472,9 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_amdgpu() {
+  return new llvm::omp::target::plugin::AMDGPUPluginTy();
+}
+}

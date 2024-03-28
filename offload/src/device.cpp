@@ -64,7 +64,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
       MappingInfo(*this) {}
 
@@ -192,7 +192,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   if (!AsyncInfo) {
-    assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
   }
