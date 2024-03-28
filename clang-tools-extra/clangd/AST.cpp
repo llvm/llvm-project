@@ -1019,5 +1019,14 @@ bool isExpandedFromParameterPack(const ParmVarDecl *D) {
   return getUnderlyingPackType(D) != nullptr;
 }
 
+std::optional<URI> toURI(OptionalFileEntryRef File) {
+  if (!File)
+    return std::nullopt;
+  auto AbsolutePath = File->getFileEntry().tryGetRealPathName();
+  if (AbsolutePath.empty())
+    return std::nullopt;
+  return URI::create(AbsolutePath);
+}
+
 } // namespace clangd
 } // namespace clang

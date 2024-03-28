@@ -1637,6 +1637,28 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
                         ExpectedHint{": static_vector<int>", "vector_name"});
 }
 
+TEST(TypeHints, Links) {
+  TestTU TU = TestTU::withCode(R"cpp(
+struct S {};
+template <class T, unsigned V, class... U>
+struct W {
+};
+enum Kind {
+  K = 1,
+};
+namespace std {
+template <class E> struct vector {};
+template <> struct vector<bool> {};
+} // namespace std
+int main() {
+  auto v = std::vector<bool>();
+})cpp");
+  TU.ExtraArgs.push_back("-std=c++2c");
+  auto AST = TU.build();
+
+  hintsOfKind(AST, InlayHintKind::Type);
+}
+
 TEST(DesignatorHints, Basic) {
   assertDesignatorHints(R"cpp(
     struct S { int x, y, z; };
