@@ -457,6 +457,54 @@ struct BinaryOpc_match {
   }
 };
 
+template <typename LHS_t, typename RHS_t, bool Commutable = false>
+struct AnyBinaryOp_match {
+  LHS_t LHS;
+  RHS_t RHS;
+  unsigned Opcode;
+
+  AnyBinaryOp_match(const LHS_t &L, const RHS_t &R) : LHS(L), RHS(R) {}
+
+  AnyBinaryOp_match(unsigned Opc, const LHS_t &L, const RHS_t &R)
+      : LHS(L), RHS(R), Opcode(Opc) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    assert(Ctx.getTLI() && "TargetLowering is required for this pattern");
+    if ((Ctx.getTLI()->isBinOp(N->getOpcode()) ||
+         (Commutable && Ctx.getTLI()->isCommutativeBinOp(N->getOpcode())))) {
+      return ((LHS.match(Ctx, N->getOperand(0)) &&
+               RHS.match(Ctx, N->getOperand(1))) ||
+              (Commutable && LHS.match(Ctx, N->getOperand(1)) &&
+               RHS.match(Ctx, N->getOperand(0))));
+    }
+
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, false> m_AnyBinOp(const LHS &L,
+                                                     const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, false>(L, R);
+}
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, true> m_c_AnyBinOp(const LHS &L,
+                                                      const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, false> m_AnyBinOp(unsigned Opc, const LHS &L,
+                                                     const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, false>(Opc, L, R);
+}
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, true>
+m_c_AnyBinOp(unsigned Opc, const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, true>(Opc, L, R);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, false> m_BinOp(unsigned Opc, const LHS &L,
                                                 const RHS &R) {
