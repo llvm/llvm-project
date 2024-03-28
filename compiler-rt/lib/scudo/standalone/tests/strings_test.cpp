@@ -142,7 +142,6 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
   rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
 
-#if !SCUDO_ANDROID
   // qemu does not honor the setrlimit, so verify before proceeding.
   void *ptr = mmap(nullptr, 100, PROT_READ | PROT_WRITE,
                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
@@ -151,7 +150,6 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
     setrlimit(RLIMIT_AS, &Limit);
     GTEST_SKIP() << "Limiting address space does not prevent mmap.";
   }
-#endif
 
   // Test requires that the default length is at least 6 characters.
   scudo::uptr MaxSize = Str.capacity();
