@@ -249,7 +249,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
           .legalForTypesWithMemDesc({{s32, p0, s8, 8},
                                      {s32, p0, s16, 16},
                                      {s32, p0, s32, 32},
-                                     {p0, p0, sXLen, XLen}});
+                                     {p0, p0, sXLen, XLen},
+                                     {nxv1s8, p0, nxv1s8, 8},
+                                     {nxv2s8, p0, nxv2s8, 8},
+                                     {nxv4s8, p0, nxv4s8, 8},
+                                     {nxv8s8, p0, nxv8s8, 8},
+                                     {nxv16s8, p0, nxv16s8, 8}})
+          .widenScalarToNextPow2(0, /* MinSize = */ 8)
+          .lowerIfMemSizeNotByteSizePow2();
+
   auto &ExtLoadActions =
       getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
           .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
