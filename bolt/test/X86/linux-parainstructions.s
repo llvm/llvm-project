@@ -8,7 +8,7 @@
 
 ## Verify paravirtual bindings to instructions.
 
-# RUN: llvm-bolt %t.exe --print-normalized -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized -o %t.out --keep-nops=0 | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 paravirtual patch sites

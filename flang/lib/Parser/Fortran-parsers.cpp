@@ -1261,24 +1261,27 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // Directives, extensions, and deprecated statements
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
-// !DIR$ name...
+// !DIR$ name[=value] [, name[=value]]...
+// !DIR$ <anything else>
 constexpr auto ignore_tkr{
-    "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
-                             maybe(parenthesized(many(letter))), name))};
+    "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
+                        maybe(parenthesized(many(letter))), name))};
 constexpr auto loopCount{
-    "DIR$ LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
-                             parenthesized(nonemptyList(digitString64)))};
-constexpr auto assumeAligned{"DIR$ ASSUME_ALIGNED" >>
+    "LOOP COUNT" >> construct<CompilerDirective::LoopCount>(
+                        parenthesized(nonemptyList(digitString64)))};
+constexpr auto assumeAligned{"ASSUME_ALIGNED" >>
     optionalList(construct<CompilerDirective::AssumeAligned>(
         indirect(designator), ":"_tok >> digitString64))};
-TYPE_PARSER(beginDirective >>
-    sourced(construct<CompilerDirective>(ignore_tkr) ||
-        construct<CompilerDirective>(loopCount) ||
-        construct<CompilerDirective>(assumeAligned) ||
-        construct<CompilerDirective>(
-            "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
-                          maybe(("="_tok || ":"_tok) >> digitString64))))) /
-        endOfStmt)
+TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+    sourced((construct<CompilerDirective>(ignore_tkr) ||
+                construct<CompilerDirective>(loopCount) ||
+                construct<CompilerDirective>(assumeAligned) ||
+                construct<CompilerDirective>(
+                    many(construct<CompilerDirective::NameValue>(
+                        name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
+            endOfStmt ||
+        construct<CompilerDirective>(pure<CompilerDirective::Unrecognized>()) /
+            SkipTo<'\n'>{}))
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
     "nonstandard usage: based POINTER"_port_en_US,

@@ -81,3 +81,11 @@ The C standard does not specify behavior for ``printf("%s", NULL)``. We will
 print the string literal ``(null)`` unless using the 
 ``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
 behavior<printf_behavior>`.
+
+Unknown Math Rounding Direction
+-------------------------------
+The C23 standard states that if the value of the ``rnd`` argument of the
+``fromfp``, ``ufromfp``, ``fromfpx`` and ``ufromfpx`` functions is not equal to
+the value of a math rounding direction macro, the direction of rounding is
+unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
+direction in this case.

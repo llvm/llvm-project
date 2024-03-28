@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_SIGSET_T_H
 #define LLVM_LIBC_TYPES_SIGSET_T_H
 
-#include <llvm-libc-macros/signal-macros.h>
+#include "llvm-libc-macros/signal-macros.h"
 
 // This definition can be adjusted/specialized for different targets and
 // platforms as necessary. This definition works for Linux on most targets.

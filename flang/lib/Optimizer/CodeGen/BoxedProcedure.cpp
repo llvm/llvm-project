@@ -69,17 +69,32 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::is_contained(visitedTypes, recTy))
-        return false;
+      auto visited = visitedTypes.find(ty);
+      if (visited != visitedTypes.end())
+        return visited->second;
+      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
+      assert(newIt.second && "expected ty to not be in the map");
+      bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
+      needConversionIsVisitingRecordType = true;
       bool result = false;
-      visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
         if (needsConversion(t.second)) {
           result = true;
           break;
         }
       }
-      visitedTypes.pop_back();
+      // Only keep the result cached if the fir.type visited was a "top-level
+      // type". Nested types with a recursive reference to the "top-level type"
+      // may incorrectly have been resolved as not needed conversions because it
+      // had not been determined yet if the "top-level type" needed conversion.
+      // This is not an issue to determine the "top-level type" need of
+      // conversion, but the result should not be kept and later used in other
+      // contexts.
+      needConversionIsVisitingRecordType = wasAlreadyVisitingRecordType;
+      if (needConversionIsVisitingRecordType)
+        visitedTypes.erase(ty);
+      else
+        visitedTypes.find(ty)->second = result;
       return result;
     }
     if (auto boxTy = ty.dyn_cast<BaseBoxType>())
@@ -139,10 +154,8 @@ public:
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
-      auto it = convertedTypes.try_emplace(ty, rec);
-      if (!it.second) {
-        llvm::errs() << "failed\n" << ty << "\n";
-      }
+      [[maybe_unused]] auto it = convertedTypes.try_emplace(ty, rec);
+      assert(it.second && "expected ty to not be in the map");
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -171,11 +184,12 @@ public:
   void setLocation(mlir::Location location) { loc = location; }
 
 private:
-  llvm::SmallVector<mlir::Type> visitedTypes;
-  // Map to deal with recursive derived types (avoid infinite loops).
+  // Maps to deal with recursive derived types (avoid infinite loops).
   // Caching is also beneficial for apps with big types (dozens of
   // components and or parent types), so the lifetime of the cache
   // is the whole pass.
+  llvm::DenseMap<mlir::Type, bool> visitedTypes;
+  bool needConversionIsVisitingRecordType = false;
   llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };

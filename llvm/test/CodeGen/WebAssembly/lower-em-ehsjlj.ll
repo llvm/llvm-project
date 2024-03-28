@@ -22,10 +22,8 @@ entry:
           to label %try.cont unwind label %lpad
 
 ; CHECK:    entry.split.split:
-; CHECK:      %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
-; CHECK-NEXT: %__threwValue.val = load i32, ptr @__threwValue
-; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %__threwValue.val, 0
-; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
+; CHECK:      %__threwValue.val = load i32, ptr @__threwValue
+; CHECK-NEXT: %[[CMP:.*]] = icmp ne i32 %__THREW__.val, 0
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; This is exception checking part. %if.else1 leads here
@@ -49,7 +47,7 @@ try.cont:                                         ; preds = %lpad, %entry
 
 ; longjmp checking part
 ; CHECK:    if.then1:
-; CHECK:      call i32 @testSetjmp
+; CHECK:      call i32 @__wasm_setjmp_test
 }
 
 ; @foo can either throw an exception or longjmp. Because this function doesn't
@@ -117,11 +115,11 @@ if.end:                                           ; preds = %entry
 
 ; CHECK:    rethrow.exn:
 ; CHECK-NEXT: %exn = call ptr @__cxa_find_matching_catch_2()
-; CHECK-NEXT: call void @free(ptr %setjmpTable{{.*}})
 ; CHECK-NEXT: call void @__resumeException(ptr %exn)
 ; CHECK-NEXT: unreachable
 
 ; CHECK:    normal:
+; CHECK-NEXT: %__threwValue.val = load i32, ptr @__threwValue, align 4
 ; CHECK-NEXT: icmp ne i32 %__THREW__.val, 0
 
 return:                                           ; preds = %if.end, %entry
@@ -147,7 +145,6 @@ throw:                                            ; preds = %if.end, %entry
   unreachable
 
 ; CHECK:    throw:
-; CHECK-NEXT: call void @free(ptr %setjmpTable{{.*}})
 ; CHECK-NEXT: call void @__cxa_throw(ptr null, ptr null, ptr null)
 ; CHECK-NEXT: unreachable
 }
@@ -208,7 +205,6 @@ return:                                           ; preds = %entry, %if.end
 
 ; CHECK:    rethrow.exn:
 ; CHECK-NEXT: %exn = call ptr @__cxa_find_matching_catch_2()
-; CHECK-NEXT: tail call void @free(ptr %setjmpTable{{.*}})
 ; CHECK-NEXT: call void @__resumeException(ptr %exn)
 ; CHECK-NEXT: unreachable
 }

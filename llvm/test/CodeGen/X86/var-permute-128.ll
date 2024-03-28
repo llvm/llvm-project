@@ -1101,17 +1101,13 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 define void @indices_convert() {
 ; SSE3-LABEL: indices_convert:
 ; SSE3:       # %bb.0: # %bb
-; SSE3-NEXT:    movdqa (%rax), %xmm0
-; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE3-NEXT:    movd %xmm1, %eax
-; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movaps (%rax), %xmm0
+; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movl (%rax), %eax
+; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
-; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; SSE3-NEXT:    movd %xmm1, %ecx
-; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE3-NEXT:    andl $3, %ecx
 ; SSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE3-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
@@ -1120,17 +1116,13 @@ define void @indices_convert() {
 ;
 ; SSSE3-LABEL: indices_convert:
 ; SSSE3:       # %bb.0: # %bb
-; SSSE3-NEXT:    movdqa (%rax), %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSSE3-NEXT:    movd %xmm1, %eax
-; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movaps (%rax), %xmm0
+; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movl (%rax), %eax
+; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    andl $3, %eax
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
-; SSSE3-NEXT:    movd %xmm1, %ecx
-; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    andl $3, %ecx
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]

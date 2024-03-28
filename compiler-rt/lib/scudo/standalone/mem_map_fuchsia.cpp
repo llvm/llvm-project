@@ -22,11 +22,10 @@ namespace scudo {
 
 static void NORETURN dieOnError(zx_status_t Status, const char *FnName,
                                 uptr Size) {
-  char Error[128];
-  formatString(Error, sizeof(Error),
-               "SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
+  ScopedString Error;
+  Error.append("SCUDO ERROR: %s failed with size %zuKB (%s)", FnName,
                Size >> 10, _zx_status_get_string(Status));
-  outputRaw(Error);
+  outputRaw(Error.data());
   die();
 }
 

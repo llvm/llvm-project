@@ -62,6 +62,26 @@ add_entrypoint_object(
     .str_from_util
 )
 
+add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+  DEPENDS
+    .str_from_util
+)
+
 add_header_library(
   str_from_util
   HDRS
@@ -394,10 +414,11 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.fixedvector
-    libc.src.__support.blockstore
-    libc.src.__support.threads.mutex
     libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.blockstore
+    libc.src.__support.fixedvector
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(

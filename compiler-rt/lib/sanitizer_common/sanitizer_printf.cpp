@@ -54,7 +54,7 @@ static int AppendNumber(char **buff, const char *buff_end, u64 absolute_value,
   uptr num_buffer[kMaxLen];
   int pos = 0;
   do {
-    RAW_CHECK_MSG((uptr)pos < kMaxLen, "AppendNumber buffer overflow");
+    RAW_CHECK_MSG((uptr)pos < kMaxLen, "AppendNumber buffer overflow",);
     num_buffer[pos++] = absolute_value % base;
     absolute_value /= base;
   } while (absolute_value > 0);

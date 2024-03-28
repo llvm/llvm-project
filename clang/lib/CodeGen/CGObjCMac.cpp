@@ -2501,12 +2501,12 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
 
     if (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
       auto *CArray = cast<ConstantArrayType>(Array);
-      uint64_t ElCount = CArray->getSize().getZExtValue();
+      uint64_t ElCount = CArray->getZExtSize();
       assert(CArray && "only array with known element size is supported");
       FQT = CArray->getElementType();
       while (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
         auto *CArray = cast<ConstantArrayType>(Array);
-        ElCount *= CArray->getSize().getZExtValue();
+        ElCount *= CArray->getZExtSize();
         FQT = CArray->getElementType();
       }
       if (FQT->isRecordType() && ElCount) {
@@ -5326,7 +5326,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
   }
   // Unlike incomplete arrays, constant arrays can be nested.
   while (auto arrayType = CGM.getContext().getAsConstantArrayType(fieldType)) {
-    numElts *= arrayType->getSize().getZExtValue();
+    numElts *= arrayType->getZExtSize();
     fieldType = arrayType->getElementType();
   }
 

@@ -18,6 +18,7 @@ namespace Fortran::runtime {
 
 class Terminator;
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
 #if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
 #elif FLANG_LITTLE_ENDIAN
@@ -25,6 +26,7 @@ constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
 #endif
+RT_OFFLOAD_VAR_GROUP_END
 
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };

@@ -626,8 +626,11 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          MachineTypes Machine, bool MinGW,
                          ArrayRef<COFFShortExport> NativeExports) {
 
-  MachineTypes NativeMachine =
-      isArm64EC(Machine) ? IMAGE_FILE_MACHINE_ARM64 : Machine;
+  MachineTypes NativeMachine = Machine;
+  if (isArm64EC(Machine)) {
+    NativeMachine = IMAGE_FILE_MACHINE_ARM64;
+    Machine = IMAGE_FILE_MACHINE_ARM64EC;
+  }
 
   std::vector<NewArchiveMember> Members;
   ObjectFactory OF(llvm::sys::path::filename(ImportName), NativeMachine);
@@ -687,12 +690,12 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       if (ImportType == IMPORT_CODE && isArm64EC(M)) {
         if (std::optional<std::string> MangledName =
                 getArm64ECMangledFunctionName(Name)) {
-          if (ExportName.empty()) {
+          if (!E.Noname && ExportName.empty()) {
             NameType = IMPORT_NAME_EXPORTAS;
             ExportName.swap(Name);
           }
           Name = std::move(*MangledName);
-        } else if (ExportName.empty()) {
+        } else if (!E.Noname && ExportName.empty()) {
           NameType = IMPORT_NAME_EXPORTAS;
           ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
         }

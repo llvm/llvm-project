@@ -10,7 +10,6 @@
 
 #include "src/__support/CPP/type_traits/remove_reference.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE::cpp {
 

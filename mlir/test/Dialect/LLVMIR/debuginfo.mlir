@@ -96,11 +96,10 @@
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
 >
 
-// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[COMP2]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE1]]>
+// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<scope = #[[COMP2]], file = #[[FILE]], type = #[[SPTYPE1]]>
 #sp1 = #llvm.di_subprogram<
-  // Omit the optional linkageName parameter.
-  compileUnit = #cu, scope = #comp2, name = "value",
-  file = #file, subprogramFlags = "Definition", type = #spType1
+  // Omit the optional parameters.
+  scope = #comp2, file = #file, type = #spType1
 >
 
 // CHECK-DAG: #[[MODULE:.*]] = #llvm.di_module<file = #[[FILE]], scope = #[[FILE]], name = "module", configMacros = "bar", includePath = "/", apinotes = "/", line = 42, isDecl = true>
@@ -112,7 +111,6 @@
 
 // CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
 #sp2 = #llvm.di_subprogram<
-  // Omit the optional linkageName parameter.
   compileUnit = #cu, scope = #module, name = "value",
   file = #file, subprogramFlags = "Definition", type = #spType2
 >

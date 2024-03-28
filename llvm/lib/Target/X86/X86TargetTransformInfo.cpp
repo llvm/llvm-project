@@ -1480,6 +1480,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // Recognize a basic concat_vector shuffle.
+  if (Kind == TTI::SK_PermuteTwoSrc &&
+      Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
+      ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    return getShuffleCost(TTI::SK_InsertSubvector,
+                          VectorType::getDoubleElementsVectorType(BaseTp), Mask,
+                          CostKind, Mask.size() / 2, BaseTp);
+
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
@@ -5651,7 +5659,7 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;

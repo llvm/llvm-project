@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -105,7 +106,14 @@ template <typename T> struct FPTest : public Test {
   const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
   const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
   const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
-  const T max_denormal = FPBits::max_subnormal().get_val();
+  const T max_denormal = FPBits::max_subnormal().get_val();                    \
+  static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
+  static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
+      MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
+          FP_INT_UPWARD,     FP_INT_DOWNWARD,                                  \
+          FP_INT_TOWARDZERO, FP_INT_TONEARESTFROMZERO,                         \
+          FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
+  };
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \

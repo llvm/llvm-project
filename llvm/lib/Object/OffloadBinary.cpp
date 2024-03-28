@@ -189,7 +189,10 @@ OffloadBinary::create(MemoryBufferRef Buf) {
     return errorCodeToError(object_error::parse_failed);
 
   if (TheHeader->Size > Buf.getBufferSize() ||
-      TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
+      TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
+    return errorCodeToError(object_error::unexpected_eof);
+
+  if (TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
       TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 

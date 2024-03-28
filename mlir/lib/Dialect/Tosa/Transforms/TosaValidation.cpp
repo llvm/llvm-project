@@ -410,6 +410,8 @@ private:
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
 
+  bool isValidElementType(Type type);
+
   SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
@@ -503,15 +505,58 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
   return success();
 }
 
+bool TosaValidation::isValidElementType(Type type) {
+  if ((profile == TosaProfileEnum::BaseInference) && isa<FloatType>(type)) {
+    return false;
+  }
+  if (type.isF64()) {
+    return false;
+  }
+  if (auto intTy = dyn_cast<IntegerType>(type)) {
+    if (intTy.isUnsigned()) {
+      switch (intTy.getWidth()) {
+      case 8:
+      case 16:
+        return true;
+      default:
+        return false;
+      }
+    } else {
+      // Signless - treated as signed.
+      switch (intTy.getWidth()) {
+      case 1:
+      case 4:
+      case 8:
+      case 16:
+      case 32:
+      case 48:
+      case 64:
+        return true;
+      default:
+        return false;
+      }
+    }
+    return false;
+  }
+  return true;
+}
+
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
   getOperation().walk([&](Operation *op) {
     for (Value operand : op->getOperands()) {
-      if ((profile == TosaProfileEnum::BaseInference) &&
-          isa<FloatType>(getElementTypeOrSelf(operand))) {
+      auto elementTy = getElementTypeOrSelf(operand);
+      if (!isValidElementType(elementTy)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
-      if (getElementTypeOrSelf(operand).isF64()) {
+    }
+    for (Type resultTy : op->getResultTypes()) {
+      auto elementTy = getElementTypeOrSelf(resultTy);
+      if (!isValidElementType(elementTy)) {
+        op->emitOpError() << "is not profile-aligned: element type "
+                          << elementTy << " is not legal";
         return signalPassFailure();
       }
     }

@@ -190,4 +190,52 @@ void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights) {
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
+void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
+  assert(T != 0 && "Caller should guarantee");
+  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
+  if (ProfileData == nullptr)
+    return;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
+                        !ProfDataName->getString().equals("VP")))
+    return;
+
+  LLVMContext &C = I.getContext();
+
+  MDBuilder MDB(C);
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfileData->getOperand(0));
+  APInt APS(128, S), APT(128, T);
+  if (ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 0) {
+    // Using APInt::div may be expensive, but most cases should fit 64 bits.
+    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
+                       ->getValue()
+                       .getZExtValue());
+    Val *= APS;
+    Vals.push_back(MDB.createConstant(ConstantInt::get(
+        Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));
+  } else if (ProfDataName->getString().equals("VP"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+      // The first value is the key of the value profile, which will not change.
+      Vals.push_back(ProfileData->getOperand(i));
+      uint64_t Count =
+          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+              ->getValue()
+              .getZExtValue();
+      // Don't scale the magic number.
+      if (Count == NOMORE_ICP_MAGICNUM) {
+        Vals.push_back(ProfileData->getOperand(i + 1));
+        continue;
+      }
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128, Count);
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(ConstantInt::get(
+          Type::getInt64Ty(C), Val.udiv(APT).getLimitedValue())));
+    }
+  I.setMetadata(LLVMContext::MD_prof, MDNode::get(C, Vals));
+}
+
 } // namespace llvm

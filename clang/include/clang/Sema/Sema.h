@@ -2234,7 +2234,8 @@ private:
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D);
+  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
+                           const llvm::StringMap<bool> &FeatureMap);
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,

@@ -33,7 +33,10 @@ using namespace llvm;
 
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
   case Intrinsic::exp:
+  case Intrinsic::log:
+  case Intrinsic::log10:
   case Intrinsic::dx_any:
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
@@ -44,6 +47,26 @@ static bool isIntrinsicExpansion(Function &F) {
     return true;
   }
   return false;
+}
+
+static bool expandAbs(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+  Constant *Zero = Ty->isVectorTy()
+                       ? ConstantVector::getSplat(
+                             ElementCount::getFixed(
+                                 cast<FixedVectorType>(Ty)->getNumElements()),
+                             ConstantInt::get(EltTy, 0))
+                       : ConstantInt::get(EltTy, 0);
+  auto *V = Builder.CreateSub(Zero, X);
+  auto *MaxCall =
+      Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr, "dx.max");
+  Orig->replaceAllUsesWith(MaxCall);
+  Orig->eraseFromParent();
+  return true;
 }
 
 static bool expandIntegerDot(CallInst *Orig, Intrinsic::ID DotIntrinsic) {
@@ -87,8 +110,8 @@ static bool expandExpIntrinsic(CallInst *Orig) {
       Ty->isVectorTy() ? ConstantVector::getSplat(
                              ElementCount::getFixed(
                                  cast<FixedVectorType>(Ty)->getNumElements()),
-                             ConstantFP::get(EltTy, numbers::log2e))
-                       : ConstantFP::get(EltTy, numbers::log2e);
+                             ConstantFP::get(EltTy, numbers::log2ef))
+                       : ConstantFP::get(EltTy, numbers::log2ef);
   Value *NewX = Builder.CreateFMul(Log2eConst, X);
   auto *Exp2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
@@ -146,6 +169,32 @@ static bool expandLerpIntrinsic(CallInst *Orig) {
   Orig->replaceAllUsesWith(Result);
   Orig->eraseFromParent();
   return true;
+}
+
+static bool expandLogIntrinsic(CallInst *Orig,
+                               float LogConstVal = numbers::ln2f) {
+  Value *X = Orig->getOperand(0);
+  IRBuilder<> Builder(Orig->getParent());
+  Builder.SetInsertPoint(Orig);
+  Type *Ty = X->getType();
+  Type *EltTy = Ty->getScalarType();
+  Constant *Ln2Const =
+      Ty->isVectorTy() ? ConstantVector::getSplat(
+                             ElementCount::getFixed(
+                                 cast<FixedVectorType>(Ty)->getNumElements()),
+                             ConstantFP::get(EltTy, LogConstVal))
+                       : ConstantFP::get(EltTy, LogConstVal);
+  auto *Log2Call =
+      Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+  Log2Call->setTailCall(Orig->isTailCall());
+  Log2Call->setAttributes(Orig->getAttributes());
+  auto *Result = Builder.CreateFMul(Ln2Const, Log2Call);
+  Orig->replaceAllUsesWith(Result);
+  Orig->eraseFromParent();
+  return true;
+}
+static bool expandLog10Intrinsic(CallInst *Orig) {
+  return expandLogIntrinsic(Orig, numbers::ln2f / numbers::ln10f);
 }
 
 static bool expandRcpIntrinsic(CallInst *Orig) {
@@ -213,8 +262,14 @@ static bool expandClampIntrinsic(CallInst *Orig, Intrinsic::ID ClampIntrinsic) {
 
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::abs:
+    return expandAbs(Orig);
   case Intrinsic::exp:
     return expandExpIntrinsic(Orig);
+  case Intrinsic::log:
+    return expandLogIntrinsic(Orig);
+  case Intrinsic::log10:
+    return expandLog10Intrinsic(Orig);
   case Intrinsic::dx_any:
     return expandAnyIntrinsic(Orig);
   case Intrinsic::dx_uclamp:

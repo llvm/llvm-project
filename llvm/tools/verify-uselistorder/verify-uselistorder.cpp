@@ -68,6 +68,8 @@ static cl::opt<unsigned>
                 cl::desc("Number of times to shuffle and verify use-lists"),
                 cl::init(1), cl::cat(Cat));
 
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
+
 namespace {
 
 struct TempFile {
@@ -169,8 +171,7 @@ std::unique_ptr<Module> TempFile::readBitcode(LLVMContext &Context) const {
 
   // verify-uselistoder currently only supports old-style debug info mode.
   // FIXME: Update mapping code for RemoveDIs.
-  assert(!ModuleOr.get()->IsNewDbgInfoFormat &&
-         "Unexpectedly in new debug info mode");
+  ModuleOr.get()->setIsNewDbgInfoFormat(false);
   return std::move(ModuleOr.get());
 }
 
@@ -182,7 +183,7 @@ std::unique_ptr<Module> TempFile::readAssembly(LLVMContext &Context) const {
     Err.print("verify-uselistorder", errs());
   // verify-uselistoder currently only supports old-style debug info mode.
   // FIXME: Update mapping code for RemoveDIs.
-  assert(!M->IsNewDbgInfoFormat && "Unexpectedly in new debug info mode");
+  M->setIsNewDbgInfoFormat(false);
   return M;
 }
 
@@ -544,6 +545,10 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");
 
+  // Do not load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_FALSE;
+
   LLVMContext Context;
   SMDiagnostic Err;
 
@@ -551,7 +556,7 @@ int main(int argc, char **argv) {
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
   // verify-uselistoder currently only supports old-style debug info mode.
   // FIXME: Update mapping code for RemoveDIs.
-  assert(!M->IsNewDbgInfoFormat && "Unexpectedly in new debug info mode");
+  M->setIsNewDbgInfoFormat(false);
 
   if (!M.get()) {
     Err.print(argv[0], errs());

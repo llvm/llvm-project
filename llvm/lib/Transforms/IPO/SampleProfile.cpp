@@ -234,6 +234,21 @@ static cl::opt<unsigned> ProfileICPRelativeHotnessSkip(
     cl::desc(
         "Skip relative hotness check for ICP up to given number of targets."));
 
+static cl::opt<unsigned> HotFuncCutoffForStalenessError(
+    "hot-func-cutoff-for-staleness-error", cl::Hidden, cl::init(800000),
+    cl::desc("A function is considered hot for staleness error check if its "
+             "total sample count is above the specified percentile"));
+
+static cl::opt<unsigned> MinfuncsForStalenessError(
+    "min-functions-for-staleness-error", cl::Hidden, cl::init(50),
+    cl::desc("Skip the check if the number of hot functions is smaller than "
+             "the specified number."));
+
+static cl::opt<unsigned> PrecentMismatchForStalenessError(
+    "precent-mismatch-for-staleness-error", cl::Hidden, cl::init(80),
+    cl::desc("Reject the profile if the mismatch percent is higher than the "
+             "given number."));
+
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
 
@@ -630,6 +645,8 @@ protected:
   std::vector<Function *> buildFunctionOrder(Module &M, LazyCallGraph &CG);
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(Module &M);
   void generateMDProfMetadata(Function &F);
+  bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
+                                  const SampleProfileMap &Profiles);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -2187,6 +2204,55 @@ bool SampleProfileLoader::doInitialization(Module &M,
   return true;
 }
 
+// Note that this is a module-level check. Even if one module is errored out,
+// the entire build will be errored out. However, the user could make big
+// changes to functions in single module but those changes might not be
+// performance significant to the whole binary. Therefore, to avoid those false
+// positives, we select a reasonable big set of hot functions that are supposed
+// to be globally performance significant, only compute and check the mismatch
+// within those functions. The function selection is based on two criteria:
+// 1) The function is hot enough, which is tuned by a hotness-based
+// flag(HotFuncCutoffForStalenessError). 2) The num of function is large enough
+// which is tuned by the MinfuncsForStalenessError flag.
+bool SampleProfileLoader::rejectHighStalenessProfile(
+    Module &M, ProfileSummaryInfo *PSI, const SampleProfileMap &Profiles) {
+  assert(FunctionSamples::ProfileIsProbeBased &&
+         "Only support for probe-based profile");
+  uint64_t TotalHotFunc = 0;
+  uint64_t NumMismatchedFunc = 0;
+  for (const auto &I : Profiles) {
+    const auto &FS = I.second;
+    const auto *FuncDesc = ProbeManager->getDesc(FS.getGUID());
+    if (!FuncDesc)
+      continue;
+
+    // Use a hotness-based threshold to control the function selection.
+    if (!PSI->isHotCountNthPercentile(HotFuncCutoffForStalenessError,
+                                      FS.getTotalSamples()))
+      continue;
+
+    TotalHotFunc++;
+    if (ProbeManager->profileIsHashMismatched(*FuncDesc, FS))
+      NumMismatchedFunc++;
+  }
+  // Make sure that the num of selected function is not too small to distinguish
+  // from the user's benign changes.
+  if (TotalHotFunc < MinfuncsForStalenessError)
+    return false;
+
+  // Finally check the mismatch percentage against the threshold.
+  if (NumMismatchedFunc * 100 >=
+      TotalHotFunc * PrecentMismatchForStalenessError) {
+    auto &Ctx = M.getContext();
+    const char *Msg =
+        "The input profile significantly mismatches current source code. "
+        "Please recollect profile to avoid performance regression.";
+    Ctx.diagnose(DiagnosticInfoSampleProfile(M.getModuleIdentifier(), Msg));
+    return true;
+  }
+  return false;
+}
+
 void SampleProfileMatcher::findIRAnchors(
     const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
   // For inlined code, recover the original callsite and callee by finding the
@@ -2718,6 +2784,11 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                         ProfileSummary::PSK_Sample);
     PSI->refresh();
   }
+
+  if (FunctionSamples::ProfileIsProbeBased &&
+      rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
+    return false;
+
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())
     TotalCollectedSamples += I.second.getTotalSamples();

@@ -122,3 +122,35 @@ define { i32, i1 } @fold_sub_simple(i32 %x) {
   %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 30)
   ret { i32, i1 } %b
 }
+
+define { i32, i1 } @fold_with_distjoin_or(i32 %x) {
+; CHECK-LABEL: @fold_with_distjoin_or(
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i1 } { i32 poison, i1 false }, i32 [[B]], 0
+; CHECK-NEXT:    ret { i32, i1 } [[TMP1]]
+;
+  %a = or disjoint i32 %x, 13
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 -7)
+  ret { i32, i1 } %b
+}
+
+define { i32, i1 } @fold_with_disjoint_or2(i32 %x) {
+; CHECK-LABEL: @fold_with_disjoint_or2(
+; CHECK-NEXT:    [[B:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 127)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
+;
+  %a = or disjoint i32 %x, 100
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 27)
+  ret { i32, i1 } %b
+}
+
+define { i32, i1 } @fold_with_or_fail(i32 %x) {
+; CHECK-LABEL: @fold_with_or_fail(
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], 100
+; CHECK-NEXT:    [[B:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[A]], i32 27)
+; CHECK-NEXT:    ret { i32, i1 } [[B]]
+;
+  %a = or i32 %x, 100
+  %b = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 27)
+  ret { i32, i1 } %b
+}

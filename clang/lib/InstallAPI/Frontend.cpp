@@ -138,6 +138,8 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
   SmallString<4096> Contents;
   raw_svector_ostream OS(Contents);
   for (const HeaderFile &H : Ctx.InputHeaders) {
+    if (H.isExcluded())
+      continue;
     if (H.getType() != Ctx.Type)
       continue;
     if (Ctx.LangMode == Language::C || Ctx.LangMode == Language::CXX)

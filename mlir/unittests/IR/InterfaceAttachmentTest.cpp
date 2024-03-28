@@ -431,8 +431,8 @@ TEST(InterfaceAttachmentTest, PromisedInterfaces) {
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 
   // Add a promise `TestExternalAttrInterface`.
-  testDialect->declarePromisedInterface<test::SimpleAAttr,
-                                        TestExternalAttrInterface>();
+  testDialect->declarePromisedInterface<TestExternalAttrInterface,
+                                        test::SimpleAAttr>();
   EXPECT_TRUE(
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 

@@ -21,6 +21,7 @@
 #include <type_traits>
 
 namespace Fortran::runtime::io {
+RT_OFFLOAD_API_GROUP_BEGIN
 
 bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
@@ -44,10 +45,6 @@ Fortran::common::optional<DataEdit> IoStatementBase::GetNextDataEdit(
   return Fortran::common::nullopt;
 }
 
-ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
-  return nullptr;
-}
-
 bool IoStatementBase::BeginReadingRecord() { return true; }
 
 void IoStatementBase::FinishReadingRecord() {}
@@ -55,6 +52,12 @@ void IoStatementBase::FinishReadingRecord() {}
 void IoStatementBase::HandleAbsolutePosition(std::int64_t) {}
 
 void IoStatementBase::HandleRelativePosition(std::int64_t) {}
+
+std::int64_t IoStatementBase::InquirePos() { return 0; }
+
+ExternalFileUnit *IoStatementBase::GetExternalFileUnit() const {
+  return nullptr;
+}
 
 bool IoStatementBase::Inquire(InquiryKeywordHash, char *, std::size_t) {
   return false;
@@ -69,8 +72,6 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t, bool &) {
 bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
   return false;
 }
-
-std::int64_t IoStatementBase::InquirePos() { return 0; }
 
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
@@ -142,21 +143,23 @@ std::int64_t InternalIoStatementState<DIR>::InquirePos() {
 }
 
 template <Direction DIR, typename CHAR>
+RT_API_ATTRS
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     Buffer buffer, std::size_t length, const CharType *format,
     std::size_t formatLength, const Descriptor *formatDescriptor,
     const char *sourceFile, int sourceLine)
     : InternalIoStatementState<DIR>{buffer, length, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength,
-                                    formatDescriptor} {}
+      ioStatementState_{*this},
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
+RT_API_ATTRS
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     const Descriptor &d, const CharType *format, std::size_t formatLength,
     const Descriptor *formatDescriptor, const char *sourceFile, int sourceLine)
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength,
-                                    formatDescriptor} {}
+      ioStatementState_{*this},
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -227,7 +230,17 @@ ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
+#if !defined(RT_USE_PSEUDO_FILE_UNIT)
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
+#else
+  // Fetch the unit pointer before *this disappears.
+  ExternalFileUnit *unitPtr{&unit_};
+  // The pseudo file units are dynamically allocated
+  // and are not tracked in the unit map.
+  // They have to be destructed and deallocated here.
+  unitPtr->~ExternalFileUnit();
+  FreeMemory(unitPtr);
+#endif
   return result;
 }
 
@@ -994,7 +1007,9 @@ void ExternalMiscIoStatementState::CompleteOperation() {
   switch (which_) {
   case Flush:
     ext.FlushOutput(*this);
+#if !defined(RT_DEVICE_COMPILATION)
     std::fflush(nullptr); // flushes C stdio output streams (12.9(2))
+#endif
     break;
   case Backspace:
     ext.BackspaceRecord(*this);
@@ -1498,4 +1513,5 @@ int ErroneousIoStatementState::EndIoStatement() {
   return IoStatementBase::EndIoStatement();
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io

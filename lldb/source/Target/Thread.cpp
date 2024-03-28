@@ -302,10 +302,10 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
       SymbolContext frame_sc(
           frame_sp->GetSymbolContext(eSymbolContextLineEntry));
       const Debugger &debugger = GetProcess()->GetTarget().GetDebugger();
-      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.file &&
+      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.GetFile() &&
           frame_sc.line_entry.line != 0) {
         if (llvm::Error e = Host::OpenFileInExternalEditor(
-                debugger.GetExternalEditor(), frame_sc.line_entry.file,
+                debugger.GetExternalEditor(), frame_sc.line_entry.GetFile(),
                 frame_sc.line_entry.line)) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                          "OpenFileInExternalEditor failed: {0}");
@@ -1753,10 +1753,10 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
       if (frame_sp) {
         SymbolContext frame_sc(
             frame_sp->GetSymbolContext(eSymbolContextLineEntry));
-        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
+        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.GetFile()) {
           if (llvm::Error e = Host::OpenFileInExternalEditor(
                   target->GetDebugger().GetExternalEditor(),
-                  frame_sc.line_entry.file, frame_sc.line_entry.line)) {
+                  frame_sc.line_entry.GetFile(), frame_sc.line_entry.line)) {
             LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                            "OpenFileInExternalEditor failed: {0}");
           }

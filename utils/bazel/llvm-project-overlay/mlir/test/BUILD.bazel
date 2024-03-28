@@ -94,12 +94,14 @@ cc_library(
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
         "//mlir:Analysis",
+        "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
+        "//mlir:SideEffectInterfaces",
         "//mlir:Support",
     ],
 )
@@ -356,6 +358,7 @@ cc_library(
     deps = [
         ":TestTransformDialectExtensionIncGen",
         "//llvm:Support",
+        "//mlir:BytecodeOpInterface",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",
@@ -386,6 +389,8 @@ cc_library(
         ":TestTypeDefsIncGen",
         "//llvm:Support",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeOpInterface",
+        "//mlir:CallOpInterfaces",
         "//mlir:ControlFlowInterfaces",
         "//mlir:CopyOpInterface",
         "//mlir:DLTIDialect",
@@ -436,6 +441,7 @@ cc_library(
         "//llvm:Support",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
         "//mlir:FuncDialect",
@@ -571,6 +577,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SPIRVDialect",
+        "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:Transforms",
     ],
@@ -814,7 +821,6 @@ cc_library(
 cc_library(
     name = "TestMesh",
     srcs = glob(["lib/Dialect/Mesh/**/*.cpp"]),
-    hdrs = glob(["lib/Dialect/Mesh/**/*.h"]),
     includes = ["lib/Dialect/Test"],
     deps = [
         ":TestDialect",
@@ -1039,18 +1045,6 @@ cc_library(
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
         "//mlir:X86VectorDialect",
-    ],
-)
-
-cc_library(
-    name = "TestTypeDialect",
-    srcs = glob([
-        "lib/Dialect/LLVMIR/*.cpp",
-    ]),
-    deps = [
-        ":TestDialect",
-        "//mlir:IR",
-        "//mlir:LLVMDialect",
     ],
 )
 

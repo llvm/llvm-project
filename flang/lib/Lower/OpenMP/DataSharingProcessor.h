@@ -89,7 +89,7 @@ public:
                        Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter),
         firOpBuilder(converter.getFirOpBuilder()),
-        clauses(omp::makeList(opClauseList, semaCtx)), eval(eval),
+        clauses(omp::makeClauses(opClauseList, semaCtx)), eval(eval),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.

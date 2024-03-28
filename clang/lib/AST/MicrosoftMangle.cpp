@@ -3911,7 +3911,8 @@ void MicrosoftMangleContextImpl::mangleReferenceTemporary(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$RT" << ManglingNumber << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$RT" + llvm::utostr(ManglingNumber));
   Mangler.mangle(VD, "");
 }
 
@@ -4022,10 +4023,8 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // char bar[42] = "foobar";
   // Where it is truncated or zero-padded to fit the array. This is the length
   // used for mangling, and any trailing null-bytes also need to be mangled.
-  unsigned StringLength = getASTContext()
-                              .getAsConstantArrayType(SL->getType())
-                              ->getSize()
-                              .getZExtValue();
+  unsigned StringLength =
+      getASTContext().getAsConstantArrayType(SL->getType())->getZExtSize();
   unsigned StringByteLength = StringLength * SL->getCharByteWidth();
 
   // <char-type>: The "kind" of string literal is encoded into the mangled name.

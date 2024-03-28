@@ -3445,6 +3445,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_PreserveAll:
   case CC_M68kRTD:
   case CC_PreserveNone:
+  case CC_RISCVVectorCall:
     // FIXME: we should be mangling all of the above.
     return "";
 

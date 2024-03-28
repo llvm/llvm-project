@@ -303,6 +303,28 @@ void MCPlusBuilder::setSize(MCInst &Inst, uint32_t Size) const {
   setAnnotationOpValue(Inst, MCAnnotation::kSize, Size);
 }
 
+bool MCPlusBuilder::isDynamicBranch(const MCInst &Inst) const {
+  if (!hasAnnotation(Inst, MCAnnotation::kDynamicBranch))
+    return false;
+  assert(isBranch(Inst) && "Branch expected.");
+  return true;
+}
+
+std::optional<uint32_t>
+MCPlusBuilder::getDynamicBranchID(const MCInst &Inst) const {
+  if (std::optional<int64_t> Value =
+          getAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch)) {
+    assert(isBranch(Inst) && "Branch expected.");
+    return static_cast<uint32_t>(*Value);
+  }
+  return std::nullopt;
+}
+
+void MCPlusBuilder::setDynamicBranch(MCInst &Inst, uint32_t ID) const {
+  assert(isBranch(Inst) && "Branch expected.");
+  setAnnotationOpValue(Inst, MCAnnotation::kDynamicBranch, ID);
+}
+
 bool MCPlusBuilder::hasAnnotation(const MCInst &Inst, unsigned Index) const {
   return (bool)getAnnotationOpValue(Inst, Index);
 }

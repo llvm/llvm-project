@@ -1719,7 +1719,7 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  int NumBytes = (int) MFI.getStackSize();
+  int64_t NumBytes = MFI.getStackSize();
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";

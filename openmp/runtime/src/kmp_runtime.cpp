@@ -6752,11 +6752,11 @@ void __kmp_register_library_startup(void) {
       int fd1 = -1;
       shm_name = __kmp_str_format("/%s", name);
       int shm_preexist = 0;
-      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0600);
       if ((fd1 == -1) && (errno == EEXIST)) {
         // file didn't open because it already exists.
         // try opening existing file
-        fd1 = shm_open(shm_name, O_RDWR, 0666);
+        fd1 = shm_open(shm_name, O_RDWR, 0600);
         if (fd1 == -1) { // file didn't open
           KMP_WARNING(FunctionError, "Can't open SHM");
           __kmp_shm_available = false;
@@ -6800,11 +6800,11 @@ void __kmp_register_library_startup(void) {
       int fd1 = -1;
       temp_reg_status_file_name = __kmp_str_format("/tmp/%s", name);
       int tmp_preexist = 0;
-      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0600);
       if ((fd1 == -1) && (errno == EEXIST)) {
         // file didn't open because it already exists.
         // try opening existing file
-        fd1 = open(temp_reg_status_file_name, O_RDWR, 0666);
+        fd1 = open(temp_reg_status_file_name, O_RDWR, 0600);
         if (fd1 == -1) { // file didn't open if (fd1 == -1) {
           KMP_WARNING(FunctionError, "Can't open TEMP");
           __kmp_tmp_available = false;
@@ -6944,7 +6944,7 @@ void __kmp_unregister_library(void) {
   int fd1;
   if (__kmp_shm_available) {
     shm_name = __kmp_str_format("/%s", name);
-    fd1 = shm_open(shm_name, O_RDONLY, 0666);
+    fd1 = shm_open(shm_name, O_RDONLY, 0600);
     if (fd1 != -1) { // File opened successfully
       char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
       if (data1 != MAP_FAILED) {

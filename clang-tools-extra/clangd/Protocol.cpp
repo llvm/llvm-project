@@ -1501,6 +1501,10 @@ bool operator<(const InlayHint &A, const InlayHint &B) {
   return std::tie(A.position, A.range, A.kind, A.label) <
          std::tie(B.position, B.range, B.kind, B.label);
 }
+std::string InlayHint::joinLabels() const {
+  return llvm::join(llvm::map_range(label, [](auto &L) { return L.value; }),
+                    "");
+}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
   auto ToString = [](InlayHintKind K) {
@@ -1517,6 +1521,33 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };
   return OS << ToString(Kind);
+}
+
+llvm::json::Value toJSON(const InlayHintLabelPart &L) {
+  llvm::json::Object Result{{"value", L.value}};
+  if (L.tooltip)
+    Result["tooltip"] = *L.tooltip;
+  if (L.location)
+    Result["location"] = *L.location;
+  if (L.command)
+    Result["command"] = *L.command;
+  return Result;
+}
+
+bool operator==(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) == std::tie(RHS.value, RHS.location);
+}
+
+bool operator<(const InlayHintLabelPart &LHS, const InlayHintLabelPart &RHS) {
+  return std::tie(LHS.value, LHS.location) < std::tie(RHS.value, RHS.location);
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlayHintLabelPart &L) {
+  OS << L.value;
+  if (L.location)
+    OS << " (" << L.location << ")";
+  return OS;
 }
 
 static const char *toString(OffsetEncoding OE) {

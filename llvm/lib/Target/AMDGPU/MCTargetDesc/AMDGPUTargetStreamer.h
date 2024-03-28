@@ -22,14 +22,12 @@ class MCSymbol;
 class formatted_raw_ostream;
 
 namespace AMDGPU {
+
+struct MCKernelDescriptor;
 namespace HSAMD {
 struct Metadata;
 }
 } // namespace AMDGPU
-
-namespace amdhsa {
-struct kernel_descriptor_t;
-}
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
   AMDGPUPALMetadata PALMetadata;
@@ -94,10 +92,11 @@ public:
     return true;
   }
 
-  virtual void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) {}
+  virtual void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             uint64_t NextVGPR, uint64_t NextSGPR,
+                             bool ReserveVCC, bool ReserveFlatScr) {}
 
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
@@ -150,10 +149,11 @@ public:
   bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
                                 bool TrapEnabled) override;
 
-  void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+  void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             uint64_t NextVGPR, uint64_t NextSGPR,
+                             bool ReserveVCC, bool ReserveFlatScr) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -205,10 +205,11 @@ public:
   bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
                                 bool TrapEnabled) override;
 
-  void EmitAmdhsaKernelDescriptor(
-      const MCSubtargetInfo &STI, StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+  void
+  EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
+                             const AMDGPU::MCKernelDescriptor &KernelDescriptor,
+                             uint64_t NextVGPR, uint64_t NextSGPR,
+                             bool ReserveVCC, bool ReserveFlatScr) override;
 };
 }
 #endif

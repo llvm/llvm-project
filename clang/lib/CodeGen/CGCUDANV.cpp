@@ -605,20 +605,10 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       uint64_t VarSize =
           CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
       if (Info.Flags.isManaged()) {
-        auto *ManagedVar = new llvm::GlobalVariable(
-            CGM.getModule(), Var->getType(),
-            /*isConstant=*/false, Var->getLinkage(),
-            /*Init=*/Var->isDeclaration()
-                ? nullptr
-                : llvm::ConstantPointerNull::get(Var->getType()),
-            /*Name=*/"", /*InsertBefore=*/nullptr,
-            llvm::GlobalVariable::NotThreadLocal);
-        ManagedVar->setDSOLocal(Var->isDSOLocal());
-        ManagedVar->setVisibility(Var->getVisibility());
-        ManagedVar->setExternallyInitialized(true);
-        ManagedVar->takeName(Var);
-        Var->setName(Twine(ManagedVar->getName() + ".managed"));
-        replaceManagedVar(Var, ManagedVar);
+        assert(Var->getName().ends_with(".managed") &&
+               "HIP managed variables not transformed");
+        auto *ManagedVar = CGM.getModule().getNamedGlobal(
+            Var->getName().drop_back(StringRef(".managed").size()));
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
             ManagedVar,
@@ -1093,7 +1083,9 @@ void CGNVCUDARuntime::transformManagedVars() {
               : llvm::ConstantPointerNull::get(Var->getType()),
           /*Name=*/"", /*InsertBefore=*/nullptr,
           llvm::GlobalVariable::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_device));
+          CGM.getContext().getTargetAddressSpace(CGM.getLangOpts().CUDAIsDevice
+                                                     ? LangAS::cuda_device
+                                                     : LangAS::Default));
       ManagedVar->setDSOLocal(Var->isDSOLocal());
       ManagedVar->setVisibility(Var->getVisibility());
       ManagedVar->setExternallyInitialized(true);
@@ -1102,7 +1094,7 @@ void CGNVCUDARuntime::transformManagedVars() {
       Var->setName(Twine(ManagedVar->getName()) + ".managed");
       // Keep managed variables even if they are not used in device code since
       // they need to be allocated by the runtime.
-      if (!Var->isDeclaration()) {
+      if (CGM.getLangOpts().CUDAIsDevice && !Var->isDeclaration()) {
         assert(!ManagedVar->isDeclaration());
         CGM.addCompilerUsedGlobal(Var);
         CGM.addCompilerUsedGlobal(ManagedVar);
@@ -1160,9 +1152,8 @@ void CGNVCUDARuntime::createOffloadingEntries() {
 
 // Returns module constructor to be added.
 llvm::Function *CGNVCUDARuntime::finalizeModule() {
+  transformManagedVars();
   if (CGM.getLangOpts().CUDAIsDevice) {
-    transformManagedVars();
-
     // Mark ODR-used device variables as compiler used to prevent it from being
     // eliminated by optimization. This is necessary for device variables
     // ODR-used by host functions. Sema correctly marks them as ODR-used no

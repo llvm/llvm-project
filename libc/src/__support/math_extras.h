@@ -14,7 +14,6 @@
 #include "src/__support/CPP/limits.h"        // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h"   // is_unsigned_v
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 
 namespace LIBC_NAMESPACE {
 
@@ -61,7 +60,7 @@ add_with_carry(T a, T b, T carry_in) {
   return add_with_carry_const<T>(a, b, carry_in);
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_addc)
+#if __has_builtin(__builtin_addc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -129,7 +128,7 @@ add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
   }
 }
 
-#endif // LIBC_HAS_BUILTIN(__builtin_addc)
+#endif // __has_builtin(__builtin_addc)
 
 // Subtract with borrow
 template <typename T> struct DiffBorrow {
@@ -157,7 +156,7 @@ sub_with_borrow(T a, T b, T borrow_in) {
   return sub_with_borrow_const<T>(a, b, borrow_in);
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_subc)
+#if __has_builtin(__builtin_subc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -225,7 +224,7 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
   }
 }
 
-#endif // LIBC_HAS_BUILTIN(__builtin_subc)
+#endif // __has_builtin(__builtin_subc)
 
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>

@@ -1082,6 +1082,17 @@ bit_cast(const UInt<Bits> &from) {
   return cpp::bit_cast<To>(from.val);
 }
 
+// Specialization of cpp::popcount ('bit.h') for BigInt.
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+popcount(T value) {
+  int bits = 0;
+  for (auto word : value.val)
+    if (word)
+      bits += popcount(word);
+  return bits;
+}
+
 // Specialization of cpp::has_single_bit ('bit.h') for BigInt.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, bool>
@@ -1216,6 +1227,49 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
     ++index;
   }
   return out;
+}
+
+// Specialization of count_zeros ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+count_zeros(T value) {
+  return cpp::popcount(~value);
+}
+
+// Specialization of first_leading_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countl_one(value) + 1;
+}
+
+// Specialization of first_leading_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_one(T value) {
+  return first_leading_zero(~value);
+}
+
+// Specialization of first_trailing_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(~value) + 1;
+}
+
+// Specialization of first_trailing_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(value) + 1;
 }
 
 } // namespace LIBC_NAMESPACE

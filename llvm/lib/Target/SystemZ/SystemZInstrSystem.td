@@ -339,7 +339,7 @@ let hasSideEffects = 1 in
 // Store clock (fast / extended).
 let hasSideEffects = 1, Defs = [CC] in {
   def STCK  : StoreInherentS<"stck",  0xB205, null_frag, 8>;
-  def STCKF : StoreInherentS<"stckf", 0xB27C, null_frag, 8>;
+  def STCKF : StoreInherentS<"stckf", 0xB27C, z_stckf, 8>;
   def STCKE : StoreInherentS<"stcke", 0xB278, null_frag, 16>;
 }
 

@@ -18,4 +18,4 @@ int strfromf(char *__restrict s, size_t n, const char *__restrict format,
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_STRTOF_H
+#endif // LLVM_LIBC_SRC_STDLIB_STRFROMF_H

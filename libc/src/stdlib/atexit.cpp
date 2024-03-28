@@ -55,14 +55,10 @@ void stdc_at_exit_func(void *payload) {
   reinterpret_cast<StdCAtExitCallback *>(payload)();
 }
 
-} // namespace
-
-namespace internal {
-
 void call_exit_callbacks() {
   handler_list_mtx.lock();
   while (!exit_callbacks.empty()) {
-    auto unit = exit_callbacks.back();
+    AtExitUnit &unit = exit_callbacks.back();
     exit_callbacks.pop_back();
     handler_list_mtx.unlock();
     unit.callback(unit.payload);
@@ -71,19 +67,30 @@ void call_exit_callbacks() {
   ExitCallbackList::destroy(&exit_callbacks);
 }
 
-} // namespace internal
-
-static int add_atexit_unit(const AtExitUnit &unit) {
+int add_atexit_unit(const AtExitUnit &unit) {
   MutexLock lock(&handler_list_mtx);
-  if (!exit_callbacks.push_back(unit))
-    return -1;
-  return 0;
+  if (exit_callbacks.push_back(unit))
+    return 0;
+  return -1;
 }
+
+} // namespace
+
+extern "C" {
 
 // TODO: Handle the last dso handle argument.
-extern "C" int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
+int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
   return add_atexit_unit({callback, payload});
 }
+
+// TODO: Handle the dso handle argument. call_exit_callbacks should only invoke
+// the callbacks from this DSO. Requires adding support for __dso_handle.
+void __cxa_finalize(void *dso) {
+  if (!dso)
+    call_exit_callbacks();
+}
+
+} // extern "C"
 
 LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
   return add_atexit_unit(

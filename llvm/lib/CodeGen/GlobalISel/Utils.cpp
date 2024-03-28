@@ -966,14 +966,15 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
 }
 
 std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
+llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
+                             std::function<unsigned(APInt)> CB) {
   LLT Ty = MRI.getType(Src);
   SmallVector<unsigned> FoldedCTLZs;
   auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
     auto MaybeCst = getIConstantVRegVal(R, MRI);
     if (!MaybeCst)
       return std::nullopt;
-    return MaybeCst->countl_zero();
+    return CB(*MaybeCst);
   };
   if (Ty.isVector()) {
     // Try to constant fold each element.

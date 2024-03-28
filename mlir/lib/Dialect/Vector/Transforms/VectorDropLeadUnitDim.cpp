@@ -329,12 +329,10 @@ struct CastAwayTransferWriteLeadingOneDim
 
 } // namespace
 
-LogicalResult
+FailureOr<Value>
 mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                               MaskingOpInterface maskingOp,
                                                RewriterBase &rewriter) {
-  // TODO(#78787): Not supported masked op yet.
-  if (cast<MaskableOpInterface>(contractOp.getOperation()).isMasked())
-    return failure();
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
     return failure();
@@ -368,6 +366,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   SmallVector<Value> operands = {contractOp.getLhs(), contractOp.getRhs(),
                                  contractOp.getAcc()};
   SmallVector<Value> newOperands;
+  auto loc = contractOp.getLoc();
 
   for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
     // Check if the dim to be dropped exists as a leading dim in the operand
@@ -405,7 +404,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
         operands[it.index()] = rewriter.create<vector::TransposeOp>(
-            contractOp.getLoc(), operands[it.index()], perm);
+            loc, operands[it.index()], perm);
       }
     }
     // We have taken care to have the dim to be dropped be
@@ -429,18 +428,29 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     // Extract if its a valid extraction, otherwise use the operand
     // without extraction.
     newOperands.push_back(
-        validExtract ? rewriter.create<vector::ExtractOp>(contractOp.getLoc(),
-                                                          operands[it.index()],
-                                                          splatZero(dropDim))
+        validExtract ? rewriter.create<vector::ExtractOp>(
+                           loc, operands[it.index()], splatZero(dropDim))
                      : operands[it.index()]);
   }
-  auto newContractOp = rewriter.create<vector::ContractionOp>(
-      contractOp.getLoc(), newOperands[0], newOperands[1], newOperands[2],
+
+  // Depending on whether this vector.contract is masked, the replacing Op
+  // should either be a new vector.contract Op or vector.mask Op.
+  Operation *newOp = rewriter.create<vector::ContractionOp>(
+      loc, newOperands[0], newOperands[1], newOperands[2],
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
-  rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-      contractOp, contractOp->getResultTypes()[0], newContractOp);
-  return success();
+
+  if (maskingOp) {
+    auto newMask = rewriter.create<vector::ExtractOp>(loc, maskingOp.getMask(),
+                                                      splatZero(dropDim));
+
+    newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
+  }
+
+  return rewriter
+      .create<vector::BroadcastOp>(loc, contractOp->getResultTypes()[0],
+                                   newOp->getResults()[0])
+      .getResult();
 }
 
 namespace {
@@ -450,12 +460,14 @@ namespace {
 /// 1 dimensions. Also performs tranpose of lhs and rhs operands if required
 /// prior to extract.
 struct CastAwayContractionLeadingOneDim
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-    return castAwayContractionLeadingOneDim(contractOp, rewriter);
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::ContractionOp contractOp,
+                            MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    return castAwayContractionLeadingOneDim(contractOp, maskingOp, rewriter);
   }
 };
 

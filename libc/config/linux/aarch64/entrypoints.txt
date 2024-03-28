@@ -195,6 +195,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.remove
+    libc.src.stdio.rename
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
@@ -365,6 +366,30 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmin
     libc.src.math.fminf
     libc.src.math.fminl
+    libc.src.math.fmaximum
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximuml
+    libc.src.math.fmaximum_num
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numl
+    libc.src.math.fmaximum_mag
+    libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magl
+    libc.src.math.fmaximum_mag_num
+    libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numl
+    libc.src.math.fminimum
+    libc.src.math.fminimumf
+    libc.src.math.fminimuml
+    libc.src.math.fminimum_num
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numl
+    libc.src.math.fminimum_mag
+    libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magl
+    libc.src.math.fminimum_mag_num
+    libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numl
     libc.src.math.fmod
     libc.src.math.fmodf
     libc.src.math.fmodl
@@ -465,6 +490,14 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fminf128
+    libc.src.math.fmaximumf128
+    libc.src.math.fmaximum_numf128
+    libc.src.math.fmaximum_magf128
+    libc.src.math.fmaximum_mag_numf128
+    libc.src.math.fminimumf128
+    libc.src.math.fminimum_numf128
+    libc.src.math.fminimum_magf128
+    libc.src.math.fminimum_mag_numf128
     libc.src.math.fmodf128
     libc.src.math.frexpf128
     libc.src.math.ilogbf128

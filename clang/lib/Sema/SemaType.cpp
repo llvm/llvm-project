@@ -138,7 +138,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
-  case ParsedAttr::AT_PreserveNone
+  case ParsedAttr::AT_PreserveNone:                                            \
+  case ParsedAttr::AT_RISCVVectorCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -1016,6 +1017,11 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
         return QualType();
 
       return type;
+    }
+
+    // Types that have __attribute__((NSObject)) are permitted.
+    if (typeArg->isObjCNSObjectType()) {
+      continue;
     }
 
     // Dependent types will be checked at instantiation time.
@@ -7934,6 +7940,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveNone:
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVectorCC:
+    return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }

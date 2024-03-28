@@ -42,6 +42,7 @@ private:
                            GISelChangeObserver &Observer) const;
 
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
+  bool legalizeVScale(MachineInstr &MI, MachineIRBuilder &MIB) const;
 };
 } // end namespace llvm
 #endif

@@ -126,7 +126,7 @@ using ThreadPoolImpls = ::testing::Types<
 #endif
     SingleThreadExecutor>;
 
-TYPED_TEST_SUITE(ThreadPoolTest, ThreadPoolImpls);
+TYPED_TEST_SUITE(ThreadPoolTest, ThreadPoolImpls, );
 
 #define CHECK_UNSUPPORTED()                                                    \
   do {                                                                         \

@@ -79,7 +79,7 @@ void SCFDialect::initialize() {
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
                             ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
                             ForallOp, InParallelOp, WhileOp, YieldOp>();
-  declarePromisedInterface<ForOp, ValueBoundsOpInterface>();
+  declarePromisedInterface<ValueBoundsOpInterface, ForOp>();
 }
 
 /// Default callback for IfOp builders. Inserts a yield without arguments.

@@ -106,13 +106,13 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
     stream.Printf(
         " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
     stream.Printf(
         " Function in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
@@ -1192,7 +1192,7 @@ bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
     return false;
 
   const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
-  if (weekday >= 0 && weekday < 7)
+  if (weekday < 7)
     stream << "weekday=" << weekdays[weekday];
   else
     stream.Printf("weekday=%u", weekday);

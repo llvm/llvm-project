@@ -15,6 +15,7 @@
 
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
+#include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -68,6 +69,24 @@ void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
     Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
     addOperands(*sym);
   }
+}
+
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize) {
+  // OpenMP runtime requires 32-bit or 64-bit loop variables.
+  loopVarTypeSize = loopVarTypeSize * 8;
+  if (loopVarTypeSize < 32) {
+    loopVarTypeSize = 32;
+  } else if (loopVarTypeSize > 64) {
+    loopVarTypeSize = 64;
+    mlir::emitWarning(converter.getCurrentLocation(),
+                      "OpenMP loop iteration variable cannot have more than 64 "
+                      "bits size and will be narrowed into 64 bits.");
+  }
+  assert((loopVarTypeSize == 32 || loopVarTypeSize == 64) &&
+         "OpenMP loop iteration variable size must be transformed into 32-bit "
+         "or 64-bit");
+  return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
 void gatherFuncAndVarSyms(

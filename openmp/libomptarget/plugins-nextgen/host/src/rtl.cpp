@@ -66,7 +66,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
     GlobalTy Global(getName(), 0);
 
     // Get the metadata (address) of the kernel function.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+    GenericGlobalHandlerTy &GHandler = Device.Plugin.getGlobalHandler();
     if (auto Err = GHandler.getGlobalMetadataFromDevice(Device, Image, Global))
       return Err;
 
@@ -132,8 +132,9 @@ private:
 /// Class implementing the device functionalities for GenELF64.
 struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Create the device with a specific id.
-  GenELF64DeviceTy(int32_t DeviceId, int32_t NumDevices)
-      : GenericDeviceTy(DeviceId, NumDevices, GenELF64GridValues) {}
+  GenELF64DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
+                   int32_t NumDevices)
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues) {}
 
   ~GenELF64DeviceTy() {}
 
@@ -149,8 +150,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Construct the kernel for a specific image on the device.
   Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the kernel.
-    GenELF64KernelTy *GenELF64Kernel =
-        Plugin::get().allocate<GenELF64KernelTy>();
+    GenELF64KernelTy *GenELF64Kernel = Plugin.allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
       return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
@@ -166,8 +166,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
                                            int32_t ImageId) override {
     // Allocate and initialize the image object.
-    GenELF64DeviceImageTy *Image =
-        Plugin::get().allocate<GenELF64DeviceImageTy>();
+    GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, TgtImage);
 
     // Create a temporary file.
@@ -399,6 +398,17 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }
 
+  /// Creates a generic ELF device.
+  GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
+                                int32_t NumDevices) override {
+    return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  /// Creates a generic global handler.
+  GenericGlobalHandlerTy *createGlobalHandler() override {
+    return new GenELF64GlobalHandlerTy();
+  }
+
   /// Get the ELF code to recognize the compatible binary images.
   uint16_t getMagicElfBits() const override { return ELF::TARGET_ELF_ID; }
 
@@ -415,18 +425,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 };
 
-GenericPluginTy *Plugin::createPlugin() { return new GenELF64PluginTy(); }
-
-GenericDeviceTy *Plugin::createDevice(int32_t DeviceId, int32_t NumDevices) {
-  return new GenELF64DeviceTy(DeviceId, NumDevices);
-}
-
-GenericGlobalHandlerTy *Plugin::createGlobalHandler() {
-  return new GenELF64GlobalHandlerTy();
-}
+GenericPluginTy *PluginTy::createPlugin() { return new GenELF64PluginTy(); }
 
 template <typename... ArgsTy>
-Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
   if (Code == 0)
     return Error::success();
 

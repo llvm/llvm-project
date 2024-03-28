@@ -46,24 +46,20 @@ namespace omp {
 /// methods that relate to clauses that can impact the lowering of that
 /// construct.
 class ClauseProcessor {
-  using ClauseTy = Fortran::parser::OmpClause;
-
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
                   const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx), clauses2(clauses),
-        clauses(makeList(clauses, semaCtx)) {}
+      : converter(converter), semaCtx(semaCtx),
+        clauses(makeClauses(clauses, semaCtx)) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
-  bool
-  processCollapse(mlir::Location currentLocation,
-                  Fortran::lower::pft::Evaluation &eval,
-                  llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-                  llvm::SmallVectorImpl<mlir::Value> &upperBound,
-                  llvm::SmallVectorImpl<mlir::Value> &step,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-                  std::size_t &loopVarTypeSize) const;
+  bool processCollapse(
+      mlir::Location currentLocation, Fortran::lower::pft::Evaluation &eval,
+      llvm::SmallVectorImpl<mlir::Value> &lowerBound,
+      llvm::SmallVectorImpl<mlir::Value> &upperBound,
+      llvm::SmallVectorImpl<mlir::Value> &step,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const;
   bool processDefault() const;
   bool processDevice(Fortran::lower::StatementContext &stmtCtx,
                      mlir::Value &result) const;
@@ -126,6 +122,7 @@ public:
   bool
   processReduction(mlir::Location currentLocation,
                    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+                   llvm::SmallVectorImpl<mlir::Type> &reductionTypes,
                    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
                    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
                        *reductionSymbols = nullptr) const;
@@ -157,7 +154,6 @@ public:
 
 private:
   using ClauseIterator = List<Clause>::const_iterator;
-  using ClauseIterator2 = std::list<ClauseTy>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
@@ -183,7 +179,6 @@ private:
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::semantics::SemanticsContext &semaCtx;
-  const Fortran::parser::OmpClauseList &clauses2;
   List<Clause> clauses;
 };
 
@@ -205,7 +200,8 @@ bool ClauseProcessor::processMotionClauses(
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        for (const omp::Object &object : clause.v) {
+        auto &objects = std::get<ObjectList>(clause.t);
+        for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
@@ -239,19 +235,17 @@ bool ClauseProcessor::processMotionClauses(
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
-  auto checkUnhandledClause = [&](const auto *x) {
+  auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
     TODO(currentLocation,
-         "Unhandled clause " +
-             llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(*x))
-                 .upper() +
+         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
              " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
              " construct");
   };
 
-  for (ClauseIterator2 it = clauses2.v.begin(); it != clauses2.v.end(); ++it)
-    (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
+  for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)
+    (checkUnhandledClause(it->id, std::get_if<Ts>(&it->u)), ...);
 }
 
 template <typename T>

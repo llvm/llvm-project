@@ -895,6 +895,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveShortCaseStatements",
                    Style.AlignConsecutiveShortCaseStatements);
+    IO.mapOptional("AlignConsecutiveTableGenBreakingDAGArgColons",
+                   Style.AlignConsecutiveTableGenBreakingDAGArgColons);
     IO.mapOptional("AlignConsecutiveTableGenCondOperatorColons",
                    Style.AlignConsecutiveTableGenCondOperatorColons);
     IO.mapOptional("AlignConsecutiveTableGenDefinitionColons",
@@ -1408,6 +1410,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
+  LLVMStyle.AlignConsecutiveTableGenBreakingDAGArgColons = {};
   LLVMStyle.AlignConsecutiveTableGenCondOperatorColons = {};
   LLVMStyle.AlignConsecutiveTableGenDefinitionColons = {};
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;

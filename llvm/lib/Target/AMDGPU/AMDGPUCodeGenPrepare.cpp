@@ -1594,6 +1594,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
           }
         }
 
+        if (auto *NewEltI = dyn_cast<Instruction>(NewElt))
+          NewEltI->copyIRFlags(&I);
+
         NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, N);
       }
     } else {

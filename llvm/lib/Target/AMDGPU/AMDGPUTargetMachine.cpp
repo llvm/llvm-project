@@ -631,107 +631,26 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
+static Expected<ScanOptions>
+parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
+  if (Params.empty())
+    return ScanOptions::Iterative;
+  Params.consume_front("strategy=");
+  auto Result = StringSwitch<std::optional<ScanOptions>>(Params)
+                    .Case("dpp", ScanOptions::DPP)
+                    .Cases("iterative", "", ScanOptions::Iterative)
+                    .Case("none", ScanOptions::None)
+                    .Default(std::nullopt);
+  if (Result)
+    return *Result;
+  return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
+}
+
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
-  PB.registerPipelineParsingCallback(
-      [this](StringRef PassName, ModulePassManager &PM,
-             ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "amdgpu-attributor") {
-          PM.addPass(AMDGPUAttributorPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-unify-metadata") {
-          PM.addPass(AMDGPUUnifyMetadataPass());
-          return true;
-        }
-        if (PassName == "amdgpu-printf-runtime-binding") {
-          PM.addPass(AMDGPUPrintfRuntimeBindingPass());
-          return true;
-        }
-        if (PassName == "amdgpu-always-inline") {
-          PM.addPass(AMDGPUAlwaysInlinePass());
-          return true;
-        }
-        if (PassName == "amdgpu-lower-module-lds") {
-          PM.addPass(AMDGPULowerModuleLDSPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-buffer-fat-pointers") {
-          PM.addPass(AMDGPULowerBufferFatPointersPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-ctor-dtor") {
-          PM.addPass(AMDGPUCtorDtorLoweringPass());
-          return true;
-        }
-        return false;
-      });
-  PB.registerPipelineParsingCallback(
-      [this](StringRef PassName, FunctionPassManager &PM,
-             ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-image-intrinsic-opt") {
-          PM.addPass(AMDGPUImageIntrinsicOptimizerPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-usenative") {
-          PM.addPass(AMDGPUUseNativeCallsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-promote-alloca") {
-          PM.addPass(AMDGPUPromoteAllocaPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-promote-alloca-to-vector") {
-          PM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-kernel-attributes") {
-          PM.addPass(AMDGPULowerKernelAttributesPass());
-          return true;
-        }
-        if (PassName == "amdgpu-promote-kernel-arguments") {
-          PM.addPass(AMDGPUPromoteKernelArgumentsPass());
-          return true;
-        }
-        if (PassName == "amdgpu-unify-divergent-exit-nodes") {
-          PM.addPass(AMDGPUUnifyDivergentExitNodesPass());
-          return true;
-        }
-        if (PassName == "amdgpu-atomic-optimizer") {
-          PM.addPass(
-              AMDGPUAtomicOptimizerPass(*this, AMDGPUAtomicOptimizerStrategy));
-          return true;
-        }
-        if (PassName == "amdgpu-codegenprepare") {
-          PM.addPass(AMDGPUCodeGenPreparePass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-lower-kernel-arguments") {
-          PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
-          return true;
-        }
-        if (PassName == "amdgpu-rewrite-undef-for-phi") {
-          PM.addPass(AMDGPURewriteUndefForPHIPass());
-          return true;
-        }
-        return false;
-      });
 
-  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
-    FAM.registerPass([&] { return AMDGPUAA(); });
-  });
-
-  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
-    if (AAName == "amdgpu-aa") {
-      AAM.registerFunctionAnalysis<AMDGPUAA>();
-      return true;
-    }
-    return false;
-  });
+#define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level) {
@@ -792,6 +711,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         }
 
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
+
+  PB.registerFullLinkTimeOptimizationLastEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        // We want to support the -lto-partitions=N option as "best effort".
+        // For that, we need to lower LDS earlier in the pipeline before the
+        // module is partitioned for codegen.
+        if (EnableLowerModuleLDS)
+          PM.addPass(AMDGPULowerModuleLDSPass(*this));
       });
 }
 

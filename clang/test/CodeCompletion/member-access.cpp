@@ -348,7 +348,23 @@ namespace function_can_be_call {
     T foo(U, V);
   };
 
-  &S::f
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:351:7 %s -o - | FileCheck -check-prefix=CHECK_FUNCTION_CAN_BE_CALL %s
+  void test() {
+    &S::f
+  }
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:352:9 %s -o - | FileCheck -check-prefix=CHECK_FUNCTION_CAN_BE_CALL %s
   // CHECK_FUNCTION_CAN_BE_CALL: COMPLETION: foo : [#T#]foo<<#typename T#>, <#typename U#>>(<#U#>, <#V#>)
+}
+
+namespace deref_dependent_this {
+template <typename T>
+class A {
+  int field;
+
+  void function() {
+    (*this).field;
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:364:13 %s -o - | FileCheck -check-prefix=CHECK-DEREF-THIS %s
+// CHECK-DEREF-THIS: field : [#int#]field
+// CHECK-DEREF-THIS: [#void#]function()
+  }
+};
 }

@@ -8,7 +8,7 @@
 define amdgpu_kernel void @kern() {
   %val0 = load i32, ptr addrspace(3) @var1
   %val1 = add i32 %val0, 4
-  store i32 %val1, ptr addrspace(3) @var1
+  store i32 %val1, ptr addrspace(3) @var2
   ret void
 }
 

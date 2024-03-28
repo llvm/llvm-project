@@ -247,7 +247,7 @@ void ROCDLDialect::initialize() {
 
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
-  declarePromisedInterface<ROCDLTargetAttr, gpu::TargetAttrInterface>();
+  declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
 }
 
 LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,

@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/DynamicLibrary.h"
+
+#include "Shared/Debug.h"
 #include <memory>
 
 #include "DLWrap.h"
@@ -37,15 +39,21 @@ uint32_t ffi_init() {
   std::string ErrMsg;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(FFI_PATH, &ErrMsg));
-  if (!DynlibHandle->isValid())
+
+  if (!DynlibHandle->isValid()) {
+    DP("Unable to load library '%s': %s!\n", FFI_PATH, ErrMsg.c_str());
     return DYNAMIC_FFI_FAIL;
+  }
 
   for (size_t I = 0; I < dlwrap::size(); I++) {
     const char *Sym = dlwrap::symbol(I);
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
-    if (P == nullptr)
+    if (P == nullptr) {
+      DP("Unable to find '%s' in '%s'!\n", Sym, FFI_PATH);
       return DYNAMIC_FFI_FAIL;
+    }
+    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
 
     *dlwrap::pointer(I) = P;
   }
@@ -53,8 +61,10 @@ uint32_t ffi_init() {
 #define DYNAMIC_INIT(SYMBOL)                                                   \
   {                                                                            \
     void *SymbolPtr = DynlibHandle->getAddressOfSymbol(#SYMBOL);               \
-    if (!SymbolPtr)                                                            \
+    if (!SymbolPtr) {                                                          \
+      DP("Unable to find '%s' in '%s'!\n", #SYMBOL, FFI_PATH);                 \
       return DYNAMIC_FFI_FAIL;                                                 \
+    }                                                                          \
     SYMBOL = *reinterpret_cast<decltype(SYMBOL) *>(SymbolPtr);                 \
   }
   DYNAMIC_INIT(ffi_type_void);

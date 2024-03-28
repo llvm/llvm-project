@@ -47,14 +47,14 @@ void mlir::memref::MemRefDialect::initialize() {
 #include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
       >();
   addInterfaces<MemRefInlinerInterface>();
-  declarePromisedInterface<MemRefDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, MemRefDialect>();
   declarePromisedInterfaces<bufferization::AllocationOpInterface, AllocOp,
                             AllocaOp, ReallocOp>();
   declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ExpandShapeOp,
                             LoadOp, ReinterpretCastOp, StoreOp, SubViewOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
                             DimOp, GetGlobalOp, RankOp, SubViewOp>();
-  declarePromisedInterface<MemRefType, DestructurableTypeInterface>();
+  declarePromisedInterface<DestructurableTypeInterface, MemRefType>();
 }
 
 /// Finds the unique dealloc operation (if one exists) for `allocValue`.

@@ -693,6 +693,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
+  ElapsedTime elapsed(m_parse_time);
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();

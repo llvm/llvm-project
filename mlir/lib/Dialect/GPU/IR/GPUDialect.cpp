@@ -216,8 +216,8 @@ void GPUDialect::initialize() {
 #include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
       >();
   addInterfaces<GPUInlinerInterface>();
-  declarePromisedInterface<TerminatorOp,
-                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           TerminatorOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {

@@ -363,8 +363,8 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     for (auto &Row : SubRegFromChannelTable)
       Row.fill(AMDGPU::NoSubRegister);
     for (unsigned Idx = 1; Idx < getNumSubRegIndices(); ++Idx) {
-      unsigned Width = AMDGPUSubRegIdxRanges[Idx].Size / 32;
-      unsigned Offset = AMDGPUSubRegIdxRanges[Idx].Offset / 32;
+      unsigned Width = getSubRegIdxSize(Idx) / 32;
+      unsigned Offset = getSubRegIdxOffset(Idx) / 32;
       assert(Width < SubRegFromChannelTableWidthMap.size());
       Width = SubRegFromChannelTableWidthMap[Width];
       if (Width == 0)

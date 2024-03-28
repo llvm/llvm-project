@@ -1776,6 +1776,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 
   AddUnalignedAccessWarning(CmdArgs);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
+                    options::OPT_fno_ptrauth_intrinsics);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -5863,8 +5866,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);
-    } else if (Triple.isNVPTX() || Triple.isAMDGPU()) {
-      // NVPTX/AMDGPU does not care about the code model and will accept
+    } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
+      // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
       // whatever works for the host.
       Ok = true;
     } else if (Triple.isSPARC64()) {
@@ -7257,10 +7260,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
-
-  if (Args.hasFlag(options::OPT_fptrauth_intrinsics,
-                   options::OPT_fno_ptrauth_intrinsics, false))
-    CmdArgs.push_back("-fptrauth-intrinsics");
 
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.

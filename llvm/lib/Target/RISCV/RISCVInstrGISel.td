@@ -24,3 +24,11 @@ def G_FCLASS : RISCVGenericInstruction {
   let hasSideEffects = false;
 }
 def : GINodeEquiv<G_FCLASS, riscv_fclass>;
+
+// Pseudo equivalent to a RISCVISD::READ_VLENB.
+def G_READ_VLENB : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_READ_VLENB, riscv_read_vlenb>;

@@ -3883,7 +3883,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   int pos = 3 + highSignificandSize;
   mlir::Value index = builder.create<mlir::arith::AndIOp>(
       loc, builder.create<mlir::arith::ShRUIOp>(loc, intVal, signShift),
-      createIntegerConstant(1 << pos));
+      createIntegerConstant(1ULL << pos));
 
   // [e] exponent != 0
   mlir::Value exponent =
@@ -3895,7 +3895,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::ne, exponent, zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [m] exponent == 1..1 (max exponent)
   index = builder.create<mlir::arith::OrIOp>(
@@ -3904,7 +3904,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::eq, exponent, exponentMask),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [l] low-order significand != 0
   index = builder.create<mlir::arith::OrIOp>(
@@ -3916,7 +3916,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
               builder.create<mlir::arith::AndIOp>(loc, intVal,
                                                   lowSignificandMask),
               zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [h] high-order significand (1 or 2 bits)
   index = builder.create<mlir::arith::OrIOp>(

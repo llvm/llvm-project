@@ -538,7 +538,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
-  OS << T->getSize().getZExtValue() << ']';
+  OS << T->getZExtSize() << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -1070,6 +1070,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       break;
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
+      break;
+    case CC_RISCVVectorCall:
+      OS << "__attribute__((riscv_vector_cc))";
       break;
     }
   }
@@ -1960,6 +1963,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveNone:
     OS << "preserve_none";
     break;
+  case attr::RISCVVectorCC:
+    OS << "riscv_vector_cc";
+    break;
   case attr::NoDeref:
     OS << "noderef";
     break;
@@ -2303,15 +2309,10 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (!Policy.SuppressTagKeyword &&
-          Argument.getKind() == TemplateArgument::Type &&
-          isa<TagType>(Argument.getAsType()))
-        OS << Argument.getAsType().getAsString();
-      else
-        // Tries to print the argument with location info if exists.
-        printArgument(Arg, Policy, ArgOS,
-                      TemplateParameterList::shouldIncludeTypeForArgument(
-                          Policy, TPL, ParmIndex));
+      // Tries to print the argument with location info if exists.
+      printArgument(Arg, Policy, ArgOS,
+                    TemplateParameterList::shouldIncludeTypeForArgument(
+                        Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 
