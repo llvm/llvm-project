@@ -183,6 +183,14 @@ registers:
   - { id: 5, class: gpr }
   - { id: 6, class: gpr }
   - { id: 7, class: gpr }
+  - { id: 8, class: fpr }
+  - { id: 9, class: gpr }
+  - { id: 10, class: fpr }
+  - { id: 11, class: gpr }
+  - { id: 12, class: gpr }
+  - { id: 13, class: gpr }
+  - { id: 14, class: gpr }
+  - { id: 15, class: gpr }
 
 # CHECK:  body:
 # CHECK:    nofpexcept FCMPSrr %0, %0, implicit-def $nzcv
@@ -208,6 +216,18 @@ body:             |
     %5(s8) = G_TRUNC %3(s32)
     %7(s32) = G_ANYEXT %5
     $w0 = COPY %7(s32)
+
+    %8(s32) = COPY $s0
+    %9(s32) = G_FCMP floatpred(true), %8, %8
+    %12(s8) = G_TRUNC %9(s32)
+    %14(s32) = G_ANYEXT %12
+    $w0 = COPY %14(s32)
+
+    %10(s64) = COPY $d0
+    %11(s32) = G_FCMP floatpred(false), %10, %10
+    %13(s8) = G_TRUNC %11(s32)
+    %15(s32) = G_ANYEXT %13
+    $w0 = COPY %15(s32)
 
 ...
 
