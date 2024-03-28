@@ -86,9 +86,6 @@ def AtomicWriteOpInterface : OpInterface<"AtomicWriteOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        mlir::Type elementType = $_op.getX().getType().getElementType();
-        if (elementType && elementType != $_op.getExpr().getType())
-          return $_op.emitError("address must dereference to value type");
         return mlir::success();
       }]
     >,
@@ -196,12 +193,6 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*defaultImplementation=*/[{
         if ($_op.getRegion().getNumArguments() != 1)
           return $_op.emitError("the region must accept exactly one argument");
-
-        Type elementType = $_op.getX().getType().getElementType();
-        if (elementType && elementType != $_op.getRegion().getArgument(0).getType()) {
-          return $_op.emitError("the type of the operand must be a pointer type whose "
-                          "element type is the same as that of the region argument");
-        }
 
         return mlir::success();
       }]

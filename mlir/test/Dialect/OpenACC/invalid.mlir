@@ -521,26 +521,6 @@ acc.set
 
 // -----
 
-func.func @acc_atomic_write(%addr : memref<memref<i32>>, %val : i32) {
-  // expected-error @below {{address must dereference to value type}}
-  acc.atomic.write %addr = %val : memref<memref<i32>>, i32
-  return
-}
-
-// -----
-
-func.func @acc_atomic_update(%x: memref<i32>, %expr: f32) {
-  // expected-error @below {{the type of the operand must be a pointer type whose element type is the same as that of the region argument}}
-  acc.atomic.update %x : memref<i32> {
-  ^bb0(%xval: f32):
-    %newval = llvm.fadd %xval, %expr : f32
-    acc.yield %newval : f32
-  }
-  return
-}
-
-// -----
-
 func.func @acc_atomic_update(%x: memref<i32>, %expr: i32) {
   // expected-error @+2 {{op expects regions to end with 'acc.yield', found 'acc.terminator'}}
   // expected-note @below {{in custom textual format, the absence of terminator implies 'acc.yield'}}
