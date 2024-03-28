@@ -1037,6 +1037,7 @@ bool PPCMIPeephole::simplifyCode() {
                    TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
           // sign-extended.
+          TII->replaceInstrAfterElimExt32To64(NarrowReg, MRI, 0, LV);
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
               MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);

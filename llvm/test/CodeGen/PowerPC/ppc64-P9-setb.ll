@@ -937,6 +937,8 @@ define i64 @setbsc3(i4 %a, i4 %b) {
 ; CHECK-PWR8-NEXT:    slwi r3, r3, 28
 ; CHECK-PWR8-NEXT:    srawi r4, r4, 28
 ; CHECK-PWR8-NEXT:    srawi r3, r3, 28
+; CHECK-PWR8-NEXT:    extsw r4, r4
+; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
 ; CHECK-PWR8-NEXT:    sub r5, r4, r3
 ; CHECK-PWR8-NEXT:    li r3, -1
