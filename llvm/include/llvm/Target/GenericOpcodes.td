@@ -1480,6 +1480,16 @@ def G_SPLAT_VECTOR: GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic splatvector parts. This allows representing 64-bit splat on a target
+// with 32-bit integers. The total width of the scalars must cover the element
+// width. The lo operand contains the least significant bits and the hi operand
+// contains the most significant bits.
+def G_SPLAT_VECTOR_PARTS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$lo, type1:$hi);
+  let hasSideEffects = false;
+}
+
 //------------------------------------------------------------------------------
 // Vector reductions
 //------------------------------------------------------------------------------

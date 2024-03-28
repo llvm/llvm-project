@@ -1107,6 +1107,20 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSplatVector(const DstOp &Res, const SrcOp &Val);
 
+  /// Build and insert \p Res = G_SPLAT_VECTOR_PARTS \p Lo Hi.
+  ///
+  /// \p Lo contains the least significant bits of the value. \p Hi contains the
+  /// most significant bits of the value.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with vector type.
+  /// \pre \p Lo must be a generic virtual register with scalar type.
+  /// \pre \p Hi must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildSplatVectorParts(const DstOp &Res, const SrcOp &Lo,
+                                            const SrcOp &Hi);
+
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
   /// G_CONCAT_VECTORS creates a vector from the concatenation of 2 or more

@@ -749,6 +749,17 @@ MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
   return buildInstr(TargetOpcode::G_SPLAT_VECTOR, Res, Src);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildSplatVectorParts(const DstOp &Res,
+                                                            const SrcOp &Lo,
+                                                            const SrcOp &Hi) {
+  TypeSize LoSize = Lo.getLLTTy(*getMRI()).getSizeInBits();
+  TypeSize HiSize = Hi.getLLTTy(*getMRI()).getSizeInBits();
+  TypeSize EltSize = Res.getLLTTy(*getMRI()).getElementType().getSizeInBits();
+  assert(LoSize + HiSize == EltSize &&
+         "Expected scalar sizes to cover Dst element size");
+  return buildInstr(TargetOpcode::G_SPLAT_VECTOR_PARTS, {Res}, {Lo, Hi});
+}
+
 MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
                                                          const SrcOp &Src1,
                                                          const SrcOp &Src2,
