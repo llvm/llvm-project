@@ -255,7 +255,7 @@ class binop_with_non_imm12<SDPatternOperator binop>
   }];
 }
 def add_non_imm12       : binop_with_non_imm12<add>;
-def or_is_add_non_imm12 : binop_with_non_imm12<or_is_add>;
+def add_like_non_imm12 : binop_with_non_imm12<add_like>;
 
 def Shifted32OnesMask : IntImmLeaf<XLenVT, [{
   if (!Imm.isShiftedMask())
@@ -756,12 +756,9 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt)),
 def : Pat<(i64 (and GPR:$rs1, Shifted32OnesMask:$mask)),
           (SLLI_UW (XLenVT (SRLI GPR:$rs1, Shifted32OnesMask:$mask)),
                    Shifted32OnesMask:$mask)>;
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, (XLenVT X0))>;
-
-def : Pat<(i64 (or_is_add_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
-          (ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 foreach i = {1,2,3} in {
   defvar shxadd_uw = !cast<Instruction>("SH"#i#"ADD_UW");
@@ -876,12 +873,9 @@ let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
 
-def : Pat<(i64 (add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
+def : Pat<(i64 (add_like_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
-
-def : Pat<(i64 (or_is_add_non_imm12 (zext GPR:$rs1), GPR:$rs2)),
-          (ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
