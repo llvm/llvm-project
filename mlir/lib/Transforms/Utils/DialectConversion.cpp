@@ -282,8 +282,10 @@ public:
     block->dropAllUses();
     if (block->getParent())
       block->erase();
-    else
+    else {
+      block->dropAllDefinedValueUses();
       delete block;
+    }
   }
 };
 
