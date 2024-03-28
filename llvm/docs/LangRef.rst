@@ -5622,34 +5622,106 @@ occurs on.
 Metadata
 ========
 
-LLVM IR allows metadata to be attached to instructions and global objects in the
-program that can convey extra information about the code to the optimizers and
-code generator. One example application of metadata is source-level
-debug information. There are two metadata primitives: strings and nodes.
+LLVM IR allows metadata to be attached to instructions and global objects in
+the program that can convey extra information about the code to the optimizers
+and code generator.
 
-Metadata does not have a type, and is not a value. If referenced from a
-``call`` instruction, it uses the ``metadata`` type.
+There are two metadata primitives: strings and nodes. There are
+also specialized nodes which have a distinguished name and a set of named
+arguments.
 
-All metadata are identified in syntax by an exclamation point ('``!``').
+.. note::
+
+    One example application of metadata is source-level debug information,
+    which is currently the only user of specialized nodes.
+
+Metadata does not have a type, and is not a value.
+
+A value of non-\ ``metadata`` type can be used in a metadata context using the
+syntax '``<type> <value>``'.
+
+All other metadata is identified in syntax as starting with an exclamation
+point ('``!``').
+
+Metadata may be used in the following value contexts by using the ``metadata``
+type:
+
+- Arguments to certain intrinsic functions, as described in their specification.
+- Arguments to the ``catchpad``/``cleanuppad`` instructions.
+
+.. note::
+
+    Metadata can be "wrapped" in a ``MetadataAsValue`` so it can be referenced
+    in a value context: ``MetadataAsValue`` is-a ``Value``.
+
+    A typed value can be "wrapped" in ``ValueAsMetadata`` so it can be
+    referenced in a metadata context: ``ValueAsMetadata`` is-a ``Metadata``.
+
+    There is no explicit syntax for a ``ValueAsMetadata``, and instead
+    the fact that a type identifier cannot begin with an exclamation point
+    is used to resolve ambiguity.
+
+    A ``metadata`` type implies a ``MetadataAsValue``, and when followed with a
+    '``<type> <value>``' pair it wraps the typed value in a ``ValueAsMetadata``.
+
+    For example, the first argument
+    to this call is a ``MetadataAsValue(ValueAsMetadata(Value))``:
+
+    .. code-block:: llvm
+
+        call void @llvm.foo(metadata i32 1)
+
+    Whereas the first argument to this call is a ``MetadataAsValue(MDNode)``:
+
+    .. code-block:: llvm
+
+        call void @llvm.foo(metadata !0)
+
+    The first element of this ``MDTuple`` is a ``MDNode``:
+
+    .. code-block:: llvm
+
+        !{!0}
+
+    And the first element of this ``MDTuple`` is a ``ValueAsMetadata(Value)``:
+
+    .. code-block:: llvm
+
+        !{i32 1}
 
 .. _metadata-string:
 
-Metadata Nodes and Metadata Strings
------------------------------------
+Metadata Strings (``MDString``)
+-------------------------------
+
+.. FIXME Either fix all references to "MDString" in the docs, or make that
+   identifier a formal part of the document.
 
 A metadata string is a string surrounded by double quotes. It can
 contain any character by escaping non-printable characters with
 "``\xx``" where "``xx``" is the two digit hex code. For example:
 "``!"test\00"``".
 
-Metadata nodes are represented with notation similar to structure
-constants (a comma separated list of elements, surrounded by braces and
-preceded by an exclamation point). Metadata nodes can have any values as
+.. note::
+
+   A metadata string is metadata, but is not a metadata node.
+
+.. _metadata-node:
+
+Metadata Nodes (``MDNode``)
+---------------------------
+
+.. FIXME Either fix all references to "MDNode" in the docs, or make that
+   identifier a formal part of the document.
+
+Metadata tuples are represented with notation similar to structure
+constants: a comma separated list of elements, surrounded by braces and
+preceded by an exclamation point. Metadata nodes can have any values as
 their operand. For example:
 
 .. code-block:: llvm
 
-    !{ !"test\00", i32 10}
+    !{!"test\00", i32 10}
 
 Metadata nodes that aren't uniqued use the ``distinct`` keyword. For example:
 
@@ -5675,6 +5747,12 @@ intrinsic is using three metadata arguments:
 .. code-block:: llvm
 
     call void @llvm.dbg.value(metadata !24, metadata !25, metadata !26)
+
+
+.. FIXME Attachments cannot be ValueAsMetadata, but we don't have a
+   particularly clear way to refer to ValueAsMetadata without getting into
+   implementation details. Ideally the restriction would be explicit somewhere,
+   though?
 
 Metadata can be attached to an instruction. Here metadata ``!21`` is attached
 to the ``add`` instruction using the ``!dbg`` identifier:
@@ -6309,7 +6387,7 @@ valid debug intrinsic.
     !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
-""""""""""""
+""""""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
 link together `@llvm.dbg.assign` intrinsics (:ref:`debug
@@ -6324,7 +6402,13 @@ Assignment Tracking <AssignmentTracking.html>`_ for more info.
     !2 = distinct !DIAssignID()
 
 DIArgList
-""""""""""""
+"""""""""
+
+.. FIXME In the implementation this is not a "node", but as it can only appear
+   inline in a function context that distinction isn't observable anyway. Even
+   if it is not required, it would be nice to be more clear about what is a
+   "node", and what that actually means. The names in the implementation could
+   also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
 used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
@@ -6340,7 +6424,7 @@ inlined, and cannot appear in named metadata.
                    metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
 
 DIFlags
-"""""""""""""""
+"""""""
 
 These flags encode various properties of DINodes.
 
@@ -6415,6 +6499,46 @@ within the file where the label is declared.
 .. code-block:: text
 
   !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+
+DICommonBlock
+"""""""""""""
+
+``DICommonBlock`` nodes represent Fortran common blocks. The ``scope:`` field
+is mandatory and points to a :ref:`DILexicalBlockFile`, a
+:ref:`DILexicalBlock`, or a :ref:`DISubprogram`. The ``declaration:``,
+``name:``, ``file:``, and ``line:`` fields are optional.
+
+DIModule
+""""""""
+
+``DIModule`` nodes represent a source language module, for example, a Clang
+module, or a Fortran module. The ``scope:`` field is mandatory and points to a
+:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
+The ``name:`` field is mandatory. The ``configMacros:``, ``includePath:``,
+``apinotes:``, ``file:``, ``line:``, and ``isDecl:`` fields are optional.
+
+DIStringType
+""""""""""""
+
+``DIStringType`` nodes represent a Fortran ``CHARACTER(n)`` type, with a
+dynamic length and location encoded as an expression.
+The ``tag:`` field is optional and defaults to ``DW_TAG_string_type``. The ``name:``,
+``stringLength:``, ``stringLengthExpression``, ``stringLocationExpression:``,
+``size:``, ``align:``, and ``encoding:`` fields are optional.
+
+If not present, the ``size:`` and ``align:`` fields default to the value zero.
+
+The length in bits of the string is specified by the first of the following
+fields present:
+
+- ``stringLength:``, which points to a ``DIVariable`` whose value is the string
+  length in bits.
+- ``stringLengthExpression:``, which points to a ``DIExpression`` which
+  computes the length in bits.
+- ``size``, which contains the literal length in bits.
+
+The ``stringLocationExpression:`` points to a ``DIExpression`` which describes
+the "data location" of the string object, if present.
 
 '``tbaa``' Metadata
 ^^^^^^^^^^^^^^^^^^^
