@@ -170,6 +170,11 @@ public:
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          CompilerType base_type);
 
+  /// Enter an anonymous Clang type with a name key into a side table.
+  void RegisterAnonymousClangType(const char *key, CompilerType clang_type);
+  /// Look up an anonymous Clang type with a name key into a side table.
+  CompilerType LookupAnonymousClangType(const char *key);
+
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                ConstString abstract_type_name);
 
@@ -434,6 +439,8 @@ private:
   llvm::DenseMap<lldb::opaque_compiler_type_t,
                  std::optional<swift::reflection::RecordTypeInfo>>
       m_clang_record_type_info;
+  llvm::DenseMap<const char *, CompilerType> m_anonymous_clang_types;
+  unsigned m_num_anonymous_clang_types = 0;
   std::recursive_mutex m_clang_type_info_mutex;
   /// \}
 

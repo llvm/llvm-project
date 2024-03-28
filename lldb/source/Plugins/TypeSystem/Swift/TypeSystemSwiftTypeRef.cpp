@@ -321,6 +321,22 @@ NodePointer TypeSystemSwiftTypeRef::CreateBoundGenericStruct(
   return outer_type;
 }
 
+CompilerType
+TypeSystemSwiftTypeRef::CreateClangStructType(llvm::StringRef name) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer module = dem.createNodeWithAllocatedText(
+      Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
+  NodePointer identifier =
+      dem.createNodeWithAllocatedText(Node::Kind::Identifier, name);
+  NodePointer nominal = dem.createNode(Node::Kind::Structure);
+  nominal->addChild(module, dem);
+  nominal->addChild(identifier, dem);
+  NodePointer type = dem.createNode(Node::Kind::Type);
+  type->addChild(nominal, dem);
+  return RemangleAsType(dem, type);
+}
+
 /// Return a demangle tree leaf node representing \p clang_type.
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
