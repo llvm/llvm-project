@@ -284,7 +284,6 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       Builder.addUnowned(PredState);
       continue;
     }
-
     bool BranchVal = blockIndexInPredecessor(*Pred, Block) == 0;
 
     // `transferBranch` may need to mutate the environment to describe the
@@ -297,6 +296,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       // assert ourselves instead of asserting via `cast()` so that we get
       // a more meaningful line number if the assertion fails.
       assert(CondVal != nullptr);
+      // Invert the condition if this is the successor for the "else" branch.
       BoolValue *AssertedVal =
           BranchVal ? CondVal : &Copy.Env.makeNot(*CondVal);
       Copy.Env.assume(AssertedVal->formula());
@@ -465,7 +465,8 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
     // we have *some* value for the condition expression. This ensures that
     // when we extend the flow condition, it actually changes.
     if (State.Env.getValue(*TerminatorCond) == nullptr)
-      State.Env.setValue(*TerminatorCond, State.Env.makeAtomicBoolValue());
+      State.Env.setValue(*TerminatorCond,
+                         bool_model::freshBoolValue(State.Env));
     AC.Log.recordState(State);
   }
 

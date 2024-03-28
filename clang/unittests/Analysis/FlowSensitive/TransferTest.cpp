@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -36,6 +37,7 @@ using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::Ne;
 using ::testing::NotNull;
+using ::testing::Optional;
 using ::testing::UnorderedElementsAre;
 
 // Declares a minimal coroutine library.
@@ -3768,6 +3770,11 @@ TEST(TransferTest, AssignFromBoolLiteral) {
       });
 }
 
+// TODO: this looks like a change-detector test. And, I don't see the value of
+// the three different cases. Why not 12? It's really not clear what we're
+// getting at here. Is this a test for correct formula construction? If so, we
+// should name it (and comment) rather than tieing it to assignment.
+// Also, this should be "InitializeFrom...".
 TEST(TransferTest, AssignFromCompositeBoolExpression) {
   {
     std::string Code = R"(
@@ -4433,12 +4440,12 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
     bool foo();
 
     void target() {
-       do {
+      do {
         bool Bar = foo();
         if (Bar) break;
         (void)Bar;
         /*[[p]]*/
-      } while (true);
+     } while (true);
     }
   )";
   // The key property that we are verifying is implicit in `runDataflow` --
@@ -4455,6 +4462,8 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarVal = getFormula(*BarDecl, Env);
+        ASSERT_EQ(BarVal.kind(), Formula::AtomRef);
+        ASSERT_THAT(Env.getAtomValue(BarVal.getAtom()), Optional(false));
         EXPECT_TRUE(Env.proves(Env.arena().makeNot(BarVal)));
       });
 }
@@ -5136,6 +5145,10 @@ TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
       });
 }
 
+// TODO: this test is overly complicated for what its name implies it's
+// testing. It involves a complex condition of (A or B), where neither holds
+// separately. But, that involves join machinery and SAT solving, which is well
+// more than the simple test for DoWhile support in flow-condition extenionsion.
 TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
   std::string Code = R"(
     void target(bool Foo) {

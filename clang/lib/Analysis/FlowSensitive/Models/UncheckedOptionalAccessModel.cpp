@@ -654,8 +654,7 @@ const Formula &evaluateEquality(Arena &A, const Formula &EqVal,
   //    If neither is set, then they are equal.
   // We rewrite b) as !EqVal => (LHS v RHS), for a more compact formula.
   return A.makeAnd(
-      A.makeImplies(EqVal, A.makeOr(A.makeAnd(LHS, RHS),
-                                    A.makeAnd(A.makeNot(LHS), A.makeNot(RHS)))),
+      A.makeImplies(EqVal, A.makeEquals(LHS, RHS)),
       A.makeImplies(A.makeNot(EqVal), A.makeOr(LHS, RHS)));
 }
 
