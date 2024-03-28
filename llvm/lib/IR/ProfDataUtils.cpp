@@ -201,14 +201,23 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
                         !ProfDataName->getString().equals("VP")))
     return;
 
+  // If an instruction is a call and its branch weight has more than two
+  // operands, it represents taken vs not-taken branch probabilities and doesn't
+  // need scaling.
+  if (isa<CallBase>(&I) && ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 2)
+    return;
+
   LLVMContext &C = I.getContext();
 
   MDBuilder MDB(C);
   SmallVector<Metadata *, 3> Vals;
   Vals.push_back(ProfileData->getOperand(0));
   APInt APS(128, S), APT(128, T);
-  if (ProfDataName->getString().equals("branch_weights") &&
-      ProfileData->getNumOperands() > 0) {
+
+  // Scale the counts associated with calls.
+  if (isa<CallBase>(&I) && ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() == 2) {
     // Using APInt::div may be expensive, but most cases should fit 64 bits.
     APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
                        ->getValue()
