@@ -30,7 +30,8 @@
 #include "test_macros.h"
 
 struct P {
-  bool operator()(int) const { return false; }
+  bool operator()(int) & { return false; }
+  bool operator()(int) const& { return false; }
 };
 
 void test_algorithms() {

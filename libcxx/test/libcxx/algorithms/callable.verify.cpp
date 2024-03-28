@@ -25,6 +25,9 @@ void f() {
 
   S a[] = {1, 2, 3, 4};
   (void) std::lower_bound(a, a + 4, 0, &S::compare); // expected-error@*:* {{The comparator has to be callable}}
+  // expected-error@*:* {{The comparator has to be const-callable}}
   (void) std::minmax({S{1}}, &S::compare); // expected-error@*:* {{The comparator has to be callable}}
+  // expected-error@*:* {{The comparator has to be const-callable}}
   (void) std::minmax_element(a, a + 4, &S::compare); // expected-error@*:* {{The comparator has to be callable}}
+  // expected-error@*:* {{The comparator has to be const-callable}}
 }

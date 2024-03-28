@@ -51,7 +51,8 @@ struct S {
 };
 
 struct eq {
-  bool operator()(const S& a, const S&b) { return a.i_ == b.i_; }
+  bool operator()(const S& a, const S& b) & { return a.i_ == b.i_; }
+  bool operator()(const S& a, const S& b) const& { return a.i_ == b.i_; }
 };
 
 

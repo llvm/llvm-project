@@ -249,8 +249,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool is_permutation(
     _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _BinaryPredicate __pred) {
-  static_assert(__is_callable<_BinaryPredicate, decltype(*__first1), decltype(*__first2)>::value,
+  static_assert(__is_callable<_BinaryPredicate&, decltype(*__first1), decltype(*__first2)>::value,
                 "The predicate has to be callable");
+  static_assert(__is_callable<_BinaryPredicate const&, decltype(*__first1), decltype(*__first2)>::value,
+                "The predicate has to be const-callable");
 
   return std::__is_permutation<_ClassicAlgPolicy>(std::move(__first1), std::move(__last1), std::move(__first2), __pred);
 }
@@ -286,8 +288,10 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     _ForwardIterator2 __first2,
     _ForwardIterator2 __last2,
     _BinaryPredicate __pred) {
-  static_assert(__is_callable<_BinaryPredicate, decltype(*__first1), decltype(*__first2)>::value,
+  static_assert(__is_callable<_BinaryPredicate&, decltype(*__first1), decltype(*__first2)>::value,
                 "The predicate has to be callable");
+  static_assert(__is_callable<_BinaryPredicate const&, decltype(*__first1), decltype(*__first2)>::value,
+                "The predicate has to be const-callable");
 
   return std::__is_permutation<_ClassicAlgPolicy>(
       std::move(__first1),

@@ -24,7 +24,8 @@ struct Less {
     constexpr explicit Less(int *copies) : copies_(copies) {}
     constexpr Less(const Less& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr Less& operator=(const Less&) = default;
-    constexpr bool operator()(void*, void*) const { return false; }
+    constexpr bool operator()(void*, void*) & { return false; }
+    constexpr bool operator()(void*, void*) const& { return false; }
 };
 
 struct Equal {
@@ -32,7 +33,8 @@ struct Equal {
     constexpr explicit Equal(int *copies) : copies_(copies) {}
     constexpr Equal(const Equal& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr Equal& operator=(const Equal&) = default;
-    constexpr bool operator()(void*, void*) const { return true; }
+    constexpr bool operator()(void*, void*) & { return true; }
+    constexpr bool operator()(void*, void*) const& { return true; }
 };
 
 struct UnaryVoid {
@@ -40,7 +42,8 @@ struct UnaryVoid {
     constexpr explicit UnaryVoid(int *copies) : copies_(copies) {}
     constexpr UnaryVoid(const UnaryVoid& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr UnaryVoid& operator=(const UnaryVoid&) = default;
-    constexpr void operator()(void*) const {}
+    constexpr void operator()(void*) & {}
+    constexpr void operator()(void*) const& {}
 };
 
 struct UnaryTrue {
@@ -48,7 +51,8 @@ struct UnaryTrue {
     constexpr explicit UnaryTrue(int *copies) : copies_(copies) {}
     constexpr UnaryTrue(const UnaryTrue& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr UnaryTrue& operator=(const UnaryTrue&) = default;
-    constexpr bool operator()(void*) const { return true; }
+    constexpr bool operator()(void*) & { return true; }
+    constexpr bool operator()(void*) const& { return true; }
 };
 
 struct NullaryValue {
@@ -56,7 +60,8 @@ struct NullaryValue {
     constexpr explicit NullaryValue(int *copies) : copies_(copies) {}
     constexpr NullaryValue(const NullaryValue& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr NullaryValue& operator=(const NullaryValue&) = default;
-    constexpr std::nullptr_t operator()() const { return nullptr; }
+    constexpr std::nullptr_t operator()() & { return nullptr; }
+    constexpr std::nullptr_t operator()() const& { return nullptr; }
 };
 
 struct UnaryTransform {
@@ -64,7 +69,8 @@ struct UnaryTransform {
     constexpr explicit UnaryTransform(int *copies) : copies_(copies) {}
     constexpr UnaryTransform(const UnaryTransform& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr UnaryTransform& operator=(const UnaryTransform&) = default;
-    constexpr std::nullptr_t operator()(void*) const { return nullptr; }
+    constexpr std::nullptr_t operator()(void*) & { return nullptr; }
+    constexpr std::nullptr_t operator()(void*) const& { return nullptr; }
 };
 
 struct BinaryTransform {
@@ -72,7 +78,8 @@ struct BinaryTransform {
     constexpr explicit BinaryTransform(int *copies) : copies_(copies) {}
     constexpr BinaryTransform(const BinaryTransform& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
     constexpr BinaryTransform& operator=(const BinaryTransform&) = default;
-    constexpr std::nullptr_t operator()(void*, void*) const { return nullptr; }
+    constexpr std::nullptr_t operator()(void*, void*) & { return nullptr; }
+    constexpr std::nullptr_t operator()(void*, void*) const& { return nullptr; }
 };
 
 constexpr bool all_the_algorithms()

@@ -129,7 +129,8 @@ void check_oob_nth_element_read() {
 
 struct FloatContainer {
   float value;
-  bool operator<(const FloatContainer& other) const { return value < other.value; }
+  bool operator<(const FloatContainer& other) & { return value < other.value; }
+  bool operator<(const FloatContainer& other) const& { return value < other.value; }
 };
 
 // Nans in floats do not satisfy strict weak ordering by breaking transitivity of equivalence.
