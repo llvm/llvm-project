@@ -37,6 +37,7 @@ body:             |
     ; CHECK-NEXT: %ctpop:_(s32) = G_LSHR [[MUL]], [[C7]](s64)
     ; CHECK-NEXT: $w0 = COPY %ctpop(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ;
     ; CHECK-CSSC-LABEL: name: s32
     ; CHECK-CSSC: liveins: $w0
     ; CHECK-CSSC-NEXT: {{  $}}
@@ -77,11 +78,12 @@ body:             |
     ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 1085102592571150095
     ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[ADD1]], [[C5]]
     ; CHECK-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND3]], [[C6]]
     ; CHECK-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND3]], [[C6]]
     ; CHECK-NEXT: %ctpop:_(s64) = G_LSHR [[MUL]], [[C7]](s64)
     ; CHECK-NEXT: $x0 = COPY %ctpop(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    ;
     ; CHECK-CSSC-LABEL: name: s64
     ; CHECK-CSSC: liveins: $x0
     ; CHECK-CSSC-NEXT: {{  $}}
