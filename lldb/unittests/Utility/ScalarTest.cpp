@@ -416,16 +416,14 @@ TEST(ScalarTest, APFloatConstructor) {
 
 TEST(ScalarTest, CreateAPFloats) {
   llvm::APFloat ap_float(llvm::APFloatBase::IEEEsingle(), "3.14159");
-  llvm::APFloat ap_nan =
-      llvm::APFloat::getNaN(llvm::APFloat::IEEEsingle());
+  llvm::APFloat ap_nan = llvm::APFloat::getNaN(llvm::APFloat::IEEEsingle());
   llvm::APSInt int1("12");
   llvm::APSInt int2("-4");
   Scalar I1(int1);
   Scalar I2(int2);
   Scalar F(ap_float);
 
-  llvm::APFloat out1_float =
-      I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out1_float = I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
   llvm::APFloat out1_double =
       I1.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
   llvm::APFloat out1_longdouble =
@@ -438,8 +436,7 @@ TEST(ScalarTest, CreateAPFloats) {
   EXPECT_FALSE(out1_double.bitwiseIsEqual(out1_float));
   EXPECT_TRUE(out1_nan.bitwiseIsEqual(ap_nan));
 
-  llvm::APFloat out2_float =
-      I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
+  llvm::APFloat out2_float = I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeFloat);
   llvm::APFloat out2_double =
       I2.CreateAPFloatFromAPSInt(lldb::eBasicTypeDouble);
   llvm::APFloat out2_longdouble =
@@ -452,8 +449,7 @@ TEST(ScalarTest, CreateAPFloats) {
   EXPECT_FALSE(out2_double.bitwiseIsEqual(out2_float));
   EXPECT_TRUE(out2_nan.bitwiseIsEqual(ap_nan));
 
-  llvm::APFloat out3_float =
-      F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloat);
+  llvm::APFloat out3_float = F.CreateAPFloatFromAPFloat(lldb::eBasicTypeFloat);
   llvm::APFloat out3_double =
       F.CreateAPFloatFromAPFloat(lldb::eBasicTypeDouble);
   llvm::APFloat out3_longdouble =
