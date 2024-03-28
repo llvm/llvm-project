@@ -36,7 +36,7 @@ namespace extractapi {
 /// 2. at a given record, walk up the class hierarchy starting from the record's
 /// dynamic type until APIRecord is reached.
 /// 3. given a (record, class) combination where 'class' is some base class of
-/// the dynamic type of 'node', call a user-overridable function to actually
+/// the dynamic type of 'record', call a user-overridable function to actually
 /// visit the record.
 ///
 /// These tasks are done by three groups of methods, respectively:
@@ -62,8 +62,8 @@ namespace extractapi {
 /// visitObjCInstancePropertyRecord()).
 ///
 /// This scheme guarantees that all visit*() calls for the same record
-/// are grouped together.  In other words, visit*() methods for different nodes
-/// are never interleaved.
+/// are grouped together.  In other words, visit*() methods for different
+/// records are never interleaved.
 ///
 /// Clients of this visitor should subclass the visitor (providing
 /// themselves as the template argument, using the curiously recurring
@@ -156,9 +156,12 @@ bool APISetVisitor<Derived>::traverseAPIRecord(const APIRecord *Record) {
     break;                                                                     \
   }
 #include "../APIRecords.inc"
-  case APIRecord::RK_Unknown:
+  case APIRecord::RK_Unknown: {
     TRY_TO(walkUpFromAPIRecord(static_cast<const APIRecord *>(Record)));
     break;
+  }
+  default:
+    llvm_unreachable("API Record with uninstantiable kind");
   }
   return true;
 }

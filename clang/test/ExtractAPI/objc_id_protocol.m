@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
-// RUN:   -x objective-c-header -triple arm64-apple-macosx %s -o - -verify | Filecheck %s
+// RUN:   -x objective-c-header -triple arm64-apple-macosx %s -o - -verify | FileCheck %s
 
 @protocol MyProtocol
 @end

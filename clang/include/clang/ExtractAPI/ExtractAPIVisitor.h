@@ -631,8 +631,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXMethodDecl(
   auto Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
   auto Signature = DeclarationFragmentsBuilder::getFunctionSignature(Decl);
 
-  if (Decl->isTemplated()) {
-    FunctionTemplateDecl *TemplateDecl = Decl->getDescribedFunctionTemplate();
+  if (FunctionTemplateDecl *TemplateDecl =
+          Decl->getDescribedFunctionTemplate()) {
     API.createRecord<CXXMethodTemplateRecord>(
         USR, Decl->getName(), createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment,
@@ -697,7 +697,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXConstructorDecl(
       DeclarationFragmentsBuilder::getFunctionSignature(Decl);
   AccessControl Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
 
-  API.createRecord<CXXInstanceMethodRecord>(
+  API.createRecord<CXXConstructorRecord>(
       USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
       AvailabilityInfo::createFromDecl(Decl), Comment, Declaration, SubHeading,
       Signature, Access, isInSystemHeader(Decl));
@@ -730,7 +730,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXDestructorDecl(
   FunctionSignature Signature =
       DeclarationFragmentsBuilder::getFunctionSignature(Decl);
   AccessControl Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
-  API.createRecord<CXXInstanceMethodRecord>(
+  API.createRecord<CXXDestructorRecord>(
       USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
       AvailabilityInfo::createFromDecl(Decl), Comment, Declaration, SubHeading,
       Signature, Access, isInSystemHeader(Decl));
@@ -1247,6 +1247,10 @@ bool ExtractAPIVisitorBase<Derived>::VisitFieldDecl(const FieldDecl *Decl) {
 template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitCXXConversionDecl(
     const CXXConversionDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl) ||
+      Decl->isImplicit())
+    return true;
+
   auto Name = Decl->getNameAsString();
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
 // RUN:   --product-name=TypedefChain -triple arm64-apple-macosx -x c-header %s -o %t/typedefchain.symbols.json -verify
 
-// RUN: Filecheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCT
 typedef struct { } MyStruct;
 // MYSTRUCT-LABEL: "!testLabel": "c:@SA@MyStruct"
 // MYSTRUCT:      "accessLevel": "public",
@@ -40,7 +40,7 @@ typedef struct { } MyStruct;
 // MYSTRUCT-NEXT:    "MyStruct"
 // MYSTRUCT-NEXT:  ]
 
-// RUN: Filecheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCTSTRUCT
+// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYSTRUCTSTRUCT
 typedef MyStruct MyStructStruct;
 // MYSTRUCTSTRUCT-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyStructStruct"
 // MYSTRUCTSTRUCT: "accessLevel": "public",
@@ -75,8 +75,8 @@ typedef MyStruct MyStructStruct;
 // MYSTRUCTSTRUCT-NEXT:  "displayName": "Type Alias",
 // MYSTRUCTSTRUCT-NEXT:  "identifier": "c.typealias"
 
-// RUN: Filecheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUM
-// RUN: Filecheck %s --input-file %t/typedefchain.symbols.json --check-prefix CASE
+// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUM
+// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix CASE
 typedef enum { Case } MyEnum;
 // MYENUM: "source": "c:@EA@MyEnum@Case",
 // MYENUM-NEXT: "target": "c:@EA@MyEnum",
@@ -119,7 +119,7 @@ typedef enum { Case } MyEnum;
 // CASE-NEXT:   "Case"
 // CASE-NEXT: ]
 
-// RUN: Filecheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUMENUM
+// RUN: FileCheck %s --input-file %t/typedefchain.symbols.json --check-prefix MYENUMENUM
 typedef MyEnum MyEnumEnum;
 // MYENUMENUM-LABEL: "!testLabel": "c:typedef_anonymous_record.c@T@MyEnumEnum"
 // MYENUMENUM:      "declarationFragments": [

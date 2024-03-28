@@ -499,6 +499,8 @@ Object serializeSymbolKind(APIRecord::RecordKind RK, Language Lang) {
     Kind["identifier"] = AddLangPrefix("typealias");
     Kind["displayName"] = "Type Alias";
     break;
+  default:
+    llvm_unreachable("API Record with uninstantiable kind");
   }
 
   return Kind;
@@ -763,7 +765,7 @@ void SymbolGraphSerializer::serializeAPIRecord(const APIRecord *Record) {
   Obj["accessLevel"] = Record->Access.getAccess();
 
   ExtendedModule &Module = getModuleForCurrentSymbol();
-  // If the hierarchy has at leas one parent and child.
+  // If the hierarchy has at least one parent and child.
   if (Hierarchy.size() >= 2)
     serializeRelationship(MemberOf, Hierarchy.back(),
                           Hierarchy[Hierarchy.size() - 2], Module);
@@ -998,6 +1000,8 @@ void SymbolGraphSerializer::serializeSingleRecord(const APIRecord *Record) {
   case APIRecord::RK_Unknown:
     visitAPIRecord(Record);
     break;
+  default:
+    llvm_unreachable("API Record with uninstantiable kind");
   }
 }
 

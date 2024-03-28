@@ -5,7 +5,7 @@
 @protocol Protocol
 @end
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix SUPER
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SUPER
 @interface Super <Protocol>
 // SUPER: "!testRelLabel": "conformsTo $ c:objc(cs)Super $ c:objc(pl)Protocol"
 // SUPER-LABEL: "!testLabel": "c:objc(cs)Super"
@@ -33,7 +33,7 @@
 // SUPER-NEXT:   "Super"
 // SUPER-NEXT: ]
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix PROP
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix PROP
 @property(readonly, getter=getProperty) unsigned Property;
 // PROP: "!testRelLabel": "memberOf $ c:objc(cs)Super(py)Property $ c:objc(cs)Super"
 // PROP: "!testLabel": "c:objc(cs)Super(py)Property"
@@ -99,7 +99,7 @@
 // PROP-NEXT:   "Property"
 // PROP-NEXT: ]
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix GET
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GET
 + (id)getWithProperty:(unsigned) Property;
 // GET: "!testRelLabel": "memberOf $ c:objc(cs)Super(cm)getWithProperty: $ c:objc(cs)Super"
 // GET-LABEL: "!testLabel": "c:objc(cs)Super(cm)getWithProperty:"
@@ -185,7 +185,7 @@
 // GET-NEXT:   "getWithProperty:"
 // GET-NEXT: ]
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix SET
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SET
 - (void)setProperty:(unsigned) Property andOtherThing: (unsigned) Thing;
 // SET: "!testRelLabel": "memberOf $ c:objc(cs)Super(im)setProperty:andOtherThing: $ c:objc(cs)Super"
 // SET-LABEL: "!testLabel": "c:objc(cs)Super(im)setProperty:andOtherThing:"
@@ -317,11 +317,11 @@
 // SET:   "title": "setProperty:andOtherThing:"
 @end
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix DERIVED
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix DERIVED
 @interface Derived : Super {
 // DERIVED: "!testRelLabel": "inheritsFrom $ c:objc(cs)Derived $ c:objc(cs)Super"
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix IVAR
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix IVAR
   char Ivar;
 // IVAR: "!testRelLabel": "memberOf $ c:objc(cs)Derived@Ivar $ c:objc(cs)Derived"
 // IVAR-LABEL: "!testLabel": "c:objc(cs)Derived@Ivar"

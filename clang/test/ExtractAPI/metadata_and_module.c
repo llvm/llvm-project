@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf --product-name=module -triple arm64-apple-macosx -x c-header %s -o %t/module.symbols.json -verify
 
-// RUN: Filecheck %s --input-file %t/module.symbols.json --check-prefix METADATA
-// RUN: Filecheck %s --input-file %t/module.symbols.json --check-prefix MOD
+// RUN: FileCheck %s --input-file %t/module.symbols.json --check-prefix METADATA
+// RUN: FileCheck %s --input-file %t/module.symbols.json --check-prefix MOD
 
 // expected-no-diagnostics
 

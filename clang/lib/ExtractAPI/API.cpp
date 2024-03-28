@@ -61,7 +61,7 @@ void RecordContext::addToRecordChain(APIRecord *Record) const {
     return;
   }
 
-  Last->NextInContex = Record;
+  Last->NextInContext = Record;
   Last = Record;
 }
 

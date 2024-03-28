@@ -28,7 +28,7 @@ module ExternalModule {
     header "ExternalModule.h"
 }
 
-// RUN: Filecheck %s --input-file  %t/symbols/Module.symbols.json --check-prefix MOD
+// RUN: FileCheck %s --input-file  %t/symbols/Module.symbols.json --check-prefix MOD
 // MOD-NOT: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(py)Property $ c:objc(cs)ExtInterface"
 // MOD-NOT: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(im)InstanceMethod $ c:objc(cs)ExtInterface"
 // MOD-NOT: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(cm)ClassMethod $ c:objc(cs)ExtInterface"
@@ -38,7 +38,7 @@ module ExternalModule {
 // MOD-NOT: "!testLabel": "c:objc(cs)ExtInterface"
 // MOD-DAG: "!testLabel": "c:objc(cs)ModInterface"
 
-// RUN: Filecheck %s --input-file %t/symbols/ExternalModule@Module.symbols.json --check-prefix EXT
+// RUN: FileCheck %s --input-file %t/symbols/ExternalModule@Module.symbols.json --check-prefix EXT
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(py)Property $ c:objc(cs)ExtInterface"
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(im)InstanceMethod $ c:objc(cs)ExtInterface"
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(cm)ClassMethod $ c:objc(cs)ExtInterface"

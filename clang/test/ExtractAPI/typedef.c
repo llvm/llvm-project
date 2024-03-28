@@ -43,7 +43,7 @@ typedef int MyInt;
 // MYINT-NEXT: ],
 // MYINT: "type": "c:I"
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix BARPTR
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix BARPTR
 typedef struct Bar *BarPtr;
 // BARPTR-LABEL: "!testLabel": "c:typedef.c@T@BarPtr"
 // BARPTR: "accessLevel": "public",
@@ -84,7 +84,7 @@ typedef struct Bar *BarPtr;
 // BARPTR-NEXT: ],
 // BARPTR: "type": "c:*$@S@Bar"
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json
+// RUN: FileCheck %s --input-file %t/output.symbols.json
 void foo(BarPtr value);
 
 void baz(BarPtr *value);

@@ -3,7 +3,7 @@
 // RUN:   -fblocks -triple arm64-apple-macosx -x objective-c-header %s -o %t/output.symbols.json -verify
 
 @interface Foo
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix NOPARAM
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix NOPARAM
 -(void)methodBlockNoParam:(void (^)())block;
 // NOPARAM-LABEL: "!testLabel": "c:objc(cs)Foo(im)methodBlockNoParam:"
 // NOPARAM:      "declarationFragments": [
@@ -88,7 +88,7 @@
 // NOPARAM-NEXT:   ]
 // NOPARAM-NEXT: }
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix PARAM
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix PARAM
 -(void)methodBlockWithParam:(int (^)(int foo))block;
 // PARAM-LABEL: "!testLabel": "c:objc(cs)Foo(im)methodBlockWithParam:"
 // PARAM:      "declarationFragments": [
@@ -207,7 +207,7 @@
 // PARAM-NEXT:   ]
 // PARAM-NEXT: }
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix MULTIPARAM
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix MULTIPARAM
 -(void)methodBlockWithMultipleParam:(int (^)(int foo, unsigned baz))block;
 // MULTIPARAM-LABEL: "!testLabel": "c:objc(cs)Foo(im)methodBlockWithMultipleParam:"
 // MULTIPARAM:      "declarationFragments": [
@@ -360,7 +360,7 @@
 // MULTIPARAM-NEXT:   ]
 // MULTIPARAM-NEXT: },
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix VARIADIC
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix VARIADIC
 -(void)methodBlockVariadic:(int (^)(int foo, ...))block;
 // VARIADIC-LABEL: "!testLabel": "c:objc(cs)Foo(im)methodBlockVariadic:"
 // VARIADIC:      "declarationFragments": [
@@ -480,7 +480,7 @@
 // VARIADIC-NEXT: },
 @end
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix FUNC
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix FUNC
 void func(int (^arg)(int foo));
 // FUNC-LABEL: "!testLabel": "c:@F@func"
 // FUNC:      "declarationFragments": [
@@ -587,7 +587,7 @@ void func(int (^arg)(int foo));
 // FUNC-NEXT:   ]
 // FUNC-NEXT: },
 
-// RUN: Filecheck %s --input-file %t/output.symbols.json --check-prefix GLOBAL
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GLOBAL
 int (^global)(int foo);
 // GLOBAL-LABEL: "!testLabel": "c:@global"
 // GLOBAL:      "declarationFragments": [

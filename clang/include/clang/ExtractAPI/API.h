@@ -195,7 +195,8 @@ struct APIRecord {
     RK_Unknown,
     // If adding a record context record kind here make sure to update
     // RecordContext::classof if needed and add a RECORD_CONTEXT entry to
-    // APIRecords.inc RecordContext Kinds start
+    // APIRecords.inc
+    RK_FirstRecordContext,
     RK_Namespace,
     RK_Enum,
     RK_Struct,
@@ -207,7 +208,7 @@ struct APIRecord {
     RK_ClassTemplate,
     RK_ClassTemplateSpecialization,
     RK_ClassTemplatePartialSpecialization,
-    // RecordContexts Kinds end
+    RK_LastRecordContext,
     RK_GlobalFunction,
     RK_GlobalFunctionTemplate,
     RK_GlobalFunctionTemplateSpecialization,
@@ -270,10 +271,10 @@ private:
   friend class RecordContext;
   // Used to store the next child record in RecordContext. This works because
   // APIRecords semantically only have one parent.
-  mutable APIRecord *NextInContex = nullptr;
+  mutable APIRecord *NextInContext = nullptr;
 
 public:
-  APIRecord *getNextInContex() const { return NextInContex; }
+  APIRecord *getNextInContext() const { return NextInContext; }
 
   RecordKind getKind() const { return Kind; }
 
@@ -312,8 +313,8 @@ public:
     return classofKind(Record->getKind());
   }
   static bool classofKind(APIRecord::RecordKind K) {
-    return K >= APIRecord::RK_Namespace &&
-           K <= APIRecord::RK_ClassTemplatePartialSpecialization;
+    return K > APIRecord::RK_FirstRecordContext &&
+           K < APIRecord::RK_LastRecordContext;
   }
 
   static bool classof(const RecordContext *Context) { return true; }
@@ -339,7 +340,8 @@ public:
     // This doesn't strictly meet the iterator requirements, but it's the
     // behavior we want here.
     value_type operator->() const { return Current; }
-    record_iterator &operator++() { Current = Current->getNextInContex();
+    record_iterator &operator++() {
+      Current = Current->getNextInContext();
       return *this;
     }
     record_iterator operator++(int) {
@@ -1421,8 +1423,8 @@ APISet::createRecord(StringRef USR, StringRef Name,
 
   // Create the record if it does not already exist
   if (Result.second) {
-    Record = new (Allocator) RecordTy(USRString, copyString(Name),
-                                std::forward<CtorArgsContTy>(CtorArgs)...);
+    Record = new (Allocator) RecordTy(
+        USRString, copyString(Name), std::forward<CtorArgsContTy>(CtorArgs)...);
     // Store the record in the record lookup map
     Result.first->second = APIRecordStoredPtr(Record);
 

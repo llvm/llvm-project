@@ -31,6 +31,8 @@ struct Foo {
 - (void)derivedMethodWithValue:(id<Protocol>)value {
     int a = 5;
 }
+/// Impl only docs
+- (void)implOnlyMethod { }
 @end
 
 // RUN: c-index-test -single-symbol-sgf-at=%s:4:9 local %s | FileCheck -check-prefix=CHECK-FOO %s
@@ -118,3 +120,10 @@ struct Foo {
 // CHECK-DERIVED-METHOD-IMPL: "text":"Derived method docs"
 // CHECK-DERIVED-METHOD-IMPL: "kind":{"displayName":"Instance Method","identifier":"objective-c.method"}
 // CHECK-DERIVED-METHOD-IMPL: "title":"derivedMethodWithValue:"
+
+// RUN: c-index-test -single-symbol-sgf-at=%s:35:11 local %s | FileCheck -check-prefix=CHECK-IMPL-ONLY %s
+// CHECK-IMPL-ONLY: "relatedSymbols":[]
+// CHECK-IMPL-ONLY: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Derived(im)implOnlyMethod","target":"c:objc(cs)Derived"
+// CHECK-IMPL-ONLY: "text":"Impl only docs"
+// CHECK-IMPL-ONLY: "kind":{"displayName":"Instance Method","identifier":"objective-c.method"}
+// CHECK-IMPL-ONLY: "title":"implOnlyMethod"

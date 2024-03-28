@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx \
-// RUN:   -x c-header %s -o - -verify | Filecheck %s
+// RUN:   -x c-header %s -o - -verify | FileCheck %s
 
 // Global record
 int _HiddenGlobal;

@@ -59,12 +59,12 @@ TypedefUnderlyingTypeResolver::getSymbolReferenceForType(QualType Type,
 
     clang::index::generateUSRForDecl(TypeDecl, TypeUSR);
     if (auto *OwningModule = TypeDecl->getImportedOwningModule())
-      OwningModuleName = API.copyString(OwningModule->Name);
+      OwningModuleName = OwningModule->Name;
   } else {
     clang::index::generateUSRForType(Type, Context, TypeUSR);
   }
 
-  return {API.copyString(TypeName), API.copyString(TypeUSR), OwningModuleName};
+  return API.createSymbolReference(TypeName, TypeUSR, OwningModuleName);
 }
 
 std::string TypedefUnderlyingTypeResolver::getUSRForType(QualType Type) const {

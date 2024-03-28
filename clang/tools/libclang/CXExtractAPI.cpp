@@ -55,7 +55,21 @@ struct LibClangExtractAPIVisitor
     if (!shouldDeclBeIncluded(Decl))
       return true;
 
-    return VisitObjCInterfaceDecl(Decl->getClassInterface());
+    auto *Interface = Decl->getClassInterface();
+
+    if (!VisitObjCInterfaceDecl(Interface))
+      return false;
+
+    SmallString<128> USR;
+    index::generateUSRForDecl(Interface, USR);
+
+    if (auto *InterfaceRecord = dyn_cast_if_present<ObjCInterfaceRecord>(
+            API.findRecordForUSR(USR))) {
+      recordObjCMethods(InterfaceRecord, Decl->methods());
+      recordObjCProperties(InterfaceRecord, Decl->properties());
+      recordObjCInstanceVariables(InterfaceRecord, Decl->ivars());
+    }
+    return true;
   }
 };
 } // namespace

@@ -137,7 +137,7 @@ class Foo {
         "precise": "c:@S@Foo@F@Foo#"
       },
       "kind": {
-        "displayName": "Instance Method",
+        "displayName": "Constructor",
         "identifier": "c++.method"
       },
       "location": {
@@ -193,7 +193,7 @@ class Foo {
         "precise": "c:@S@Foo@F@~Foo#"
       },
       "kind": {
-        "displayName": "Instance Method",
+        "displayName": "Destructor",
         "identifier": "c++.method"
       },
       "location": {

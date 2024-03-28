@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
-// RUN:   -triple arm64-apple-macosx -x objective-c-header %s -o - -verify | Filecheck %s
+// RUN:   -triple arm64-apple-macosx -x objective-c-header %s -o - -verify | FileCheck %s
 
 @protocol Protocol
 @property(class) int myProtocolTypeProp;
