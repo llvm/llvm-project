@@ -39,6 +39,21 @@ enum class ParameterKind : uint8_t {
   DXILHandle,
 };
 
+enum OverloadKind : uint16_t {
+  Invalid = 0,
+  Void = 1,
+  Half = 1 << 1,
+  Float = 1 << 2,
+  Double = 1 << 3,
+  I1 = 1 << 4,
+  I8 = 1 << 5,
+  I16 = 1 << 6,
+  I32 = 1 << 7,
+  I64 = 1 << 8,
+  UserDefineType = 1 << 9,
+  ObjectType = 1 << 10,
+};
+
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
 /// "Shape" in the DXIL docs.
 enum class ResourceKind : uint32_t {
