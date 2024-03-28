@@ -8711,7 +8711,8 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
 
   // v = (v * 0x01010101...) >> (Len - 8)
   SDValue V;
-  if (isOperationLegalOrCustomOrPromote(ISD::MUL, VT)) {
+  if (isOperationLegalOrCustomOrPromote(
+          ISD::MUL, getTypeToTransformTo(*DAG.getContext(), VT))) {
     SDValue Mask01 =
         DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x01)), dl, VT);
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
@@ -8776,7 +8777,8 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
 
   // v = (v * 0x01010101...) >> (Len - 8)
   SDValue V;
-  if (isOperationLegalOrCustomOrPromote(ISD::VP_MUL, VT)) {
+  if (isOperationLegalOrCustomOrPromote(
+          ISD::VP_MUL, getTypeToTransformTo(*DAG.getContext(), VT))) {
     SDValue Mask01 =
         DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x01)), dl, VT);
     V = DAG.getNode(ISD::VP_MUL, dl, VT, Op, Mask01, Mask, VL);
