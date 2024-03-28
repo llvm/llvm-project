@@ -10,7 +10,6 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/integer_literals.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -22,8 +21,6 @@
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, 0)
-
-using LIBC_NAMESPACE::operator""_u128;
 
 template <typename T>
 class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
@@ -58,31 +55,33 @@ public:
       T cx;
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
-      // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = SNaN
-      FPBits test1(0x00000000'00007FFF'00000000'00000000_u128);
+      // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = Infinty
+
+      FPBits test1((UInt128(0x7FFF) << 64) + UInt128(0x0000000000000000));
       const T test1_val = test1.get_val();
-      TEST_SPECIAL(cx, test1_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test1_val, 0, 0);
+      EXPECT_FP_EQ(cx, inf);
 
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
       // All Ones   |     00     |  Non-Zero | Pseudo NaN, Value = SNaN
-      FPBits test2_1(0x000000000'00007FFF'00000000'00000001_u128);
+
+      FPBits test2_1((UInt128(0x7FFF) << 64) + UInt128(0x0000000000000001));
       const T test2_1_val = test2_1.get_val();
       TEST_SPECIAL(cx, test2_1_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_2(0x000000000'00007FFF'00000042'70000001_u128);
+      FPBits test2_2((UInt128(0x7FFF) << 64) + UInt128(0x0000004270000001));
       const T test2_2_val = test2_2.get_val();
       TEST_SPECIAL(cx, test2_2_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_3(0x000000000'00007FFF'00000000'08261001_u128);
+      FPBits test2_3((UInt128(0x7FFF) << 64) + UInt128(0x0000000008261001));
       const T test2_3_val = test2_3.get_val();
       TEST_SPECIAL(cx, test2_3_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_4(0x000000000'00007FFF'00007800'08261001_u128);
+      FPBits test2_4((UInt128(0x7FFF) << 64) + UInt128(0x0000780008261001));
       const T test2_4_val = test2_4.get_val();
       TEST_SPECIAL(cx, test2_4_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
@@ -90,22 +89,23 @@ public:
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
       // All Ones   |     01     | Anything  | Pseudo NaN, Value = SNaN
-      FPBits test3_1(0x00000000'00007FFF'40000000'00000000_u128);
+
+      FPBits test3_1((UInt128(0x7FFF) << 64) + UInt128(0x4000000000000000));
       const T test3_1_val = test3_1.get_val();
       TEST_SPECIAL(cx, test3_1_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test3_2(0x00000000'00007FFF'40000042'70000001_u128);
+      FPBits test3_2((UInt128(0x7FFF) << 64) + UInt128(0x4000004270000001));
       const T test3_2_val = test3_2.get_val();
       TEST_SPECIAL(cx, test3_2_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test3_3(0x00000000'00007FFF'40000000'08261001_u128);
+      FPBits test3_3((UInt128(0x7FFF) << 64) + UInt128(0x4000000008261001));
       const T test3_3_val = test3_3.get_val();
       TEST_SPECIAL(cx, test3_3_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test3_4(0x00000000'00007FFF'40007800'08261001_u128);
+      FPBits test3_4((UInt128(0x7FFF) << 64) + UInt128(0x4007800008261001));
       const T test3_4_val = test3_4.get_val();
       TEST_SPECIAL(cx, test3_4_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
@@ -114,18 +114,20 @@ public:
       //            |   Bit 63   | Bits 62-0 |
       // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
       //            |            |           | (−1)**s × m × 2**−16382
-      FPBits test4_1(0x00000000'00000000'80000000'00000000_u128);
+
+      FPBits test4_1((UInt128(0x0000) << 64) + UInt128(0x8000000000000000));
       const T test4_1_val = test4_1.get_val();
       TEST_SPECIAL(cx, test4_1_val, 0, 0);
       EXPECT_FP_EQ(
           cx, FPBits::make_value(test4_1.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test4_2(0x00000000'00000000'80000042'70000001_u128);
+      FPBits test4_2((UInt128(0x0000) << 64) + UInt128(0x8000004270000001));
       const T test4_2_val = test4_2.get_val();
       TEST_SPECIAL(cx, test4_2_val, 0, 0);
       EXPECT_FP_EQ(
           cx, FPBits::make_value(test4_2.get_explicit_mantissa(), 0).get_val());
-      FPBits test4_3(0x00000000'00000000'80000000'08261001_u128);
+
+      FPBits test4_3((UInt128(0x0000) << 64) + UInt128(0x8000000008261001));
       const T test4_3_val = test4_3.get_val();
       TEST_SPECIAL(cx, test4_3_val, 0, 0);
       EXPECT_FP_EQ(
@@ -133,37 +135,44 @@ public:
 
       // Exponent   |       Significand      | Meaning
       //            |   Bit 63   | Bits 62-0 |
-      // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
-      //  Values    |            |           |
-      FPBits test5_1(0x00000000'00000040'00000000'00000001_u128);
+      // All Other  |   Zero     | Anything  | Unnormal, Value =
+      //  Values    |            |           | (−1)**s × m × 2**−16382
+
+      FPBits test5_1(UInt128(0x0000000000000001));
       const T test5_1_val = test5_1.get_val();
-      TEST_SPECIAL(cx, test5_1_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_1_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_1.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test5_2(0x00000000'00000230'00000042'70000001_u128);
+      FPBits test5_2(UInt128(0x0000004270000001));
       const T test5_2_val = test5_2.get_val();
-      TEST_SPECIAL(cx, test5_2_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_2_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_2.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test5_3(0x00000000'00000560'00000000'08261001_u128);
+      FPBits test5_3(UInt128(0x0000000008261001));
       const T test5_3_val = test5_3.get_val();
-      TEST_SPECIAL(cx, test5_3_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_3_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_3.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test5_4(0x00000000'00000780'00000028'16000000_u128);
+      FPBits test5_4(UInt128(0x0000002816000000));
       const T test5_4_val = test5_4.get_val();
-      TEST_SPECIAL(cx, test5_4_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_4_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_4.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test5_5(0x00000000'00000900'00000042'70000001_u128);
+      FPBits test5_5(UInt128(0x0000004270000001));
       const T test5_5_val = test5_5.get_val();
-      TEST_SPECIAL(cx, test5_5_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_5_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_5.get_explicit_mantissa(), 0).get_val());
 
-      FPBits test5_6(0x00000000'00000AB0'00000000'08261001_u128);
+      FPBits test5_6(UInt128(0x0000000008261001));
       const T test5_6_val = test5_6.get_val();
-      TEST_SPECIAL(cx, test5_6_val, 1, FE_INVALID);
-      EXPECT_FP_EQ(cx, aNaN);
+      TEST_SPECIAL(cx, test5_6_val, 0, 0);
+      EXPECT_FP_EQ(
+          cx, FPBits::make_value(test5_6.get_explicit_mantissa(), 0).get_val());
     }
   }
 
