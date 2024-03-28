@@ -5,9 +5,15 @@
 // Test that an error is given if a physreg is defined by multiple operands.
 int test_physreg_defs(void) {
   register int l __asm__("r7") = 0;
+  int m;
 
   // CHECK: error: multiple outputs to hard register: r7
-  __asm__("" : "+r"(l), "=r"(l));
+  __asm__(""
+          : "+r"(l), "=r"(l));
 
-  return l;
+  // CHECK: error: multiple outputs to hard register: r6
+  __asm__(""
+          : "+{r6}"(m), "={r6}"(m));
+
+  return l + m;
 }

@@ -2186,9 +2186,17 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-static std::string
-SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
-                 SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons=nullptr) {
+static std::string SimplifyConstraint(
+    const char *Constraint, const TargetInfo &Target,
+    SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons = nullptr) {
+  // If we have only the {...} constraint, do not do any simplifications. This
+  // already maps to the lower level LLVM inline assembly IR that tells the
+  // backend to allocate a specific register. Any validations would have already
+  // been done in the Sema stage or will be done in the AddVariableConstraints
+  // function.
+  if (Constraint[0] == '{' || (Constraint[0] == '&' && Constraint[1] == '{'))
+    return std::string(Constraint);
+
   std::string Result;
 
   while (*Constraint) {
@@ -2235,37 +2243,94 @@ SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
 
   return Result;
 }
+/// Is it valid to apply a register constraint for a variable marked with
+/// the "register asm" construct?
+/// Optionally, if it is determined that we can, we set "Register" to the
+/// regiser name.
+static bool
+ShouldApplyRegisterVariableConstraint(const Expr &AsmExpr,
+                                      std::string *Register = nullptr) {
 
-/// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
-/// as using a particular register add that as a constraint that will be used
-/// in this asm stmt.
+  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
+  if (!AsmDeclRef)
+    return false;
+  const ValueDecl &Value = *AsmDeclRef->getDecl();
+  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
+  if (!Variable)
+    return false;
+  if (Variable->getStorageClass() != SC_Register)
+    return false;
+  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
+  if (!Attr)
+    return false;
+
+  if (Register != nullptr)
+    // Set the register to return from Attr.
+    *Register = Attr->getLabel().str();
+  return true;
+}
+
+/// AddVariableConstraints:
+/// Look at AsmExpr and if it is a variable declared as using a particular
+/// register add that as a constraint that will be used in this asm stmt.
+/// Whether it can be used or not is dependent on querying
+/// ShouldApplyRegisterVariableConstraint() Also check whether the "hard
+/// register" inline asm constraint (i.e. "{reg-name}") is specified. If so, add
+/// that as a constraint that will be used in this asm stmt.
 static std::string
 AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
                        const TargetInfo &Target, CodeGenModule &CGM,
                        const AsmStmt &Stmt, const bool EarlyClobber,
                        std::string *GCCReg = nullptr) {
-  const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(&AsmExpr);
-  if (!AsmDeclRef)
+
+  // Do we have the "hard register" inline asm constraint.
+  bool ApplyHardRegisterConstraint =
+      Constraint[0] == '{' || (EarlyClobber && Constraint[1] == '{');
+
+  // Do we have "register asm" on a variable.
+  std::string Reg = "";
+  bool ApplyRegisterVariableConstraint =
+      ShouldApplyRegisterVariableConstraint(AsmExpr, &Reg);
+
+  // Diagnose the scenario where we apply both the register variable constraint
+  // and a hard register variable constraint as an unsupported error.
+  // Why? Because we could have a situation where the register passed in through
+  // {...} and the register passed in through the "register asm" construct could
+  // be different, and in this case, there's no way for the compiler to know
+  // which one to emit.
+  if (ApplyHardRegisterConstraint && ApplyRegisterVariableConstraint) {
+    CGM.getDiags().Report(AsmExpr.getExprLoc(),
+                          diag::err_asm_hard_reg_variable_duplicate);
     return Constraint;
-  const ValueDecl &Value = *AsmDeclRef->getDecl();
-  const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
-  if (!Variable)
+  }
+
+  if (!ApplyHardRegisterConstraint && !ApplyRegisterVariableConstraint)
     return Constraint;
-  if (Variable->getStorageClass() != SC_Register)
-    return Constraint;
-  AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
-  if (!Attr)
-    return Constraint;
-  StringRef Register = Attr->getLabel();
-  assert(Target.isValidGCCRegisterName(Register));
+
   // We're using validateOutputConstraint here because we only care if
   // this is a register constraint.
   TargetInfo::ConstraintInfo Info(Constraint, "");
-  if (Target.validateOutputConstraint(Info) &&
-      !Info.allowsRegister()) {
+  if (Target.validateOutputConstraint(Info) && !Info.allowsRegister()) {
     CGM.ErrorUnsupported(&Stmt, "__asm__");
     return Constraint;
   }
+
+  if (ApplyHardRegisterConstraint) {
+    int Start = EarlyClobber ? 2 : 1;
+    int End = Constraint.find('}');
+    Reg = Constraint.substr(Start, End - Start);
+    // If we don't have a valid register name, simply return the constraint.
+    // For example: There are some targets like X86 that use a constraint such
+    // as "@cca", which is validated and then converted into {@cca}. Now this
+    // isn't necessarily a "GCC Register", but in terms of emission, it is
+    // valid since it lowered appropriately in the X86 backend. For the {..}
+    // constraint, we shouldn't be too strict and error out if the register
+    // itself isn't a valid "GCC register".
+    if (!Target.isValidGCCRegisterName(Reg))
+      return Constraint;
+  }
+
+  StringRef Register(Reg);
   // Canonicalize the register here before returning it.
   Register = Target.getNormalizedGCCRegisterName(Register);
   if (GCCReg != nullptr)
