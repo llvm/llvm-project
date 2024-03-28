@@ -327,9 +327,9 @@ llvm.func @type_mismatch_array_access(%arg: i32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<(i32, i32, i32)> : (i32) -> !llvm.ptr
-  %7 = llvm.getelementptr %1[8] : (!llvm.ptr) -> !llvm.ptr, i8
+  %2 = llvm.getelementptr %1[8] : (!llvm.ptr) -> !llvm.ptr, i8
   // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
-  llvm.store %arg, %7 : i32, !llvm.ptr
+  llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }
 
@@ -341,9 +341,9 @@ llvm.func @type_mismatch_struct_access(%arg: i32) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<(i32, i32, i32)> : (i32) -> !llvm.ptr
-  %7 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, i32)>
   // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
-  llvm.store %arg, %7 : i32, !llvm.ptr
+  llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }
 
@@ -355,8 +355,8 @@ llvm.func @index_in_final_padding(%arg: i32) {
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i8)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i8)> : (i32) -> !llvm.ptr
   // CHECK: = llvm.getelementptr %[[ALLOCA]][7] : (!llvm.ptr) -> !llvm.ptr, i8
-  %7 = llvm.getelementptr %1[7] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.store %arg, %7 : i32, !llvm.ptr
+  %2 = llvm.getelementptr %1[7] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }
 
@@ -368,8 +368,8 @@ llvm.func @index_out_of_bounds(%arg: i32) {
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32)> : (i32) -> !llvm.ptr
   // CHECK: = llvm.getelementptr %[[ALLOCA]][9] : (!llvm.ptr) -> !llvm.ptr, i8
-  %7 = llvm.getelementptr %1[9] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.store %arg, %7 : i32, !llvm.ptr
+  %2 = llvm.getelementptr %1[9] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }
 
@@ -381,8 +381,8 @@ llvm.func @index_in_padding(%arg: i16) {
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, i32)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, i32)> : (i32) -> !llvm.ptr
   // CHECK: = llvm.getelementptr %[[ALLOCA]][2] : (!llvm.ptr) -> !llvm.ptr, i8
-  %7 = llvm.getelementptr %1[2] : (!llvm.ptr) -> !llvm.ptr, i8
-  llvm.store %arg, %7 : i16, !llvm.ptr
+  %2 = llvm.getelementptr %1[2] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.store %arg, %2 : i16, !llvm.ptr
   llvm.return
 }
 
@@ -394,9 +394,9 @@ llvm.func @index_not_in_padding_because_packed(%arg: i16) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", packed (i16, i32)> : (i32) -> !llvm.ptr
-  %7 = llvm.getelementptr %1[2] : (!llvm.ptr) -> !llvm.ptr, i8
+  %2 = llvm.getelementptr %1[2] : (!llvm.ptr) -> !llvm.ptr, i8
   // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
-  llvm.store %arg, %7 : i16, !llvm.ptr
+  llvm.store %arg, %2 : i16, !llvm.ptr
   llvm.return
 }
 
@@ -411,5 +411,19 @@ llvm.func @no_crash_on_negative_gep_index(%arg: f16) {
   // CHECK: llvm.getelementptr %[[ALLOCA]][-1] : (!llvm.ptr) -> !llvm.ptr, f32
   %2 = llvm.getelementptr %1[-1] : (!llvm.ptr) -> !llvm.ptr, f32
   llvm.store %arg, %2 : f16, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @out_of_bound_gep_array_access
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @out_of_bound_gep_array_access(%arg: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32)> : (i32) -> !llvm.ptr
+  %2 = llvm.getelementptr %1[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i8>
+  // CHECK-NEXT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }

@@ -457,9 +457,6 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
     bool shouldCancel =
         TypeSwitch<Type, bool>(currentType)
             .Case([&](LLVM::LLVMArrayType arrayType) {
-              // TODO: Support out-of-bounds accesses.
-              if (arrayType.getNumElements() <= index)
-                return true;
               offset +=
                   index * dataLayout.getTypeSize(arrayType.getElementType());
               currentType = arrayType.getElementType();
