@@ -295,10 +295,6 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
-  /// Remapping table for source locations in this module.
-  ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>
-      SLocRemap;
-
   // === Identifiers ===
 
   /// The number of identifiers in this AST file.

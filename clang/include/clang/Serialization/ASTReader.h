@@ -696,7 +696,7 @@ private:
   /// Mapping from global submodule IDs to the module file in which the
   /// submodule resides along with the offset that should be added to the
   /// global submodule ID to produce a local ID.
-  GlobalSubmoduleMapType GlobalSubmoduleMap;
+  mutable GlobalSubmoduleMapType GlobalSubmoduleMap;
 
   /// A set of hidden declarations.
   using HiddenNames = SmallVector<Decl *, 2>;
@@ -941,6 +941,12 @@ private:
   ///
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
+
+  /// The module files imported by different module files. Indirectly imported
+  /// module files are included too. The information comes from
+  /// ReadModuleOffsetMap(ModuleFile&).
+  mutable llvm::DenseMap<ModuleFile *, llvm::SmallVector<ModuleFile *>>
+      ImportedModuleFiles;
 
 private:
   struct ImportedSubmodule {
@@ -1761,6 +1767,7 @@ public:
 
   /// Retrieve the module manager.
   ModuleManager &getModuleManager() { return ModuleMgr; }
+  const ModuleManager &getModuleManager() const { return ModuleMgr; }
 
   /// Retrieve the preprocessor.
   Preprocessor &getPreprocessor() const { return PP; }
@@ -2170,8 +2177,8 @@ public:
 
   /// Retrieve the global submodule ID given a module and its local ID
   /// number.
-  serialization::SubmoduleID
-  getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID);
+  serialization::SubmoduleID getGlobalSubmoduleID(ModuleFile &M,
+                                                  unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
   ///
@@ -2184,7 +2191,7 @@ public:
 
   /// Retrieve the module file with a given local ID within the specified
   /// ModuleFile.
-  ModuleFile *getLocalModuleFile(ModuleFile &M, unsigned ID);
+  ModuleFile *getLocalModuleFile(ModuleFile &M, unsigned ID) const;
 
   /// Get an ID for the given module file.
   unsigned getModuleFileID(ModuleFile *M);
@@ -2220,40 +2227,47 @@ public:
     return Sema::AlignPackInfo::getFromRawEncoding(Raw);
   }
 
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
-  SourceLocation ReadUntranslatedSourceLocation(SourceLocation::UIntTy Raw,
-                                                LocSeq *Seq = nullptr) const {
+  std::pair<SourceLocation, unsigned>
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
+                                 LocSeq *Seq = nullptr) const {
     return SourceLocationEncoding::decode(Raw, Seq);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    SourceLocation::UIntTy Raw,
-                                    LocSeq *Seq = nullptr) const {
-    SourceLocation Loc = ReadUntranslatedSourceLocation(Raw, Seq);
-    return TranslateSourceLocation(ModuleFile, Loc);
+  SourceLocation ReadRawSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
+                                       LocSeq *Seq = nullptr) const {
+    if (!MF.ModuleOffsetMap.empty())
+      ReadModuleOffsetMap(MF);
+
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    ModuleFile *ModuleFileHomingLoc =
+        ModuleFileIndex ? ImportedModuleFiles[&MF][ModuleFileIndex - 1] : &MF;
+    return TranslateSourceLocation(*ModuleFileHomingLoc, Loc);
   }
 
   /// Translate a source location from another module file's source
   /// location space into ours.
   SourceLocation TranslateSourceLocation(ModuleFile &ModuleFile,
                                          SourceLocation Loc) const {
-    if (!ModuleFile.ModuleOffsetMap.empty())
-      ReadModuleOffsetMap(ModuleFile);
-    assert(ModuleFile.SLocRemap.find(Loc.getOffset()) !=
-               ModuleFile.SLocRemap.end() &&
-           "Cannot find offset to remap.");
-    SourceLocation::IntTy Remap =
-        ModuleFile.SLocRemap.find(Loc.getOffset())->second;
-    return Loc.getLocWithOffset(Remap);
+    if (Loc.isInvalid())
+      return Loc;
+
+    // It implies that the Loc is already translated.
+    if (SourceMgr.isLoadedSourceLocation(Loc))
+      return Loc;
+
+    return Loc.getLocWithOffset(ModuleFile.SLocEntryBaseOffset - 2);
   }
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
                                     const RecordDataImpl &Record, unsigned &Idx,
                                     LocSeq *Seq = nullptr) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+    return ReadRawSourceLocation(ModuleFile, Record[Idx++], Seq);
   }
 
   /// Read a FileID.

@@ -3246,7 +3246,7 @@ ASTReader::DeclCursorForID(DeclID ID, SourceLocation &Loc) {
   ModuleFile *M = I->second;
   const DeclOffset &DOffs =
       M->DeclOffsets[ID - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
-  Loc = TranslateSourceLocation(*M, DOffs.getLocation());
+  Loc = ReadRawSourceLocation(*M, DOffs.getRawLoc());
   return RecordLocation(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
 }
 
