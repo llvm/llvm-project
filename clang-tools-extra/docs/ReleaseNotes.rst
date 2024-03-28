@@ -129,6 +129,12 @@ New checks
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  Finds locations where a pointer's nullability is checked after it has already
+  been dereferenced.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

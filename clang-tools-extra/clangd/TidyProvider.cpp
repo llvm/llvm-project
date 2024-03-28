@@ -219,9 +219,10 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
       "-bugprone-use-after-move",
       // Alias for bugprone-use-after-move.
       "-hicpp-invalid-access-moved",
-      // Check uses dataflow analysis, which might hang/crash unexpectedly on
+      // Checks use dataflow analysis, which might hang/crash unexpectedly on
       // incomplete code.
       "-bugprone-unchecked-optional-access",
+      "-bugprone-null-check-after-dereference",
 
       // ----- Performance problems -----
 
