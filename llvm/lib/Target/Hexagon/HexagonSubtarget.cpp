@@ -437,9 +437,9 @@ bool HexagonSubtarget::useAA() const {
 
 /// Perform target specific adjustments to the latency of a schedule
 /// dependency.
-void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
-                                             SUnit *Dst, int DstOpIdx,
-                                             SDep &Dep) const {
+void HexagonSubtarget::adjustSchedDependency(
+    SUnit *Src, int SrcOpIdx, SUnit *Dst, int DstOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (!Src->isInstr() || !Dst->isInstr())
     return;
 

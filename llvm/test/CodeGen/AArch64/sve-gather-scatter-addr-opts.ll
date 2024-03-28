@@ -71,18 +71,18 @@ define <vscale x 4 x i8> @gather_i8_index_offset_8(ptr %base, i64 %offset, <vsca
 define void @scatter_f16_index_offset_var(ptr %base, i64 %offset, i64 %scale, <vscale x 4 x i1> %pg, <vscale x 4 x half> %data) #0 {
 ; CHECK-LABEL: scatter_f16_index_offset_var:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    movprfx z4, z2
-; CHECK-NEXT:    mla z4.d, p1/m, z1.d, z2.d
 ; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    movprfx z4, z2
+; CHECK-NEXT:    mla z4.d, p1/m, z1.d, z2.d
 ; CHECK-NEXT:    incd z1.d
-; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z4.d, lsl #1]
 ; CHECK-NEXT:    mad z1.d, p1/m, z2.d, z2.d
+; CHECK-NEXT:    st1h { z3.d }, p2, [x0, z4.d, lsl #1]
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0, z1.d, lsl #1]
 ; CHECK-NEXT:    ret
   %t0 = insertelement <vscale x 4 x i64> undef, i64 %offset, i32 0

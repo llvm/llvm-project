@@ -190,8 +190,8 @@ define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uzp1 z24.d, z2.d, z3.d
 ; CHECK-NEXT:    uzp2 z25.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp1 z26.d, z6.d, z7.d
 ; CHECK-NEXT:    fmul z1.d, z24.d, z25.d
@@ -199,12 +199,12 @@ define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale
 ; CHECK-NEXT:    uzp2 z25.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp1 z4.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp2 z5.d, z6.d, z7.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z0.d
 ; CHECK-NEXT:    fmla z3.d, p0/m, z26.d, z25.d
+; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z0.d
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fmla z2.d, p0/m, z5.d, z4.d
-; CHECK-NEXT:    fnmls z2.d, p0/m, z24.d, z0.d
 ; CHECK-NEXT:    fmla z1.d, p0/m, z26.d, z4.d
+; CHECK-NEXT:    fnmls z2.d, p0/m, z24.d, z0.d
 ; CHECK-NEXT:    fmls z1.d, p0/m, z5.d, z25.d
 ; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d

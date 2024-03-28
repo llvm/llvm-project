@@ -750,14 +750,14 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; SVE-NEXT:    mov z0.s, w8
 ; SVE-NEXT:    movprfx z3, z1
 ; SVE-NEXT:    umulh z3.s, p0/m, z3.s, z0.s
-; SVE-NEXT:    sub z1.s, z1.s, z3.s
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z2.s
-; SVE-NEXT:    lsr z1.s, z1.s, #1
+; SVE-NEXT:    sub z1.s, z1.s, z3.s
 ; SVE-NEXT:    sub z2.s, z2.s, z0.s
-; SVE-NEXT:    add z1.s, z1.s, z3.s
+; SVE-NEXT:    lsr z1.s, z1.s, #1
 ; SVE-NEXT:    lsr z2.s, z2.s, #1
-; SVE-NEXT:    lsr z1.s, z1.s, #6
+; SVE-NEXT:    add z1.s, z1.s, z3.s
 ; SVE-NEXT:    add z0.s, z2.s, z0.s
+; SVE-NEXT:    lsr z1.s, z1.s, #6
 ; SVE-NEXT:    lsr z0.s, z0.s, #6
 ; SVE-NEXT:    stp q1, q0, [x0]
 ; SVE-NEXT:    ret
