@@ -1407,6 +1407,9 @@ public:
   // extended VA to 57 bits.
   bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX12_10Insts; }
 
+  /// \returns true if the target supports Wavegroups.
+  bool hasWavegroups() const { return GFX13Insts; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

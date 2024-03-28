@@ -675,7 +675,7 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_i32_16x16x256_iu4, "V8iIbV8iIbV16iV8is", 
 // GFX13+ only builtins.
 //===----------------------------------------------------------------------===//
 
-BUILTIN(__builtin_amdgcn_wavegroup_id, "Ui", "nc")
+TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id, "Ui", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_wave_id_in_wavegroup, "Ui", "nc", "gfx13-insts")
 
 #undef BUILTIN

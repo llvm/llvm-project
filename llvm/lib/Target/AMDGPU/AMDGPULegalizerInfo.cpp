@@ -7107,10 +7107,10 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
 
 bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
                                               MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
   // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
   // TTMP8[29:25].
-  if (!ST.hasArchitectedSGPRs())
-    return false;
   LLT S32 = LLT::scalar(32);
   Register DstReg = MI.getOperand(0).getReg();
   auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
@@ -7125,10 +7125,9 @@ bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
 
 bool AMDGPULegalizerInfo::legalizeWaveIDInWavegroup(MachineInstr &MI,
                                                     MachineIRBuilder &B) const {
-  // WaveIDInWavegroup is in GROUP_INFO[19:16]. GROUP_INFO only exists in
-  // GFX13+.
-  if (ST.getGeneration() < AMDGPUSubtarget::GFX13)
+  if (!ST.hasWavegroups())
     return false;
+  // WaveIDInWavegroup is in GROUP_INFO[19:16].
   MachineRegisterInfo &MRI = *B.getMRI();
   Register DstReg = MI.getOperand(0).getReg();
   if (!MRI.getRegClassOrNull(DstReg))

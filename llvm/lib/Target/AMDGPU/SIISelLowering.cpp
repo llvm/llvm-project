@@ -8357,10 +8357,10 @@ SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
 
 SDValue SITargetLowering::lowerWavegroupID(SelectionDAG &DAG,
                                            SDValue Op) const {
+  if (!Subtarget->hasWavegroups())
+    return {};
   // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
   // TTMP8[29:25].
-  if (!Subtarget->hasArchitectedSGPRs())
-    return {};
   SDLoc SL(Op);
   MVT VT = MVT::i32;
   SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
@@ -8373,10 +8373,9 @@ SDValue SITargetLowering::lowerWavegroupID(SelectionDAG &DAG,
 
 SDValue SITargetLowering::lowerWaveIDInWavegroup(SelectionDAG &DAG,
                                                  SDValue Op) const {
-  // WaveIDInWavegroup is in GROUP_INFO[19:16]. GROUP_INFO only exists in
-  // GFX13+.
-  if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX13)
+  if (!Subtarget->hasWavegroups())
     return {};
+  // WaveIDInWavegroup is in GROUP_INFO[19:16].
   SDLoc SL(Op);
   using namespace AMDGPU::Hwreg;
   return {
