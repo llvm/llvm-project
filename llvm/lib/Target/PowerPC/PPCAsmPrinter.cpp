@@ -803,7 +803,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
-  const bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
+  const bool HasAIXSmallLocalTLS = Subtarget->hasAIXSmallLocalExecTLS() ||
+                                   Subtarget->hasAIXSmallLocalDynamicTLS();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -1612,11 +1613,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LFD:
   case PPC::STFD:
   case PPC::ADDI8: {
-    // A faster non-TOC-based local-exec sequence is represented by `addi`
-    // or a load/store instruction (that directly loads or stores off of the
-    // thread pointer) with an immediate operand having the MO_TPREL_FLAG.
+    // A faster non-TOC-based local-[exec|dynamic] sequence is represented by
+    // `addi` or a load/store instruction (that directly loads or stores off of
+    // the thread pointer) with an immediate operand having the MO_TPREL_FLAG.
     // Such instructions do not otherwise arise.
-    if (!HasAIXSmallLocalExecTLS)
+    if (!HasAIXSmallLocalTLS)
       break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
     unsigned OpNum = IsMIADDI8 ? 2 : 1;
@@ -1624,7 +1625,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned Flag = MO.getTargetFlags();
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
-        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
+        Flag == PPCII::MO_TPREL_PCREL_FLAG || Flag == PPCII::MO_TLSLD_FLAG) {
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
       const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
@@ -1672,7 +1673,12 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
 
   assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
   const GlobalValue *GValue = MO.getGlobal();
-  assert(TM.getTLSModel(GValue) == TLSModel::LocalExec &&
+  // TODO: handle aix-small-local-dynamic-tls none-zero offset case.
+  TLSModel::Model Model = TM.getTLSModel(GValue);
+  if (Model == TLSModel::LocalDynamic) {
+    return nullptr;
+  }
+  assert(Model == TLSModel::LocalExec &&
          "Only local-exec accesses are handled!");
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();

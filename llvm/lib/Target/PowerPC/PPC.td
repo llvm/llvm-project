@@ -329,6 +329,15 @@ def FeatureAIXLocalExecTLS :
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
 
+// Specifies that local-dynamic TLS accesses in any function with this target
+// attribute should use the optimized sequence (where the offset is an immediate
+// off module-hlandle for which the linker might add fix-up code if the
+// immediate is too large).
+def FeatureAIXLocalDynamicTLS :
+  SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
+                   "true", "Produce a faster local-dynamic TLS sequence for this "
+                   " function for 64-bit AIX">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",

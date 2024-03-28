@@ -149,10 +149,10 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
 
 static const char AIXSSPCanaryWordName[] = "__ssp_canary_word";
 
-// A faster local-exec TLS access sequence (enabled with the
-// -maix-small-local-exec-tls option) can be produced for TLS variables;
-// consistent with the IBM XL compiler, we apply a max size of slightly under
-// 32KB.
+// A faster local-[exec|dynamic] TLS access sequence (enabled with the
+// -maix-small-local-[exec|dynamic]-tls option) can be produced for TLS
+// variables; consistent with the IBM XL compiler, we apply a max size of
+// slightly under 32KB.
 constexpr uint64_t AIXSmallTlsPolicySizeLimit = 32751;
 
 // FIXME: Remove this once the bug has been fixed!
@@ -3368,6 +3368,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
   bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
+  bool HasAIXSmallLocalDynamicTLS = Subtarget.hasAIXSmallLocalDynamicTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
@@ -3419,6 +3420,12 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   }
 
   if (Model == TLSModel::LocalDynamic) {
+    // We do not implement the 32-bit version of the faster access sequence
+    // for local-dynamic that is controlled by -maix-small-local-dynamic-tls.
+    if (!Is64Bit && HasAIXSmallLocalDynamicTLS)
+      report_fatal_error("The small-local-dynamic TLS access sequence is "
+                         "currently only supported on AIX (64-bit mode).");
+
     // For local-dynamic on AIX, we need to generate one TOC entry for each
     // variable offset, and a single module-handle TOC entry for the entire
     // file.
@@ -3438,6 +3445,22 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
     SDValue ModuleHandle =
         DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
+
+    // With the -maix-small-local-dynamic-tls option, produce a faster access
+    // sequence for local-dynamic TLS variables where the offset from the
+    // module-handle is encoded as an immediate operand.
+    //
+    // We only utilize the faster local-dynamic access sequence when the TLS
+    // variable has a size within the policy limit. We treat types that are
+    // not sized or are empty as being over the policy size limit.
+    if (HasAIXSmallLocalDynamicTLS) {
+      Type *GVType = GV->getValueType();
+      if (GVType->isSized() && !GVType->isEmptyTy() &&
+          GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+              AIXSmallTlsPolicySizeLimit)
+        return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA,
+                           ModuleHandle);
+    }
 
     return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
   }
