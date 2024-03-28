@@ -1,4 +1,5 @@
-; A pre-commit test to show that branch weights and value profiles associated with invoke are not updated.
+; Test that branch weights and value profiles associated with invoke are updated
+; in both caller and callee after inline.
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s
 
 declare i32 @__gxx_personality_v0(...)
@@ -56,9 +57,11 @@ ret:
 
 ; CHECK-LABL: @callee(
 ; CHECK:  invoke void %func(
-; CHECK-NEXT: {{.*}} !prof ![[PROF1]] 
+; CHECK-NEXT: {{.*}} !prof ![[PROF3:[0-9]+]]
 ; CHECK:  invoke void @inner_callee(
-; CHECK-NEXT: {{.*}} !prof ![[PROF2]]
+; CHECK-NEXT: {{.*}} !prof ![[PROF4:[0-9]+]]
 
-; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 1500, i64 123, i64 900, i64 456, i64 600}
-; CHECK: ![[PROF2]] = !{!"branch_weights", i32 1500}
+; CHECK: ![[PROF1]] = !{!"VP", i32 0, i64 1000, i64 123, i64 600, i64 456, i64 400}
+; CHECK: ![[PROF2]] = !{!"branch_weights", i32 1000}
+; CHECK: ![[PROF3]] = !{!"VP", i32 0, i64 500, i64 123, i64 300, i64 456, i64 200}
+; CHECK: ![[PROF4]] = !{!"branch_weights", i32 500}
