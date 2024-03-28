@@ -12041,7 +12041,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert((getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
+          assert((It != MinBWs.end() ||
+                  getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
                   MinBWs.contains(getOperandEntry(E, I))) &&
                  "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
@@ -14042,25 +14043,28 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // that feed it. The type of the loaded value may indicate a more suitable
   // width than V's type. We want to base the vector element size on the width
   // of memory operations where possible.
-  SmallVector<std::pair<Instruction *, BasicBlock *>, 16> Worklist;
+  SmallVector<std::tuple<Instruction *, BasicBlock *, unsigned>> Worklist;
   SmallPtrSet<Instruction *, 16> Visited;
   if (auto *I = dyn_cast<Instruction>(V)) {
-    Worklist.emplace_back(I, I->getParent());
+    Worklist.emplace_back(I, I->getParent(), 0);
     Visited.insert(I);
   }
 
   // Traverse the expression tree in bottom-up order looking for loads. If we
   // encounter an instruction we don't yet handle, we give up.
   auto Width = 0u;
+  Value *FirstNonBool = nullptr;
   while (!Worklist.empty()) {
-    Instruction *I;
-    BasicBlock *Parent;
-    std::tie(I, Parent) = Worklist.pop_back_val();
+    auto [I, Parent, Level] = Worklist.pop_back_val();
 
     // We should only be looking at scalar instructions here. If the current
     // instruction has a vector type, skip.
     auto *Ty = I->getType();
     if (isa<VectorType>(Ty))
+      continue;
+    if (Ty != Builder.getInt1Ty() && !FirstNonBool)
+      FirstNonBool = I;
+    if (Level > RecursionMaxDepth)
       continue;
 
     // If the current instruction is a load, update MaxWidth to reflect the
@@ -14074,11 +14078,16 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // user or the use is a PHI node, we add it to the worklist.
     else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
                  BinaryOperator, UnaryOperator>(I)) {
-      for (Use &U : I->operands())
+      for (Use &U : I->operands()) {
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
-              (isa<PHINode>(I) || J->getParent() == Parent))
-            Worklist.emplace_back(J, J->getParent());
+              (isa<PHINode>(I) || J->getParent() == Parent)) {
+            Worklist.emplace_back(J, J->getParent(), Level + 1);
+            continue;
+          }
+        if (!FirstNonBool && U.get()->getType() != Builder.getInt1Ty())
+          FirstNonBool = U.get();
+      }
     } else {
       break;
     }
@@ -14088,8 +14097,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // gave up for some reason, just return the width of V. Otherwise, return the
   // maximum width we found.
   if (!Width) {
-    if (auto *CI = dyn_cast<CmpInst>(V))
-      V = CI->getOperand(0);
+    if (V->getType() == Builder.getInt1Ty() && FirstNonBool)
+      V = FirstNonBool;
     Width = DL->getTypeSizeInBits(V->getType());
   }
 
@@ -14287,6 +14296,28 @@ bool BoUpSLP::collectValuesToDemote(
               return AmtKnownBits.getMaxValue().ult(BitWidth) &&
                      ShiftedBits < ComputeNumSignBits(I->getOperand(0), *DL, 0,
                                                       AC, nullptr, DT);
+            },
+            NeedToExit))
+      return false;
+    if (NeedToExit)
+      return true;
+    if (!ProcessOperands({I->getOperand(0), I->getOperand(1)}, NeedToExit))
+      return false;
+    break;
+  }
+  case Instruction::UDiv:
+  case Instruction::URem: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
+    // UDiv and URem can be truncated if all the truncated bits are zero.
+    if (!AttemptCheckBitwidth(
+            [&](unsigned BitWidth, unsigned OrigBitWidth) {
+              assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+              APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+              return MaskedValueIsZero(I->getOperand(0), Mask,
+                                       SimplifyQuery(*DL)) &&
+                     MaskedValueIsZero(I->getOperand(1), Mask,
+                                       SimplifyQuery(*DL));
             },
             NeedToExit))
       return false;
@@ -14529,6 +14560,13 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
         IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+    if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
+      if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
+        ReductionBitWidth = bit_ceil(MaxBitWidth);
+      else if (MaxBitWidth == 0)
+        ReductionBitWidth = 0;
+    }
+
     for (unsigned Idx : RootDemotes)
       ToDemote.append(VectorizableTree[Idx]->Scalars.begin(),
                       VectorizableTree[Idx]->Scalars.end());
@@ -15945,7 +15983,9 @@ public:
           RegMaxNumber * llvm::bit_floor(MaxVecRegSize / EltSize);
 
       unsigned ReduxWidth = std::min<unsigned>(
-          llvm::bit_floor(NumReducedVals), std::max(RedValsMaxNumber, MaxElts));
+          llvm::bit_floor(NumReducedVals),
+          std::clamp<unsigned>(MaxElts, RedValsMaxNumber,
+                               RegMaxNumber * RedValsMaxNumber));
       unsigned Start = 0;
       unsigned Pos = Start;
       // Restarts vectorization attempt with lower vector factor.
