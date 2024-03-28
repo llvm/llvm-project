@@ -1124,17 +1124,44 @@ pipeline. This display mode is available in mlir-opt via
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-timing-display=list
 
 ===-------------------------------------------------------------------------===
-                      ... Pass execution timing report ...
+                         ... Execution time report ...
 ===-------------------------------------------------------------------------===
-  Total Execution Time: 0.0203 seconds
+  Total Execution Time: 0.0135 seconds
 
-   ---Wall Time---  --- Name ---
-   0.0047 ( 55.9%)  Canonicalizer
-   0.0019 ( 22.2%)  VerifierPass
-   0.0016 ( 18.5%)  LLVMLoweringPass
-   0.0003 (  3.4%)  CSE
-   0.0002 (  1.9%)  (A) DominanceInfo
-   0.0084 (100.0%)  Total
+  ----Wall Time----  ----Name----
+    0.0135 (100.0%)  root
+    0.0041 ( 30.1%)  Parser
+    0.0018 ( 13.3%)  ConvertFuncToLLVMPass
+    0.0011 (  8.2%)  Output
+    0.0007 (  5.2%)  Pipeline Collection : ['func.func']
+    0.0006 (  4.6%)  'func.func' Pipeline
+    0.0005 (  3.5%)  Canonicalizer
+    0.0001 (  0.9%)  CSE
+    0.0001 (  0.5%)  (A) DataLayoutAnalysis
+    0.0000 (  0.1%)  (A) DominanceInfo
+    0.0058 ( 43.2%)  Rest
+    0.0135 (100.0%)  Total
+```
+
+The results can be displayed in JSON format via `-mlir-output-format=json`.
+
+```shell
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-timing-display=list -mlir-output-format=json
+
+[
+{"wall": {"duration":   0.0135, "percentage": 100.0}, "name": "root"},
+{"wall": {"duration":   0.0041, "percentage":  30.1}, "name": "Parser"},
+{"wall": {"duration":   0.0018, "percentage":  13.3}, "name": "ConvertFuncToLLVMPass"},
+{"wall": {"duration":   0.0011, "percentage":   8.2}, "name": "Output"},
+{"wall": {"duration":   0.0007, "percentage":   5.2}, "name": "Pipeline Collection : ['func.func']"},
+{"wall": {"duration":   0.0006, "percentage":   4.6}, "name": "'func.func' Pipeline"},
+{"wall": {"duration":   0.0005, "percentage":   3.5}, "name": "Canonicalizer"},
+{"wall": {"duration":   0.0001, "percentage":   0.9}, "name": "CSE"},
+{"wall": {"duration":   0.0001, "percentage":   0.5}, "name": "(A) DataLayoutAnalysis"},
+{"wall": {"duration":   0.0000, "percentage":   0.1}, "name": "(A) DominanceInfo"},
+{"wall": {"duration":   0.0058, "percentage":  43.2}, "name": "Rest"},
+{"wall": {"duration":   0.0135, "percentage": 100.0}, "name": "Total"}
+]
 ```
 
 ##### Tree Display Mode
@@ -1149,21 +1176,48 @@ invalidated and recomputed. This is the default display mode.
 $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing
 
 ===-------------------------------------------------------------------------===
-                      ... Pass execution timing report ...
+                         ... Execution time report ...
 ===-------------------------------------------------------------------------===
-  Total Execution Time: 0.0249 seconds
+  Total Execution Time: 0.0127 seconds
 
-   ---Wall Time---  --- Name ---
-   0.0058 ( 70.8%)  'func.func' Pipeline
-   0.0004 (  4.3%)    CSE
-   0.0002 (  2.6%)      (A) DominanceInfo
-   0.0004 (  4.8%)    VerifierPass
-   0.0046 ( 55.4%)    Canonicalizer
-   0.0005 (  6.2%)    VerifierPass
-   0.0005 (  5.8%)  VerifierPass
-   0.0014 ( 17.2%)  LLVMLoweringPass
-   0.0005 (  6.2%)  VerifierPass
-   0.0082 (100.0%)  Total
+  ----Wall Time----  ----Name----
+    0.0038 ( 30.2%)  Parser
+    0.0006 (  4.8%)  'func.func' Pipeline
+    0.0001 (  0.9%)    CSE
+    0.0000 (  0.1%)      (A) DominanceInfo
+    0.0005 (  3.7%)    Canonicalizer
+    0.0017 ( 13.7%)  ConvertFuncToLLVMPass
+    0.0001 (  0.6%)    (A) DataLayoutAnalysis
+    0.0010 (  8.2%)  Output
+    0.0054 ( 42.5%)  Rest
+    0.0127 (100.0%)  Total
+```
+
+The results can be displayed in JSON format via `-mlir-output-format=json`.
+
+```shell
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='builtin.module(func.func(cse,canonicalize),convert-func-to-llvm)' -mlir-timing -mlir-output-format=json
+
+[
+{"wall": {"duration":   0.0038, "percentage":  30.2}, "name": "Parser", "passes": [
+{}]},
+{"wall": {"duration":   0.0006, "percentage":   4.8}, "name": "'func.func' Pipeline", "passes": [
+  {"wall": {"duration":   0.0001, "percentage":   0.9}, "name": "CSE", "passes": [
+    {"wall": {"duration":   0.0000, "percentage":   0.1}, "name": "(A) DominanceInfo", "passes": [
+    {}]},
+  {}]},
+  {"wall": {"duration":   0.0005, "percentage":   3.7}, "name": "Canonicalizer", "passes": [
+  {}]},
+{}]},
+{"wall": {"duration":   0.0017, "percentage":  13.7}, "name": "ConvertFuncToLLVMPass", "passes": [
+  {"wall": {"duration":   0.0001, "percentage":   0.6}, "name": "(A) DataLayoutAnalysis", "passes": [
+  {}]},
+{}]},
+{"wall": {"duration":   0.0010, "percentage":   8.2}, "name": "Output", "passes": [
+{}]},
+{"wall": {"duration":   0.0054, "percentage":  42.5}, "name": "Rest"},
+{"wall": {"duration":   0.0127, "percentage": 100.0}, "name": "Total"}
+]
 ```
 
 ##### Multi-threaded Pass Timing
