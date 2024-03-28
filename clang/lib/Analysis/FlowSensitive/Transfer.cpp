@@ -689,51 +689,22 @@ public:
     }
 
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+    RecordInitListHelper InitListHelper(S);
 
-    // This only contains the direct fields for the given type.
-    std::vector<const FieldDecl *> FieldsForInit = getFieldsForInitListExpr(S);
-
-    // `S->inits()` contains all the initializer expressions, including the
-    // ones for direct base classes.
-    ArrayRef<Expr *> Inits = S->inits();
-    size_t InitIdx = 0;
-
-    // Unions initialized with an empty initializer list need special treatment.
-    // For structs/classes initialized with an empty initializer list, Clang
-    // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
-    // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
-    std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
-    SmallVector<Expr *> InitsForUnion;
-    if (S->getType()->isUnionType() && Inits.empty()) {
-      assert(FieldsForInit.size() == 1);
-      ImplicitValueInitForUnion.emplace(FieldsForInit.front()->getType());
-      InitsForUnion.push_back(&*ImplicitValueInitForUnion);
-      Inits = InitsForUnion;
+    for (auto [Base, Init] : InitListHelper.base_inits()) {
+      assert(Base->getType().getCanonicalType() ==
+             Init->getType().getCanonicalType());
+      auto *BaseVal = Env.get<RecordValue>(*Init);
+      if (!BaseVal)
+        BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
+      // Take ownership of the fields of the `RecordValue` for the base class
+      // and incorporate them into the "flattened" set of fields for the
+      // derived class.
+      auto Children = BaseVal->getLoc().children();
+      FieldLocs.insert(Children.begin(), Children.end());
     }
 
-    // Initialize base classes.
-    if (auto* R = S->getType()->getAsCXXRecordDecl()) {
-      assert(FieldsForInit.size() + R->getNumBases() == Inits.size());
-      for ([[maybe_unused]] const CXXBaseSpecifier &Base : R->bases()) {
-        assert(InitIdx < Inits.size());
-        auto Init = Inits[InitIdx++];
-        assert(Base.getType().getCanonicalType() ==
-               Init->getType().getCanonicalType());
-        auto *BaseVal = Env.get<RecordValue>(*Init);
-        if (!BaseVal)
-          BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
-        // Take ownership of the fields of the `RecordValue` for the base class
-        // and incorporate them into the "flattened" set of fields for the
-        // derived class.
-        auto Children = BaseVal->getLoc().children();
-        FieldLocs.insert(Children.begin(), Children.end());
-      }
-    }
-
-    assert(FieldsForInit.size() == Inits.size() - InitIdx);
-    for (auto Field : FieldsForInit) {
-      assert(InitIdx < Inits.size());
-      auto Init = Inits[InitIdx++];
+    for (auto [Field, Init] : InitListHelper.field_inits()) {
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
