@@ -1408,6 +1408,10 @@ private:
           LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
 
       for (GlobalVariable *GV : Sorted) {
+        if (DL.getTypeAllocSize(GV->getValueType()) == 0)
+          report_fatal_error("cannot lower LDS '" + GV->getName() +
+                             "' because it has a zero-sized type");
+
         OptimizedStructLayoutField F(GV,
                                      DL.getTypeAllocSize(GV->getValueType()),
                                      AMDGPU::getAlign(DL, GV));
