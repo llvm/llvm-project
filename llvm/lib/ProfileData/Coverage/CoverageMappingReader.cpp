@@ -894,33 +894,33 @@ static Error readCoverageMappingData(
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
-    std::unique_ptr<InstrProfSymtab> ProfileNames, uint8_t BytesInAddress,
+    std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
     llvm::endianness Endian, StringRef CompilationDir) {
-  if (ProfileNames == nullptr)
+  if (ProfileNamesPtr == nullptr)
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "Caller must provide ProfileNames");
   std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader(
-      std::move(ProfileNames), std::move(FuncRecords)));
-  InstrProfSymtab &ProfileNamesRef = *Reader->ProfileNames;
+      std::move(ProfileNamesPtr), std::move(FuncRecords)));
+  InstrProfSymtab &ProfileNames = *Reader->ProfileNames;
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
   if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::little>(
-            ProfileNamesRef, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
             CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 4 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::big>(
-            ProfileNamesRef, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
             CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::little>(
-            ProfileNamesRef, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
             CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::big>(
-            ProfileNamesRef, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
             CompilationDir, Reader->Filenames))
       return std::move(E);
   } else

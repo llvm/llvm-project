@@ -210,12 +210,10 @@ public:
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage,
-                                 FuncRecordsStorage &&FuncRecords,
-                                 std::unique_ptr<InstrProfSymtab> ProfileNames,
-                                 uint8_t BytesInAddress,
-                                 llvm::endianness Endian,
-                                 StringRef CompilationDir = "");
+  createCoverageReaderFromBuffer(
+      StringRef Coverage, FuncRecordsStorage &&FuncRecords,
+      std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
+      llvm::endianness Endian, StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };
