@@ -94,6 +94,9 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
 /// ComputePosition - Examine the current output and update line and column
 /// counts.
 void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
+  if (DisableScan)
+    return;
+
   // If our previous scan pointer is inside the buffer, assume we already
   // scanned those bytes. This depends on raw_ostream to not change our buffer
   // in unexpected ways.

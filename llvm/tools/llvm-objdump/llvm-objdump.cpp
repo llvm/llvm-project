@@ -2032,13 +2032,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       formatted_raw_ostream FOS(outs());
 
-      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-      // are (incorrectly) written directly to the unbuffered raw_ostream
-      // wrapped by the formatted_raw_ostream.
-      if (DisassemblyColor == ColorOutput::Enable ||
-          DisassemblyColor == ColorOutput::Auto)
-        FOS.SetUnbuffered();
-
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
       if (SymbolizeOperands) {
