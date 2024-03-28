@@ -2357,6 +2357,9 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
       break;
   }
 
+  // Pad neighboring MFMA with noops for better inter-wave performance.
+  WaitStatesNeeded = std::max(WaitStatesNeeded, checkMFMAPadding(MI));
+
   return WaitStatesNeeded;
 }
 
