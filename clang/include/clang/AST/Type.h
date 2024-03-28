@@ -918,6 +918,18 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
+  /// Return true if this is a bitwise copyable type.
+  ///
+  /// This is an extension in clang: bitwise copyable types act as trivially
+  /// copyable types, underlying bytes of bitwise copyable type can be safely
+  /// copied by memcpy or memmove. Clang guarantees that both source and
+  /// destination objects have the same **object** representations after the
+  /// copy, and the lifetime of the destination object implicitly starts.
+  ///
+  /// bitwise copyable types cover a wider range of types, e.g. classes with
+  /// virtual methods.
+  bool isBitwiseCopyableType(const ASTContext &Context) const;
+
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 

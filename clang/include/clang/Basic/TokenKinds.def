@@ -526,6 +526,7 @@ TYPE_TRAIT_2(__is_layout_compatible, IsLayoutCompatible, KEYCXX)
 #include "clang/Basic/TransformTypeTraits.def"
 
 // Clang-only C++ Type Traits
+TYPE_TRAIT_1(__is_bitwise_copyable, IsBitwiseCopyable, KEYCXX)
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
 TYPE_TRAIT_1(__is_trivially_equality_comparable, IsTriviallyEqualityComparable, KEYCXX)
 TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
