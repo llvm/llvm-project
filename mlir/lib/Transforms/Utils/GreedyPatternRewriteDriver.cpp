@@ -697,16 +697,23 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
     // opportunities.
     if (!operand)
       continue;
+
+    auto *defOp = operand.getDefiningOp();
+    if (!defOp)
+      continue;
+
     Operation *otherUser = nullptr;
     if (!llvm::all_of(operand.getUsers(), [&](Operation *user) {
-      if (user == op) return true;
-      if (otherUser && user != otherUser) return false;
-      otherUser = user;
-      return true;
-    }))
+          if (user == op)
+            return true;
+          if (otherUser && user != otherUser)
+            return false;
+          otherUser = user;
+          return true;
+        }))
       continue;
-    if (auto *defOp = operand.getDefiningOp())
-      addToWorklist(defOp);
+
+    addToWorklist(defOp);
   }
 }
 
