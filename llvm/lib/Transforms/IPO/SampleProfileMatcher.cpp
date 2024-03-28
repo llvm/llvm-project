@@ -469,23 +469,22 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
 
   if (ReportProfileStaleness) {
     if (FunctionSamples::ProfileIsProbeBased) {
-      errs() << "(" << NumStaleProfileFunc << "/" << TotalProfiledFunc << ")"
-             << " of functions' profile are invalid and "
-             << " (" << MismatchedFunctionSamples << "/" << TotalFunctionSamples
+      errs() << "(" << NumStaleProfileFunc << "/" << TotalProfiledFunc
+             << ") of functions' profile are invalid and ("
+             << MismatchedFunctionSamples << "/" << TotalFunctionSamples
              << ") of samples are discarded due to function hash mismatch.\n";
     }
     errs() << "(" << (NumMismatchedCallsites + NumRecoveredCallsites) << "/"
-           << TotalProfiledCallsites << ")"
-           << " of callsites' profile are invalid and "
-           << "(" << (MismatchedCallsiteSamples + RecoveredCallsiteSamples)
-           << "/" << TotalFunctionSamples << ")"
-           << " of samples are discarded due to callsite location mismatch.\n";
+           << TotalProfiledCallsites
+           << ") of callsites' profile are invalid and ("
+           << (MismatchedCallsiteSamples + RecoveredCallsiteSamples) << "/"
+           << TotalFunctionSamples
+           << ") of samples are discarded due to callsite location mismatch.\n";
     errs() << "(" << NumRecoveredCallsites << "/"
-           << (NumRecoveredCallsites + NumMismatchedCallsites) << ")"
-           << " of callsites and "
-           << "(" << RecoveredCallsiteSamples << "/"
-           << (RecoveredCallsiteSamples + MismatchedCallsiteSamples) << ")"
-           << " of samples are recovered by stale profile matching.\n";
+           << (NumRecoveredCallsites + NumMismatchedCallsites)
+           << ") of callsites and (" << RecoveredCallsiteSamples << "/"
+           << (RecoveredCallsiteSamples + MismatchedCallsiteSamples)
+           << ") of samples are recovered by stale profile matching.\n";
   }
 
   if (PersistProfileStaleness) {
