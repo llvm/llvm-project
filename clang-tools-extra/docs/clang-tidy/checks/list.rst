@@ -275,6 +275,7 @@ Clang-Tidy Checks
    :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`modernize-make-shared <modernize/make-shared>`, "Yes"
    :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
+   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
    :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
