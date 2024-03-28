@@ -450,6 +450,7 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
 #    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
+#    define _LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -1529,6 +1530,11 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // Clang-18 has support for deducing this, but it does not set the FTM.
 #  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#  endif
+
+#  if (defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__) || defined(_LIBCPP_WIN32API)) &&               \
+      !defined(__PICOLIBC__) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_DEBUGGING)
+#    define _LIBCPP_HAS_DEBUGGING
 #  endif
 
 #endif // __cplusplus

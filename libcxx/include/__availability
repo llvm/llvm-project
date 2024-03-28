@@ -160,6 +160,13 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
+// This controls the availability of the C++26 debugging functions.
+// The platform specific implementation is built in the library.
+#  if defined(_LIBCPP_HAS_DEBUGGING)
+#    define _LIBCPP_AVAILABILITY_HAS_DEBUGGING 1
+#    define _LIBCPP_AVAILABILITY_DEBUGGING
+#  endif
+
 #elif defined(__APPLE__)
 
 #  define _LIBCPP_AVAILABILITY_HAS_BAD_OPTIONAL_ACCESS                                                                 \
@@ -290,6 +297,12 @@
 #  else
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 1
 #  endif
+
+#  if defined(_LIBCPP_HAS_DEBUGGING)
+#    define _LIBCPP_AVAILABILITY_HAS_DEBUGGING 0
+#    define _LIBCPP_AVAILABILITY_DEBUGGING __attribute__((unavailable))
+#  endif
+
 #else
 
 // ...New vendors can add availability markup here...
