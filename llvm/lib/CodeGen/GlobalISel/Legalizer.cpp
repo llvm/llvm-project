@@ -221,8 +221,14 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, KB);
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
+  unsigned Iteration = 0;
   do {
-    LLVM_DEBUG(dbgs() << "=== New Iteration ===\n");
+    LLVM_DEBUG({
+      if (Iteration > 0) {
+        dbgs() << "=== New Iteration: " << Iteration << " ===\n";
+        MF.dump();
+      }
+    });
     assert(RetryList.empty() && "Expected no instructions in RetryList");
     unsigned NumArtifacts = ArtifactList.size();
     while (!InstList.empty()) {
@@ -302,6 +308,8 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
         InstList.insert(&MI);
       }
     }
+
+    ++Iteration;
   } while (!InstList.empty());
 
   return {Changed, /*FailedOn*/ nullptr};
