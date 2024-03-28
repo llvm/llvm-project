@@ -23,6 +23,7 @@ config.mlir_obj_root = "@MLIR_BINARY_DIR@"
 config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
 config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.mlir_lib_dir = "@MLIR_LIB_DIR@"
+config.enable_mlir_rewrite = "@MLIR_ENABLE_REWRITE@"
 
 config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@

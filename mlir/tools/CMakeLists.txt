@@ -15,3 +15,8 @@ add_subdirectory(tblgen-to-irdl)
 if(MLIR_ENABLE_EXECUTION_ENGINE)
   add_subdirectory(mlir-cpu-runner)
 endif()
+
+# FIXME: Currently depends on utility functions inside clang.
+if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  add_subdirectory(mlir-rewrite)
+endif()
