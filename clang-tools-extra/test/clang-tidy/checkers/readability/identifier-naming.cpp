@@ -766,3 +766,11 @@ STATIC_MACRO void someFunc(MyFunPtr, const MyFunPtr****) {}
 // CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(my_fun_ptr_t, const my_fun_ptr_t****) {}
 #undef STATIC_MACRO
 }
+
+struct Some_struct {
+  int SomeMember;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for public member 'SomeMember' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}  int some_member;
+};
+Some_struct g_s{ .SomeMember = 1 };
+// CHECK-FIXES: {{^}}Some_struct g_s{ .some_member = 1 };
