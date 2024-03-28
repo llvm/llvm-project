@@ -743,22 +743,16 @@ int main() {
 // CHECK1-NEXT:    [[TOBOOL3:%.*]] = trunc i8 [[TMP18]] to i1
 // CHECK1-NEXT:    br i1 [[TOBOOL3]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       omp_if.then:
-// CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 3, ptr [[TMP16]], align 4
-// CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 1
-// CHECK1-NEXT:    store i32 0, ptr [[TMP17]], align 4
-// CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 2
-// CHECK1-NEXT:    store ptr null, ptr [[TMP18]], align 8
-// CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 3
-// CHECK1-NEXT:    store ptr null, ptr [[TMP19]], align 8
-// CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 4
-// CHECK1-NEXT:    store ptr null, ptr [[TMP20]], align 8
-// CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 5
+// CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK1-NEXT:    store i64 [[TMP17]], ptr [[TMP19]], align 8
+// CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// CHECK1-NEXT:    store i64 [[TMP17]], ptr [[TMP20]], align 8
+// CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr null, ptr [[TMP21]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP24]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP24]], align 4
 // CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP25]], align 4
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
