@@ -191,25 +191,45 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
   FDs[1].events = POLLIN;
   FDs[1].fd = PipeFD[0];
 
-  int TimeoutCount = Timeout.value_or(std::chrono::milliseconds(-1)).count();
-#ifdef _WIN32
-  int PollStatus = WSAPoll(FDs, 2, TimeoutCount);
-  if (PollStatus == SOCKET_ERROR)
-#else
-  int PollStatus = ::poll(FDs, 2, TimeoutCount);
-  if (PollStatus == -1)
-#endif
-    return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "poll failed");
-  if (PollStatus == 0)
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::timed_out),
-        "No client requests within timeout window");
+  std::chrono::milliseconds OriginalTimeout =
+      Timeout.value_or(std::chrono::milliseconds(-1));
+  int RemainingTime = OriginalTimeout.count();
+  std::chrono::milliseconds ElapsedTime = std::chrono::milliseconds(0);
 
-  if (FDs[0].revents & POLLNVAL)
-    return llvm::make_error<StringError>(
-        std::make_error_code(std::errc::bad_file_descriptor),
-        "File descriptor closed by another thread");
+  int PollStatus = -1;
+  while (PollStatus == -1 &&
+         (RemainingTime == -1 || ElapsedTime < OriginalTimeout)) {
+    if (RemainingTime != -1)
+      RemainingTime -= ElapsedTime.count();
+
+    auto Start = std::chrono::steady_clock::now();
+#ifdef _WIN32
+    PollStatus = WSAPoll(FDs, 2, RemainingTime);
+    if (PollStatus == SOCKET_ERROR) {
+#else
+    PollStatus = ::poll(FDs, 2, RemainingTime);
+    if (PollStatus == -1) {
+#endif
+      // Ignore error if caused by interupting signal
+      std::error_code PollErrCode = getLastSocketErrorCode();
+      if (PollErrCode != std::errc::interrupted)
+        return llvm::make_error<StringError>(PollErrCode, "poll failed");
+    }
+
+    if (PollStatus == 0)
+      return llvm::make_error<StringError>(
+          std::make_error_code(std::errc::timed_out),
+          "No client requests within timeout window");
+
+    if (FDs[0].revents & POLLNVAL)
+      return llvm::make_error<StringError>(
+          std::make_error_code(std::errc::bad_file_descriptor),
+          "File descriptor closed by another thread");
+
+    auto End = std::chrono::steady_clock::now();
+    ElapsedTime +=
+        std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+  }
 
   int AcceptFD;
 #ifdef _WIN32
