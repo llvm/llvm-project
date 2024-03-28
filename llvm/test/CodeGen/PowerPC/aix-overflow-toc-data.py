@@ -1,17 +1,17 @@
 # UNSUPPORTED: expensive_checks, debug
 
 # RUN: %python %s > %t.ll
-# RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -mcpu=pwr4 -mattr=-altivec -O0 < %t.ll | \
+# RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -mcpu=pwr7 -mattr=-altivec -O0 < %t.ll | \
 # RUN:   FileCheck --check-prefix=ASM32 %s
 
-# RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small -mcpu=pwr4 -mattr=-altivec -O0 < %t.ll | \
+# RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small -mcpu=pwr7 -mattr=-altivec -O0 < %t.ll | \
 # RUN:   FileCheck --check-prefix=ASM64 %s
 
-# RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -mcpu=pwr4 -mattr=-altivec -O0 \
+# RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small -mcpu=pwr7 -mattr=-altivec -O0 \
 # RUN:     -filetype=obj -o %t.o < %t.ll
 # RUN: llvm-objdump --no-print-imm-hex -D -r --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=DIS32 %s
 
-# RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small -mcpu=pwr4 -mattr=-altivec -O0 \
+# RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small -mcpu=pwr7 -mattr=-altivec -O0 \
 # RUN:     -filetype=obj -o %t.o < %t.ll
 # RUN: llvm-objdump --no-print-imm-hex -D -r --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefix=DIS64 %s
 
