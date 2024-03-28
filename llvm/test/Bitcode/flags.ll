@@ -18,6 +18,8 @@ second:                                           ; preds = %first
   %z = add i32 %a, 0                              ; <i32> [#uses=0]
   %hh = zext nneg i32 %a to i64
   %ll = zext i32 %s to i64
+  %ff = uitofp nneg i32 %a to float
+  %bb = uitofp i32 %s to float
   %jj = or disjoint i32 %a, 0
   %oo = or i32 %a, 0
   unreachable
@@ -30,6 +32,8 @@ first:                                            ; preds = %entry
   %zz = add i32 %a, 0                             ; <i32> [#uses=0]
   %kk = zext nneg i32 %a to i64
   %rr = zext i32 %ss to i64
+  %ww = uitofp nneg i32 %a to float
+  %xx = uitofp i32 %ss to float
   %mm = or disjoint i32 %a, 0
   %nn = or i32 %a, 0
   br label %second

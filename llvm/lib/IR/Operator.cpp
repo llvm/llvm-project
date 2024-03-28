@@ -39,6 +39,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
     // Note: inrange exists on constexpr only
     return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
   }
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();

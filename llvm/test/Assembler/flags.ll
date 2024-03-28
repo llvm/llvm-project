@@ -256,6 +256,13 @@ define i64 @test_zext(i32 %a) {
   ret i64 %res
 }
 
+define float @test_uitofp(i32 %a) {
+; CHECK: %res = uitofp nneg i32 %a to float
+  %res = uitofp nneg i32 %a to float
+  ret float %res
+}
+
+
 define i64 @test_or(i64 %a, i64 %b) {
 ; CHECK: %res = or disjoint i64 %a, %b
   %res = or disjoint i64 %a, %b

@@ -2010,14 +2010,7 @@ public:
 
   Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "",
                     bool IsNonNeg = false) {
-    if (V->getType() == DestTy)
-      return V;
-    if (Value *Folded = Folder.FoldCast(Instruction::ZExt, V, DestTy))
-      return Folded;
-    Instruction *I = Insert(new ZExtInst(V, DestTy), Name);
-    if (IsNonNeg)
-      I->setNonNeg();
-    return I;
+    return CreateCast(Instruction::ZExt, V, DestTy, Name, IsNonNeg);
   }
 
   Value *CreateSExt(Value *V, Type *DestTy, const Twine &Name = "") {
@@ -2068,11 +2061,12 @@ public:
     return CreateCast(Instruction::FPToSI, V, DestTy, Name);
   }
 
-  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      bool IsNonNeg = false) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::UIToFP, V, DestTy, Name);
+    return CreateCast(Instruction::UIToFP, V, DestTy, Name, IsNonNeg);
   }
 
   Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
@@ -2143,12 +2137,17 @@ public:
   }
 
   Value *CreateCast(Instruction::CastOps Op, Value *V, Type *DestTy,
-                    const Twine &Name = "") {
+                    const Twine &Name = "", bool IsNonNeg = false) {
     if (V->getType() == DestTy)
       return V;
     if (Value *Folded = Folder.FoldCast(Op, V, DestTy))
       return Folded;
-    return Insert(CastInst::Create(Op, V, DestTy), Name);
+    Instruction *I = Insert(CastInst::Create(Op, V, DestTy), Name);
+    if (IsNonNeg) {
+      assert(isa<PossiblyNonNegInst>(I) && "Invalid use of IsNonNeg");
+      I->setNonNeg();
+    }
+    return I;
   }
 
   Value *CreatePointerCast(Value *V, Type *DestTy,

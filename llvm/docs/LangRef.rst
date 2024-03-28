@@ -11616,6 +11616,10 @@ Overview:
 The '``uitofp``' instruction regards ``value`` as an unsigned integer
 and converts that value to the ``ty2`` type.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the
+operand is non-negative. This property may be used by optimization
+passes to later convert the ``uitofp`` into a ``sitofp``.
+
 Arguments:
 """"""""""
 
@@ -11633,6 +11637,9 @@ integer quantity and converts it to the corresponding floating-point
 value. If the value cannot be exactly represented, it is rounded using
 the default rounding mode.
 
+If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
+the result is a poison value.
+
 
 Example:
 """"""""
@@ -11641,6 +11648,9 @@ Example:
 
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
+
+      %a = uitofp nneg i32 256 to i32      ; yields float:257.0
+      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

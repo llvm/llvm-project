@@ -382,7 +382,7 @@ void Instruction::setIsExact(bool b) {
 }
 
 void Instruction::setNonNeg(bool b) {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
                          (b * PossiblyNonNegInst::NonNeg);
 }
@@ -396,7 +396,7 @@ bool Instruction::hasNoSignedWrap() const {
 }
 
 bool Instruction::hasNonNeg() const {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   return (SubclassOptionalData & PossiblyNonNegInst::NonNeg) != 0;
 }
 
@@ -429,6 +429,7 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
     break;
 
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     setNonNeg(false);
     break;
