@@ -109,3 +109,18 @@ define float @fabs_mag(float %x, float %y) {
   %r = call float @llvm.copysign.f32(float %a, float %y)
   ret float %r
 }
+
+define float @copysign_conditional(i1 noundef zeroext %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float -1.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.000000e+00, float 1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
