@@ -149,6 +149,7 @@ public:
 };
 
 // Initialize a fake InputSection that does not belong to any InputFile.
+// The created ConcatInputSection will always have 'live=true'
 ConcatInputSection *makeSyntheticInputSection(StringRef segName,
                                               StringRef sectName,
                                               uint32_t flags = 0,
