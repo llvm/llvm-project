@@ -128,20 +128,23 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
 } // Uses = [EFLAGS]
 
 // SetZUCC and promoted SetCC instructions.
-let Uses = [EFLAGS], mayStore = 1, isCodeGenOnly = 1, ForceDisassemble = 1,
-  OpEnc = EncEVEX, hasSideEffects = 0, Predicates = [HasEGPR, In64BitMode] in {
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1, OpEnc = EncEVEX,
+  hasSideEffects = 0, Predicates = [HasEGPR, In64BitMode] in {
   def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "setzu${cond}\t$dst", []>,
                 T_MAP4, XD, EVEX_B, NoCD8, Sched<[WriteSETCC]>;
-  def SETZUCCm : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
-                "setzu${cond}\t$dst", []>,
-                T_MAP4, XD, EVEX_B, NoCD8, Sched<[WriteSETCCStore]>;
   def SETCCr_EVEX : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "set${cond}\t$dst", []>,
                 XD, PL, Sched<[WriteSETCC]>;
+  let mayStore = 1 {
+  def SETZUCCm : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
+                "setzu${cond}\t$dst", []>,
+                T_MAP4, XD, EVEX_B, NoCD8, Sched<[WriteSETCCStore]>;
+
   def SETCCm_EVEX : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
                 "set${cond}\t$dst", []>,
                 XD, PL, Sched<[WriteSETCCStore]>;
+  }
 }
 
 // SALC is an undocumented instruction. Information for this instruction can be found
