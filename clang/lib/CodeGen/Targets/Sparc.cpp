@@ -326,7 +326,7 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Update VAList.
   Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
-  Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
+  Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
 
   return ArgAddr.withElementType(ArgTy);
 }

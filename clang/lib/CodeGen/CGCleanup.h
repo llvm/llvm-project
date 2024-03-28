@@ -333,7 +333,7 @@ public:
   Address getActiveFlag() const {
     return ActiveFlag;
   }
-  void setActiveFlag(RawAddress Var) {
+  void setActiveFlag(Address Var) {
     assert(Var.getAlignment().isOne());
     ActiveFlag = Var;
   }

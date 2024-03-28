@@ -20,12 +20,6 @@ using namespace CodeGen;
 
 CGCXXABI::~CGCXXABI() { }
 
-Address CGCXXABI::getThisAddress(CodeGenFunction &CGF) {
-  return CGF.makeNaturalAddressForPointer(
-      CGF.CXXABIThisValue, CGF.CXXABIThisDecl->getType()->getPointeeType(),
-      CGF.CXXABIThisAlignment);
-}
-
 void CGCXXABI::ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S) {
   DiagnosticsEngine &Diags = CGF.CGM.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
@@ -50,12 +44,8 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
   ErrorUnsupportedABI(CGF, "calls through member pointers");
 
-  const auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
-  ThisPtrForCall =
-      CGF.getAsNaturalPointerTo(This, CGF.getContext().getRecordType(RD));
-  const FunctionProtoType *FPT =
-      MPT->getPointeeType()->getAs<FunctionProtoType>();
+  ThisPtrForCall = This.getPointer();
+  const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
   llvm::Constant *FnPtr = llvm::Constant::getNullValue(
       llvm::PointerType::getUnqual(CGM.getLLVMContext()));
   return CGCallee::forDirect(FnPtr, FPT);
@@ -261,15 +251,16 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
 
   // If we don't need an array cookie, bail out early.
   if (!requiresArrayCookie(expr, eltTy)) {
-    allocPtr = ptr.emitRawPointer(CGF);
+    allocPtr = ptr.getPointer();
     numElements = nullptr;
     cookieSize = CharUnits::Zero();
     return;
   }
 
   cookieSize = getArrayCookieSizeImpl(eltTy);
-  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
-  allocPtr = allocAddr.emitRawPointer(CGF);
+  Address allocAddr =
+    CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
+  allocPtr = allocAddr.getPointer();
   numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
 }
 
