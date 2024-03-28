@@ -179,3 +179,17 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
     llvm_unreachable("Unexpected register class");
   }
 }
+
+bool WebAssembly::canLowerReturn(size_t ResultSize,
+                                 const WebAssemblySubtarget *Subtarget) {
+  // We don't return multivalues when either of Emscripten EH or Emscripten SjLj
+  // is used. JS invoke wrapper functions, which are used in Emscripten EH/SjLj,
+  // don't support multiple return values, and the functions indirectly called
+  // from those JS invoke wrapper functions can't be lowered using multivalue
+  // results because they have to match the signature of the JS invoke wrappers.
+  // We can come up with a precise set of functions that are called from the JS
+  // wrappers if we do some bookeeping, but given that Emscripten EH/SjLj is an
+  // old feature whose use is expected to decline, we don't think it's worth it.
+  return ResultSize <= 1 || (Subtarget->hasMultivalue() &&
+                             !WebAssembly::WasmEnableEmEH && !WasmEnableEmSjLj);
+}

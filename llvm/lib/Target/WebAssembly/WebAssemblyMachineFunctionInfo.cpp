@@ -17,6 +17,7 @@
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/Target/TargetMachine.h"
@@ -70,12 +71,12 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
-  if (Results.size() > 1 &&
-      !TM.getSubtarget<WebAssemblySubtarget>(ContextFunc).hasMultivalue()) {
+  if (!WebAssembly::canLowerReturn(
+          Results.size(),
+          &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
     // WebAssembly can't lower returns of multiple values without demoting to
-    // sret unless multivalue is enabled (see
-    // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
-    // values with a poitner parameter.
+    // sret unless multivalue is enabled (see WebAssembly::canLowerReturn). So
+    // replace multiple return values with a pointer parameter.
     Results.clear();
     Params.push_back(PtrVT);
   }
