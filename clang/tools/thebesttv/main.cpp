@@ -423,11 +423,15 @@ void saveAsJson(const std::set<std::vector<int>> &results,
     }
 }
 
-static void findPathBetween(const VarLocResult &from, const VarLocResult &to,
+static void findPathBetween(const VarLocResult &from, VarLocResult to,
                             const std::vector<VarLocResult> &path,
                             const std::string &type, ordered_json &jResults) {
-    requireTrue(from.isValid());
-    requireTrue(to.isValid());
+    requireTrue(from.isValid(), "FROM location is invalid");
+    if (!to.isValid()) {
+        logger.warn("Missing sink! Using exit of source instead");
+        to.fid = from.fid;
+        to.bid = Global.icfg.entryExitOfFunction[from.fid].second;
+    }
 
     ICFG &icfg = Global.icfg;
     int u = icfg.getNodeId(from.fid, from.bid);

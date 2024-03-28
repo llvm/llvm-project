@@ -3,6 +3,23 @@
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
     "results": [
         {
+            "type": "test-no-sink",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "line": 9,
+                    "column": 8
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
+                    "line": 6,
+                    "column": 5
+                }
+            ]
+        },
+        {
             "type": "npe",
             "locations": [
                 {
