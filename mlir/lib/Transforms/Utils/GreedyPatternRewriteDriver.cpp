@@ -377,7 +377,7 @@ private:
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
   /// simplifications.
-  void addOperandsToWorklist(ValueRange operands);
+  void addOperandsToWorklist(Operation* op);
 
   /// Notify the driver that the given block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
@@ -688,15 +688,17 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
-  for (Value operand : operands) {
-    // If the use count of this operand is now < 2, we re-add the defining
-    // operation to the worklist.
-    // TODO: This is based on the fact that zero use operations
-    // may be deleted, and that single use values often have more
-    // canonicalization opportunities.
-    if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
-      continue;
+void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation* op) {
+  for (Value operand : op->getOperands()) {
+    // If this operand was only used by the op under consideration, we re-add
+    // the operation that defined it to the worklist. Indeed, if the op is about
+    // to be deleted and it was the sole user of the operand, the operand may
+    // also be deleted.
+    // TODO: if the operand has a single use besides the op under consideration,
+    // there may be further canonicalization opportunities, so it should be
+    // added to the worklist.
+    if (!operand) continue;
+    if (!llvm::all_of(operand.getUsers(), [&op](auto u) { return u == op; })) continue;
     if (auto *defOp = operand.getDefiningOp())
       addToWorklist(defOp);
   }
@@ -722,7 +724,7 @@ void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   if (config.listener)
     config.listener->notifyOperationErased(op);
 
-  addOperandsToWorklist(op->getOperands());
+  addOperandsToWorklist(op);
   worklist.remove(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
