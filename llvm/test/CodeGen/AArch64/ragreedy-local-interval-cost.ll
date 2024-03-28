@@ -147,10 +147,10 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    mov v19.16b, v23.16b
 ; CHECK-NEXT:    mov v3.d[1], x20
 ; CHECK-NEXT:    mov v23.16b, v27.16b
-; CHECK-NEXT:    mov v27.16b, v9.16b
-; CHECK-NEXT:    mul x15, x4, x5
 ; CHECK-NEXT:    add v27.2d, v9.2d, v1.2d
+; CHECK-NEXT:    mul x15, x4, x5
 ; CHECK-NEXT:    str q11, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    mov v11.16b, v15.16b
 ; CHECK-NEXT:    mov v4.d[1], x22
 ; CHECK-NEXT:    add v19.2d, v19.2d, v1.2d
 ; CHECK-NEXT:    add v7.2d, v7.2d, v1.2d
@@ -171,9 +171,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    mov v10.16b, v26.16b
 ; CHECK-NEXT:    mov v14.d[1], x13
 ; CHECK-NEXT:    mov v22.16b, v31.16b
-; CHECK-NEXT:    mov v20.16b, v8.16b
 ; CHECK-NEXT:    ldp q26, q31, [sp] // 32-byte Folded Reload
-; CHECK-NEXT:    mov v11.16b, v15.16b
 ; CHECK-NEXT:    mov v0.d[1], x12
 ; CHECK-NEXT:    add v13.2d, v13.2d, v14.2d
 ; CHECK-NEXT:    add v31.2d, v31.2d, v14.2d
