@@ -1400,7 +1400,7 @@ namespace dr95 { // dr95: 3.3
   //   expected-note@#dr95-C-f {{implicitly declared private here}}
 }
 
-namespace dr96 { // dr96: no
+namespace dr96 { // dr96: sup P1787
   struct A {
     void f(int);
     template<typename T> int f(T);
@@ -1415,6 +1415,7 @@ namespace dr96 { // dr96: no
     // name a class template.
     // FIXME: What about alias templates?
     int k2 = a.template f(1);
+    // expected-error@-1 {{a template argument list is expected after a name prefixed by the template keyword}}
     A::template S<int> s;
     B<A::template S> b;
   }
