@@ -3207,7 +3207,11 @@ public:
     Other,
     ///   = default ;
     Default,
+    ///   deleted-function-body
+    ///
+    /// deleted-function-body:
     ///   = delete ;
+    ///   = delete ( unevaluated-string ) ;
     Delete
   };
 
