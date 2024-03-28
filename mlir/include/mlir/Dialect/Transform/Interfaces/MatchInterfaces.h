@@ -218,6 +218,6 @@ expandTargetSpecification(Location loc, bool isAll, bool isInverted,
 } // namespace transform
 } // namespace mlir
 
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h.inc"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_MATCHINTERFACES_H
