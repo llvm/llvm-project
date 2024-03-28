@@ -42,5 +42,20 @@ def StageWithSortSparseOpInterface : OpInterface<"StageWithSortSparseOp"> {
   ];
 }
 
+def SparseCollapsableOpInterface : OpInterface<"SparseCollapsableOp"> {
+  let description = [{ TODO }];
+
+  let cppNamespace = "::mlir::sparse_tensor";
+
+  let methods = [
+    InterfaceMethod<
+    /*desc=*/"test",
+    /*retTy=*/"ValueRange",
+    /*methodName=*/"collaspeOpInto",
+    /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                  "::mlir::ArrayRef<::mlir::Operation *>":$loops,
+                  "::mlir::Operation *":$collapsed)>,
+  ];
+}
 
 #endif // SPARSETENSOR_IR_SPARSETENSORINTERFACES

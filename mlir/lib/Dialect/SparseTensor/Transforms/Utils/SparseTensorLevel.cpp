@@ -46,21 +46,41 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 
 namespace {
 
+template <bool hasPosBuffer>
 class SparseLevel : public SparseTensorLevel {
+  // It is either a array of size 2 or size 1 depending on whether the space
+  // level requires a position array.
+  using BufferT = std::conditional_t<hasPosBuffer, std::array<Value, 2>,
+                                     std::array<Value, 1>>;
+
 public:
   SparseLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
-              Value crdBuffer)
-      : SparseTensorLevel(tid, lvl, lt, lvlSize), crdBuffer(crdBuffer) {}
+              BufferT buffers)
+      : SparseTensorLevel(tid, lvl, lt, lvlSize), buffers(buffers) {}
+
+  ValueRange getLvlBuffers() const override { return buffers; }
 
   Value peekCrdAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                   Value iv) const override {
     SmallVector<Value> memCrd(batchPrefix);
     memCrd.push_back(iv);
-    return genIndexLoad(b, l, crdBuffer, memCrd);
+    return genIndexLoad(b, l, getCrdBuf(), memCrd);
   }
 
 protected:
-  const Value crdBuffer;
+  template <typename T = void, typename = std::enable_if_t<hasPosBuffer, T>>
+  Value getPosBuf() const {
+    return buffers[0];
+  }
+
+  Value getCrdBuf() const {
+    if constexpr (hasPosBuffer)
+      return buffers[1];
+    else
+      return buffers[0];
+  }
+
+  const BufferT buffers;
 };
 
 class DenseLevel : public SparseTensorLevel {
@@ -71,6 +91,8 @@ public:
   Value peekCrdAt(OpBuilder &, Location, ValueRange, Value) const override {
     llvm_unreachable("locate random-accessible level instead");
   }
+
+  ValueRange getLvlBuffers() const override { return {}; }
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange, Value p,
                         Value max) const override {
@@ -88,6 +110,8 @@ public:
     llvm_unreachable("locate random-accessible level instead");
   }
 
+  ValueRange getLvlBuffers() const override { return {}; }
+
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange, Value p,
                         Value max) const override {
     assert(max == nullptr && "Dense level can not be non-unique.");
@@ -96,11 +120,11 @@ public:
   }
 };
 
-class CompressedLevel : public SparseLevel {
+class CompressedLevel : public SparseLevel<true> {
 public:
   CompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
                   Value posBuffer, Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer), posBuffer(posBuffer) {}
+      : SparseLevel(tid, lvl, lt, lvlSize, {posBuffer, crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         Value p, Value max) const override {
@@ -109,21 +133,18 @@ public:
 
     SmallVector<Value> memCrd(batchPrefix);
     memCrd.push_back(p);
-    Value pLo = genIndexLoad(b, l, posBuffer, memCrd);
+    Value pLo = genIndexLoad(b, l, getPosBuf(), memCrd);
     memCrd.back() = ADDI(p, C_IDX(1));
-    Value pHi = genIndexLoad(b, l, posBuffer, memCrd);
+    Value pHi = genIndexLoad(b, l, getPosBuf(), memCrd);
     return {pLo, pHi};
   }
-
-private:
-  const Value posBuffer;
 };
 
-class LooseCompressedLevel : public SparseLevel {
+class LooseCompressedLevel : public SparseLevel<true> {
 public:
   LooseCompressedLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
                        Value posBuffer, Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer), posBuffer(posBuffer) {}
+      : SparseLevel(tid, lvl, lt, lvlSize, {posBuffer, crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         Value p, Value max) const override {
@@ -133,21 +154,18 @@ public:
 
     p = MULI(p, C_IDX(2));
     memCrd.push_back(p);
-    Value pLo = genIndexLoad(b, l, posBuffer, memCrd);
+    Value pLo = genIndexLoad(b, l, getPosBuf(), memCrd);
     memCrd.back() = ADDI(p, C_IDX(1));
-    Value pHi = genIndexLoad(b, l, posBuffer, memCrd);
+    Value pHi = genIndexLoad(b, l, getPosBuf(), memCrd);
     return {pLo, pHi};
   }
-
-private:
-  const Value posBuffer;
 };
 
-class SingletonLevel : public SparseLevel {
+class SingletonLevel : public SparseLevel<false> {
 public:
   SingletonLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
                  Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer) {}
+      : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         Value p, Value segHi) const override {
@@ -159,11 +177,11 @@ public:
   }
 };
 
-class NOutOfMLevel : public SparseLevel {
+class NOutOfMLevel : public SparseLevel<false> {
 public:
   NOutOfMLevel(unsigned tid, Level lvl, LevelType lt, Value lvlSize,
                Value crdBuffer)
-      : SparseLevel(tid, lvl, lt, lvlSize, crdBuffer) {}
+      : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         Value p, Value max) const override {
@@ -1314,6 +1332,30 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
 // SparseIterator factory functions.
 //===----------------------------------------------------------------------===//
 
+/// Helper function to create a TensorLevel object from given `tensor`.
+std::unique_ptr<SparseTensorLevel>
+sparse_tensor::makeSparseTensorLevel(LevelType lt, Value sz, ValueRange b,
+                                     unsigned t, Level l) {
+  assert(lt.getNumBuffer() == b.size());
+  switch (lt.getLvlFmt()) {
+  case LevelFormat::Dense:
+    return std::make_unique<DenseLevel>(t, l, sz);
+  case LevelFormat::Batch:
+    return std::make_unique<BatchLevel>(t, l, sz);
+  case LevelFormat::Compressed:
+    return std::make_unique<CompressedLevel>(t, l, lt, sz, b[0], b[1]);
+  case LevelFormat::LooseCompressed:
+    return std::make_unique<LooseCompressedLevel>(t, l, lt, sz, b[0], b[1]);
+  case LevelFormat::Singleton:
+    return std::make_unique<SingletonLevel>(t, l, lt, sz, b[0]);
+  case LevelFormat::NOutOfM:
+    return std::make_unique<NOutOfMLevel>(t, l, lt, sz, b[0]);
+  case LevelFormat::Undef:
+    llvm_unreachable("undefined level format");
+  }
+  llvm_unreachable("unrecognizable level format");
+}
+
 std::unique_ptr<SparseTensorLevel>
 sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
                                      unsigned tid, Level lvl) {
@@ -1323,33 +1365,16 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   Value sz = stt.hasEncoding() ? b.create<LvlOp>(l, t, lvl).getResult()
                                : b.create<tensor::DimOp>(l, t, lvl).getResult();
 
-  switch (lt.getLvlFmt()) {
-  case LevelFormat::Dense:
-    return std::make_unique<DenseLevel>(tid, lvl, sz);
-  case LevelFormat::Batch:
-    return std::make_unique<BatchLevel>(tid, lvl, sz);
-  case LevelFormat::Compressed: {
+  SmallVector<Value, 2> buffers;
+  if (lt.isWithPosLT()) {
     Value pos = b.create<ToPositionsOp>(l, t, lvl);
-    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
-    return std::make_unique<CompressedLevel>(tid, lvl, lt, sz, pos, crd);
+    buffers.push_back(pos);
   }
-  case LevelFormat::LooseCompressed: {
-    Value pos = b.create<ToPositionsOp>(l, t, lvl);
-    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
-    return std::make_unique<LooseCompressedLevel>(tid, lvl, lt, sz, pos, crd);
+  if (lt.isWithCrdLT()) {
+    Value pos = b.create<ToCoordinatesOp>(l, t, lvl);
+    buffers.push_back(pos);
   }
-  case LevelFormat::Singleton: {
-    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
-    return std::make_unique<SingletonLevel>(tid, lvl, lt, sz, crd);
-  }
-  case LevelFormat::NOutOfM: {
-    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
-    return std::make_unique<NOutOfMLevel>(tid, lvl, lt, sz, crd);
-  }
-  case LevelFormat::Undef:
-    llvm_unreachable("undefined level format");
-  }
-  llvm_unreachable("unrecognizable level format");
+  return makeSparseTensorLevel(lt, sz, buffers, tid, lvl);
 }
 
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>

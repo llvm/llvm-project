@@ -55,6 +55,7 @@ public:
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
   Value getSize() const { return lvlSize; }
+  virtual ValueRange getLvlBuffers() const = 0;
 
   //
   // Level properties
@@ -285,6 +286,11 @@ private:
 /// Helper function to create a TensorLevel object from given `tensor`.
 std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
                                                          Location loc, Value t,
+                                                         unsigned tid, Level l);
+
+/// Helper function to create a TensorLevel object from given `tensor`.
+std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
+                                                         ValueRange buffers,
                                                          unsigned tid, Level l);
 
 /// Helper function to create a simple SparseIterator object that iterate over
