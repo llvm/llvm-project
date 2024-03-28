@@ -444,6 +444,7 @@ libc_support_library(
     hdrs = ["src/__support/fixedvector.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_iterator",
     ],
 )
 
