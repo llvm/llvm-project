@@ -1,4 +1,4 @@
-//===-- RegisterFlagsLinux_arm64.h ------------------------------*- C++ -*-===//
+//===-- RegisterFlagsDetector_arm64.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSLINUX_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSLINUX_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 
 #include "lldb/Target/RegisterFlags.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,9 +18,9 @@ namespace lldb_private {
 struct RegisterInfo;
 
 /// This class manages the storage and detection of register field information
-/// for Arm64 Linux registers. The same register may have different fields on
-/// different CPUs. This class abstracts out the field detection process so we
-/// can use it on live processes and core files.
+/// for Arm64 Linux and FreeBSD registers. The same register may have different
+/// fields on different CPUs. This class abstracts out the field detection
+/// process so we can use it on live processes and core files.
 ///
 /// The general way to use this class is:
 /// * Make an instance somewhere that will last as long as the debug session
@@ -33,7 +33,7 @@ struct RegisterInfo;
 /// This must be done in that order, and you should ensure that if multiple
 /// threads will reference the information, a mutex is used to make sure only
 /// one calls DetectFields.
-class LinuxArm64RegisterFlags {
+class Arm64RegisterFlagsDetector {
 public:
   /// For the registers listed in this class, detect which fields are
   /// present. Must be called before UpdateRegisterInfos.
@@ -73,7 +73,9 @@ private:
       RegisterEntry("cpsr", 4, DetectCPSRFields),
       RegisterEntry("fpsr", 4, DetectFPSRFields),
       RegisterEntry("fpcr", 4, DetectFPCRFields),
+      // Linux only, won't be found on FreeBSD.
       RegisterEntry("mte_ctrl", 8, DetectMTECtrlFields),
+      // Linux only, won't be found on FreeBSD.
       RegisterEntry("svcr", 8, DetectSVCRFields),
   };
 
@@ -83,4 +85,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSLINUX_ARM64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
