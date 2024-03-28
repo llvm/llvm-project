@@ -285,7 +285,7 @@
 "`3379 <https://wg21.link/LWG3379>`__","""``safe``\ "" in several library names is misleading","Prague","|Complete|","15.0","|ranges|"
 "`3380 <https://wg21.link/LWG3380>`__","``common_type``\  and comparison categories","Prague","|Complete|","15.0","|spaceship|"
 "`3381 <https://wg21.link/LWG3381>`__","``begin``\  and ``data``\  must agree for ``contiguous_range``\ ","Prague","|Nothing To Do|","","|ranges|"
-"`3382 <https://wg21.link/LWG3382>`__","NTTP for ``pair``\  and ``array``\ ","Prague","",""
+"`3382 <https://wg21.link/LWG3382>`__","NTTP for ``pair``\  and ``array``\ ","Prague","|Nothing To Do|",""
 "`3383 <https://wg21.link/LWG3383>`__","|sect|\ [time.zone.leap.nonmembers] ``sys_seconds``\  should be replaced with ``seconds``\ ","Prague","","","|chrono|"
 "`3384 <https://wg21.link/LWG3384>`__","``transform_view::*sentinel*``\  has an incorrect ``operator-``\ ","Prague","|Complete|","15.0","|ranges|"
 "`3385 <https://wg21.link/LWG3385>`__","``common_iterator``\  is not sufficiently constrained for non-copyable iterators","Prague","|Complete|","15.0","|ranges|"
