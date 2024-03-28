@@ -13,6 +13,7 @@
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_same.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <cstddef>
 #include <experimental/__config>
 #include <experimental/__simd/utility.h>
@@ -54,6 +55,24 @@ public:
   _LIBCPP_HIDE_FROM_ABI __simd_reference operator=(_Up&& __v) && noexcept {
     __set(static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI void swap(__simd_reference&& __a, __simd_reference&& __b) noexcept {
+    value_type __tmp(std::move(__a.__get()));
+    __a.__set(std::move(__b.__get()));
+    __b.__set(std::move(__tmp));
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI void swap(value_type& __a, __simd_reference&& __b) noexcept {
+    value_type __tmp(std::move(__a));
+    __a = std::move(__b.__get());
+    __b.__set(std::move(__tmp));
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI void swap(__simd_reference&& __a, value_type& __b) noexcept {
+    value_type __tmp(std::move(__a.__get()));
+    __a.__set(std::move(__b));
+    __b = std::move(__tmp);
   }
 };
 
