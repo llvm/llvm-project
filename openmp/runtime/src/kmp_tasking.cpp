@@ -1511,8 +1511,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
       KA_TRACE(30,
                ("T#%d creating task team in __kmp_task_alloc for proxy task\n",
                 gtid));
-      // 1 indicates setup the current team regardless of nthreads
-      __kmp_task_team_setup(thread, team, 1);
+      __kmp_task_team_setup(thread, team);
       thread->th.th_task_team = team->t.t_task_team[thread->th.th_task_state];
     }
     kmp_task_team_t *task_team = thread->th.th_task_team;
@@ -4050,6 +4049,40 @@ void __kmp_reap_task_teams(void) {
   }
 }
 
+// View the array of two task team pointers as a pair of pointers:
+//  1) a single task_team pointer
+//  2) next pointer for stack
+// Serial teams can create a stack of task teams for nested serial teams.
+void __kmp_push_task_team_node(kmp_info_t *thread, kmp_team_t *team) {
+  KMP_DEBUG_ASSERT(team->t.t_nproc == 1);
+  kmp_task_team_list_t *current =
+      (kmp_task_team_list_t *)(&team->t.t_task_team[0]);
+  kmp_task_team_list_t *node =
+      (kmp_task_team_list_t *)__kmp_allocate(sizeof(kmp_task_team_list_t));
+  node->task_team = current->task_team;
+  node->next = current->next;
+  thread->th.th_task_team = current->task_team = NULL;
+  current->next = node;
+}
+
+// Serial team pops a task team off the stack
+void __kmp_pop_task_team_node(kmp_info_t *thread, kmp_team_t *team) {
+  KMP_DEBUG_ASSERT(team->t.t_nproc == 1);
+  kmp_task_team_list_t *current =
+      (kmp_task_team_list_t *)(&team->t.t_task_team[0]);
+  if (current->task_team) {
+    __kmp_free_task_team(thread, current->task_team);
+  }
+  kmp_task_team_list_t *next = current->next;
+  if (next) {
+    current->task_team = next->task_team;
+    current->next = next->next;
+    KMP_DEBUG_ASSERT(next != current);
+    __kmp_free(next);
+    thread->th.th_task_team = current->task_team;
+  }
+}
+
 // __kmp_wait_to_unref_task_teams:
 // Some threads could still be in the fork barrier release code, possibly
 // trying to steal tasks.  Wait for each thread to unreference its task team.
@@ -4114,55 +4147,28 @@ void __kmp_wait_to_unref_task_teams(void) {
   }
 }
 
-void __kmp_shift_task_state_stack(kmp_info_t *this_thr, kmp_uint8 value) {
-  // Shift values from th_task_state_top+1 to task_state_stack_sz
-  if (this_thr->th.th_task_state_top + 1 >=
-      this_thr->th.th_task_state_stack_sz) { // increase size
-    kmp_uint32 new_size = 2 * this_thr->th.th_task_state_stack_sz;
-    kmp_uint8 *old_stack, *new_stack;
-    kmp_uint32 i;
-    new_stack = (kmp_uint8 *)__kmp_allocate(new_size);
-    for (i = 0; i <= this_thr->th.th_task_state_top; ++i) {
-      new_stack[i] = this_thr->th.th_task_state_memo_stack[i];
-    }
-    // If we need to reallocate do the shift at the same time.
-    for (; i < this_thr->th.th_task_state_stack_sz; ++i) {
-      new_stack[i + 1] = this_thr->th.th_task_state_memo_stack[i];
-    }
-    for (i = this_thr->th.th_task_state_stack_sz; i < new_size;
-         ++i) { // zero-init rest of stack
-      new_stack[i] = 0;
-    }
-    old_stack = this_thr->th.th_task_state_memo_stack;
-    this_thr->th.th_task_state_memo_stack = new_stack;
-    this_thr->th.th_task_state_stack_sz = new_size;
-    __kmp_free(old_stack);
-  } else {
-    kmp_uint8 *end;
-    kmp_uint32 i;
-
-    end = &this_thr->th
-               .th_task_state_memo_stack[this_thr->th.th_task_state_stack_sz];
-
-    for (i = this_thr->th.th_task_state_stack_sz - 1;
-         i > this_thr->th.th_task_state_top; i--, end--)
-      end[0] = end[-1];
-  }
-  this_thr->th.th_task_state_memo_stack[this_thr->th.th_task_state_top + 1] =
-      value;
-}
-
 // __kmp_task_team_setup:  Create a task_team for the current team, but use
 // an already created, unused one if it already exists.
-void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
+void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
 
+  // For serial teams, setup the first task team pointer to point to task team.
+  // The other pointer is a stack of task teams from previous serial levels.
+  if (team->t.t_task_team[0] == NULL && team->t.t_nproc == 1) {
+    team->t.t_task_team[0] = __kmp_allocate_task_team(this_thr, team);
+    KA_TRACE(20,
+             ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
+              " for serial/root team %p\n",
+              __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
+
+    return;
+  }
   // If this task_team hasn't been created yet, allocate it. It will be used in
   // the region after the next.
   // If it exists, it is the current task team and shouldn't be touched yet as
   // it may still be in use.
   if (team->t.t_task_team[this_thr->th.th_task_state] == NULL &&
-      (always || team->t.t_nproc > 1)) {
+      team->t.t_nproc > 1) {
     team->t.t_task_team[this_thr->th.th_task_state] =
         __kmp_allocate_task_team(this_thr, team);
     KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
@@ -4170,14 +4176,6 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
                   __kmp_gtid_from_thread(this_thr),
                   team->t.t_task_team[this_thr->th.th_task_state], team->t.t_id,
                   this_thr->th.th_task_state));
-  }
-  if (this_thr->th.th_task_state == 1 && always && team->t.t_nproc == 1) {
-    // fix task state stack to adjust for proxy and helper tasks
-    KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d needs to shift stack"
-                  " for team %d at parity=%d\n",
-                  __kmp_gtid_from_thread(this_thr), team->t.t_id,
-                  this_thr->th.th_task_state));
-    __kmp_shift_task_state_stack(this_thr, this_thr->th.th_task_state);
   }
 
   // After threads exit the release, they will call sync, and then point to this
