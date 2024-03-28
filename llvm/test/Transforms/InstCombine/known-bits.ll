@@ -534,8 +534,7 @@ define i8 @and_eq_bits_must_be_set(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %xy = and i8 %x, %y
   %cmp = icmp eq i8 %xy, 123
@@ -549,8 +548,7 @@ define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 11
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 11
 ;
   %xy = and i8 %x, %y
   %cmp = icmp eq i8 %xy, 123
@@ -579,8 +577,7 @@ define i8 @or_eq_bits_must_be_unset(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %xy = or i8 %x, %y
   %cmp = icmp eq i8 %xy, 124
@@ -594,8 +591,7 @@ define i8 @or_eq_bits_must_be_unset2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %xy = or i8 %x, %y
   %cmp = icmp eq i8 %xy, 124
@@ -609,7 +605,7 @@ define i8 @or_eq_bits_must_be_unset2_partial_fail(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 7
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 4
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = or i8 %x, %y
