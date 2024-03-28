@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,pre26 -pedantic %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=expected,compat -Wpre-c++26-compat %s
 // RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify %s
 
 struct S {
@@ -5,15 +7,15 @@ struct S {
   void b() = delete(; // expected-error {{expected string literal}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   void c() = delete(); // expected-error {{expected string literal}}
   void d() = delete(42); // expected-error {{expected string literal}}
-  void e() = delete("foo"[0]); // expected-error {{expected ')'}} expected-note {{to match this '('}}
-  void f() = delete("foo");
+  void e() = delete("foo"[0]); // expected-error {{expected ')'}} expected-note {{to match this '('}} // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  void f() = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
 
-  S() = delete("foo");
-  ~S() = delete("foo");
-  S(const S&) = delete("foo");
-  S(S&&) = delete("foo");
-  S& operator=(const S&) = delete("foo");
-  S& operator=(S&&) = delete("foo");
+  S() = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  ~S() = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  S(const S&) = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  S(S&&) = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  S& operator=(const S&) = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+  S& operator=(S&&) = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
 };
 
 struct T {
@@ -29,5 +31,5 @@ void a() = delete;
 void b() = delete(; // expected-error {{expected string literal}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 void c() = delete(); // expected-error {{expected string literal}}
 void d() = delete(42); // expected-error {{expected string literal}}
-void e() = delete("foo"[0]); // expected-error {{expected ')'}} expected-note {{to match this '('}}
-void f() = delete("foo");
+void e() = delete("foo"[0]); // expected-error {{expected ')'}} expected-note {{to match this '('}} // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
+void f() = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}

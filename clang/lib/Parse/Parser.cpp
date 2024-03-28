@@ -1417,6 +1417,11 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      if (DeletedMessage)
+        Diag(DeletedMessage->getBeginLoc(),
+             getLangOpts().CPlusPlus26 ? diag::warn_cxx23_delete_with_message
+                                       : diag::ext_delete_with_message)
+            << DeletedMessage->getSourceRange();
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
