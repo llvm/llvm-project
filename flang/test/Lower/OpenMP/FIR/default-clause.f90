@@ -193,7 +193,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_testsEx"}
 !CHECK: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[PRIVATE_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_default_clause_testsEz"}
-!CHECK: %[[PRIVATE_W:.*]] = fir.alloca i32 {bindc_name = "w", pinned, uniq_name = "_QFnested_default_clause_testsEw"} 
 !CHECK: omp.parallel {
 !CHECK: %[[PRIVATE_INNER_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_testsEx"}
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
@@ -206,10 +205,12 @@ subroutine nested_default_clause_tests
 !CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.parallel {
+!CHECK: %[[PRIVATE_INNER_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name =
+!"_QFnested_default_clause_testsEz"}
 !CHECK: %[[PRIVATE_INNER_W:.*]] = fir.alloca i32 {bindc_name = "w", pinned, uniq_name = "_QFnested_default_clause_testsEw"} 
 !CHECK: %[[PRIVATE_INNER_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_testsEx"}
 !CHECK: %[[temp_1:.*]] = fir.load %[[PRIVATE_INNER_X]] : !fir.ref<i32>
-!CHECK: %[[temp_2:.*]] = fir.load %[[PRIVATE_Z]] : !fir.ref<i32>
+!CHECK: %[[temp_2:.*]] = fir.load %[[PRIVATE_INNER_Z]] : !fir.ref<i32>
 !CHECK: %[[result:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_INNER_W]] : !fir.ref<i32>
 !CHECK: omp.terminator

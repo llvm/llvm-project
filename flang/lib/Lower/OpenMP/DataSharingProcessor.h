@@ -50,7 +50,6 @@ private:
   llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
-  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
@@ -61,6 +60,11 @@ private:
 
   bool needBarrier();
   void collectSymbols(Fortran::semantics::Symbol::Flag flag);
+  void collectSymbolsInNestedRegions(
+      Fortran::lower::pft::Evaluation &eval,
+      Fortran::semantics::Symbol::Flag flag,
+      llvm::SetVector<const Fortran::semantics::Symbol *>
+          &symbolsInNestedRegions);
   void collectOmpObjectListSymbol(
       const omp::ObjectList &objects,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet);
