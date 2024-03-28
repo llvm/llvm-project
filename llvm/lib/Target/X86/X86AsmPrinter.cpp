@@ -796,7 +796,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       }
       O << '-';
       break;
-    case 'H': 
+    case 'H':
       ErrorMsg += " 'H' modifier used on an operand that is a non-offsetable"
                   " memory reference.";
       return true;

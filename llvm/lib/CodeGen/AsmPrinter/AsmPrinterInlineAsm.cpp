@@ -307,15 +307,15 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
             Error = AP->PrintAsmMemoryOperand(
                 MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           } else {
-            Error = AP->PrintAsmOperand(MI, OpNo,
-                                        Modifier[0] ? Modifier : nullptr, OS,
-                                        ErrorMsg);
+            Error = AP->PrintAsmOperand(
+                MI, OpNo, Modifier[0] ? Modifier : nullptr, OS, ErrorMsg);
           }
         }
         if (Error) {
           std::string msg;
           raw_string_ostream Msg(msg);
-          Msg << "invalid operand in inline asm: '" << AsmStr << "'" <<ErrorMsg;
+          Msg << "invalid operand in inline asm: '" << AsmStr << "'"
+              << ErrorMsg;
           MMI->getModule()->getContext().emitError(LocCookie, Msg.str());
         }
       }

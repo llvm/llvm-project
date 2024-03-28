@@ -56,7 +56,7 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
-                                          raw_ostream &OS, 
+                                          raw_ostream &OS,
                                           std::string &ErrorMsg) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
   if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS, ErrorMsg))

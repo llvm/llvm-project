@@ -54,7 +54,7 @@ namespace {
     void printSrcMemOperand(const MachineInstr *MI, int OpNum,
                             raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O, 
+                         const char *ExtraCode, raw_ostream &O,
                          std::string &ErrorMsg) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &O) override;

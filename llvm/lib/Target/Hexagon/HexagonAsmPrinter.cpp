@@ -113,8 +113,8 @@ bool HexagonAsmPrinter::isBlockOnlyReachableByFallthrough(
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                        const char *ExtraCode,
-                                        raw_ostream &OS, std::string &ErrorMsg) {
+                                        const char *ExtraCode, raw_ostream &OS,
+                                        std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)

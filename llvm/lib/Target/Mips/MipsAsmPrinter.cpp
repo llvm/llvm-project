@@ -473,7 +473,7 @@ void MipsAsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 
 // Print out an operand for an inline asm expression.
 bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                     const char *ExtraCode, raw_ostream &O, 
+                                     const char *ExtraCode, raw_ostream &O,
                                      std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {

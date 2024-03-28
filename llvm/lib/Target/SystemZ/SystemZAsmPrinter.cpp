@@ -926,8 +926,8 @@ static void printAddress(const MCAsmInfo *MAI, unsigned Base,
 }
 
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                        const char *ExtraCode,
-                                        raw_ostream &OS, std::string &ErrorMsg) {
+                                        const char *ExtraCode, raw_ostream &OS,
+                                        std::string &ErrorMsg) {
   const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
