@@ -926,3 +926,17 @@ define float @crash_4b8320(<2 x float> %i1, float %i12) {
   %i29 = extractelement <4 x float> %i26, i64 0
   ret float %i29
 }
+
+define i32 @freeze_between_extractelement_and_shufflevector(<2 x float> %inp) {
+; ANY-LABEL: @freeze_between_extractelement_and_shufflevector(
+; ANY-NEXT:  entry:
+; ANY-NEXT:    ret i32 0
+;
+entry:
+  %sh1 = shufflevector <2 x float> %inp, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  %sh2 = shufflevector <4 x float> %sh1, <4 x float> <float poison, float poison, float 0.000000e+00, float undef>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %fr = freeze <4 x float> %sh2
+  %bc13 = bitcast <4 x float> %fr to <4 x i32>
+  %ext = extractelement <4 x i32> %bc13, i64 2
+  ret i32 %ext
+}
