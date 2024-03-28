@@ -444,3 +444,20 @@ add_libc_test(
     libc.src.stdio.fopencookie
     libc.src.stdio.fflush
 )
+
+add_libc_unittest(
+  pipe2_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pipe2_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.close
+    libc.src.unistd.pipe2
+    libc.src.unistd.read
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

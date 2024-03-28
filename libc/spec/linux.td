@@ -264,6 +264,20 @@ def Linux : StandardSpec<"Linux"> {
       ]
   >;
 
+  HeaderSpec UniStd = HeaderSpec<
+    "unistd.h",
+    [], // Macros
+    [], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "pipe2",
+          RetValSpec<IntType>,
+          [ArgSpec<IntPtr>, ArgSpec<IntType>]  // TODO: use int[2] array for the first ArgSpec when possible
+        >,
+    ]
+  >;
+
   let Headers = [
     Errno,
     SysEpoll,
@@ -272,5 +286,6 @@ def Linux : StandardSpec<"Linux"> {
     SysRandom,
     SysTime,
     Signal,
+    UniStd
   ];
 }
