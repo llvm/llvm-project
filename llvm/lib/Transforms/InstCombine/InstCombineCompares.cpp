@@ -6391,57 +6391,51 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     case ICmpInst::ICMP_ULT: {
       if (Op1Min == Op0Max) // A <u B -> A != B if max(A) == min(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      const APInt *CmpC;
-      if (match(Op1, m_APInt(CmpC))) {
-        // A <u C -> A == C-1 if min(A)+1 == C
-        if (*CmpC == Op0Min + 1)
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              ConstantInt::get(Op1->getType(), *CmpC - 1));
-        // X <u C --> X == 0, if the number of zero bits in the bottom of X
-        // exceeds the log2 of C.
-        if (Op0Known.countMinTrailingZeros() >= CmpC->ceilLogBase2())
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              Constant::getNullValue(Op1->getType()));
-      }
+      // A <u C -> A == C-1 if min(A)+1 == C
+      if (match(Op1, m_SpecificInt(Op0Min + 1)))
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            ConstantInt::get(Op1->getType(), Op0Min));
+      // X <u C --> X == 0, if the number of zero bits in the bottom of X
+      // exceeds the log2 of C.
+      if (match(Op1, m_CheckedInt([&Op0Known](const APInt &C) {
+                  return Op0Known.countMinTrailingZeros() >= C.ceilLogBase2();
+                })))
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            Constant::getNullValue(Op1->getType()));
       break;
     }
     case ICmpInst::ICMP_UGT: {
       if (Op1Max == Op0Min) // A >u B -> A != B if min(A) == max(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      const APInt *CmpC;
-      if (match(Op1, m_APInt(CmpC))) {
-        // A >u C -> A == C+1 if max(a)-1 == C
-        if (*CmpC == Op0Max - 1)
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              ConstantInt::get(Op1->getType(), *CmpC + 1));
-        // X >u C --> X != 0, if the number of zero bits in the bottom of X
-        // exceeds the log2 of C.
-        if (Op0Known.countMinTrailingZeros() >= CmpC->getActiveBits())
-          return new ICmpInst(ICmpInst::ICMP_NE, Op0,
-                              Constant::getNullValue(Op1->getType()));
-      }
+      // A >u C -> A == C+1 if max(a)-1 == C
+      if (match(Op1, m_SpecificInt(Op0Max - 1)))
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            ConstantInt::get(Op1->getType(), Op0Max));
+      // X >u C --> X != 0, if the number of zero bits in the bottom of X
+      // exceeds the log2 of C.
+      if (match(Op1, m_CheckedInt([&Op0Known](const APInt &C) {
+                  return Op0Known.countMinTrailingZeros() >= C.getActiveBits();
+                })))
+        return new ICmpInst(ICmpInst::ICMP_NE, Op0,
+                            Constant::getNullValue(Op1->getType()));
       break;
     }
     case ICmpInst::ICMP_SLT: {
       if (Op1Min == Op0Max) // A <s B -> A != B if max(A) == min(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      const APInt *CmpC;
-      if (match(Op1, m_APInt(CmpC))) {
-        if (*CmpC == Op0Min + 1) // A <s C -> A == C-1 if min(A)+1 == C
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              ConstantInt::get(Op1->getType(), *CmpC - 1));
-      }
+      // A <s C -> A == C-1 if min(A)+1 == C
+      if (match(Op1, m_SpecificInt(Op0Min + 1)))
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            ConstantInt::get(Op1->getType(), Op0Min));
       break;
     }
     case ICmpInst::ICMP_SGT: {
       if (Op1Max == Op0Min) // A >s B -> A != B if min(A) == max(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      const APInt *CmpC;
-      if (match(Op1, m_APInt(CmpC))) {
-        if (*CmpC == Op0Max - 1) // A >s C -> A == C+1 if max(A)-1 == C
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              ConstantInt::get(Op1->getType(), *CmpC + 1));
-      }
+      // A >s C -> A == C+1 if max(A)-1 == C
+      if (match(Op1, m_SpecificInt(Op0Max - 1)))
+        return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
+                            ConstantInt::get(Op1->getType(), Op0Max));
       break;
     }
     }

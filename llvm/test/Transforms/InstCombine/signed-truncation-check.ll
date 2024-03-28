@@ -212,10 +212,7 @@ define <3 x i1> @positive_vec_undef0(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef1(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef1(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
@@ -227,10 +224,7 @@ define <3 x i1> @positive_vec_undef1(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef2(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef2(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 undef, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
@@ -242,10 +236,7 @@ define <3 x i1> @positive_vec_undef2(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef3(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef3(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 undef, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 undef, i32 -1>
@@ -257,10 +248,7 @@ define <3 x i1> @positive_vec_undef3(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef4(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef4(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 undef, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 undef, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 undef, i32 -1>
@@ -272,10 +260,7 @@ define <3 x i1> @positive_vec_undef4(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef5(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef5(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 undef, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
@@ -287,10 +272,7 @@ define <3 x i1> @positive_vec_undef5(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_undef6(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_undef6(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 undef, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 undef, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
 ; CHECK-NEXT:    ret <3 x i1> [[T4]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 undef, i32 -1>
