@@ -295,6 +295,11 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
+  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
+                               LangAS SrcAddr, LangAS DestAddr,
+                               llvm::Type *DestTy,
+                               bool IsNonNull = false) const;
+
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.
   /// \param SrcAddr is the language address space of \p V.
