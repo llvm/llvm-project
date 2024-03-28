@@ -158,6 +158,13 @@ config.substitutions.append(
     )
 )
 
+config.substitutions.append(
+    (
+        "%llvm-ctx-ifdo",
+        os.path.join(config.llvm_tools_dir, "llvm-ctx-ifdo")
+    )
+)
+
 if config.host_os not in [
     "Windows",
     "Darwin",
