@@ -155,10 +155,6 @@ if (LIBCXX_CONFIGURE_IDE)
   endif()
 endif()
 
-if(NOT LIBCXX_INSTALL_LIBRARY)
-  set(exclude_from_all EXCLUDE_FROM_ALL)
-endif()
-
 if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
   find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
 endif()
@@ -194,8 +190,7 @@ split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
 # Build the shared library.
-if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx_shared SHARED $<$<NOT:$<BOOL:LIBCXX_ENABLE_SHARED>>:EXCLUDE_FROM_ALL> ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES})
@@ -269,7 +264,10 @@ if (LIBCXX_ENABLE_SHARED)
     )
   endif()
 
+if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
+endif()
+
   if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
@@ -277,13 +275,11 @@ if (LIBCXX_ENABLE_SHARED)
     set_target_properties(cxx_shared PROPERTIES
                           APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
   endif()
-endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
 # Build the static library.
-if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  add_library(cxx_static STATIC $<$<NOT:$<BOOL:LIBCXX_ENABLE_STATIC>>:EXCLUDE_FROM_ALL> ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES}
@@ -312,16 +308,18 @@ if (LIBCXX_ENABLE_STATIC)
     target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
-  list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  if (LIBCXX_ENABLE_STATIC)
+    list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
+  endif()
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
   endif()
-endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
+# Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
