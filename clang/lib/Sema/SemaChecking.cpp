@@ -7978,19 +7978,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // arguments or return values, then warn the user that the streaming and
     // non-streaming vector lengths may be different.
     const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
-    if (CallerFD) {
-      if ((!FD || !FD->getBuiltinID()) && AnyScalableArgsOrRet) {
-        bool IsCalleeStreaming = ExtInfo.AArch64SMEAttributes &
-                                 FunctionType::SME_PStateSMEnabledMask;
-        bool IsCalleeStreamingCompatible =
-            ExtInfo.AArch64SMEAttributes &
-            FunctionType::SME_PStateSMCompatibleMask;
-        ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
-        if (!IsCalleeStreamingCompatible &&
-            (CallerFnType == ArmStreamingCompatible ||
-             ((CallerFnType == ArmStreaming) ^ IsCalleeStreaming)))
-          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
-      }
+    if (CallerFD && (!FD || !FD->getBuiltinID()) && AnyScalableArgsOrRet) {
+      bool IsCalleeStreaming =
+          ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
+      bool IsCalleeStreamingCompatible =
+          ExtInfo.AArch64SMEAttributes &
+          FunctionType::SME_PStateSMCompatibleMask;
+      ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
+      if (!IsCalleeStreamingCompatible &&
+          (CallerFnType == ArmStreamingCompatible ||
+           ((CallerFnType == ArmStreaming) ^ IsCalleeStreaming)))
+        Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming);
     }
 
     FunctionType::ArmStateValue CalleeArmZAState =
