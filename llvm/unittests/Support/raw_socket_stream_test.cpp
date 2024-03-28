@@ -39,13 +39,13 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   std::remove(SocketPath.c_str());
 
   Expected<ListeningSocket> MaybeServerListener =
-      ListeningSocket::createListeningUnixSocket(SocketPath);
+      ListeningSocket::createUnix(SocketPath);
   ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
 
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
-      raw_socket_stream::createConnectedUnixSocket(SocketPath);
+      raw_socket_stream::createConnectedUnix(SocketPath);
   ASSERT_THAT_EXPECTED(MaybeClient, llvm::Succeeded());
 
   raw_socket_stream &Client = **MaybeClient;
@@ -79,17 +79,18 @@ TEST(raw_socket_streamTest, TIMEOUT_PROVIDED) {
   std::remove(SocketPath.c_str());
 
   Expected<ListeningSocket> MaybeServerListener =
-      ListeningSocket::createListeningUnixSocket(SocketPath);
+      ListeningSocket::createUnix(SocketPath);
   ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
-  std::chrono::seconds Timeout = std::chrono::seconds(5);
+  std::chrono::milliseconds Timeout = std::chrono::milliseconds(100);
   auto Start = std::chrono::steady_clock::now();
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
       ServerListener.accept(Timeout);
   auto End = std::chrono::steady_clock::now();
-  auto Duration = std::chrono::duration_cast<std::chrono::seconds>(End - Start);
-  ASSERT_NEAR(Duration.count(), Timeout.count(), 1);
+  auto Duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+  ASSERT_NEAR(Duration.count(), Timeout.count(), 10);
 
   ASSERT_THAT_EXPECTED(MaybeServer, Failed());
   llvm::Error Err = MaybeServer.takeError();
@@ -110,7 +111,7 @@ TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
   std::remove(SocketPath.c_str());
 
   Expected<ListeningSocket> MaybeServerListener =
-      ListeningSocket::createListeningUnixSocket(SocketPath);
+      ListeningSocket::createUnix(SocketPath);
   ASSERT_THAT_EXPECTED(MaybeServerListener, llvm::Succeeded());
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 

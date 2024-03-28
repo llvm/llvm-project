@@ -107,9 +107,8 @@ ListeningSocket::ListeningSocket(ListeningSocket &&LS)
   LS.PipeFD[1] = -1;
 }
 
-Expected<ListeningSocket>
-ListeningSocket::createListeningUnixSocket(StringRef SocketPath,
-                                           int MaxBacklog) {
+Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
+                                                      int MaxBacklog) {
 
   // Handle instances where the target socket address already exists and
   // differentiate between a preexisting file with and without a bound socket
@@ -262,7 +261,7 @@ raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
 Expected<std::unique_ptr<raw_socket_stream>>
-raw_socket_stream::createConnectedUnixSocket(StringRef SocketPath) {
+raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
 #ifdef _WIN32
   WSABalancer _;
 #endif // _WIN32

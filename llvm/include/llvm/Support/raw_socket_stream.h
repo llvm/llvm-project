@@ -64,8 +64,8 @@ class ListeningSocket {
 
   /// If a seperate thread calls ListeningSocket::shutdown, the ListeningSocket
   /// file descriptor (FD) could be closed while ::poll is waiting for it to be
-  /// ready to performa I/O operations. ::poll with continue to block even after
-  /// FD is closed so use a self-pipe mechanism to get ::poll to return
+  /// ready to perform a I/O operations. ::poll with continue to block even
+  /// after FD is closed so use a self-pipe mechanism to get ::poll to return
   int PipeFD[2]; // Never modified after construction
 
   ListeningSocket(int SocketFD, StringRef SocketPath, int PipeFD[2]);
@@ -107,7 +107,7 @@ public:
   /// \param SocketPath The file system path where the socket will be created
   /// \param MaxBacklog The max number of connections in a socket's backlog
   ///
-  static Expected<ListeningSocket> createListeningUnixSocket(
+  static Expected<ListeningSocket> createUnix(
       StringRef SocketPath,
       int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
 };
@@ -127,7 +127,7 @@ public:
   /// Create a \p raw_socket_stream connected to the UNIX domain socket at \p
   /// SocketPath.
   static Expected<std::unique_ptr<raw_socket_stream>>
-  createConnectedUnixSocket(StringRef SocketPath);
+  createConnectedUnix(StringRef SocketPath);
   ~raw_socket_stream();
 };
 
