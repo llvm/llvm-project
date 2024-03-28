@@ -7,6 +7,7 @@
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
 void clang_analyzer_eval(bool);
+void clang_analyzer_dump(int);
 
 namespace clang {
 struct Shape {
@@ -17,19 +18,49 @@ struct Shape {
   const T *getAs() const;
 
   virtual double area();
+  virtual void print(int n) const {
+    clang_analyzer_dump(n + 1); // expected-warning {{+ 1}} this was analyzed in top-level-context
+  }
 };
-class Triangle : public Shape {};
-class Rectangle : public Shape {};
-class Hexagon : public Shape {};
-class Circle : public Shape {
+struct Triangle : public Shape {
+  void print(int n) const override {
+    clang_analyzer_dump(n + 2); // expected-warning {{+ 2}} this was analyzed in top-level-context
+  }
+};
+struct Rectangle : public Shape {
+  void print(int n) const override {
+    clang_analyzer_dump(n + 3);
+    // expected-warning@-1 {{103}} this was inlined from 'test_conflicting_type_information' 'A->print(100)'
+    // expected-warning@-2 {{303}} this was inlined from 'test_conflicting_type_information' 'R->print(300)'
+  }
+};
+struct Hexagon : public Shape {
+  void print(int n) const override {
+    clang_analyzer_dump(n + 4); // expected-warning {{+ 4}}
+  }
+};
+struct Circle : public Shape {
 public:
   ~Circle();
 };
-class SuspiciouslySpecificCircle : public Circle {};
+struct SuspiciouslySpecificCircle : public Circle {};
 } // namespace clang
 
 using namespace llvm;
 using namespace clang;
+
+void test_conflicting_type_information(const Shape *A) {
+  if (auto const *T = dyn_cast<Triangle>(A)) {
+    // Now, we associate 'Triangle' with 'A'.
+    if (auto const *R = dyn_cast<Rectangle>(A)) {
+      // Now, we associate 'Rectangle' with 'A'.
+      // This should be unreachable becasue 'A' cannot be a 'Triangle' and a 'Rectangle' at the same time.
+      A->print(100); // Splits into 2 paths: (1) conservative eval, (2) inlining `Rectangle::print`
+      T->print(200); // On path (2), it will conservative eval, because the dynamic type
+      R->print(300); // Splits on path (2) into other 2 paths: (3) conservative eval, (4) inlining `Rectangle::print`
+    }
+  }
+}
 
 void test_regions_dyn_cast(const Shape *A, const Shape *B) {
   if (dyn_cast<Circle>(A) && !dyn_cast<Circle>(B))

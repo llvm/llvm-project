@@ -492,11 +492,13 @@ void check_required_cast() {
 
 void check_cast_behavior(OSObject *obj) {
   OSArray *arr1 = OSDynamicCast(OSArray, obj);
-  clang_analyzer_eval(arr1 == obj); // expected-warning{{TRUE}}
-                                    // expected-note@-1{{TRUE}}
-                                    // expected-note@-2{{Assuming 'arr1' is not equal to 'obj'}}
-                                    // expected-warning@-3{{FALSE}}
-                                    // expected-note@-4   {{FALSE}}
+  clang_analyzer_eval(arr1 == obj); // #check_cast_behavior_1
+  // expected-warning@#check_cast_behavior_1 {{TRUE}}
+  // expected-note@#check_cast_behavior_1    {{TRUE}}
+  // expected-note@#check_cast_behavior_1{{Assuming 'arr1' is equal to 'obj'}}
+  // expected-warning@#check_cast_behavior_1 {{FALSE}}
+  // expected-note@#check_cast_behavior_1    {{FALSE}}
+  // expected-note@#check_cast_behavior_1{{Assuming 'arr1' is not equal to 'obj'}}
   OSArray *arr2 = OSRequiredCast(OSArray, obj);
   clang_analyzer_eval(arr2 == obj); // expected-warning{{TRUE}}
                                     // expected-note@-1{{TRUE}}
