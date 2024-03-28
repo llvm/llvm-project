@@ -688,11 +688,31 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   if (!ts)
     return llvm::make_error<llvm::StringError>("no Swift typesystem",
                                                llvm::inconvertibleErrorCode());
+  if (!type)
+    return llvm::make_error<llvm::StringError>("invalid type",
+                                               llvm::inconvertibleErrorCode());
 
   // Deal with the LLDB-only SILPackType variant.
   if (auto pack_type = ts->IsSILPackType(type))
     if (pack_type->expanded)
       return pack_type->count;
+
+  // Deal with Clang types.
+  {
+    CompilerType clang_type =
+        LookupAnonymousClangType(type.GetMangledTypeName().AsCString());
+    if (!clang_type)
+      ts->IsImportedType(type.GetOpaqueQualType(), &clang_type);
+    if (clang_type) {
+      bool is_signed;
+      if (clang_type.IsEnumerationType(is_signed))
+        return 1;
+      ExecutionContext exe_ctx;
+      if (exe_scope)
+        exe_scope->CalculateExecutionContext(exe_ctx);
+      return clang_type.GetNumChildren(true, exe_scope ? &exe_ctx : nullptr);
+    }
+  }
 
   // Try the static type metadata.
   const swift::reflection::TypeRef *tr = nullptr;
@@ -710,14 +730,6 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     //
     // However, some imported Clang types (specifically enums) will also produce
     // `BuiltinTypeInfo` instances. These types are not to be handled here.
-    swift::Demangle::Context dem;
-    NodePointer root = SwiftLanguageRuntime::DemangleSymbolAsNode(
-        type.GetMangledTypeName().GetStringRef(), dem);
-    using Kind = Node::Kind;
-    auto *builtin_type = swift_demangle::nodeAtPath(
-        root, {Kind::TypeMangling, Kind::Type, Kind::BuiltinTypeName});
-    if (builtin_type)
-      return 0;
     LLDB_LOG(GetLog(LLDBLog::Types),
              "{0}: unrecognized builtin type info or this is a Clang type "
              "without DWARF debug info",
