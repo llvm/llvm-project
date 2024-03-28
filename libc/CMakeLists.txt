@@ -26,8 +26,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
-# Default to C++17
-set(CMAKE_CXX_STANDARD 17)
+# Default to C++20
+set(CMAKE_CXX_STANDARD 20)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
