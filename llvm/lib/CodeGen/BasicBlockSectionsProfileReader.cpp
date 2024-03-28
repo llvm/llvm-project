@@ -75,10 +75,16 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
   return ProgramPathAndClusterInfo.lookup(getAliasName(FuncName)).ClonePaths;
 }
 
+uint64_t BasicBlockSectionsProfileReader::getCFGHashForFunction(
+    StringRef FuncName) const {
+  auto R = FuncHashMap.find(getAliasName(FuncName));
+  return R != FuncHashMap.end() ? R->second : 0;
+}
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
 //   f <function_name_1> <function_name_2> ...
+//   h <hash>
 //   c <bb_id_1> <bb_id_2> <bb_id_3>
 //   c <bb_id_4> <bb_id_5>
 //   ...
@@ -86,17 +92,17 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
 // distinguishing profile for internal-linkage functions with the same name. If
 // not specified, it will apply to any function with the same name. Function
 // name specifier (starting with 'f') can specify multiple function name
-// aliases. Basic block clusters are specified by 'c' and specify the cluster of
-// basic blocks, and the internal order in which they must be placed in the same
-// section.
-// This profile can also specify cloning paths which instruct the compiler to
-// clone basic blocks along a path. The cloned blocks are then specified in the
-// cluster information.
-// The following profile lists two cloning paths (starting with 'p') for
-// function bar and places the total 9 blocks within two clusters. The first two
-// blocks of a cloning path specify the edge along which the path is cloned. For
-// instance, path 1 (1 -> 3 -> 4) instructs that 3 and 4 must be cloned along
-// the edge 1->3. Within the given clusters, each cloned block is identified by
+// aliases. Function hash are specified by 'h' to detect whether profile is
+// out-dated. Basic block clusters are specified by 'c' and specify the cluster
+// of basic blocks, and the internal order in which they must be placed in the
+// same section. This profile can also specify cloning paths which instruct the
+// compiler to clone basic blocks along a path. The cloned blocks are then
+// specified in the cluster information. The following profile lists two cloning
+// paths (starting with 'p') for function bar and places the total 9 blocks
+// within two clusters. The first two blocks of a cloning path specify the edge
+// along which the path is cloned. For instance, path 1 (1 -> 3 -> 4) instructs
+// that 3 and 4 must be cloned along the edge 1->3. Within the given clusters,
+// each cloned block is identified by
 // "<original block id>.<clone id>". For instance, 3.1 represents the first
 // clone of block 3. Original blocks are specified just with their block ids. A
 // block cloned multiple times appears with distinct clone ids. The CFG for bar
@@ -196,6 +202,21 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       // We won't need DIFilename anymore. Clean it up to avoid its application
       // on the next function.
       DIFilename = "";
+      continue;
+    }
+    case 'h': { // Machine function cfg hash
+      if (Values.size() != 1) {
+        return createProfileParseError(Twine("invalid hash value: '") + S +
+                                       "'");
+      }
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
+      unsigned long long Hash = 0;
+      if (getAsUnsignedInteger(Values.front(), 10, Hash))
+        return createProfileParseError(
+            Twine("unable to parse function hash: '" + Values.front()) +
+            "': unsigned integer expected");
+      FuncHashMap[FI->first()] = static_cast<uint64_t>(Hash);
       continue;
     }
     case 'c': // Basic block cluster specifier.
@@ -442,6 +463,11 @@ BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
 BasicBlockSectionsProfileReader &
 BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
   return BBSPR;
+}
+
+uint64_t BasicBlockSectionsProfileReaderWrapperPass::getCFGHashForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getCFGHashForFunction(FuncName);
 }
 
 ImmutablePass *llvm::createBasicBlockSectionsProfileReaderWrapperPass(
