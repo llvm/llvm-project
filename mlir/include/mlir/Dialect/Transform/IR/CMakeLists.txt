@@ -24,7 +24,3 @@ add_dependencies(mlir-headers MLIRTransformDialectEnumIncGen)
 add_mlir_dialect(TransformOps transform)
 add_mlir_doc(TransformOps TransformOps Dialects/ -gen-op-doc -dialect=transform)
 
-add_mlir_interface(MatchInterfaces)
-add_dependencies(MLIRMatchInterfacesIncGen MLIRTransformInterfacesIncGen)
-add_mlir_doc(MatchInterfaces MatchOpInterfaces Dialects/ -gen-op-interface-docs)
-
