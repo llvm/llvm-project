@@ -861,6 +861,7 @@ define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpgtd %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vcvtdq2ps %ymm1, %ymm1
 ; AVX1-NEXT:    vxorps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vpsrad $31, %xmm4, %xmm1
 ; AVX1-NEXT:    vpsrad $31, %xmm2, %xmm2
@@ -1059,6 +1060,7 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpcmpgtd %xmm4, %xmm5, %xmm5
 ; AVX1-NEXT:    vpcmpgtd %xmm6, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
+; AVX1-NEXT:    vcvtdq2ps %ymm2, %ymm2
 ; AVX1-NEXT:    vxorps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vpsrad $31, %xmm6, %xmm2
 ; AVX1-NEXT:    vpsrad $31, %xmm4, %xmm4
@@ -1074,6 +1076,7 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm5, %xmm5
 ; AVX1-NEXT:    vpcmpgtd %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
+; AVX1-NEXT:    vcvtdq2ps %ymm3, %ymm3
 ; AVX1-NEXT:    vxorps %ymm1, %ymm3, %ymm1
 ; AVX1-NEXT:    vpsrad $31, %xmm6, %xmm3
 ; AVX1-NEXT:    vpsrad $31, %xmm2, %xmm2

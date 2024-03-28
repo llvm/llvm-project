@@ -180,21 +180,17 @@ define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 define <8 x i32> @and_mask_constant(<8 x i32> %v0, <8 x i32> %v1) {
 ; X86-LABEL: and_mask_constant:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X86-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X86-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_mask_constant:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
 ;

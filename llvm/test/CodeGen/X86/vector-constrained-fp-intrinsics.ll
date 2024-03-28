@@ -7745,19 +7745,15 @@ define <16 x float> @vpaddd_mask_test(<16 x float> %i, <16 x float> %j, <16 x i3
 ;
 ; AVX1-LABEL: vpaddd_mask_test:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
-; AVX1-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm5, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm6
-; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm4, %xmm4
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
+; AVX1-NEXT:    vcvtdq2ps %ymm5, %ymm5
+; AVX1-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; AVX1-NEXT:    vcmpneq_oqps %ymm6, %ymm5, %ymm5
+; AVX1-NEXT:    vcvtdq2ps %ymm4, %ymm4
+; AVX1-NEXT:    vcmpneq_oqps %ymm6, %ymm4, %ymm4
 ; AVX1-NEXT:    vaddps %ymm3, %ymm1, %ymm3
 ; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm2
-; AVX1-NEXT:    vblendvps %ymm4, %ymm0, %ymm2, %ymm0
-; AVX1-NEXT:    vblendvps %ymm5, %ymm1, %ymm3, %ymm1
+; AVX1-NEXT:    vblendvps %ymm4, %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvps %ymm5, %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: vpaddd_mask_test:
