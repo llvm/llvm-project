@@ -134,14 +134,11 @@ static _Atomic float glob_flt = 0.0f;
 
 void force_global_uses(void) {
   (void)glob_pointer;
-  // CHECK: %[[LOCAL_INT:.+]] = load atomic i32, ptr @[[GLOB_POINTER]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT]] to ptr
+  // CHECK: load atomic ptr, ptr @[[GLOB_POINTER]] seq_cst
   (void)glob_pointer_from_int;
-  // CHECK: %[[LOCAL_INT_2:.+]] = load atomic i32, ptr @[[GLOB_POINTER_FROM_INT]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT_2]] to ptr
+  // CHECK-NEXT: load atomic ptr, ptr @[[GLOB_POINTER_FROM_INT]] seq_cst
   (void)nonstatic_glob_pointer_from_int;
-  // CHECK: %[[LOCAL_INT_3:.+]] = load atomic i32, ptr @[[NONSTATIC_GLOB_POINTER_FROM_INT]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT_3]] to ptr
+  // CHECK-NEXT: load atomic ptr, ptr @[[NONSTATIC_GLOB_POINTER_FROM_INT]] seq_cst
   (void)glob_int;
   // CHECK: load atomic i32, ptr @[[GLOB_INT]] seq_cst
   (void)glob_flt;
