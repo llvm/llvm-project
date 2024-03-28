@@ -7102,6 +7102,111 @@ static void handleSwiftAsyncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     checkSwiftAsyncErrorBlock(S, D, ErrorAttr, AsyncAttr);
 }
 
+// This function is called only if function call is not inside template body.
+// TODO: Add call for function calls inside template body.
+// Check if parent function misses format attribute. If misses, emit warning.
+void Sema::DiagnoseMissingFormatAttributes(const FunctionDecl *FDecl,
+                                           ArrayRef<const Expr *> Args,
+                                           SourceLocation Loc) {
+  assert(FDecl);
+
+  const FunctionDecl *ParentFuncDecl = getCurFunctionDecl();
+  if (!ParentFuncDecl)
+    return;
+
+  // If function is a member of struct/union/class, format attribute argument
+  // indexing starts from 2. Otherwise, it starts from 1.
+  const unsigned int FormatArgumentIndexOffset =
+      isInstanceMethod(FDecl) ? 2 : 1;
+  const unsigned int ParentFunctionFormatArgumentIndexOffset =
+      isInstanceMethod(ParentFuncDecl) ? 2 : 1;
+
+  // Check if function has format attribute with forwarded format string.
+  IdentifierInfo *AttrType;
+  const ParmVarDecl *FormatArg;
+  if (!llvm::any_of(
+          FDecl->specific_attrs<FormatAttr>(), [&](const FormatAttr *Attr) {
+            const int FormatIndexOffseted =
+                Attr->getFormatIdx() - FormatArgumentIndexOffset;
+            if (FormatIndexOffseted < 0 ||
+                (unsigned)FormatIndexOffseted >= Args.size())
+              return false;
+
+            const DeclRefExpr *FormatArgExpr = dyn_cast_or_null<DeclRefExpr>(
+                Args[FormatIndexOffseted]->IgnoreParenCasts());
+            if (!FormatArgExpr)
+              return false;
+
+            FormatArg = dyn_cast_or_null<ParmVarDecl>(
+                FormatArgExpr->getReferencedDeclOfCallee());
+            if (!FormatArg)
+              return false;
+
+            AttrType = Attr->getType();
+            return true;
+          }))
+    return;
+
+  // Check if format string argument is parent function parameter.
+  unsigned int StringIndex = 0;
+  if (!llvm::any_of(ParentFuncDecl->parameters(),
+                    [&](const ParmVarDecl *Param) {
+                      StringIndex = Param->getFunctionScopeIndex() +
+                                    ParentFunctionFormatArgumentIndexOffset;
+
+                      return Param == FormatArg;
+                    }))
+    return;
+
+  unsigned NumOfParentFunctionParams = ParentFuncDecl->getNumParams();
+
+  // Compare parent and calling function format attribute arguments (archetype
+  // and format string).
+  if (llvm::any_of(
+          ParentFuncDecl->specific_attrs<FormatAttr>(),
+          [&](const FormatAttr *Attr) {
+            if (Attr->getType() != AttrType)
+              return false;
+            const int FormatIndexOffseted =
+                Attr->getFormatIdx() - ParentFunctionFormatArgumentIndexOffset;
+
+            if (FormatIndexOffseted < 0 ||
+                (unsigned)FormatIndexOffseted >= NumOfParentFunctionParams)
+              return false;
+
+            if (ParentFuncDecl->parameters()[FormatIndexOffseted] != FormatArg)
+              return false;
+
+            return true;
+          }))
+    return;
+
+  // If parent function is variadic, check if last argument of child function is
+  // va_list.
+  unsigned FirstToCheck = [&]() -> unsigned {
+    if (!ParentFuncDecl->isVariadic())
+      return 0;
+    const DeclRefExpr *FirstToCheckArg = dyn_cast_or_null<DeclRefExpr>(
+        Args[Args.size() - 1]->IgnoreParenCasts());
+    if (!FirstToCheckArg)
+      return 0;
+
+    if (FirstToCheckArg->getType().getAsString() != "va_list")
+      return 0;
+    return NumOfParentFunctionParams + ParentFunctionFormatArgumentIndexOffset;
+  }();
+
+  // Emit warning
+  std::string InsertionText;
+  llvm::raw_string_ostream OS(InsertionText);
+  OS << "__attribute__((format(" << AttrType->getName() << ", " << StringIndex
+     << ", " << FirstToCheck << ")))";
+  SourceLocation ParentFuncLoc = ParentFuncDecl->getLocation();
+  Diag(ParentFuncLoc, diag::warn_missing_format_attribute)
+      << AttrType << ParentFuncDecl
+      << FixItHint::CreateInsertion(ParentFuncLoc, InsertionText);
+}
+
 //===----------------------------------------------------------------------===//
 // Microsoft specific attribute handlers.
 //===----------------------------------------------------------------------===//

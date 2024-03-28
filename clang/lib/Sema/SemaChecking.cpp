@@ -8020,8 +8020,10 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
   }
 
-  if (FD)
+  if (FD) {
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
+    DiagnoseMissingFormatAttributes(FD, Args, Range.getBegin());
+  }
 }
 
 /// CheckConstructorCall - Check a constructor call for correctness and safety
