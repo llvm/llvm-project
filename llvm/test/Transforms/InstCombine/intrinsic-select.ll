@@ -280,3 +280,30 @@ entry:
   %ret = icmp eq i64 %masked, 0
   ret i1 %ret
 }
+
+define double @test_fabs_select1(double %a) {
+; CHECK-LABEL: @test_fabs_select1(
+; CHECK-NEXT:    [[COND:%.*]] = fcmp uno double [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double 0x7FF8000000000000, double [[A]]
+; CHECK-NEXT:    ret double [[SEL1]]
+;
+  %cond = fcmp uno double %a, 0.000000e+00
+  %sel1 = select i1 %cond, double 0x7FF8000000000000, double %a
+  %fabs = call double @llvm.fabs.f64(double %sel1)
+  %sel2 = select i1 %cond, double %fabs, double %a
+  ret double %sel2
+}
+
+define double @test_fabs_select2(double %a) {
+; CHECK-LABEL: @test_fabs_select2(
+; CHECK-NEXT:    [[ABS1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[ABS2:%.*]] = select i1 [[CMP]], double 0.000000e+00, double [[ABS1]]
+; CHECK-NEXT:    ret double [[ABS2]]
+;
+  %abs1 = call double @llvm.fabs.f64(double %a)
+  %cmp = fcmp oeq double %abs1, 0x7FF0000000000000
+  %sel = select i1 %cmp, double -0.000000e+00, double %abs1
+  %abs2 = call double @llvm.fabs.f64(double %sel)
+  ret double %abs2
+}
