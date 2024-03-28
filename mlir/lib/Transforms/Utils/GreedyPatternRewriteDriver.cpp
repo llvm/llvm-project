@@ -699,7 +699,8 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
     // added to the worklist.
     if (!operand)
       continue;
-    if (!llvm::all_of(operand.getUsers(), [&op](auto u) { return u == op; }))
+    if (!llvm::all_of(operand.getUsers(),
+                      [&op](Operation *u) { return u == op; }))
       continue;
     if (auto *defOp = operand.getDefiningOp())
       addToWorklist(defOp);
