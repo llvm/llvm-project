@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H
 #define LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H
 
-#include <sys/mman.h> // For size_t and off_t
 
 namespace LIBC_NAMESPACE {
 
