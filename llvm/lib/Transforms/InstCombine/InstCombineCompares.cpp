@@ -8020,6 +8020,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
         return NV;
       break;
+    case Instruction::Select:
+      if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
+        return NV;
+      break;
     case Instruction::SIToFP:
     case Instruction::UIToFP:
       if (Instruction *NV = foldFCmpIntToFPConst(I, LHSI, RHSC))
