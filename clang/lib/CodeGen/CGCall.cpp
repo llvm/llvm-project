@@ -5693,7 +5693,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CI->setName("call");
 
   if (getTarget().getTriple().isSPIRVLogical() && CI->isConvergent())
-    CI = AddControlledConvergenceAttr(CI);
+    CI = addControlledConvergenceToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =

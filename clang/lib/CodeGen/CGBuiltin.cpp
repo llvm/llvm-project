@@ -1146,8 +1146,8 @@ llvm::IntrinsicInst *getConvergenceToken(llvm::BasicBlock *BB) {
 } // namespace
 
 llvm::CallBase *
-CodeGenFunction::AddConvergenceControlAttr(llvm::CallBase *Input,
-                                           llvm::Value *ParentToken) {
+CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
+                                            llvm::Value *ParentToken) {
   llvm::Value *bundleArgs[] = {ParentToken};
   llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
   auto Output = llvm::CallBase::addOperandBundle(
@@ -1158,15 +1158,15 @@ CodeGenFunction::AddConvergenceControlAttr(llvm::CallBase *Input,
 }
 
 llvm::IntrinsicInst *
-CodeGenFunction::EmitConvergenceLoop(llvm::BasicBlock *BB,
-                                     llvm::Value *ParentToken) {
+CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
+                                          llvm::Value *ParentToken) {
   CGBuilderTy::InsertPoint IP = Builder.saveIP();
   Builder.SetInsertPoint(&BB->front());
   auto CB = Builder.CreateIntrinsic(
       llvm::Intrinsic::experimental_convergence_loop, {}, {});
   Builder.restoreIP(IP);
 
-  auto I = AddConvergenceControlAttr(CB, ParentToken);
+  auto I = addConvergenceControlToken(CB, ParentToken);
   return cast<llvm::IntrinsicInst>(I);
 }
 
@@ -1201,20 +1201,20 @@ CodeGenFunction::getOrEmitConvergenceLoopToken(const LoopInfo *LI) {
 
   llvm::IntrinsicInst *PII =
       LI->getParent()
-          ? EmitConvergenceLoop(LI->getHeader(),
-                                getOrEmitConvergenceLoopToken(LI->getParent()))
+          ? emitConvergenceLoopToken(
+                LI->getHeader(), getOrEmitConvergenceLoopToken(LI->getParent()))
           : getOrEmitConvergenceEntryToken(LI->getHeader()->getParent());
 
-  return EmitConvergenceLoop(LI->getHeader(), PII);
+  return emitConvergenceLoopToken(LI->getHeader(), PII);
 }
 
 llvm::CallBase *
-CodeGenFunction::AddControlledConvergenceAttr(llvm::CallBase *Input) {
+CodeGenFunction::addControlledConvergenceToken(llvm::CallBase *Input) {
   llvm::Value *ParentToken =
       LoopStack.hasInfo()
           ? getOrEmitConvergenceLoopToken(&LoopStack.getInfo())
           : getOrEmitConvergenceEntryToken(Input->getFunction());
-  return AddConvergenceControlAttr(Input, ParentToken);
+  return addConvergenceControlToken(Input, ParentToken);
 }
 
 BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
@@ -5892,7 +5892,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
         {}, false, true));
     if (getTarget().getTriple().isSPIRVLogical())
-      CI = dyn_cast<CallInst>(AddControlledConvergenceAttr(CI));
+      CI = dyn_cast<CallInst>(addControlledConvergenceToken(CI));
     return RValue::get(CI);
   }
 
