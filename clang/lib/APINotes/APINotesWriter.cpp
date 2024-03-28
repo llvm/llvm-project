@@ -441,7 +441,7 @@ void emitVersionedInfo(
   std::sort(VI.begin(), VI.end(),
             [](const std::pair<VersionTuple, T> &LHS,
                const std::pair<VersionTuple, T> &RHS) -> bool {
-              assert(LHS.first != RHS.first &&
+              assert((&LHS == &RHS || LHS.first != RHS.first) &&
                      "two entries for the same version");
               return LHS.first < RHS.first;
             });
