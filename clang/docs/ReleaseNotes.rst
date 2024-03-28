@@ -304,6 +304,9 @@ Improvements to Clang's diagnostics
   annotated with the ``clang::always_destroy`` attribute.
   Fixes #GH68686, #GH86486
 
+- ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
+  flexible array members in a union or alone in a struct. Fixes GH#84565.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -454,6 +457,8 @@ Bug Fixes to C++ Support
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
+- Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
