@@ -1392,3 +1392,25 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
   store i9 42, ptr %p
   ret <vscale x 1 x i64> %vd
 }
+
+; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
+; FIXME: We should be able to recover the or into vwaddu.vv if the disjoint
+; flag is set.
+define <vscale x 2 x i32> @disjoint_or(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
+; CHECK-LABEL: disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsll.vi v8, v10, 8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf4 v8, v9
+; CHECK-NEXT:    vor.vv v8, v10, v8
+; CHECK-NEXT:    ret
+  %x.i16 = zext <vscale x 2 x i8> %x.i8 to <vscale x 2 x i16>
+  %x.shl = shl <vscale x 2 x i16> %x.i16, shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 8, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+  %x.i32 = zext <vscale x 2 x i16> %x.shl to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i8> %y.i8 to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %add
+}
