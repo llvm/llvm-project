@@ -8,6 +8,10 @@
 # RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
 
+## Test arm64 + relative method lists + dead-strip
+# RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -objc_relative_method_lists -dead_strip
+# RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_REL
+
 ## Test arm64 + traditional method lists (no relative offsets)
 # RUN: %no-lsystem-lld a64_rel_dylib.o -o a64_rel_dylib.dylib -map a64_rel_dylib.map -dylib -arch arm64 -no_objc_relative_method_lists
 # RUN: llvm-objdump --macho --objc-meta-data a64_rel_dylib.dylib  | FileCheck %s --check-prefix=CHK_NO_REL
