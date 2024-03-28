@@ -110,6 +110,7 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 #include <__fwd/fstream.h>
 #include <__fwd/ios.h>
 #include <__fwd/istream.h>
+#include <__fwd/memory.h>
 #include <__fwd/ostream.h>
 #include <__fwd/sstream.h>
 #include <__fwd/streambuf.h>
@@ -161,10 +162,6 @@ using wosyncstream = basic_osyncstream<wchar_t>;
 #  endif
 
 #endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
-
-// Include other forward declarations here
-template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS vector;
 
 template <class _CharT, class _Traits>
 class __save_flags {

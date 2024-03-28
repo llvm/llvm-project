@@ -192,6 +192,7 @@ template <class T, class Allocator, class Predicate>
 #include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
+#include <__fwd/deque.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -243,9 +244,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Tp, class _Allocator = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS deque;
 
 template <class _ValueType, class _DiffType>
 struct __deque_block_size {
