@@ -300,6 +300,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
   }
     LLVM_FALLTHROUGH;
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      return getInstructionMapping(
+          DefaultMappingID, /*Cost=*/1,
+          getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue()),
+          NumOperands);
+    }
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
+                                 NumOperands);
+  }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -321,9 +334,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
@@ -485,6 +495,19 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
     OpdsMapping[1] = GPRValueMapping;
+    break;
+  }
+  case TargetOpcode::G_ICMP: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+      LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+      LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
+      OpdsMapping[0] =
+          getVRBValueMapping(DstTy.getSizeInBits().getKnownMinValue());
+      OpdsMapping[2] = OpdsMapping[3] =
+          getVRBValueMapping(SrcTy.getSizeInBits().getKnownMinValue());
+    } else {
+      OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = GPRValueMapping;
+    }
     break;
   }
   case TargetOpcode::G_FCMP: {
