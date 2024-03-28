@@ -38,23 +38,14 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ct
   return __builtin_ctzll(__x);
 }
 
+template <class _Tp>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
+  if (__t == 0)
+    return numeric_limits<_Tp>::digits;
+
 #if __has_builtin(__builtin_ctzg)
-
-template <class _Tp>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
-  if (__t == 0)
-    return numeric_limits<_Tp>::digits;
-
   return __builtin_ctzg(__t);
-}
-
-#else // __has_builtin(__builtin_ctzg)
-
-template <class _Tp>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
-  if (__t == 0)
-    return numeric_limits<_Tp>::digits;
-
+#else  // __has_builtin(__builtin_ctzg)
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
   else if (sizeof(_Tp) <= sizeof(unsigned long))
@@ -70,9 +61,8 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
     }
     return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   }
-}
-
 #endif // __has_builtin(__builtin_ctzg)
+}
 
 #if _LIBCPP_STD_VER >= 20
 
