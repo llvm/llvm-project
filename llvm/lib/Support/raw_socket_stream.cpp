@@ -227,7 +227,10 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
 }
 
 void ListeningSocket::shutdown() {
-  if (FD == -1)
+  int ObservedFD = FD.load();
+  if (ObservedFD == -1)
+    return;
+  if (!FD.compare_exchange_strong(ObservedFD, -1))
     return;
   ::close(FD);
   ::unlink(SocketPath.c_str());
