@@ -170,7 +170,7 @@ public:
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
     }
-    return Plan.getVPValueOrAddLiveIn(V);
+    return Plan.getOrAddLiveIn(V);
   }
 };
 } // end namespace llvm
