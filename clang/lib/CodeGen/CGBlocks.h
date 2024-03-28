@@ -271,8 +271,7 @@ public:
   /// The block's captures. Non-constant captures are sorted by their offsets.
   llvm::SmallVector<Capture, 4> SortedCaptures;
 
-  // Currently we assume that block-pointer types are never signed.
-  RawAddress LocalAddress;
+  Address LocalAddress;
   llvm::StructType *StructureType;
   const BlockDecl *Block;
   const BlockExpr *BlockExpression;
