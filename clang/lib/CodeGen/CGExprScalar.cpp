@@ -2302,7 +2302,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // performed and the object is not of the derived type.
     if (CGF.sanitizePerformTypeCheck())
       CGF.EmitTypeCheck(CodeGenFunction::TCK_DowncastPointer, CE->getExprLoc(),
-                        Derived, DestTy->getPointeeType());
+                        Derived.getPointer(), DestTy->getPointeeType());
 
     if (CGF.SanOpts.has(SanitizerKind::CFIDerivedCast))
       CGF.EmitVTablePtrCheckForCast(DestTy->getPointeeType(), Derived,
@@ -2310,14 +2310,13 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                     CodeGenFunction::CFITCK_DerivedCast,
                                     CE->getBeginLoc());
 
-    return CGF.getAsNaturalPointerTo(Derived, CE->getType()->getPointeeType());
+    return Derived.getPointer();
   }
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
     // The EmitPointerWithAlignment path does this fine; just discard
     // the alignment.
-    return CGF.getAsNaturalPointerTo(CGF.EmitPointerWithAlignment(CE),
-                                     CE->getType()->getPointeeType());
+    return CGF.EmitPointerWithAlignment(CE).getPointer();
   }
 
   case CK_Dynamic: {
@@ -2327,8 +2326,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
 
   case CK_ArrayToPointerDecay:
-    return CGF.getAsNaturalPointerTo(CGF.EmitArrayToPointerDecay(E),
-                                     CE->getType()->getPointeeType());
+    return CGF.EmitArrayToPointerDecay(E).getPointer();
   case CK_FunctionToPointerDecay:
     return EmitLValue(E).getPointer(CGF);
 
@@ -5655,17 +5653,4 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   EmitCheck(Checks, SanitizerHandler::PointerOverflow, StaticArgs, DynamicArgs);
 
   return GEPVal;
-}
-
-Address CodeGenFunction::EmitCheckedInBoundsGEP(
-    Address Addr, ArrayRef<Value *> IdxList, llvm::Type *elementType,
-    bool SignedIndices, bool IsSubtraction, SourceLocation Loc, CharUnits Align,
-    const Twine &Name) {
-  if (!SanOpts.has(SanitizerKind::PointerOverflow))
-    return Builder.CreateInBoundsGEP(Addr, IdxList, elementType, Align, Name);
-
-  return RawAddress(
-      EmitCheckedInBoundsGEP(Addr.getElementType(), Addr.emitRawPointer(*this),
-                             IdxList, SignedIndices, IsSubtraction, Loc, Name),
-      elementType, Align);
 }
