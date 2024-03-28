@@ -72,7 +72,7 @@ _validated_string_list_flag = rule(
 def generate_driver_selects(name):
     """Generates flags and config settings to configure the tool list.
 
-    By default, all tools in LLVM are included in the "llvm" driver binary.
+    By default, all supported tools are included in the "llvm" driver binary.
     To build only a subset, specify just the subset you want as the flag.
     For example, to produce a binary with just llvm-nm and llvm-size, run:
 
