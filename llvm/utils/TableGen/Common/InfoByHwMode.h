@@ -176,6 +176,8 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
 
 ValueTypeByHwMode getValueTypeByHwMode(Record *Rec, const CodeGenHwModes &CGH);
 
+raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
+
 struct RegSizeInfo {
   unsigned RegSize;
   unsigned SpillSize;
@@ -213,9 +215,26 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
+
+struct SubRegRange {
+  uint16_t Size;
+  uint16_t Offset;
+
+  SubRegRange(Record *R);
+  SubRegRange(uint16_t Size, uint16_t Offset) : Size(Size), Offset(Offset) {}
+};
+
+struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
+  SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH);
+  SubRegRangeByHwMode(SubRegRange Range) { Map.insert({DefaultMode, Range}); }
+  SubRegRangeByHwMode() = default;
+
+  void insertSubRegRangeForMode(unsigned Mode, SubRegRange Info) {
+    Map.insert(std::pair(Mode, Info));
+  }
+};
 
 struct EncodingInfoByHwMode : public InfoByHwMode<Record *> {
   EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
