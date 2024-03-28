@@ -134,6 +134,7 @@ public:
                 F.hasFnAttribute("profile-checksum-mismatch")) &&
            "In post-link, profile checksum matching state doesn't match "
            "function 'profile-checksum-mismatch' attribute.");
+    (void)LTOPhase;
     // The desc for import function is unavailable. Check the function attribute
     // for mismatch.
     return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
