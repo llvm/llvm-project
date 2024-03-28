@@ -5641,12 +5641,16 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
-  case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_exp:
+  case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:
   case Builtin::BI__builtin_elementwise_log10:
   case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_trunc: {
     if (CheckFloatOrHalfRepresentations(this, TheCall))
