@@ -147,6 +147,34 @@ main_body:
   ret half %res
 }
 
+define amdgpu_ps half @v_interp_rtz_f16(float inreg %i, float inreg %j, i32 inreg %m0) #0 {
+; GCN-LABEL: v_interp_rtz_f16:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    s_mov_b32 s3, exec_lo
+; GCN-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GCN-NEXT:    s_mov_b32 m0, s2
+; GCN-NEXT:    lds_param_load v1, attr0.x wait_vdst:15
+; GCN-NEXT:    s_mov_b32 exec_lo, s3
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    v_interp_p10_rtz_f16_f32 v3, v1, v0, v1 wait_exp:0
+; GCN-NEXT:    v_interp_p10_rtz_f16_f32 v0, v1, v0, v1 op_sel:[1,0,1,0] wait_exp:7
+; GCN-NEXT:    v_interp_p2_rtz_f16_f32 v3, v1, v2, v3 wait_exp:7
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GCN-NEXT:    v_interp_p2_rtz_f16_f32 v0, v1, v2, v0 op_sel:[1,0,0,0] wait_exp:7
+; GCN-NEXT:    v_add_f16_e32 v0, v3, v0
+; GCN-NEXT:    ; return to shader part epilog
+main_body:
+  %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %m0)
+  %l_p0 = call float @llvm.amdgcn.interp.p10.rtz.f16.inreg(float %p0, float %i, float %p0, i1 0)
+  %l_p1 = call half @llvm.amdgcn.interp.p2.rtz.f16.inreg(float %p0, float %j, float %l_p0, i1 0)
+  %h_p0 = call float @llvm.amdgcn.interp.p10.rtz.f16.inreg(float %p0, float %i, float %p0, i1 1)
+  %h_p1 = call half @llvm.amdgcn.interp.p2.rtz.f16.inreg(float %p0, float %j, float %h_p0, i1 1)
+  %res = fadd half %l_p1, %h_p1
+  ret half %res
+}
+
 define amdgpu_ps half @v_interp_f16_imm_params(float inreg %i, float inreg %j) #0 {
 ; GCN-LABEL: v_interp_f16_imm_params:
 ; GCN:       ; %bb.0: ; %main_body
@@ -172,6 +200,8 @@ declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #0
 declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #0
 declare float @llvm.amdgcn.interp.inreg.p10.f16(float, float, float, i1) #0
 declare half @llvm.amdgcn.interp.inreg.p2.f16(float, float, float, i1) #0
+declare float @llvm.amdgcn.interp.p10.rtz.f16.inreg(float, float, float, i1) #0
+declare half @llvm.amdgcn.interp.p2.rtz.f16.inreg(float, float, float, i1) #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare void @llvm.amdgcn.exp.f16(i32, i32, float, float, float, float, i1, i1) #0
 

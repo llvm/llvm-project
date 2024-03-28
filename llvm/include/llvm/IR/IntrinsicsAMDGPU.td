@@ -2066,6 +2066,24 @@ def int_amdgcn_interp_inreg_p2_f16 :
             [IntrNoMem, IntrSpeculatable,
              ImmArg<ArgIndex<3>>]>;
 
+// llvm.amdgcn.interp.p10.rtz.f16.inreg <p>, <i>, <p0>, <high>
+// fp16 interpolation intrinsic, but round-toward-zero.
+// high selects whether high or low 16-bits are used for p and p0 operands
+def int_amdgcn_interp_p10_rtz_f16_inreg:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.interp.p2.rtz.f16.inreg <p>, <j>, <tmp>, <high>
+// fp16 interpolation intrinsic, but round-toward-zero.
+// high selects whether high or low 16-bits are used for p operand
+def int_amdgcn_interp_p2_rtz_f16_inreg :
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
 // Deprecated: use llvm.amdgcn.live.mask instead.
 def int_amdgcn_ps_live : DefaultAttrsIntrinsic <
   [llvm_i1_ty],

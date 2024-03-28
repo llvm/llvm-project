@@ -3135,6 +3135,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_interp_inreg_p2:
     case Intrinsic::amdgcn_interp_inreg_p10_f16:
     case Intrinsic::amdgcn_interp_inreg_p2_f16:
+    case Intrinsic::amdgcn_interp_p10_rtz_f16_inreg:
+    case Intrinsic::amdgcn_interp_p2_rtz_f16_inreg:
       applyDefaultMapping(OpdMapper);
       return;
     case Intrinsic::amdgcn_permlane16:
@@ -4778,7 +4780,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_interp_inreg_p10:
     case Intrinsic::amdgcn_interp_inreg_p2:
     case Intrinsic::amdgcn_interp_inreg_p10_f16:
-    case Intrinsic::amdgcn_interp_inreg_p2_f16: {
+    case Intrinsic::amdgcn_interp_inreg_p2_f16:
+    case Intrinsic::amdgcn_interp_p10_rtz_f16_inreg:
+    case Intrinsic::amdgcn_interp_p2_rtz_f16_inreg: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);

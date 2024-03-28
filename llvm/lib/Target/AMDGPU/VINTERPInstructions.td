@@ -173,6 +173,12 @@ defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
 defm : VInterpF16Pat<int_amdgcn_interp_inreg_p2_f16,
                      V_INTERP_P2_F16_F32_inreg, f16,
                      [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p10_rtz_f16_inreg,
+                     V_INTERP_P10_RTZ_F16_F32_inreg, f32,
+                     [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16_inreg,
+                     V_INTERP_P2_RTZ_F16_F32_inreg, f16,
+                     [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
 
 //===----------------------------------------------------------------------===//
 // VINTERP Real Instructions
