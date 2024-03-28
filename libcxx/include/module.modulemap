@@ -1336,12 +1336,14 @@ module std_private_format_formatter_output                [system] { header "__f
 module std_private_format_formatter_pointer               [system] { header "__format/formatter_pointer.h" }
 module std_private_format_formatter_string                [system] { header "__format/formatter_string.h" }
 module std_private_format_formatter_tuple                 [system] { header "__format/formatter_tuple.h" }
+module std_private_format_indic_conjunct_break_table      [system] { header "__format/indic_conjunct_break_table.h" }
 module std_private_format_parser_std_format_spec          [system] { header "__format/parser_std_format_spec.h" }
 module std_private_format_range_default_formatter         [system] { header "__format/range_default_formatter.h" }
 module std_private_format_range_formatter                 [system] { header "__format/range_formatter.h" }
 module std_private_format_unicode                         [system] {
   header "__format/unicode.h"
   export std_private_format_extended_grapheme_cluster_table
+  export std_private_format_indic_conjunct_break_table
 }
 module std_private_format_width_estimation_table          [system] { header "__format/width_estimation_table.h" }
 module std_private_format_write_escaped                   [system] { header "__format/write_escaped.h" }

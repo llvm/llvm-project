@@ -53,6 +53,7 @@ Improvements and New Features
   resulting in a performance increase of up to 1400x.
 - The ``std::mismatch`` algorithm has been optimized for integral types, which can lead up to 40x performance
   improvements.
+- The formatting library is updated to Unicode 15.1.0.
 
 Deprecations and Removals
 -------------------------

@@ -388,6 +388,7 @@
   { include: [ "<__format/formatter_pointer.h>", "private", "<format>", "public" ] },
   { include: [ "<__format/formatter_string.h>", "private", "<format>", "public" ] },
   { include: [ "<__format/formatter_tuple.h>", "private", "<format>", "public" ] },
+  { include: [ "<__format/indic_conjunct_break_table.h>", "private", "<format>", "public" ] },
   { include: [ "<__format/parser_std_format_spec.h>", "private", "<format>", "public" ] },
   { include: [ "<__format/range_default_formatter.h>", "private", "<format>", "public" ] },
   { include: [ "<__format/range_formatter.h>", "private", "<format>", "public" ] },
