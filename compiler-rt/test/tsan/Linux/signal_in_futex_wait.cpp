@@ -57,16 +57,13 @@ private:
 Mutex mutex;
 
 void *Thread(void *x) {
-  // fprintf(stderr, "canova here thread 0\n");
   // Waiting for the futex.
   mutex.lock();
-  // fprintf(stderr, "canova here thread 1\n");
   // Finished waiting.
   return nullptr;
 }
 
 static void SigprofHandler(int signal, siginfo_t *info, void *context) {
-  // fprintf(stderr, "canova here sigprof handler\n");
   // Unlock the futex.
   mutex.unlock();
 }
