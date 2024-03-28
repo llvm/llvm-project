@@ -7,21 +7,21 @@ define i16 @test(i8 %a, i32 %b) {
 ; CHECK-SAME: i8 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV31_I1161_I:%.*]] = trunc i32 [[B]] to i16
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[CONV31_I1161_I]] to i64
-; CHECK-NEXT:    [[CMP_I_I_I1163_I:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP0]], 255
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP4]] to i16
-; CHECK-NEXT:    ret i16 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 255
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i16
+; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
 entry:
   %0 = zext i8 %a to i32
-  %conv31.i1161.i = trunc i32 %b to i16
-  %cmp.i.i.i1163.i = icmp eq i16 %conv31.i1161.i, 0
-  %rem.i.i69.rhs.trunc.i1165.i = trunc i32 %0 to i8
-  %1 = zext i8 %rem.i.i69.rhs.trunc.i1165.i to i16
-  %2 = xor i16 %1, %conv31.i1161.i
-  ret i16 %2
+  %1 = trunc i32 %b to i16
+  %2 = icmp eq i16 %1, 0
+  %3 = trunc i32 %0 to i8
+  %4 = zext i8 %3 to i16
+  %5 = xor i16 %4, %1
+  ret i16 %5
 }
