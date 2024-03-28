@@ -1,5 +1,4 @@
-; RUN: not llc -march x86 < %s 2> %t
-; RUN: FileCheck %s < %t
+; RUN: not llc -march x86 < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: invalid operand in inline asm: 'movl $0, ${1:H}' 'H' modifier used on an operand that is a non-offsetable memory reference.
 define void @H() {
