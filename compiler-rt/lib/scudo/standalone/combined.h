@@ -182,10 +182,10 @@ public:
   }
 
   void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
-    RingBufferInitLock.unlock();
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->enable();
+    RingBufferInitLock.unlock();
   }
 
   void disableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
