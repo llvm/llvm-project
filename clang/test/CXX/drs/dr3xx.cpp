@@ -23,7 +23,7 @@ namespace dr301 { // dr301: 3.5
     bool b = (void(*)(S, S))operator- < (void(*)(S, S))operator-;
     // cxx98-17-warning@-1 {{ordered comparison of function pointers ('void (*)(S, S)' and 'void (*)(S, S)')}}
     // cxx20-23-error@-2 {{expected '>'}}
-    //   cxx20-23-note@-3 {{to match this '<'}} 
+    //   cxx20-23-note@-3 {{to match this '<'}}
     bool c = (void(*)(S, S))operator+ < (void(*)(S, S))operator-;
     // expected-error@-1 {{expected '>'}}
     //   expected-note@-2 {{to match this '<'}}
@@ -432,7 +432,7 @@ namespace dr329 { // dr329: 3.5
     //   expected-note@#dr329-b {{in instantiation of template class 'dr329::A<char>' requested here}}
     //   expected-note@#dr329-i {{previous definition is here}}
   };
-  A<int> a; 
+  A<int> a;
   A<char> b; // #dr329-b
 
   void test() {
@@ -631,7 +631,7 @@ namespace dr339 { // dr339: 2.8
   char xxx(int);
   char (&xxx(float))[2];
 
-  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #dr339-f 
+  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #dr339-f
 
   void test() {
     A<1> a = f(0);
@@ -673,9 +673,9 @@ namespace dr341 { // dr341: sup 1708
   namespace B {
     extern "C" int &dr341_a = dr341_a;
     // expected-error@-1 {{redefinition of 'dr341_a'}}
-    //   expected-note@#dr341_a {{previous definition is here}} 
+    //   expected-note@#dr341_a {{previous definition is here}}
   }
-  extern "C" void dr341_b(); // #dr341_b 
+  extern "C" void dr341_b(); // #dr341_b
 }
 int dr341_a;
 // expected-error@-1 {{declaration of 'dr341_a' in global scope conflicts with declaration with C language linkage}}
@@ -693,7 +693,7 @@ namespace dr341 {
   // expected-error@-1 {{declaration of 'dr341_d' with C language linkage conflicts with declaration in global scope}}
   //   expected-note@#dr341_d {{declared in global scope here}}
 
-  namespace A { extern "C" int dr341_e; } // #dr341_e 
+  namespace A { extern "C" int dr341_e; } // #dr341_e
   namespace B { extern "C" void dr341_e(); }
   // expected-error@-1 {{redefinition of 'dr341_e' as different kind of symbol}}
   //   expected-note@#dr341_e {{previous definition is here}}
@@ -817,7 +817,7 @@ namespace dr352 { // dr352: 2.8
     void g(A::E e) {
       foo(e, &arg);
       // expected-error@-1 {{no matching function for call to 'foo'}}
-      //   expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}} 
+      //   expected-note@#dr352-foo {{candidate template ignored: couldn't infer template argument 'R'}}
 
       using A::foo;
       foo<int, int>(e, &arg); // ok, uses non-template
@@ -918,7 +918,7 @@ namespace dr352 { // dr352: 2.8
 
   namespace example5 {
     template<int I> class A {};
-    template<int I> void g(A<I+1>); // #dr352-g 
+    template<int I> void g(A<I+1>); // #dr352-g
     template<int I> void f(A<I>, A<I+1>);
     void h(A<1> a1, A<2> a2) {
       g(a1);
@@ -1095,7 +1095,7 @@ namespace dr364 { // dr364: yes
 }
 
 // dr366: yes
-#if "foo" // expected-error {{invalid token at start of a preprocessor expression}} 
+#if "foo" // expected-error {{invalid token at start of a preprocessor expression}}
 #endif
 
 namespace dr367 { // dr367: yes
@@ -1252,7 +1252,7 @@ namespace dr373 { // dr373: 5
     }
   };
 
-  struct A { struct B {}; }; // #dr373-A 
+  struct A { struct B {}; }; // #dr373-A
   namespace X = A::B;
   // expected-error@-1 {{expected namespace name}}
   //   expected-note@#dr373-A {{'A' declared here}}
@@ -1585,7 +1585,7 @@ namespace dr395 { // dr395: 3.0
     // expected-error@-2 {{conversion function cannot have any parameters}}
     // expected-error@-3 {{cannot specify any part of a return type in the declaration of a conversion function}}
     // expected-error@-4 {{conversion function cannot convert to a function type}}
-  
+
   };
 
   struct null1_t {
@@ -1698,9 +1698,9 @@ namespace dr399 { // dr399: 11
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
     B_ptr->dr399::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'dr399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'dr399'}}
     B_ptr->dr399::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'dr399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'dr399'}}
   }
 
   template<typename T, typename U>

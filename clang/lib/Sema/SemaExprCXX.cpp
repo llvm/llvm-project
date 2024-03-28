@@ -9073,7 +9073,7 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
   // Do the redeclaration lookup in the current scope.
   LookupResult R(*this, TargetNameInfo, Sema::LookupAnyName,
                  Sema::NotForRedeclaration);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   R.suppressDiagnostics();
 
   switch (R.getResultKind()) {

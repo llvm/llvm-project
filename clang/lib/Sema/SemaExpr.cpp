@@ -666,8 +666,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // expressions of certain types in C++.
   if (getLangOpts().CPlusPlus &&
       (E->getType() == Context.OverloadTy ||
-       T->isDependentType() ||
-       T->isRecordType()))
+       // FIXME: This is a hack! We want the lvalue-to-rvalue conversion applied
+       // to pointer types even if the pointee type is dependent.
+       (T->isDependentType() && !T->isPointerType()) || T->isRecordType()))
     return E;
 
   // The C standard is actually really unclear on this point, and
@@ -2768,18 +2769,19 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // results until we get here but it's likely not worth it.
     bool MemberOfUnknownSpecialization;
     AssumedTemplateKind AssumedTemplate;
-    if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
+    if (LookupTemplateName(R, S, SS, /*ObjectType=*/QualType(),
+                           /*EnteringContext=*/false,
                            MemberOfUnknownSpecialization, TemplateKWLoc,
                            &AssumedTemplate))
       return ExprError();
 
-    if (MemberOfUnknownSpecialization ||
-        (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation))
+    if (R.wasNotFoundInCurrentInstantiation())
       return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                         IsAddressOfOperand, TemplateArgs);
   } else {
     bool IvarLookupFollowUp = II && !SS.isSet() && getCurMethodDecl();
-    LookupParsedName(R, S, &SS, !IvarLookupFollowUp);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType(),
+                     /*AllowBuiltinCreation=*/!IvarLookupFollowUp);
 
     // If the result might be in a dependent base class, this is a dependent
     // id-expression.
