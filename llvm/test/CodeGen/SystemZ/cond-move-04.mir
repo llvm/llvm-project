@@ -65,12 +65,10 @@ body:             |
     CHIMux %3, 0, implicit-def $cc
     %0 = LOCRMux undef %0, %5, 14, 6, implicit $cc
     %0 = LOCRMux %0, %2, 14, 6, implicit killed $cc
-    ADJCALLSTACKDOWN 0, 0
     %7 = LGFR %0
     $r3d = LGHI 0
     $r4d = COPY %7
     CallBRASL @foo, undef $r2d, killed $r3d, killed $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def dead $r2d
-    ADJCALLSTACKUP 0, 0
     J %bb.1
 
 ...
