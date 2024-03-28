@@ -4827,6 +4827,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
+    if (Left.is(tok::identifier) && Right.is(tok::numeric_constant) &&
+        Right.TokenText[0] == '.') {
+      return false;
+    }
   } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
