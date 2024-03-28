@@ -52,7 +52,7 @@ def expected(id_map):
     Output appears as dimension coordinates but lexicographically
     sorted by level coordinates. For BSR, the blocks are filled.
     """
-    if id_map is 0:
+    if id_map == 0:
         return f"""# extended FROSTT format
 2 5
 10 10
@@ -62,7 +62,7 @@ def expected(id_map):
 5 5 5
 10 1 4
 """
-    if id_map is 1:
+    if id_map == 1:
         return f"""# extended FROSTT format
 2 5
 10 10
@@ -72,7 +72,7 @@ def expected(id_map):
 5 5 5
 1 10 3
 """
-    if id_map is 2:
+    if id_map == 2:
         return f"""# extended FROSTT format
 2 16
 10 10

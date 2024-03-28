@@ -211,7 +211,7 @@ def adapt_module(module_path, module, check_name, check_name_camel):
                         f.write(check_decl)
                     else:
                         match = re.search(
-                            'registerCheck<(.*)> *\( *(?:"([^"]*)")?', line
+                            r'registerCheck<(.*)> *\( *(?:"([^"]*)")?', line
                         )
                         prev_line = None
                         if match:
@@ -383,7 +383,7 @@ def update_checks_list(clang_tidy_path):
             if stmt_start_pos == -1:
                 return ""
             stmt = code[stmt_start_pos + 1 : stmt_end_pos]
-            matches = re.search('registerCheck<([^>:]*)>\(\s*"([^"]*)"\s*\)', stmt)
+            matches = re.search(r'registerCheck<([^>:]*)>\(\s*"([^"]*)"\s*\)', stmt)
             if matches and matches[2] == full_check_name:
                 class_name = matches[1]
                 if "::" in class_name:
@@ -401,8 +401,8 @@ def update_checks_list(clang_tidy_path):
     # Examine code looking for a c'tor definition to get the base class name.
     def get_base_class(code, check_file):
         check_class_name = os.path.splitext(os.path.basename(check_file))[0]
-        ctor_pattern = check_class_name + "\([^:]*\)\s*:\s*([A-Z][A-Za-z0-9]*Check)\("
-        matches = re.search("\s+" + check_class_name + "::" + ctor_pattern, code)
+        ctor_pattern = check_class_name + r"\([^:]*\)\s*:\s*([A-Z][A-Za-z0-9]*Check)\("
+        matches = re.search(r"\s+" + check_class_name + "::" + ctor_pattern, code)
 
         # The constructor might be inline in the header.
         if not matches:
@@ -476,7 +476,7 @@ def update_checks_list(clang_tidy_path):
                 # Orphan page, don't list it.
                 return "", ""
 
-            match = re.search(".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content)
+            match = re.search(r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content)
             # Is it a redirect?
             return check_name, match
 
@@ -505,7 +505,7 @@ def update_checks_list(clang_tidy_path):
                 ref_begin = ""
                 ref_end = "_"
             else:
-                redirect_parts = re.search("^\.\./([^/]*)/([^/]*)$", match.group(1))
+                redirect_parts = re.search(r"^\.\./([^/]*)/([^/]*)$", match.group(1))
                 title = redirect_parts[1] + "-" + redirect_parts[2]
                 target = redirect_parts[1] + "/" + redirect_parts[2]
                 autofix = has_auto_fix(title)

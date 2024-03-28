@@ -136,7 +136,7 @@ inline constexpr uint32_t __unallocated_region_lower_bound = 0x{unallocated:08x}
 
 /// Returns whether the code unit needs to be escaped.
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {{
   // Since __unallocated_region_lower_bound contains the unshifted range do the
   // comparison without shifting.
