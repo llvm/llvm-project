@@ -10,15 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
 #include <stdbool.h>
-
+// clang-format on
 #include "config.h"
-
-#ifdef __USING_WASM_EXCEPTIONS__
-
 #include "unwind.h"
-#include <threads.h>
 
+#ifdef __wasm__
 _Unwind_Reason_Code __gxx_personality_wasm0(int version, _Unwind_Action actions,
                                             uint64_t exceptionClass,
                                             _Unwind_Exception *unwind_exception,
@@ -35,7 +33,7 @@ struct _Unwind_LandingPadContext {
 
 // Communication channel between compiler-generated user code and personality
 // function
-thread_local struct _Unwind_LandingPadContext __wasm_lpad_context;
+_Thread_local struct _Unwind_LandingPadContext __wasm_lpad_context;
 
 /// Calls to this function is in landing pads in compiler-generated user code.
 /// In other EH schemes, stack unwinding is done by libunwind library, which
@@ -119,5 +117,4 @@ _LIBUNWIND_EXPORT uintptr_t
 _Unwind_GetRegionStart(struct _Unwind_Context *context) {
   return 0;
 }
-
-#endif // defined(__USING_WASM_EXCEPTIONS__)
+#endif

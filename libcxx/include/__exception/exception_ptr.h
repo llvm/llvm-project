@@ -30,19 +30,21 @@
 
 namespace __cxxabiv1 {
 
+#    if defined(__wasm__)
+typedef void* (*__libcpp_exception_destructor_func)(void*);
+#    elif defined(_WIN32)
+typedef void(__thiscall* __libcpp_exception_destructor_func)(void*);
+#    else
+typedef void (*__libcpp_exception_destructor_func)(void*);
+#    endif
+
 extern "C" {
 _LIBCPP_OVERRIDABLE_FUNC_VIS void* __cxa_allocate_exception(size_t) throw();
 _LIBCPP_OVERRIDABLE_FUNC_VIS void __cxa_free_exception(void*) throw();
 
 struct __cxa_exception;
-_LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
-    void*,
-    std::type_info*,
-    void(
-#    if defined(_WIN32)
-        __thiscall
-#    endif
-            *)(void*)) throw();
+_LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception*
+__cxa_init_primary_exception(void*, std::type_info*, __libcpp_exception_destructor_func) throw();
 }
 
 } // namespace __cxxabiv1

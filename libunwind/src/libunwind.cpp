@@ -12,6 +12,7 @@
 #include <libunwind.h>
 
 #include "config.h"
+#ifndef __wasm__
 #include "libunwind_ext.h"
 
 #include <stdlib.h>
@@ -431,6 +432,7 @@ int __unw_remove_find_dynamic_unwind_sections(
 }
 
 #endif // __APPLE__
+#endif
 
 // Add logging hooks in Debug builds only
 #ifndef NDEBUG

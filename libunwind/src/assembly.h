@@ -15,6 +15,7 @@
 #ifndef UNWIND_ASSEMBLY_H
 #define UNWIND_ASSEMBLY_H
 
+#ifndef __wasm__
 #if defined(__linux__) && defined(__CET__)
 #include <cet.h>
 #define _LIBUNWIND_CET_ENDBR _CET_ENDBR
@@ -283,6 +284,7 @@ aliasname:                                                                     \
 
 #if defined(__powerpc__)
 #define PPC_LEFT_SHIFT(index) << (index)
+#endif
 #endif
 
 #endif /* UNWIND_ASSEMBLY_H */

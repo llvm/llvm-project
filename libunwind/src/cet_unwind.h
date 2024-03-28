@@ -10,6 +10,7 @@
 #ifndef LIBUNWIND_CET_UNWIND_H
 #define LIBUNWIND_CET_UNWIND_H
 
+#ifndef __wasm__
 #include "libunwind.h"
 
 // Currently, CET is implemented on Linux x86 platforms.
@@ -37,5 +38,7 @@
 
 extern void *__libunwind_cet_get_registers(unw_cursor_t *);
 extern void *__libunwind_cet_get_jump_target(void);
+
+#endif
 
 #endif
