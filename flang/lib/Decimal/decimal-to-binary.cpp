@@ -16,6 +16,10 @@
 #include <ctype.h>
 #include <utility>
 
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
+
 namespace Fortran::decimal {
 
 template <int PREC, int LOG10RADIX>
