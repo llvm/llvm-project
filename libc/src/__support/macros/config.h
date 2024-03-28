@@ -13,24 +13,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
-// LIBC_HAS_BUILTIN()
-//
-// Checks whether the compiler supports a Clang Feature Checking Macro, and if
-// so, checks whether it supports the provided builtin function "x" where x
-// is one of the functions noted in
-// https://clang.llvm.org/docs/LanguageExtensions.html
-//
-// Note: Use this macro to avoid an extra level of #ifdef __has_builtin check.
-// http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
-
-// Compiler builtin-detection.
-// clang.llvm.org/docs/LanguageExtensions.html#has-builtin
-#ifdef __has_builtin
-#define LIBC_HAS_BUILTIN(x) __has_builtin(x)
-#else
-#define LIBC_HAS_BUILTIN(x) 0
-#endif
-
 // Compiler feature-detection.
 // clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension
 #ifdef __has_feature
