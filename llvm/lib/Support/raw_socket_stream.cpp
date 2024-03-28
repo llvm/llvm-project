@@ -178,7 +178,7 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 }
 
 Expected<std::unique_ptr<raw_socket_stream>>
-ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
+ListeningSocket::accept(std::chrono::milliseconds Timeout) {
 
   struct pollfd FDs[2];
   FDs[0].events = POLLIN;
@@ -191,15 +191,14 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
   FDs[1].events = POLLIN;
   FDs[1].fd = PipeFD[0];
 
-  std::chrono::milliseconds OriginalTimeout =
-      Timeout.value_or(std::chrono::milliseconds(-1));
-  int RemainingTime = OriginalTimeout.count();
+  // Keep track of how much time has passed in case poll is interupted by a
+  // signal and needs to be recalled
+  int RemainingTime = Timeout.count();
   std::chrono::milliseconds ElapsedTime = std::chrono::milliseconds(0);
-
   int PollStatus = -1;
-  while (PollStatus == -1 &&
-         (RemainingTime == -1 || ElapsedTime < OriginalTimeout)) {
-    if (RemainingTime != -1)
+
+  while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
+    if (Timeout.count() != -1)
       RemainingTime -= ElapsedTime.count();
 
     auto Start = std::chrono::steady_clock::now();
@@ -213,7 +212,7 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
       // Ignore error if caused by interupting signal
       std::error_code PollErrCode = getLastSocketErrorCode();
       if (PollErrCode != std::errc::interrupted)
-        return llvm::make_error<StringError>(PollErrCode, "poll failed");
+        return llvm::make_error<StringError>(PollErrCode, "FD poll failed");
     }
 
     if (PollStatus == 0)
@@ -226,9 +225,14 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
           std::make_error_code(std::errc::bad_file_descriptor),
           "File descriptor closed by another thread");
 
-    auto End = std::chrono::steady_clock::now();
+    if (FDs[1].revents & POLLIN)
+      return llvm::make_error<StringError>(
+          std::make_error_code(std::errc::operation_canceled),
+          "Accept canceled");
+
+    auto Stop = std::chrono::steady_clock::now();
     ElapsedTime +=
-        std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
+        std::chrono::duration_cast<std::chrono::milliseconds>(Stop - Start);
   }
 
   int AcceptFD;
@@ -241,24 +245,27 @@ ListeningSocket::accept(std::optional<std::chrono::milliseconds> Timeout) {
 
   if (AcceptFD == -1)
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
-                                         "accept failed");
+                                         "Socket accept failed");
   return std::make_unique<raw_socket_stream>(AcceptFD);
 }
 
 void ListeningSocket::shutdown() {
   int ObservedFD = FD.load();
+
   if (ObservedFD == -1)
     return;
+
+  // If FD equals ObservedFD set FD to -1; If FD doesn't equal ObservedFD then
+  // another thread is responsible for shutdown so return
   if (!FD.compare_exchange_strong(ObservedFD, -1))
     return;
-  ::close(FD);
+
+  ::close(ObservedFD);
   ::unlink(SocketPath.c_str());
 
   // Ensure ::poll returns if shutdown is called by a seperate thread
   char Byte = 'A';
   ::write(PipeFD[1], &Byte, 1);
-
-  FD = -1;
 }
 
 ListeningSocket::~ListeningSocket() {
@@ -267,6 +274,8 @@ ListeningSocket::~ListeningSocket() {
   // Close the pipe's FDs in the destructor instead of within
   // ListeningSocket::shutdown to avoid unnecessary synchronization issues that
   // would occur as PipeFD's values would have to be changed to -1
+  //
+  // The move constructor sets PipeFD to -1
   if (PipeFD[0] != -1)
     ::close(PipeFD[0]);
   if (PipeFD[1] != -1)

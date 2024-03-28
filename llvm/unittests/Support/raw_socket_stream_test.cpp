@@ -118,7 +118,7 @@ TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
   // Create a separate thread to close the socket after a delay. Simulates a
   // signal handler calling ServerListener::shutdown
   std::thread CloseThread([&]() {
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     ServerListener.shutdown();
   });
 
@@ -132,7 +132,7 @@ TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
   llvm::Error Err = MaybeServer.takeError();
   llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
     std::error_code EC = SE.convertToErrorCode();
-    ASSERT_EQ(EC, std::errc::bad_file_descriptor);
+    ASSERT_EQ(EC, std::errc::operation_canceled);
   });
 }
 } // namespace

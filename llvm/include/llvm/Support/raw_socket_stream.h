@@ -47,7 +47,7 @@ public:
 /// Usage example:
 /// \code{.cpp}
 /// std::string Path = "/path/to/socket"
-/// Expected<ListeningSocket> S = ListeningSocket::createListeningSocket(Path);
+/// Expected<ListeningSocket> S = ListeningSocket::createUnix(Path);
 ///
 /// if (S) {
 ///   Expected<std::unique_ptr<raw_socket_stream>> connection = S->accept();
@@ -95,10 +95,11 @@ public:
   /// specified amount of time has passed. By default the method will block
   /// until the socket has recieved a connection.
   ///
-  /// \param Timeout An optional timeout duration in milliseconds
+  /// \param Timeout An optional timeout duration in milliseconds. Setting
+  /// Timeout to -1 causes accept to block indefinitely
   ///
   Expected<std::unique_ptr<raw_socket_stream>>
-  accept(std::optional<std::chrono::milliseconds> Timeout = std::nullopt);
+  accept(std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
 
   /// Creates a listening socket bound to the specified file system path.
   /// Handles the socket creation, binding, and immediately starts listening for
