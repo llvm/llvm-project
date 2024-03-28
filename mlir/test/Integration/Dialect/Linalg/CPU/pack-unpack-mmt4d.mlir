@@ -1,7 +1,8 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" \
-// DEFINE:    -buffer-deallocation-pipeline  -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm
+// DEFINE:    -buffer-deallocation-pipeline="private-function-dynamic-ownership" \
+// DEFINE:    -cse -canonicalize -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = mlir-cpu-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
@@ -70,14 +71,14 @@ func.func @main() {
   return
 }
 
-func.func @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
+func.func private @matmul(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
   %C_matmul = linalg.matmul ins(%A, %B: tensor<7x16xi32>, tensor<16x13xi32>) 
                             outs(%C: tensor<7x13xi32>) -> tensor<7x13xi32>
 
   return %C_matmul : tensor<7x13xi32>
 }
 
-func.func @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
+func.func private @mmt4d(%A: tensor<7x16xi32>, %B: tensor<16x13xi32>, %C: tensor<7x13xi32>) -> tensor<7x13xi32> {
   %zero = arith.constant 0 : i32
 
   %A_pack_empty = tensor.empty() : tensor<2x16x8x1xi32>
