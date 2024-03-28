@@ -4924,10 +4924,12 @@ public:
                                SourceLocation EqualLoc);
 
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
-  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc);
+  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
+                      StringLiteral *Message = nullptr);
   void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
 
-  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind);
+  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+                           StringLiteral *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -8267,6 +8269,11 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
+  void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                    DeclarationName Name,
+                                    OverloadCandidateSet &CandidateSet,
+                                    FunctionDecl *Fn, MultiExprArg Args,
+                                    bool IsMember = false);
 
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
                                               FunctionDecl *Fun);

@@ -18111,7 +18111,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   return ND;
 }
 
-void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
+void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
+                          StringLiteral *Message) {
   AdjustDeclIfTemplate(Dcl);
 
   FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(Dcl);
@@ -18160,7 +18161,7 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   // C++11 [dcl.fct.def.delete]p4:
   //  A deleted function is implicitly inline.
   Fn->setImplicitlyInline();
-  Fn->setDeletedAsWritten();
+  Fn->setDeletedWithMessage(Message);
 }
 
 void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
@@ -18273,11 +18274,11 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc,
-                               FnBodyKind BodyKind) {
+void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+                               StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
-    SetDeclDeleted(D, Loc);
+    SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
     SetDeclDefaulted(D, Loc);

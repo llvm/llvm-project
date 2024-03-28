@@ -1122,6 +1122,11 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     }
   }
 
+  // FIXME: See ASTWriterDecl::VisitFunctionDecl.
+  if (FD->isDeletedAsWritten())
+    FD->setDeletedWithMessage(
+        cast_if_present<StringLiteral>(Record.readStmt()));
+
   if (Existing)
     mergeRedeclarable(FD, Existing, Redecl);
   else if (auto Kind = FD->getTemplatedKind();

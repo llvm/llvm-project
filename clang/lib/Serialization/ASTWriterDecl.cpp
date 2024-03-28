@@ -761,6 +761,13 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
+  // FIXME: Hack: We're out of bits in FunctionDeclBits, so always
+  // add this even though it's 0 in the vast majority of cases. We
+  // might really want to consider storing this in the DefaultedFunctionInfo
+  // instead.
+  if (D->isDeletedAsWritten())
+    Record.AddStmt(D->getDeletedMessage());
+
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
     Record.AddDeclRef(P);
