@@ -1,0 +1,618 @@
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX9
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX90A
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX10
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-flat-scratch,+precise-memory < %s | FileCheck --check-prefixes=GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX11
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+precise-memory < %s | FileCheck %s -check-prefixes=GFX12
+
+; from atomicrmw-expand.ll
+; covers flat_load, flat_atomic (atomic with return)
+;
+; GFX90A-LABEL: syncscope_workgroup_nortn:
+; GFX90A:  ; %bb.0:
+; GFX90A:         flat_load_dword v5, v[0:1]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A:  .LBB0_1: ; %atomicrmw.start
+; GFX90A:         flat_atomic_cmpswap v3, v[0:1], v[4:5] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+;
+; GFX10-LABEL: syncscope_workgroup_nortn:
+; GFX10:  ; %bb.0:
+; GFX10:         flat_load_dword v4, v[0:1]
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10:  .LBB0_1: ; %atomicrmw.start
+; GFX10:         flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+;
+; GFX11-LABEL: syncscope_workgroup_nortn:
+; GFX11:  ; %bb.0:
+; GFX11:         flat_load_b32 v4, v[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11:  .LBB0_1:                                ; %atomicrmw.start
+; GFX11:         flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+;
+; GFX12-LABEL: syncscope_workgroup_nortn:
+; GFX12:  ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    flat_load_b32 v4, v[0:1]
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+
+define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
+  %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst
+  ret void
+}
+
+; from atomicrmw-nand.ll
+; covers global_atomic (atomic with return), global_load
+;
+; GFX9-LABEL: atomic_nand_i32_global:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v2, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_mov_b64 s[4:5], 0
+; GFX9-NEXT:  .LBB1_1: ; %atomicrmw.start
+; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-NOT:     s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    v_not_b32_e32 v2, v3
+; GFX9-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_wbinvl1_vol
+; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    s_cbranch_execnz .LBB1_1
+; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX9-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: atomic_nand_i32_global:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v2, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:  .LBB1_1: ; %atomicrmw.start
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NOT:     s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v3, v2
+; GFX10-NEXT:    v_not_b32_e32 v2, v3
+; GFX10-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_gl1_inv
+; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
+; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
+; GFX10-NEXT:    s_cbranch_execnz .LBB1_1
+;
+; GFX11-LABEL: atomic_nand_i32_global:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:  s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:  global_load_b32 v2, v[0:1], off
+; GFX11-NEXT:  s_waitcnt vmcnt(0)
+; GFX11:       .LBB1_1:                                ; %atomicrmw.start
+; GFX11:       v_mov_b32_e32 v3, v2
+; GFX11-NEXT:  s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:  v_not_b32_e32 v2, v3
+; GFX11-NEXT:  v_or_b32_e32 v2, -5, v2
+; GFX11-NEXT:  s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:  global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
+; GFX11-NEXT:  s_waitcnt vmcnt(0)
+; GFX11-NEXT:  buffer_gl1_inv
+; GFX11-NEXT:  buffer_gl0_inv
+;
+; GFX12-LABEL: atomic_nand_i32_global:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:  s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:  s_wait_expcnt 0x0
+; GFX12-NEXT:  s_wait_samplecnt 0x0
+; GFX12-NEXT:  s_wait_bvhcnt 0x0
+; GFX12-NEXT:  s_wait_kmcnt 0x0
+; GFX12-NEXT:  global_load_b32 v2, v[0:1], off
+; GFX12-NEXT:  s_wait_loadcnt 0x0
+; GFX12:       .LBB1_1:                                ; %atomicrmw.start
+; GFX12:       v_mov_b32_e32 v3, v2
+; GFX12-NEXT:  s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:  v_not_b32_e32 v2, v3
+; GFX12-NEXT:  v_or_b32_e32 v2, -5, v2
+; GFX12-NEXT:  s_wait_storecnt 0x0
+; GFX12-NEXT:  global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:  s_wait_loadcnt 0x0
+; GFX12-NEXT:  global_inv scope:SCOPE_SYS
+; GFX12-NEXT:  v_cmp_eq_u32_e32 vcc_lo, v2, v3
+
+define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
+  %result = atomicrmw nand ptr addrspace(1) %ptr, i32 4 seq_cst
+  ret i32 %result
+}
+
+; from bf16.ll
+; covers flat_load, flat_store, global_load, global_store
+;
+; GFX9-LABEL: test_load_store:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    global_store_short v[2:3], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: test_load_store:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: test_load_store:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_load_store:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+
+define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+  %val = load bfloat, ptr addrspace(1) %in
+  store bfloat %val, ptr addrspace(1) %out
+  ret void
+}
+
+; covers scratch_load, scratch_store, buffer_load, buffer_store
+; GFX9-LABEL: test_load_store_as5:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-FLATSCR-LABEL: test_load_store_as5:
+; GFX9-FLATSCR:       ; %bb.0:
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-FLATSCR-NEXT:    scratch_load_ushort v0, v0, off
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT:    scratch_store_short v1, v0, off
+; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: test_load_store_as5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    buffer_load_ushort v0, v0, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_short v0, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: test_load_store_as5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_u16 v0, v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b16 v1, v0, off
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_load_store_as5:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    scratch_load_u16 v0, v0, off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    scratch_store_b16 v1, v0, off
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+
+define void @test_load_store_as5(ptr addrspace(5) %in, ptr addrspace(5) %out) {
+  %val = load bfloat, ptr addrspace(5) %in
+  store bfloat %val, ptr addrspace(5) %out
+  ret void
+}
+
+; from udiv.ll
+; covers s_load
+;
+; GFX9-LABEL: udiv_i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NOT:     s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
+;
+; GFX10-LABEL: udiv_i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX10:         global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: udiv_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX11:         global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: udiv_i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_cvt_f32_u32 s4, s3
+; GFX12:         global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_endpgm
+
+define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
+  %r = udiv i32 %x, %y
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
+
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32)
+
+; from smrd.ll
+; covers s_buffer_load
+; GFX9-LABEL: {{^}}smrd_sgpr_offset:
+; GFX9:         s_buffer_load_dword s{{[0-9]}}, s[0:3], s4
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: {{^}}smrd_sgpr_offset:
+; GFX10:         s_buffer_load_dword s0, s[0:3], s4 offset:0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}smrd_sgpr_offset:
+; GFX11:         s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s0
+;
+; GFX12-LABEL: {{^}}smrd_sgpr_offset:
+; GFX12:         s_buffer_load_b32 s0, s[0:3], s4 offset:0x0
+; GFX12:         s_wait_kmcnt 0x0
+; GFX12:         v_mov_b32_e32 v0, s0
+
+define amdgpu_ps float @smrd_sgpr_offset(<4 x i32> inreg %desc, i32 inreg %offset) #0 {
+main_body:
+  %r = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %offset, i32 0)
+  ret float %r
+}
+
+; from atomic_load_add.ll
+; covers s_load, ds_add (atomic without return)
+; GFX9-LABEL: atomic_add_local:
+; GFX9:       ; %bb.1:
+; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9:         ds_add_u32 v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: atomic_add_local:
+; GFX10:       ; %bb.1:
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10:         ds_add_u32 v0, v1
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_gl0_inv
+;
+; GFX11-LABEL: atomic_add_local:
+; GFX11:       ; %bb.1:
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11:         ds_add_u32 v0, v1
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_gl0_inv
+;
+; GFX12-LABEL: atomic_add_local:
+; GFX12:       ; %bb.1:
+; GFX12-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12:         ds_add_u32 v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    global_inv scope:SCOPE_SE
+
+define amdgpu_kernel void @atomic_add_local(ptr addrspace(3) %local) {
+   %unused = atomicrmw volatile add ptr addrspace(3) %local, i32 5 seq_cst
+   ret void
+}
+
+declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)
+
+; from atomic_optimizations_buffer.ll
+; covers buffer_atomic (atomic with return)
+; GFX9-LABEL: add_i32_constant:
+; GFX9:       ; %bb.1:
+; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x34
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9:         buffer_atomic_add v1, off, s[8:11], 0 glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX10-LABEL: add_i32_constant:
+; GFX10:       ; %bb.1:
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10:         buffer_atomic_add v1, off, s[4:7], 0 glc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NOT:    s_waitcnt_vscnt null, 0x0
+; GFX10:       .LBB{{[0-9]+}}_2
+;
+; GFX11-LABEL: add_i32_constant:
+; GFX11:       ; %bb.1:
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x34
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11:         buffer_atomic_add_u32 v1, off, s[4:7], 0 glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX12-LABEL: add_i32_constant:
+; GFX12:       ; %bb.1:
+; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x34
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12:         buffer_atomic_add_u32 v1, off, s[4:7], null th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:  .LBB{{[0-9]+}}_2
+; GFX12:         s_load_b64 s[0:1], s[0:1], 0x24
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12:         global_store_b32 v1, v0, s[0:1]
+; GFX12-NEXT:    s_wait_storecnt 0x0
+; GFX12-NEXT:    s_endpgm
+
+define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace(8) %inout) {
+entry:
+  %old = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32 5, ptr addrspace(8) %inout, i32 0, i32 0, i32 0)
+  store i32 %old, ptr addrspace(1) %out
+  ret void
+}
+
+declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32, i16, <8 x i32>, i32, i32)
+
+; from llvm.amdgcn.image.load.a16.ll
+; covers image_load
+; GFX9-LABEL: {{^}}load.f32.1d:
+; GFX9:         image_load v0, v0, s[0:7] dmask:0x1 unorm a16
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX10-LABEL: {{^}}load.f32.1d:
+; GFX10:     %bb.0:                                ; %main_body
+; GFX10-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX11-LABEL: {{^}}load.f32.1d:
+; GFX11:     %bb.0:                                ; %main_body
+; GFX11-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX12-LABEL: {{^}}load.f32.1d:
+; GFX12:     %bb.0:                                ; %main_body
+; GFX12-NEXT:    image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D a16
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+
+define amdgpu_ps <4 x float> @load.f32.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
+main_body:
+  %x = extractelement <2 x i16> %coords, i32 0
+  %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16(i32 1, i16 %x, <8 x i32> %rsrc, i32 0, i32 0)
+  ret <4 x float> %v
+}
+
+declare void @llvm.amdgcn.image.store.1d.v4f32.i16(<4 x float>, i32, i16, <8 x i32>, i32, i32)
+
+; from llvm.amdgcn.image.store.a16.ll
+; covers image_store
+define amdgpu_ps void @store_f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4 x float> %val) {
+; GFX9-LABEL: store_f32_1d:
+; GFX9:       ; %bb.0: ; %main_body
+; GFX9-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 unorm a16
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_f32_1d:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_f32_1d:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+;
+; GFX12-LABEL: store_f32_1d:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D a16
+; GFX12-NEXT:    s_wait_storecnt 0x0
+
+main_body:
+  %x = extractelement <2 x i16> %coords, i32 0
+  call void @llvm.amdgcn.image.store.1d.v4f32.i16(<4 x float> %val, i32 1, i16 %x, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
+declare i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(i32, i32, <8 x i32>, i32, i32)
+
+; from llvm.amdgcn.image.atomic.dim.ll
+; covers image_atomic (atomic with return)
+; GFX90A-LABEL: {{^}}atomic_swap_1d:
+; GFX90A: image_atomic_swap v0, v{{[02468]}}, s[0:7] dmask:0x1 unorm glc{{$}}
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+;
+; GFX10-LABEL: {{^}}atomic_swap_1d:
+; GFX10: ; %bb.0:                                ; %main_body
+; GFX10-NEXT:    image_atomic_swap v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NOT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:  ; return to shader part epilog
+;
+; GFX11-LABEL: {{^}}atomic_swap_1d:
+; GFX11: ; %bb.0:                                ; %main_body
+; GFX11-NEXT:    image_atomic_swap v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:  ; return to shader part epilog
+;
+; GFX12-LABEL: {{^}}atomic_swap_1d:
+; GFX12: ; %bb.0:                                ; %main_body
+; GFX12-NEXT:    image_atomic_swap v0, v1, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:  ; return to shader part epilog
+
+define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s) {
+main_body:
+  %v = call i32 @llvm.amdgcn.image.atomic.swap.1d.i32.i32(i32 %data, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  %out = bitcast i32 %v to float
+  ret float %out
+}
+
+; from lds-bounds.ll
+; covers ds_write_b64 (atomic without return)
+@compute_lds = external addrspace(3) global [512 x i32], align 16
+; GFX9-LABEL: {{^}}store_aligned:
+; GFX9:      ds_write_b64
+; GFX9-NEXT: s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: {{^}}store_aligned:
+; GFX10:         ds_write_b64 v0, v[1:2]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}store_aligned:
+; GFX11:         ds_store_b64 v0, v[1:2]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX12-LABEL: {{^}}store_aligned:
+; GFX12:         ds_store_b64 v0, v[1:2]
+; GFX12-NEXT:    s_wait_dscnt 0x0
+
+define amdgpu_cs void @store_aligned(ptr addrspace(3) %ptr) #0 {
+entry:
+  %ptr.gep.1 = getelementptr i32, ptr addrspace(3) %ptr, i32 1
+
+  store i32 42, ptr addrspace(3) %ptr, align 8
+  store i32 43, ptr addrspace(3) %ptr.gep.1
+  ret void
+}
+
+
+; from lds-bounds.ll
+; covers ds_read_b64
+; GFX9-LABEL: {{^}}load_aligned:
+; GFX9:      ds_read_b64
+; GFX9-NEXT: s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: {{^}}load_aligned:
+; GFX10:         ds_read_b64 v[0:1], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}load_aligned:
+; GFX11:         ds_load_b64 v[0:1], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX12-LABEL: {{^}}load_aligned:
+; GFX12:         ds_load_b64 v[0:1], v0
+; GFX12-NEXT:    s_wait_dscnt 0x0
+
+define amdgpu_cs <2 x float> @load_aligned(ptr addrspace(3) %ptr) #0 {
+entry:
+  %ptr.gep.1 = getelementptr i32, ptr addrspace(3) %ptr, i32 1
+
+  %v.0 = load i32, ptr addrspace(3) %ptr, align 8
+  %v.1 = load i32, ptr addrspace(3) %ptr.gep.1
+
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
+  %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
+  %bc = bitcast <2 x i32> %r.1 to <2 x float>
+  ret <2 x float> %bc
+}
+
+; from lds-bounds.ll
+; covers ds_write2_b32
+; GFX9-LABEL: {{^}}store_global_const_idx:
+; GFX9:      ds_write2_b32
+; GFX9-NEXT: s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: {{^}}store_global_const_idx:
+; GFX10:         ds_write2_b32 v0, v1, v2 offset0:3 offset1:4
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}store_global_const_idx:
+; GFX11:         ds_store_2addr_b32 v0, v1, v2 offset0:3 offset1:4
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX12-LABEL: {{^}}store_global_const_idx:
+; GFX12:         ds_store_2addr_b32 v0, v1, v2 offset0:3 offset1:4
+; GFX12-NEXT:    s_wait_dscnt 0x0
+
+define amdgpu_cs void @store_global_const_idx() #0 {
+entry:
+  %ptr.a = getelementptr [512 x i32], ptr addrspace(3) @compute_lds, i32 0, i32 3
+  %ptr.b = getelementptr [512 x i32], ptr addrspace(3) @compute_lds, i32 0, i32 4
+
+  store i32 42, ptr addrspace(3) %ptr.a
+  store i32 43, ptr addrspace(3) %ptr.b
+  ret void
+}
+
+; from lds-bounds.ll
+; covers ds_read2_b32
+; GFX9-LABEL: {{^}}load_global_const_idx:
+; GFX9:      ds_read2_b32
+; GFX9-NEXT: s_waitcnt lgkmcnt(0)
+;
+; GFX10-LABEL: {{^}}load_global_const_idx:
+; GFX10:         ds_read2_b32 v[0:1], v0 offset0:3 offset1:4
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX11-LABEL: {{^}}load_global_const_idx:
+; GFX11:         ds_load_2addr_b32 v[0:1], v0 offset0:3 offset1:4
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+;
+; GFX12-LABEL: {{^}}load_global_const_idx:
+; GFX12:         ds_load_2addr_b32 v[0:1], v0 offset0:3 offset1:4
+; GFX12-NEXT:    s_wait_dscnt 0x0
+
+define amdgpu_cs <2 x float> @load_global_const_idx() #0 {
+entry:
+  %ptr.a = getelementptr [512 x i32], ptr addrspace(3) @compute_lds, i32 0, i32 3
+  %ptr.b = getelementptr [512 x i32], ptr addrspace(3) @compute_lds, i32 0, i32 4
+
+  %v.0 = load i32, ptr addrspace(3) %ptr.a
+  %v.1 = load i32, ptr addrspace(3) %ptr.b
+
+  %r.0 = insertelement <2 x i32> poison, i32 %v.0, i32 0
+  %r.1 = insertelement <2 x i32> %r.0, i32 %v.1, i32 1
+  %bc = bitcast <2 x i32> %r.1 to <2 x float>
+  ret <2 x float> %bc
+}
+
