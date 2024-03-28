@@ -1829,7 +1829,9 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     be as many handles as `ShapedType::kDynamic` values in the
     `static_sizes` attribute. A static size of `0` indicates that the dimension
     should not be tiled. No loop will be generated for such dimensions. If all
-    tile sizes are `0`, this transform is effectively a no-op.
+    tile sizes are `0`, this transform is effectively a no-op. To apply
+    continuous tiling `continuous_tiles` needs to be supplied with as many
+    boolean values as there are nested loops.
 
     This op returns handles to the tiled op (in the generated loop nest) and the
     generated loops. The number of loops is the number of tile sizes that are
@@ -1855,6 +1857,7 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
+                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$continuous_tiles,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
                    DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
@@ -1863,22 +1866,26 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
+                   CArg<"ArrayRef<bool>", "{}">:$continuousTiles,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   CArg<"ArrayRef<bool>", "{}">:$continuousTiles,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
+                   CArg<"ArrayRef<bool>", "{}">:$continuousTiles,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   CArg<"ArrayRef<bool>", "{}">:$continuousTiles,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,

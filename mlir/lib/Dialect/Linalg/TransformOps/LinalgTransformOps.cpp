@@ -2492,39 +2492,42 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
 void transform::TileUsingForOp::build(
     OpBuilder &builder, OperationState &result, TypeRange loopTypes,
     Value target, ArrayRef<int64_t> staticTileSizes,
-    ArrayRef<int64_t> interchange,
+    ArrayRef<bool> continuousTiles, ArrayRef<int64_t> interchange,
     std::optional<ArrayRef<bool>> scalableSizes) {
   return build(builder, result, loopTypes,
                /*target=*/target,
                /*mixedTileSizes=*/
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
-               interchange, scalableSizes);
+               continuousTiles, interchange, scalableSizes);
 }
 
 void transform::TileUsingForOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    ArrayRef<int64_t> staticTileSizes, ArrayRef<int64_t> interchange,
+    ArrayRef<int64_t> staticTileSizes, ArrayRef<bool> continuousTiles,
+    ArrayRef<int64_t> interchange,
     std::optional<ArrayRef<bool>> scalableSizes) {
   build(builder, result, target,
         getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
-        interchange, scalableSizes);
+        builder.getDenseBoolArrayAttr(continuousTiles), interchange,
+        scalableSizes);
 }
 
 void transform::TileUsingForOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    ArrayRef<OpFoldResult> mixedTileSizes, ArrayRef<int64_t> interchange,
+    ArrayRef<OpFoldResult> mixedTileSizes, ArrayRef<bool> continuousTiles,
+    ArrayRef<int64_t> interchange,
     std::optional<ArrayRef<bool>> scalableSizes) {
   // Loop types are automaticaly splat by the callee, setting up one is
   // enough.
   SmallVector<Type> loopTypes(1, builder.getType<transform::AnyOpType>());
-  build(builder, result, loopTypes, target, mixedTileSizes, interchange,
-        scalableSizes);
+  build(builder, result, loopTypes, target, mixedTileSizes, continuousTiles,
+        interchange, scalableSizes);
 }
 
 void transform::TileUsingForOp::build(
     OpBuilder &builder, OperationState &result, TypeRange loopTypes,
     Value target, ArrayRef<OpFoldResult> mixedTileSizes,
-    ArrayRef<int64_t> interchange,
+    ArrayRef<bool> continuousTiles, ArrayRef<int64_t> interchange,
     std::optional<ArrayRef<bool>> scalableSizes) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
@@ -2533,6 +2536,7 @@ void transform::TileUsingForOp::build(
   // attributes for multiple variadic operands. In the absence of this,
   // horrible bugs ensue.
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
+  auto continuousTilesAttr = builder.getDenseBoolArrayAttr(continuousTiles);
   unsigned numExpectedLoops =
       staticTileSizes.size() - llvm::count(staticTileSizes, 0);
   SmallVector<Type> resultTypes;
@@ -2551,6 +2555,7 @@ void transform::TileUsingForOp::build(
         /*target=*/target,
         /*dynamic_sizes=*/dynamicTileSizes,
         /*static_sizes=*/staticTileSizesAttr,
+        /*continuous_tiles=*/continuousTilesAttr,
         /*interchange=*/builder.getDenseI64ArrayAttr(interchange),
         /*scalable_sizes=*/expandedScalableSizes);
 }
@@ -2691,8 +2696,15 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     }
 
     tilingOptions.setInterchange(getInterchange());
-    FailureOr<scf::SCFTilingResult> maybeTilingResult =
-        tileUsingSCF(rewriter, tilingInterface, tilingOptions);
+    tilingOptions.setCTileMapping(getContinuousTiles());
+
+    FailureOr<scf::SCFTilingResult> maybeTilingResult;
+    if (tilingOptions.continuousTileMappingVector.empty())
+      maybeTilingResult =
+          tileUsingSCF(rewriter, tilingInterface, tilingOptions);
+    else
+      maybeTilingResult =
+          continuousTileUsingSCF(rewriter, tilingInterface, tilingOptions);
     if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 
@@ -2741,6 +2753,18 @@ ParseResult parseOptionalInterchange(OpAsmParser &parser,
   return success();
 }
 
+ParseResult parseOptionalContinuousTiles(OpAsmParser &parser,
+                                         OperationState &result) {
+  if (failed(parser.parseOptionalKeyword("continuous_tiles")))
+    return success();
+  if (failed(parser.parseEqual()))
+    return failure();
+  result.addAttribute(
+      transform::TileUsingForOp::getContinuousTilesAttrName(result.name),
+      DenseBoolArrayAttr::parse(parser, Type{}));
+  return success();
+}
+
 void printOptionalInterchange(OpAsmPrinter &p,
                               ArrayRef<int64_t> interchangeVals) {
   if (!interchangeVals.empty()) {
@@ -2763,6 +2787,7 @@ ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
       parseOptionalInterchange(parser, result) ||
+      parseOptionalContinuousTiles(parser, result) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(functionalType))
     return ParseResult::failure();

@@ -71,6 +71,14 @@ struct SCFTilingOptions {
         mapping, [](auto attr) -> Attribute { return attr; });
     return *this;
   }
+
+  /// Specify which loops in the loop nest are to be continuously tiled.
+  SmallVector<bool> continuousTileMappingVector = {};
+  SCFTilingOptions &setCTileMapping(ArrayRef<bool> ctile) {
+    continuousTileMappingVector =
+        llvm::map_to_vector(ctile, [](auto attr) -> bool { return attr; });
+    return *this;
+  }
 };
 
 /// Transformation information returned after tiling.
@@ -91,6 +99,12 @@ struct SCFTilingResult {
 FailureOr<SCFTilingResult> tileUsingSCF(RewriterBase &rewriter,
                                         TilingInterface op,
                                         const SCFTilingOptions &options);
+
+/// Method to continuously tile an op that implements the `TilingInterface`
+/// using `scf.for` for iterating over the tiles.
+FailureOr<SCFTilingResult>
+continuousTileUsingSCF(RewriterBase &rewriter, TilingInterface op,
+                       const SCFTilingOptions &options);
 
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {

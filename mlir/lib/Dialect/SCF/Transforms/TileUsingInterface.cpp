@@ -31,6 +31,8 @@
 
 using namespace mlir;
 
+static constexpr char kLoopIndexLabel[] = "__loop_index__";
+
 scf::SCFTilingOptions &
 scf::SCFTilingOptions::setTileSizes(ArrayRef<OpFoldResult> ts) {
   assert(!tileSizeComputationFunction && "tile sizes already set");
@@ -307,6 +309,188 @@ static LogicalResult generateLoopNest(RewriterBase &rewriter, Location loc,
         destinationTensors, tiledBodyFn, loops);
   }
   return rewriter.notifyMatchFailure(loc, "unhandled loop type");
+}
+
+static void continuousLoopNestHelper(
+    OpBuilder &builder, Location loc, ArrayRef<Range> loopRanges,
+    SmallVector<LoopLikeOpInterface> &loops, uint64_t loopLevelIdx,
+    uint64_t &loopIdx, ArrayRef<OpFoldResult> tileSizes,
+    SmallVector<bool> &CTileVector, std::map<int, OpFoldResult> &sizesMap,
+    SmallVector<scf::ForOp> &innermostLoops, ValueRange destinationTensors = {},
+    bool isHeadOrInsideHeadLoop = false) {
+
+  Value offset = getValueOrCreateConstantIndexOp(
+      builder, loc, loopRanges[loopLevelIdx].offset);
+  Value size = getValueOrCreateConstantIndexOp(builder, loc,
+                                               loopRanges[loopLevelIdx].size);
+  Value tileSize =
+      getValueOrCreateConstantIndexOp(builder, loc, tileSizes[loopLevelIdx]);
+
+  AffineExpr sym0, sym1, sym2;
+  bindSymbols(builder.getContext(), sym0, sym1, sym2);
+  AffineMap defaultSplitMap =
+      AffineMap::get(0, 3, {sym1 - ((sym1 - sym0) % sym2)});
+  // Simplified map for use when step is power of 2 and lower bound
+  // is exactly divisble by step.
+  AffineMap powerSplitMap = AffineMap::get(0, 3, {sym1 - (sym1 % sym2)});
+
+  uint64_t tileSizeInt = *getConstantIntValue(tileSize);
+
+  // Enforce no tiling when tile size is zero.
+  // No need to create a loop here.
+  if (tileSizeInt == 0) {
+    continuousLoopNestHelper(builder, loc, loopRanges, loops, loopLevelIdx + 1,
+                             loopIdx, tileSizes, CTileVector, sizesMap,
+                             innermostLoops, destinationTensors,
+                             isHeadOrInsideHeadLoop);
+    return;
+  }
+
+  // The head loop is always tiled using the tile size specified
+  // in the size parameters to tile_using_for transform.
+  auto loop = builder.create<scf::ForOp>(
+      loc, offset, size, tileSize, destinationTensors,
+      [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
+          ValueRange /*iterArgs*/) {
+        sizesMap[loopIdx] =
+            getBoundedTileSize(bodyBuilder, bodyLoc, loopRanges[loopLevelIdx],
+                               iv, getAsOpFoldResult(tileSize));
+      });
+
+  loop->setAttr(kLoopIndexLabel, builder.getIndexAttr(loopIdx));
+  ++loopIdx;
+
+  scf::ForOp currentLoop = loop;
+  auto lbInt = getConstantIntValue(currentLoop.getLowerBound());
+  // Use simplified powerSplitMap instead of the default when possible.
+  bool usePowerSplit = (lbInt.has_value()) &&
+                       (*lbInt % tileSizeInt == static_cast<int64_t>(0)) &&
+                       (tileSizeInt == llvm::bit_floor(tileSizeInt));
+
+  AffineMap splitMap = usePowerSplit ? powerSplitMap : defaultSplitMap;
+
+  bool isInnermostLoop = loopLevelIdx == loopRanges.size() - 1;
+  if (isInnermostLoop)
+    innermostLoops.push_back(currentLoop);
+
+  if (isHeadOrInsideHeadLoop)
+    loops.push_back(loop);
+
+  builder.setInsertionPointToEnd(loop.getBody());
+
+  // Create the nested loop inside current loop.
+  if (!isInnermostLoop)
+    continuousLoopNestHelper(builder, loop->getLoc(), loopRanges, loops,
+                             loopLevelIdx + 1, loopIdx, tileSizes, CTileVector,
+                             sizesMap, innermostLoops, loop.getRegionIterArgs(),
+                             isHeadOrInsideHeadLoop);
+
+  // Apply continuous tiling to current loop if continuous_tiles
+  // specifies so.
+  while (CTileVector[loopLevelIdx] && tileSizeInt > 1) {
+
+    uint64_t maxPower = llvm::bit_floor(tileSizeInt);
+    tileSizeInt = maxPower == tileSizeInt ? maxPower >> 1 : maxPower;
+
+    builder.setInsertionPoint(currentLoop);
+
+    auto constStepOp = builder.create<arith::ConstantIndexOp>(loc, tileSizeInt);
+
+    Value splitBound = builder.createOrFold<affine::AffineApplyOp>(
+        loc, splitMap,
+        ValueRange{currentLoop.getLowerBound(), currentLoop.getUpperBound(),
+                   currentLoop.getStep()});
+
+    builder.setInsertionPointAfter(currentLoop);
+    auto additionalLoop =
+        builder.create<scf::ForOp>(currentLoop->getLoc(), splitBound, size,
+                                   constStepOp, destinationTensors);
+
+    additionalLoop.getInitArgsMutable().assign(currentLoop->getResults());
+    currentLoop.getUpperBoundMutable().assign(splitBound);
+
+    builder.setInsertionPointToStart(additionalLoop.getBody());
+    AffineExpr s0, s1, d0;
+    bindDims(builder.getContext(), d0);
+    bindSymbols(builder.getContext(), s0, s1);
+    AffineMap minMap = AffineMap::get(1, 1, {s0}, builder.getContext());
+    auto additionalLoopAffineMin = affine::makeComposedAffineMin(
+        builder, loc, minMap,
+        SmallVector<OpFoldResult>{splitBound, getAsOpFoldResult(constStepOp),
+                                  size});
+
+    currentLoop = additionalLoop;
+
+    sizesMap[loopIdx] = getAsOpFoldResult(additionalLoopAffineMin);
+
+    // Add custom loop-indexing attribute to each loop op.
+    // Continuous tiling ends up generating many loop nestings and
+    // each loop can be identified with its loop-index attribute.
+    // This is needed later to retrieve the sizes from sizesMap.
+    currentLoop->setAttr(kLoopIndexLabel, builder.getIndexAttr(loopIdx));
+
+    ++loopIdx;
+
+    if (isInnermostLoop)
+      innermostLoops.push_back(currentLoop);
+
+    builder.setInsertionPointToEnd(currentLoop.getBody());
+
+    // Create the nested loop inside current loop.
+    if (!isInnermostLoop)
+      continuousLoopNestHelper(builder, currentLoop->getLoc(), loopRanges,
+                               loops, loopLevelIdx + 1, loopIdx, tileSizes,
+                               CTileVector, sizesMap, innermostLoops,
+                               currentLoop.getRegionIterArgs());
+  }
+
+  // Yiled results for all loops in the loop nest except for
+  // outermost loop as that is handled with `replacements` later.
+  // Always yield the result of the tail-end loop as this
+  // will have all the processed tiles.
+  if (loopLevelIdx != 0) {
+    builder.setInsertionPointToEnd(currentLoop->getBlock());
+    builder.create<scf::YieldOp>(currentLoop.getLoc(),
+                                 currentLoop.getResults());
+  }
+  /// For the outermost loop insert the tail-end loop in front of loops
+  /// structure so that it's results can be used for replacements in the
+  /// function return. This is removed from the head of loops later.
+  else
+    loops.insert(loops.begin(), currentLoop);
+
+  destinationTensors = loop.getRegionIterArgs();
+}
+
+/// Generate an empty loop nest that represents the continuous-tiled loop nest
+/// shell.
+/// - `loopRanges` specifies the lb, ub and step of the untiled iteration space.
+/// - `tileSizes` is the tile sizes to use in the first tiling attempt. Zero
+/// represent untiled loops.
+/// - In ``sizesMap` return the multi-dimensional size of
+///   the tile processed within the inner most loop.
+/// - `CTileVector` specifies which loop nest should be continuously tiled.
+/// Note that this methods adds `scf.yield` operation for all tailing loops
+/// inside the loop nest.
+static SmallVector<LoopLikeOpInterface> generateContinuousTileLoopNest(
+    OpBuilder &builder, Location loc, ArrayRef<Range> loopRanges,
+    ArrayRef<OpFoldResult> tileSizes, SmallVector<bool> CTileVector,
+    std::map<int, OpFoldResult> &sizesMap,
+    SmallVector<scf::ForOp> &innermostLoops,
+    ValueRange destinationTensors = {}) {
+  if (loopRanges.empty())
+    return {};
+  assert(loopRanges.size() == tileSizes.size() &&
+         "expected as many tile sizes as loop ranges");
+  OpBuilder::InsertionGuard guard(builder);
+  SmallVector<LoopLikeOpInterface> loops;
+
+  uint64_t loopIdx = 0;
+  continuousLoopNestHelper(builder, loc, loopRanges, loops, 0, loopIdx,
+                           tileSizes, CTileVector, sizesMap, innermostLoops,
+                           destinationTensors, true);
+
+  return loops;
 }
 
 /// Append the specified additional `newInitOperands` operands to the
@@ -677,6 +861,276 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   SmallVector<Value> replacements = llvm::map_to_vector(
       loops.front()->getResults(), [](OpResult r) -> Value { return r; });
   return scf::SCFTilingResult{tilingResult->tiledOps, loops, replacements};
+}
+
+/// Implementation of continuous-tiling transformation of `op`
+/// that implements the `TilingInterface` using a sequence of
+/// `scf.for` loops to iterate over tiles of exponentially
+/// diminishing sizes.
+///
+/// The generated sequence of `scf.for` loops iterate over tiles of
+/// exponentially diminishing sizes as opposed to vanilla tiling scheme where
+/// only the tile sizes specified as transform parameters are used.
+/// continuous-tiling first applies regular tiling using the specified
+/// tile size, then halves the tile size and uses it to tile the leftover
+/// chunk. This process of halving the tile size and tiling the leftover
+/// chunk is repeated until tile size reaches 1. The transform parameter
+/// continuous_tiles controls which nested loop should be tiled. If all
+/// arguments in continuous_tiles are set to false, the result is identical
+/// to vanilla tiling transform.
+///
+/// When tiling a tensor of size M with tile size 8, it generates
+/// the following loop to tile
+///
+/// for (int i = 0; i < M; i += 8) {
+///   int size = min(8, M-i);
+///   // size is unknown at compile time because M is dynamic
+///   // compute using dynamic size (not optimal)
+/// }
+///
+/// In case of continuous tiling the above loop is converted to a chain of
+/// loops that attempt to tile the cases where (M-i < 8) using smaller
+/// tile sizes, as follows
+///
+/// // use tile size of 8 in the head loop as originally used
+/// for (int i = 0; i != (M - M % 8); i += 8) {
+///   int size = 8;
+///   // size is constant the tail is moved to the next loop
+///   // compute using static size (optimal)
+/// }
+/// // use halved tile size 4 to tile the remaining chunk
+/// for (int i = (M - M % 8); i != (M - M % 4); i += 4)
+///   int size = 4;
+/// // use halved tile size 2 to tile the remaining chunk
+/// for (int i = (M - M % 4); i != (M - M % 2); i += 2)
+///   int size = 2;
+/// // use halved tile size 1 to tile the remaining chunk
+/// for (int i = (M - M % 2); i != M; i += 1)
+///   int size = 1;
+///
+/// All tail-loops can be converted to IFs as they execute at-most once.
+///
+FailureOr<scf::SCFTilingResult>
+mlir::scf::continuousTileUsingSCF(RewriterBase &rewriter, TilingInterface op,
+                                  const scf::SCFTilingOptions &options) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(op);
+
+  std::map<int, OpFoldResult> sizesMap;
+
+  if (!options.tileSizeComputationFunction) {
+    return rewriter.notifyMatchFailure(
+        op, "missing tile size computation function");
+  }
+
+  // 1. Get the range of the loops that are represented by the operation.
+  SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
+  size_t numLoops = iterationDomain.size();
+  if (numLoops == 0) {
+    return rewriter.notifyMatchFailure(
+        op, "unable to tile op with no iteration domain");
+  }
+  // 2. Materialize the tile sizes. Enforce the convention that "tiling by zero"
+  // skips tiling a particular dimension. This convention is significantly
+  // simpler to handle instead of adjusting affine maps to account for missing
+  // dimensions.
+  SmallVector<OpFoldResult> tileSizeVector =
+      options.tileSizeComputationFunction(rewriter, op);
+  if (tileSizeVector.size() < iterationDomain.size()) {
+    auto zero = rewriter.getIndexAttr(0);
+    tileSizeVector.append(numLoops - tileSizeVector.size(), zero);
+  }
+
+  // 3. Find the destination tensors to use for the operation.
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(rewriter, op.getLoc(), op,
+                                             destinationTensors))) {
+    return rewriter.notifyMatchFailure(op,
+                                       "unable to create destination tensors");
+  }
+
+  SmallVector<OpFoldResult> offsets, sizes;
+  SmallVector<LoopLikeOpInterface> forLoops;
+  // Several innermost loops are created when applying continuous tiling.
+  // All innermost loops need to be processed in an identical manner.
+  SmallVector<scf::ForOp> innermostLoops;
+  {
+    // If there is an interchange specified, permute the iteration domain and
+    // the tile sizes.
+    SmallVector<int64_t> interchangeVector;
+    if (!options.interchangeVector.empty()) {
+      interchangeVector = fillInterchangeVector(options.interchangeVector,
+                                                iterationDomain.size());
+
+      if (!isPermutationVector(interchangeVector)) {
+        return rewriter.notifyMatchFailure(
+            op, "invalid intechange vector, not a permutation of the entire "
+                "iteration space");
+      }
+
+      applyPermutationToVector(iterationDomain, interchangeVector);
+      applyPermutationToVector(tileSizeVector, interchangeVector);
+    }
+
+    // Specify which loop nesting should continuously tiled.
+    SmallVector<bool> cTileVector = options.continuousTileMappingVector;
+
+    if (cTileVector.size() < iterationDomain.size())
+      cTileVector.append(numLoops - cTileVector.size(), false);
+
+    offsets.resize(iterationDomain.size());
+    sizes.resize(iterationDomain.size());
+
+    // 4. Materialize an empty loop nest that iterates over the tiles. These
+    // loops for now do not return any values even if the original operation has
+    // results.
+    forLoops = generateContinuousTileLoopNest(
+        rewriter, op.getLoc(), iterationDomain, tileSizeVector, cTileVector,
+        sizesMap, innermostLoops, destinationTensors);
+  }
+
+  LLVM_DEBUG({
+    if (!forLoops.empty()) {
+      llvm::dbgs() << "LoopNest shell :\n";
+      forLoops.front()->getBlock()->dump();
+      llvm::dbgs() << "\n";
+    }
+  });
+
+  TilingResult origTiledImplementation;
+
+  // 5) Generate the tiled implementation within all inner-most loops
+  // and 6) yield results for all inner-most loops.
+  for (scf::ForOp &innermostLoop : innermostLoops) {
+
+    // 5. Generate the tiled implementation within the inner most loop.
+    SmallVector<Value> clonedOpDestination = destinationTensors;
+    if (!forLoops.empty()) {
+      rewriter.setInsertionPointToEnd(innermostLoop.getBody());
+      clonedOpDestination =
+          llvm::map_to_vector(innermostLoop.getRegionIterArgs(),
+                              [](BlockArgument b) -> Value { return b; });
+    }
+
+    // 5a. Clone the operation within the loop body.
+    auto clonedOp = cast<TilingInterface>(
+        cloneOpAndUpdateDestinationArgs(rewriter, op, clonedOpDestination));
+
+    // Compute offsets and sizes for each loop nest combination separately.
+    int loopLevelIdx = iterationDomain.size() - 1;
+    Operation *loopOp = innermostLoop.getOperation();
+
+    // Compute the correct offsets and sizes for each loop nesting (note
+    // that there are possibly several different loop nestings with continuous
+    // tiling enabled) before supplying them to `getTiledImplementation`.
+    while (loopOp) {
+
+      Value tileSize = getValueOrCreateConstantIndexOp(
+          rewriter, op.getLoc(), tileSizeVector[loopLevelIdx]);
+
+      // No need to compute new offsets and sizes when tile size is zero.
+      if (matchPattern(tileSize, m_Zero())) {
+        offsets[loopLevelIdx] = iterationDomain[loopLevelIdx].offset;
+        sizes[loopLevelIdx] = iterationDomain[loopLevelIdx].size;
+        --loopLevelIdx;
+        continue;
+      }
+
+      Value offset = dyn_cast<scf::ForOp>(loopOp).getInductionVar();
+      offsets[loopLevelIdx] = offset;
+
+      // Get the loop index for retreiving sizes info from sizeMap
+      // using the loop attribute `kLoopIndexLabel`.
+      uint64_t currLoopIdxLabel =
+          loopOp->getAttrOfType<IntegerAttr>(kLoopIndexLabel).getInt();
+      sizes[loopLevelIdx] = sizesMap[currLoopIdxLabel];
+
+      loopOp = loopOp->getParentOfType<scf::ForOp>();
+      --loopLevelIdx;
+    }
+
+    // 5b. Early return cloned op if tiling is not happening. We can not return
+    // the original op because it could lead to
+    // `rewriter.replaceOp(op, op->getResults())` and user would get crash.
+    if (llvm::all_of(tileSizeVector, isZeroIndex)) {
+      return scf::SCFTilingResult{/*tiledOps=*/{clonedOp}, /*loops=*/{},
+                                  clonedOp->getResults()};
+    }
+
+    // 5c. Tile the cloned operation.
+    FailureOr<TilingResult> tiledImplementation =
+        clonedOp.getTiledImplementation(rewriter, offsets, sizes);
+    if (failed(tiledImplementation)) {
+      return rewriter.notifyMatchFailure(op, "failed to tile operation");
+    }
+
+    origTiledImplementation.tiledOps.append(tiledImplementation->tiledOps);
+
+    // 5d. Delete the cloned operation.
+    rewriter.eraseOp(clonedOp);
+
+    // If loops are empty, the tiled op is used as the replacement for the
+    // untiled op.
+    if (forLoops.empty()) {
+      return scf::SCFTilingResult{tiledImplementation->tiledOps, forLoops,
+                                  tiledImplementation->tiledValues};
+    }
+
+    if (op->getNumResults() == 0) {
+      // The innermost loop does not have a `scf.yield` yet. There is nothing to
+      // return, so generate an empty `scf.yield` operation.
+      rewriter.setInsertionPointToEnd(innermostLoop.getBody());
+      rewriter.create<scf::YieldOp>(op->getLoc());
+    }
+
+    // 6. Yield all the results of the tiled operation.
+    int64_t numResults = op->getNumResults();
+    SmallVector<SmallVector<OpFoldResult>> resultOffsetsList(numResults),
+        resultSizesList(numResults);
+    SmallVector<Value> yieldedValues;
+    for (auto [index, tiledValue] :
+         llvm::enumerate(tiledImplementation->tiledValues)) {
+      SmallVector<OpFoldResult> resultOffsets, resultSizes;
+      if (failed(op.getResultTilePosition(rewriter, index, offsets, sizes,
+                                          resultOffsets, resultSizes))) {
+        return rewriter.notifyMatchFailure(
+            op, "failed to get slice of result produced");
+      }
+      SmallVector<OpFoldResult> resultStrides(resultOffsets.size(),
+                                              rewriter.getIndexAttr(1));
+      auto insertSlice = rewriter.create<tensor::InsertSliceOp>(
+          op->getLoc(), tiledValue, clonedOpDestination[index], resultOffsets,
+          resultSizes, resultStrides);
+      yieldedValues.push_back(insertSlice);
+    }
+    rewriter.create<scf::YieldOp>(op->getLoc(), yieldedValues);
+  }
+
+  SmallVector<Value> replacements = llvm::map_to_vector(
+      forLoops.front()->getResults(), [](OpResult r) -> Value { return r; });
+  LLVM_DEBUG({
+    if (!forLoops.empty()) {
+      llvm::dbgs() << "After tiled implementation :\n";
+      forLoops.front().dump();
+      llvm::dbgs() << "\n";
+    }
+  });
+
+  /// Remove outermost tailend loop as its only use was to compute
+  /// replacements.
+  forLoops.erase(forLoops.begin());
+
+  Block *pBlock = forLoops.front()->getBlock();
+
+  /// Remove custom loop-indexing attribute from all loops.
+  pBlock->walk([](ForOp loopOp) {
+    if (loopOp->hasAttr(kLoopIndexLabel))
+      loopOp->removeAttr(kLoopIndexLabel);
+  });
+
+  return scf::SCFTilingResult{origTiledImplementation.tiledOps, forLoops,
+                              op->getNumResults() == 0 ? SmallVector<Value>({})
+                                                       : replacements};
 }
 
 FailureOr<scf::SCFReductionTilingResult>
