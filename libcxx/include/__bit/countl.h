@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+//  refactor this code to exclusively use __builtin_clzg.
+
 #ifndef _LIBCPP___BIT_COUNTL_H
 #define _LIBCPP___BIT_COUNTL_H
 
@@ -38,6 +41,9 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_cl
 
 #ifndef _LIBCPP_HAS_NO_INT128
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x) _NOEXCEPT {
+#  if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__x);
+#  else
   // The function is written in this form due to C++ constexpr limitations.
   // The algorithm:
   // - Test whether any bit in the high 64-bits is set
@@ -49,6 +55,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
   //     zeros in the high 64-bits.
   return ((__x >> 64) == 0) ? (64 + __builtin_clzll(static_cast<unsigned long long>(__x)))
                             : __builtin_clzll(static_cast<unsigned long long>(__x >> 64));
+#  endif
 }
 #endif // _LIBCPP_HAS_NO_INT128
 
@@ -58,6 +65,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__t);
+#else  // __has_builtin(__builtin_clzg)
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_clz(static_cast<unsigned int>(__t)) -
            (numeric_limits<unsigned int>::digits - numeric_limits<_Tp>::digits);
@@ -79,6 +89,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _
     }
     return __ret + __iter;
   }
+#endif // __has_builtin(__builtin_clzg)
 }
 
 #if _LIBCPP_STD_VER >= 20
