@@ -176,30 +176,34 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    addiw s0, a1, 1365
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw s1, a1, 819
 ; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addi s2, a1, -241
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addi s3, a1, 257
+; RV64I-NEXT:    addiw s0, a1, -241
+; RV64I-NEXT:    slli a1, s0, 32
+; RV64I-NEXT:    add s0, s0, a1
+; RV64I-NEXT:    slli s1, s0, 2
+; RV64I-NEXT:    xor s1, s1, s0
+; RV64I-NEXT:    lui a1, 349525
+; RV64I-NEXT:    addiw s2, a1, 1365
+; RV64I-NEXT:    srli a1, s0, 3
+; RV64I-NEXT:    and s3, a1, s0
 ; RV64I-NEXT:  .LBB4_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call bar
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    and a0, a0, s0
-; RV64I-NEXT:    sub a0, a1, a0
-; RV64I-NEXT:    and a2, a0, s1
-; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, s1
-; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    and a0, a0, s2
+; RV64I-NEXT:    slli a2, a1, 32
+; RV64I-NEXT:    srli a2, a2, 32
+; RV64I-NEXT:    sub a2, a2, a0
+; RV64I-NEXT:    and a0, a2, s1
+; RV64I-NEXT:    srli a2, a2, 2
+; RV64I-NEXT:    and a2, a2, s1
+; RV64I-NEXT:    add a0, a0, a2
 ; RV64I-NEXT:    srli a2, a0, 4
 ; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    and a0, a0, s2
+; RV64I-NEXT:    and a0, a0, s0
 ; RV64I-NEXT:    mul a0, a0, s3
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    bnez a1, .LBB4_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
 ; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
@@ -323,27 +327,23 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
-; RV64I-NEXT:    lui a1, 349525
-; RV64I-NEXT:    addiw s0, a1, 1365
+; RV64I-NEXT:    lui a1, 61681
+; RV64I-NEXT:    addiw s0, a1, -241
 ; RV64I-NEXT:    slli a1, s0, 32
 ; RV64I-NEXT:    add s0, s0, a1
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw s1, a1, 819
-; RV64I-NEXT:    slli a1, s1, 32
-; RV64I-NEXT:    add s1, s1, a1
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw s2, a1, -241
+; RV64I-NEXT:    slli s1, s0, 2
+; RV64I-NEXT:    xor s1, s1, s0
+; RV64I-NEXT:    lui a1, 349525
+; RV64I-NEXT:    addiw s2, a1, 1365
 ; RV64I-NEXT:    slli a1, s2, 32
 ; RV64I-NEXT:    add s2, s2, a1
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw s3, a1, 257
-; RV64I-NEXT:    slli a1, s3, 32
-; RV64I-NEXT:    add s3, s3, a1
+; RV64I-NEXT:    srli a1, s0, 3
+; RV64I-NEXT:    and s3, a1, s0
 ; RV64I-NEXT:  .LBB6_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call foo
 ; RV64I-NEXT:    srli a1, a0, 1
-; RV64I-NEXT:    and a1, a1, s0
+; RV64I-NEXT:    and a1, a1, s2
 ; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    and a1, a0, s1
 ; RV64I-NEXT:    srli a0, a0, 2
@@ -351,7 +351,7 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    srli a1, a0, 4
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    and a0, a0, s2
+; RV64I-NEXT:    and a0, a0, s0
 ; RV64I-NEXT:    mul a0, a0, s3
 ; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    bnez a0, .LBB6_1

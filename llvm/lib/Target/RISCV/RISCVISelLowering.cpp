@@ -391,7 +391,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
     }
   } else if (!Subtarget.hasVendorXCVbitmanip()) {
-    setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
+    setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    setOperationAction(ISD::CTPOP, XLenVT,
+                       Subtarget.is64Bit() ? Custom : Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTPOP}, MVT::i32, Expand);
   }
@@ -901,10 +903,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                            VT, Custom);
       } else {
         setOperationAction({ISD::BITREVERSE, ISD::VP_BITREVERSE}, VT, Expand);
-        setOperationAction({ISD::CTLZ, ISD::CTTZ, ISD::CTPOP}, VT, Expand);
+        setOperationAction({ISD::CTLZ, ISD::CTTZ}, VT, Expand);
         setOperationAction({ISD::VP_CTLZ, ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ,
-                            ISD::VP_CTTZ_ZERO_UNDEF, ISD::VP_CTPOP},
+                            ISD::VP_CTTZ_ZERO_UNDEF},
                            VT, Expand);
+
+        setOperationAction({ISD::CTPOP, ISD::VP_CTPOP}, VT, Custom);
 
         // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
         // range of f32.
@@ -1238,6 +1242,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
                              VT, Custom);
         } else {
+          setOperationAction({ISD::CTPOP, ISD::VP_CTPOP}, VT, Custom);
           // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
           // range of f32.
           EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
@@ -6746,8 +6751,18 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::BSWAP:
-  case ISD::CTPOP:
     return lowerToScalableOp(Op, DAG);
+  case ISD::CTPOP: {
+    if (Op.getValueType().isScalarInteger())
+      return lowerScalarCTPOP(Op, DAG);
+    if (Subtarget.hasStdExtZvbb())
+      return lowerToScalableOp(Op, DAG);
+    return lowerVectorCTPOP(Op, DAG);
+  }
+  case ISD::VP_CTPOP:
+    if (Subtarget.hasStdExtZvbb())
+      return lowerVPOp(Op, DAG);
+    return lowerVectorCTPOP(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -6972,8 +6987,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Subtarget.hasStdExtZvbb())
       return lowerVPOp(Op, DAG);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
-  case ISD::VP_CTPOP:
-    return lowerVPOp(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
@@ -10753,6 +10766,182 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   if (VT.isFixedLengthVector())
     Max = convertFromScalableVector(VT, Max, DAG, Subtarget);
   return Max;
+}
+
+SDValue RISCVTargetLowering::lowerScalarCTPOP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  MVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout()).getSimpleVT();
+  unsigned Len = VT.getScalarSizeInBits();
+  assert(VT.isInteger() && "lowerScalarCTPOP not implemented for this type.");
+
+  SDValue V = Op.getOperand(0);
+
+  // This is same algorithm of TargetLowering::expandCTPOP from
+  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+  // 0x0F0F0F0F...
+  const APInt &Constant0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  SDValue Mask0F = DAG.getConstant(Constant0F, DL, VT, false, true);
+  // 0x33333333... = (0x0F0F0F0F... ^ (0x0F0F0F0F... << 2))
+  const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
+  SDValue Mask33 =
+      RISCVMatInt::getIntMatCost(Constant33, VT.getScalarSizeInBits(),
+                                 Subtarget) > 2
+          ? DAG.getNode(ISD::XOR, DL, VT, Mask0F,
+                        DAG.getNode(ISD::SHL, DL, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(2, VT, DL)))
+          : DAG.getConstant(Constant33, DL, VT);
+  // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
+  const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
+  SDValue Mask55 =
+      RISCVMatInt::getIntMatCost(Constant55, VT.getScalarSizeInBits(),
+                                 Subtarget) > 2
+          ? DAG.getNode(ISD::XOR, DL, VT, Mask33,
+                        DAG.getNode(ISD::SHL, DL, VT, Mask33,
+                                    DAG.getShiftAmountConstant(1, VT, DL)))
+          : DAG.getConstant(Constant55, DL, VT);
+
+  // v = v - ((v >> 1) & 0x55555555...)
+  V = DAG.getNode(ISD::SUB, DL, VT, V,
+                  DAG.getNode(ISD::AND, DL, VT,
+                              DAG.getNode(ISD::SRL, DL, VT, V,
+                                          DAG.getConstant(1, DL, ShVT)),
+                              Mask55));
+  // v = (v & 0x33333333...) + ((v >> 2) & 0x33333333...)
+  V = DAG.getNode(ISD::ADD, DL, VT, DAG.getNode(ISD::AND, DL, VT, V, Mask33),
+                  DAG.getNode(ISD::AND, DL, VT,
+                              DAG.getNode(ISD::SRL, DL, VT, V,
+                                          DAG.getConstant(2, DL, ShVT)),
+                              Mask33));
+  // v = (v + (v >> 4)) & 0x0F0F0F0F...
+  V = DAG.getNode(ISD::AND, DL, VT,
+                  DAG.getNode(ISD::ADD, DL, VT, V,
+                              DAG.getNode(ISD::SRL, DL, VT, V,
+                                          DAG.getConstant(4, DL, ShVT))),
+                  Mask0F);
+
+  // v = (v * 0x01010101...) >> (Len - 8)
+  // 0x01010101... == (0x0F0F0F0F... & (0x0F0F0F0F... >> 3))
+  const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
+  SDValue Mask01 =
+      RISCVMatInt::getIntMatCost(Constant01, VT.getScalarSizeInBits(),
+                                 Subtarget) > 2
+          ? DAG.getNode(ISD::AND, DL, VT, Mask0F,
+                        DAG.getNode(ISD::SRL, DL, VT, Mask0F,
+                                    DAG.getShiftAmountConstant(3, VT, DL)))
+          : DAG.getConstant(Constant01, DL, VT);
+  return DAG.getNode(ISD::SRL, DL, VT, DAG.getNode(ISD::MUL, DL, VT, V, Mask01),
+                     DAG.getConstant(Len - 8, DL, ShVT));
+}
+
+SDValue RISCVTargetLowering::lowerVectorCTPOP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  unsigned Len = VT.getScalarSizeInBits();
+  assert(VT.isInteger() && "lowerVectorCTPOP not implemented for this type.");
+
+  SDValue V = Op.getOperand(0);
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    V = convertToScalableVector(ContainerVT, V, DAG, Subtarget);
+  }
+
+  SDValue Mask, VL;
+  if (Op->getOpcode() == ISD::VP_CTPOP) {
+    Mask = Op->getOperand(1);
+    if (VT.isFixedLengthVector())
+      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                     Subtarget);
+    VL = Op->getOperand(2);
+  } else
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  // This is same algorithm of TargetLowering::expandVPCTPOP from
+  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
+  // 0x0F0F0F0F...
+  const APInt &Constant0F = APInt::getSplat(Len, APInt(8, 0x0F));
+  SDValue Mask0F = DAG.getConstant(Constant0F, DL, ContainerVT);
+  // 0x33333333... = (0x0F0F0F0F... ^ (0x0F0F0F0F... << 2))
+  const APInt &Constant33 = APInt::getSplat(Len, APInt(8, 0x33));
+  SDValue Mask33 =
+      RISCVMatInt::getIntMatCost(Constant33, ContainerVT.getScalarSizeInBits(),
+                                 Subtarget) > 2
+          ? DAG.getNode(RISCVISD::XOR_VL, DL, ContainerVT, Mask0F,
+                        DAG.getNode(RISCVISD::SHL_VL, DL, ContainerVT, Mask0F,
+                                    DAG.getConstant(2, DL, ContainerVT),
+                                    DAG.getUNDEF(ContainerVT), Mask, VL),
+                        DAG.getUNDEF(ContainerVT), Mask, VL)
+          : DAG.getConstant(Constant33, DL, ContainerVT);
+  // 0x55555555... = (0x33333333... ^ (0x33333333... << 1))
+  const APInt &Constant55 = APInt::getSplat(Len, APInt(8, 0x55));
+  SDValue Mask55 =
+      RISCVMatInt::getIntMatCost(Constant55, ContainerVT.getScalarSizeInBits(),
+                                 Subtarget) > 2
+          ? DAG.getNode(RISCVISD::XOR_VL, DL, ContainerVT, Mask33,
+                        DAG.getNode(RISCVISD::SHL_VL, DL, ContainerVT, Mask33,
+                                    DAG.getConstant(1, DL, ContainerVT),
+                                    DAG.getUNDEF(ContainerVT), Mask, VL),
+                        DAG.getUNDEF(ContainerVT), Mask, VL)
+          : DAG.getConstant(Constant55, DL, ContainerVT);
+
+  SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5;
+
+  // v = v - ((v >> 1) & 0x55555555...)
+  Tmp1 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT,
+                     DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                                 DAG.getConstant(1, DL, ContainerVT),
+                                 DAG.getUNDEF(ContainerVT), Mask, VL),
+                     Mask55, DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, V, Tmp1,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  // v = (v & 0x33333333...) + ((v >> 2) & 0x33333333...)
+  Tmp2 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, V, Mask33,
+                     DAG.getUNDEF(ContainerVT), Mask, VL);
+  Tmp3 = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT,
+                     DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                                 DAG.getConstant(2, DL, ContainerVT),
+                                 DAG.getUNDEF(ContainerVT), Mask, VL),
+                     Mask33, DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::ADD_VL, DL, ContainerVT, Tmp2, Tmp3,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  // v = (v + (v >> 4)) & 0x0F0F0F0F...
+  Tmp4 = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, V,
+                     DAG.getConstant(4, DL, ContainerVT),
+                     DAG.getUNDEF(ContainerVT), Mask, VL),
+  Tmp5 = DAG.getNode(RISCVISD::ADD_VL, DL, ContainerVT, V, Tmp4,
+                     DAG.getUNDEF(ContainerVT), Mask, VL);
+  V = DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Tmp5, Mask0F,
+                  DAG.getUNDEF(ContainerVT), Mask, VL);
+
+  if (Len > 8) {
+    // v = (v * 0x01010101...) >> (Len - 8)
+    // 0x01010101... == (0x0F0F0F0F... & (0x0F0F0F0F... >> 3))
+    const APInt &Constant01 = APInt::getSplat(Len, APInt(8, 0x01));
+    SDValue Mask01 =
+        RISCVMatInt::getIntMatCost(
+            Constant01, ContainerVT.getScalarSizeInBits(), Subtarget) > 2
+            ? DAG.getNode(RISCVISD::AND_VL, DL, ContainerVT, Mask0F,
+                          DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT, Mask0F,
+                                      DAG.getConstant(3, DL, ContainerVT),
+                                      DAG.getUNDEF(ContainerVT), Mask, VL),
+                          DAG.getUNDEF(ContainerVT), Mask, VL)
+            : DAG.getConstant(Constant01, DL, ContainerVT);
+    V = DAG.getNode(RISCVISD::SRL_VL, DL, ContainerVT,
+                    DAG.getNode(RISCVISD::MUL_VL, DL, ContainerVT, V, Mask01,
+                                DAG.getUNDEF(ContainerVT), Mask, VL),
+                    DAG.getConstant(Len - 8, DL, ContainerVT),
+                    DAG.getUNDEF(ContainerVT), Mask, VL);
+  }
+
+  if (VT.isFixedLengthVector())
+    V = convertFromScalableVector(VT, V, DAG, Subtarget);
+  return V;
 }
 
 SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
