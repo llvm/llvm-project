@@ -478,3 +478,27 @@ template <Concept> class Foo {
 };
 
 } // namespace FriendOfFriend
+
+namespace GH86769 {
+
+template <typename T>
+concept X = true;
+
+template <X T> struct Y {
+  Y(T) {}
+  template <X U> friend struct Y;
+  template <X U> friend struct Y;
+  template <X U> friend struct Y;
+};
+
+template <class T>
+struct Z {
+  // FIXME: This is ill-formed per N4950 [temp.param]p12.
+  template <X U = void> friend struct Y;
+};
+
+template struct Y<int>;
+template struct Z<int>;
+Y y(1);
+
+}
