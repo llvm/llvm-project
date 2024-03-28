@@ -422,6 +422,7 @@ private:
   bool InstrumentLandingPads;
   bool InstrumentWithCalls;
   bool InstrumentStack;
+  bool InstrumentGlobals;
   bool DetectUseAfterScope;
   bool UsePageAliases;
   bool UseMatchAllCallback;
@@ -639,11 +640,13 @@ void HWAddressSanitizer::initializeModule() {
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
+  InstrumentGlobals =
+      !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
+
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
-    if (InstrumentGlobals && !UsePageAliases)
+    if (InstrumentGlobals)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -787,6 +790,13 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
     if (SSI && SSI->stackAccessIsSafe(*Inst))
       return true;
   }
+
+  if (isa<GlobalVariable>(getUnderlyingObject(Ptr))) {
+    if (!InstrumentGlobals)
+      return true;
+    // TODO: Optimize inbound global accesses, like Asan `instrumentMop`.
+  }
+
   return false;
 }
 
@@ -1104,6 +1114,8 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     // FIXME: the interceptor is not as fast as real memset. Consider lowering
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
+    // Mechanical proof of this address calculation can be found at:
+    // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
     if (ShadowSize)
       IRB.CreateMemSet(ShadowPtr, Tag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
@@ -1220,8 +1232,11 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 }
 
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/platform/bionic/tls_defines.h.
+  constexpr int SanitizerSlot = 6;
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
-    return memtag::getAndroidSanitizerSlotPtr(IRB);
+    return memtag::getAndroidSlotPtr(IRB, SanitizerSlot);
   return ThreadPtrGlobal;
 }
 
