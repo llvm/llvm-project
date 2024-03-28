@@ -31,6 +31,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/SystemDesc.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -171,6 +172,12 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                 " (no crash required)"),
             cl::location(generateReproducerFileFlag), cl::init(""),
             cl::value_desc("filename"));
+
+    static cl::opt<std::string, /*ExternalStorage=*/true> systemDescriptionFile(
+        "mlir-system-description-file",
+        llvm::cl::desc("Name of the system description file"),
+        cl::location(systemDescriptionFileFlag), cl::init(""),
+        cl::value_desc("filename"));
 
     /// Set the callback to load a pass plugin.
     passPlugins.setCallback([&](const std::string &pluginPath) {
@@ -391,6 +398,24 @@ performActions(raw_ostream &os,
     return failure();
 
   context->enableMultithreading(wasThreadingEnabled);
+
+  bool setDefaultSystemDesc = true;
+  if (!config.getSystemDescriptionFileName().empty()) {
+    std::optional<SystemDesc> desc =
+        SystemDescConfigFileParser::buildSystemDescFromConfigFile(
+            context, config.getSystemDescriptionFileName());
+    if (desc) {
+      context->setSystemDesc(*desc);
+      setDefaultSystemDesc = false;
+    }
+  }
+  if (setDefaultSystemDesc) {
+    DefaultCPUDeviceDesc default_cpu_device_desc(context);
+    default_cpu_device_desc.registerDeviceDesc(context);
+
+    DefaultGPUDeviceDesc default_gpu_device_desc(context);
+    default_gpu_device_desc.registerDeviceDesc(context);
+  }
 
   // Prepare the pass manager, applying command-line and reproducer options.
   PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
