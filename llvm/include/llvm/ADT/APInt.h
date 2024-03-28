@@ -17,6 +17,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/float128.h"
 #include <cassert>
 #include <climits>
 #include <cstring>
@@ -1670,6 +1671,13 @@ public:
   /// any bit width. Exactly 64 bits will be translated.
   double bitsToDouble() const { return llvm::bit_cast<double>(getWord(0)); }
 
+#ifdef __FLOAT128__
+  float128 bitsToQuad() const {
+    __uint128_t ul = ((__uint128_t)U.pVal[1] << 64) + U.pVal[0];
+    return llvm::bit_cast<float128>(ul);
+  }
+#endif
+
   /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
@@ -1694,6 +1702,16 @@ public:
   static APInt floatToBits(float V) {
     return APInt(sizeof(float) * CHAR_BIT, llvm::bit_cast<uint32_t>(V));
   }
+
+#ifdef __FLOAT128__
+  static APInt longDoubleToBits(float128 V) {
+    const uint64_t Words[2] = {
+        static_cast<uint64_t>(V),
+        static_cast<uint64_t>(llvm::bit_cast<__uint128_t>(V) >> 64),
+    };
+    return APInt(sizeof(float128) * CHAR_BIT, 2, Words);
+  }
+#endif
 
   /// @}
   /// \name Mathematics Operations

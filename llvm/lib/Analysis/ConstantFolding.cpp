@@ -1673,9 +1673,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" ||
-           Name == "log2" || Name == "log2f" ||
-           Name == "log10" || Name == "log10f";
+    return Name == "log" || Name == "logf" || Name == "log2" ||
+           Name == "log2f" || Name == "log10" || Name == "log10f";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -2088,6 +2087,17 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
+
+#if defined(__FLOAT128__) && defined(HAS_LOGF128)
+    if (Ty->isFP128Ty()) {
+      switch (IntrinsicID) {
+      default:
+        return nullptr;
+      case Intrinsic::log:
+        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
+      }
+    }
+#endif
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
