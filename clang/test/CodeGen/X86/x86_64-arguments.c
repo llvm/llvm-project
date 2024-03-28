@@ -533,6 +533,24 @@ typedef float t66 __attribute__((__vector_size__(128), __aligned__(128)));
 void f66(t66 a0) {
 }
 
+typedef long long t67 __attribute__((aligned (4)));
+struct s67 {
+  int a;
+  t67 b;
+};
+// CHECK-LABEL: define{{.*}} void @f67(ptr noundef byval(%struct.s67) align 8 %x)
+void f67(struct s67 x) {
+}
+
+typedef double t68 __attribute__((aligned (4)));
+struct s68 {
+  int a;
+  t68 b;
+};
+// CHECK-LABEL: define{{.*}} void @f68(ptr noundef byval(%struct.s68) align 8 %x)
+void f68(struct s68 x) {
+}
+
 /// The synthesized __va_list_tag does not have file/line fields.
 // CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
 // CHECK-NOT:  file:
