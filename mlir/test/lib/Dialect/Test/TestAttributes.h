@@ -17,6 +17,7 @@
 #include <tuple>
 
 #include "TestTraits.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpace.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"

@@ -16,6 +16,7 @@
 // To get the test dialect definition.
 include "TestDialect.td"
 include "TestEnumDefs.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -338,6 +339,15 @@ def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
   let assemblyFormat = [{
     `<` custom<ConditionalAlias>($value) `>`
   }];
+}
+
+// Test a ptr constant memory space.
+def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let mnemonic = "const_memory_space";
+  let parameters = (ins DefaultValuedParameter<"unsigned", "0">:$addressSpace);
+  let assemblyFormat = "(`<` $addressSpace^ `>`)?";
 }
 
 #endif // TEST_ATTRDEFS

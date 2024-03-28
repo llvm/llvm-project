@@ -240,6 +240,54 @@ static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestConstMemorySpaceAttr
+//===----------------------------------------------------------------------===//
+
+Attribute TestConstMemorySpaceAttr::getDefaultMemorySpace() const {
+  return TestConstMemorySpaceAttr::get(getContext(), 0);
+}
+
+LogicalResult TestConstMemorySpaceAttr::isValidLoad(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Operation *diagnosticOp) const {
+  return success();
+}
+
+LogicalResult TestConstMemorySpaceAttr::isValidStore(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Operation *diagnosticOp) const {
+  return diagnosticOp ? diagnosticOp->emitError("memory space is read-only")
+                      : failure();
+}
+
+LogicalResult TestConstMemorySpaceAttr::isValidAtomicOp(
+    mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
+    IntegerAttr alignment, Operation *diagnosticOp) const {
+  return diagnosticOp ? diagnosticOp->emitError("memory space is read-only")
+                      : failure();
+}
+
+LogicalResult TestConstMemorySpaceAttr::isValidAtomicXchg(
+    Type type, mlir::ptr::AtomicOrdering successOrdering,
+    mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    Operation *diagnosticOp) const {
+  return diagnosticOp ? diagnosticOp->emitError("memory space is read-only")
+                      : failure();
+}
+
+LogicalResult
+TestConstMemorySpaceAttr::isValidAddrSpaceCast(Type tgt, Type src,
+                                               Operation *diagnosticOp) const {
+  return ptr::isValidAddrSpaceCastImpl(tgt, src, diagnosticOp);
+}
+
+LogicalResult
+TestConstMemorySpaceAttr::isValidPtrIntCast(Type intLikeTy, Type ptrLikeTy,
+                                            Operation *diagnosticOp) const {
+  return ptr::isValidPtrIntCastImpl(intLikeTy, ptrLikeTy, diagnosticOp);
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
