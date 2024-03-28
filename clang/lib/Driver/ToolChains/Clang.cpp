@@ -5585,6 +5585,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fcomplex_ppc_gnu_abi)) {
+    if (!TC.getTriple().isPPC32() || !TC.getTriple().isOSBinFormatELF()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << RawTriple.str();
+    } else {
+      CmdArgs.push_back("-fcomplex-ppc-gnu-abi");
+    }
+  }
+
   if (Args.hasFlag(options::OPT_mrtd, options::OPT_mno_rtd, false)) {
     if (Triple.getArch() == llvm::Triple::m68k)
       CmdArgs.push_back("-fdefault-calling-conv=rtdcall");

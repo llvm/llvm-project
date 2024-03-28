@@ -78,6 +78,12 @@ public:
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
+  enum ComplexArgumentConventionKind {
+    CMPLX_OnStack,
+    CMPLX_InGPR, // If -fcomplex-ppc-gnu-abi is specified on ppc32
+    CMPLX_InFPR
+  };
+
   enum ProfileInstrKind {
     ProfileNone,       // Profile instrumentation is turned off.
     ProfileClangInstr, // Clang instrumentation to generate execution counts
