@@ -1077,6 +1077,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::LIS8:
   case PPC::ADDIStocHA:
   case PPC::ADDIStocHA8:
+  case PPC::ADDItocL:
   case PPC::ADDItocL8:
   case PPC::LOAD_STACK_GUARD:
   case PPC::PPCLdFixedAddr:
