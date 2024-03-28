@@ -182,7 +182,7 @@ CodeGenFunction::EmitPointerAuthInfo(PointerAuthQualifier qualifier,
   if (qualifier.isAddressDiscriminated()) {
     assert(storageAddress.isValid() &&
            "address discrimination without address");
-    auto storagePtr = storageAddress.getPointer();
+    auto storagePtr = storageAddress.emitRawPointer(*this);
     if (discriminator) {
       discriminator =
         EmitPointerAuthBlendDiscriminator(storagePtr, discriminator);
