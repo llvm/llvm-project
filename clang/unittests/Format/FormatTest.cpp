@@ -12075,6 +12075,7 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   verifyFormat("SomeType s [[gnu::unused]] (InitValue);");
   verifyFormat("SomeType s [[using gnu: unused]] (InitValue);");
   verifyFormat("[[gsl::suppress(\"clang-tidy-check-name\")]] void f() {}");
+  verifyFormat("[[suppress(type.5)]] int uninitialized_on_purpose;");
   verifyFormat("void f() [[deprecated(\"so sorry\")]];");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    [[unused]] aaaaaaaaaaaaaaaaaaaaaaa(int i);");
