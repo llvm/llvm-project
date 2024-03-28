@@ -1,0 +1,53 @@
+# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            g_splat_vector_parts
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(<2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+
+    ; CHECK: Destination type must be a scalable vector
+    %3:_(s32) = G_SPLAT_VECTOR_PARTS %0, %0
+
+    ; CHECK: Destination type must be a scalable vector
+    %4:_(<2 x s32>) = G_SPLAT_VECTOR_PARTS %0, %0
+
+    ; CHECK: Source types must be scalar
+    %5:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %1, %0
+
+    ; CHECK: Source types must be scalar
+    %6:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %0, %1
+
+    ; CHECK: Source types must be scalar
+    %7:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %1, %1
+
+    ; CHECK: Source types must be scalar
+    %8:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %0, %2
+
+    ; CHECK: Source types must be scalar
+    %9:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %2, %0
+
+    ; CHECK: Source types must be scalar
+    %10:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR_PARTS %2, %2
+
+    %11:_(s16) = G_CONSTANT i16 0
+
+    ; CHECK: Source types must cover the element type
+    %12:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_PARTS %11, %11
+
+    ; CHECK: Source types must cover the element type
+    %13:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_PARTS %11, %0
+
+    %14:_(s64) = G_CONSTANT i64 0
+
+    ; CHECK: Source types must cover the element type
+    %15:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_PARTS %14, %14
+
+    ; CHECK: Source types must cover the element type
+    %16:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_PARTS %14, %0
+
+...

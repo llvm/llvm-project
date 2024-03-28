@@ -1781,6 +1781,28 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_SPLAT_VECTOR_PARTS: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT LoTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT HiTy = MRI->getType(MI->getOperand(2).getReg());
+
+    if (!DstTy.isScalableVector()) {
+      report("Destination type must be a scalable vector", MI);
+      break;
+    }
+
+    if (!LoTy.isScalar() || !HiTy.isScalar()) {
+      report("Source types must be scalar", MI);
+      break;
+    }
+
+    if (LoTy.getSizeInBits() + HiTy.getSizeInBits() != DstTy.getSizeInBits()) {
+      report("Source types must cover the element type", MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_DYN_STACKALLOC: {
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &AllocOp = MI->getOperand(1);

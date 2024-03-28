@@ -690,6 +690,15 @@ G_SPLAT_VECTOR
 
 Create a vector where all elements are the scalar from the source operand.
 
+G_SPLAT_VECTOR_PARTS
+^^^^^^^^^^^^^^^^^^^^
+
+Create a vector where all elements are the scalar created by joining the
+operands together. This allows representing 64-bit splat on a target with 32-bit
+integers. The total width of the scalars must cover the element width exactly.
+The lo operand contains the least significant bits and the hi operand contains
+the most significant bits.
+
 Vector Reduction Operations
 ---------------------------
 
