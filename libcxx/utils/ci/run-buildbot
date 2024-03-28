@@ -44,9 +44,6 @@ CMAKE               The CMake binary to use. This variable is optional.
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
-ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
-                    is optional.
-
 EOF
 }
 
@@ -111,10 +108,6 @@ function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
-if [ -z "${ENABLE_CLANG_TIDY}" ]; then
-    ENABLE_CLANG_TIDY=Off
-fi
-
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -126,7 +119,6 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
-          -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }

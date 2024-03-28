@@ -9,22 +9,14 @@ set(Clang_DIR_SAVE ${Clang_DIR})
 # versions must match. Otherwise there likely will be ODR-violations. This had
 # led to crashes and incorrect output of the clang-tidy based checks.
 find_package(Clang ${CMAKE_CXX_COMPILER_VERSION})
-
-set(SOURCES
-    abi_tag_on_virtual.cpp
-    header_exportable_declarations.cpp
-    hide_from_abi.cpp
-    proper_version_checks.cpp
-    qualify_declval.cpp
-    robust_against_adl.cpp
-    uglify_attributes.cpp
-
-    libcpp_module.cpp
-   )
-
 if(NOT Clang_FOUND)
-  message(STATUS "Could not find a suitable version of the Clang development package;
-                  custom libc++ clang-tidy checks will not be available.")
+  message(STATUS "Clang-tidy tests are disabled since the "
+                 "Clang development package is unavailable.")
+  return()
+endif()
+if(NOT TARGET clangTidy)
+  message(STATUS "Clang-tidy tests are disabled since the "
+                 "Clang development package has no clangTidy target.")
   return()
 endif()
 
@@ -54,6 +46,38 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
                         )
 endif()
 
+# In some cases even with the clangTidy target present the headers appear not to
+# be on the system. Run a short test to see whether the header is present.
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/test.cpp" "
+#if !__has_include(\"clang-tidy/ClangTidyCheck.h\")
+	# error No clang-tidy headers
+#endif
+int main(){}
+")
+try_compile(HAS_CLANG_TIDY_HEADERS
+  "${CMAKE_CURRENT_BINARY_DIR}"
+  "${CMAKE_CURRENT_BINARY_DIR}/test.cpp"
+   LINK_LIBRARIES clangTidy)
+
+if(NOT HAS_CLANG_TIDY_HEADERS)
+  message(STATUS "Clang-tidy tests are disabled since the "
+                 "clang-tidy headers are not present.")
+  return()
+endif()
+message(STATUS "Clang-tidy tests are enabled.")
+
+set(SOURCES
+    abi_tag_on_virtual.cpp
+    header_exportable_declarations.cpp
+    hide_from_abi.cpp
+    proper_version_checks.cpp
+    qualify_declval.cpp
+    robust_against_adl.cpp
+    uglify_attributes.cpp
+
+    libcpp_module.cpp
+   )
+
 add_library(cxx-tidy MODULE ${SOURCES})
 target_link_libraries(cxx-tidy clangTidy)
 
@@ -64,3 +88,5 @@ set_target_properties(cxx-tidy PROPERTIES
 
 set_target_properties(cxx-tidy PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_SHARED_MODULE_SUFFIX_CXX .plugin) # Use a portable suffix to simplify how we can find it from Lit
+
+list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
