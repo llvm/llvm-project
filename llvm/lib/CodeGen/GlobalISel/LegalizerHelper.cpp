@@ -3768,9 +3768,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     auto [OldValRes, SuccessRes, Addr, CmpVal, NewVal] = MI.getFirst5Regs();
-    MIRBuilder.buildAtomicCmpXchg(OldValRes, Addr, CmpVal, NewVal,
+    Register NewOldValRes = MRI.cloneVirtualRegister(OldValRes);
+    Register NewSuccessRes = MRI.cloneVirtualRegister(SuccessRes);
+    MIRBuilder.buildAtomicCmpXchg(NewOldValRes, Addr, CmpVal, NewVal,
                                   **MI.memoperands_begin());
-    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, SuccessRes, OldValRes, CmpVal);
+    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, NewSuccessRes, NewOldValRes, CmpVal);
+    MIRBuilder.buildCopy(OldValRes, NewOldValRes);
+    MIRBuilder.buildCopy(SuccessRes, NewSuccessRes);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -7657,10 +7661,13 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   LLT Ty = Dst0Ty;
   LLT BoolTy = Dst1Ty;
 
+  Register NewDst0 = MRI.cloneVirtualRegister(Dst0);
+  Register NewDst1 = MRI.cloneVirtualRegister(Dst1);
+
   if (IsAdd)
-    MIRBuilder.buildAdd(Dst0, LHS, RHS);
+    MIRBuilder.buildAdd(NewDst0, LHS, RHS);
   else
-    MIRBuilder.buildSub(Dst0, LHS, RHS);
+    MIRBuilder.buildSub(NewDst0, LHS, RHS);
 
   // TODO: If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
 
@@ -7673,12 +7680,16 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
   // otherwise there will be overflow.
   auto ResultLowerThanLHS =
-      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Dst0, LHS);
+      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
   auto ConditionRHS = MIRBuilder.buildICmp(
       IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
 
-  MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+  MIRBuilder.buildXor(NewDst1, ConditionRHS, ResultLowerThanLHS);
+
+  MIRBuilder.buildCopy(Dst0, NewDst0);
+  MIRBuilder.buildCopy(Dst1, NewDst1);
   MI.eraseFromParent();
+
   return Legalized;
 }
 
