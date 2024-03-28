@@ -1990,7 +1990,8 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   }
 }
 
-void TextNodeDumper::VisitCXXDeductionGuideDecl(const CXXDeductionGuideDecl *D) {
+void TextNodeDumper::VisitCXXDeductionGuideDecl(
+    const CXXDeductionGuideDecl *D) {
   VisitFunctionDecl(D);
   switch (D->getDeductionCandidateKind()) {
   case DeductionCandidate::Normal:
