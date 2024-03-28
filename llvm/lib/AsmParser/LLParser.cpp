@@ -63,6 +63,9 @@ static cl::opt<bool> AllowIncompleteIR(
         "metadata will be dropped)"));
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -71,12 +74,20 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
-// Currently, we should always process modules in the old debug info format by
-// default regardless of the module's format in IR; convert it to the old format
-// here.
-bool finalizeDebugInfoFormat(Module *M) {
-  if (M)
+// Whatever debug info format we parsed, we should convert to the expected debug
+// info format immediately afterwards.
+bool LLParser::finalizeDebugInfoFormat(Module *M) {
+  // We should have already returned an error if we observed both intrinsics and
+  // records in this IR.
+  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
+         "Mixed debug intrinsics/records seen without a parsing error?");
+  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
+    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
+  } else if (M) {
     M->setIsNewDbgInfoFormat(false);
+  }
   return false;
 }
 
@@ -6507,10 +6518,10 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       if (SeenOldDbgInfoFormat)
         return error(Lex.getLoc(), "debug record should not appear in a module "
                                    "containing debug info intrinsics");
+      if (!SeenNewDbgInfoFormat)
+        M->setIsNewDbgInfoFormat(true, true);
       SeenNewDbgInfoFormat = true;
       Lex.Lex();
-      if (!M->IsNewDbgInfoFormat)
-        M->convertToNewDbgValues();
 
       DbgRecord *DR;
       if (parseDebugRecord(DR, PFS))
@@ -7912,6 +7923,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
       return error(CallLoc, "llvm.dbg intrinsic should not appear in a module "
                             "using non-intrinsic debug info");
     }
+    if (!SeenOldDbgInfoFormat)
+      M->setIsNewDbgInfoFormat(false, true);
     SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);

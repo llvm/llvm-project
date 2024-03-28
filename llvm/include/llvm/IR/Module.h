@@ -224,26 +224,26 @@ public:
   void removeDebugIntrinsicDeclarations();
 
   /// \see BasicBlock::convertToNewDbgValues.
-  void convertToNewDbgValues() {
+  void convertToNewDbgValues(bool UpdateFlagOnly = false) {
     for (auto &F : *this) {
-      F.convertToNewDbgValues();
+      F.convertToNewDbgValues(UpdateFlagOnly);
     }
     IsNewDbgInfoFormat = true;
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  void convertFromNewDbgValues(bool UpdateFlagOnly = false) {
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      F.convertFromNewDbgValues(UpdateFlagOnly);
     }
     IsNewDbgInfoFormat = false;
   }
 
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
+  void setIsNewDbgInfoFormat(bool UseNewFormat, bool UpdateFlagOnly = false) {
     if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
+      convertToNewDbgValues(UpdateFlagOnly);
     else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
+      convertFromNewDbgValues(UpdateFlagOnly);
   }
 
   /// The Module constructor. Note that there is no default constructor. You

@@ -83,25 +83,25 @@ static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
-void Function::convertToNewDbgValues() {
+void Function::convertToNewDbgValues(bool UpdateFlagOnly) {
   IsNewDbgInfoFormat = true;
   for (auto &BB : *this) {
-    BB.convertToNewDbgValues();
+    BB.convertToNewDbgValues(UpdateFlagOnly);
   }
 }
 
-void Function::convertFromNewDbgValues() {
+void Function::convertFromNewDbgValues(bool UpdateFlagOnly) {
   IsNewDbgInfoFormat = false;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues();
+    BB.convertFromNewDbgValues(UpdateFlagOnly);
   }
 }
 
-void Function::setIsNewDbgInfoFormat(bool NewFlag) {
+void Function::setIsNewDbgInfoFormat(bool NewFlag, bool UpdateFlagOnly) {
   if (NewFlag && !IsNewDbgInfoFormat)
-    convertToNewDbgValues();
+    convertToNewDbgValues(UpdateFlagOnly);
   else if (!NewFlag && IsNewDbgInfoFormat)
-    convertFromNewDbgValues();
+    convertFromNewDbgValues(UpdateFlagOnly);
 }
 
 //===----------------------------------------------------------------------===//

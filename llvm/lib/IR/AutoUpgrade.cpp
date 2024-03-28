@@ -983,7 +983,8 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
+static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
+                                      bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
   StringRef Name = F->getName();
@@ -1057,7 +1058,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'd':
     if (Name.consume_front("dbg.")) {
       // Mark debug intrinsics for upgrade to new debug format.
-      if (F->getParent()->IsNewDbgInfoFormat) {
+      if (CanUpgradeDebugIntrinsicsToRecords &&
+          F->getParent()->IsNewDbgInfoFormat) {
         if (Name == "addr" || Name == "value" || Name == "assign" ||
             Name == "declare" || Name == "label") {
           // There's no function to replace these with.
@@ -1413,9 +1415,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   return false;
 }
 
-bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
+bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                    bool CanUpgradeDebugIntrinsicsToRecords) {
   NewFn = nullptr;
-  bool Upgraded = upgradeIntrinsicFunction1(F, NewFn);
+  bool Upgraded =
+      upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
   assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.

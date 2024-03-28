@@ -114,12 +114,12 @@ public:
   }
 
   /// \see BasicBlock::convertToNewDbgValues.
-  void convertToNewDbgValues();
+  void convertToNewDbgValues(bool UpdateFlagOnly = false);
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues();
+  void convertFromNewDbgValues(bool UpdateFlagOnly = false);
 
-  void setIsNewDbgInfoFormat(bool NewVal);
+  void setIsNewDbgInfoFormat(bool NewVal, bool UpdateFlagOnly = false);
 
 private:
   friend class TargetLibraryInfoImpl;
