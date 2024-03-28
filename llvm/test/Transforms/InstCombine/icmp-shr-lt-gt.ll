@@ -3379,7 +3379,7 @@ define i1 @ashrslt_01_01_exact(i4 %x) {
 
 define i1 @ashrslt_01_02_exact(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_02_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i4 %x, 1
@@ -3389,7 +3389,7 @@ define i1 @ashrslt_01_02_exact(i4 %x) {
 
 define i1 @ashrslt_01_03_exact(i4 %x) {
 ; CHECK-LABEL: @ashrslt_01_03_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i4 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i4 %x, 1
