@@ -3022,9 +3022,9 @@ public:
     return Value2VPValue[V];
   }
 
-  /// Gets the VPValue for \p V or adds a new live-in (if none exists yet) for
-  /// \p V.
-  VPValue *getVPValueOrAddLiveIn(Value *V) {
+  /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
+  ///  yet) for \p V.
+  VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
     if (!Value2VPValue.count(V)) {
       VPValue *VPV = new VPValue(V);

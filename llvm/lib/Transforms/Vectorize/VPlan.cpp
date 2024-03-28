@@ -812,7 +812,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   if (CanonicalIVStartValue) {
-    VPValue *VPV = getVPValueOrAddLiveIn(CanonicalIVStartValue);
+    VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
@@ -1088,7 +1088,7 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     Old2NewVPValues[OldLiveIn] =
-        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1099,7 +1099,7 @@ VPlan *VPlan::duplicate() {
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
     Old2NewVPValues[TripCount] =
-        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1422,9 +1422,9 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     return Expanded;
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
     Expanded = new VPExpandSCEVRecipe(Expr, SE);
     Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());
