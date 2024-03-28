@@ -339,6 +339,72 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
   return capitalize(std::move(Result));
 }
 
+std::optional<Fix>
+generateApplyAllFromOption(const llvm::StringRef Name,
+                           llvm::ArrayRef<Diag *> AllDiagnostics) {
+  Fix ApplyAll;
+  for (auto *const Diag : AllDiagnostics) {
+    for (const auto &Fix : Diag->Fixes)
+      ApplyAll.Edits.insert(ApplyAll.Edits.end(), Fix.Edits.begin(),
+                            Fix.Edits.end());
+  }
+  llvm::sort(ApplyAll.Edits);
+  ApplyAll.Edits.erase(
+      std::unique(ApplyAll.Edits.begin(), ApplyAll.Edits.end()),
+      ApplyAll.Edits.end());
+  // Skip diagnostic categories that don't have multiple fixes to apply
+  if (ApplyAll.Edits.size() < 2U) {
+    return std::nullopt;
+  }
+  ApplyAll.Message = llvm::formatv("apply all '{0}' fixes", Name);
+  return ApplyAll;
+}
+
+std::optional<Fix>
+generateApplyAllFixesOption(llvm::ArrayRef<Diag> AllDiagnostics) {
+  Fix ApplyAll;
+  for (auto const &Diag : AllDiagnostics) {
+    for (const auto &Fix : Diag.Fixes)
+      ApplyAll.Edits.insert(ApplyAll.Edits.end(), Fix.Edits.begin(),
+                            Fix.Edits.end());
+  }
+  llvm::sort(ApplyAll.Edits);
+  ApplyAll.Edits.erase(
+      std::unique(ApplyAll.Edits.begin(), ApplyAll.Edits.end()),
+      ApplyAll.Edits.end());
+  if (ApplyAll.Edits.size() < 2U) {
+    return std::nullopt;
+  }
+  ApplyAll.Message = "apply all clangd fixes";
+  return ApplyAll;
+}
+
+void appendApplyAlls(std::vector<Diag> &AllDiagnostics) {
+  llvm::DenseMap<llvm::StringRef, std::vector<Diag *>> CategorizedFixes;
+
+  for (auto &Diag : AllDiagnostics) {
+    // Keep track of fixable diagnostics for generating "apply all fixes"
+    if (!Diag.Fixes.empty()) {
+      if (auto [It, DidEmplace] = CategorizedFixes.try_emplace(
+              Diag.Name, std::vector<struct Diag *>{&Diag});
+          !DidEmplace)
+        It->second.emplace_back(&Diag);
+    }
+  }
+
+  auto FixAllClangd = generateApplyAllFixesOption(AllDiagnostics);
+  for (const auto &[Name, DiagsForThisCategory] : CategorizedFixes) {
+    auto FixAllForCategory =
+        generateApplyAllFromOption(Name, DiagsForThisCategory);
+    for (auto *Diag : DiagsForThisCategory) {
+      if (DiagsForThisCategory.size() >= 2U && FixAllForCategory.has_value())
+        Diag->Fixes.emplace_back(*FixAllForCategory);
+      if (CategorizedFixes.size() >= 2U && FixAllClangd.has_value())
+        Diag->Fixes.emplace_back(*FixAllClangd);
+    }
+  }
+}
+
 void setTags(clangd::Diag &D) {
   static const auto *DeprecatedDiags = new llvm::DenseSet<unsigned>{
       diag::warn_access_decl_deprecated,
@@ -575,7 +641,8 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   // Do not forget to emit a pending diagnostic if there is one.
   flushLastDiag();
 
-  // Fill in name/source now that we have all the context needed to map them.
+  // Fill in name/source now that we have all the context needed to map
+  // them.
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
@@ -619,6 +686,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   llvm::erase_if(Output, [&](const Diag &D) {
     return !SeenDiags.emplace(D.Range, D.Message).second;
   });
+
+  appendApplyAlls(Output);
+
   return std::move(Output);
 }
 
