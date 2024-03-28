@@ -2724,14 +2724,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   parseFiles(files, armCmseImpLib);
 
-  // Now that we have every file, we can decide if we will need a
-  // dynamic symbol table.
-  // We need one if we were asked to export dynamic symbols or if we are
-  // producing a shared library.
-  // We also need one if any shared libraries are used and for pie executables
-  // (probably because the dynamic linker needs it).
-  config->hasDynSymTab =
-      !ctx.sharedFiles.empty() || config->isPic || config->exportDynamic;
+  // Create dynamic sections for dynamic linking and static PIE.
+  config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
   script->addScriptReferencedSymbolsToSymTable();
 
