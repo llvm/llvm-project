@@ -12,6 +12,8 @@
 
 #include "Thumb1InstrInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -47,22 +49,61 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   assert(ARM::GPRRegClass.contains(DestReg, SrcReg) &&
          "Thumb1 can only copy GPR registers");
 
-  if (st.hasV6Ops() || ARM::hGPRRegClass.contains(SrcReg)
-      || !ARM::tGPRRegClass.contains(DestReg))
+  if (st.hasV6Ops() || ARM::hGPRRegClass.contains(SrcReg) ||
+      !ARM::tGPRRegClass.contains(DestReg))
     BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
   else {
-    // FIXME: Can also use 'mov hi, $src; mov $dst, hi',
-    // with hi as either r10 or r11.
-
     const TargetRegisterInfo *RegInfo = st.getRegisterInfo();
-    if (MBB.computeRegisterLiveness(RegInfo, ARM::CPSR, I)
-        == MachineBasicBlock::LQR_Dead) {
+    LiveRegUnits UsedRegs(*RegInfo);
+    UsedRegs.addLiveOuts(MBB);
+
+    auto InstUpToI = MBB.end();
+    while (InstUpToI != I)
+      // The pre-decrement is on purpose here.
+      // We want to have the liveness right before I.
+      UsedRegs.stepBackward(*--InstUpToI);
+
+    if (UsedRegs.available(ARM::CPSR)) {
       BuildMI(MBB, I, DL, get(ARM::tMOVSr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc))
           ->addRegisterDead(ARM::CPSR, RegInfo);
       return;
+    }
+
+    BitVector Allocatable = RegInfo->getAllocatableSet(
+        MF, RegInfo->getRegClass(ARM::hGPRRegClassID));
+
+    // LR is techically caller-save, not callee-save. This means that as long as
+    // it is saved on stack and killed, it is safe to use as a temporary high
+    // register, as it will be restored anyway.
+    Allocatable.reset(ARM::SP);
+    Allocatable.reset(ARM::PC);
+
+    // Prefer R12 as it is known to not be preserved anyway
+    if (UsedRegs.available(ARM::R12) && Allocatable.test(ARM::R12)) {
+      BuildMI(MBB, I, DL, get(ARM::tMOVr), ARM::R12)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
+          .addReg(ARM::R12, RegState::Kill)
+          .add(predOps(ARMCC::AL));
+      return;
+    }
+
+    // Find the first high-register that is available
+    for (Register Reg : Allocatable.set_bits()) {
+      if (UsedRegs.available(Reg)) {
+        // Use high register to move source to destination
+        BuildMI(MBB, I, DL, get(ARM::tMOVr), Reg)
+            .addReg(SrcReg, getKillRegState(KillSrc))
+            .add(predOps(ARMCC::AL));
+        BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
+            .addReg(Reg, RegState::Kill)
+            .add(predOps(ARMCC::AL));
+        return;
+      }
     }
 
     // 'MOV lo, lo' is unpredictable on < v6, so use the stack to do it
