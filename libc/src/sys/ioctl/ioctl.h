@@ -8,8 +8,6 @@
 
 #ifndef LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H
 #define LLVM_LIBC_SRC_SYS_IOCTL_IOCTL_H
-
-
 namespace LIBC_NAMESPACE {
 
 int ioctl(int fd, unsigned long request, ...);
