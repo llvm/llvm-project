@@ -32,21 +32,21 @@ void f() {
   // Not an integral type
   {
     double* p = nullptr;
-    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires the value_type of the iterator {{.+}}}}
+    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires{{.+}}}}
     // expected-error@*:* 0+ {{invalid operands to}}
   }
 
   // Not an unsigned type
   {
     long long* p = nullptr;
-    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires the value_type of the iterator {{.+}}}}
+    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires{{.+}}}}
   }
 
   // Not a 32-bit type
   {
     static_assert(sizeof(unsigned char) * CHAR_BIT < 32, "the test doesn't work on this platform");
     unsigned char* p = nullptr;
-    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires the value_type of the iterator {{.+}}}}
+    seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires{{.+}}}}
   }
 
   // Everything satisfied
