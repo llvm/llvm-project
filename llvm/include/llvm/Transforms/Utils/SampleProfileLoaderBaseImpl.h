@@ -86,9 +86,12 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+  const ThinOrFullLTOPhase LTOPhase;
 
 public:
-  PseudoProbeManager(const Module &M) {
+  PseudoProbeManager(const Module &M,
+                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
+      : LTOPhase(LTOPhase) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
@@ -126,17 +129,15 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    if (!Desc) {
-      LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function "
-                        << F.getName() << "\n");
-      return false;
-    }
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-    return true;
+    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !Desc ||
+            profileIsHashMismatched(*Desc, Samples) ==
+                F.hasFnAttribute("profile-checksum-mismatch")) &&
+           "In post-link, profile checksum matching state doesn't match "
+           "function 'profile-checksum-mismatch' attribute.");
+    // The desc for import function is unavailable. Check the function attribute
+    // for mismatch.
+    return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
+           (Desc && !profileIsHashMismatched(*Desc, Samples));
   }
 };
 
