@@ -627,6 +627,12 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
             encoding_type->GetForwardCompilerType().GetRValueReferenceType();
         break;
 
+      case eEncodingIsLLVMPtrAuthUID:
+        m_compiler_type =
+            encoding_type->GetForwardCompilerType().AddPtrAuthModifier(
+                m_payload);
+        break;
+
       default:
         llvm_unreachable("Unhandled encoding_data_type.");
       }
@@ -681,6 +687,10 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsRValueReferenceUID:
           m_compiler_type = void_compiler_type.GetRValueReferenceType();
           break;
+
+        case eEncodingIsLLVMPtrAuthUID:
+          llvm_unreachable("Cannot handle eEncodingIsLLVMPtrAuthUID without "
+                           "valid encoding_type");
 
         default:
           llvm_unreachable("Unhandled encoding_data_type.");

@@ -66,11 +66,13 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The Layout is as follows:
+  /// The payload is used for typedefs and ptrauth types.
+  /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
+  /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
   Type::Payload m_payload = 0;
 
 public:
@@ -793,8 +795,7 @@ public:
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
-                                  unsigned key, bool isAddressDiscriminated,
-                                  unsigned extraDiscriminator) override;
+                                  uint32_t payload) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 

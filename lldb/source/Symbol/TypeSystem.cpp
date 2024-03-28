@@ -94,9 +94,7 @@ CompilerType TypeSystem::AddConstModifier(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType TypeSystem::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
-                                            unsigned key,
-                                            bool isAddressDiscriminated,
-                                            unsigned extraDiscriminator) {
+                                            uint32_t payload) {
   return CompilerType();
 }
 

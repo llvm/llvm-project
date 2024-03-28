@@ -289,9 +289,7 @@ public:
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
-                                          unsigned key,
-                                          bool isAddressDiscriminated,
-                                          unsigned extraDiscriminator);
+                                          uint32_t payload);
 
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.

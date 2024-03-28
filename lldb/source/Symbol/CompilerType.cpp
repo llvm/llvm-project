@@ -685,14 +685,10 @@ CompilerType CompilerType::GetPointerType() const {
   return CompilerType();
 }
 
-CompilerType
-CompilerType::AddPtrAuthModifier(unsigned key, bool isAddressDiscriminated,
-                                 unsigned extraDiscriminator) const {
-  if (IsValid()) {
+CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->AddPtrAuthModifier(
-          m_type, key, isAddressDiscriminated, extraDiscriminator);
-  }
+      return type_system_sp->AddPtrAuthModifier(m_type, payload);
   return CompilerType();
 }
 
