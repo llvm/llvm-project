@@ -585,6 +585,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   // debug-info, convert to dbg.values before writing out.
   ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
                                                 WriteNewDbgInfoFormatToBitcode);
+  if (M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode)
+    M.removeDebugIntrinsicDeclarations();
 
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
