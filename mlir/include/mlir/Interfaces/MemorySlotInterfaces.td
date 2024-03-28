@@ -229,6 +229,36 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
       (ins "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
            "::mlir::RewriterBase &":$rewriter)
     >,
+    InterfaceMethod<[{
+        This method returns whether the promoted operation requires amending the
+        mutated definitions by a store operation.
+
+        If this method returns true, the operation will be visited using the
+        `amendMutatedDefs` method after the main mutation stage finishes
+        (i.e., after all ops have been processed with `removeBlockingUses`).
+
+        Operations should only request amending the mutated definitions if the
+        intended transformation applies to all mutated values. Furthermore,
+        mutated values must not be deleted.
+      }], "bool", "requiresAmendingMutatedDefs", (ins), [{}],
+      [{ return false; }]
+    >,
+    InterfaceMethod<[{
+        Transforms the IR to amend all the mutated definitions to the slot by a
+        store operation.
+
+        This method will only be called after all blocking uses have been
+        scheduled for removal and if `requiresAmendingMutatedDefs` returned
+        true.
+
+        The rewriter is located after the promotable operation on call. All IR
+        mutations must happen through the rewriter. During the transformation,
+        *no operation should be deleted*.
+      }],
+      "void", "amendMutatedDefs",
+      (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
+           "::mlir::RewriterBase &":$rewriter), [{}], [{ return; }]
+    >,
   ];
 }
 
