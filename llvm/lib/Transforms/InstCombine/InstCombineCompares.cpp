@@ -8101,22 +8101,22 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   // Convert a sign-bit test of an FP value into a cast and integer compare.
-  // TODO: Simplify if the copysign constant is 0.0 or NaN.
-  // TODO: Handle non-zero compare constants.
-  // TODO: Handle other predicates.
   if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::copysign>(m_APFloat(C),
                                                            m_Value(X)))) &&
-      match(Op1, m_AnyZeroFP()) && !C->isZero() && !C->isNaN()) {
+      match(Op1, m_ImmConstant(RHSC))) {
     Type *IntType = Builder.getIntNTy(X->getType()->getScalarSizeInBits());
     if (auto *VecTy = dyn_cast<VectorType>(OpType))
       IntType = VectorType::get(IntType, VecTy->getElementCount());
 
-    // copysign(non-zero constant, X) < 0.0 --> (bitcast X) < 0
-    if (Pred == FCmpInst::FCMP_OLT) {
-      Value *IntX = Builder.CreateBitCast(X, IntType);
-      return new ICmpInst(ICmpInst::ICMP_SLT, IntX,
-                          ConstantInt::getNullValue(IntType));
-    }
+    APFloat PosC = abs(*C);
+    if (Value *CmpPos = ConstantFoldCompareInstOperands(
+            Pred, ConstantFP::get(X->getType(), PosC), RHSC, DL, &TLI, &I))
+      if (Value *CmpNeg = ConstantFoldCompareInstOperands(
+              Pred, ConstantFP::get(X->getType(), -PosC), RHSC, DL, &TLI, &I)) {
+        Value *IntX = Builder.CreateBitCast(X, IntType);
+        Value *NotNeg = Builder.CreateIsNotNeg(IntX);
+        return SelectInst::Create(NotNeg, CmpPos, CmpNeg);
+      }
   }
 
   {
