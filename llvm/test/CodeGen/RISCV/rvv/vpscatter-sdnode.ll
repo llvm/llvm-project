@@ -2182,6 +2182,7 @@ define void @vpscatter_nxv16f64(<vscale x 16 x double> %val, <vscale x 16 x ptr>
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.nxv16f64.nxv16p0(<vscale x 16 x double> %val, <vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> %m, i32 %evl)
@@ -2262,6 +2263,7 @@ define void @vpscatter_baseidx_nxv16i16_nxv16f64(<vscale x 16 x double> %val, pt
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, ptr %base, <vscale x 16 x i16> %idxs
@@ -2343,6 +2345,7 @@ define void @vpscatter_baseidx_sext_nxv16i16_nxv16f64(<vscale x 16 x double> %va
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %eidxs = sext <vscale x 16 x i16> %idxs to <vscale x 16 x i64>

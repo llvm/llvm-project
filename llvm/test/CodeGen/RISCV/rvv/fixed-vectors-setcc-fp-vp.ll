@@ -1191,6 +1191,7 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
 ; ZVFH32-NEXT:    csrr a0, vlenb
 ; ZVFH32-NEXT:    slli a0, a0, 4
 ; ZVFH32-NEXT:    add sp, sp, a0
+; ZVFH32-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFH32-NEXT:    addi sp, sp, 16
 ; ZVFH32-NEXT:    ret
 ;
@@ -1243,6 +1244,7 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
 ; ZVFH64-NEXT:    csrr a0, vlenb
 ; ZVFH64-NEXT:    slli a0, a0, 4
 ; ZVFH64-NEXT:    add sp, sp, a0
+; ZVFH64-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFH64-NEXT:    addi sp, sp, 16
 ; ZVFH64-NEXT:    ret
 ;
@@ -2951,6 +2953,7 @@ define <32 x i1> @fcmp_oeq_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x i1> @llvm.vp.fcmp.v32f64(<32 x double> %va, <32 x double> %vb, metadata !"oeq", <32 x i1> %m, i32 %evl)

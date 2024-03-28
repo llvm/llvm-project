@@ -524,6 +524,7 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16(<vscale x 32 x half> %va, <vs
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.nearbyint.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -607,6 +608,7 @@ define <vscale x 32 x half> @vp_nearbyint_nxv32f16_unmasked(<vscale x 32 x half>
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
@@ -1150,6 +1152,7 @@ define <vscale x 16 x double> @vp_nearbyint_nxv16f64(<vscale x 16 x double> %va,
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x double> @llvm.vp.nearbyint.nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 %evl)

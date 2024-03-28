@@ -275,6 +275,7 @@ define <64 x float> @interleave_v32f32(<32 x float> %x, <32 x float> %y) {
 ; V128-NEXT:    csrr a0, vlenb
 ; V128-NEXT:    slli a0, a0, 3
 ; V128-NEXT:    add sp, sp, a0
+; V128-NEXT:    .cfi_def_cfa sp, 16
 ; V128-NEXT:    addi sp, sp, 16
 ; V128-NEXT:    ret
 ;

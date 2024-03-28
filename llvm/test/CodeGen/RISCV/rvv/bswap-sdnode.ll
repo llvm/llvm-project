@@ -553,6 +553,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;

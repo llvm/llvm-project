@@ -356,6 +356,7 @@ define <32 x double> @vfsgnj_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.copysign.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 %evl)

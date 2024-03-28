@@ -1684,6 +1684,7 @@ define <32 x i64> @vp_ctpop_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV32-NEXT:    li a1, 48
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -1768,6 +1769,7 @@ define <32 x i64> @vp_ctpop_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.ctpop.v32i64(<32 x i64> %va, <32 x i1> %m, i32 %evl)
@@ -1903,6 +1905,7 @@ define <32 x i64> @vp_ctpop_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    li a1, 40
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;

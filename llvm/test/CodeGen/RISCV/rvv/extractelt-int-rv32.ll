@@ -895,6 +895,7 @@ define i32 @extractelt_nxv32i32_neg1(<vscale x 32 x i32> %v) {
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    lw a0, -4(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80
@@ -945,6 +946,7 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    lw a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80

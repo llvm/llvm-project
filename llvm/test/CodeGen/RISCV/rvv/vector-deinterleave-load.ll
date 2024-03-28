@@ -168,6 +168,7 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_load_nxv8i6
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x i64>, ptr %p

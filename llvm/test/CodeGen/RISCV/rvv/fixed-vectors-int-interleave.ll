@@ -440,6 +440,7 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    csrr a0, vlenb
 ; V128-NEXT:    slli a0, a0, 3
 ; V128-NEXT:    add sp, sp, a0
+; V128-NEXT:    .cfi_def_cfa sp, 16
 ; V128-NEXT:    addi sp, sp, 16
 ; V128-NEXT:    ret
 ;

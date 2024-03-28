@@ -1292,6 +1292,7 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    li a1, 40
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x double> @llvm.vp.fmuladd.nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x double> %b, <vscale x 16 x double> %c, <vscale x 16 x i1> %m, i32 %evl)
@@ -1357,6 +1358,7 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64_unmasked(<vscale x 16 x double> 
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0

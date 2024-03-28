@@ -51,6 +51,7 @@ define <vscale x 16 x i32> @foo(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, 
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    addi sp, s0, -96
+; CHECK-NEXT:    .cfi_def_cfa sp, 96
 ; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload

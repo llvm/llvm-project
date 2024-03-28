@@ -705,6 +705,7 @@ define <vscale x 16 x float> @vfmacc_vv_nxv16f32(<vscale x 16 x half> %a, <vscal
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %aext = call <vscale x 16 x float> @llvm.vp.fpext.nxv16f32.nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x i1> %m, i32 %evl)

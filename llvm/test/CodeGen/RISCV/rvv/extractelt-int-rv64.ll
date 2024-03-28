@@ -889,6 +889,7 @@ define i64 @extractelt_nxv16i64_neg1(<vscale x 16 x i64> %v) {
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80
@@ -939,6 +940,7 @@ define i64 @extractelt_nxv16i64_idx(<vscale x 16 x i64> %v, i32 zeroext %idx) {
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80

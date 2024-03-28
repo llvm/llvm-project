@@ -607,6 +607,7 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv17f64.p0.i32(<vscale x 17 x double> %v, ptr %ptr, i32 %stride, <vscale x 17 x i1> %mask, i32 %evl)

@@ -188,6 +188,7 @@ define <vscale x 16 x half> @vfmin_nxv16f16_vv(<vscale x 16 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 16 x half> @llvm.minimum.nxv16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b)

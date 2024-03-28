@@ -408,6 +408,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i8> @llvm.vp.merge.nxv128i8(<vscale x 128 x i1> %m, <vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, i32 %evl)

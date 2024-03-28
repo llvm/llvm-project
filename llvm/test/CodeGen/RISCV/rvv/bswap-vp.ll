@@ -1128,6 +1128,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1178,6 +1179,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
@@ -1242,6 +1244,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1373,6 +1376,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1423,6 +1427,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
@@ -1487,6 +1492,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1586,6 +1592,7 @@ define <vscale x 64 x i16> @vp_bswap_nxv64i16(<vscale x 64 x i16> %va, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;

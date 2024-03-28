@@ -47,6 +47,7 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect
 ; RV32-NEXT:    addi sp, s0, -144
+; RV32-NEXT:    .cfi_def_cfa sp, 144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 144
@@ -78,6 +79,7 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect
 ; RV64-NEXT:    addi sp, s0, -144
+; RV64-NEXT:    .cfi_def_cfa sp, 144
 ; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144

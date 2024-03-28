@@ -42,6 +42,7 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, s0, -96
+; CHECK-NEXT:    .cfi_def_cfa sp, 96
 ; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 80(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 72(sp) # 8-byte Folded Reload

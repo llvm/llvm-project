@@ -488,6 +488,7 @@ define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %v
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %cond = icmp eq <vscale x 16 x i64> %va, zeroinitializer

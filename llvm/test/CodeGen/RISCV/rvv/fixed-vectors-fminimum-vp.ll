@@ -598,6 +598,7 @@ define <16 x double> @vfmin_vv_v16f64(<16 x double> %va, <16 x double> %vb, <16 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.minimum.v16f64(<16 x double> %va, <16 x double> %vb, <16 x i1> %m, i32 %evl)
@@ -723,6 +724,7 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.minimum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 %evl)
@@ -806,6 +808,7 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <32 x i1> poison, i1 true, i32 0

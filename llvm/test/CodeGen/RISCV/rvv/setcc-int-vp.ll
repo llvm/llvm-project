@@ -1204,6 +1204,7 @@ define <vscale x 128 x i1> @icmp_eq_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i1> @llvm.vp.icmp.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, metadata !"eq", <vscale x 128 x i1> %m, i32 %evl)
@@ -2430,6 +2431,7 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i1> @llvm.vp.icmp.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> %vb, metadata !"eq", <vscale x 32 x i1> %m, i32 %evl)

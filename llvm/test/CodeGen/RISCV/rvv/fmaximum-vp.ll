@@ -360,6 +360,7 @@ define <vscale x 16 x half> @vfmax_vv_nxv16f16(<vscale x 16 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 16 x half> @llvm.vp.maximum.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> %m, i32 %evl)
@@ -406,6 +407,7 @@ define <vscale x 16 x half> @vfmax_vv_nxv16f16_unmasked(<vscale x 16 x half> %va
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
@@ -442,6 +444,7 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFH-NEXT:    csrr a0, vlenb
 ; ZVFH-NEXT:    slli a0, a0, 3
 ; ZVFH-NEXT:    add sp, sp, a0
+; ZVFH-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFH-NEXT:    addi sp, sp, 16
 ; ZVFH-NEXT:    ret
 ;
@@ -600,6 +603,7 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    li a1, 34
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %v = call <vscale x 32 x half> @llvm.vp.maximum.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> %m, i32 %evl)
@@ -713,6 +717,7 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 5
 ; ZVFHMIN-NEXT:    add sp, sp, a0
+; ZVFHMIN-NEXT:    .cfi_def_cfa sp, 16
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
@@ -1009,6 +1014,7 @@ define <vscale x 8 x double> @vfmax_vv_nxv8f64(<vscale x 8 x double> %va, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 8 x double> @llvm.vp.maximum.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 %evl)
@@ -1165,6 +1171,7 @@ define <vscale x 16 x double> @vfmax_vv_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-NEXT:    li a1, 42
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x double> @llvm.vp.maximum.nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x double> %vb, <vscale x 16 x i1> %m, i32 %evl)
@@ -1236,6 +1243,7 @@ define <vscale x 16 x double> @vfmax_vv_nxv16f64_unmasked(<vscale x 16 x double>
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0

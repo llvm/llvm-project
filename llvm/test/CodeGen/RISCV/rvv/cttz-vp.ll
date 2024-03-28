@@ -2530,6 +2530,7 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV32-NEXT:    li a1, 56
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -2622,6 +2623,7 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64(<vscale x 16 x i64> %va, <vscale x 
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
@@ -2773,6 +2775,7 @@ define <vscale x 16 x i64> @vp_cttz_nxv16i64_unmasked(<vscale x 16 x i64> %va, i
 ; RV32-NEXT:    li a1, 40
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -4151,6 +4154,7 @@ define <vscale x 16 x i64> @vp_cttz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;

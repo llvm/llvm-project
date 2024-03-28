@@ -72,6 +72,7 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 32
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
@@ -133,6 +134,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4
 ; SUBREGLIVENESS-NEXT:    add sp, sp, a0
+; SUBREGLIVENESS-NEXT:    .cfi_def_cfa sp, 32
 ; SUBREGLIVENESS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    addi sp, sp, 32

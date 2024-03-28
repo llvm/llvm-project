@@ -299,6 +299,7 @@ define <128 x i16> @vwmulsu_v128i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
@@ -347,6 +348,7 @@ define <64 x i32> @vwmulsu_v64i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <64 x i16>, ptr %x
@@ -394,6 +396,7 @@ define <32 x i64> @vwmulsu_v32i64(ptr %x, ptr %y) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %a = load <32 x i32>, ptr %x

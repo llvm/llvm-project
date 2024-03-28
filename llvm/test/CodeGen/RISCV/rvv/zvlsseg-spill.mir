@@ -63,6 +63,7 @@ body: |
     ; CHECK-NEXT: $x10 = frame-destroy PseudoReadVLENB
     ; CHECK-NEXT: $x10 = frame-destroy SLLI killed $x10, 3
     ; CHECK-NEXT: $x2 = frame-destroy ADD $x2, killed $x10
+    ; CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $x2, 16
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10

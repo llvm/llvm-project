@@ -435,6 +435,32 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                Flag, getStackAlign());
 }
 
+static void appendScalableVectorExpression(SmallVectorImpl<char> &Expr,
+                                           int FixedOffset, int ScalableOffset,
+                                           unsigned DwarfVlenb,
+                                           llvm::raw_string_ostream &Comment) {
+  uint8_t buffer[16];
+  if (FixedOffset) {
+    Expr.push_back(dwarf::DW_OP_consts);
+    Expr.append(buffer, buffer + encodeSLEB128(FixedOffset, buffer));
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+    Comment << (FixedOffset < 0 ? " - " : " + ") << std::abs(FixedOffset);
+  }
+
+  Expr.push_back((uint8_t)dwarf::DW_OP_consts);
+  Expr.append(buffer, buffer + encodeSLEB128(ScalableOffset, buffer));
+
+  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+  Expr.append(buffer, buffer + encodeULEB128(DwarfVlenb, buffer));
+  Expr.push_back(0);
+
+  Expr.push_back((uint8_t)dwarf::DW_OP_mul);
+  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+
+  Comment << (ScalableOffset < 0 ? " - " : " + ") << std::abs(ScalableOffset)
+          << " * vlenb";
+}
+
 static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
                                                Register Reg,
                                                uint64_t FixedOffset,
@@ -452,29 +478,39 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   else
     Comment << printReg(Reg, &TRI);
 
-  uint8_t buffer[16];
-  if (FixedOffset) {
-    Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(buffer, buffer + encodeSLEB128(FixedOffset, buffer));
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-    Comment << " + " << FixedOffset;
-  }
-
-  Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-  Expr.append(buffer, buffer + encodeSLEB128(ScalableOffset, buffer));
-
-  unsigned DwarfVlenb = TRI.getDwarfRegNum(RISCV::VLENB, true);
-  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-  Expr.append(buffer, buffer + encodeULEB128(DwarfVlenb, buffer));
-  Expr.push_back(0);
-
-  Expr.push_back((uint8_t)dwarf::DW_OP_mul);
-  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-
-  Comment << " + " << ScalableOffset << " * vlenb";
+  appendScalableVectorExpression(Expr, FixedOffset, ScalableOffset,
+                                 TRI.getDwarfRegNum(RISCV::VLENB, true),
+                                 Comment);
 
   SmallString<64> DefCfaExpr;
+  uint8_t buffer[16];
   DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
+  DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
+  DefCfaExpr.append(Expr.str());
+
+  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
+                                        Comment.str());
+}
+
+static MCCFIInstruction createDefCFAOffset(const TargetRegisterInfo &TRI,
+                                           Register Reg, uint64_t FixedOffset,
+                                           uint64_t ScalableOffset) {
+  assert(ScalableOffset != 0 && "Did not need to adjust CFA for RVV");
+  SmallString<64> Expr;
+  std::string CommentBuffer;
+  llvm::raw_string_ostream Comment(CommentBuffer);
+  Comment << printReg(Reg, &TRI) << "  @ cfa";
+
+  // Build up the expression (FixedOffset + ScalableOffset * VLENB).
+  appendScalableVectorExpression(Expr, FixedOffset, ScalableOffset,
+                                 TRI.getDwarfRegNum(RISCV::VLENB, true),
+                                 Comment);
+
+  SmallString<64> DefCfaExpr;
+  uint8_t buffer[16];
+  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
+  DefCfaExpr.push_back(dwarf::DW_CFA_expression);
+  DefCfaExpr.append(buffer, buffer + encodeULEB128(DwarfReg, buffer));
   DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
   DefCfaExpr.append(Expr.str());
 
@@ -671,6 +707,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameSetup);
     }
+
+    std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
+    emitCalleeSavedRVVPrologCFI(MBB, MBBI, hasFP(MF));
   }
 
   if (hasFP(MF)) {
@@ -757,6 +796,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
+  if (RVVStackSize)
+    emitCalleeSavedRVVEpilogCFI(MBB, LastFrameDestroy);
+
   // Restore the stack pointer using the value of the frame pointer. Only
   // necessary if the stack pointer was modified, meaning the stack size is
   // unknown.
@@ -777,6 +819,15 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     if (RVVStackSize)
       adjustStackForRVV(MF, MBB, LastFrameDestroy, DL, RVVStackSize,
                         MachineInstr::FrameDestroy);
+  }
+
+  if (RVVStackSize) {
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+        nullptr, RI->getDwarfRegNum(SPReg, true), RealStackSize));
+    BuildMI(MBB, LastFrameDestroy, DL,
+            STI.getInstrInfo()->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
   }
 
   uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
@@ -1530,6 +1581,63 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   storeRegToStackSlot(RVVCSI);
 
   return true;
+}
+
+void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, bool HasFP) const {
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MI);
+
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
+  if (RVVCSI.empty())
+    return;
+
+  uint64_t FixedSize = getStackSizeWithRVVPadding(*MF) +
+                       RVFI->getLibCallStackSize() + RVFI->getRVPushStackSize();
+  if (!HasFP) {
+    uint64_t ScalarLocalVarSize =
+        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+        RVFI->getRVPushStackSize() - RVFI->getVarArgsSaveSize() +
+        RVFI->getRVVPadding();
+    FixedSize -= ScalarLocalVarSize;
+  }
+
+  for (auto &CS : RVVCSI) {
+    // Insert the spill to the stack frame.
+    int FI = CS.getFrameIdx();
+    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+      unsigned CFIIndex = MF->addFrameInst(
+          createDefCFAOffset(*STI.getRegisterInfo(), CS.getReg(), -FixedSize,
+                             MFI.getObjectOffset(FI) / 8));
+      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
+}
+
+void RISCVFrameLowering::emitCalleeSavedRVVEpilogCFI(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const {
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MI);
+
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
+  if (RVVCSI.empty())
+    return;
+
+  for (const auto &CS : RVVCSI) {
+    unsigned CFIIndex = MF->addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, TRI.getDwarfRegNum(CS.getReg(), true)));
+    BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
 }
 
 bool RISCVFrameLowering::restoreCalleeSavedRegisters(

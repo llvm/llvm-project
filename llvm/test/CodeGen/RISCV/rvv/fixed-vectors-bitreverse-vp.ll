@@ -1797,6 +1797,7 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -1874,6 +1875,7 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl)
@@ -1972,6 +1974,7 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -2163,6 +2166,7 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    li a1, 24
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -2240,6 +2244,7 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl)
@@ -2338,6 +2343,7 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    addi sp, sp, 48
 ; RV32-NEXT:    ret
 ;
@@ -2491,6 +2497,7 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> %m, i32 %evl)

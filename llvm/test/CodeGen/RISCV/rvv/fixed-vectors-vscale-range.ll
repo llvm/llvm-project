@@ -107,6 +107,7 @@ define <512 x i8> @vadd_v512i8_zvl128(<512 x i8> %a, <512 x i8> %b) #0 {
 ; CHECK-NEXT:    li a1, 48
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %c = add <512 x i8> %a, %b

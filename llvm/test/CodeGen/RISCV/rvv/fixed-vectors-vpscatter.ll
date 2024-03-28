@@ -1744,6 +1744,7 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x ptr> %ptrs, <32 x i1> %m
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v32f64.v32p0(<32 x double> %val, <32 x ptr> %ptrs, <32 x i1> %m, i32 %evl)
@@ -1828,6 +1829,7 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, ptr %base, <32 
 ; RV64-NEXT:    li a1, 10
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, ptr %base, <32 x i32> %idxs
@@ -1914,6 +1916,7 @@ define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV64-NEXT:    li a1, 10
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %eidxs = sext <32 x i32> %idxs to <32 x i64>
@@ -2001,6 +2004,7 @@ define void @vpscatter_baseidx_zext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV64-NEXT:    li a1, 10
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %eidxs = zext <32 x i32> %idxs to <32 x i64>

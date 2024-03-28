@@ -1245,6 +1245,7 @@ define <32 x double> @vpmerge_vv_v32f64(<32 x double> %va, <32 x double> %vb, <3
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.merge.v32f64(<32 x i1> %m, <32 x double> %va, <32 x double> %vb, i32 %evl)

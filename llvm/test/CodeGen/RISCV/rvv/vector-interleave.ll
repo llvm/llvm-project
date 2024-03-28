@@ -315,6 +315,7 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
@@ -350,6 +351,7 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 3
 ; ZVBB-NEXT:    add sp, sp, a0
+; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.experimental.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)
@@ -615,6 +617,7 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ;
@@ -650,6 +653,7 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 3
 ; ZVBB-NEXT:    add sp, sp, a0
+; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 16 x double> @llvm.experimental.vector.interleave2.nxv16f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b)

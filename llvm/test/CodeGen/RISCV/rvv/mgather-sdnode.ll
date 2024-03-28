@@ -1252,6 +1252,7 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
   %p0 = call <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr> undef, <vscale x 8 x ptr> %ptrs0, i64 0)

@@ -184,6 +184,7 @@ define fastcc <vscale x 128 x i32> @ret_split_nxv128i32(ptr %x) {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = load <vscale x 128 x i32>, ptr %x
@@ -272,6 +273,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_param_nxv32i32_nxv32i32_nxv32i32
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %r = add <vscale x 32 x i32> %x, %y
@@ -315,6 +317,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_i32(<vsca
 ; RV32-NEXT:    vmv8r.v v16, v24
 ; RV32-NEXT:    call ext2
 ; RV32-NEXT:    addi sp, s0, -144
+; RV32-NEXT:    .cfi_def_cfa sp, 144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 144
@@ -349,6 +352,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_i32(<vsca
 ; RV64-NEXT:    vmv8r.v v16, v24
 ; RV64-NEXT:    call ext2
 ; RV64-NEXT:    addi sp, s0, -144
+; RV64-NEXT:    .cfi_def_cfa sp, 144
 ; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144
@@ -421,6 +425,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_nxv32i32_
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV32-NEXT:    call ext3
 ; RV32-NEXT:    addi sp, s0, -144
+; RV32-NEXT:    .cfi_def_cfa sp, 144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 144
@@ -489,6 +494,7 @@ define fastcc <vscale x 32 x i32> @ret_nxv32i32_call_nxv32i32_nxv32i32_nxv32i32_
 ; RV64-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV64-NEXT:    call ext3
 ; RV64-NEXT:    addi sp, s0, -144
+; RV64-NEXT:    .cfi_def_cfa sp, 144
 ; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144
@@ -564,6 +570,7 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call vector_arg_indirect_stack
 ; RV32-NEXT:    addi sp, s0, -144
+; RV32-NEXT:    .cfi_def_cfa sp, 144
 ; RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 144
@@ -615,6 +622,7 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call vector_arg_indirect_stack
 ; RV64-NEXT:    addi sp, s0, -144
+; RV64-NEXT:    .cfi_def_cfa sp, 144
 ; RV64-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 128(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144

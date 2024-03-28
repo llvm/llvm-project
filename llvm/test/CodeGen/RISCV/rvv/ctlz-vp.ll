@@ -2615,6 +2615,7 @@ define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64(<vscale x 16 x i64> %va,
 }
 
 define <vscale x 16 x i64> @vp_ctlz_zero_undef_nxv16i64_unmasked(<vscale x 16 x i64> %va, i32 zeroext %evl) {
+;
 ; CHECK-LABEL: vp_ctlz_zero_undef_nxv16i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb

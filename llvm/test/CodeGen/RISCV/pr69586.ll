@@ -763,6 +763,7 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; NOREMAT-NEXT:    li a1, 6
 ; NOREMAT-NEXT:    mul a0, a0, a1
 ; NOREMAT-NEXT:    add sp, sp, a0
+; NOREMAT-NEXT:    .cfi_def_cfa sp, 400
 ; NOREMAT-NEXT:    ld ra, 392(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s0, 384(sp) # 8-byte Folded Reload
 ; NOREMAT-NEXT:    ld s1, 376(sp) # 8-byte Folded Reload

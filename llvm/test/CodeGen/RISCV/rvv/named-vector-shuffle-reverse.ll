@@ -1699,6 +1699,7 @@ define <vscale x 12 x i64> @reverse_nxv12i64(<vscale x 12 x i64> %a) {
 ; RV32-NEXT:    vl8re64.v v16, (a0)
 ; RV32-NEXT:    vl8re64.v v8, (a1)
 ; RV32-NEXT:    addi sp, s0, -80
+; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80
@@ -1735,6 +1736,7 @@ define <vscale x 12 x i64> @reverse_nxv12i64(<vscale x 12 x i64> %a) {
 ; RV64-NEXT:    vl8re64.v v16, (a0)
 ; RV64-NEXT:    vl8re64.v v8, (a1)
 ; RV64-NEXT:    addi sp, s0, -80
+; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 80

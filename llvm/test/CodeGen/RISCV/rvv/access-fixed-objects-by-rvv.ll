@@ -46,6 +46,7 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add sp, sp, a0
+; RV64IV-NEXT:    .cfi_def_cfa sp, 528
 ; RV64IV-NEXT:    addi sp, sp, 528
 ; RV64IV-NEXT:    ret
   %local = alloca i64
