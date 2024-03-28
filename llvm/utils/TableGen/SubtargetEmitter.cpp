@@ -1122,8 +1122,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
       // If this Write is not referenced by a ReadAdvance, don't distinguish it
       // from other WriteLatency entries.
-      if (!SchedModels.hasReadOfWrite(
-              SchedModels.getSchedWrite(WriteID).TheDef)) {
+      if (!SchedModels.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef,
+                                      ProcModel)) {
         WriteID = 0;
       }
       WLEntry.WriteResourceID = WriteID;

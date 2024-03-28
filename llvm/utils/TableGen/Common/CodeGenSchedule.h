@@ -537,7 +537,8 @@ public:
   unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
 
   // Return true if the given write record is referenced by a ReadAdvance.
-  bool hasReadOfWrite(Record *WriteDef) const;
+  bool hasReadOfWrite(const Record *WriteDef,
+                      const CodeGenProcModel &ProcModel) const;
 
   // Get a SchedClass from its index.
   CodeGenSchedClass &getSchedClass(unsigned Idx) {
