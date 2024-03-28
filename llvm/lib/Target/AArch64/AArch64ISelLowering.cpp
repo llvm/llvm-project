@@ -24580,6 +24580,19 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
       return R;
     return performFlagSettingCombine(N, DCI, AArch64ISD::SBC);
+  case AArch64ISD::BICi: {
+    KnownBits Known;
+    APInt DemandedBits =
+        APInt::getAllOnes(N->getValueType(0).getScalarSizeInBits());
+    APInt DemandedElts =
+        APInt::getAllOnes(N->getValueType(0).getVectorNumElements());
+    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                          !DCI.isBeforeLegalizeOps());
+    if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(
+            SDValue(N, 0), DemandedBits, DemandedElts, Known, TLO))
+      return TLO.New;
+    break;
+  }
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:
@@ -27619,6 +27632,24 @@ bool AArch64TargetLowering::SimplifyDemandedBitsForTargetNode(
     // All bits that are zeroed by (VSHL (VLSHR Val X) X) are not
     // used - simplify to just Val.
     return TLO.CombineTo(Op, ShiftR->getOperand(0));
+  }
+  case AArch64ISD::BICi: {
+    // Fold BICi if all destination bits already known to be zeroed
+    SDValue Op0 = Op.getOperand(0);
+    KnownBits KnownOp0 =
+        TLO.DAG.computeKnownBits(Op0, OriginalDemandedElts, Depth + 1);
+    // Op0 &= ~(ConstantOperandVal(1) << ConstantOperandVal(2))
+    uint64_t BitsToClear = Op->getConstantOperandVal(1)
+                           << Op->getConstantOperandVal(2);
+    APInt AlreadyZeroedBitsToClear = BitsToClear & KnownOp0.Zero;
+    if (APInt(Known.getBitWidth(), BitsToClear)
+            .isSubsetOf(AlreadyZeroedBitsToClear))
+      return TLO.CombineTo(Op, Op0);
+
+    Known = KnownOp0 &
+            KnownBits::makeConstant(APInt(Known.getBitWidth(), ~BitsToClear));
+
+    return false;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     if (auto ElementSize = IsSVECntIntrinsic(Op)) {
