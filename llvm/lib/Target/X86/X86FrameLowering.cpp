@@ -1418,34 +1418,6 @@ bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
   return !isWin64Prologue(MF) && MF.needsFrameMoves();
 }
 
-/// Return true if an opcode is part of the REP group of instructions
-static bool isOpcodeRep(unsigned Opcode) {
-  switch (Opcode) {
-  case X86::REPNE_PREFIX:
-  case X86::REP_MOVSB_32:
-  case X86::REP_MOVSB_64:
-  case X86::REP_MOVSD_32:
-  case X86::REP_MOVSD_64:
-  case X86::REP_MOVSQ_32:
-  case X86::REP_MOVSQ_64:
-  case X86::REP_MOVSW_32:
-  case X86::REP_MOVSW_64:
-  case X86::REP_PREFIX:
-  case X86::REP_STOSB_32:
-  case X86::REP_STOSB_64:
-  case X86::REP_STOSD_32:
-  case X86::REP_STOSD_64:
-  case X86::REP_STOSQ_32:
-  case X86::REP_STOSQ_64:
-  case X86::REP_STOSW_32:
-  case X86::REP_STOSW_64:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-
 /// emitPrologue - Push callee-saved registers onto the stack, which
 /// automatically adjust the stack pointer. Adjust the stack pointer to allocate
 /// space for local variables. Also emit labels used by the exception handler to
@@ -2223,34 +2195,45 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // in each prologue of interrupt handler function.
   //
   // Create "cld" instruction only in these cases:
-  // 1. The interrupt handling function uses any of the "rep" instructions.
+  // 1. If DF is used by any instruction (exempting PUSHF, as the purpose is to
+  // save eflags).
   // 2. Interrupt handling function calls another function.
-  // 3. If there are any inline asm blocks, as we do not know what they do
+  // 3. If there are any inline asm blocks, as the ABI expects DF to be cleared
+  // unless manually set otherwise.
   //
-  // TODO: We should also emit cld if we detect the use of std, but as of now,
-  // the compiler does not even emit that instruction or even define it, so in
-  // practice, this would only happen with inline asm, which we cover anyway.
   if (Fn.getCallingConv() == CallingConv::X86_INTR) {
     bool NeedsCLD = false;
 
     for (const MachineBasicBlock &B : MF) {
       for (const MachineInstr &MI : B) {
+        if (MI.isInlineAsm()) {
+          NeedsCLD = true;
+          break;
+        }
+
         if (MI.isCall()) {
           NeedsCLD = true;
           break;
         }
 
-        if (isOpcodeRep(MI.getOpcode())) {
-          NeedsCLD = true;
-          break;
-        }
-
-        if (MI.isInlineAsm()) {
-          // TODO: Parse asm for rep instructions or call sites?
-          // For now, let's play it safe and emit a cld instruction
-          // just in case.
-          NeedsCLD = true;
-          break;
+        if (MI.findRegisterUseOperand(X86::DF)) {
+          // Because EFLAGS being pushed and popped save the instruction, it
+          // counts as a use, but we ignore them because the purpose is to
+          // save EFLAGS to stack.
+          switch (MI.getOpcode()) {
+          case X86::PUSHF16:
+          case X86::PUSHF32:
+          case X86::PUSHF64:
+          case X86::PUSHFS16:
+          case X86::PUSHFS32:
+          case X86::PUSHFS64:
+            break;
+          default:
+            NeedsCLD = true;
+            break;
+          }
+          if (NeedsCLD)
+            break;
         }
       }
     }
