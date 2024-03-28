@@ -144,7 +144,8 @@ public:
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O,
+                       std::string &ErrorMsg) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 

@@ -65,7 +65,8 @@ void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                     const char *ExtraCode, raw_ostream &OS) {
+                                     const char *ExtraCode, raw_ostream &OS,
+                                     std::string &ErrorMsg) {
   // Print the operand if there is no operand modifier.
   if (!ExtraCode || !ExtraCode[0]) {
     printOperand(MI, OpNo, OS);
@@ -73,7 +74,7 @@ bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   }
 
   // Fallback to the default implementation.
-  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS, ErrorMsg);
 }
 
 void M68kAsmPrinter::printDisp(const MachineInstr *MI, unsigned opNum,

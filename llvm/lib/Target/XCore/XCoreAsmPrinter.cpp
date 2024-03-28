@@ -67,7 +67,8 @@ namespace {
     }
     void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
+                         const char *ExtraCode, raw_ostream &O,
+                         std::string &ErrorMsg) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                                const char *ExtraCode, raw_ostream &O) override;
 
@@ -230,7 +231,8 @@ void XCoreAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
 bool XCoreAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &O) {
+                                      const char *ExtraCode, raw_ostream &O,
+                                      std::string &ErrorMsg) {
   // Print the operand if there is no operand modifier.
   if (!ExtraCode || !ExtraCode[0]) {
     printOperand(MI, OpNo, O);
@@ -238,7 +240,7 @@ bool XCoreAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   }
 
   // Otherwise fallback on the default implementation.
-  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O, ErrorMsg);
 }
 
 bool XCoreAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

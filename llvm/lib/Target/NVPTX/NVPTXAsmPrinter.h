@@ -184,7 +184,8 @@ private:
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &) override;
+                       const char *ExtraCode, raw_ostream &,
+                       std::string &ErrorMsg) override;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &) override;

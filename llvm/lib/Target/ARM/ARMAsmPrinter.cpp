@@ -284,7 +284,8 @@ GetARMJTIPICJumpTableLabel(unsigned uid) const {
 }
 
 bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                    const char *ExtraCode, raw_ostream &O) {
+                                    const char *ExtraCode, raw_ostream &O,
+                                    std::string &ErrorMsg) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
@@ -292,7 +293,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     switch (ExtraCode[0]) {
     default:
       // See if this is a generic print operand
-      return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
+      return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O, ErrorMsg);
     case 'P': // Print a VFP double precision register.
     case 'q': // Print a NEON quad precision register.
       printOperand(MI, OpNum, O);

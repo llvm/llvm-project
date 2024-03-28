@@ -52,7 +52,8 @@ public:
   void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       const char *ExtraCode, raw_ostream &O) override;
+                       const char *ExtraCode, raw_ostream &O,
+                       std::string &ErrorMsg) override;
 
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
@@ -98,10 +99,11 @@ void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                    const char *ExtraCode, raw_ostream &O) {
+                                    const char *ExtraCode, raw_ostream &O,
+                                    std::string &ErrorMsg) {
   // Default asm printer can only deal with some extra codes,
   // so try it first.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O, ErrorMsg))
     return false;
 
   const MachineOperand &MO = MI->getOperand(OpNum);
