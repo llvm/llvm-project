@@ -9,10 +9,13 @@
 #ifndef LLVM_FLOAT128
 #define LLVM_FLOAT128
 
+namespace llvm {
+
 #if defined(__clang__) && defined(__FLOAT128__)
 typedef __float128 float128;
 #elif defined(__FLOAT128__) && (defined(__GNUC__) || defined(__GNUG__))
 typedef _Float128 float128;
 #endif
 
+} // namespace llvm
 #endif // LLVM_FLOAT128

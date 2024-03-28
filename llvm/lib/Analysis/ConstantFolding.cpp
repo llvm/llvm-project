@@ -2088,8 +2088,18 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy() &&
-        !Ty->isFP128Ty())
+#if defined(__FLOAT128__) && defined(HAS_LOGF128)
+    if (Ty->isFP128Ty()) {
+      switch (IntrinsicID) {
+      default:
+        return nullptr;
+      case Intrinsic::log:
+        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
+      }
+    }
+#endif
+
+    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
 
     // Use internal versions of these intrinsics.
@@ -2204,11 +2214,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     switch (IntrinsicID) {
       default: break;
       case Intrinsic::log:
-#if defined(__FLOAT128__) && defined(HAS_LOGF128)
-        if (Ty->isFP128Ty()) {
-          return ConstantFP::get(Ty, logf128(APF.convertToQuad()));
-        }
-#endif
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         // TODO: What about hosts that lack a C99 library?
