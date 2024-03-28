@@ -110,6 +110,12 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-exception-rethrow
+  <clang-tidy/checks/bugprone/exception-rethrow>` check.
+
+  Identifies problematic exception rethrowing, especially with caught exception
+  variables or empty throw statements outside catch blocks.
+
 - New :doc:`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
 
