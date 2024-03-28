@@ -3342,14 +3342,34 @@ static_assert(__is_trivially_relocatable(int));
 static_assert(__is_trivially_relocatable(int[]));
 static_assert(__is_trivially_relocatable(const int));
 static_assert(__is_trivially_relocatable(volatile int));
+static_assert(__is_trivially_relocatable(AggregateTemplate<int>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<int[2]>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<const int>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<const int[2]>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<volatile int>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<volatile int[2]>));
+static_assert(!__is_trivially_relocatable(int&));
+static_assert(!__is_trivially_relocatable(const int&));
+static_assert(__is_trivially_relocatable(AggregateTemplate<int&>));
+static_assert(__is_trivially_relocatable(AggregateTemplate<const int&>));
+
+static_assert(!__is_trivially_relocatable(Polymorph));
+static_assert(!__is_trivially_relocatable(InheritPolymorph));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<Polymorph>));
+
+static_assert(__is_trivially_relocatable(HasPrivateBase));
+static_assert(__is_trivially_relocatable(HasProtectedBase));
+static_assert(!__is_trivially_relocatable(HasVirtBase));
 
 enum Enum {};
 static_assert(__is_trivially_relocatable(Enum));
 static_assert(__is_trivially_relocatable(Enum[]));
+static_assert(__is_trivially_relocatable(AggregateTemplate<Enum>));
 
 union Union {int x;};
 static_assert(__is_trivially_relocatable(Union));
 static_assert(__is_trivially_relocatable(Union[]));
+static_assert(__is_trivially_relocatable(AggregateTemplate<Union>));
 
 struct Trivial {};
 static_assert(__is_trivially_relocatable(Trivial));
@@ -3359,6 +3379,7 @@ static_assert(__is_trivially_relocatable(volatile Trivial));
 static_assert(__is_trivially_relocatable(Trivial[]));
 static_assert(__is_trivially_relocatable(const Trivial[]));
 static_assert(__is_trivially_relocatable(volatile Trivial[]));
+static_assert(__is_trivially_relocatable(AggregateTemplate<Trivial>));
 
 static_assert(__is_trivially_relocatable(int[10]));
 static_assert(__is_trivially_relocatable(const int[10]));
@@ -3386,18 +3407,21 @@ static_assert(!__is_trivially_relocatable(NontrivialDtor));
 static_assert(!__is_trivially_relocatable(NontrivialDtor[]));
 static_assert(!__is_trivially_relocatable(const NontrivialDtor));
 static_assert(!__is_trivially_relocatable(volatile NontrivialDtor));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialDtor>));
 
 struct NontrivialCopyCtor {
   NontrivialCopyCtor(const NontrivialCopyCtor&) {}
 };
 static_assert(!__is_trivially_relocatable(NontrivialCopyCtor));
 static_assert(!__is_trivially_relocatable(NontrivialCopyCtor[]));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialCopyCtor>));
 
 struct NontrivialMoveCtor {
   NontrivialMoveCtor(NontrivialMoveCtor&&) {}
 };
 static_assert(!__is_trivially_relocatable(NontrivialMoveCtor));
 static_assert(!__is_trivially_relocatable(NontrivialMoveCtor[]));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialMoveCtor>));
 
 struct [[clang::trivial_abi]] TrivialAbiNontrivialDtor {
   ~TrivialAbiNontrivialDtor() {}
@@ -3406,6 +3430,8 @@ static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialDtor[]));
 static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialDtor));
 static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialDtor));
+static_assert(__is_trivially_relocatable(AggregateTemplate<TrivialAbiNontrivialDtor>));
+static_assert(__is_trivially_relocatable(NonAggregateTemplate<TrivialAbiNontrivialDtor>));
 
 struct [[clang::trivial_abi]] TrivialAbiNontrivialCopyCtor {
   TrivialAbiNontrivialCopyCtor(const TrivialAbiNontrivialCopyCtor&) {}
@@ -3414,6 +3440,8 @@ static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialCopyCtor[]));
 static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialCopyCtor));
 static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialCopyCtor));
+static_assert(__is_trivially_relocatable(AggregateTemplate<TrivialAbiNontrivialCopyCtor>));
+static_assert(__is_trivially_relocatable(NonAggregateTemplate<TrivialAbiNontrivialCopyCtor>));
 
 // A more complete set of tests for the behavior of trivial_abi can be found in
 // clang/test/SemaCXX/attr-trivial-abi.cpp
@@ -3424,6 +3452,34 @@ static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor));
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]));
 static_assert(__is_trivially_relocatable(const TrivialAbiNontrivialMoveCtor));
 static_assert(__is_trivially_relocatable(volatile TrivialAbiNontrivialMoveCtor));
+static_assert(__is_trivially_relocatable(AggregateTemplate<TrivialAbiNontrivialMoveCtor>));
+static_assert(__is_trivially_relocatable(NonAggregateTemplate<TrivialAbiNontrivialMoveCtor>));
+
+struct NontrivialNonConstCopyConstructor {
+  NontrivialNonConstCopyConstructor();
+  NontrivialNonConstCopyConstructor(NontrivialNonConstCopyConstructor&);
+  NontrivialNonConstCopyConstructor(const NontrivialNonConstCopyConstructor&) = default;
+  NontrivialNonConstCopyConstructor& operator=(const NontrivialNonConstCopyConstructor&) = default;
+  ~NontrivialNonConstCopyConstructor() = default;
+};
+static_assert(!__is_trivially_relocatable(NontrivialNonConstCopyConstructor));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialNonConstCopyConstructor>));
+
+struct NontrivialCopyAssignment {
+  NontrivialCopyAssignment(const NontrivialCopyAssignment&) = default;
+  NontrivialCopyAssignment& operator=(const NontrivialCopyAssignment&);
+  ~NontrivialCopyAssignment() = default;
+};
+static_assert(!__is_trivially_relocatable(NontrivialCopyAssignment));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialCopyAssignment>));
+
+struct NontrivialMoveAssignment {
+  NontrivialMoveAssignment(NontrivialMoveAssignment&&) = default;
+  NontrivialMoveAssignment& operator=(NontrivialMoveAssignment&&);
+  ~NontrivialMoveAssignment() = default;
+};
+static_assert(!__is_trivially_relocatable(NontrivialMoveAssignment));
+static_assert(!__is_trivially_relocatable(AggregateTemplate<NontrivialMoveAssignment>));
 
 } // namespace is_trivially_relocatable
 

@@ -1386,6 +1386,9 @@ public:
         (SMF_CopyConstructor | SMF_MoveConstructor | SMF_Destructor);
   }
 
+  /// Determine whether this class is trivially relocatable
+  bool isTriviallyRelocatable() const;
+
   /// Determine whether declaring a const variable with this type is ok
   /// per core issue 253.
   bool allowConstDefaultInit() const {
