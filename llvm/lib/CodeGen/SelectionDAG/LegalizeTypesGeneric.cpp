@@ -428,7 +428,8 @@ SDValue DAGTypeLegalizer::ExpandOp_INSERT_VECTOR_ELT(SDNode *N) {
     std::swap(Lo, Hi);
 
   SDValue Idx = N->getOperand(2);
-  Idx = DAG.getNode(ISD::ADD, dl, Idx.getValueType(), Idx, Idx);
+  Idx = DAG.getNode(ISD::SHL, dl, Idx.getValueType(), Idx,
+                    DAG.getShiftAmountConstant(1, Idx.getValueType(), dl));
   NewVec = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, NewVecVT, NewVec, Lo, Idx);
   Idx = DAG.getNode(ISD::ADD, dl,
                     Idx.getValueType(), Idx,
