@@ -914,10 +914,19 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
   }
 
-  // If MBB doesn't have successors, delete the copies whose defs are not used.
-  // If MBB does have successors, then conservative assume the defs are live-out
-  // since we don't want to trust live-in lists.
-  if (MBB.succ_empty()) {
+  bool TracksLiveness = MRI->tracksLiveness();
+
+  // If a copy result is livein to a successor, it is not dead.
+  if (TracksLiveness && !MaybeDeadCopies.empty())
+    for (const MachineBasicBlock *Succ : MBB.successors())
+      for (const auto &LI : Succ->liveins())
+        for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
+          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+            MaybeDeadCopies.remove(Copy);
+
+  // Delete copies whose defs are not used if there are no successors or we were
+  // able to use the live-in lists to determine which copies were still live.
+  if (MBB.succ_empty() || TracksLiveness) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
       LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
                  MaybeDead->dump());
