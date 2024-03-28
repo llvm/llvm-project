@@ -99,7 +99,6 @@ tools = [
     "llvm-lto2",
     "llvm-profdata",
     "llvm-readtapi",
-    "dsymutil",
     ToolSubst(
         "%clang_extdef_map",
         command=FindTool("clang-extdef-mapping"),

@@ -111,7 +111,6 @@ set(CLANG_TEST_PARAMS
 
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
-    dsymutil
     llvm-config
     FileCheck count not
     llc
