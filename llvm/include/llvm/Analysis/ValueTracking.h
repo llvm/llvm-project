@@ -263,6 +263,11 @@ struct KnownFPClass {
     return (KnownFPClasses & Mask) == fcNone;
   }
 
+  /// Return true if it's known this can only be one of the mask entries.
+  bool isKnownOnly(FPClassTest Mask) const {
+    return (KnownFPClasses & ~Mask) == fcNone;
+  }
+
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
   }

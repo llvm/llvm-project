@@ -1105,6 +1105,37 @@ static void computeKnownBitsFromOperator(const Operator *I,
       break;
     }
 
+    Value *V;
+    // Handle bitcast from floating point to integer.
+    if (match(const_cast<Operator *>(I), m_ElementWiseBitCast(m_Value(V))) &&
+        V->getType()->isFPOrFPVectorTy()) {
+      KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
+      if (Result.SignBit) {
+        if (*Result.SignBit)
+          Known.makeNegative();
+        else
+          Known.makeNonNegative();
+      }
+
+      Type *FPType = V->getType()->getScalarType();
+      int MantissaWidth = FPType->getFPMantissaWidth();
+      if (MantissaWidth != -1) {
+        if (Result.isKnownOnly(fcInf)) {
+          Known.Zero.setLowBits(MantissaWidth);
+          Known.One.setBits(MantissaWidth, BitWidth - 1);
+        } else if (Result.isKnownOnly(fcZero))
+          Known.Zero.setLowBits(BitWidth - 1);
+        else if (Result.isKnownOnly(fcInf | fcNan))
+          Known.One.setBits(MantissaWidth, BitWidth - 1);
+        else if (Result.isKnownOnly(fcSubnormal | fcZero))
+          Known.Zero.setBits(MantissaWidth, BitWidth - 1);
+        else if (Result.isKnownOnly(fcInf | fcZero))
+          Known.Zero.setLowBits(MantissaWidth);
+      }
+
+      break;
+    }
+
     // Handle cast from vector integer type to scalar or vector integer.
     auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcTy);
     if (!SrcVecTy || !SrcVecTy->getElementType()->isIntegerTy() ||
