@@ -74,8 +74,7 @@ define void @bar(ptr %red, i32 %idx) {
 ; SM30-NEXT:    ld.param.u64 %rd1, [bar_param_0];
 ; SM30-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM30-NEXT:    ld.param.u32 %r1, [bar_param_1];
-; SM30-NEXT:    mov.u64 %rd3, tex0;
-; SM30-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [%rd3, {%r1}];
+; SM30-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [tex0, {%r1}];
 ; SM30-NEXT:    st.global.f32 [%rd2], %f1;
 ; SM30-NEXT:    ret;
   %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
@@ -126,7 +125,7 @@ define void @baz(ptr %red, i32 %idx) {
 ; SM30-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM30-NEXT:    ld.param.u32 %r1, [baz_param_1];
 ; SM30-NEXT:    mov.u64 %rd3, tex0;
-; SM30-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [%rd3, {%r1}];
+; SM30-NEXT:    tex.1d.v4.f32.s32 {%f1, %f2, %f3, %f4}, [tex0, {%r1}];
 ; SM30-NEXT:    { // callseq 0, 0
 ; SM30-NEXT:    .param .b64 param0;
 ; SM30-NEXT:    st.param.b64 [param0], %rd3;

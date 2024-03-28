@@ -76,8 +76,7 @@ define void @bar(ptr %red, i32 %idx) {
 ; SM30-NEXT:    ld.param.u64 %rd1, [bar_param_0];
 ; SM30-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; SM30-NEXT:    ld.param.u32 %r1, [bar_param_1];
-; SM30-NEXT:    mov.u64 %rd3, surf0;
-; SM30-NEXT:    suld.b.1d.b32.trap {%r2}, [%rd3, {%r1}];
+; SM30-NEXT:    suld.b.1d.b32.trap {%r2}, [surf0, {%r1}];
 ; SM30-NEXT:    cvt.rn.f32.s32 %f1, %r2;
 ; SM30-NEXT:    st.global.f32 [%rd2], %f1;
 ; SM30-NEXT:    ret;

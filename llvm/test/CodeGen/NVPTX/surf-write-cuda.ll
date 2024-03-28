@@ -62,8 +62,7 @@ define void @bar(i32 %val, i32 %idx) {
 ; SM30-NEXT:  // %bb.0:
 ; SM30-NEXT:    ld.param.u32 %r1, [bar_param_0];
 ; SM30-NEXT:    ld.param.u32 %r2, [bar_param_1];
-; SM30-NEXT:    mov.u64 %rd1, surf0;
-; SM30-NEXT:    sust.b.1d.b32.trap [%rd1, {%r2}], {%r1};
+; SM30-NEXT:    sust.b.1d.b32.trap [surf0, {%r2}], {%r1};
 ; SM30-NEXT:    ret;
   %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
   tail call void @llvm.nvvm.sust.b.1d.i32.trap(i64 %surfHandle, i32 %idx, i32 %val)

@@ -59,8 +59,7 @@ define i32 @t1() {
 ; SM30-NEXT:    .reg .b64 %rd<2>;
 ; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
-; SM30-NEXT:    mov.u64 %rd1, tex0;
-; SM30-NEXT:    txq.width.b32 %r1, [%rd1];
+; SM30-NEXT:    txq.width.b32 %r1, [tex0];
 ; SM30-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM30-NEXT:    ret;
   %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
@@ -112,8 +111,7 @@ define i32 @t3() {
 ; SM30-NEXT:    .reg .b64 %rd<2>;
 ; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
-; SM30-NEXT:    mov.u64 %rd1, tex0;
-; SM30-NEXT:    txq.height.b32 %r1, [%rd1];
+; SM30-NEXT:    txq.height.b32 %r1, [tex0];
 ; SM30-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM30-NEXT:    ret;
   %texHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @tex0)
@@ -165,8 +163,7 @@ define i32 @s1() {
 ; SM30-NEXT:    .reg .b64 %rd<2>;
 ; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
-; SM30-NEXT:    mov.u64 %rd1, surf0;
-; SM30-NEXT:    suq.width.b32 %r1, [%rd1];
+; SM30-NEXT:    suq.width.b32 %r1, [surf0];
 ; SM30-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM30-NEXT:    ret;
   %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
@@ -218,8 +215,7 @@ define i32 @s3() {
 ; SM30-NEXT:    .reg .b64 %rd<2>;
 ; SM30-EMPTY:
 ; SM30-NEXT:  // %bb.0:
-; SM30-NEXT:    mov.u64 %rd1, surf0;
-; SM30-NEXT:    suq.height.b32 %r1, [%rd1];
+; SM30-NEXT:    suq.height.b32 %r1, [surf0];
 ; SM30-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM30-NEXT:    ret;
   %surfHandle = tail call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf0)
