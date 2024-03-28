@@ -796,4 +796,52 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_extload_knownnegative) {
   EXPECT_EQ(Known.One, APInt(32, 0xfffffff0));
 }
 
+TEST_F(AArch64SelectionDAGTest,
+       computeKnownBits_AVGFLOORU_AVGFLOORS_AVGCEILU_AVGCEILS) {
+  SDLoc Loc;
+  auto Int8VT = EVT::getIntegerVT(Context, 8);
+  auto Int16VT = EVT::getIntegerVT(Context, 16);
+  auto Int8Vec8VT = EVT::getVectorVT(Context, Int8VT, 8);
+  auto Int16Vec8VT = EVT::getVectorVT(Context, Int16VT, 8);
+
+  SDValue UnknownOp0 = DAG->getRegister(0, Int8Vec8VT);
+  SDValue UnknownOp1 = DAG->getRegister(1, Int8Vec8VT);
+
+  SDValue ZextOp0 =
+      DAG->getNode(ISD::ZERO_EXTEND, Loc, Int16Vec8VT, UnknownOp0);
+  SDValue ZextOp1 =
+      DAG->getNode(ISD::ZERO_EXTEND, Loc, Int16Vec8VT, UnknownOp1);
+  // ZextOp0 = 00000000????????
+  // ZextOp1 = 00000000????????
+  // => (for all AVG* instructions)
+  // Known.Zero = 1111111100000000 (0xFF00)
+  // Known.One  = 0000000000000000 (0x0000)
+  auto Zeroes = APInt(16, 0xFF00);
+  auto Ones = APInt(16, 0x0000);
+
+  SDValue AVGFLOORU =
+      DAG->getNode(ISD::AVGFLOORU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGFLOORU = DAG->computeKnownBits(AVGFLOORU);
+  EXPECT_EQ(KnownAVGFLOORU.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGFLOORU.One, Ones);
+
+  SDValue AVGFLOORS =
+      DAG->getNode(ISD::AVGFLOORU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGFLOORS = DAG->computeKnownBits(AVGFLOORS);
+  EXPECT_EQ(KnownAVGFLOORS.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGFLOORS.One, Ones);
+
+  SDValue AVGCEILU =
+      DAG->getNode(ISD::AVGCEILU, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGCEILU = DAG->computeKnownBits(AVGCEILU);
+  EXPECT_EQ(KnownAVGCEILU.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGCEILU.One, Ones);
+
+  SDValue AVGCEILS =
+      DAG->getNode(ISD::AVGCEILS, Loc, Int16Vec8VT, ZextOp0, ZextOp1);
+  KnownBits KnownAVGCEILS = DAG->computeKnownBits(AVGCEILS);
+  EXPECT_EQ(KnownAVGCEILS.Zero, Zeroes);
+  EXPECT_EQ(KnownAVGCEILS.One, Ones);
+}
+
 } // end namespace llvm
