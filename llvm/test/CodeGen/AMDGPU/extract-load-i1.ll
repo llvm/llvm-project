@@ -29,6 +29,8 @@ define i1 @extractloadi1(ptr %ptr, i32 %idx) {
 ; CHECK-NEXT:    buffer_store_byte v2, off, s[0:3], s32 offset:1
 ; CHECK-NEXT:    buffer_load_ubyte v0, v1, s[0:3], 0 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = load <8 x i1>, ptr %ptr
   %ret = extractelement <8 x i1> %val, i32 %idx

@@ -11,8 +11,7 @@ define i1 @test1(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, 1000
   %cmp2 = icmp slt i32 %arg2, 1000
@@ -25,8 +24,7 @@ define i1 @test2(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, 1000
   %cmp2 = icmp ult i32 %arg2, 1000
@@ -39,8 +37,7 @@ define i1 @test3(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e9, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e9, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, 1000
   %cmp2 = icmp sle i32 %arg2, 1000
@@ -53,8 +50,7 @@ define i1 @test4(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e9, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e9, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, 1000
   %cmp2 = icmp ule i32 %arg2, 1000
@@ -67,8 +63,7 @@ define i1 @test5(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, 1000
   %cmp2 = icmp sgt i32 %arg2, 1000
@@ -81,8 +76,7 @@ define i1 @test6(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, 1000
   %cmp2 = icmp ugt i32 %arg2, 1000
@@ -95,8 +89,7 @@ define i1 @test7(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e7, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e7, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, 1000
   %cmp2 = icmp sge i32 %arg2, 1000
@@ -109,8 +102,7 @@ define i1 @test8(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e7, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e7, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, 1000
   %cmp2 = icmp uge i32 %arg2, 1000
@@ -123,8 +115,7 @@ define i1 @test9(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -137,8 +128,7 @@ define i1 @test10(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg2, %arg3
@@ -151,8 +141,7 @@ define i1 @test11(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, %arg3
   %cmp2 = icmp sle i32 %arg2, %arg3
@@ -165,8 +154,7 @@ define i1 @test12(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, %arg3
   %cmp2 = icmp ule i32 %arg2, %arg3
@@ -179,8 +167,7 @@ define i1 @test13(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -193,8 +180,7 @@ define i1 @test14(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, %arg3
   %cmp2 = icmp ugt i32 %arg2, %arg3
@@ -207,8 +193,7 @@ define i1 @test15(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, %arg3
   %cmp2 = icmp sge i32 %arg2, %arg3
@@ -221,8 +206,7 @@ define i1 @test16(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, %arg3
   %cmp2 = icmp uge i32 %arg2, %arg3
@@ -235,8 +219,7 @@ define i1 @test17(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, 1000
   %cmp2 = icmp slt i32 %arg2, 1000
@@ -249,8 +232,7 @@ define i1 @test18(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, 1000
   %cmp2 = icmp ult i32 %arg2, 1000
@@ -263,8 +245,7 @@ define i1 @test19(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0x3e9, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e9, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, 1000
   %cmp2 = icmp sle i32 %arg2, 1000
@@ -277,8 +258,7 @@ define i1 @test20(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x3e9, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e9, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, 1000
   %cmp2 = icmp ule i32 %arg2, 1000
@@ -291,8 +271,7 @@ define i1 @test21(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, 1000
   %cmp2 = icmp sgt i32 %arg2, 1000
@@ -305,8 +284,7 @@ define i1 @test22(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e8, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, 1000
   %cmp2 = icmp ugt i32 %arg2, 1000
@@ -319,8 +297,7 @@ define i1 @test23(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0x3e7, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, 0x3e7, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, 1000
   %cmp2 = icmp sge i32 %arg2, 1000
@@ -333,8 +310,7 @@ define i1 @test24(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3e7, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, 0x3e7, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, 1000
   %cmp2 = icmp uge i32 %arg2, 1000
@@ -347,8 +323,7 @@ define i1 @test25(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -361,8 +336,7 @@ define i1 @test26(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg2, %arg3
@@ -375,8 +349,7 @@ define i1 @test27(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_le_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sle i32 %arg1, %arg3
   %cmp2 = icmp sle i32 %arg2, %arg3
@@ -389,8 +362,7 @@ define i1 @test28(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_le_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg1, %arg3
   %cmp2 = icmp ule i32 %arg2, %arg3
@@ -403,8 +375,7 @@ define i1 @test29(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -417,8 +388,7 @@ define i1 @test30(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg1, %arg3
   %cmp2 = icmp ugt i32 %arg2, %arg3
@@ -431,8 +401,7 @@ define i1 @test31(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sge i32 %arg1, %arg3
   %cmp2 = icmp sge i32 %arg2, %arg3
@@ -445,8 +414,7 @@ define i1 @test32(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp uge i32 %arg1, %arg3
   %cmp2 = icmp uge i32 %arg2, %arg3
@@ -459,8 +427,7 @@ define i1 @test33(i32 %arg1, i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v1, 0x3e8, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v1, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg2
   %cmp2 = icmp slt i32 %arg1, 1000
@@ -633,8 +600,7 @@ define i1 @test42(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg3, %arg1
   %cmp2 = icmp ult i32 %arg3, %arg2
@@ -647,8 +613,7 @@ define i1 @test43(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg3, %arg1
   %cmp2 = icmp ult i32 %arg3, %arg2
@@ -661,8 +626,7 @@ define i1 @test44(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg3, %arg1
   %cmp2 = icmp ugt i32 %arg3, %arg2
@@ -675,8 +639,7 @@ define i1 @test45(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ugt i32 %arg3, %arg1
   %cmp2 = icmp ugt i32 %arg3, %arg2
@@ -689,8 +652,7 @@ define i1 @test46(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg3, %arg1
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -703,8 +665,7 @@ define i1 @test47(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg3, %arg2
@@ -717,8 +678,7 @@ define i1 @test48(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg3, %arg2
@@ -731,8 +691,7 @@ define i1 @test49(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg3, %arg1
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -745,8 +704,7 @@ define i1 @test50(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg3, %arg1
   %cmp2 = icmp sgt i32 %arg2, %arg3
@@ -759,8 +717,7 @@ define i1 @test51(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg1, %arg3
   %cmp2 = icmp slt i32 %arg3, %arg2
@@ -773,8 +730,7 @@ define i1 @test52(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, %arg3
   %cmp2 = icmp sgt i32 %arg3, %arg2
@@ -787,8 +743,7 @@ define i1 @test53(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_i32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_i32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp sgt i32 %arg3, %arg1
   %cmp2 = icmp slt i32 %arg2, %arg3
@@ -801,8 +756,7 @@ define i1 @test54(float %arg1, float %arg2, float %arg3) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %arg3
   %cmp2 = fcmp olt float %arg2, %arg3
@@ -815,8 +769,7 @@ define i1 @test55(double %arg1, double %arg2, double %arg3) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ole double %arg1, %arg3
   %cmp2 = fcmp ole double %arg2, %arg3
@@ -829,8 +782,7 @@ define i1 @test56(double %arg1, double %arg2, double %arg3) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ogt double %arg1, %arg3
   %cmp2 = fcmp ogt double %arg2, %arg3
@@ -843,8 +795,7 @@ define i1 @test57(float %arg1, float %arg2, float %arg3) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp oge float %arg1, %arg3
   %cmp2 = fcmp oge float %arg2, %arg3
@@ -857,16 +808,14 @@ define i1 @test58(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11-NEXT:    v_cmp_nle_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nle_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test58:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ugt double %arg1, %arg3
   %cmp2 = fcmp ugt double %arg2, %arg3
@@ -879,16 +828,14 @@ define i1 @test59(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test59:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp uge float %arg1, %arg3
   %cmp2 = fcmp uge float %arg2, %arg3
@@ -901,16 +848,14 @@ define i1 @test60(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ngt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test60:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ule float %arg1, %arg3
   %cmp2 = fcmp ule float %arg2, %arg3
@@ -923,16 +868,14 @@ define i1 @test61(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nge_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test61:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult double %arg1, %arg3
   %cmp2 = fcmp ult double %arg2, %arg3
@@ -946,8 +889,7 @@ define i1 @test62(float %arg1, float %arg2, float %arg3) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 2.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, 1.0
   %add2 = fadd nnan float %arg2, 2.0
@@ -964,8 +906,7 @@ define i1 @test63(double %arg1, double %arg2, double %arg3) #0 {
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan double %arg1, 1.0
   %add2 = fadd nnan double %arg2, 2.0
@@ -982,8 +923,7 @@ define i1 @test64(double %arg1, double %arg2, double %arg3) #0 {
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan double %arg1, 1.0
   %add2 = fadd nnan double %arg2, 2.0
@@ -999,8 +939,7 @@ define i1 @test65(float %arg1, float %arg2, float %arg3) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 2.0, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, 1.0
   %add2 = fadd nnan float %arg2, 2.0
@@ -1017,8 +956,7 @@ define i1 @test66(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan double %arg1, 1.0
   %add2 = fadd nnan double %arg2, 2.0
@@ -1034,8 +972,7 @@ define i1 @test67(float %arg1, float %arg2, float %arg3) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 2.0, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, 1.0
   %add2 = fadd nnan float %arg2, 2.0
@@ -1051,8 +988,7 @@ define i1 @test68(float %arg1, float %arg2, float %arg3) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 2.0, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, 1.0
   %add2 = fadd nnan float %arg2, 2.0
@@ -1069,8 +1005,7 @@ define i1 @test69(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan double %arg1, 1.0
   %add2 = fadd nnan double %arg2, 2.0
@@ -1086,16 +1021,14 @@ define i1 @test70(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test70:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -1112,8 +1045,7 @@ define i1 @test71(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GCN-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -1130,8 +1062,7 @@ define i1 @test72(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GCN-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -1147,16 +1078,14 @@ define i1 @test73(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test73:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -1173,8 +1102,7 @@ define i1 @test74(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11-NEXT:    v_cmp_nle_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nle_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test74:
@@ -1183,8 +1111,7 @@ define i1 @test74(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -1200,16 +1127,14 @@ define i1 @test75(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test75:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -1225,16 +1150,14 @@ define i1 @test76(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ngt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test76:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -1251,8 +1174,7 @@ define i1 @test77(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nge_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test77:
@@ -1261,8 +1183,7 @@ define i1 @test77(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -1277,8 +1198,7 @@ define i1 @test78(float %arg1, float %arg2, float %arg3) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %arg3
   %cmp2 = fcmp ogt float %arg3, %arg2
@@ -1291,16 +1211,14 @@ define i1 @test79(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nge_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test79:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult float %arg1, %arg3
   %cmp2 = fcmp ugt float %arg3, %arg2
@@ -1314,8 +1232,7 @@ define i1 @test80(float %arg1, float %arg2, float %arg3) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 2.0, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, 1.0
   %add2 = fadd nnan float %arg2, 2.0
@@ -1332,8 +1249,7 @@ define i1 @test81(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GCN-NEXT:    v_add_f64 v[2:3], v[2:3], 2.0
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan double %arg1, 1.0
   %add2 = fadd nnan double %arg2, 2.0
@@ -1350,8 +1266,7 @@ define i1 @test82(double %arg1, double %arg2, double %arg3) {
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GCN-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -1367,16 +1282,14 @@ define i1 @test83(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ngt_f32_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test83:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -1393,16 +1306,14 @@ define i1 @test84(half %arg1, half %arg2, half %arg3) {
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_f16_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test84:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f16_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call half @llvm.canonicalize.f16(half %arg1)
   %var2 = call half @llvm.canonicalize.f16(half %arg2)
@@ -1487,16 +1398,14 @@ define i1 @test87(half %arg1, half %arg2, half %arg3) {
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ge_f16_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test87:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f16_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call half @llvm.canonicalize.f16(half %arg1)
   %var2 = call half @llvm.canonicalize.f16(half %arg2)
@@ -1547,16 +1456,14 @@ define i1 @test89(half %arg1, half %arg2, half %arg3) {
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nlt_f16_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test89:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f16_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f16_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call half @llvm.canonicalize.f16(half %arg1)
   %var2 = call half @llvm.canonicalize.f16(half %arg2)
@@ -1573,16 +1480,14 @@ define i1 @test90(half %arg1, half %arg2, half %arg3) {
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX11-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_ngt_f16_e64 s0, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test90:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f16_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f16_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call half @llvm.canonicalize.f16(half %arg1)
   %var2 = call half @llvm.canonicalize.f16(half %arg2)
@@ -1631,8 +1536,7 @@ define i1 @test92(i32 %arg1, i32 %arg2, i32 %arg3, i32 %C) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min3_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v3
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1651,7 +1555,6 @@ define i1 @test93(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
 ; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v1, v4
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1671,8 +1574,7 @@ define i1 @test94(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %ar
 ; GCN-NEXT:    v_min3_u32 v0, v0, v1, v2
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v4
 ; GCN-NEXT:    v_min3_u32 v0, v5, v6, v0
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v8
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1697,8 +1599,7 @@ define i1 @test95(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_maxmin_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1713,8 +1614,7 @@ define i1 @test96(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_minmax_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1730,8 +1630,7 @@ define i1 @test97(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v0, v0, v1
 ; GCN-NEXT:    v_max3_u32 v0, v0, v2, v3
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1749,8 +1648,7 @@ define i1 @test98(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_u32_e32 v2, v2, v3
 ; GCN-NEXT:    v_minmax_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1768,8 +1666,7 @@ define i1 @test99(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v2, v2, v3
 ; GCN-NEXT:    v_min3_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1787,8 +1684,7 @@ define i1 @test100(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_max_u32_e32 v2, v2, v3
 ; GCN-NEXT:    v_maxmin_u32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1807,8 +1703,7 @@ define i1 @test101(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GCN-NEXT:    v_minmax_u32 v1, v3, v4, v5
 ; GCN-NEXT:    v_min3_u32 v0, v0, v2, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v6
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1831,8 +1726,7 @@ define i1 @test102(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GCN-NEXT:    v_min_u32_e32 v1, v2, v3
 ; GCN-NEXT:    v_min3_u32 v0, v0, v5, v1
-; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v6
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1859,7 +1753,6 @@ define i1 @test103(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v6
 ; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v0, v6
 ; GCN-NEXT:    s_or_b32 s0, s0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1892,7 +1785,6 @@ define i1 @test104(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-NEXT:    s_or_b32 s1, s2, vcc_lo
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1931,7 +1823,6 @@ define i1 @test105(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s1, s2, s1
 ; GCN-NEXT:    s_and_b32 s0, s0, s1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
   %cmp2 = icmp ult i32 %arg2, %C
@@ -1968,7 +1859,6 @@ define i1 @test106(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-NEXT:    s_or_b32 s0, s2, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C1
   %cmp2 = icmp ult i32 %arg2, %C1
@@ -2001,8 +1891,7 @@ define i1 @test107(float %arg1, float %arg2, float %arg3, float %C) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min3_f32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v3
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2017,16 +1906,14 @@ define i1 @test108(float %arg1, float %arg2, float %arg3, float %C) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_max3_f32 v0, v0, v1, v2
-; GFX11-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v3
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_nge_f32_e64 s0, v0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test108:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max3_f32 v0, v0, v1, v2
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v3
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v3
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult float %arg1, %C
   %cmp2 = fcmp ult float %arg2, %C
@@ -2046,7 +1933,6 @@ define i1 @test109(float %arg1, float %arg2, float %arg3, float %arg4, float %C)
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, v1, v4
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test109:
@@ -2056,7 +1942,6 @@ define i1 @test109(float %arg1, float %arg2, float %arg3, float %arg4, float %C)
 ; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
 ; GFX11NONANS-NEXT:    v_cmp_gt_f32_e64 s0, v1, v4
 ; GFX11NONANS-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2078,7 +1963,6 @@ define i1 @test110(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
 ; GCN-NEXT:    v_cmp_gt_f32_e64 s0, v1, v8
 ; GCN-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, %C1
   %add2 = fadd nnan float %arg2, %C2
@@ -2099,12 +1983,12 @@ define i1 @test111(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v3, v3, v3 :: v_dual_max_f32 v2, v2, v2
-; GFX11-NEXT:    v_dual_min_f32 v2, v2, v3 :: v_dual_max_f32 v3, v4, v4
+; GFX11-NEXT:    v_min_f32_e32 v2, v2, v3
 ; GFX11-NEXT:    v_min3_f32 v0, v0, v1, v2
-; GFX11-NEXT:    v_min_f32_e32 v0, v0, v3
+; GFX11-NEXT:    v_max_f32_e32 v1, v4, v4
+; GFX11-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_min3_f32 v0, v5, v6, v0
-; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test111:
@@ -2114,8 +1998,7 @@ define i1 @test111(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11NONANS-NEXT:    v_min3_f32 v0, v0, v1, v2
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v4
 ; GFX11NONANS-NEXT:    v_min3_f32 v0, v5, v6, v0
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2141,13 +2024,13 @@ define i1 @test112(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v3, v3, v3 :: v_dual_max_f32 v2, v2, v2
 ; GFX11-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v4, v8
-; GFX11-NEXT:    v_dual_max_f32 v5, v5, v5 :: v_dual_min_f32 v2, v2, v3
+; GFX11-NEXT:    v_min_f32_e32 v2, v2, v3
 ; GFX11-NEXT:    v_max_f32_e32 v3, v6, v6
 ; GFX11-NEXT:    v_min3_f32 v0, v0, v1, v2
-; GFX11-NEXT:    v_min3_f32 v0, v0, v5, v3
+; GFX11-NEXT:    v_max_f32_e32 v1, v5, v5
+; GFX11-NEXT:    v_min3_f32 v0, v0, v1, v3
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GFX11-NEXT:    s_or_b32 s0, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test112:
@@ -2157,8 +2040,7 @@ define i1 @test112(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11NONANS-NEXT:    v_min3_f32 v0, v0, v1, v2
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v4
 ; GFX11NONANS-NEXT:    v_min3_f32 v0, v5, v6, v0
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2187,15 +2069,13 @@ define i1 @test113(float %arg1, float %arg2, float %arg3, float %C) {
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_cmp_nge_f32_e64 s0, v0, v3
 ; GFX11-NEXT:    s_or_b32 s0, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test113:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_maxmin_f32 v0, v0, v1, v2
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v3
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v3
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult float %arg1, %C
   %cmp2 = fcmp ult float %arg2, %C
@@ -2214,7 +2094,6 @@ define i1 @test114(float %arg1, float %arg2, float %arg3, float %C) {
 ; GFX11-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, v0, v3
 ; GFX11-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test114:
@@ -2224,7 +2103,6 @@ define i1 @test114(float %arg1, float %arg2, float %arg3, float %C) {
 ; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v2, v3
 ; GFX11NONANS-NEXT:    v_cmp_gt_f32_e64 s0, v0, v3
 ; GFX11NONANS-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ogt float %arg1, %C
   %cmp2 = fcmp ogt float %arg2, %C
@@ -2244,7 +2122,6 @@ define i1 @test115(float %arg1, float %arg2, float %arg3, float %arg4, float %C)
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
 ; GFX11-NEXT:    v_cmp_nge_f32_e64 s0, v1, v4
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test115:
@@ -2252,8 +2129,7 @@ define i1 @test115(float %arg1, float %arg2, float %arg3, float %arg4, float %C)
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v2, v2, v3
 ; GFX11NONANS-NEXT:    v_min3_f32 v0, v0, v1, v2
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v4
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2287,7 +2163,6 @@ define i1 @test116(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11-NEXT:    s_or_b32 s1, s2, vcc_lo
 ; GFX11-NEXT:    s_or_b32 s0, s0, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test116:
@@ -2304,7 +2179,6 @@ define i1 @test116(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11NONANS-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11NONANS-NEXT:    s_or_b32 s1, s2, vcc_lo
 ; GFX11NONANS-NEXT:    s_or_b32 s0, s0, s1
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C
   %cmp2 = fcmp olt float %arg2, %C
@@ -2348,7 +2222,6 @@ define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11-NEXT:    s_or_b32 s0, s2, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test117:
@@ -2366,7 +2239,6 @@ define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GFX11NONANS-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11NONANS-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11NONANS-NEXT:    s_or_b32 s0, s2, s0
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %C1
   %cmp2 = fcmp olt float %arg2, %C1
@@ -2403,8 +2275,7 @@ define i1 @test118(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
 ; GCN-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_max3_f32 v0, v0, v2, v3
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, %C1
   %add2 = fadd nnan float %arg2, %C2
@@ -2428,8 +2299,7 @@ define i1 @test119(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
 ; GCN-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
 ; GCN-NEXT:    v_min_f32_e32 v2, v2, v3
 ; GCN-NEXT:    v_minmax_f32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, %C1
   %add2 = fadd nnan float %arg2, %C2
@@ -2453,8 +2323,7 @@ define i1 @test120(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
 ; GCN-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
 ; GCN-NEXT:    v_max_f32_e32 v2, v2, v3
 ; GCN-NEXT:    v_min3_f32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, %C1
   %add2 = fadd nnan float %arg2, %C2
@@ -2478,8 +2347,7 @@ define i1 @test121(float %arg1, float %arg2, float %arg3, float %arg4, float %C1
 ; GCN-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
 ; GCN-NEXT:    v_max_f32_e32 v2, v2, v3
 ; GCN-NEXT:    v_maxmin_f32 v0, v0, v1, v2
-; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v0, v8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %add1 = fadd nnan float %arg1, %C1
   %add2 = fadd nnan float %arg2, %C2
@@ -2500,8 +2368,7 @@ define i1 @test122(double %arg1, double %arg2, double %arg3) #1 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult double %arg1, %arg3
   %cmp2 = fcmp ult double %arg2, %arg3
@@ -2516,8 +2383,7 @@ define i1 @test123(double %arg1, double %arg2, double %arg3) #1 {
 ; GCN-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GCN-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GCN-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GCN-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -2536,7 +2402,6 @@ define i1 @test124(i32 %arg1, i64 %arg2) {
 ; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0x3e8, v[1:2]
 ; GCN-NEXT:    v_cmp_gt_i32_e64 s0, 0x3e8, v0
 ; GCN-NEXT:    s_or_b32 s0, s0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp slt i32 %arg1, 1000
   %cmp2 = icmp slt i64 %arg2, 1000
@@ -2551,7 +2416,6 @@ define i1 @test125(i32 %arg1, i32 %arg2) {
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x3e8, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s0, 0x3e8, v1
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp eq i32 %arg1, 1000
   %cmp2 = icmp eq i32 %arg2, 1000
@@ -2566,7 +2430,6 @@ define i1 @test126(i32 %arg1, i32 %arg2) {
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x3e8, v0
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s0, 0x3e8, v1
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ne i32 %arg1, 1000
   %cmp2 = icmp ne i32 %arg2, 1000
@@ -2581,7 +2444,6 @@ define i1 @test127(i64 %arg1, i64 %arg2, i64 %arg3) {
 ; GCN-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[4:5]
 ; GCN-NEXT:    v_cmp_lt_u64_e64 s0, v[2:3], v[4:5]
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
    %cmp1 = icmp ult i64 %arg1, %arg3
    %cmp2 = icmp ult i64 %arg2, %arg3
@@ -2596,7 +2458,6 @@ define i1 @test128(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cmp_lt_u32_e64 s0, v2, v1
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg3, %arg2
@@ -2611,7 +2472,6 @@ define i1 @test129(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cmp_le_u32_e64 s0, v1, v2
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ule i32 %arg2, %arg3
@@ -2626,7 +2486,6 @@ define i1 @test130(i32 %arg1, i32 %arg2, i32 %arg3) {
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc_lo, v2, v0
 ; GCN-NEXT:    v_cmp_gt_u32_e64 s0, v1, v2
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ule i32 %arg3, %arg1
   %cmp2 = icmp ugt i32 %arg2, %arg3
@@ -2641,7 +2500,6 @@ define i1 @test131(i16 %arg1, i32 %arg2) {
 ; GCN-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 10, v0
 ; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 10, v1
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i16 %arg1, 10
   %cmp2 = icmp ult i32 %arg2, 10
@@ -2659,7 +2517,6 @@ define i1 @test132(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s1, s1, vcc_lo
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %arg3
   %cmp2 = icmp ult i32 %arg2, %arg3
@@ -2677,7 +2534,6 @@ define i1 @test133(i32 %arg1, i32 %arg2) {
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x64, v0
 ; GCN-NEXT:    v_cmp_gt_u32_e64 s0, 0x3e8, v1
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, 100
   %cmp2 = icmp ult i32 %arg2, 1000
@@ -2692,15 +2548,13 @@ define i1 @test134(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, v2, v1
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test134:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %arg3
   %cmp2 = fcmp ogt float %arg3, %arg2
@@ -2715,15 +2569,13 @@ define i1 @test135(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_nle_f32_e64 s0, v2, v1
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test135:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult float %arg1, %arg3
   %cmp2 = fcmp ugt float %arg3, %arg2
@@ -2740,7 +2592,6 @@ define i1 @test136(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_ge_f64_e64 s0, v[4:5], v[2:3]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test136:
@@ -2749,8 +2600,7 @@ define i1 @test136(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -2768,15 +2618,13 @@ define i1 @test137(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, v2, v1
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test137:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -2793,15 +2641,13 @@ define i1 @test138(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test138:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp olt float %arg1, %arg3
   %cmp2 = fcmp olt float %arg2, %arg3
@@ -2816,15 +2662,13 @@ define i1 @test139(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_le_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test139:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ole double %arg1, %arg3
   %cmp2 = fcmp ole double %arg2, %arg3
@@ -2839,15 +2683,13 @@ define i1 @test140(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_gt_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test140:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ogt double %arg1, %arg3
   %cmp2 = fcmp ogt double %arg2, %arg3
@@ -2862,15 +2704,13 @@ define i1 @test141(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test141:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp oge float %arg1, %arg3
   %cmp2 = fcmp oge float %arg2, %arg3
@@ -2885,15 +2725,13 @@ define i1 @test142(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_nle_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_nle_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test142:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ugt double %arg1, %arg3
   %cmp2 = fcmp ugt double %arg2, %arg3
@@ -2908,15 +2746,13 @@ define i1 @test143(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test143:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp uge float %arg1, %arg3
   %cmp2 = fcmp uge float %arg2, %arg3
@@ -2931,15 +2767,13 @@ define i1 @test144(float %arg1, float %arg2, float %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_ngt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test144:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ule float %arg1, %arg3
   %cmp2 = fcmp ule float %arg2, %arg3
@@ -2954,15 +2788,13 @@ define i1 @test145(double %arg1, double %arg2, double %arg3) #0 {
 ; GFX11-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_nge_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test145:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = fcmp ult double %arg1, %arg3
   %cmp2 = fcmp ult double %arg2, %arg3
@@ -2978,15 +2810,13 @@ define i1 @test146(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_lt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test146:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -3005,7 +2835,6 @@ define i1 @test147(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_le_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test147:
@@ -3014,8 +2843,7 @@ define i1 @test147(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -3034,7 +2862,6 @@ define i1 @test148(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_gt_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test148:
@@ -3043,8 +2870,7 @@ define i1 @test148(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -3062,15 +2888,13 @@ define i1 @test149(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_ge_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test149:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -3089,7 +2913,6 @@ define i1 @test150(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_cmp_nle_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_nle_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test150:
@@ -3098,8 +2921,7 @@ define i1 @test150(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_gt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
@@ -3117,15 +2939,13 @@ define i1 @test151(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test151:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_max_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_ge_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -3143,15 +2963,13 @@ define i1 @test152(float %arg1, float %arg2, float %arg3) {
 ; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
 ; GFX11-NEXT:    v_cmp_ngt_f32_e64 s0, v1, v2
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test152:
 ; GFX11NONANS:       ; %bb.0:
 ; GFX11NONANS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11NONANS-NEXT:    v_min_f32_e32 v0, v0, v1
-; GFX11NONANS-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_le_f32_e64 s0, v0, v2
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call float @llvm.canonicalize.f32(float %arg1)
   %var2 = call float @llvm.canonicalize.f32(float %arg2)
@@ -3170,7 +2988,6 @@ define i1 @test153(double %arg1, double %arg2, double %arg3) {
 ; GFX11-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
 ; GFX11-NEXT:    v_cmp_nge_f64_e64 s0, v[2:3], v[4:5]
 ; GFX11-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11NONANS-LABEL: test153:
@@ -3179,8 +2996,7 @@ define i1 @test153(double %arg1, double %arg2, double %arg3) {
 ; GFX11NONANS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11NONANS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11NONANS-NEXT:    v_min_f64 v[0:1], v[0:1], v[2:3]
-; GFX11NONANS-NEXT:    v_cmp_lt_f64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11NONANS-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11NONANS-NEXT:    v_cmp_lt_f64_e64 s0, v[0:1], v[4:5]
 ; GFX11NONANS-NEXT:    s_setpc_b64 s[30:31]
   %var1 = call double @llvm.canonicalize.f64(double %arg1)
   %var2 = call double @llvm.canonicalize.f64(double %arg2)
