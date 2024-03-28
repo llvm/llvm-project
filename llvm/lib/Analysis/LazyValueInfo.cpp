@@ -641,7 +641,7 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   // instruction is placed, even if it could legally be hoisted much higher.
   // That is unfortunate.
   PointerType *PT = dyn_cast<PointerType>(BBI->getType());
-  if (PT && isKnownNonZero(BBI, DL))
+  if (PT && isKnownNonZero(BBI, /*Depth=*/0, DL))
     return ValueLatticeElement::getNot(ConstantPointerNull::get(PT));
 
   if (BBI->getType()->isIntegerTy()) {
@@ -1858,7 +1858,8 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   Module *M = CxtI->getModule();
   const DataLayout &DL = M->getDataLayout();
   if (V->getType()->isPointerTy() && C->isNullValue() &&
-      isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
+      isKnownNonZero(V->stripPointerCastsSameRepresentation(), /*Depth=*/0,
+                     DL)) {
     if (Pred == ICmpInst::ICMP_EQ)
       return LazyValueInfo::False;
     else if (Pred == ICmpInst::ICMP_NE)

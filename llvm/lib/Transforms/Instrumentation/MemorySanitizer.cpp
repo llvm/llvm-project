@@ -1281,7 +1281,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         // ignored.
         return;
       }
-      if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
+      if (llvm::isKnownNonZero(ConvertedShadow, /*Depth=*/0, DL)) {
         // Copy origin as the value is definitely uninitialized.
         paintOrigin(IRB, updateOrigin(Origin, IRB), OriginPtr, StoreSize,
                     OriginAlignment);
@@ -1427,7 +1427,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           // Skip, value is initialized or const shadow is ignored.
           continue;
         }
-        if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
+        if (llvm::isKnownNonZero(ConvertedShadow, /*Depth=*/0, DL)) {
           // Report as the value is definitely uninitialized.
           insertWarningFn(IRB, ShadowData.Origin);
           if (!MS.Recover)

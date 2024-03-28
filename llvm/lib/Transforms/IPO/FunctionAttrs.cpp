@@ -1175,7 +1175,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     Value *RetVal = FlowsToReturn[i];
 
     // If this value is locally known to be non-null, we're good
-    if (isKnownNonZero(RetVal, DL))
+    if (isKnownNonZero(RetVal, /*Depth=*/0, DL))
       continue;
 
     // Otherwise, we need to look upwards since we can't make any local
