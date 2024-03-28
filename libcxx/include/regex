@@ -4215,11 +4215,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return str().compare(__s); }
   _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return str().compare(__s); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s)
-#ifndef _LIBCPP_CXX03_LANG
-      _NOEXCEPT(__is_nothrow_swappable<_BidirectionalIterator>::value)
-#endif // _LIBCPP_CXX03_LANG
-  {
+  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s) _NOEXCEPT_(__is_nothrow_swappable_v<_BidirectionalIterator>) {
     this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
     std::swap(matched, __s.matched);
   }

@@ -934,7 +934,7 @@ public:
                  (!__node_traits::propagate_on_container_swap::value ||
                   __is_nothrow_swappable<__node_allocator>::value));
 #else
-      _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value);
+      _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI size_type max_bucket_count() const _NOEXCEPT { return max_size(); }
@@ -1990,7 +1990,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
                 __is_nothrow_swappable<__pointer_allocator>::value) &&
                (!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value))
 #else
-    _NOEXCEPT_(__is_nothrow_swappable<hasher>::value&& __is_nothrow_swappable<key_equal>::value)
+    _NOEXCEPT_(__is_nothrow_swappable_v<hasher>&& __is_nothrow_swappable_v<key_equal>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(

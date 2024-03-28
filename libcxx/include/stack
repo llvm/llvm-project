@@ -270,7 +270,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void pop() { c.pop_back(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(stack& __s) _NOEXCEPT_(__is_nothrow_swappable<container_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(stack& __s) _NOEXCEPT_(__is_nothrow_swappable_v<container_type>) {
     using std::swap;
     swap(c, __s.c);
   }
@@ -356,7 +356,7 @@ operator<=>(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y
 
 #endif
 
-template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
+template <class _Tp, class _Container, __enable_if_t<__is_swappable_v<_Container>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);

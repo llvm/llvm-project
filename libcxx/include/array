@@ -192,8 +192,7 @@ struct _LIBCPP_TEMPLATE_VIS array {
     std::fill_n(data(), _Size, __u);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(array& __a)
-      _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(array& __a) _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>) {
     std::swap_ranges(data(), data() + _Size, __a.data());
   }
 
@@ -428,7 +427,7 @@ operator<=>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
 
 #endif // _LIBCPP_STD_VER <= 17
 
-template <class _Tp, size_t _Size, __enable_if_t<_Size == 0 || __is_swappable<_Tp>::value, int> = 0>
+template <class _Tp, size_t _Size, __enable_if_t<_Size == 0 || __is_swappable_v<_Tp>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(array<_Tp, _Size>& __x, array<_Tp, _Size>& __y)
     _NOEXCEPT_(noexcept(__x.swap(__y))) {
   __x.swap(__y);

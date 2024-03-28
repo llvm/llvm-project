@@ -813,9 +813,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(set& __s) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
-    __tree_.swap(__s.__tree_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(set& __s) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__s.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return __tree_.__alloc(); }
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __tree_.value_comp(); }
@@ -1271,7 +1269,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(multiset& __s) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(multiset& __s) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
     __tree_.swap(__s.__tree_);
   }
 

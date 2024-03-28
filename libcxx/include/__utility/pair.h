@@ -417,7 +417,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
 #endif   // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(pair& __p)
-      _NOEXCEPT_(__is_nothrow_swappable<first_type>::value&& __is_nothrow_swappable<second_type>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<first_type>&& __is_nothrow_swappable_v<second_type>) {
     using std::swap;
     swap(first, __p.first);
     swap(second, __p.second);
@@ -425,7 +425,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
 #if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(const pair& __p) const
-      noexcept(__is_nothrow_swappable<const first_type>::value && __is_nothrow_swappable<const second_type>::value) {
+      noexcept(__is_nothrow_swappable_v<const first_type> && __is_nothrow_swappable_v<const second_type>) {
     using std::swap;
     swap(first, __p.first);
     swap(second, __p.second);
@@ -519,15 +519,15 @@ struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
 };
 #endif // _LIBCPP_STD_VER >= 23
 
-template <class _T1, class _T2, __enable_if_t<__is_swappable<_T1>::value && __is_swappable<_T2>::value, int> = 0>
+template <class _T1, class _T2, __enable_if_t<__is_swappable_v<_T1> && __is_swappable_v<_T2>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
-    _NOEXCEPT_(__is_nothrow_swappable<_T1>::value&& __is_nothrow_swappable<_T2>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<_T1>&& __is_nothrow_swappable_v<_T2>) {
   __x.swap(__y);
 }
 
 #if _LIBCPP_STD_VER >= 23
 template <class _T1, class _T2>
-  requires(__is_swappable<const _T1>::value && __is_swappable<const _T2>::value)
+  requires(__is_swappable_v<const _T1> && __is_swappable_v<const _T2>)
 _LIBCPP_HIDE_FROM_ABI constexpr void
 swap(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y) noexcept(noexcept(__x.swap(__y))) {
   __x.swap(__y);

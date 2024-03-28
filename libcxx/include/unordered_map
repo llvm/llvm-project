@@ -651,7 +651,7 @@ public:
     return static_cast<const _Hash&>(*this)(__x);
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable<_Hash>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Hash>) {
     using std::swap;
     swap(static_cast<_Hash&>(*this), static_cast<_Hash&>(__y));
   }
@@ -675,7 +675,7 @@ public:
     return __hash_(__x);
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable<_Hash>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Hash>) {
     using std::swap;
     swap(__hash_, __y.__hash_);
   }
@@ -726,7 +726,7 @@ public:
     return static_cast<const _Pred&>(*this)(__x, __y);
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Pred>) {
     using std::swap;
     swap(static_cast<_Pred&>(*this), static_cast<_Pred&>(__y));
   }
@@ -769,7 +769,7 @@ public:
     return __pred_(__x, __y);
   }
 #endif
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Pred>) {
     using std::swap;
     swap(__pred_, __y.__pred_);
   }
@@ -1374,7 +1374,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_map& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_map& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 
@@ -2125,7 +2125,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multimap& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multimap& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 

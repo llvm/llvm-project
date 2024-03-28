@@ -642,7 +642,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return static_cast<const _Compare&>(*this)(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(static_cast<_Compare&>(*this), static_cast<_Compare&>(__y));
   }
@@ -680,7 +680,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
     return __comp_(__x, __y.__get_value().first);
   }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value) {
+  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
@@ -1360,7 +1360,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
     __tree_.swap(__m.__tree_);
   }
 
@@ -1952,7 +1952,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) _NOEXCEPT_(__is_nothrow_swappable<__base>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(multimap& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
     __tree_.swap(__m.__tree_);
   }
 

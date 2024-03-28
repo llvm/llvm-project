@@ -829,7 +829,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 
@@ -1432,7 +1432,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 
