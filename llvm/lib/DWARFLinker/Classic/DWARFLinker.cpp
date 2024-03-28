@@ -1653,12 +1653,6 @@ shouldSkipAttribute(bool Update,
   }
 }
 
-struct AttributeLinkedOffsetFixup {
-  int64_t LinkedOffsetFixupVal;
-  uint64_t InputAttrStartOffset;
-  uint64_t InputAttrEndOffset;
-};
-
 DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                       const DWARFFile &File, CompileUnit &Unit,
                                       int64_t PCOffset, uint32_t OutOffset,
@@ -1744,7 +1738,6 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 
   std::optional<StringRef> LibraryInstallName =
       ObjFile.Addresses->getLibraryInstallName();
-  SmallVector<AttributeLinkedOffsetFixup> AttributesFixups;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     if (shouldSkipAttribute(Update, AttrSpec, Flags & TF_SkipPC)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
@@ -1752,22 +1745,14 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
-    AttributeLinkedOffsetFixup CurAttrFixup;
-    CurAttrFixup.InputAttrStartOffset = InputDIE.getOffset() + Offset;
-    CurAttrFixup.LinkedOffsetFixupVal =
-        Unit.getStartOffset() + OutOffset - CurAttrFixup.InputAttrStartOffset;
-
     DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
-    CurAttrFixup.InputAttrEndOffset = InputDIE.getOffset() + Offset;
     AttrSize = Offset - AttrSize;
 
     uint64_t FinalAttrSize =
         cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec, AttrSize,
                        AttrInfo, IsLittleEndian);
-    if (FinalAttrSize != 0 && ObjFile.Addresses->needToSaveValidRelocs())
-      AttributesFixups.push_back(CurAttrFixup);
 
     OutOffset += FinalAttrSize;
   }
@@ -1859,15 +1844,6 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 
   // Add the size of the abbreviation number to the output offset.
   OutOffset += AbbrevNumberSize;
-
-  // Update fixups with the size of the abbreviation number
-  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
-    F.LinkedOffsetFixupVal += AbbrevNumberSize;
-
-  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
-    ObjFile.Addresses->updateAndSaveValidRelocs(
-        Unit.getOrigUnit().getVersion() >= 5, Unit.getOrigUnit().getOffset(),
-        F.LinkedOffsetFixupVal, F.InputAttrStartOffset, F.InputAttrEndOffset);
 
   if (!HasChildren) {
     // Update our size.
@@ -2718,12 +2694,9 @@ Error DWARFLinker::link() {
     if (Options.VerifyInputDWARF)
       verifyInput(OptContext.File);
 
-    // Look for relocations that correspond to address map entries.
-
-    // there was findvalidrelocations previously ... probably we need to gather
-    // info here
+    // Check if we can skip linking.
     if (LLVM_LIKELY(!Options.Update) &&
-        !OptContext.File.Addresses->hasValidRelocs()) {
+        !OptContext.File.Addresses->hasLiveDebugInfo()) {
       if (Options.Verbose)
         outs() << "No valid relocations found. Skipping.\n";
 
@@ -2853,7 +2826,7 @@ Error DWARFLinker::link() {
     // The calls to applyValidRelocs inside cloneDIE will walk the reloc
     // array again (in the same way findValidRelocsInDebugInfo() did). We
     // need to reset the NextValidReloc index to the beginning.
-    if (OptContext.File.Addresses->hasValidRelocs() ||
+    if (OptContext.File.Addresses->hasLiveDebugInfo() ||
         LLVM_UNLIKELY(Options.Update)) {
       SizeByObject[OptContext.File.FileName].Input =
           getDebugInfoSize(*OptContext.File.Dwarf);

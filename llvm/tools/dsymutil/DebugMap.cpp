@@ -58,10 +58,6 @@ bool DebugMapObject::addSymbol(StringRef Name,
   return InsertResult.second;
 }
 
-void DebugMapObject::setRelocationMap(dsymutil::RelocationMap &RM) {
-  RelocMap.emplace(RM);
-}
-
 void DebugMapObject::setInstallName(StringRef IN) { InstallName.emplace(IN); }
 
 void DebugMapObject::print(raw_ostream &OS) const {
@@ -169,8 +165,8 @@ struct MappingTraits<dsymutil::DebugMapObject>::YamlDMO {
   std::vector<dsymutil::DebugMapObject::YAMLSymbolMapping> Entries;
 };
 
-void MappingTraits<std::pair<std::string, SymbolMapping>>::mapping(
-    IO &io, std::pair<std::string, SymbolMapping> &s) {
+void MappingTraits<std::pair<std::string, DebugMapObject::SymbolMapping>>::
+    mapping(IO &io, std::pair<std::string, DebugMapObject::SymbolMapping> &s) {
   io.mapRequired("sym", s.first);
   io.mapOptional("objAddr", s.second.ObjectAddress);
   io.mapRequired("binAddr", s.second.BinaryAddress);

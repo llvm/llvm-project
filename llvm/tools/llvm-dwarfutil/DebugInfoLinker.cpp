@@ -78,7 +78,7 @@ public:
   }
 
   // should be renamed into has valid address ranges
-  bool hasValidRelocs() override { return HasValidAddressRanges; }
+  bool hasLiveDebugInfo() override { return HasValidAddressRanges; }
 
   std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
                                                       bool Verbose) override {
@@ -141,16 +141,6 @@ public:
     // no need to apply relocations to the linked binary.
     return false;
   }
-
-  bool needToSaveValidRelocs() override { return false; }
-
-  void updateAndSaveValidRelocs(bool, uint64_t, int64_t, uint64_t,
-                                uint64_t) override {}
-
-  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                       uint64_t OutputUnitOffset) override {}
-
-  void clear() override {}
 
 protected:
   // returns true if specified address range is inside address ranges

@@ -461,7 +461,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   // Check for live relocations. If there is no any live relocation then we
   // can skip entire object file.
   if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
-      !InputDWARFFile.Addresses->hasValidRelocs()) {
+      !InputDWARFFile.Addresses->hasLiveDebugInfo()) {
     if (GlobalData.getOptions().Verbose)
       outs() << "No valid relocations found. Skipping.\n";
     return Error::success();
@@ -668,7 +668,7 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           // Clone input compile unit.
           if (CU.isClangModule() ||
               GlobalData.getOptions().UpdateIndexTablesOnly ||
-              CU.getContaingFile().Addresses->hasValidRelocs()) {
+              CU.getContaingFile().Addresses->hasLiveDebugInfo()) {
             if (Error Err = CU.cloneAndEmit(GlobalData.getTargetTriple(),
                                             ArtificialTypeUnit))
               return std::move(Err);
