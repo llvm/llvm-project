@@ -153,7 +153,7 @@
 ///      %__THREW__.val = __THREW__;
 ///      __THREW__ = 0;
 ///      %__threwValue.val = __threwValue;
-///      if (%__THREW__.val != 0) {
+///      if (%__THREW__.val != 0 & %__threwValue.val != 0) {
 ///        %label = __wasm_setjmp_test(%__THREW__.val, functionInvocationId);
 ///        if (%label == 0)
 ///          emscripten_longjmp(%__THREW__.val, %__threwValue.val);
@@ -712,10 +712,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
+  Value *ThrewCmp = IRB.CreateICmpNE(Threw, getAddrSizeInt(M, 0));
   Value *ThrewValue = IRB.CreateLoad(IRB.getInt32Ty(), ThrewValueGV,
                                      ThrewValueGV->getName() + ".val");
-  Value *ThrewCmp = IRB.CreateICmpNE(Threw, getAddrSizeInt(M, 0));
-  IRB.CreateCondBr(ThrewCmp, ThenBB1, ElseBB1);
+  Value *ThrewValueCmp = IRB.CreateICmpNE(ThrewValue, IRB.getInt32(0));
+  Value *Cmp1 = IRB.CreateAnd(ThrewCmp, ThrewValueCmp, "cmp1");
+  IRB.CreateCondBr(Cmp1, ThenBB1, ElseBB1);
 
   // Generate call.em.longjmp BB once and share it within the function
   if (!CallEmLongjmpBB) {

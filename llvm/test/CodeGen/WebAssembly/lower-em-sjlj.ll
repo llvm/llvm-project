@@ -37,8 +37,10 @@ entry:
 ; CHECK-NEXT: call cc{{.*}} void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
+; CHECK-NEXT: %[[CMP0:.*]] = icmp ne [[PTR]] %__THREW__.val, 0
 ; CHECK-NEXT: %[[THREWVALUE_VAL:.*]] = load i32, ptr @__threwValue
-; CHECK-NEXT: %[[CMP:.*]] = icmp ne [[PTR]] %__THREW__.val, 0
+; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %[[THREWVALUE_VAL]], 0
+; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; CHECK: entry.split.split.split:
