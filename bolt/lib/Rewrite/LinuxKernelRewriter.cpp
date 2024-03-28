@@ -1174,12 +1174,17 @@ Error LinuxKernelRewriter::rewriteParaInstructions() {
 }
 
 /// Process __bug_table section.
-/// This section contains information useful for kernel debugging.
+/// This section contains information useful for kernel debugging, mostly
+/// utilized by WARN()/WARN_ON() macros and deprecated BUG()/BUG_ON().
+///
 /// Each entry in the section is a struct bug_entry that contains a pointer to
 /// the ud2 instruction corresponding to the bug, corresponding file name (both
 /// pointers use PC relative offset addressing), line number, and flags.
 /// The definition of the struct bug_entry can be found in
-/// `include/asm-generic/bug.h`
+/// `include/asm-generic/bug.h`. The first entry in the struct is an instruction
+/// address encoded as a PC-relative offset. In theory, it could be an absolute
+/// address if CONFIG_GENERIC_BUG_RELATIVE_POINTERS is not set, but in practice
+/// the kernel code relies on it being a relative offset on x86-64.
 Error LinuxKernelRewriter::readBugTable() {
   BugTableSection = BC.getUniqueSectionByName("__bug_table");
   if (!BugTableSection)
@@ -1255,7 +1260,7 @@ Error LinuxKernelRewriter::rewriteBugTable() {
         const uint32_t ID = BC.MIB->getAnnotationAs<uint32_t>(Inst, "BugEntry");
         EmittedIDs.insert(ID);
 
-        // Create a relocation entry for this bug entry;
+        // Create a relocation entry for this bug entry.
         MCSymbol *Label =
             BC.MIB->getOrCreateInstLabel(Inst, "__BUG_", BC.Ctx.get());
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
