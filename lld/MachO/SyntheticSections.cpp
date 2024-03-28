@@ -850,7 +850,7 @@ ConcatInputSection *ObjCSelRefsHelper::makeSelRef(StringRef methname) {
                                 S_LITERAL_POINTERS | S_ATTR_NO_DEAD_STRIP,
                                 ArrayRef<uint8_t>{selrefData, wordSize},
                                 /*align=*/wordSize);
-  objcSelref->live = true;
+  assert(objcSelref->live);
   objcSelref->relocs.push_back({/*type=*/target->unsignedRelocType,
                                 /*pcrel=*/false, /*length=*/3,
                                 /*offset=*/0,
