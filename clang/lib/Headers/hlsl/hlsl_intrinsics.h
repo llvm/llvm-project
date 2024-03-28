@@ -1389,7 +1389,12 @@ float4 trunc(float4);
 /// true, across all active lanes in the current wave.
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
-uint WaveActiveCountBits(bool Val);
+__attribute__((convergent)) uint WaveActiveCountBits(bool Val);
+
+/// \brief Returns the index of the current lane within the current wave.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
+__attribute__((convergent)) uint WaveGetLaneIndex();
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
