@@ -1077,30 +1077,25 @@ OperandPredicateMatcher::~OperandPredicateMatcher() {}
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
   // Generally speaking, an instruction is more important than an Int or a
-  // LiteralInt because it can cover more nodes but theres an exception to
+  // LiteralInt because it can cover more nodes but there's an exception to
   // this. G_CONSTANT's are less important than either of those two because they
   // are more permissive.
 
-  const InstructionOperandMatcher *AOM =
-      dyn_cast<InstructionOperandMatcher>(this);
-  const InstructionOperandMatcher *BOM =
-      dyn_cast<InstructionOperandMatcher>(&B);
+  const auto *AOM = dyn_cast<InstructionOperandMatcher>(this);
+  const auto *BOM = dyn_cast<InstructionOperandMatcher>(&B);
   bool AIsConstantInsn = AOM && AOM->getInsnMatcher().isConstantInstruction();
   bool BIsConstantInsn = BOM && BOM->getInsnMatcher().isConstantInstruction();
 
-  if (AOM && BOM) {
-    // The relative priorities between a G_CONSTANT and any other instruction
-    // don't actually matter but this code is needed to ensure a strict weak
-    // ordering. This is particularly important on Windows where the rules will
-    // be incorrectly sorted without it.
-    if (AIsConstantInsn != BIsConstantInsn)
-      return AIsConstantInsn < BIsConstantInsn;
-    return false;
-  }
+  // The relative priorities between a G_CONSTANT and any other instruction
+  // don't actually matter but this code is needed to ensure a strict weak
+  // ordering. This is particularly important on Windows where the rules will
+  // be incorrectly sorted without it.
+  if (AOM && BOM)
+    return !AIsConstantInsn && BIsConstantInsn;
 
-  if (AOM && AIsConstantInsn && (B.Kind == OPM_Int || B.Kind == OPM_LiteralInt))
+  if (AIsConstantInsn && (B.Kind == OPM_Int || B.Kind == OPM_LiteralInt))
     return false;
-  if (BOM && BIsConstantInsn && (Kind == OPM_Int || Kind == OPM_LiteralInt))
+  if (BIsConstantInsn && (Kind == OPM_Int || Kind == OPM_LiteralInt))
     return true;
 
   return Kind < B.Kind;
