@@ -805,7 +805,7 @@ let Command = "script add" in {
   def script_add_function : Option<"function", "f">, Group<1>,
     Arg<"PythonFunction">,
     Desc<"Name of the Python function to bind to this command name.">;
-  def script_add_class : Option<"class", "c">, Groups<[2,3]>, 
+  def script_add_class : Option<"class", "c">, Groups<[2,3]>,
     Arg<"PythonClass">,
     Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
@@ -816,7 +816,7 @@ let Command = "script add" in {
     EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
-  def script_add_completion_type : Option<"completion-type", "C">, 
+  def script_add_completion_type : Option<"completion-type", "C">,
     Groups<[1,2]>, EnumArg<"CompletionType">,
     Desc<"Specify which completion type the command should use - if none is "
     "specified, the command won't use auto-completion.">;
@@ -1037,7 +1037,7 @@ let Command = "target stop hook add" in {
 
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (-1 for all)">;
+  Desc<"How many frames to display (0 for all)">;
   def thread_backtrace_start : Option<"start", "s">, Group<1>,
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,

@@ -69,17 +69,32 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::is_contained(visitedTypes, recTy))
-        return false;
+      auto visited = visitedTypes.find(ty);
+      if (visited != visitedTypes.end())
+        return visited->second;
+      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
+      assert(newIt.second && "expected ty to not be in the map");
+      bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
+      needConversionIsVisitingRecordType = true;
       bool result = false;
-      visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
         if (needsConversion(t.second)) {
           result = true;
           break;
         }
       }
-      visitedTypes.pop_back();
+      // Only keep the result cached if the fir.type visited was a "top-level
+      // type". Nested types with a recursive reference to the "top-level type"
+      // may incorrectly have been resolved as not needed conversions because it
+      // had not been determined yet if the "top-level type" needed conversion.
+      // This is not an issue to determine the "top-level type" need of
+      // conversion, but the result should not be kept and later used in other
+      // contexts.
+      needConversionIsVisitingRecordType = wasAlreadyVisitingRecordType;
+      if (needConversionIsVisitingRecordType)
+        visitedTypes.erase(ty);
+      else
+        visitedTypes.find(ty)->second = result;
       return result;
     }
     if (auto boxTy = ty.dyn_cast<BaseBoxType>())
@@ -139,10 +154,8 @@ public:
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
-      auto it = convertedTypes.try_emplace(ty, rec);
-      if (!it.second) {
-        llvm::errs() << "failed\n" << ty << "\n";
-      }
+      [[maybe_unused]] auto it = convertedTypes.try_emplace(ty, rec);
+      assert(it.second && "expected ty to not be in the map");
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -171,11 +184,12 @@ public:
   void setLocation(mlir::Location location) { loc = location; }
 
 private:
-  llvm::SmallVector<mlir::Type> visitedTypes;
-  // Map to deal with recursive derived types (avoid infinite loops).
+  // Maps to deal with recursive derived types (avoid infinite loops).
   // Caching is also beneficial for apps with big types (dozens of
   // components and or parent types), so the lifetime of the cache
   // is the whole pass.
+  llvm::DenseMap<mlir::Type, bool> visitedTypes;
+  bool needConversionIsVisitingRecordType = false;
   llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };
@@ -209,6 +223,7 @@ public:
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
       mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
+        bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
           mlir::Type ty = addr.getVal().getType();
@@ -220,6 +235,7 @@ public:
             rewriter.setInsertionPoint(addr);
             rewriter.replaceOpWithNewOp<ConvertOp>(
                 addr, typeConverter.convertType(addr.getType()), addr.getVal());
+            opIsValid = false;
           } else if (typeConverter.needsConversion(resTy)) {
             rewriter.startOpModification(op);
             op->getResult(0).setType(typeConverter.convertType(resTy));
@@ -271,10 +287,12 @@ public:
                 llvm::ArrayRef<mlir::Value>{tramp});
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy,
                                                    adjustCall.getResult(0));
+            opIsValid = false;
           } else {
             // Just forward the function as a pointer.
             rewriter.replaceOpWithNewOp<ConvertOp>(embox, toTy,
                                                    embox.getFunc());
+            opIsValid = false;
           }
         } else if (auto global = mlir::dyn_cast<GlobalOp>(op)) {
           auto ty = global.getType();
@@ -297,6 +315,7 @@ public:
             rewriter.replaceOpWithNewOp<AllocaOp>(
                 mem, toTy, uniqName, bindcName, isPinned, mem.getTypeparams(),
                 mem.getShape());
+            opIsValid = false;
           }
         } else if (auto mem = mlir::dyn_cast<AllocMemOp>(op)) {
           auto ty = mem.getType();
@@ -310,6 +329,7 @@ public:
             rewriter.replaceOpWithNewOp<AllocMemOp>(
                 mem, toTy, uniqName, bindcName, mem.getTypeparams(),
                 mem.getShape());
+            opIsValid = false;
           }
         } else if (auto coor = mlir::dyn_cast<CoordinateOp>(op)) {
           auto ty = coor.getType();
@@ -321,6 +341,7 @@ public:
             auto toBaseTy = typeConverter.convertType(baseTy);
             rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
                                                       coor.getCoor(), toBaseTy);
+            opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {
           auto ty = index.getType();
@@ -332,6 +353,7 @@ public:
             auto toOnTy = typeConverter.convertType(onTy);
             rewriter.replaceOpWithNewOp<FieldIndexOp>(
                 index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
+            opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<LenParamIndexOp>(op)) {
           auto ty = index.getType();
@@ -342,7 +364,8 @@ public:
             auto toTy = typeConverter.convertType(ty);
             auto toOnTy = typeConverter.convertType(onTy);
             rewriter.replaceOpWithNewOp<LenParamIndexOp>(
-                mem, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
+                index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
+            opIsValid = false;
           }
         } else if (op->getDialect() == firDialect) {
           rewriter.startOpModification(op);
@@ -354,7 +377,7 @@ public:
           rewriter.finalizeOpModification(op);
         }
         // Ensure block arguments are updated if needed.
-        if (op->getNumRegions() != 0) {
+        if (opIsValid && op->getNumRegions() != 0) {
           rewriter.startOpModification(op);
           for (mlir::Region &region : op->getRegions())
             for (mlir::Block &block : region.getBlocks())

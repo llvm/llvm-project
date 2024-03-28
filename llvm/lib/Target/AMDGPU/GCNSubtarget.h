@@ -153,6 +153,7 @@ protected:
   bool HasDot8Insts = false;
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
+  bool HasDot11Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -222,7 +223,7 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
-  bool HasGFX11FullVGPRs = false;
+  bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
@@ -647,6 +648,14 @@ public:
   // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
   bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
 
+  bool hasExportInsts() const {
+    return !hasGFX940Insts();
+  }
+
+  bool hasVINTERPEncoding() const {
+    return GFX11Insts;
+  }
+
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
 
@@ -783,6 +792,10 @@ public:
 
   bool hasDot10Insts() const {
     return HasDot10Insts;
+  }
+
+  bool hasDot11Insts() const {
+    return HasDot11Insts;
   }
 
   bool hasMAIInsts() const {
@@ -1189,7 +1202,7 @@ public:
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
 
-  bool hasGFX11FullVGPRs() const { return HasGFX11FullVGPRs; }
+  bool has1_5xVGPRs() const { return Has1_5xVGPRs; }
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 

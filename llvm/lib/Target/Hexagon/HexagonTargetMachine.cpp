@@ -164,6 +164,7 @@ namespace llvm {
   void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonHardwareLoopsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
+  void initializeHexagonLoopAlignPass(PassRegistry &);
   void initializeHexagonNewValueJumpPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   void initializeHexagonPacketizerPass(PassRegistry&);
@@ -194,6 +195,7 @@ namespace llvm {
   FunctionPass *createHexagonHardwareLoops();
   FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                      CodeGenOptLevel OptLevel);
+  FunctionPass *createHexagonLoopAlign();
   FunctionPass *createHexagonLoopRescheduling();
   FunctionPass *createHexagonNewValueJump();
   FunctionPass *createHexagonOptAddrMode();
@@ -256,8 +258,10 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small),
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
-      TLOF(std::make_unique<HexagonTargetObjectFile>()) {
+      TLOF(std::make_unique<HexagonTargetObjectFile>()),
+      Subtarget(Triple(TT), CPU, FS, *this) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
+  initializeHexagonLoopAlignPass(*PassRegistry::getPassRegistry());
   initializeHexagonTfrCleanupPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
@@ -295,6 +299,9 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
 
 void HexagonTargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
+#define GET_PASS_REGISTRY "HexagonPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());
@@ -475,6 +482,9 @@ void HexagonPassConfig::addPreEmitPass() {
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
+
+  if (!NoOpt)
+    addPass(createHexagonLoopAlign());
 
   if (EnableVectorPrint)
     addPass(createHexagonVectorPrint());

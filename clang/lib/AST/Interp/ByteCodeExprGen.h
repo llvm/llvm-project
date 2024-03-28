@@ -75,6 +75,7 @@ public:
   bool VisitGNUNullExpr(const GNUNullExpr *E);
   bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitComplexUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
   bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E);
@@ -98,6 +99,7 @@ public:
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitTypeTraitExpr(const TypeTraitExpr *E);
+  bool VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E);
   bool VisitLambdaExpr(const LambdaExpr *E);
   bool VisitPredefinedExpr(const PredefinedExpr *E);
   bool VisitCXXThrowExpr(const CXXThrowExpr *E);
@@ -118,6 +120,7 @@ public:
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
+  bool VisitPackIndexingExpr(const PackIndexingExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -268,6 +271,8 @@ private:
 
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
+  bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
+                             const BinaryOperator *E);
 
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);

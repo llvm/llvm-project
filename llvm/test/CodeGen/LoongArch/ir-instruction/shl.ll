@@ -61,10 +61,10 @@ define i32 @shl_i32(i32 %x, i32 %y) {
 define i64 @shl_i64(i64 %x, i64 %y) {
 ; LA32-LABEL: shl_i64:
 ; LA32:       # %bb.0:
+; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    xori $a3, $a2, 31
 ; LA32-NEXT:    srli.w $a4, $a0, 1
 ; LA32-NEXT:    srl.w $a3, $a4, $a3
-; LA32-NEXT:    sll.w $a1, $a1, $a2
 ; LA32-NEXT:    or $a1, $a1, $a3
 ; LA32-NEXT:    addi.w $a3, $a2, -32
 ; LA32-NEXT:    slti $a4, $a3, 0
@@ -142,8 +142,8 @@ define i32 @shl_i32_3(i32 %x) {
 define i64 @shl_i64_3(i64 %x) {
 ; LA32-LABEL: shl_i64_3:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 3
 ; LA32-NEXT:    srli.w $a2, $a0, 29
+; LA32-NEXT:    slli.w $a1, $a1, 3
 ; LA32-NEXT:    or $a1, $a1, $a2
 ; LA32-NEXT:    slli.w $a0, $a0, 3
 ; LA32-NEXT:    ret

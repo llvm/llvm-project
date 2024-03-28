@@ -1571,7 +1571,6 @@ size_t Header::size() const {
   case 12ull:
     return offsetOf(&Header::VTableNamesOffset) +
            sizeof(Header::VTableNamesOffset);
-    [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:

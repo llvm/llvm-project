@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_TABLE_H
 
-#include "llvm-libc-types/ENTRY.h"
+#include "include/llvm-libc-types/ENTRY.h"
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/HashTable/bitmask.h"

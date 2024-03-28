@@ -2647,6 +2647,9 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
 void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                                           SourceLocation Loc,
                                           OpenMPDirectiveKind DKind) {
+  assert(DKind == OMPD_distribute || DKind == OMPD_for ||
+         DKind == OMPD_sections &&
+             "Expected distribute, for, or sections directive kind");
   if (!CGF.HaveInsertPoint())
     return;
   // Call __kmpc_for_static_fini(ident_t *loc, kmp_int32 tid);
@@ -6793,7 +6796,7 @@ private:
                              OASE->getBase()->IgnoreParenImpCasts())
                              .getCanonicalType();
       if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-        return ATy->getSize().getSExtValue() != 1;
+        return ATy->getSExtSize() != 1;
       // If we don't have a constant dimension length, we have to consider
       // the current section as having any size, so it is not necessarily
       // unitary. If it happen to be unity size, that's user fault.
@@ -7543,8 +7546,8 @@ private:
       // it.
       if (DimSizes.size() < Components.size() - 1) {
         if (CAT)
-          DimSizes.push_back(llvm::ConstantInt::get(
-              CGF.Int64Ty, CAT->getSize().getZExtValue()));
+          DimSizes.push_back(
+              llvm::ConstantInt::get(CGF.Int64Ty, CAT->getZExtSize()));
         else if (VAT)
           DimSizes.push_back(CGF.Builder.CreateIntCast(
               CGF.EmitScalarExpr(VAT->getSizeExpr()), CGF.Int64Ty,

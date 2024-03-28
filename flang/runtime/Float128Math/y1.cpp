@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(Y1F128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Y1<RTNAME(Y1F128)>::invoke(x);
+  return Y1<true>::invoke(x);
 }
 #endif
 

@@ -153,8 +153,33 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmax
     libc.src.math.fmaxf
     libc.src.math.fmaxl
+    libc.src.math.fmaximum
+    libc.src.math.fmaximumf
+    libc.src.math.fmaximuml
+    libc.src.math.fmaximum_num
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numl
+    libc.src.math.fmaximum_mag
+    libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magl
+    libc.src.math.fmaximum_mag_num
+    libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numl
+    libc.src.math.fminimum
+    libc.src.math.fminimumf
+    libc.src.math.fminimuml
+    libc.src.math.fminimum_num
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numl
+    libc.src.math.fminimum_mag
+    libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magl
+    libc.src.math.fminimum_mag_num
+    libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmodl
     libc.src.math.frexp
     libc.src.math.frexpf
     libc.src.math.frexpl

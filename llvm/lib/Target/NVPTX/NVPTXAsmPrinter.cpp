@@ -489,8 +489,11 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->emitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (MMI && MMI->hasDebugInfo())
-    emitInitialRawDwarfLocDirective(*MF);
+  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
+    assert(SP->getUnit());
+    if (!SP->getUnit()->isDebugDirectivesOnly() && MMI && MMI->hasDebugInfo())
+      emitInitialRawDwarfLocDirective(*MF);
+  }
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -1716,7 +1719,7 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  int NumBytes = (int) MFI.getStackSize();
+  int64_t NumBytes = MFI.getStackSize();
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";

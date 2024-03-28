@@ -106,9 +106,9 @@ public:
   void writeTo(uint8_t *buf) override;
 
   void addConstant(const Relocation &r);
-  void addEntry(Symbol &sym);
-  bool addTlsDescEntry(Symbol &sym);
-  bool addDynTlsEntry(Symbol &sym);
+  void addEntry(const Symbol &sym);
+  bool addTlsDescEntry(const Symbol &sym);
+  bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
   uint32_t getTlsDescOffset(const Symbol &sym) const;
   uint64_t getTlsDescAddr(const Symbol &sym) const;
@@ -641,7 +641,7 @@ public:
   size_t getSize() const override { return getNumSymbols() * entsize; }
   void addSymbol(Symbol *sym);
   unsigned getNumSymbols() const { return symbols.size() + 1; }
-  size_t getSymbolIndex(Symbol *sym);
+  size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
 
 protected:
@@ -1358,7 +1358,6 @@ struct InStruct {
   std::unique_ptr<PPC32Got2Section> ppc32Got2;
   std::unique_ptr<IBTPltSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
-  std::unique_ptr<RelocationBaseSection> relaIplt;
   std::unique_ptr<StringTableSection> shStrTab;
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;

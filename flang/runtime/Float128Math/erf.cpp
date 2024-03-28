@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Erf<RTNAME(ErfF128)>::invoke(x);
+  return Erf<true>::invoke(x);
 }
 #endif
 

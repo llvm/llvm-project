@@ -197,7 +197,7 @@ define void  @broadcast_fixed() #0{
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %41 = shufflevector <32 x i1> undef, <32 x i1> undef, <32 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %42 = shufflevector <64 x i1> undef, <64 x i1> undef, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %43 = shufflevector <128 x i1> undef, <128 x i1> undef, <128 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ins1 = insertelement <128 x i1> poison, i1 poison, i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %ins1 = insertelement <128 x i1> poison, i1 poison, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %44 = shufflevector <128 x i1> %ins1, <128 x i1> poison, <128 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ins2 = insertelement <2 x i8> poison, i8 3, i32 0
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %45 = shufflevector <2 x i8> %ins2, <2 x i8> undef, <2 x i32> zeroinitializer

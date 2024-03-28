@@ -527,6 +527,13 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     return StmtError();
   }
 
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(CaseLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
+  }
+
   auto *CS = CaseStmt::Create(Context, LHSVal.get(), RHSVal.get(),
                               CaseLoc, DotDotDotLoc, ColonLoc);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(CS);
@@ -544,6 +551,13 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   if (getCurFunction()->SwitchStack.empty()) {
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
+  }
+
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(DefaultLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
   }
 
   DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc, SubStmt);
@@ -566,6 +580,11 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
+
+  // If this label is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
@@ -3304,6 +3323,12 @@ StmtResult Sema::ActOnGotoStmt(SourceLocation GotoLoc,
                                SourceLocation LabelLoc,
                                LabelDecl *TheDecl) {
   setFunctionHasBranchIntoScope();
+
+  // If this goto is in a compute construct scope, we need to make sure we check
+  // gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   TheDecl->markUsed(Context);
   return new (Context) GotoStmt(TheDecl, GotoLoc, LabelLoc);
 }
@@ -3331,6 +3356,11 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
   E = ExprRes.get();
 
   setFunctionHasIndirectGoto();
+
+  // If this goto is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }

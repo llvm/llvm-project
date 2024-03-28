@@ -47,6 +47,7 @@ define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id 
 ; CHECK-NEXT:    s_mov_b32 s15, 42
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; CHECK-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_endpgm
@@ -57,4 +58,4 @@ define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id 
 
 !llvm.module.flags = !{!1}
 !0 = !{i32 42}
-!1 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!1 = !{i32 1, !"amdhsa_code_object_version", i32 500}

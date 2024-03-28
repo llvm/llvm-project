@@ -884,7 +884,7 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
           // Check to see if we already looked up the value.
           Value *CachedVal =
               new LoadInst(F->getType(), Cache, "fpcache", EntryBB);
-          Value *IsNull = new ICmpInst(*EntryBB, ICmpInst::ICMP_EQ, CachedVal,
+          Value *IsNull = new ICmpInst(EntryBB, ICmpInst::ICMP_EQ, CachedVal,
                                        NullPtr, "isNull");
           BranchInst::Create(LookupBB, DoCallBB, IsNull, EntryBB);
 

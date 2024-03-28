@@ -2022,6 +2022,13 @@ APInt APInt::ushl_ov(unsigned ShAmt, bool &Overflow) const {
   return *this << ShAmt;
 }
 
+APInt APInt::sfloordiv_ov(const APInt &RHS, bool &Overflow) const {
+  APInt quotient = sdiv_ov(RHS, Overflow);
+  if ((quotient * RHS != *this) && (isNegative() != RHS.isNegative()))
+    return quotient - 1;
+  return quotient;
+}
+
 APInt APInt::sadd_sat(const APInt &RHS) const {
   bool Overflow;
   APInt Res = sadd_ov(RHS, Overflow);
@@ -2161,7 +2168,8 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
 }
 
 void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
-                     bool formatAsCLiteral, bool UpperCase) const {
+                     bool formatAsCLiteral, bool UpperCase,
+                     bool InsertSeparators) const {
   assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 ||
           Radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
@@ -2186,6 +2194,9 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
         llvm_unreachable("Invalid radix!");
     }
   }
+
+  // Number of digits in a group between separators.
+  unsigned Grouping = (Radix == 8 || Radix == 10) ? 3 : 4;
 
   // First, check for a zero value and just short circuit the logic below.
   if (isZero()) {
@@ -2223,9 +2234,13 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
       ++Prefix;
     };
 
+    int Pos = 0;
     while (N) {
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
+        *--BufPtr = '\'';
       *--BufPtr = Digits[N % Radix];
       N /= Radix;
+      Pos++;
     }
     Str.append(BufPtr, std::end(Buffer));
     return;
@@ -2257,17 +2272,27 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
     unsigned ShiftAmt = (Radix == 16 ? 4 : (Radix == 8 ? 3 : 1));
     unsigned MaskAmt = Radix - 1;
 
+    int Pos = 0;
     while (Tmp.getBoolValue()) {
       unsigned Digit = unsigned(Tmp.getRawData()[0]) & MaskAmt;
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
+        Str.push_back('\'');
+
       Str.push_back(Digits[Digit]);
       Tmp.lshrInPlace(ShiftAmt);
+      Pos++;
     }
   } else {
+    int Pos = 0;
     while (Tmp.getBoolValue()) {
       uint64_t Digit;
       udivrem(Tmp, Radix, Tmp, Digit);
       assert(Digit < Radix && "divide failed");
+      if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
+        Str.push_back('\'');
+
       Str.push_back(Digits[Digit]);
+      Pos++;
     }
   }
 
@@ -3075,4 +3100,24 @@ void llvm::LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
 
     memcpy(Dst + sizeof(uint64_t) - LoadBytes, Src, LoadBytes);
   }
+}
+
+APInt APIntOps::avgFloorS(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 + C2) / 2)
+  return (C1 & C2) + (C1 ^ C2).ashr(1);
+}
+
+APInt APIntOps::avgFloorU(const APInt &C1, const APInt &C2) {
+  // Return floor((C1 + C2) / 2)
+  return (C1 & C2) + (C1 ^ C2).lshr(1);
+}
+
+APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
+  // Return ceil((C1 + C2) / 2)
+  return (C1 | C2) - (C1 ^ C2).ashr(1);
+}
+
+APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
+  // Return ceil((C1 + C2) / 2)
+  return (C1 | C2) - (C1 ^ C2).lshr(1);
 }

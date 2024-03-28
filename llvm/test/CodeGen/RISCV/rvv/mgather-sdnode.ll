@@ -2136,20 +2136,37 @@ define <vscale x 32 x i8> @mgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8>
 ; RV64-NEXT:    vluxei64.v v13, (a0), v24, v0.t
 ; RV64-NEXT:    srli a1, a1, 2
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v16, a1
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vsext.vf8 v16, v10
-; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
-; RV64-NEXT:    vluxei64.v v14, (a0), v16, v0.t
+; RV64-NEXT:    vslidedown.vx v8, v16, a1
 ; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a2
+; RV64-NEXT:    vslidedown.vx v0, v8, a2
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v11
 ; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
 ; RV64-NEXT:    vluxei64.v v15, (a0), v16, v0.t
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf8 v16, v10
+; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; RV64-NEXT:    vmv1r.v v0, v8
+; RV64-NEXT:    vluxei64.v v14, (a0), v16, v0.t
 ; RV64-NEXT:    vmv4r.v v8, v12
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 32 x i8> %idxs
   %v = call <vscale x 32 x i8> @llvm.masked.gather.nxv32i8.nxv32p0(<vscale x 32 x ptr> %ptrs, i32 2, <vscale x 32 x i1> %m, <vscale x 32 x i8> %passthru)
   ret <vscale x 32 x i8> %v
+}
+
+define <vscale x 1 x i8> @mgather_baseidx_zext_nxv1i1_nxv1i8(ptr %base, <vscale x 1 x i1> %idxs, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru) {
+; CHECK-LABEL: mgather_baseidx_zext_nxv1i1_nxv1i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vluxei8.v v9, (a0), v10, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %eidxs = zext <vscale x 1 x i1> %idxs to <vscale x 1 x i8>
+  %ptrs = getelementptr inbounds i8, ptr %base, <vscale x 1 x i8> %eidxs
+  %v = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru)
+  ret <vscale x 1 x i8> %v
 }

@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,6 +47,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
@@ -569,11 +571,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  auto *VPI = dyn_cast<VPInstruction>(R);
-  bool IsCondBranch =
-      isa<VPBranchOnMaskRecipe>(R) ||
-      (VPI && (VPI->getOpcode() == VPInstruction::BranchOnCond ||
-               VPI->getOpcode() == VPInstruction::BranchOnCount));
+  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
+                      match(R, m_BranchOnCond(m_VPValue())) ||
+                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
   (void)IsCondBranch;
 
   if (VPBB->getNumSuccessors() >= 2 ||
@@ -860,11 +860,8 @@ void VPlan::execute(VPTransformState *State) {
         Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        // TODO: Split off the case that all users of a pointer phi are scalar
-        // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
-          continue;
-
+        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+               "recipe generating only scalars should have been replaced");
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }

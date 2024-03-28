@@ -61,6 +61,11 @@ file formats.
   Dump decompressed section content when used with ``-x`` or ``-p``.
   If the section(s) are not compressed, they are displayed as is.
 
+.. option:: --demangle, -C
+
+ Display demangled symbol names in the output. This option is only for ELF and
+ XCOFF file formats.
+
 .. option:: --expand-relocs
 
  When used with :option:`--relocs`, display each relocation in an expanded
@@ -93,6 +98,11 @@ file formats.
 .. option:: --needed-libs
 
  Display the needed libraries.
+
+.. option:: --no-demangle
+
+ Do not demangle symbol names in the output. This option is only for ELF and
+ XCOFF file formats. The option is enabled by default.
 
 .. option:: --relocations, --relocs, -r
 
@@ -174,10 +184,6 @@ The following options are implemented only for the ELF file format.
  are printed using the same format as their respective analysis pass.
 
  Requires :option:`--bb-addr-map` to have an effect.
-
-.. option:: --demangle, -C
-
- Display demangled symbol names in the output.
 
 .. option:: --dependent-libraries
 

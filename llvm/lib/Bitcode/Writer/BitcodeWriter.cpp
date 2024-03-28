@@ -99,6 +99,9 @@ namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
 
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to
@@ -128,6 +131,7 @@ enum {
   FUNCTION_INST_RET_VAL_ABBREV,
   FUNCTION_INST_UNREACHABLE_ABBREV,
   FUNCTION_INST_GEP_ABBREV,
+  FUNCTION_DEBUG_RECORD_VALUE_ABBREV,
 };
 
 /// Abstract class to manage the bitcode writing, subclassed for each bitcode
@@ -844,6 +848,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE;
   case Attribute::DeadOnUnwind:
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
+  case Attribute::Range:
+    return bitc::ATTR_KIND_RANGE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -854,6 +860,39 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
   }
 
   llvm_unreachable("Trying to encode unknown attribute");
+}
+
+static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
+  if ((int64_t)V >= 0)
+    Vals.push_back(V << 1);
+  else
+    Vals.push_back((-V << 1) | 1);
+}
+
+static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
+  // We have an arbitrary precision integer value to write whose
+  // bit width is > 64. However, in canonical unsigned integer
+  // format it is likely that the high bits are going to be zero.
+  // So, we only write the number of active words.
+  unsigned NumWords = A.getActiveWords();
+  const uint64_t *RawData = A.getRawData();
+  for (unsigned i = 0; i < NumWords; i++)
+    emitSignedInt64(Vals, RawData[i]);
+}
+
+static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
+                              const ConstantRange &CR) {
+  unsigned BitWidth = CR.getBitWidth();
+  Record.push_back(BitWidth);
+  if (BitWidth > 64) {
+    Record.push_back(CR.getLower().getActiveWords() |
+                     (uint64_t(CR.getUpper().getActiveWords()) << 32));
+    emitWideAPInt(Record, CR.getLower());
+    emitWideAPInt(Record, CR.getUpper());
+  } else {
+    emitSignedInt64(Record, CR.getLower().getSExtValue());
+    emitSignedInt64(Record, CR.getUpper().getSExtValue());
+  }
 }
 
 void ModuleBitcodeWriter::writeAttributeGroupTable() {
@@ -889,13 +928,17 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
           Record.append(Val.begin(), Val.end());
           Record.push_back(0);
         }
-      } else {
-        assert(Attr.isTypeAttribute());
+      } else if (Attr.isTypeAttribute()) {
         Type *Ty = Attr.getValueAsType();
         Record.push_back(Ty ? 6 : 5);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
+      } else {
+        assert(Attr.isConstantRangeAttribute());
+        Record.push_back(7);
+        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
+        emitConstantRange(Record, Attr.getValueAsConstantRange());
       }
     }
 
@@ -1716,24 +1759,6 @@ void ModuleBitcodeWriter::writeDIGenericSubrange(
   Record.clear();
 }
 
-static void emitSignedInt64(SmallVectorImpl<uint64_t> &Vals, uint64_t V) {
-  if ((int64_t)V >= 0)
-    Vals.push_back(V << 1);
-  else
-    Vals.push_back((-V << 1) | 1);
-}
-
-static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
-  // We have an arbitrary precision integer value to write whose
-  // bit width is > 64. However, in canonical unsigned integer
-  // format it is likely that the high bits are going to be zero.
-  // So, we only write the number of active words.
-  unsigned NumWords = A.getActiveWords();
-  const uint64_t *RawData = A.getRawData();
-  for (unsigned i = 0; i < NumWords; i++)
-    emitSignedInt64(Vals, RawData[i]);
-}
-
 void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
@@ -1803,6 +1828,11 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
     Record.push_back(0);
 
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
+
+  if (auto PtrAuthData = N->getPtrAuthData())
+    Record.push_back(PtrAuthData->RawData);
+  else
+    Record.push_back(0);
 
   Stream.EmitRecord(bitc::METADATA_DERIVED_TYPE, Record, Abbrev);
   Record.clear();
@@ -2721,9 +2751,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
-        if (std::optional<unsigned> Idx = GO->getInRangeIndex()) {
-          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE_INDEX;
-          Record.push_back((*Idx << 1) | GO->isInBounds());
+        if (std::optional<ConstantRange> Range = GO->getInRange()) {
+          Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
+          Record.push_back(GO->isInBounds());
+          emitConstantRange(Record, *Range);
         } else if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
@@ -3491,25 +3522,96 @@ void ModuleBitcodeWriter::writeFunction(
       NeedsMetadataAttachment |= I.hasMetadataOtherThanDebugLoc();
 
       // If the instruction has a debug location, emit it.
-      DILocation *DL = I.getDebugLoc();
-      if (!DL)
-        continue;
-
-      if (DL == LastDL) {
-        // Just repeat the same debug loc as last time.
-        Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC_AGAIN, Vals);
-        continue;
+      if (DILocation *DL = I.getDebugLoc()) {
+        if (DL == LastDL) {
+          // Just repeat the same debug loc as last time.
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC_AGAIN, Vals);
+        } else {
+          Vals.push_back(DL->getLine());
+          Vals.push_back(DL->getColumn());
+          Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
+          Vals.push_back(VE.getMetadataOrNullID(DL->getInlinedAt()));
+          Vals.push_back(DL->isImplicitCode());
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
+          Vals.clear();
+          LastDL = DL;
+        }
       }
 
-      Vals.push_back(DL->getLine());
-      Vals.push_back(DL->getColumn());
-      Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
-      Vals.push_back(VE.getMetadataOrNullID(DL->getInlinedAt()));
-      Vals.push_back(DL->isImplicitCode());
-      Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
-      Vals.clear();
+      // If the instruction has DbgRecords attached to it, emit them. Note that
+      // they come after the instruction so that it's easy to attach them again
+      // when reading the bitcode, even though conceptually the debug locations
+      // start "before" the instruction.
+      if (I.hasDbgRecords() && WriteNewDbgInfoFormatToBitcode) {
+        /// Try to push the value only (unwrapped), otherwise push the
+        /// metadata wrapped value. Returns true if the value was pushed
+        /// without the ValueAsMetadata wrapper.
+        auto PushValueOrMetadata = [&Vals, InstID,
+                                    this](Metadata *RawLocation) {
+          assert(RawLocation &&
+                 "RawLocation unexpectedly null in DbgVariableRecord");
+          if (ValueAsMetadata *VAM = dyn_cast<ValueAsMetadata>(RawLocation)) {
+            SmallVector<unsigned, 2> ValAndType;
+            // If the value is a fwd-ref the type is also pushed. We don't
+            // want the type, so fwd-refs are kept wrapped (pushValueAndType
+            // returns false if the value is pushed without type).
+            if (!pushValueAndType(VAM->getValue(), InstID, ValAndType)) {
+              Vals.push_back(ValAndType[0]);
+              return true;
+            }
+          }
+          // The metadata is a DIArgList, or ValueAsMetadata wrapping a
+          // fwd-ref. Push the metadata ID.
+          Vals.push_back(VE.getMetadataID(RawLocation));
+          return false;
+        };
 
-      LastDL = DL;
+        // Write out non-instruction debug information attached to this
+        // instruction. Write it after the instruction so that it's easy to
+        // re-attach to the instruction reading the records in.
+        for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
+          if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+            Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
+            Vals.push_back(VE.getMetadataID(DLR->getLabel()));
+            Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_LABEL, Vals);
+            Vals.clear();
+            continue;
+          }
+
+          // First 3 fields are common to all kinds:
+          //   DILocation, DILocalVariable, DIExpression
+          // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE)
+          //   ..., LocationMetadata
+          // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE - abbrev'd)
+          //   ..., Value
+          // dbg_declare (FUNC_CODE_DEBUG_RECORD_DECLARE)
+          //   ..., LocationMetadata
+          // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
+          //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
+          DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+          Vals.push_back(VE.getMetadataID(&*DVR.getDebugLoc()));
+          Vals.push_back(VE.getMetadataID(DVR.getVariable()));
+          Vals.push_back(VE.getMetadataID(DVR.getExpression()));
+          if (DVR.isDbgValue()) {
+            if (PushValueOrMetadata(DVR.getRawLocation()))
+              Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE, Vals,
+                                FUNCTION_DEBUG_RECORD_VALUE_ABBREV);
+            else
+              Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_VALUE, Vals);
+          } else if (DVR.isDbgDeclare()) {
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
+            Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_DECLARE, Vals);
+          } else {
+            assert(DVR.isDbgAssign() && "Unexpected DbgRecord kind");
+            Vals.push_back(VE.getMetadataID(DVR.getRawLocation()));
+            Vals.push_back(VE.getMetadataID(DVR.getAssignID()));
+            Vals.push_back(VE.getMetadataID(DVR.getAddressExpression()));
+            Vals.push_back(VE.getMetadataID(DVR.getRawAddress()));
+            Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN, Vals);
+          }
+          Vals.clear();
+        }
+      }
     }
 
     if (BlockAddress *BA = BlockAddress::lookup(&BB)) {
@@ -3750,7 +3852,17 @@ void ModuleBitcodeWriter::writeBlockInfo() {
         FUNCTION_INST_GEP_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
   }
-
+  {
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 7)); // dbgloc
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 7)); // var
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 7)); // expr
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // val
+    if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
+        FUNCTION_DEBUG_RECORD_VALUE_ABBREV)
+      llvm_unreachable("Unexpected abbrev ordering! 1");
+  }
   Stream.ExitBlock();
 }
 

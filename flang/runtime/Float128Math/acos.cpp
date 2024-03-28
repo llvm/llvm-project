@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(AcosF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Acos<RTNAME(AcosF128)>::invoke(x);
+  return Acos<true>::invoke(x);
 }
 #endif
 

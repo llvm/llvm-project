@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(CoshF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Cosh<RTNAME(CoshF128)>::invoke(x);
+  return Cosh<true>::invoke(x);
 }
 #endif
 

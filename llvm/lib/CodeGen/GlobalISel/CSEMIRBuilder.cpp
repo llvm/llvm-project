@@ -256,10 +256,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildFConstant(DstOps[0], *Cst);
     break;
   }
-  case TargetOpcode::G_CTLZ: {
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTTZ: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto MaybeCsts = ConstantFoldCTLZ(SrcOps[0].getReg(), *getMRI());
+    std::function<unsigned(APInt)> CB;
+    if (Opc == TargetOpcode::G_CTLZ)
+      CB = [](APInt V) -> unsigned { return V.countl_zero(); };
+    else
+      CB = [](APInt V) -> unsigned { return V.countTrailingZeros(); };
+    auto MaybeCsts = ConstantFoldCountZeros(SrcOps[0].getReg(), *getMRI(), CB);
     if (!MaybeCsts)
       break;
     if (MaybeCsts->size() == 1)
@@ -309,7 +315,7 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
   if (Ty.isVector())
-    return buildSplatVector(Res, buildConstant(Ty.getElementType(), Val));
+    return buildSplatBuildVector(Res, buildConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
@@ -336,7 +342,7 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
   if (Ty.isVector())
-    return buildSplatVector(Res, buildFConstant(Ty.getElementType(), Val));
+    return buildSplatBuildVector(Res, buildFConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());

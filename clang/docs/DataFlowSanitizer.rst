@@ -233,6 +233,28 @@ labels of just ``v1`` and ``v2``.
   or, and can be accessed using
   ``dfsan_label dfsan_get_labels_in_signal_conditional();``.
 
+* ``-dfsan-reaches-function-callbacks`` -- An experimental feature that inserts
+  callbacks for data entering a function.
+
+  In addition to this compilation flag, a callback handler must be registered
+  using ``dfsan_set_reaches_function_callback(my_callback);``, where my_callback is
+  a function with a signature matching
+  ``void my_callback(dfsan_label label, dfsan_origin origin, const char *file, unsigned int line, const char *function);``
+  This signature is the same when origin tracking is disabled - in this case
+  the dfsan_origin passed in it will always be 0.
+
+  The callback will be called when a tained value reach stack/registers
+  in the context of a function. Tainted values can reach a function:
+  * via the arguments of the function
+  * via the return value of a call that occurs in the function
+  * via the loaded value of a load that occurs in the function
+
+  The callback will be skipped for conditional expressions inside signal
+  handlers, as this is prone to deadlock. Tainted values reaching functions
+  inside signal handlers will instead be aggregated via bitwise or, and can
+  be accessed using
+  ``dfsan_label dfsan_get_labels_in_signal_reaches_function()``.
+
 * ``-dfsan-track-origins`` -- Controls how to track origins. When its value is
   0, the runtime does not track origins. When its value is 1, the runtime tracks
   origins at memory store operations. When its value is 2, the runtime tracks

@@ -188,6 +188,9 @@ attributes #7 = { builtin }
 ; IR: define {{.*}} @_Z1Mv.memprof.1()
 ; IR:   call {{.*}} @_Z2XZv.memprof.1()
 
+; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+
 ; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
 ; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis

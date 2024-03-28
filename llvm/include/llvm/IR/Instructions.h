@@ -1298,14 +1298,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   ICmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::ICmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1481,14 +1481,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   FCmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
     AssertOK();
   }
 

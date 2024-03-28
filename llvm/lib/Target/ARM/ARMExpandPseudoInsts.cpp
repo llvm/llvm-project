@@ -1468,7 +1468,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   if (passesFPReg)
     assert(STI->hasFPRegs() && "Subtarget needs fpregs");
 
-  // Lazy store all fp registers to the stack
+  // Lazy store all fp registers to the stack.
   // This executes as NOP in the absence of floating-point support.
   MachineInstrBuilder VLSTM =
       BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
@@ -1569,7 +1569,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         .addImm(CMSE_FP_SAVE_SIZE >> 2)
         .add(predOps(ARMCC::AL));
 
-    // Lazy store all fp registers to the stack.
+    // Lazy store all FP registers to the stack
     MachineInstrBuilder VLSTM =
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLSTM))
             .addReg(ARM::SP)

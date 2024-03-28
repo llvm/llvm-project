@@ -214,8 +214,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -956,9 +955,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -1047,8 +1044,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
-  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
+  declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,

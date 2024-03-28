@@ -27,9 +27,13 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
+/clang/include/clang/Sema/Sema.h @Endilll
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
+
+clang/lib/AST/Interp/ @tbaederr
+clang/test/AST/Interp/ @tbaederr
 
 /lldb/ @JDevlieghere
 
@@ -55,8 +59,8 @@
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
@@ -73,14 +77,14 @@
 /mlir/**/*SME* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*SVE* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*VectorInterfaces* @dcaballe @nicolasvasilache
-/mlir/**/*VectorToSCF* @banach-space @dcaballe @nicolasvasilache @matthias-springer
+/mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/**/*EmulateNarrowType* @hanhanW
+/mlir/include/mlir/Dialect/Vector/* @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector/* @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
 
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
@@ -92,6 +96,7 @@
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse @nicolasvasilache
 /mlir/lib/Dialect/Transform/* @ftynse @nicolasvasilache
+/mlir/**/*TransformOps* @ftynse @nicolasvasilache
 
 # SPIR-V Dialect in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
@@ -102,5 +107,21 @@
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
+# MLIR NVGPU Dialect
+/mlir/**/NVGPU*/ @grypp
+/mlir/test/**/CUDA/ @grypp
+
+# MLIR NVVM Dialect in MLIR
+/mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
+/mlir/**/NVVM*/ @grypp
+
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+
+# Bazel build system.
+/utils/bazel/ @rupprecht
+
+# InstallAPI and TextAPI
+/llvm/**/TextAPI/ @cyndyishida
+/clang/**/InstallAPI/ @cyndyishida
+/clang/tools/clang-installapi/ @cyndyishida

@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/Visitor.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -26,21 +27,22 @@ namespace installapi {
 
 /// Create a buffer that contains all headers to scan
 /// for global symbols with.
-std::unique_ptr<llvm::MemoryBuffer>
-createInputBuffer(const InstallAPIContext &Ctx);
+std::unique_ptr<llvm::MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx);
 
 class InstallAPIAction : public ASTFrontendAction {
 public:
-  explicit InstallAPIAction(llvm::MachO::RecordsSlice &Records)
-      : Records(Records) {}
+  explicit InstallAPIAction(InstallAPIContext &Ctx) : Ctx(Ctx) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
-    return std::make_unique<InstallAPIVisitor>(CI.getASTContext(), Records);
+    Ctx.Diags->getClient()->BeginSourceFile(CI.getLangOpts());
+    Ctx.Verifier->setSourceManager(CI.getSourceManager());
+    return std::make_unique<InstallAPIVisitor>(
+        CI.getASTContext(), Ctx, CI.getSourceManager(), CI.getPreprocessor());
   }
 
 private:
-  llvm::MachO::RecordsSlice &Records;
+  InstallAPIContext &Ctx;
 };
 } // namespace installapi
 } // namespace clang

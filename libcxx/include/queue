@@ -258,7 +258,6 @@ template <class T, class Container, class Compare>
 #include <__algorithm/pop_heap.h>
 #include <__algorithm/push_heap.h>
 #include <__algorithm/ranges_copy.h>
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/back_insert_iterator.h>

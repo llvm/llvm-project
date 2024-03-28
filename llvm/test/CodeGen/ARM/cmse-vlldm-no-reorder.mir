@@ -109,4 +109,3 @@ body:             |
 # CHECK-NEXT:  $s0 = VMOVSR $r12, 14 /* CC::al */, $noreg
 # CHECK-NEXT:  $sp = tADDspi $sp, 34, 14 /* CC::al */, $noreg
 # CHECK-NEXT:  $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11
- 

@@ -1593,12 +1593,20 @@ private:
   }
 
   bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
-    // NSObject is a fixed size. If we can see the @implementation of a class
-    // which inherits from NSObject then we know that all it's offsets also must
-    // be fixed. FIXME: Can we do this if see a chain of super classes with
-    // implementations leading to NSObject?
-    return ID->getImplementation() && ID->getSuperClass() &&
-           ID->getSuperClass()->getName() == "NSObject";
+    // Test a class by checking its superclasses up to
+    // its base class if it has one.
+    for (; ID; ID = ID->getSuperClass()) {
+      // The layout of base class NSObject
+      // is guaranteed to be statically known
+      if (ID->getIdentifier()->getName() == "NSObject")
+        return true;
+
+      // If we cannot see the @implementation of a class,
+      // we cannot statically know the class layout.
+      if (!ID->getImplementation())
+        return false;
+    }
+    return false;
   }
 
 public:
@@ -2493,12 +2501,12 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
 
     if (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
       auto *CArray = cast<ConstantArrayType>(Array);
-      uint64_t ElCount = CArray->getSize().getZExtValue();
+      uint64_t ElCount = CArray->getZExtSize();
       assert(CArray && "only array with known element size is supported");
       FQT = CArray->getElementType();
       while (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
         auto *CArray = cast<ConstantArrayType>(Array);
-        ElCount *= CArray->getSize().getZExtValue();
+        ElCount *= CArray->getZExtSize();
         FQT = CArray->getElementType();
       }
       if (FQT->isRecordType() && ElCount) {
@@ -5318,7 +5326,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
   }
   // Unlike incomplete arrays, constant arrays can be nested.
   while (auto arrayType = CGM.getContext().getAsConstantArrayType(fieldType)) {
-    numElts *= arrayType->getSize().getZExtValue();
+    numElts *= arrayType->getZExtSize();
     fieldType = arrayType->getElementType();
   }
 

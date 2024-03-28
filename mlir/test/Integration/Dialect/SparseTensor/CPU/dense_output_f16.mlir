@@ -94,6 +94,8 @@ module {
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 32
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
     // CHECK-NEXT: values : ( 1, 11, 0, 2, 13, 0, 0, 0, 0, 0, 14, 3, 0, 0, 0, 0, 15, 4, 16, 0, 5, 6, 0, 0, 0, 0, 0, 0, 7, 8, 0, 9,
     // CHECK-NEXT: ----
     //

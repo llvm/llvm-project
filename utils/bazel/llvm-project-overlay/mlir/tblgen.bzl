@@ -181,8 +181,6 @@ def _gentbl_rule_impl(ctx):
 gentbl_rule = rule(
     _gentbl_rule_impl,
     doc = "Generates tabular code from a table definition file.",
-    # Match genrule behavior
-    output_to_genfiles = True,
     attrs = {
         "tblgen": attr.label(
             doc = "The TableGen executable with which to generate `out`.",

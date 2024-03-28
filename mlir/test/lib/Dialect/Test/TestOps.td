@@ -1270,8 +1270,8 @@ def TestOpWithRegionFoldNoMemoryEffect : TEST_Op<
 
 // Op for testing folding of outer op with inner ops.
 def TestOpWithRegionFold : TEST_Op<"op_with_region_fold"> {
-  let arguments = (ins I32:$operand);
-  let results = (outs I32);
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType);
   let regions = (region SizedRegion<1>:$region);
   let hasFolder = 1;
 }
@@ -2045,6 +2045,17 @@ def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
   let assemblyFormat = [{
     `dimension_list` `=` custom<DimensionList>($dimension_list)
     attr-dict
+  }];
+}
+
+def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
+  let description = [{
+    Test using a custom directive as the optional group anchor and the first
+    element to parse. It is expected to return an `OptionalParseResult`.
+  }];
+  let arguments = (ins OptionalAttr<I1Attr>:$attr);
+  let assemblyFormat = [{
+    attr-dict (custom<OptionalCustomParser>($attr)^) : (`bar`)?
   }];
 }
 

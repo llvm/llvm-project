@@ -45,7 +45,7 @@
 #endif
 
 
-#if check(implicit_move, 0, 0, 0, 0, 0, 202011, 202011)
+#if check(implicit_move, 0, 0, 0, 0, 0, 202207, 202207)
 #error "wrong value for __cpp_implicit_move"
 #endif
 

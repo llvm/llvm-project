@@ -21,7 +21,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
@@ -705,56 +704,6 @@ void ClangASTSource::FillNamespaceMap(
   }
 }
 
-template <class D> class TaggedASTDecl {
-public:
-  TaggedASTDecl() : decl(nullptr) {}
-  TaggedASTDecl(D *_decl) : decl(_decl) {}
-  bool IsValid() const { return (decl != nullptr); }
-  bool IsInvalid() const { return !IsValid(); }
-  D *operator->() const { return decl; }
-  D *decl;
-};
-
-template <class D2, template <class D> class TD, class D1>
-TD<D2> DynCast(TD<D1> source) {
-  return TD<D2>(dyn_cast<D2>(source.decl));
-}
-
-template <class D = Decl> class DeclFromParser;
-template <class D = Decl> class DeclFromUser;
-
-template <class D> class DeclFromParser : public TaggedASTDecl<D> {
-public:
-  DeclFromParser() : TaggedASTDecl<D>() {}
-  DeclFromParser(D *_decl) : TaggedASTDecl<D>(_decl) {}
-
-  DeclFromUser<D> GetOrigin(ClangASTSource &source);
-};
-
-template <class D> class DeclFromUser : public TaggedASTDecl<D> {
-public:
-  DeclFromUser() : TaggedASTDecl<D>() {}
-  DeclFromUser(D *_decl) : TaggedASTDecl<D>(_decl) {}
-
-  DeclFromParser<D> Import(ClangASTSource &source);
-};
-
-template <class D>
-DeclFromUser<D> DeclFromParser<D>::GetOrigin(ClangASTSource &source) {
-  ClangASTImporter::DeclOrigin origin = source.GetDeclOrigin(this->decl);
-  if (!origin.Valid())
-    return DeclFromUser<D>();
-  return DeclFromUser<D>(dyn_cast<D>(origin.decl));
-}
-
-template <class D>
-DeclFromParser<D> DeclFromUser<D>::Import(ClangASTSource &source) {
-  DeclFromParser<> parser_generic_decl(source.CopyDecl(this->decl));
-  if (parser_generic_decl.IsInvalid())
-    return DeclFromParser<D>();
-  return DeclFromParser<D>(dyn_cast<D>(parser_generic_decl.decl));
-}
-
 bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
     NameSearchContext &context, ObjCInterfaceDecl *original_interface_decl,
     const char *log_info) {
@@ -1188,8 +1137,8 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   } while (false);
 }
 
-static bool FindObjCPropertyAndIvarDeclsWithOrigin(
-    NameSearchContext &context, ClangASTSource &source,
+bool ClangASTSource::FindObjCPropertyAndIvarDeclsWithOrigin(
+    NameSearchContext &context,
     DeclFromUser<const ObjCInterfaceDecl> &origin_iface_decl) {
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -1209,7 +1158,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 
   if (origin_property_decl.IsValid()) {
     DeclFromParser<ObjCPropertyDecl> parser_property_decl(
-        origin_property_decl.Import(source));
+        origin_property_decl.Import(m_ast_context, *m_ast_importer_sp));
     if (parser_property_decl.IsValid()) {
       LLDB_LOG(log, "  CAS::FOPD found\n{0}",
                ClangUtil::DumpDecl(parser_property_decl.decl));
@@ -1224,7 +1173,7 @@ static bool FindObjCPropertyAndIvarDeclsWithOrigin(
 
   if (origin_ivar_decl.IsValid()) {
     DeclFromParser<ObjCIvarDecl> parser_ivar_decl(
-        origin_ivar_decl.Import(source));
+        origin_ivar_decl.Import(m_ast_context, *m_ast_importer_sp));
     if (parser_ivar_decl.IsValid()) {
       LLDB_LOG(log, "  CAS::FOPD found\n{0}",
                ClangUtil::DumpDecl(parser_ivar_decl.decl));
@@ -1243,7 +1192,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
   DeclFromParser<const ObjCInterfaceDecl> parser_iface_decl(
       cast<ObjCInterfaceDecl>(context.m_decl_context));
   DeclFromUser<const ObjCInterfaceDecl> origin_iface_decl(
-      parser_iface_decl.GetOrigin(*this));
+      parser_iface_decl.GetOrigin(*m_ast_importer_sp));
 
   ConstString class_name(parser_iface_decl->getNameAsString().c_str());
 
@@ -1253,7 +1202,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
            m_ast_context, m_clang_ast_context->getDisplayName(),
            parser_iface_decl->getName(), context.m_decl_name.getAsString());
 
-  if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this, origin_iface_decl))
+  if (FindObjCPropertyAndIvarDeclsWithOrigin(context, origin_iface_decl))
     return;
 
   LLDB_LOG(log,
@@ -1286,7 +1235,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              "(ObjCInterfaceDecl*){0}/(ASTContext*){1}...",
              complete_iface_decl.decl, &complete_iface_decl->getASTContext());
 
-    FindObjCPropertyAndIvarDeclsWithOrigin(context, *this, complete_iface_decl);
+    FindObjCPropertyAndIvarDeclsWithOrigin(context, complete_iface_decl);
 
     return;
   } while (false);
@@ -1320,7 +1269,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              interface_decl_from_modules.decl,
              &interface_decl_from_modules->getASTContext());
 
-    if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this,
+    if (FindObjCPropertyAndIvarDeclsWithOrigin(context,
                                                interface_decl_from_modules))
       return;
   } while (false);
@@ -1364,7 +1313,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
              interface_decl_from_runtime.decl,
              &interface_decl_from_runtime->getASTContext());
 
-    if (FindObjCPropertyAndIvarDeclsWithOrigin(context, *this,
+    if (FindObjCPropertyAndIvarDeclsWithOrigin(context,
                                                interface_decl_from_runtime))
       return;
   } while (false);
@@ -1395,205 +1344,16 @@ void ClangASTSource::LookupInNamespace(NameSearchContext &context) {
   }
 }
 
-typedef llvm::DenseMap<const FieldDecl *, uint64_t> FieldOffsetMap;
-typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetMap;
-
-template <class D, class O>
-static bool ImportOffsetMap(llvm::DenseMap<const D *, O> &destination_map,
-                            llvm::DenseMap<const D *, O> &source_map,
-                            ClangASTSource &source) {
-  // When importing fields into a new record, clang has a hard requirement that
-  // fields be imported in field offset order.  Since they are stored in a
-  // DenseMap with a pointer as the key type, this means we cannot simply
-  // iterate over the map, as the order will be non-deterministic.  Instead we
-  // have to sort by the offset and then insert in sorted order.
-  typedef llvm::DenseMap<const D *, O> MapType;
-  typedef typename MapType::value_type PairType;
-  std::vector<PairType> sorted_items;
-  sorted_items.reserve(source_map.size());
-  sorted_items.assign(source_map.begin(), source_map.end());
-  llvm::sort(sorted_items, llvm::less_second());
-
-  for (const auto &item : sorted_items) {
-    DeclFromUser<D> user_decl(const_cast<D *>(item.first));
-    DeclFromParser<D> parser_decl(user_decl.Import(source));
-    if (parser_decl.IsInvalid())
-      return false;
-    destination_map.insert(
-        std::pair<const D *, O>(parser_decl.decl, item.second));
-  }
-
-  return true;
-}
-
-template <bool IsVirtual>
-bool ExtractBaseOffsets(const ASTRecordLayout &record_layout,
-                        DeclFromUser<const CXXRecordDecl> &record,
-                        BaseOffsetMap &base_offsets) {
-  for (CXXRecordDecl::base_class_const_iterator
-           bi = (IsVirtual ? record->vbases_begin() : record->bases_begin()),
-           be = (IsVirtual ? record->vbases_end() : record->bases_end());
-       bi != be; ++bi) {
-    if (!IsVirtual && bi->isVirtual())
-      continue;
-
-    const clang::Type *origin_base_type = bi->getType().getTypePtr();
-    const clang::RecordType *origin_base_record_type =
-        origin_base_type->getAs<RecordType>();
-
-    if (!origin_base_record_type)
-      return false;
-
-    DeclFromUser<RecordDecl> origin_base_record(
-        origin_base_record_type->getDecl());
-
-    if (origin_base_record.IsInvalid())
-      return false;
-
-    DeclFromUser<CXXRecordDecl> origin_base_cxx_record(
-        DynCast<CXXRecordDecl>(origin_base_record));
-
-    if (origin_base_cxx_record.IsInvalid())
-      return false;
-
-    CharUnits base_offset;
-
-    if (IsVirtual)
-      base_offset =
-          record_layout.getVBaseClassOffset(origin_base_cxx_record.decl);
-    else
-      base_offset =
-          record_layout.getBaseClassOffset(origin_base_cxx_record.decl);
-
-    base_offsets.insert(std::pair<const CXXRecordDecl *, CharUnits>(
-        origin_base_cxx_record.decl, base_offset));
-  }
-
-  return true;
-}
-
-bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
-                                      uint64_t &alignment,
-                                      FieldOffsetMap &field_offsets,
-                                      BaseOffsetMap &base_offsets,
-                                      BaseOffsetMap &virtual_base_offsets) {
-
-  Log *log = GetLog(LLDBLog::Expressions);
-
-  LLDB_LOG(log,
-           "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{2} [name = '{3}']",
-           m_ast_context, m_clang_ast_context->getDisplayName(), record,
-           record->getName());
-
-  DeclFromParser<const RecordDecl> parser_record(record);
-  DeclFromUser<const RecordDecl> origin_record(
-      parser_record.GetOrigin(*this));
-
-  if (origin_record.IsInvalid())
-    return false;
-
-  FieldOffsetMap origin_field_offsets;
-  BaseOffsetMap origin_base_offsets;
-  BaseOffsetMap origin_virtual_base_offsets;
-
-  TypeSystemClang::GetCompleteDecl(
-      &origin_record->getASTContext(),
-      const_cast<RecordDecl *>(origin_record.decl));
-
-  clang::RecordDecl *definition = origin_record.decl->getDefinition();
-  if (!definition || !definition->isCompleteDefinition())
-    return false;
-
-  const ASTRecordLayout &record_layout(
-      origin_record->getASTContext().getASTRecordLayout(origin_record.decl));
-
-  int field_idx = 0, field_count = record_layout.getFieldCount();
-
-  for (RecordDecl::field_iterator fi = origin_record->field_begin(),
-                                  fe = origin_record->field_end();
-       fi != fe; ++fi) {
-    if (field_idx >= field_count)
-      return false; // Layout didn't go well.  Bail out.
-
-    uint64_t field_offset = record_layout.getFieldOffset(field_idx);
-
-    origin_field_offsets.insert(
-        std::pair<const FieldDecl *, uint64_t>(*fi, field_offset));
-
-    field_idx++;
-  }
-
-  lldbassert(&record->getASTContext() == m_ast_context);
-
-  DeclFromUser<const CXXRecordDecl> origin_cxx_record(
-      DynCast<const CXXRecordDecl>(origin_record));
-
-  if (origin_cxx_record.IsValid()) {
-    if (!ExtractBaseOffsets<false>(record_layout, origin_cxx_record,
-                                   origin_base_offsets) ||
-        !ExtractBaseOffsets<true>(record_layout, origin_cxx_record,
-                                  origin_virtual_base_offsets))
-      return false;
-  }
-
-  if (!ImportOffsetMap(field_offsets, origin_field_offsets, *this) ||
-      !ImportOffsetMap(base_offsets, origin_base_offsets, *this) ||
-      !ImportOffsetMap(virtual_base_offsets, origin_virtual_base_offsets,
-                       *this))
-    return false;
-
-  size = record_layout.getSize().getQuantity() * m_ast_context->getCharWidth();
-  alignment = record_layout.getAlignment().getQuantity() *
-              m_ast_context->getCharWidth();
-
-  if (log) {
-    LLDB_LOG(log, "LRT returned:");
-    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0}",
-             static_cast<const void *>(origin_record.decl));
-    LLDB_LOG(log, "LRT   Size = {0}", size);
-    LLDB_LOG(log, "LRT   Alignment = {0}", alignment);
-    LLDB_LOG(log, "LRT   Fields:");
-    for (RecordDecl::field_iterator fi = record->field_begin(),
-                                    fe = record->field_end();
-         fi != fe; ++fi) {
-      LLDB_LOG(log,
-               "LRT     (FieldDecl*){0}, Name = '{1}', Type = '{2}', Offset = "
-               "{3} bits",
-               *fi, fi->getName(), fi->getType().getAsString(),
-               field_offsets[*fi]);
-    }
-    DeclFromParser<const CXXRecordDecl> parser_cxx_record =
-        DynCast<const CXXRecordDecl>(parser_record);
-    if (parser_cxx_record.IsValid()) {
-      LLDB_LOG(log, "LRT   Bases:");
-      for (CXXRecordDecl::base_class_const_iterator
-               bi = parser_cxx_record->bases_begin(),
-               be = parser_cxx_record->bases_end();
-           bi != be; ++bi) {
-        bool is_virtual = bi->isVirtual();
-
-        QualType base_type = bi->getType();
-        const RecordType *base_record_type = base_type->getAs<RecordType>();
-        DeclFromParser<RecordDecl> base_record(base_record_type->getDecl());
-        DeclFromParser<CXXRecordDecl> base_cxx_record =
-            DynCast<CXXRecordDecl>(base_record);
-
-        LLDB_LOG(log,
-                 "LRT     {0}(CXXRecordDecl*){1}, Name = '{2}', Offset = "
-                 "{3} chars",
-                 (is_virtual ? "Virtual " : ""), base_cxx_record.decl,
-                 base_cxx_record.decl->getName(),
-                 (is_virtual
-                      ? virtual_base_offsets[base_cxx_record.decl].getQuantity()
-                      : base_offsets[base_cxx_record.decl].getQuantity()));
-      }
-    } else {
-      LLDB_LOG(log, "LRD   Not a CXXRecord, so no bases");
-    }
-  }
-
-  return true;
+bool ClangASTSource::layoutRecordType(
+    const RecordDecl *record, uint64_t &size, uint64_t &alignment,
+    llvm::DenseMap<const clang::FieldDecl *, uint64_t> &field_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &base_offsets,
+    llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
+        &virtual_base_offsets) {
+  return m_ast_importer_sp->importRecordLayoutFromOrigin(
+      record, size, alignment, field_offsets, base_offsets,
+      virtual_base_offsets);
 }
 
 void ClangASTSource::CompleteNamespaceMap(

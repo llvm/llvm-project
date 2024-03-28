@@ -74,6 +74,9 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
   case CC_M68kRTD: return llvm::CallingConv::M68k_RTD;
   case CC_PreserveNone: return llvm::CallingConv::PreserveNone;
+    // clang-format off
+  case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
+    // clang-format on
   }
 }
 
@@ -259,6 +262,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveNoneAttr>())
     return CC_PreserveNone;
+
+  if (D->hasAttr<RISCVVectorCCAttr>())
+    return CC_RISCVVectorCall;
 
   return CC_C;
 }
@@ -933,8 +939,8 @@ struct NoExpansion : TypeExpansion {
 static std::unique_ptr<TypeExpansion>
 getTypeExpansion(QualType Ty, const ASTContext &Context) {
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
-    return std::make_unique<ConstantArrayExpansion>(
-        AT->getElementType(), AT->getSize().getZExtValue());
+    return std::make_unique<ConstantArrayExpansion>(AT->getElementType(),
+                                                    AT->getZExtSize());
   }
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     SmallVector<const CXXBaseSpecifier *, 1> Bases;
@@ -1796,14 +1802,14 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_inout_zt0");
 }
 
-static void AddAttributesFromAssumes(llvm::AttrBuilder &FuncAttrs,
-                                     const Decl *Callee) {
+static void AddAttributesFromOMPAssumes(llvm::AttrBuilder &FuncAttrs,
+                                        const Decl *Callee) {
   if (!Callee)
     return;
 
   SmallVector<StringRef, 4> Attrs;
 
-  for (const AssumptionAttr *AA : Callee->specific_attrs<AssumptionAttr>())
+  for (const OMPAssumeAttr *AA : Callee->specific_attrs<OMPAssumeAttr>())
     AA->getAssumption().split(Attrs, ",");
 
   if (!Attrs.empty())
@@ -2344,7 +2350,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
   // Attach assumption attributes to the declaration. If this is a call
   // site, attach assumptions from the caller to the call as well.
-  AddAttributesFromAssumes(FuncAttrs, TargetDecl);
+  AddAttributesFromOMPAssumes(FuncAttrs, TargetDecl);
 
   bool HasOptnone = false;
   // The NoBuiltinAttr attached to the target FunctionDecl.
@@ -3086,7 +3092,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
               AI->addAttrs(llvm::AttrBuilder(getLLVMContext()).addAlignmentAttr(Alignment));
-              uint64_t ArrSize = ArrTy->getSize().getZExtValue();
+              uint64_t ArrSize = ArrTy->getZExtSize();
               if (!ETy->isIncompleteType() && ETy->isConstantSizeType() &&
                   ArrSize) {
                 llvm::AttrBuilder Attrs(getLLVMContext());

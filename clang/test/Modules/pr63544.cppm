@@ -8,6 +8,18 @@
 // RUN:     -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++23 %t/pr63544.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
 
+// Test again with reduced BMI.
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++23 %t/a.cppm -emit-reduced-module-interface -o %t/m-a.pcm
+// RUN: %clang_cc1 -std=c++23 %t/b.cppm -emit-reduced-module-interface -o %t/m-b.pcm
+// RUN: %clang_cc1 -std=c++23 %t/m.cppm -emit-reduced-module-interface -o %t/m.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++23 %t/pr63544.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+
+
 //--- foo.h
 
 namespace std {
