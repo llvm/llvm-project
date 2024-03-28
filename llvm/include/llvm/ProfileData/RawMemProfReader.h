@@ -97,6 +97,8 @@ protected:
   }
   // A mapping from FrameId (a hash of the contents) to the frame.
   llvm::DenseMap<FrameId, Frame> IdToFrame;
+  // A mapping from CallStackId (a hash of the contents) to the call stack.
+  llvm::DenseMap<CallStackId, SmallVector<FrameId>> CallStackIdToCallStack;
   // A mapping from function GUID, hash of the canonical function symbol to the
   // memprof profile data for that function, i.e allocation and callsite info.
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
