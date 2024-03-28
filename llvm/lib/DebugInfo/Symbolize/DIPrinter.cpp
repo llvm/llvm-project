@@ -131,14 +131,17 @@ void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
 
 void LLVMPrinter::printSimpleLocation(StringRef Filename,
                                       const DILineInfo &Info) {
-  OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
+  OS << Filename << ':' << Info.Line << ':' << Info.Column
+     << (Info.IsApproximatedLine ? (" " + Twine(Info.ApproxString)) : "")
+     << '\n';
   printContext(
       SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
 }
 
 void GNUPrinter::printSimpleLocation(StringRef Filename,
                                      const DILineInfo &Info) {
-  OS << Filename << ':' << Info.Line;
+  OS << Filename << ':' << Info.Line
+     << (Info.IsApproximatedLine ? (" " + Twine(Info.ApproxString)) : "");
   if (Info.Discriminator)
     OS << " (discriminator " << Info.Discriminator << ')';
   OS << '\n';
@@ -158,6 +161,8 @@ void PlainPrinterBase::printVerbose(StringRef Filename,
   OS << "  Column: " << Info.Column << '\n';
   if (Info.Discriminator)
     OS << "  Discriminator: " << Info.Discriminator << '\n';
+  if (Info.IsApproximatedLine)
+    OS << "  Approximate: " << Info.IsApproximatedLine << '\n';
 }
 
 void LLVMPrinter::printStartAddress(const DILineInfo &Info) {
@@ -308,7 +313,8 @@ static json::Object toJSON(const DILineInfo &LineInfo) {
         LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
        {"Line", LineInfo.Line},
        {"Column", LineInfo.Column},
-       {"Discriminator", LineInfo.Discriminator}});
+       {"Discriminator", LineInfo.Discriminator},
+       {"Approximate", LineInfo.IsApproximatedLine}});
 }
 
 void JSONPrinter::print(const Request &Request, const DILineInfo &Info) {

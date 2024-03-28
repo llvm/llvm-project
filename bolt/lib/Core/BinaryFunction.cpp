@@ -191,8 +191,10 @@ static SMLoc findDebugLineInformationForInstructionAt(
       "Cannot fit instruction debug line information into SMLoc's pointer");
 
   SMLoc NullResult = DebugLineTableRowRef::NULL_ROW.toSMLoc();
-  uint32_t RowIndex = LineTable->lookupAddress(
-      {Address, object::SectionedAddress::UndefSection});
+  auto RowIndexValue = LineTable->lookupAddress(
+      {Address, object::SectionedAddress::UndefSection},
+      DILineInfoSpecifier::ApproximateLineKind::None);
+  uint32_t RowIndex = RowIndexValue.first;
   if (RowIndex == LineTable->UnknownRowIndex)
     return NullResult;
 

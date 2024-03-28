@@ -207,6 +207,17 @@ Example 7 - Addresses as symbol names:
   foz
   /tmp/test.h:1:0
 
+Example 8 - Addresses having approximate line info:
+
+.. code-block:: console
+
+  $ llvm-symbolizer --obj=test.elf --approximate-line-info=before 0xa
+  main
+  /home/ampandey/test-hip/main.c:4:6 (approximate)
+  $ llvm-symbolizer --obj=test.elf --approximate-line-info=after 0xa
+  main
+  /home/ampandey/test-hip/main.c:8:2 (approximate)
+
 OPTIONS
 -------
 
@@ -215,6 +226,12 @@ OPTIONS
   Add the specified offset to object file addresses when performing lookups.
   This can be used to perform lookups as if the object were relocated by the
   offset.
+
+.. option:: --approximate-line-info=<before|after>
+
+  Print the approximate non-zero line number nearest to an input address.
+  Nearest lookup is performed by querying the line-table structure for an
+  address having non-zero line information in close proximity.
 
 .. option:: --basenames, -s
 
@@ -370,6 +387,7 @@ OPTIONS
         "ModuleName": "inlined.elf",
         "Symbol": [
           {
+            "Approximate": false,
             "Column": 18,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",
@@ -380,6 +398,7 @@ OPTIONS
             "StartLine": 9
           },
           {
+            "Approximate": false,
             "Column": 0,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",
@@ -396,6 +415,7 @@ OPTIONS
         "ModuleName": "inlined.elf",
         "Symbol": [
           {
+            "Approximate": false,
             "Column": 3,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",

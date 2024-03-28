@@ -1742,8 +1742,8 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
       LineTable->getFileLineInfoForAddress(
-          {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-          Spec.FLIKind, Result);
+          {Address.Address, Address.SectionIndex}, Spec.ALKind,
+          CU->getCompilationDir(), Spec.FLIKind, Result);
     }
   }
 
@@ -1838,7 +1838,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
       DILineInfo Frame;
       LineTable = getLineTableForUnit(CU);
       if (LineTable && LineTable->getFileLineInfoForAddress(
-                           {Address.Address, Address.SectionIndex},
+                           {Address.Address, Address.SectionIndex}, Spec.ALKind,
                            CU->getCompilationDir(), Spec.FLIKind, Frame))
         InliningInfo.addFrame(Frame);
     }
@@ -1865,8 +1865,8 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
         // For the topmost routine, get file/line info from line table.
         if (LineTable)
           LineTable->getFileLineInfoForAddress(
-              {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-              Spec.FLIKind, Frame);
+              {Address.Address, Address.SectionIndex}, Spec.ALKind,
+              CU->getCompilationDir(), Spec.FLIKind, Frame);
       } else {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.

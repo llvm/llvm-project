@@ -22,7 +22,7 @@
 ;; Check JSON style output.
 ; RUN: llvm-symbolizer --print-source-context-lines=3 --obj=%t.o 0 --output-style=JSON | \
 ; RUN:   FileCheck %s --check-prefix=JSON --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-; JSON:[{"Address":"0x0","ModuleName":"{{.*}}.o","Symbol":[{"Column":13,"Discriminator":0,"FileName":"/source.c","FunctionName":"foo","Line":3,"Source":"2  : // Line 2\n3 >: void foo() {}\n4  : // Line 4\n","StartAddress":"0x0","StartFileName":"/source.c","StartLine":3}]}]
+; JSON:[{"Address":"0x0","ModuleName":"{{.*}}.o","Symbol":[{"Approximate":false,"Column":13,"Discriminator":0,"FileName":"/source.c","FunctionName":"foo","Line":3,"Source":"2  : // Line 2\n3 >: void foo() {}\n4  : // Line 4\n","StartAddress":"0x0","StartFileName":"/source.c","StartLine":3}]}]
 
 ;; Generated from the following source:
 ;; // Line 1
