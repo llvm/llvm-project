@@ -1337,9 +1337,24 @@ static bool compileModule(CompilerInstance &ImportingInstance,
   // Get or create the module map that we'll use to build this module.
   ModuleMap &ModMap
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  SourceManager &SourceMgr = ImportingInstance.getSourceManager();
   bool Result;
-  if (OptionalFileEntryRef ModuleMapFile =
-          ModMap.getContainingModuleMapFile(Module)) {
+  if (FileID ModuleMapFID = ModMap.getContainingModuleMapFileID(Module);
+      ModuleMapFID.isValid()) {
+    // We want to use the top-level module map. If we don't, the compiling
+    // instance may think the containing module map is a top-level one, while
+    // the importing instance knows it's included from a parent module map via
+    // the extern directive. This mismatch could bite us later.
+    SourceLocation Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
+    while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
+      ModuleMapFID = SourceMgr.getFileID(Loc);
+      Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
+    }
+
+    OptionalFileEntryRef ModuleMapFile =
+        SourceMgr.getFileEntryRefForID(ModuleMapFID);
+    assert(ModuleMapFile && "Top-level module map with no FileID");
+
     // Canonicalize compilation to start with the public module map. This is
     // vital for submodules declarations in the private module maps to be
     // correctly parsed when depending on a top level module in the public one.
