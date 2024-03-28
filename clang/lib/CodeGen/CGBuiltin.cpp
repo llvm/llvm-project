@@ -26,6 +26,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1053,6 +1054,165 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
+namespace {
+
+class ObjectSizeVisitor
+    : public ConstStmtVisitor<ObjectSizeVisitor, const Expr *> {
+  bool SkipASE;
+
+public:
+  ObjectSizeVisitor(bool SkipASE = false) : SkipASE(SkipASE) {}
+
+  const Expr *Visit(const Expr *E) {
+    return ConstStmtVisitor<ObjectSizeVisitor, const Expr *>::Visit(E);
+  }
+
+  const Expr *VisitStmt(const Stmt *S) { return nullptr; }
+
+  const Expr *VisitDeclRefExpr(const DeclRefExpr *E) { return E; }
+  const Expr *VisitMemberExpr(const MemberExpr *E) { return E; }
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    return SkipASE ? Visit(E->getBase()) : E;
+  }
+
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+/// getLastDecl - Return the last FieldDecl in the struct.
+static const FieldDecl *getLastDecl(const RecordDecl *RD) {
+  const Decl *LastDecl = nullptr;
+  for (const Decl *D : RD->decls())
+    if (isa<FieldDecl>(D) || isa<RecordDecl>(D))
+      LastDecl = D;
+
+  if (const auto *LastRD = dyn_cast<RecordDecl>(LastDecl)) {
+    LastDecl = getLastDecl(LastRD);
+  } else if (const auto *LastFD = dyn_cast<FieldDecl>(LastDecl)) {
+    QualType Ty = LastFD->getType();
+    if (Ty->isPointerType())
+      Ty = Ty->getPointeeType();
+
+    if (const RecordDecl *Rec = Ty->getAsRecordDecl())
+      // The last FieldDecl is a structure. Look into that struct to find its
+      // last FieldDecl.
+      LastDecl = getLastDecl(Rec);
+  }
+
+  return dyn_cast_if_present<FieldDecl>(LastDecl);
+}
+
+/// tryToCalculateSubObjectSize - It may be possible to calculate the
+/// sub-object size of an array and skip the generation of the llvm.objectsize
+/// intrinsic. This avoids the complication in conveying the sub-object's
+/// information to the backend. This calculation works for an N-dimentional
+/// array.
+llvm::Value *
+CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
+                                             llvm::IntegerType *ResType) {
+  if ((Type & 0x01) != 1)
+    // Only support sub-object calculation.
+    return nullptr;
+
+  const Expr *ObjectRef = ObjectSizeVisitor().Visit(E);
+  if (!ObjectRef)
+    return nullptr;
+
+  QualType ObjectRefType = ObjectRef->getType();
+  if (ObjectRefType->isPointerType())
+    ObjectRefType = ObjectRefType->getPointeeType();
+
+  // Collect the base and index from the array.
+  QualType ObjectBaseRefTy;
+  const Expr *ArrayIdx = nullptr;
+
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(ObjectRef)) {
+    ArrayIdx = ASE->getIdx()->IgnoreParenImpCasts();
+
+    const Expr *ArrayRefBase = ASE->getBase()->IgnoreParenImpCasts();
+    if (isa<ArraySubscriptExpr>(ArrayRefBase)) {
+      ObjectBaseRefTy = ArrayRefBase->getType();
+      if (ObjectBaseRefTy->isPointerType())
+        ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
+    }
+  }
+
+  ASTContext &Ctx = getContext();
+  if (!ArrayIdx || ArrayIdx->HasSideEffects(Ctx))
+    return nullptr;
+
+  // Check to see if the Decl is a flexible array member. Processing of the
+  // 'counted_by' attribute is done by now. So we don't have any information on
+  // its size, so return MAX_INT.
+  //
+  // Rerun the visitor to find the base expr: MemberExpr or DeclRefExpr.
+  ObjectRef = ObjectSizeVisitor(true).Visit(ObjectRef);
+  if (!ObjectRef)
+    return nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(ObjectRef)) {
+    if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+          getLangOpts().getStrictFlexArraysLevel();
+      const RecordDecl *OuterRD =
+          FD->getParent()->getOuterLexicalRecordContext();
+      const FieldDecl *LastFD = getLastDecl(OuterRD);
+
+      if (LastFD == FD && Decl::isFlexibleArrayMemberLike(
+                              Ctx, FD, FD->getType(), StrictFlexArraysLevel,
+                              /*IgnoreTemplateOrMacroSubstitution=*/true))
+        return ConstantInt::get(ResType, -1, /*isSigned=*/true);
+    }
+  }
+
+  if (ObjectBaseRefTy.isNull()) {
+    ObjectBaseRefTy = ObjectRef->getType();
+    if (ObjectBaseRefTy->isPointerType())
+      ObjectBaseRefTy = ObjectBaseRefTy->getPointeeType();
+  }
+
+  // Generate the calculation:
+  //
+  //     S Object[n_1][n_2]...[n_m]; /* M-dimentional array */
+  //
+  //     ObjectRef = Object[n_1]...[n_x]; /* 0 < x < m */
+  //     ObjectBaseRef = Object[n_1]...[n_{x-1}];
+  //
+  //     ArrayRefSize = sizeof( typeof( ObjectRef ) );
+  //     ArrayRefBaseSize = sizeof( typeof( ObjectBaseRef ) );
+  //
+  //     Size = ArrayRefSize - (ArrayRefBaseSize * ArrayIdx);
+  //     return Size > 0 ? Size : 0;
+  //
+  Value *ArrayRefSize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(ObjectRefType).getQuantity(),
+      /*isSigned=*/true);
+  Value *ArrayRefBaseSize = ConstantInt::get(
+      ResType, Ctx.getTypeSizeInChars(ObjectBaseRefTy).getQuantity(),
+      /*isSigned=*/true);
+
+  Value *Res = EmitScalarExpr(ArrayIdx);
+
+  Res = Builder.CreateIntCast(Res, ResType, /*isSigned=*/true);
+  Res =
+      Builder.CreateSub(ArrayRefBaseSize, Builder.CreateMul(ArrayRefSize, Res));
+
+  return Builder.CreateSelect(Builder.CreateIsNotNeg(Res), Res,
+                              ConstantInt::get(ResType, 0, /*isSigned=*/true));
+}
+
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///   - A llvm::Argument (if E is a param with the pass_object_size attribute on
@@ -1085,18 +1245,21 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     }
   }
 
-  if (IsDynamic) {
-    // Emit special code for a flexible array member with the "counted_by"
-    // attribute.
-    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
-      return V;
-  }
-
   // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate E for side-effects. In either case, we shouldn't lower to
   // @llvm.objectsize.
   if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
+
+  if (IsDynamic) {
+    // Emit special code for a flexible array member with the "counted_by"
+    // attribute.
+    if (Value *V = emitFlexibleArrayMemberSize(E, Type, ResType))
+      return V;
+
+    if (Value *V = tryToCalculateSubObjectSize(E, Type, ResType))
+      return V;
+  }
 
   Value *Ptr = EmittedE ? EmittedE : EmitScalarExpr(E);
   assert(Ptr->getType()->isPointerTy() &&
