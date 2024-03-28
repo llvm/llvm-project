@@ -354,6 +354,18 @@ public:
   /// Compute knownbits resulting from llvm.usub.sat(LHS, RHS)
   static KnownBits usub_sat(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute knownbits resulting from (C1 & C2) + (C1 ^ C2).ashr(1)
+  static KnownBits avgFloorS(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from (C1 & C2) + (C1 ^ C2).lshr(1)
+  static KnownBits avgFloorU(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from (C1 & C2) - (C1 ^ C2).ashr(1)
+  static KnownBits avgCeilS(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from (C1 & C2) - (C1 ^ C2).lshr(1)
+  static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits resulting from multiplying LHS and RHS.
   static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
                        bool NoUndefSelfMultiply = false);
