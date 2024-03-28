@@ -237,6 +237,50 @@ void __kmpc_push_num_threads(ident_t *loc, kmp_int32 global_tid,
   __kmp_push_num_threads(loc, global_tid, num_threads);
 }
 
+void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32 global_tid,
+                                    kmp_int32 num_threads, int severity,
+                                    const char *message) {
+  __kmp_push_num_threads(loc, global_tid, num_threads);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
+}
+
+/*!
+@ingroup PARALLEL
+@param loc source location information
+@param global_tid global thread number
+@param list_length number of entries in the num_threads_list array
+@param num_threads_list array of numbers of threads requested for this parallel
+construct and subsequent nested parallel constructs
+
+Set the number of threads to be used by the next fork spawned by this thread,
+and some nested forks as well.
+This call is only required if the parallel construct has a `num_threads` clause
+that has a list of integers as the argument.
+*/
+void __kmpc_push_num_threads_list(ident_t *loc, kmp_int32 global_tid,
+                                  kmp_uint32 list_length,
+                                  kmp_int32 *num_threads_list) {
+  KA_TRACE(20, ("__kmpc_push_num_threads_list: enter T#%d num_threads_list=",
+                global_tid));
+  KA_TRACE(20, ("%d", num_threads_list[0]));
+#ifdef KMP_DEBUG
+  for (kmp_uint32 i = 1; i < list_length; ++i)
+    KA_TRACE(20, (", %d", num_threads_list[i]));
+#endif
+  KA_TRACE(20, ("/n"));
+
+  __kmp_assert_valid_gtid(global_tid);
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+}
+
+void __kmpc_push_num_threads_list_strict(ident_t *loc, kmp_int32 global_tid,
+                                         kmp_uint32 list_length,
+                                         kmp_int32 *num_threads_list,
+                                         int severity, const char *message) {
+  __kmp_push_num_threads_list(loc, global_tid, list_length, num_threads_list);
+  __kmp_set_strict_num_threads(loc, global_tid, severity, message);
+}
+
 void __kmpc_pop_num_threads(ident_t *loc, kmp_int32 global_tid) {
   KA_TRACE(20, ("__kmpc_pop_num_threads: enter\n"));
   /* the num_threads are automatically popped */
