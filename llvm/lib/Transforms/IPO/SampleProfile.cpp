@@ -2425,7 +2425,8 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
     // dropped, so we leverage function attribute(profile-checksum-mismatch) to
     // transfer the info: add the attribute during pre-link phase and check it
     // during post-link phase(see "profileIsValid").
-    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+    if (FunctionSamples::ProfileIsProbeBased &&
+        LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
       F.addFnAttr("profile-checksum-mismatch");
 
     // The matching result will be saved to IRToProfileLocationMap, create a
