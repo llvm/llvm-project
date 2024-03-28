@@ -135,34 +135,36 @@ infrastructure and how to run various tests.
 Variables and Variable Fragments
 ================================
 
-Source language variables (or just "variables") are represented by `local
-variable <LangRef.html#dilocalvariable>`_ and `global variable
-<LangRef.html#diglobalvariable>`_ metadata nodes.
+In the context of this document a "variable" refers generally to any source
+language object which can have a value, including at least:
 
-When variables are not allocated to contiguous memory or to a single LLVM value
-the metadata must record enough information to describe each "piece" or
-"fragment" of the source variable. Each fragment is a contiguous span of bits
-of the variable it is a part of.
+- Variables
+- Constants
+- Formal parameters
 
-This is achieved by encoding fragment information at the end of the
-``DIExpression`` with the ``DW_OP_LLVM_fragment`` operation, whose operands are
-the bit offset of the fragment relative to the start of the variable, and the
-fragment size in bits.
+.. note::
+
+   There is no special provision for "true" constants in LLVM today, and
+   they are instead treated as local or global variables.
+
+A variable is represented by a `local variable <LangRef.html#dilocalvariable>`_
+or `global variable <LangRef.html#diglobalvariable>`_ metadata node.
+
+A variable fragment (or just "fragment") is a contiguous span of bits of a
+variable.
+
+A debug intrinsic which refers to a ``DIExpression`` ending with a
+``DW_OP_LLVM_fragment`` operation describes a fragment of the variable it
+refers to.
+
+The operands of the ``DW_OP_LLVM_fragment`` operation encode the bit offset of
+the fragment relative to the start of the variable, and the size of the
+fragment in bits, respectively.
 
 .. note::
 
    The ``DW_OP_LLVM_fragment`` operation acts only to encode the fragment
    information, and does not have an effect on the semantics of the expression.
-
-A debug intrinsic which refers to a ``DIExpression`` ending with a fragment
-operation provides information about the fragment of the variable it refers to,
-rather than the whole variable.
-
-An equivalence relation over the set of all variables and variable fragments
-called "spatially overlapping" is defined in order to describe when intrinsics
-terminate the effects of other intrinsics. A variable spatially overlaps with
-itself and all fragments of itself. Fragments additionally spatially overlap
-with other fragments sharing one common bit of the same variable.
 
 .. _format:
 
@@ -448,11 +450,23 @@ values through compilation, when objects are promoted to SSA values an
 ``llvm.dbg.value`` intrinsic is created for each assignment, recording the
 variable's new location. Compared with the ``llvm.dbg.declare`` intrinsic:
 
-* A dbg.value terminates the effect of any preceding dbg.values for any
-  spatially overlapping variables or fragments of the specified variable or
-  fragment.
-* The dbg.value's position in the IR defines where in the instruction stream
-  the variable's value changes.
+* A ``llvm.dbg.value`` intrinsic terminates the effects that any preceding
+  ``llvm.dbg.value`` intrinsics have on any common bits of a common variable.
+
+  .. note::
+
+    The current implementation generally terminates the effect of every
+    intrinsic in its entirety if any of its effects would be terminated, rather
+    than carrying forward the effect of previous intrinsics for non-overlapping
+    bits as it would be permitted to do by this definition. This is allowed
+    just as dropping any debug information at any point in the compilation is
+    allowed.
+
+    One exception to this is :doc:`AssignmentTracking` where certain
+    memory-based locations are carried forward partially in some situations.
+
+* The ``llvm.dbg.value``'s position in the IR defines where in the instruction
+  stream the variable's value changes.
 * Operands can be constants, indicating the variable is assigned a
   constant value.
 
