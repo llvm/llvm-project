@@ -112,10 +112,10 @@ define void @addsub_and_external_users(ptr %A, ptr %ptr) {
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[SHUFFLE]], <double 1.100000e+00, double 1.200000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[SHUFFLE]], <double 1.100000e+00, double 1.200000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP1]], <double 1.100000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], <double 2.100000e+00, double 2.200000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 3.100000e+00, double 3.200000e+00>
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
@@ -159,10 +159,10 @@ define void @subadd_and_external_users(ptr %A, ptr %ptr) {
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[LD:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[LD]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[SHUFFLE]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[SHUFFLE]], <double 1.200000e+00, double 1.100000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP1]], <double 1.200000e+00, double 1.100000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], <double 2.200000e+00, double 2.100000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], <double 3.200000e+00, double 3.100000e+00>
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[A:%.*]], align 8
