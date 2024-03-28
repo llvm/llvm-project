@@ -353,6 +353,44 @@ createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
       .getResult();
 }
 
+static SmallVector<int64_t>
+findLinearizedShape(llvm::SmallVector<int64_t> currShape, unsigned elemBitWidth,
+                    unsigned targetBitWidth, int firstDimToCollapse) {
+  int idx = (int)currShape.size() - 1;
+  unsigned totalFlat = 1;
+  unsigned reqdBitWidth = targetBitWidth / elemBitWidth;
+  while (reqdBitWidth > 1 && idx >= firstDimToCollapse) {
+    unsigned curr = currShape[idx];
+    if (reqdBitWidth % curr == 0) {
+      reqdBitWidth /= curr;
+      totalFlat *= curr;
+      curr = 1;
+    } else if (curr % 2 == 0 and reqdBitWidth % 2 == 0) {
+      reqdBitWidth /= 2;
+      curr /= 2;
+      totalFlat *= 2;
+    } else {
+      // At this moment, bail when the shape is not perfectly divisible
+      // by the curent required bit-width. For example, if the shape is
+      // <5x4x3x2xi8>, and targetBitWidth=128, then when we reach '3'
+      // the required bitWidth is 8 and dividing 8/3 you get a remainder
+      // of 2, thus the shapes won't match. So bail here for now.
+      break;
+    }
+    currShape[idx] = curr;
+    if (curr == 1) {
+      idx--;
+    }
+  }
+  SmallVector<int64_t> newShape(currShape.begin(),
+                                currShape.begin() + (idx + 1));
+  newShape.push_back(totalFlat);
+  for (int i = firstDimToCollapse - 1; i >= 0; i--) {
+    newShape.push_back(currShape[i]);
+  }
+  return newShape;
+}
+
 namespace {
 
 /// Rewrites `vector.transfer_read` ops where the source has unit dims, by
@@ -493,18 +531,39 @@ class TransferWriteDropUnitDimsPattern
 
 /// Creates a memref.collapse_shape collapsing all inner dimensions of the
 /// input starting at `firstDimToCollapse`.
-static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
-                               Value input, int64_t firstDimToCollapse) {
+static std::optional<Value> collapseInnerDims(PatternRewriter &rewriter,
+                                              mlir::Location loc, Value input,
+                                              int64_t firstDimToCollapse,
+                                              unsigned vectorBitWidth) {
   ShapedType inputType = cast<ShapedType>(input.getType());
   if (inputType.getRank() == 1)
     return input;
   SmallVector<ReassociationIndices> reassociation;
+  SmallVector<int64_t> inputShape(inputType.getShape());
+  auto newShape =
+      findLinearizedShape(inputShape, inputType.getElementTypeBitWidth(),
+                          vectorBitWidth, firstDimToCollapse);
+  // InputShape == newShape means no need to Collapse and just use
+  // transfer as-is
+  if (inputShape == newShape) {
+    return std::nullopt;
+  }
+
+  auto reassocIndices =
+      mlir::getReassociationIndicesForCollapse(inputType.getShape(), newShape);
+  if (reassocIndices.has_value()) {
+    reassociation = reassocIndices.value();
+  } else {
+    return std::nullopt;
+  }
+#if 0
   for (int64_t i = 0; i < firstDimToCollapse; ++i)
     reassociation.push_back(ReassociationIndices{i});
   ReassociationIndices collapsedIndices;
   for (int64_t i = firstDimToCollapse; i < inputType.getRank(); ++i)
     collapsedIndices.push_back(i);
   reassociation.push_back(collapsedIndices);
+#endif
   return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
 }
 
@@ -581,8 +640,11 @@ public:
     int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
 
     // 1. Collapse the source memref
-    Value collapsedSource =
-        collapseInnerDims(rewriter, loc, source, firstDimToCollapse);
+    std::optional<Value> collapsedSrc = collapseInnerDims(
+        rewriter, loc, source, firstDimToCollapse, targetVectorBitwidth);
+    if (!collapsedSrc.has_value())
+      return failure();
+    Value collapsedSource = collapsedSrc.value();
     MemRefType collapsedSourceType =
         dyn_cast<MemRefType>(collapsedSource.getType());
     int64_t collapsedRank = collapsedSourceType.getRank();
@@ -715,24 +777,38 @@ public:
                                                 collapsedIndices)))
       return failure();
 
-    Value collapsedSource =
-        collapseInnerDims(rewriter, loc, source, firstContiguousInnerDim);
+    std::optional<Value> collapsedSrc = collapseInnerDims(
+        rewriter, loc, source, firstContiguousInnerDim, targetVectorBitwidth);
+    if (!collapsedSrc.has_value())
+      return failure();
+    Value collapsedSource = collapsedSrc.value();
     MemRefType collapsedSourceType =
         cast<MemRefType>(collapsedSource.getType());
     int64_t collapsedRank = collapsedSourceType.getRank();
-    assert(collapsedRank == firstContiguousInnerDim + 1);
+    // assert(collapsedRank == firstContiguousInnerDim + 1);
     SmallVector<AffineExpr, 1> dimExprs{
         getAffineDimExpr(firstContiguousInnerDim, rewriter.getContext())};
     auto collapsedMap =
         AffineMap::get(collapsedRank, 0, dimExprs, rewriter.getContext());
+#if 0
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
+#else
+    VectorType flatVectorType = VectorType::get(
+        collapsedSourceType.getShape(), collapsedSourceType.getElementType());
+#endif
     Value flatVector =
+        // rewriter.create<vector::ReshapeOp>(loc, flatVectorType, vector);
         rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, vector);
     vector::TransferWriteOp flatWrite =
         rewriter.create<vector::TransferWriteOp>(
             loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    llvm::errs() << "flatVector, CollapsedSource ";
+    collapsedSource.dump();
+    flatVector.dump();
+    llvm::errs() << "flatWrite: ";
+    flatWrite.dump();
     rewriter.eraseOp(transferWriteOp);
     return success();
   }
