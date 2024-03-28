@@ -1020,6 +1020,8 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
     matchActionPairs.emplace_back(matcherSymbol, actionSymbol);
   }
 
+  DiagnosedSilenceableFailure overallDiag =
+      DiagnosedSilenceableFailure::success();
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
       // If getRestrictRoot is not present, skip over the root op itself so we
@@ -1058,8 +1060,19 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
              action.getFunctionBody().front().without_terminator()) {
           DiagnosedSilenceableFailure result =
               state.applyTransform(cast<TransformOpInterface>(transform));
-          if (failed(result.checkAndReport()))
+          if (result.isDefiniteFailure())
             return WalkResult::interrupt();
+          if (result.isSilenceableFailure()) {
+            if (overallDiag.succeeded()) {
+              overallDiag = emitSilenceableError() << "actions failed";
+            }
+            overallDiag.attachNote(action->getLoc())
+                << "failed action: " << result.getMessage();
+            overallDiag.attachNote(op->getLoc())
+                << "when applied to this matching payload";
+            (void)result.silence();
+            continue;
+          }
         }
         break;
       }
@@ -1075,7 +1088,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
   // by actions, are invalidated.
   results.set(llvm::cast<OpResult>(getUpdated()),
               state.getPayloadOps(getRoot()));
-  return DiagnosedSilenceableFailure::success();
+  return overallDiag;
 }
 
 void transform::ForeachMatchOp::getEffects(
