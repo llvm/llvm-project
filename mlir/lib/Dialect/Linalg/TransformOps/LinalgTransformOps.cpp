@@ -546,9 +546,9 @@ LogicalResult transform::FuseOp::verify() {
 
 void transform::FuseIntoContainingOp::build(OpBuilder &builder,
                                             OperationState &result,
-                                            Value producerOp,
+                                            Value targetOp,
                                             Value containingOp) {
-  result.addOperands({producerOp, containingOp});
+  result.addOperands({targetOp, containingOp});
   auto resultType = transform::AnyOpType::get(builder.getContext());
   result.addTypes({resultType, resultType});
 }
@@ -629,6 +629,223 @@ static Operation *replaceForAllWithNewSignature(
                                return dominatedUsers.contains(user);
                              });
   return newforallOp;
+}
+
+static std::tuple<SmallVector<Operation *>, Operation *>
+tileAndFuseParallelInsertSlice(RewriterBase &rewriter, Diagnostic &diag,
+                               Operation *consumerOp, Operation *containingOp) {
+  // Check consumer has tiling interface.
+  LLVM_DEBUG(DBGS() << "Try to fuse a consumer\n");
+  auto tileableConsumer = dyn_cast<TilingInterface>(consumerOp);
+  if (!tileableConsumer) {
+    diag.attachNote(consumerOp->getLoc())
+        << "consumer is not a TileableInterface: " << *consumerOp;
+    return {};
+  }
+
+  // Check containing op is "scf::ForallOp".
+  auto forallOp = dyn_cast<scf::ForallOp>(containingOp);
+  if (!forallOp) {
+    diag.attachNote(containingOp->getLoc())
+        << "containing op is not a scf.forall: " << containingOp;
+    return {};
+  }
+
+  // Check dominance.
+  DominanceInfo domInfo(
+      containingOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>());
+  if (llvm::any_of(consumerOp->getOperands(), [&](Value v) {
+        return v.getDefiningOp() != containingOp &&
+               !domInfo.properlyDominates(v, containingOp);
+      })) {
+    diag.attachNote(consumerOp->getLoc())
+        << "consumer's operand can't dominate containing op";
+    return {};
+  }
+
+  // Check consumer don't use more than one result of containingOp.
+  Value bridge(nullptr);
+  SmallVector<unsigned> operandNums;
+  for (auto [idx, opd] : llvm::enumerate((consumerOp->getOperands()))) {
+    if (opd.getDefiningOp() == containingOp) {
+      operandNums.push_back(idx);
+      if (!bridge) {
+        bridge = opd;
+      } else if (bridge != opd) {
+        diag.attachNote(consumerOp->getLoc())
+            << "consumer's operand use more than one containingOp's result";
+        return {};
+      }
+    }
+  }
+
+  // TODO: We have to init result of consumer before scf.forall, use
+  //       DestinationStyleOpInterface to get result shape from init for now.
+  //       Add support for other op such as op has InferTypeOpInterface.
+  // Check consumer has DestinationStyleOpInterface.
+  auto dstOp = dyn_cast<DestinationStyleOpInterface>(consumerOp);
+  if (!dstOp) {
+    diag.attachNote(consumerOp->getLoc())
+        << "consumer op should have destination style op interface";
+    return {};
+  }
+
+  // Check consumer doon't use scf.forall's output as init.
+  SmallVector<Value> dpsInits = llvm::to_vector<4>(
+      llvm::map_range(dstOp.getDpsInits(), [](Value v) { return v; }));
+  if (llvm::is_contained(dpsInits, bridge)) {
+    diag.attachNote(consumerOp->getLoc())
+        << "consumer op take result of scf.forall as init";
+    return {};
+  }
+
+  // Check result was inserted only once.
+  int64_t bridgeResultIdx = cast<OpResult>(bridge).getResultNumber();
+  auto bridgeBlockArg = forallOp.getRegionOutArgs()[bridgeResultIdx];
+  scf::InParallelOp terminatorOp = forallOp.getTerminator();
+
+  tensor::ParallelInsertSliceOp targetInsertOp(nullptr);
+  for (Operation &op : terminatorOp.getRegion().front().getOperations()) {
+    auto parallelInsertSliceOp = cast<tensor::ParallelInsertSliceOp>(op);
+    if (parallelInsertSliceOp.getDest() == bridgeBlockArg) {
+      if (!targetInsertOp) {
+        targetInsertOp = parallelInsertSliceOp;
+      } else {
+        diag.attachNote(containingOp->getLoc())
+            << "containingOp's result inserted multi time";
+        return {};
+      }
+    }
+  }
+
+  if (!targetInsertOp) {
+    diag.attachNote(containingOp->getLoc())
+        << "containingOp's result was not inserted";
+    return {};
+  }
+
+  SmallVector<OpFoldResult> offsets = targetInsertOp.getMixedOffsets();
+  SmallVector<OpFoldResult> sizes = targetInsertOp.getMixedSizes();
+  SmallVector<OpFoldResult> strides = targetInsertOp.getMixedStrides();
+
+  // Check all insert stride is 1.
+  if (llvm::any_of(strides, [](OpFoldResult foldRes) {
+        if (auto attr = foldRes.dyn_cast<Attribute>()) {
+          return cast<IntegerAttr>(attr).getInt() != 1;
+        }
+        return true;
+      })) {
+    diag.attachNote(containingOp->getLoc())
+        << "containingOp's result yield with stride";
+    return {};
+  }
+
+  Location loc = forallOp.getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(terminatorOp);
+
+  SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
+
+  // Try to get iter domain position from input position.
+  if (failed(tileableConsumer.getIterDomainTilePositionFromOperandPosition(
+          rewriter, operandNums.front(), offsets, sizes, iterDomainOffsets,
+          iterDomainSizes))) {
+    diag.attachNote(consumerOp->getLoc())
+        << "can't get iter domain position from input position";
+    return {};
+  }
+
+  // Try to get all containing op result's position from iter domain position.
+  llvm::SmallVector<std::pair<llvm::SmallVector<OpFoldResult>,
+                              llvm::SmallVector<OpFoldResult>>>
+      resultPositions(consumerOp->getNumResults());
+  for (auto [idx, v] : llvm::enumerate(consumerOp->getResults())) {
+    if (failed(tileableConsumer.getResultTilePosition(
+            rewriter, idx, iterDomainOffsets, iterDomainSizes,
+            resultPositions[idx].first, resultPositions[idx].second))) {
+      diag.attachNote(consumerOp->getLoc())
+          << "can't get result domain position from iter domain position";
+      return {};
+    }
+  }
+
+  // All check passed, try to fuse consumer.
+  // Create tiled implementation of containing op.
+  FailureOr<TilingResult> tileAndFuseResult =
+      tileableConsumer.getTiledImplementationFromOperandPosition(
+          rewriter, operandNums.front(), offsets, sizes);
+  if (failed(tileAndFuseResult)) {
+    diag.attachNote(consumerOp->getLoc()) << "get tiled implementation failed";
+    return {};
+  }
+
+  auto tiledOps = tileAndFuseResult->tiledOps;
+  if (failed(tileAndFuseResult) || tiledOps.size() != 1) {
+    diag.attachNote(tileableConsumer->getLoc())
+        << "failed to tile consumer op: " << *tileableConsumer;
+    return {};
+  }
+
+  // Replace tiled op's operand.
+  for (auto operandNum : operandNums) {
+    tiledOps[0]->setOperand(operandNum, targetInsertOp.getSource());
+  }
+  rewriter.replaceUsesWithIf(bridge, forallOp.getOutputs()[bridgeResultIdx],
+                             [&](OpOperand &use) {
+                               Operation *op = use.getOwner();
+                               return forallOp->isProperAncestor(op);
+                             });
+
+  SmallVector<Value> newOuts(forallOp.getOutputs());
+  newOuts.append(dpsInits);
+
+  // Create new scf.forall op.
+  rewriter.setInsertionPoint(forallOp);
+  auto newforallOp = rewriter.create<scf::ForallOp>(
+      loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
+      forallOp.getMixedStep(), newOuts, forallOp.getMapping());
+  rewriter.eraseBlock(newforallOp.getBody());
+  newforallOp.getRegion().takeBody(forallOp.getRegion());
+
+  for (auto v : dpsInits) {
+    newforallOp.getBody()->addArgument(v.getType(), v.getLoc());
+    auto bbArgs = newforallOp.getBody()->getArguments();
+    rewriter.replaceUsesWithIf(v, bbArgs.back(), [&](OpOperand &use) {
+      Operation *op = use.getOwner();
+      return newforallOp->isProperAncestor(op);
+    });
+  }
+
+  // Fix terminator.
+  scf::InParallelOp newTerminatorOp = newforallOp.getTerminator();
+  SmallVector<Operation *> yieldingOps = llvm::to_vector<4>(llvm::map_range(
+      newTerminatorOp.getYieldingOps(), [](Operation &op) { return &op; }));
+  Operation *firstYieldOp = yieldingOps.front();
+  rewriter.setInsertionPoint(firstYieldOp);
+  auto bbArgs = newforallOp.getBody()->getArguments();
+  for (auto [idx, v] : llvm::enumerate(tiledOps[0]->getResults())) {
+    SmallVector<OpFoldResult> strides(resultPositions[idx].first.size(),
+                                      rewriter.getIndexAttr(1));
+    rewriter.create<tensor::ParallelInsertSliceOp>(
+        firstYieldOp->getLoc(), v,
+        bbArgs[forallOp.getRank() + forallOp.getOutputs().size() + idx],
+        resultPositions[idx].first, resultPositions[idx].second, strides);
+  }
+
+  // Replace the result of forall and consumer op.
+  for (auto result : llvm::enumerate(forallOp.getResults())) {
+    rewriter.replaceAllUsesWith(result.value(),
+                                newforallOp->getResult(result.index()));
+  }
+
+  for (auto consumerResult : llvm::enumerate(consumerOp->getResults())) {
+    rewriter.replaceAllUsesWith(
+        consumerResult.value(),
+        newforallOp->getResult(forallOp.getOutputs().size() +
+                               consumerResult.index()));
+  }
+
+  return std::make_tuple(tileAndFuseResult->tiledOps, newforallOp);
 }
 
 /// Find the first "extract" user of `producerOp` and tile it right before its
@@ -880,7 +1097,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
                                        transform::TransformResults &results,
                                        transform::TransformState &state) {
   SmallVector<Operation *> fusedOps;
-  auto producerOps = state.getPayloadOps(getProducerOp());
+  auto targetOps = state.getPayloadOps(getTargetOp());
   auto containingOps = state.getPayloadOps(getContainingOp());
   if (!llvm::hasSingleElement(containingOps)) {
     return emitDefiniteFailure()
@@ -890,69 +1107,115 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
   Operation *containingOp = *containingOps.begin();
 
   // If nothing to fuse, propagate success.
-  if (std::empty(producerOps)) {
+  if (std::empty(targetOps)) {
     results.set(cast<OpResult>(getFusedOp()), SmallVector<mlir::Operation *>{});
     results.set(cast<OpResult>(getNewContainingOp()), {containingOp});
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Helper function to find the next producer that should be fused. Take any
-  // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(producerOps.begin(),
-                                            producerOps.end());
-  auto getNextProducer = [&]() -> FailureOr<Operation *> {
-    for (const auto &it : enumerate(remainingProducers)) {
-      Operation *producerOp = it.value();
-      // The containing op may be a user of producerOp: use isAncestor.
+  // Helper function to find the next target that should be fused. Take any
+  // target that has a use inside the containing op. Return target operation
+  // and a bool variable indicate if this target op is a producer.
+  SetVector<Operation *> remainingTargets(targetOps.begin(), targetOps.end());
+  auto getNextTarget = [&]() -> FailureOr<std::pair<Operation *, bool>> {
+    for (const auto &it : enumerate(remainingTargets)) {
+      Operation *targetOp = it.value();
+      // The containing op may be a user of targetOp: use isAncestor.
       int64_t numUsesInContainingOp =
-          llvm::count_if(producerOp->getUsers(), [&](Operation *op) {
+          llvm::count_if(targetOp->getUsers(), [&](Operation *op) {
             return containingOp->isAncestor(op);
           });
       // TODO: When resolving the TODO below (no duplicate ops), take an op
-      // that has no use among the remaining producers. This is a topological
+      // that has no use among the remaining targets. This is a topological
       // sorting.
       if (numUsesInContainingOp > 0) {
         if (numUsesInContainingOp == 1)
-          remainingProducers.erase(remainingProducers.begin() + it.index());
-        return producerOp;
+          remainingTargets.erase(remainingTargets.begin() + it.index());
+        return std::make_pair(targetOp, true);
+      }
+
+      // The containing op may be a producer of targetOp: use getDefinitionOp.
+      if (llvm::any_of(
+              targetOp->getOperands(),
+              [&](Value v) { return v.getDefiningOp() == containingOp; }) &&
+          !targetOp->getUses().empty()) {
+        remainingTargets.erase(remainingTargets.begin() + it.index());
+        return std::make_pair(targetOp, false);
       }
     }
     return failure();
   };
 
-  while (!remainingProducers.empty()) {
-    auto nextProducer = getNextProducer();
-    if (failed(nextProducer)) {
+  while (!remainingTargets.empty()) {
+    auto nextTarget = getNextTarget();
+    if (failed(nextTarget)) {
       auto diag = mlir::emitSilenceableFailure(getLoc())
-                  << "could not find next producer to fuse into container";
+                  << "could not find next target to fuse into container";
       diag.attachNote(containingOp->getLoc()) << "containing op";
       return diag;
     }
 
-    Operation *producerOp = *nextProducer;
+    Operation *targetOp = nextTarget->first;
 
     // Default diagnostic, to be complemented with more failure information.
-    Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Remark);
-    diag << "could not fuse " << *producerOp << " into " << *containingOp;
+    Diagnostic diag(targetOp->getLoc(), DiagnosticSeverity::Remark);
+    diag << "could not fuse " << *targetOp << " into " << *containingOp;
 
-    // TODO: If there are multiple uses of the producer in the containing op,
-    // we currently tile/clone the op multiple times (once per use). In some
-    // cases, we can tile/clone once and reuse the value for each use.
-    // Futhermore, producers should then be traversed according to a
-    // topological sorting.
-    auto [tiledOps, newContainingOp] =
-        tileAndFuseFirstExtractUse(rewriter, diag, producerOp, containingOp);
-    if (!tiledOps.empty()) {
-      LLVM_DEBUG(DBGS() << "\nFused a direct extract use\n" << *containingOp);
-      fusedOps.append(tiledOps);
-      if (newContainingOp) {
-        // Update handles associated with the containing op so we don't need to
-        // invalidate them. This is a hack to support better composability
-        // between tiling and fusion while a proper mechanism is being
-        // investigated.
-        //
-        // DO NOT replicate this elsewhere unless you understand what you are
-        // doing.
+    if (nextTarget->second) {
+      // Fuse producer.
+      // TODO: If there are multiple uses of the target in the containing op,
+      // we currently tile/clone the op multiple times (once per use). In some
+      // cases, we can tile/clone once and reuse the value for each use.
+      // Futhermore, targets should then be traversed according to a
+      // topological sorting.
+      auto [tiledOps, newContainingOp] =
+          tileAndFuseFirstExtractUse(rewriter, diag, targetOp, containingOp);
+      if (!tiledOps.empty()) {
+        LLVM_DEBUG(DBGS() << "\nFused a direct extract use\n" << *containingOp);
+        fusedOps.append(tiledOps);
+        if (newContainingOp) {
+          // Update handles associated with the containing op so we don't need
+          // to invalidate them. This is a hack to support better composability
+          // between tiling and fusion while a proper mechanism is being
+          // investigated.
+          //
+          // DO NOT replicate this elsewhere unless you understand what you are
+          // doing.
+          LogicalResult replacementStatus =
+              rewriter.notifyPayloadOperationReplaced(containingOp,
+                                                      newContainingOp);
+          (void)replacementStatus;
+          assert(succeeded(replacementStatus) &&
+                 "unable to update transform state mapping");
+          rewriter.eraseOp(containingOp);
+          containingOp = newContainingOp;
+        }
+        continue;
+      }
+
+      SmallVector<Operation *> tiledContainingOpOperand =
+          tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
+              rewriter, diag, targetOp, containingOp);
+      if (!tiledContainingOpOperand.empty()) {
+        LLVM_DEBUG(DBGS() << "\nFused an extract use through block argument\n"
+                          << *containingOp);
+        fusedOps.append(tiledContainingOpOperand);
+        continue;
+      }
+
+      Operation *cloned =
+          cloneAndFuseFirstUse(rewriter, diag, targetOp, containingOp);
+      if (cloned) {
+        LLVM_DEBUG(DBGS() << "\nFused an use by cloning\n" << *containingOp);
+        fusedOps.push_back(cloned);
+        continue;
+      }
+    } else {
+      // Fuse consumer.
+      auto [tiledOps, newContainingOp] = tileAndFuseParallelInsertSlice(
+          rewriter, diag, targetOp, containingOp);
+      if (!tiledOps.empty()) {
+        fusedOps.append(tiledOps);
         LogicalResult replacementStatus =
             rewriter.notifyPayloadOperationReplaced(containingOp,
                                                     newContainingOp);
@@ -961,26 +1224,8 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
                "unable to update transform state mapping");
         rewriter.eraseOp(containingOp);
         containingOp = newContainingOp;
+        continue;
       }
-      continue;
-    }
-
-    SmallVector<Operation *> tiledContainingOpOperand =
-        tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
-            rewriter, diag, producerOp, containingOp);
-    if (!tiledContainingOpOperand.empty()) {
-      LLVM_DEBUG(DBGS() << "\nFused an extract use through block argument\n"
-                        << *containingOp);
-      fusedOps.append(tiledContainingOpOperand);
-      continue;
-    }
-
-    Operation *cloned =
-        cloneAndFuseFirstUse(rewriter, diag, producerOp, containingOp);
-    if (cloned) {
-      LLVM_DEBUG(DBGS() << "\nFused an use by cloning\n" << *containingOp);
-      fusedOps.push_back(cloned);
-      continue;
     }
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
@@ -992,7 +1237,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::FuseIntoContainingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getProducerOp(), effects);
+  consumesHandle(getTargetOp(), effects);
   onlyReadsHandle(getContainingOp(), effects);
   producesHandle(getResults(), effects);
   modifiesPayload(effects);

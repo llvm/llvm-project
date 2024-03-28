@@ -310,51 +310,61 @@ def FuseIntoContainingOp :
           ["allowsRepeatedHandleOperands"]>,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        ReportTrackingListenerFailuresOpTrait]> {
-  let summary = "Fuse a producer into a containing operation.";
+  let summary = "Fuse a target into a containing operation.";
 
   let description = [{
-    Fuses the `producer_op` into the `containing_op`.
+    Fuses the `target_op` into the `containing_op`.
     Returns a handle to the fused ops and the `new_containing_op`.
 
-    The producer is typically a slice of a tileable op (i.e., implements
-    TilingInterface). In that case, this transform computes the accessed
-    producer slice inside of the containing op ("tile and fuse") and if required,
-    creates a new containing op with outputs from the fused producer. Otherwise,
-    the entire producer is cloned inside the containing op ("clone and fuse").
+    This operation supports fusion of producer or fusion of consumer. We will
+    refer to the value connecting the containing operation and the target
+    operation as the "bridge" below.
+
+    When fuse producer, the bridge is typically a slice of a tileable op (i.e.,
+    implements TilingInterface). In that case, this transform computes the
+    accessed bridge slice inside of the containing op ("tile and fuse") and
+    if required, creates a new containing op with outputs from the fused target.
+    Otherwise, the entire target is cloned inside the containing op ("clone
+    and fuse").
+
+    When fuse consumer, the bridge is the result of containing op and a operand
+    of a tileable op (i.e., implements TilingInterface). In this case, this
+    transform computes the access bridge slice inside the containing op ("tile
+    and fuse") and creates a new containing op with consumer's output.
 
     The containing op handle must be associated with exactly one payload op. The
-    producer op handle may be associated with multiple payload ops. This
-    transform fuses producers one-by-one, always picking an unspecified producer
+    target op handle may be associated with multiple payload ops. This
+    transform fuses targets one-by-one, always picking an unspecified target
     that has at least one use inside the containing op among the
-    producers. A producer can be listed multiple times in the handle.
+    targets. A target can be listed multiple times in the handle.
 
-    Note: If a producer has multiple uses inside the containing op, it is
+    Note: If a target has multiple uses inside the containing op, it is
     currently tiled and/or cloned multiple times into the containing op.
     TODO: Reuse already fused OpResults instead of tiling/cloning a second time
-    when possible. Fuse producers according to a topological sorting to achieve
+    when possible. Fuse targets according to a topological sorting to achieve
     the largest amount of reuse.
 
     #### Return modes
 
-    If at least one producer could not be fused, this operation produces a
+    If at least one target could not be fused, this operation produces a
     silenceable failure.  This is the case when tiling fails or when no
-    producer op could be found among the remaining producers that has at least
-    one use within the containing op. I.e., "producers" that are not consumed
+    target op could be found among the remaining targets that has at least
+    one use within the containing op. I.e., "targets" that are not consumed
     within the containing op are rejected by this operation.
 
-    This operation consumes the producer handle.
+    This operation consumes the target handle.
     This operation only reads the containing op handle.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$producer_op,
+  let arguments = (ins TransformHandleTypeInterface:$target_op,
                        TransformHandleTypeInterface:$containing_op);
   let results = (outs TransformHandleTypeInterface:$fused_op,
                       TransformHandleTypeInterface:$new_containing_op);
-  let assemblyFormat = "$producer_op `into` $containing_op attr-dict "
+  let assemblyFormat = "$target_op `into` $containing_op attr-dict "
                        " `:` functional-type(operands, results)";
 
   let builders = [
-    OpBuilder<(ins "Value":$producerOp, "Value":$containingOp)>
+    OpBuilder<(ins "Value":$targetOp, "Value":$containingOp)>
   ];
 }
 
