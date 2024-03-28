@@ -174,6 +174,7 @@ add_header_library(
   StrfromTest.h
   DEPENDS
   libc.src.__support.CPP.type_traits
+  libc.src.__support.FPUtil.fp_bits
 )
 
 add_libc_test(
