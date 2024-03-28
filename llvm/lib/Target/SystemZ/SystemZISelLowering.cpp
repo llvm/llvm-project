@@ -8181,6 +8181,7 @@ SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
   auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
   assert(TFL->hasReservedCallFrame(MF) &&
          "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
+  (void)TFL;
   // Get the MaxCallFrameSize value and erase MI since it serves no further
   // purpose as the call frame is statically reserved in the prolog. Set
   // AdjustsStack as MI is *not* mapped as a frame instruction.
