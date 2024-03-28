@@ -554,6 +554,10 @@ else()
   option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 endif()
 
+set(LLVM_ENABLE_ICU "ON" CACHE STRING "Use ICU for character conversion support if available. Can be ON, OFF, or FORCE_ON")
+
+set(LLVM_ENABLE_ICONV "ON" CACHE STRING "Use iconv for character conversion support if available. Can be ON, OFF, or FORCE_ON")
+
 set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression if available. Can be ON, OFF, or FORCE_ON")

@@ -153,6 +153,7 @@ add_llvm_component_library(LLVMSupport
   CachePruning.cpp
   Caching.cpp
   circular_raw_ostream.cpp
+  CharSet.cpp
   Chrono.cpp
   COM.cpp
   CodeGenCoverage.cpp
@@ -294,6 +295,22 @@ add_llvm_component_library(LLVMSupport
   LINK_COMPONENTS
   Demangle
   )
+
+# Link icu library if it is an external library.
+if(ICU_FOUND)
+  target_link_libraries(LLVMSupport
+  PRIVATE
+  ${ICU_LIBRARIES}
+  )
+else()
+  # Link iconv library if it is an external library.
+  if(Iconv_FOUND AND NOT Iconv_IS_BUILT_IN)
+    target_link_libraries(LLVMSupport
+    PRIVATE
+    ${Iconv_LIBRARIES}
+    )
+  endif()
+endif()
 
 set(llvm_system_libs ${system_libs})
 

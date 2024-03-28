@@ -281,6 +281,12 @@
 /* Have host's ___chkstk_ms */
 #cmakedefine HAVE____CHKSTK_MS ${HAVE____CHKSTK_MS}
 
+/* Define if icu library is available */
+#cmakedefine HAVE_ICU ${HAVE_ICU}
+
+/* Define if iconv library is available */
+#cmakedefine HAVE_ICONV ${HAVE_ICONV}
+
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 
