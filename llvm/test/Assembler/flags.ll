@@ -261,3 +261,27 @@ define i64 @test_or(i64 %a, i64 %b) {
   %res = or disjoint i64 %a, %b
   ret i64 %res
 }
+
+define i32 @test_trunc_signed(i64 %a) {
+; CHECK: %res = trunc nsw i64 %a to i32
+  %res = trunc nsw i64 %a to i32
+  ret i32 %res
+}
+
+define i32 @test_trunc_unsigned(i64 %a) {
+; CHECK: %res = trunc nuw i64 %a to i32
+  %res = trunc nuw i64 %a to i32
+  ret i32 %res
+}
+
+define i32 @test_trunc_both(i64 %a) {
+; CHECK: %res = trunc nuw nsw i64 %a to i32
+  %res = trunc nuw nsw i64 %a to i32
+  ret i32 %res
+}
+
+define i32 @test_trunc_both_reversed(i64 %a) {
+; CHECK: %res = trunc nuw nsw i64 %a to i32
+  %res = trunc nsw nuw i64 %a to i32
+  ret i32 %res
+}

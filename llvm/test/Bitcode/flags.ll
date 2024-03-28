@@ -20,6 +20,10 @@ second:                                           ; preds = %first
   %ll = zext i32 %s to i64
   %jj = or disjoint i32 %a, 0
   %oo = or i32 %a, 0
+  %tu = trunc nuw i32 %a to i16
+  %ts = trunc nsw i32 %a to i16
+  %tus = trunc nuw nsw i32 %a to i16
+  %t = trunc i32 %a to i16
   unreachable
 
 first:                                            ; preds = %entry
@@ -32,5 +36,9 @@ first:                                            ; preds = %entry
   %rr = zext i32 %ss to i64
   %mm = or disjoint i32 %a, 0
   %nn = or i32 %a, 0
+  %tuu = trunc nuw i32 %a to i16
+  %tss = trunc nsw i32 %a to i16
+  %tuss = trunc nuw nsw i32 %a to i16
+  %tt = trunc i32 %a to i16
   br label %second
 }

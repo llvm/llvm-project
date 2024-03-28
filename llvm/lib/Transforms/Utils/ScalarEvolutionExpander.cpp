@@ -59,6 +59,10 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
     Disjoint = PDI->isDisjoint();
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     NNeg = PNI->hasNonNeg();
+  if (auto *TI = dyn_cast<TruncInst>(I)) {
+    NUW = TI->hasNoUnsignedWrap();
+    NSW = TI->hasNoSignedWrap();
+  }
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -72,6 +76,10 @@ void PoisonFlags::apply(Instruction *I) {
     PDI->setIsDisjoint(Disjoint);
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     PNI->setNonNeg(NNeg);
+  if (isa<TruncInst>(I)) {
+    I->setHasNoUnsignedWrap(NUW);
+    I->setHasNoSignedWrap(NSW);
+  }
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
