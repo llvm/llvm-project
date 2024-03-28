@@ -5711,13 +5711,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_urhadd:
   case Intrinsic::aarch64_neon_shadd:
   case Intrinsic::aarch64_neon_uhadd: {
+    bool IsUnsignedAdd = IntNo == Intrinsic::aarch64_neon_uhadd;
     bool IsSignedAdd = (IntNo == Intrinsic::aarch64_neon_srhadd ||
                         IntNo == Intrinsic::aarch64_neon_shadd);
     bool IsRoundingAdd = (IntNo == Intrinsic::aarch64_neon_srhadd ||
                           IntNo == Intrinsic::aarch64_neon_urhadd);
-    unsigned Opcode = IsSignedAdd
-                          ? (IsRoundingAdd ? ISD::AVGCEILS : ISD::AVGFLOORS)
-                          : (IsRoundingAdd ? ISD::AVGCEILU : ISD::AVGFLOORU);
+    unsigned Opcode;
+    if (IsUnsignedAdd) {
+      Opcode = IsRoundingAdd ? ISD::AVGCEILU : ISD::AVGFLOORU;
+    } else {
+      Opcode = IsRoundingAdd ? ISD::AVGCEILS : ISD::AVGFLOORS;
+    }
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
