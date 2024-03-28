@@ -4806,6 +4806,121 @@ private:
   friend class ASTStmtReader;
 };
 
+/// Represents a #embed "expression".
+class PPEmbedExpr final : public Expr {
+  SourceLocation BuiltinLoc, RParenLoc;
+  DeclContext *ParentContext;
+  StringLiteral *Filename = nullptr;
+  StringLiteral *BinaryData = nullptr;
+  IntegerLiteral *FakeChildNode = nullptr;
+  const ASTContext *Ctx = nullptr;
+
+public:
+  enum Action {
+    NotFound,
+    FoundOne,
+    Expanded,
+  };
+
+  PPEmbedExpr(const ASTContext &Ctx, StringLiteral *Filename,
+              StringLiteral *BinaryData, SourceLocation BLoc,
+              SourceLocation RParenLoc, DeclContext *Context);
+
+  /// Build an empty call expression.
+  explicit PPEmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+
+  const DeclContext *getParentContext() const { return ParentContext; }
+  DeclContext *getParentContext() { return ParentContext; }
+
+  SourceLocation getLocation() const { return BuiltinLoc; }
+  SourceLocation getBeginLoc() const { return BuiltinLoc; }
+  SourceLocation getEndLoc() const { return RParenLoc; }
+
+  StringLiteral *getFilenameStringLiteral() const { return Filename; }
+  StringLiteral *getDataStringLiteral() const { return BinaryData; }
+
+  size_t getDataElementCount(ASTContext &Context) const;
+
+private:
+  template <bool Const>
+  class ChildElementIter
+      : public llvm::iterator_facade_base<
+            // FIXME: it seems reasonable to make this a random access iterator
+            // instead, but all current access patterns are a linear walk over
+            // the contents, so it's being left for follow-up work if needed.
+            ChildElementIter<Const>, std::input_iterator_tag,
+            std::conditional_t<Const, const IntegerLiteral *,
+                               IntegerLiteral *>> {
+    friend class PPEmbedExpr;
+
+    PPEmbedExpr *PPExpr = nullptr;
+    unsigned long long CurOffset;
+    using BaseTy = typename ChildElementIter::iterator_facade_base;
+
+    ChildElementIter(PPEmbedExpr *E) : PPExpr(E), CurOffset(0) {}
+
+  public:
+    ChildElementIter() : CurOffset(ULLONG_MAX) {}
+    typename BaseTy::reference operator*() const {
+      assert(PPExpr && CurOffset != ULLONG_MAX &&
+             "trying to dereference an invalid iterator");
+      IntegerLiteral *N = PPExpr->FakeChildNode;
+      StringRef DataRef = PPExpr->BinaryData->getBytes();
+      N->setValue(*PPExpr->Ctx,
+                  llvm::APInt(N->getValue().getBitWidth(), DataRef[CurOffset],
+                              N->getType()->isSignedIntegerType()));
+      // We want to return a reference to the fake child node in the
+      // PPEmbedExpr, not the local variable N.
+      return const_cast<typename BaseTy::reference>(PPExpr->FakeChildNode);
+    }
+    typename BaseTy::pointer operator->() const { return **this; }
+    using BaseTy::operator++;
+    ChildElementIter &operator++() {
+      assert(PPExpr && "trying to increment an invalid iterator");
+      assert(CurOffset != ULLONG_MAX &&
+             "Already at the end of what we can iterate over");
+      if (++CurOffset >= PPExpr->BinaryData->getByteLength()) {
+        CurOffset = ULLONG_MAX;
+        PPExpr = nullptr;
+      }
+      return *this;
+    }
+    bool operator==(ChildElementIter Other) const {
+      return (PPExpr == Other.PPExpr && CurOffset == Other.CurOffset);
+    }
+  }; // class ChildElementIter
+
+public:
+  using fake_child_range = llvm::iterator_range<ChildElementIter<false>>;
+  using const_fake_child_range = llvm::iterator_range<ChildElementIter<true>>;
+
+  fake_child_range underlying_data_elements() {
+    return fake_child_range(ChildElementIter<false>(this),
+                            ChildElementIter<false>());
+  }
+
+  const_fake_child_range underlying_data_elements() const {
+    return const_fake_child_range(
+        ChildElementIter<true>(const_cast<PPEmbedExpr *>(this)),
+        ChildElementIter<true>());
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == PPEmbedExprClass;
+  }
+
+private:
+  friend class ASTStmtReader;
+};
+
 /// Describes an C or C++ initializer list.
 ///
 /// InitListExpr describes an initializer list, which can be used to

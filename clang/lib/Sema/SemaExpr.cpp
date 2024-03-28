@@ -3937,7 +3937,7 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
 
   bool ValueIsPositive = ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
-    Diag(E->getExprLoc(), diag::err_pragma_loop_invalid_argument_value)
+    Diag(E->getExprLoc(), diag::err_requires_positive_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
     return true;
   }
@@ -7182,6 +7182,13 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
       << FixItHint::CreateInsertion(DRE->getLocation(), "std::");
 }
 
+void Sema::ModifyCallExprArguments(Expr *Fn, SourceLocation LParenLoc,
+                                   SmallVectorImpl<Expr *> &ArgExprs,
+                                   SourceLocation RParenLoc) {
+  [[maybe_unused]] PPEmbedExpr::Action Action =
+      ExpandPPEmbedExprInExprList(ArgExprs);
+}
+
 ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig) {
@@ -8019,8 +8026,17 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  InitListExpr *E = new (Context) InitListExpr(Context, LBraceLoc, InitArgList,
-                                               RBraceLoc);
+  InitListExpr *E = nullptr;
+  if (InitArgList.size() > 1 &&
+      CheckExprListForPPEmbedExpr(InitArgList, std::nullopt) !=
+          PPEmbedExpr::NotFound) {
+    SmallVector<Expr *, 4> OutputExprList;
+    ExpandPPEmbedExprInExprList(InitArgList, OutputExprList);
+    E = new (Context)
+        InitListExpr(Context, LBraceLoc, OutputExprList, RBraceLoc);
+  } else {
+    E = new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
+  }
   E->setType(Context.VoidTy); // FIXME: just a place holder for now.
   return E;
 }
@@ -17607,6 +17623,184 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                     DeclContext *ParentContext) {
   return new (Context)
       SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc, ParentContext);
+}
+
+ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
+                                  SourceLocation BinaryDataLoc,
+                                  SourceLocation RPLoc, StringLiteral *Filename,
+                                  StringLiteral *BinaryData) {
+  return new (Context)
+      PPEmbedExpr(Context, Filename, BinaryData, BuiltinLoc, RPLoc, CurContext);
+}
+
+IntegerLiteral *Sema::ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
+                                              bool FirstElement) {
+  assert((PPEmbed->getDataElementCount(Context) == 1 || !FirstElement) &&
+         "Data should only contain a single element");
+  StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
+  QualType ElementTy = PPEmbed->getType();
+  const size_t TargetWidth = Context.getTypeSize(ElementTy);
+  const size_t BytesPerElement = CHAR_BIT / TargetWidth;
+  StringRef Data = DataLiteral->getBytes();
+  Data = Data.substr(FirstElement ? 0 : Data.size() - 1, 1);
+  SmallVector<uint64_t, 4> ByteVals{};
+  for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
+    if ((ValIndex % sizeof(uint64_t)) == 0) {
+      ByteVals.push_back(0);
+    }
+    const unsigned char DataByte = Data[ValIndex];
+    ByteVals.back() |=
+        (static_cast<uint64_t>(DataByte) << (ValIndex * CHAR_BIT));
+  }
+  ArrayRef<uint64_t> ByteValsRef(ByteVals);
+  return IntegerLiteral::Create(Context, llvm::APInt(TargetWidth, ByteValsRef),
+                                ElementTy, DataLiteral->getBeginLoc());
+}
+
+PPEmbedExpr::Action
+Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
+                                  std::optional<QualType> MaybeInitType) {
+  if (ExprList.empty()) {
+    return PPEmbedExpr::NotFound;
+  }
+  PPEmbedExpr *First =
+      ExprList.size() == 1
+          ? dyn_cast_if_present<PPEmbedExpr>(ExprList[0]->IgnoreParens())
+          : nullptr;
+  if (First) {
+    // only one and it's an embed
+    if (MaybeInitType) {
+      // With the type information, we have a duty to check if it matches;
+      // if not, explode it out into a list of integer literals.
+      QualType &InitType = *MaybeInitType;
+      if (InitType->isArrayType()) {
+        const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
+        QualType InitElementTy = InitArrayType->getElementType();
+        QualType PPEmbedExprElementTy = First->getType();
+        const bool TypesMatch =
+            Context.typesAreCompatible(InitElementTy, PPEmbedExprElementTy) ||
+            (InitElementTy->isCharType() && PPEmbedExprElementTy->isCharType());
+        if (TypesMatch) {
+          // Keep the PPEmbedExpr, report that everything has been found.
+          return PPEmbedExpr::FoundOne;
+        }
+      }
+    } else {
+      // leave it, possibly adjusted later!
+      return PPEmbedExpr::FoundOne;
+    }
+  }
+  if (std::find_if(ExprList.begin(), ExprList.end(),
+                   [](const Expr *const SomeExpr) {
+                     return isa<PPEmbedExpr>(SomeExpr->IgnoreParens());
+                   }) == ExprList.end()) {
+    // We didn't find one.
+    return PPEmbedExpr::NotFound;
+  }
+  // Otherwise, we found one but it is not the sole entry in the initialization
+  // list.
+  return PPEmbedExpr::Expanded;
+}
+
+PPEmbedExpr::Action
+Sema::ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &ExprList) {
+  PPEmbedExpr::Action Action = PPEmbedExpr::NotFound;
+  SmallVector<uint64_t, 4> ByteVals{};
+  for (size_t I = 0; I < ExprList.size();) {
+    Expr *&OriginalExpr = ExprList[I];
+    PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(OriginalExpr);
+    if (!PPEmbed) {
+      ++I;
+      continue;
+    }
+    auto ExprListIt = ExprList.erase(&OriginalExpr);
+    const size_t ExpectedDataElements = PPEmbed->getDataElementCount(Context);
+    if (ExpectedDataElements == 0) {
+      // No ++I, we are already pointing to newest element.
+      continue;
+    }
+    Action = PPEmbedExpr::Expanded;
+    StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
+    QualType ElementTy = PPEmbed->getType();
+    const size_t TargetWidth = Context.getTypeSize(ElementTy);
+    const size_t BytesPerElement = CHAR_BIT / TargetWidth;
+    StringRef Data = DataLiteral->getBytes();
+    size_t Insertions = 0;
+    for (size_t ByteIndex = 0; ByteIndex < Data.size();
+         ByteIndex += BytesPerElement) {
+      ByteVals.clear();
+      for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
+        if ((ValIndex % sizeof(uint64_t)) == 0) {
+          ByteVals.push_back(0);
+        }
+        const unsigned char DataByte = Data[ByteIndex + ValIndex];
+        ByteVals.back() |=
+            (static_cast<uint64_t>(DataByte) << (ValIndex * CHAR_BIT));
+      }
+      ArrayRef<uint64_t> ByteValsRef(ByteVals);
+      IntegerLiteral *IntLit =
+          IntegerLiteral::Create(Context, llvm::APInt(TargetWidth, ByteValsRef),
+                                 ElementTy, DataLiteral->getBeginLoc());
+      ExprListIt = ExprList.insert(ExprListIt, IntLit);
+      ++Insertions;
+      // make sure we are inserting **after** the item we just inserted, not
+      // before
+      ++ExprListIt;
+    }
+    assert(Insertions == ExpectedDataElements);
+    I += Insertions;
+  }
+  return PPEmbedExpr::Expanded;
+}
+
+PPEmbedExpr::Action
+Sema::ExpandPPEmbedExprInExprList(ArrayRef<Expr *> ExprList,
+                                  SmallVectorImpl<Expr *> &OutputExprList,
+                                  bool ClearOutputFirst) {
+  if (ClearOutputFirst) {
+    OutputExprList.clear();
+  }
+  size_t ExpectedResize = OutputExprList.size() + ExprList.size();
+  const auto FindPPEmbedExpr = [](const Expr *const SomeExpr) {
+    return isa<PPEmbedExpr>(SomeExpr);
+  };
+  if (std::find_if(ExprList.begin(), ExprList.end(), FindPPEmbedExpr) ==
+      ExprList.end()) {
+    return PPEmbedExpr::NotFound;
+  }
+  SmallVector<uint64_t, 4> ByteVals{};
+  OutputExprList.reserve(ExpectedResize);
+  for (size_t I = 0; I < ExprList.size(); ++I) {
+    Expr *OriginalExpr = ExprList[I];
+    PPEmbedExpr *PPEmbed = dyn_cast_if_present<PPEmbedExpr>(OriginalExpr);
+    if (!PPEmbed) {
+      OutputExprList.push_back(OriginalExpr);
+      continue;
+    }
+    StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
+    QualType ElementTy = PPEmbed->getType();
+    const size_t TargetWidth = Context.getTypeSize(ElementTy);
+    const size_t BytesPerElement = CHAR_BIT / TargetWidth;
+    StringRef Data = DataLiteral->getBytes();
+    for (size_t ByteIndex = 0; ByteIndex < Data.size();
+         ByteIndex += BytesPerElement) {
+      ByteVals.clear();
+      for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
+        if ((ValIndex % sizeof(uint64_t)) == 0) {
+          ByteVals.push_back(0);
+        }
+        const unsigned char DataByte = Data[ByteIndex + ValIndex];
+        ByteVals.back() |=
+            (static_cast<uint64_t>(DataByte) << (ValIndex * CHAR_BIT));
+      }
+      ArrayRef<uint64_t> ByteValsRef(ByteVals);
+      IntegerLiteral *IntLit =
+          IntegerLiteral::Create(Context, llvm::APInt(TargetWidth, ByteValsRef),
+                                 ElementTy, DataLiteral->getBeginLoc());
+      OutputExprList.push_back(IntLit);
+    }
+  }
+  return PPEmbedExpr::Expanded;
 }
 
 bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,

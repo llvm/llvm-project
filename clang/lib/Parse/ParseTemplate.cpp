@@ -1553,6 +1553,8 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
     // arguments.
   } while (TryConsumeToken(tok::comma));
 
+  Actions.ModifyTemplateArguments(Template, TemplateArgs);
+
   return false;
 }
 

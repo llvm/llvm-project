@@ -937,6 +937,9 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 ///                   '__is_rvalue_expr'
 /// \endverbatim
 ///
+
+// clang-format on
+
 ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
                                        bool &NotCastExpr,
@@ -1059,6 +1062,28 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
            "should not perform typo correction on annotation token");
     break;
   }
+
+  case tok::annot_embed: {
+    EmbedAnnotationData *Data =
+        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+    SourceLocation StartLoc = ConsumeAnnotationToken();
+    ASTContext &Context = Actions.getASTContext();
+    auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
+      llvm::APSInt ArraySize =
+          Context.MakeIntValue(Str.size(), Context.getSizeType());
+      QualType ArrayTy = Context.getConstantArrayType(
+          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                                   false, ArrayTy, StartLoc);
+    };
+
+    StringLiteral *FileNameArg =
+        CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
+    StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
+        Data->BinaryData, Context.UnsignedCharTy);
+    Res = Actions.ActOnPPEmbedExpr(StartLoc, StartLoc, StartLoc, FileNameArg,
+                                   BinaryDataArg);
+  } break;
 
   case tok::kw___super:
   case tok::kw_decltype:
@@ -2191,6 +2216,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       } else {
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
+        Actions.ModifyCallExprArguments(Fn, Loc, ArgExprs, RParLoc);
         LHS = Actions.ActOnCallExpr(getCurScope(), Fn, Loc, ArgExprs, RParLoc,
                                     ExecConfig);
         if (LHS.isInvalid()) {
@@ -2627,6 +2653,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   return Operand;
 }
 
+// clang-format off
+
 /// ParseBuiltinPrimaryExpression
 ///
 /// \verbatim
@@ -2650,6 +2678,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
 /// [GNU]   offsetof-member-designator '.' identifier
 /// [GNU]   offsetof-member-designator '[' expression ']'
 /// \endverbatim
+
+// clang-format on
 ExprResult Parser::ParseBuiltinPrimaryExpression() {
   ExprResult Res;
   const IdentifierInfo *BuiltinII = Tok.getIdentifierInfo();
