@@ -132,9 +132,9 @@ def Tparam : BlockCommand<"tparam"> { let IsTParamCommand = 1; }
 // HeaderDoc command for template parameter documentation.
 def Templatefield : BlockCommand<"templatefield"> { let IsTParamCommand = 1; }
 
-def Throws    : BlockCommand<"throws"> { let IsThrowsCommand = 1; }
-def Throw     : BlockCommand<"throw"> { let IsThrowsCommand = 1; }
-def Exception : BlockCommand<"exception"> { let IsThrowsCommand = 1; }
+def Throws    : BlockCommand<"throws"> { let IsThrowsCommand = 1; let NumArgs = 1; }
+def Throw     : BlockCommand<"throw"> { let IsThrowsCommand = 1; let NumArgs = 1; }
+def Exception : BlockCommand<"exception"> { let IsThrowsCommand = 1; let NumArgs = 1;}
 
 def Deprecated : BlockCommand<"deprecated"> {
   let IsEmptyParagraphAllowed = 1;

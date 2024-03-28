@@ -75,6 +75,25 @@ class TextTokenRetokenizer {
     return *Pos.BufferPtr;
   }
 
+  char peekNext(unsigned offset) const {
+    assert(!isEnd());
+    assert(Pos.BufferPtr != Pos.BufferEnd);
+    if (Pos.BufferPtr + offset <= Pos.BufferEnd) {
+      return *(Pos.BufferPtr + offset);
+    } else {
+      return '\0';
+    }
+  }
+
+  void peekNextToken(SmallString<32> &WordText) const {
+    unsigned offset = 1;
+    char C = peekNext(offset++);
+    while (!isWhitespace(C) && C != '\0') {
+      WordText.push_back(C);
+      C = peekNext(offset++);
+    }
+  }
+
   void consumeChar() {
     assert(!isEnd());
     assert(Pos.BufferPtr != Pos.BufferEnd);
@@ -87,6 +106,114 @@ class TextTokenRetokenizer {
       assert(!isEnd());
       setupBuffer();
     }
+  }
+
+  bool continueInt(SmallString<32> &NextToken) {
+    return NextToken.ends_with(StringRef("char")) ||
+           NextToken.ends_with(StringRef("int")) ||
+           NextToken.ends_with(StringRef("char*")) ||
+           NextToken.ends_with(StringRef("int*")) ||
+           NextToken.ends_with(StringRef("char&")) ||
+           NextToken.ends_with(StringRef("int&"));
+  }
+
+  bool lexInt(SmallString<32> &WordText, SmallString<32> &NextToken) {
+    unsigned LongCounter = (WordText.ends_with(StringRef("long"))) ? 1 : 0;
+    bool complete = false;
+
+    while (!isEnd()) {
+      const char C = peek();
+      if (!isWhitespace(C)) {
+        WordText.push_back(C);
+        consumeChar();
+      } else {
+
+        NextToken.clear();
+        peekNextToken(NextToken);
+
+        if (WordText.ends_with(StringRef("long"))) {
+          LongCounter++;
+          if (continueInt(NextToken)) {
+            WordText.push_back(C);
+            consumeChar();
+            complete = true;
+            continue;
+          } else {
+            if (LongCounter == 2) {
+              return true;
+            }
+          }
+        } else {
+
+          if (complete || continueInt(WordText)) {
+            return true;
+          }
+        }
+
+        if (NextToken.ends_with(StringRef("long"))) {
+          WordText.push_back(C);
+          consumeChar();
+        } else {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Extract a template type
+  bool lexTemplate(SmallString<32> &WordText) {
+    unsigned IncrementCounter = 0;
+    while (!isEnd()) {
+      const char C = peek();
+      WordText.push_back(C);
+      consumeChar();
+      switch (C) {
+      case '<': {
+        IncrementCounter++;
+        break;
+      }
+      case '>': {
+        IncrementCounter--;
+        if (!IncrementCounter)
+          return true;
+        break;
+      }
+      default:
+        break;
+      }
+    }
+    return false;
+  }
+
+  bool isTypeQualifier(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("const")) ||
+           WordText.ends_with(StringRef("volatile")) ||
+           WordText.ends_with(StringRef("short")) ||
+           WordText.ends_with(StringRef("restrict")) ||
+           WordText.ends_with(StringRef("auto")) ||
+           WordText.ends_with(StringRef("register")) ||
+           WordText.ends_with(StringRef("static")) ||
+           WordText.ends_with(StringRef("extern")) ||
+           WordText.ends_with(StringRef("struct")) ||
+           WordText.ends_with(StringRef("typedef")) ||
+           WordText.ends_with(StringRef("union")) ||
+           WordText.ends_with(StringRef("void"));
+  }
+
+  bool isScopeResolutionOperator(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("::"));
+  }
+
+  bool isInt(SmallString<32> &WordText) {
+    return WordText.ends_with(StringRef("unsigned")) ||
+           WordText.ends_with(StringRef("long")) ||
+           WordText.ends_with(StringRef("signed"));
+  }
+
+  bool continueParsing(SmallString<32> &WordText) {
+    return isTypeQualifier(WordText) || isScopeResolutionOperator(WordText);
   }
 
   /// Add a token.
@@ -147,6 +274,93 @@ public:
       Allocator(Allocator), P(P), NoMoreInterestingTokens(false) {
     Pos.CurToken = 0;
     addToken();
+  }
+
+  /// Extract a type argument
+  bool lexType(Token &Tok) {
+    if (isEnd())
+      return false;
+    Position SavedPos = Pos;
+    consumeWhitespace();
+    SmallString<32> NextToken;
+    SmallString<32> WordText;
+    const char *WordBegin = Pos.BufferPtr;
+    SourceLocation Loc = getSourceLocation();
+    StringRef ConstVal = StringRef("const");
+    StringRef PointerVal = StringRef("*");
+    StringRef ReferenceVal = StringRef("&");
+    bool ConstPointer = false;
+
+    while (!isEnd()) {
+      const char C = peek();
+      if (!isWhitespace(C)) {
+        if (C == '<') {
+          if (!lexTemplate(WordText))
+            return false;
+        } else {
+          WordText.push_back(C);
+          consumeChar();
+        }
+      } else {
+        if (ConstPointer) {
+          consumeChar();
+          break;
+        } else {
+          if (isInt(WordText)) {
+            WordText.push_back(C);
+            consumeChar();
+            if (!lexInt(WordText, NextToken))
+              return false;
+          }
+          if (continueParsing(WordText)) {
+            WordText.push_back(C);
+            consumeChar();
+          } else {
+            NextToken.clear();
+            peekNextToken(NextToken);
+            if (WordText.ends_with(PointerVal) ||
+                WordText.ends_with(ReferenceVal)) {
+              if (NextToken.equals(ConstVal)) {
+                ConstPointer = true;
+                WordText.push_back(C);
+                consumeChar();
+              } else {
+                consumeChar();
+                break;
+              }
+            } else {
+              if ((NextToken.ends_with(PointerVal) ||
+                   NextToken.ends_with(ReferenceVal))) {
+                WordText.push_back(C);
+                consumeChar();
+              } else {
+                if (continueParsing(NextToken)) {
+                  WordText.push_back(C);
+                  consumeChar();
+                } else {
+                  consumeChar();
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const unsigned Length = WordText.size();
+    if (Length == 0) {
+      Pos = SavedPos;
+      return false;
+    }
+
+    char *TextPtr = Allocator.Allocate<char>(Length + 1);
+
+    memcpy(TextPtr, WordText.c_str(), Length + 1);
+    StringRef Text = StringRef(TextPtr, Length);
+
+    formTokenWithChars(Tok, Loc, WordBegin, Length, Text);
+    return true;
   }
 
   /// Extract a word -- sequence of non-whitespace characters.
@@ -295,7 +509,25 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
       Comment::Argument[NumArgs];
   unsigned ParsedArgs = 0;
   Token Arg;
+
   while (ParsedArgs < NumArgs && Retokenizer.lexWord(Arg)) {
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
+    ParsedArgs++;
+  }
+
+  return llvm::ArrayRef(Args, ParsedArgs);
+}
+
+ArrayRef<Comment::Argument>
+Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
+                              unsigned NumArgs) {
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
+  unsigned ParsedArgs = 0;
+  Token Arg;
+
+  while (ParsedArgs < NumArgs && Retokenizer.lexType(Arg)) {
     Args[ParsedArgs] = Comment::Argument{
         SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
     ParsedArgs++;
@@ -356,6 +588,9 @@ BlockCommandComment *Parser::parseBlockCommand() {
       parseParamCommandArgs(PC, Retokenizer);
     else if (TPC)
       parseTParamCommandArgs(TPC, Retokenizer);
+    else if (Info->IsThrowsCommand)
+      S.actOnBlockCommandArgs(
+          BC, parseThrowCommandArgs(Retokenizer, Info->NumArgs));
     else
       S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 
