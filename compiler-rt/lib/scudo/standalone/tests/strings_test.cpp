@@ -144,7 +144,8 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
 
 #if !SCUDO_ANDROID
   // qemu does not honor the setrlimit, so verify before proceeding.
-  void *ptr = mmap(nullptr, 100, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  void *ptr = mmap(nullptr, 100, PROT_READ | PROT_WRITE,
+                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (ptr != MAP_FAILED) {
     munmap(ptr, 100);
     setrlimit(RLIMIT_AS, &Limit);
