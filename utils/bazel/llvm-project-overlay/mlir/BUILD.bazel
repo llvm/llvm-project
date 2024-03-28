@@ -11940,17 +11940,17 @@ gentbl_cc_library(
             [
                 "-gen-op-interface-decls",
             ],
-            "include/mlir/Dialect/Transform/IR/MatchInterfaces.h.inc",
+            "include/mlir/Dialect/Transform/Interfaces/MatchInterfaces.h.inc",
         ),
         (
             [
                 "-gen-op-interface-defs",
             ],
-            "include/mlir/Dialect/Transform/IR/MatchInterfaces.cpp.inc",
+            "include/mlir/Dialect/Transform/Interfaces/MatchInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Transform/IR/MatchInterfaces.td",
+    td_file = "include/mlir/Dialect/Transform/Interfaces/MatchInterfaces.td",
     deps = [
         ":TransformDialectInterfacesIncGen",
         ":TransformDialectTdFiles",
@@ -12060,6 +12060,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectInterfacesIncGen",
+	":TransformDialectMatchInterfacesIncGen",
         ":TransformDialectUtils",
         ":Transforms",
         "//llvm:Support",
@@ -12088,7 +12089,6 @@ cc_library(
         ":TransformDialectEnumsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfaces",
-        ":TransformDialectMatchInterfacesIncGen",
         ":TransformDialectUtils",
         ":TransformOpsIncGen",
         ":TransformTypesIncGen",
