@@ -411,6 +411,7 @@ private:
   typedef enum { DebugUse = false, RegularUse = true } DebugType;
 
   void ReadRegister(MCRegister Reg, MachineInstr &Reader, DebugType DT);
+  void readSuccessorLiveIns(const MachineBasicBlock &MBB);
   void ForwardCopyPropagateBlock(MachineBasicBlock &MBB);
   void BackwardCopyPropagateBlock(MachineBasicBlock &MBB);
   void EliminateSpillageCopies(MachineBasicBlock &MBB);
@@ -458,6 +459,22 @@ void MachineCopyPropagation::ReadRegister(MCRegister Reg, MachineInstr &Reader,
         MaybeDeadCopies.remove(Copy);
       } else {
         CopyDbgUsers[Copy].insert(&Reader);
+      }
+    }
+  }
+}
+
+void MachineCopyPropagation::readSuccessorLiveIns(
+    const MachineBasicBlock &MBB) {
+  if (MaybeDeadCopies.empty())
+    return;
+
+  // If a copy result is livein to a successor, it is not dead.
+  for (const MachineBasicBlock *Succ : MBB.successors()) {
+    for (const auto &LI : Succ->liveins()) {
+      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
+        if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+          MaybeDeadCopies.remove(Copy);
       }
     }
   }
@@ -916,16 +933,14 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
   bool TracksLiveness = MRI->tracksLiveness();
 
-  // If a copy result is livein to a successor, it is not dead.
-  if (TracksLiveness && !MaybeDeadCopies.empty())
-    for (const MachineBasicBlock *Succ : MBB.successors())
-      for (const auto &LI : Succ->liveins())
-        for (MCRegUnit Unit : TRI->regunits(LI.PhysReg))
-          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
-            MaybeDeadCopies.remove(Copy);
+  // If liveness is tracked, we can use the live-in lists to know which
+  // copies aren't dead.
+  if (TracksLiveness)
+    readSuccessorLiveIns(MBB);
 
-  // Delete copies whose defs are not used if there are no successors or we were
-  // able to use the live-in lists to determine which copies were still live.
+  // If MBB doesn't have succesor, delete copies whose defs are not used.
+  // If MBB does have successors, we can only delete copies if we are able to
+  // use liveness information from successors to confirm they are really dead.
   if (MBB.succ_empty() || TracksLiveness) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
       LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
