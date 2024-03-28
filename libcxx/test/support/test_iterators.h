@@ -730,8 +730,24 @@ struct common_input_iterator {
 // * `stride_displacement`, which records the displacement of the calls. This means that both
 //   op++/op+= will increase the displacement counter by 1, and op--/op-= will decrease the
 //   displacement counter by 1.
-template <class It>
+template <class It,
+          class StrideCountType        = std::iter_difference_t<It>,
+          class StrideDisplacementType = std::iter_difference_t<It>>
 class stride_counting_iterator {
+  template <typename UnderlyingType>
+  struct concrete_or_ref {
+    using value_type            = std::remove_cv_t<std::remove_reference_t<UnderlyingType>>;
+    constexpr concrete_or_ref() = default;
+    explicit constexpr concrete_or_ref(UnderlyingType* c) noexcept : ptr_{c} {}
+
+    constexpr operator value_type&() noexcept { return ptr_ ? *ptr_ : val_; }
+    constexpr operator const value_type&() const noexcept { return ptr_ ? *ptr_ : val_; }
+
+  private:
+    value_type val_{};
+    value_type* ptr_{nullptr};
+  };
+
 public:
     using value_type = typename iter_value_or_void<It>::type;
     using difference_type = std::iter_difference_t<It>;
@@ -743,16 +759,27 @@ public:
         std::conditional_t<std::input_iterator<It>,         std::input_iterator_tag,
         /* else */                                          std::output_iterator_tag
     >>>>>;
+    using iterator_category = iterator_concept;
 
     stride_counting_iterator() requires std::default_initializable<It> = default;
 
     constexpr explicit stride_counting_iterator(It const& it) : base_(base(it)) { }
 
+    constexpr explicit stride_counting_iterator(
+        It const& it, StrideCountType* stride_count, StrideDisplacementType* stride_displacement)
+        : base_(base(it)), stride_count_(stride_count), stride_displacement_(stride_displacement) {}
+
+    constexpr stride_counting_iterator(const stride_counting_iterator& o) { *this = o; }
+    constexpr stride_counting_iterator(stride_counting_iterator&& o) { *this = o; }
+
+    constexpr stride_counting_iterator& operator=(const stride_counting_iterator& o) = default;
+    constexpr stride_counting_iterator& operator=(stride_counting_iterator&& o) { return *this = o; }
+
     friend constexpr It base(stride_counting_iterator const& it) { return It(it.base_); }
 
-    constexpr difference_type stride_count() const { return stride_count_; }
+    constexpr StrideCountType stride_count() const { return stride_count_; }
 
-    constexpr difference_type stride_displacement() const { return stride_displacement_; }
+    constexpr StrideDisplacementType stride_displacement() const { return stride_displacement_; }
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
@@ -873,8 +900,8 @@ public:
 
 private:
     decltype(base(std::declval<It>())) base_;
-    difference_type stride_count_ = 0;
-    difference_type stride_displacement_ = 0;
+    concrete_or_ref<StrideCountType> stride_count_;
+    concrete_or_ref<StrideDisplacementType> stride_displacement_;
 };
 template <class It>
 stride_counting_iterator(It) -> stride_counting_iterator<It>;
