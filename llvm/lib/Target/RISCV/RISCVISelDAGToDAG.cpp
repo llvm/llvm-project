@@ -3645,11 +3645,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // If True has a merge operand then it needs to be the same as vmerge's False,
   // since False will be used for the result's merge operand.
   if (HasTiedDest && !isImplicitDef(True->getOperand(0))) {
-    // The vmerge instruction must be TU.
-    // FIXME: This could be relaxed, but we need to handle the policy for the
-    // resulting op correctly.
-    if (isImplicitDef(Merge))
-      return false;
     SDValue MergeOpTrue = True->getOperand(0);
     if (False != MergeOpTrue)
       return false;
@@ -3659,9 +3654,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // going to keep the mask from True.
   if (IsMasked) {
     assert(HasTiedDest && "Expected tied dest");
-    // The vmerge instruction must be TU.
-    if (isImplicitDef(Merge))
-      return false;
     // FIXME: Support mask agnostic True instruction which would have an
     // undef merge operand.
     if (Mask && !usesAllOnesMask(Mask, Glue))
