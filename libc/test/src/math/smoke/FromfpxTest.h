@@ -52,6 +52,8 @@ public:
       EXPECT_FP_EQ(T(-10.0), func(T(-10.0), rnd, 5U));
       EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 12U));
       EXPECT_FP_EQ(T(-1234.0), func(T(-1234.0), rnd, 12U));
+      EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 65U));
+      EXPECT_FP_EQ(T(-1234.0), func(T(-1234.0), rnd, 65U));
     }
   }
 

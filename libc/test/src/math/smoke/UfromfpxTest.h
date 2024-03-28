@@ -49,6 +49,7 @@ public:
       EXPECT_FP_EQ(T(1.0), func(T(1.0), rnd, 1U));
       EXPECT_FP_EQ(T(10.0), func(T(10.0), rnd, 4U));
       EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 11U));
+      EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 64U));
     }
   }
 
