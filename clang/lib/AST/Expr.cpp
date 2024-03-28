@@ -1721,7 +1721,8 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   assert(!NameInfo.getName() ||
          MemberDecl->getDeclName() == NameInfo.getName());
   MemberExprBits.IsArrow = IsArrow;
-  MemberExprBits.HasQualifierOrFoundDecl = false;
+  MemberExprBits.HasQualifier = false;
+  MemberExprBits.HasFoundDecl = false;
   MemberExprBits.HasTemplateKWAndArgsInfo = false;
   MemberExprBits.HadMultipleCandidates = false;
   MemberExprBits.NonOdrUseReason = NOUR;
@@ -1735,30 +1736,30 @@ MemberExpr *MemberExpr::Create(
     ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
     DeclarationNameInfo NameInfo, const TemplateArgumentListInfo *TemplateArgs,
     QualType T, ExprValueKind VK, ExprObjectKind OK, NonOdrUseReason NOUR) {
-  bool HasQualOrFound = QualifierLoc || FoundDecl.getDecl() != MemberDecl ||
-                        FoundDecl.getAccess() != MemberDecl->getAccess();
+  bool HasQualifier = QualifierLoc.hasQualifier();
+  bool HasFoundDecl = FoundDecl.getDecl() != MemberDecl ||
+                      FoundDecl.getAccess() != MemberDecl->getAccess();
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
   std::size_t Size =
-      totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(
-          HasQualOrFound ? 1 : 0, HasTemplateKWAndArgsInfo ? 1 : 0,
+      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          HasQualifier ? 1 : 0, HasFoundDecl ? 1 : 0,
+          HasTemplateKWAndArgsInfo ? 1 : 0,
           TemplateArgs ? TemplateArgs->size() : 0);
 
   void *Mem = C.Allocate(Size, alignof(MemberExpr));
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
-  if (HasQualOrFound) {
-    E->MemberExprBits.HasQualifierOrFoundDecl = true;
+  E->MemberExprBits.HasQualifier = HasQualifier;
+  E->MemberExprBits.HasFoundDecl = HasFoundDecl;
+  E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateKWAndArgsInfo;
 
-    MemberExprNameQualifier *NQ =
-        E->getTrailingObjects<MemberExprNameQualifier>();
-    NQ->QualifierLoc = QualifierLoc;
-    NQ->FoundDecl = FoundDecl;
-  }
-
-  E->MemberExprBits.HasTemplateKWAndArgsInfo =
-      TemplateArgs || TemplateKWLoc.isValid();
+  if (HasQualifier)
+    new (E->getTrailingObjects<NestedNameSpecifierLoc>())
+        NestedNameSpecifierLoc(QualifierLoc);
+  if (HasFoundDecl)
+    *E->getTrailingObjects<DeclAccessPair>() = FoundDecl;
 
   // FIXME: remove remaining dependence computation to computeDependence().
   auto Deps = E->getDependence();
@@ -1785,12 +1786,11 @@ MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
                                     unsigned NumTemplateArgs) {
   assert((!NumTemplateArgs || HasTemplateKWAndArgsInfo) &&
          "template args but no template arg info?");
-  bool HasQualOrFound = HasQualifier || HasFoundDecl;
   std::size_t Size =
-      totalSizeToAlloc<MemberExprNameQualifier, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(HasQualOrFound ? 1 : 0,
-                                            HasTemplateKWAndArgsInfo ? 1 : 0,
-                                            NumTemplateArgs);
+      totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+          HasQualifier ? 1 : 0, HasFoundDecl ? 1 : 0,
+          HasTemplateKWAndArgsInfo ? 1 : 0, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(MemberExpr));
   return new (Mem) MemberExpr(EmptyShell());
 }

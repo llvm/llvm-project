@@ -3163,23 +3163,12 @@ public:
   }
 };
 
-/// Extra data stored in some MemberExpr objects.
-struct MemberExprNameQualifier {
-  /// The nested-name-specifier that qualifies the name, including
-  /// source-location information.
-  NestedNameSpecifierLoc QualifierLoc;
-
-  /// The DeclAccessPair through which the MemberDecl was found due to
-  /// name qualifiers.
-  DeclAccessPair FoundDecl;
-};
-
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
 class MemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<MemberExpr, MemberExprNameQualifier,
-                                    ASTTemplateKWAndArgsInfo,
+      private llvm::TrailingObjects<MemberExpr, NestedNameSpecifierLoc,
+                                    DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
   friend class ASTReader;
   friend class ASTStmtReader;
@@ -3201,17 +3190,19 @@ class MemberExpr final
   /// MemberLoc - This is the location of the member name.
   SourceLocation MemberLoc;
 
-  size_t numTrailingObjects(OverloadToken<MemberExprNameQualifier>) const {
-    return hasQualifierOrFoundDecl();
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasQualifier();
+  }
+
+  size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return hasFoundDecl();
   }
 
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
     return hasTemplateKWAndArgsInfo();
   }
 
-  bool hasQualifierOrFoundDecl() const {
-    return MemberExprBits.HasQualifierOrFoundDecl;
-  }
+  bool hasFoundDecl() const { return MemberExprBits.HasFoundDecl; }
 
   bool hasTemplateKWAndArgsInfo() const {
     return MemberExprBits.HasTemplateKWAndArgsInfo;
@@ -3264,24 +3255,24 @@ public:
 
   /// Retrieves the declaration found by lookup.
   DeclAccessPair getFoundDecl() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasFoundDecl())
       return DeclAccessPair::make(getMemberDecl(),
                                   getMemberDecl()->getAccess());
-    return getTrailingObjects<MemberExprNameQualifier>()->FoundDecl;
+    return *getTrailingObjects<DeclAccessPair>();
   }
 
   /// Determines whether this member expression actually had
   /// a C++ nested-name-specifier prior to the name of the member, e.g.,
   /// x->Base::foo.
-  bool hasQualifier() const { return getQualifier() != nullptr; }
+  bool hasQualifier() const { return MemberExprBits.HasQualifier; }
 
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name, with source-location
   /// information.
   NestedNameSpecifierLoc getQualifierLoc() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasQualifier())
       return NestedNameSpecifierLoc();
-    return getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc;
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
   }
 
   /// If the member name was qualified, retrieves the
