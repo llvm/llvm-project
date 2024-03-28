@@ -242,6 +242,15 @@ struct VPTransformState {
   ElementCount VF;
   unsigned UF;
 
+  /// If EVL (Explicit Vector Length) is not nullptr, then EVL must be a valid
+  /// value set during plan transformation, possibly a default value = whole
+  /// vector register length. EVL is created only if TTI prefers predicated
+  /// vectorization, thus if EVL is not nullptr it also implies preference for
+  /// predicated vectorization.
+  /// TODO: this is a temporarily solution, the EVL must be explicitly used by
+  /// the recipes and must be removed here.
+  VPValue *EVL = nullptr;
+
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
@@ -1155,6 +1164,7 @@ public:
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
+    ExplicitVectorLength,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -2467,6 +2477,45 @@ public:
 
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe for generating the phi node for the current index of elements,
+/// adjusted in accordance with EVL value. It starts at the start value of the
+/// canonical induction and gets incremented by EVL in each iteration of the
+/// vector loop.
+class VPEVLBasedIVPHIRecipe : public VPHeaderPHIRecipe {
+public:
+  VPEVLBasedIVPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPEVLBasedIVPHISC, nullptr, StartIV, DL) {}
+
+  ~VPEVLBasedIVPHIRecipe() override = default;
+
+  VPEVLBasedIVPHIRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *D) {
+    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
+  }
+
+  /// Generate phi for handling IV based on EVL over iterations correctly.
+  /// TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
+  void execute(VPTransformState &State) override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
