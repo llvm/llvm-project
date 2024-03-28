@@ -606,6 +606,21 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
+void VPBasicBlock::insert(VPRecipeBase *Recipe, iterator InsertPt) {
+  assert(Recipe && "No recipe to append.");
+  assert(!Recipe->Parent && "Recipe already in VPlan");
+  Recipe->Parent = this;
+  Recipes.insert(InsertPt, Recipe);
+
+  if (Recipe->getNumDefinedValues() != 1)
+    return;
+  VPValue *VPV = Recipe->getVPSingleValue();
+  Value *UV = VPV->getUnderlyingValue();
+  VPlan *ParentPlan = getPlan();
+  if (UV && ParentPlan && !ParentPlan->hasName(VPV))
+    VPV->setName(UV->getName());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
   if (getSuccessors().empty()) {
@@ -1062,8 +1077,10 @@ static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
       assert(OldR.getNumDefinedValues() == NewR.getNumDefinedValues() &&
              "recipes must define the same number of operands");
       for (const auto &[OldV, NewV] :
-           zip(OldR.definedValues(), NewR.definedValues()))
+           zip(OldR.definedValues(), NewR.definedValues())) {
         Old2NewVPValues[OldV] = NewV;
+        NewV->setName(OldV->getName());
+      }
     }
   }
 
@@ -1119,6 +1136,25 @@ VPlan *VPlan::duplicate() {
          "TripCount must have been added to Old2NewVPValues");
   NewPlan->TripCount = Old2NewVPValues[TripCount];
   return NewPlan;
+}
+
+void VPlan::setName(const VPValue *V, const Twine &Name) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  std::string N = Name.str();
+  if (N.empty())
+    return;
+  std::string CurrName = N;
+
+  if (UsedNames.contains(N))
+    CurrName = N + ".1";
+  unsigned Cnt = 2;
+  while (UsedNames.contains(CurrName)) {
+    CurrName = N + "." + std::to_string(Cnt);
+    Cnt += 1;
+  }
+  VPValue2Name[V] = CurrName;
+  UsedNames.insert(CurrName);
+#endif
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1307,18 +1343,12 @@ void VPValue::replaceUsesWithIf(
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
-  if (const Value *UV = getUnderlyingValue()) {
+  if (!getDefiningRecipe() && getUnderlyingValue()) {
     OS << "ir<";
-    UV->printAsOperand(OS, false);
+    getUnderlyingValue()->printAsOperand(OS, false);
     OS << ">";
-    return;
-  }
-
-  unsigned Slot = Tracker.getSlot(this);
-  if (Slot == unsigned(-1))
-    OS << "<badref>";
-  else
-    OS << "vp<%" << Tracker.getSlot(this) << ">";
+  } else
+    OS << Tracker.getName(this);
 }
 
 void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
@@ -1327,6 +1357,31 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   });
 }
 #endif
+
+std::string VPValue::getName() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (auto *Def = getDefiningRecipe())
+    return Def->getParent()->getPlan()->getName(this);
+  assert(isLiveIn() && "called getName() on unsupported VPValue");
+  return getLiveInIRValue()->getName().str();
+#else
+  return "";
+#endif
+}
+
+void VPValue::setName(const Twine &Name) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  auto *Def = getDefiningRecipe();
+  Def->getParent()->getPlan()->setName(this, Name);
+#endif
+}
+
+void VPValue::takeName(const VPValue *Src) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  auto *Def = getDefiningRecipe();
+  Def->getParent()->getPlan()->takeName(Src, this);
+#endif
+}
 
 void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
                                           Old2NewTy &Old2New,
@@ -1404,6 +1459,16 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &Recipe : *VPBB)
     for (VPValue *Def : Recipe.definedValues())
       assignSlot(Def);
+}
+
+std::string VPSlotTracker::getName(const VPValue *V) const {
+  if (!Plan)
+    return "<badref>";
+  std::string N = Plan->getName(V);
+  if (!N.empty())
+    return (Twine("vp<%") + N + ">").str();
+
+  return (Twine("vp<%") + std::to_string(getSlot(V)) + ">").str();
 }
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {

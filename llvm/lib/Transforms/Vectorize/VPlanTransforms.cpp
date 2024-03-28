@@ -86,9 +86,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       }
 
       NewRecipe->insertBefore(&Ingredient);
-      if (NewRecipe->getNumDefinedValues() == 1)
+      if (NewRecipe->getNumDefinedValues() == 1) {
         VPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
-      else
+        NewRecipe->getVPSingleValue()->takeName(VPV);
+      } else
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
       Ingredient.eraseFromParent();
@@ -157,9 +158,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
         continue;
       Instruction *I = SinkCandidate->getUnderlyingInstr();
       auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
-      // TODO: add ".cloned" suffix to name of Clone's VPValue.
-
       Clone->insertBefore(SinkCandidate);
+      Clone->setName(SinkCandidate->getName() + ".cloned");
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
         return cast<VPRecipeBase>(&U)->getParent() != SinkTo;
       });
@@ -314,6 +314,8 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
     PredRecipe->replaceAllUsesWith(PHIRecipe);
     PHIRecipe->setOperand(0, RecipeWithoutMask);
   }
+  Plan.takeName(PredRecipe, RecipeWithoutMask);
+
   PredRecipe->eraseFromParent();
   auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
@@ -580,10 +582,11 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       auto *Recipe =
           new VPInstruction(VPInstruction::PtrAdd,
                             {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+                            PtrIV->getDebugLoc());
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
+      Recipe->setName("next.gep");
       continue;
     }
 
