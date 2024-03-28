@@ -428,6 +428,12 @@ private:
     return markConstant(ValueState[V], V, C);
   }
 
+  /// markConstantRange - Mark the object as constant range with \p CR. If the
+  /// object is not a constant range with the range \p CR, add it to the
+  /// instruction work list so that the users of the instruction are updated
+  /// later.
+  bool markConstantRange(ValueLatticeElement &IV, Value *V, ConstantRange &CR);
+
   // markOverdefined - Make a value be marked as "overdefined". If the
   // value is not already overdefined, add it to the overdefined instruction
   // work list so that the users of the instruction are updated later.
@@ -788,6 +794,17 @@ public:
       markOverdefined(ValueState[V], V);
   }
 
+  void trackValueOfArgument(Argument *A) {
+    if (A->getType()->isIntegerTy()) {
+      if (std::optional<ConstantRange> Range = A->getRange()) {
+        markConstantRange(ValueState[A], A, *Range);
+        return;
+      }
+    }
+    // Assume nothing about the incoming arguments without range.
+    markOverdefined(A);
+  }
+
   bool isStructLatticeConstant(Function *F, StructType *STy);
 
   Constant *getConstant(const ValueLatticeElement &LV, Type *Ty) const;
@@ -869,6 +886,15 @@ bool SCCPInstVisitor::markConstant(ValueLatticeElement &IV, Value *V,
   if (!IV.markConstant(C, MayIncludeUndef))
     return false;
   LLVM_DEBUG(dbgs() << "markConstant: " << *C << ": " << *V << '\n');
+  pushToWorkList(IV, V);
+  return true;
+}
+
+bool SCCPInstVisitor::markConstantRange(ValueLatticeElement &IV, Value *V,
+                                        ConstantRange &CR) {
+  if (!IV.markConstantRange(CR))
+    return false;
+  LLVM_DEBUG(dbgs() << "markConstantRange: " << CR << ": " << *V << '\n');
   pushToWorkList(IV, V);
   return true;
 }
@@ -1581,10 +1607,15 @@ void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {
 }
 
 static ValueLatticeElement getValueFromMetadata(const Instruction *I) {
-  if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
-    if (I->getType()->isIntegerTy())
+  if (I->getType()->isIntegerTy()) {
+    if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
       return ValueLatticeElement::getRange(
           getConstantRangeFromMetadata(*Ranges));
+
+    if (const auto *CB = dyn_cast<CallBase>(I))
+      if (std::optional<ConstantRange> Range = CB->getRange())
+        return ValueLatticeElement::getRange(*Range);
+  }
   if (I->hasMetadata(LLVMContext::MD_nonnull))
     return ValueLatticeElement::getNot(
         ConstantPointerNull::get(cast<PointerType>(I->getType())));
@@ -2089,6 +2120,10 @@ const SmallPtrSet<Function *, 16> SCCPSolver::getMRVFunctionsTracked() {
 }
 
 void SCCPSolver::markOverdefined(Value *V) { Visitor->markOverdefined(V); }
+
+void SCCPSolver::trackValueOfArgument(Argument *V) {
+  Visitor->trackValueOfArgument(V);
+}
 
 bool SCCPSolver::isStructLatticeConstant(Function *F, StructType *STy) {
   return Visitor->isStructLatticeConstant(F, STy);
