@@ -11,9 +11,10 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 # TODO: uncomment the remaining targets after splitting them
 # into separate library/binary targets.
 _TOOLS = {
-    # "clang": "//clang:clang-driver",
     # "clang-scan-deps": "//clang:clang-scan-deps-lib",
+    # "clang": "//clang:clang-driver",
     # "dsymutil": "//llvm:dsymutil-lib",
+    # "lld": "//lld:lld-lib",
     "llvm-ar": "//llvm:llvm-ar-lib",
     # "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
     # "llvm-dwp": "//llvm:llvm-dwp-lib",
@@ -32,7 +33,6 @@ _TOOLS = {
     "llvm-size": "//llvm:llvm-size-lib",
     # "llvm-symbolizer": "//llvm:llvm-symbolizer-lib",
     # "sancov": "//llvm:sancov-lib",
-    # "lld": "//lld:lld-lib",
 }
 
 # Tools automatically get their own name as an alias, but there may be additional
