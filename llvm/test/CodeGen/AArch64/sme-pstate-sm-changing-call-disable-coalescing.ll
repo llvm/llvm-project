@@ -1085,7 +1085,6 @@ define void @dont_coalesce_res_f32(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldr s0, [sp, #12] // 4-byte Folded Reload
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1116,7 +1115,6 @@ define void @dont_coalesce_res_f64(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1151,7 +1149,6 @@ define void @dont_coalesce_res_v1i8(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1183,7 +1180,6 @@ define void @dont_coalesce_res_v1i16(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1215,7 +1211,6 @@ define void @dont_coalesce_res_v1i32(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1247,7 +1242,6 @@ define void @dont_coalesce_res_v1i64(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1311,7 +1305,6 @@ define void @dont_coalesce_res_v1f32(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
@@ -1343,7 +1336,6 @@ define void @dont_coalesce_res_v1f64(ptr %ptr) #0 {
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
