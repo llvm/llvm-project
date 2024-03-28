@@ -1192,7 +1192,7 @@ bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
     return false;
 
   const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
-  if (weekday >= 0 && weekday < 7)
+  if (weekday < 7)
     stream << "weekday=" << weekdays[weekday];
   else
     stream.Printf("weekday=%u", weekday);
