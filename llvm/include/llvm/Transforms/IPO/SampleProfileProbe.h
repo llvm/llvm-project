@@ -82,8 +82,7 @@ private:
   uint32_t getBlockId(const BasicBlock *BB) const;
   uint32_t getCallsiteId(const Instruction *Call) const;
   void computeCFGHash();
-  void computeProbeIdForBlocks();
-  void computeProbeIdForCallsites();
+  void computeProbeId();
 
   Function *F;
 

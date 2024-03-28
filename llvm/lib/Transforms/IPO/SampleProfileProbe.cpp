@@ -173,8 +173,7 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   BlockProbeIds.clear();
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
-  computeProbeIdForBlocks();
-  computeProbeIdForCallsites();
+  computeProbeId();
   computeCFGHash();
 }
 
@@ -207,7 +206,10 @@ void SampleProfileProber::computeCFGHash() {
                     << ", Hash = " << FunctionHash << "\n");
 }
 
-void SampleProfileProber::computeProbeIdForBlocks() {
+void SampleProfileProber::computeProbeId() {
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
   DenseSet<BasicBlock *> KnownColdBlocks;
   computeEHOnlyBlocks(*F, KnownColdBlocks);
   // Insert pseudo probe to non-cold blocks only. This will reduce IR size as
@@ -216,18 +218,9 @@ void SampleProfileProber::computeProbeIdForBlocks() {
     ++LastProbeId;
     if (!KnownColdBlocks.contains(&BB))
       BlockProbeIds[&BB] = LastProbeId;
-  }
-}
 
-void SampleProfileProber::computeProbeIdForCallsites() {
-  LLVMContext &Ctx = F->getContext();
-  Module *M = F->getParent();
-
-  for (auto &BB : *F) {
     for (auto &I : BB) {
-      if (!isa<CallBase>(I))
-        continue;
-      if (isa<IntrinsicInst>(&I))
+      if (!isa<CallBase>(I) || isa<IntrinsicInst>(&I))
         continue;
 
       // The current implementation uses the lower 16 bits of the discriminator
