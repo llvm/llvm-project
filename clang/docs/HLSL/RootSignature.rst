@@ -22,7 +22,7 @@ possible to attach a root signature string to a particular shader via the
 RootSignature attribute (in the following example, using the MyRS1 entry 
 point):
 
-.. code-block:: hlsl
+.. code-block::
 
     #define RS "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | " \ 
               "DENY_VERTEX_SHADER_ROOT_ACCESS), " \ 
