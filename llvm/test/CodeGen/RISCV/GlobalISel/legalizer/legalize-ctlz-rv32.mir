@@ -49,10 +49,12 @@ body:             |
     ; RV32I-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[LSHR5]], [[ADD]]
     ; RV32I-NEXT: [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; RV32I-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C13]]
-    ; RV32I-NEXT: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32I-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[AND8]], [[C14]](s32)
-    ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C15]], [[LSHR6]]
+    ; RV32I-NEXT: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND8]], [[C14]]
+    ; RV32I-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C15]](s32)
+    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C16]], [[LSHR6]]
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
@@ -126,13 +128,12 @@ body:             |
     ; RV32I-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[LSHR6]], [[ADD]]
     ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
     ; RV32I-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C15]]
-    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 257
     ; RV32I-NEXT: [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND9]], [[C17]](s32)
-    ; RV32I-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[AND9]], [[SHL]]
+    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND9]], [[C16]]
     ; RV32I-NEXT: [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C18]]
-    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C16]](s32)
+    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C18]]
+    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C17]](s32)
     ; RV32I-NEXT: [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C19]], [[LSHR7]]
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
@@ -387,10 +388,12 @@ body:             |
     ; RV32I-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[LSHR5]], [[ADD]]
     ; RV32I-NEXT: [[C13:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; RV32I-NEXT: [[AND8:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C13]]
-    ; RV32I-NEXT: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32I-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[AND8]], [[C14]](s32)
-    ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C15]], [[LSHR6]]
+    ; RV32I-NEXT: [[C14:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND8]], [[C14]]
+    ; RV32I-NEXT: [[LSHR6:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C15]](s32)
+    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C16]], [[LSHR6]]
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
@@ -464,13 +467,12 @@ body:             |
     ; RV32I-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[LSHR6]], [[ADD]]
     ; RV32I-NEXT: [[C15:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
     ; RV32I-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C15]]
-    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[C16:%[0-9]+]]:_(s32) = G_CONSTANT i32 257
     ; RV32I-NEXT: [[C17:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND9]], [[C17]](s32)
-    ; RV32I-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[AND9]], [[SHL]]
+    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND9]], [[C16]]
     ; RV32I-NEXT: [[C18:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C18]]
-    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C16]](s32)
+    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C18]]
+    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C17]](s32)
     ; RV32I-NEXT: [[C19:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C19]], [[LSHR7]]
     ; RV32I-NEXT: $x10 = COPY [[SUB1]](s32)

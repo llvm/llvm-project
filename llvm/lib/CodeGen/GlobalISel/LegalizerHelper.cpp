@@ -6365,7 +6365,12 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
 
     // Shift count result from 8 high bits to low bits.
     auto C_SizeM8 = B.buildConstant(Ty, Size - 8);
-    if (isSupported({TargetOpcode::G_MUL, {Ty, Ty}})) {
+
+    auto IsMulSupported = [this](const LLT Ty) {
+      auto Action = LI.getAction({TargetOpcode::G_MUL, {Ty, Ty}}).Action;
+      return Action == Legal || Action == WidenScalar || Action == Custom;
+    };
+    if (IsMulSupported(Ty)) {
       auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
       B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
     } else {
