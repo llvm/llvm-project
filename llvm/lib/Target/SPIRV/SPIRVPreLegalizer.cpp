@@ -186,8 +186,9 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       }
       case TargetOpcode::G_GLOBAL_VALUE: {
         MIB.setInsertPt(*MI->getParent(), MI);
-        const auto *Global = MI->getOperand(1).getGlobal();
-        auto *Ty = TypedPointerType::get(Global->getValueType(),
+        const GlobalValue *Global = MI->getOperand(1).getGlobal();
+        Type *ElementTy = GR->getDeducedGlobalValueType(Global);
+        auto *Ty = TypedPointerType::get(ElementTy,
                                          Global->getType()->getAddressSpace());
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
         break;

@@ -41,9 +41,13 @@ class SPIRVGlobalRegistry {
 
   // map a Function to its definition (as a machine instruction operand)
   DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
+  DenseMap<const MachineInstr *, const Function *> FunctionToInstrRev;
   // map function pointer (as a machine instruction operand) to the used
   // Function
   DenseMap<const MachineOperand *, const Function *> InstrToFunction;
+  // Maps Functions to their calls (in a form of the machine instruction,
+  // OpFunctionCall) that happened before the definition is available
+  DenseMap<const Function *, SmallVector<MachineInstr *>> ForwardCalls;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -58,6 +62,13 @@ class SPIRVGlobalRegistry {
 
   // Holds the maximum ID we have in the module.
   unsigned Bound;
+
+  // Maps values associated with untyped pointers into deduced element types of
+  // untyped pointers.
+  DenseMap<Value *, Type *> DeducedElTys;
+  // Maps composite values to deduced types where untyped pointers are replaced
+  // with typed ones
+  DenseMap<Value *, Type *> DeducedNestedTys;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -122,6 +133,37 @@ public:
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
 
+  // Deduced element types of untyped pointers and composites:
+  // - Add a record to the map of deduced element types.
+  void addDeducedElementType(Value *Val, Type *Ty) { DeducedElTys[Val] = Ty; }
+  // - Find a record in the map of deduced element types.
+  Type *findDeducedElementType(const Value *Val) {
+    auto It = DeducedElTys.find(Val);
+    return It == DeducedElTys.end() ? nullptr : It->second;
+  }
+  // - Add a record to the map of deduced composite types.
+  void addDeducedCompositeType(Value *Val, Type *Ty) {
+    DeducedNestedTys[Val] = Ty;
+  }
+  // - Find a record in the map of deduced composite types.
+  Type *findDeducedCompositeType(const Value *Val) {
+    auto It = DeducedNestedTys.find(Val);
+    return It == DeducedNestedTys.end() ? nullptr : It->second;
+  }
+  // - Find a type of the given Global value
+  Type *getDeducedGlobalValueType(const GlobalValue *Global) {
+    // we may know element type if it was deduced earlier
+    Type *ElementTy = findDeducedElementType(Global);
+    if (!ElementTy) {
+      // or we may know element type if it's associated with a composite
+      // value
+      if (Value *GlobalElem =
+              Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
+        ElementTy = findDeducedCompositeType(GlobalElem);
+    }
+    return ElementTy ? ElementTy : Global->getValueType();
+  }
+
   // Map a machine operand that represents a use of a function via function
   // pointer to a machine operand that represents the function definition.
   // Return either the register or invalid value, because we have no context for
@@ -133,17 +175,55 @@ public:
     auto ResReg = FunctionToInstr.find(ResF->second);
     return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
   }
+
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const MachineInstr *getFunctionDefinition(const Function *F) {
+    if (!F)
+      return nullptr;
+    auto MOIt = FunctionToInstr.find(F);
+    return MOIt == FunctionToInstr.end() ? nullptr : MOIt->second->getParent();
+  }
+
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const Function *getFunctionByDefinition(const MachineInstr *MI) {
+    if (!MI)
+      return nullptr;
+    auto FIt = FunctionToInstrRev.find(MI);
+    return FIt == FunctionToInstrRev.end() ? nullptr : FIt->second;
+  }
+
   // map function pointer (as a machine instruction operand) to the used
   // Function
   void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
     InstrToFunction[MO] = F;
   }
+
   // map a Function to its definition (as a machine instruction)
   void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
     FunctionToInstr[F] = MO;
+    FunctionToInstrRev[MO->getParent()] = F;
   }
+
   // Return true if any OpConstantFunctionPointerINTEL were generated
   bool hasConstFunPtr() { return !InstrToFunction.empty(); }
+
+  // Add a record about forward function call.
+  void addForwardCall(const Function *F, MachineInstr *MI) {
+    auto It = ForwardCalls.find(F);
+    if (It == ForwardCalls.end())
+      ForwardCalls[F] = {MI};
+    else
+      It->second.push_back(MI);
+  }
+
+  // Map a Function to the vector of machine instructions that represents
+  // forward function calls or to nullptr if not found.
+  SmallVector<MachineInstr *> *getForwardCalls(const Function *F) {
+    auto It = ForwardCalls.find(F);
+    return It == ForwardCalls.end() ? nullptr : &It->second;
+  }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
