@@ -421,13 +421,25 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     // TODO: Perhaps we should map host -O2 to ptxas -O3. -O3 is ptxas's
     // default, so it may correspond more closely to the spirit of clang -O2.
 
+    bool noOptimization = A->getOption().matches(options::OPT_O0);
+    // Emit a driver diagnostic as warning if any -O option different from -O0,
+    // is passed since ptxas does not support optimized debugging.
+    if (!noOptimization) {
+      auto &Diags = TC.getDriver().getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Warning,
+          "ptxas cannot emit debug info with optimization "
+          "level ('%0') different than O0.");
+      Diags.Report(DiagID) << A->getAsString(Args);
+    }
+
     // -O3 seems like the least-bad option when -Osomething is specified to
     // clang but it isn't handled below.
     StringRef OOpt = "3";
     if (A->getOption().matches(options::OPT_O4) ||
         A->getOption().matches(options::OPT_Ofast))
       OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O0))
+    else if (noOptimization)
       OOpt = "0";
     else if (A->getOption().matches(options::OPT_O)) {
       // -Os, -Oz, and -O(anything else) map to -O2, for lack of better options.
