@@ -439,14 +439,14 @@ define i64 @bzhi64_a0_masked(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1-LABEL: bzhi64_a0_masked:
 ; X64-BMI1:       # %bb.0:
-; X64-BMI1-NEXT:    andb $63, %sil
+; X64-BMI1-NEXT:    andl $63, %esi
 ; X64-BMI1-NEXT:    shll $8, %esi
 ; X64-BMI1-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bzhi64_a0_masked:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    andb $63, %sil
+; X64-BMI2-NEXT:    andl $63, %esi
 ; X64-BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
 ; X64-BMI2-NEXT:    retq
   %numlowbits.masked = and i64 %numlowbits, 63
