@@ -210,6 +210,12 @@ def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
   ];
+  let options = [
+    Option<"debugLevel", "debug-level",
+           "unsigned",
+           /*default=*/"0",
+           "Level of debug information to generate.">,
+  ];
 }
 
 // This needs to be a "mlir::ModuleOp" pass, because it inserts simplified

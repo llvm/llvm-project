@@ -155,9 +155,10 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
   });
 }
 
-inline void addDebugFoundationPass(mlir::PassManager &pm) {
+inline void addDebugFoundationPass(
+    mlir::PassManager &pm, llvm::codegenoptions::DebugInfoKind debugLevel) {
   addPassConditionally(pm, disableDebugFoundation,
-      [&]() { return fir::createAddDebugFoundationPass(); });
+      [&]() { return fir::createAddDebugFoundationPass(debugLevel); });
 }
 
 inline void addFIRToLLVMPass(
@@ -288,7 +289,7 @@ inline void createDebugPasses(
   // Currently only -g1, -g, -gline-tables-only supported
   switch (debugLevel) {
   case llvm::codegenoptions::DebugLineTablesOnly:
-    addDebugFoundationPass(pm);
+    addDebugFoundationPass(pm, debugLevel);
     return;
   case llvm::codegenoptions::NoDebugInfo:
     return;
@@ -296,7 +297,7 @@ inline void createDebugPasses(
     // TODO: Add cases and passes for other debug options.
     // All other debug options not implemented yet, currently emits warning
     // and generates as much debug information as possible.
-    addDebugFoundationPass(pm);
+    addDebugFoundationPass(pm, debugLevel);
     return;
   }
 }
@@ -307,10 +308,10 @@ inline void createDefaultFIRCodeGenPassPipeline(
   pm.addNestedPass<mlir::func::FuncOp>(
       fir::createAbstractResultOnFuncOptPass());
   pm.addNestedPass<fir::GlobalOp>(fir::createAbstractResultOnGlobalOptPass());
+  fir::createDebugPasses(pm, config.DebugInfo);
   fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
-  fir::createDebugPasses(pm, config.DebugInfo);
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));

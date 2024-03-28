@@ -144,8 +144,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
       return false;
     }
     opts.setDebugInfo(val.value());
-    if (val != llvm::codegenoptions::DebugLineTablesOnly &&
-        val != llvm::codegenoptions::NoDebugInfo) {
+    if (val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
           clang::DiagnosticsEngine::Warning, "Unsupported debug option: %0");
       diags.Report(debugWarning) << arg->getValue();
