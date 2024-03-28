@@ -75,7 +75,7 @@ private:
   // deployment of newer versions of llvm-profdata.
   bool WritePrevVersion = false;
 
-  // The MemProf version we should use to write in.
+  // The MemProf version we should write.
   memprof::IndexedVersion MemProfVersionRequested;
 
 public:
