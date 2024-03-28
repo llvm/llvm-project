@@ -202,6 +202,12 @@ lw ra, 252(sp)
 # CHECK: # encoding:  [0x82,0x80]
 jalr zero, 0(ra)
 
+# CHECK-BYTES: 81 40
+# CHECK-ALIAS: li ra, 0
+# CHECK-INST: c.li ra, 0
+# CHECK:  # encoding: [0x81,0x40]
+add ra, zero, zero
+
 # CHECK-BYTES: 92 80
 # CHECK-ALIAS: mv ra, tp
 # CHECK-INST: c.mv ra, tp
@@ -249,3 +255,93 @@ sw zero, 252(sp)
 # CHECK-INST: c.unimp
 # CHECK: # encoding: [0x00,0x00]
 unimp
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+and s0, a5, x0
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+and s0, x0, a5
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+and s0, x0, x0
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+or s0, a5, x0
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+or s0, x0, a5
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+or s0, x0, x0
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+xor s0, a5, x0
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+xor s0, x0, a5
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+xor s0, x0, x0
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+sll s0, a5, x0
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+sll s0, x0, a5
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+srl s0, a5, x0
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+srl s0, x0, a5
+
+# CHECK-BYTES: 3e 84
+# CHECK-ALIAS: mv s0, a5
+# CHECK-INST: c.mv s0, a5
+# CHECK: # encoding: [0x3e,0x84]
+sra s0, a5, x0
+
+# CHECK-BYTES: 01 44
+# CHECK-ALIAS: li s0, 0
+# CHECK-INST: c.li s0, 0
+# CHECK: # encoding: [0x01,0x44]
+sra s0, x0, a5

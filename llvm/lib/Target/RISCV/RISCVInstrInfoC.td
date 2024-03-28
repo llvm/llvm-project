@@ -915,8 +915,16 @@ def : CompressPat<(LUI GPRNoX0X2:$rd, c_lui_imm:$imm),
                   (C_LUI GPRNoX0X2:$rd, c_lui_imm:$imm)>;
 def : CompressPat<(SRLI GPRC:$rs1, GPRC:$rs1, uimmlog2xlennonzero:$imm),
                   (C_SRLI GPRC:$rs1, uimmlog2xlennonzero:$imm)>;
+def : CompressPat<(SRL GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SRL GPRNoX0:$rs1, X0, GPR),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 def : CompressPat<(SRAI GPRC:$rs1, GPRC:$rs1, uimmlog2xlennonzero:$imm),
                   (C_SRAI GPRC:$rs1, uimmlog2xlennonzero:$imm)>;
+def : CompressPat<(SRA GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SRA GPRNoX0:$rs1, X0, GPR),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 def : CompressPat<(ANDI GPRC:$rs1, GPRC:$rs1, simm6:$imm),
                   (C_ANDI GPRC:$rs1, simm6:$imm)>;
 def : CompressPat<(SUB GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
@@ -926,8 +934,20 @@ def : CompressPat<(XOR GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
 let isCompressOnly = true in
 def : CompressPat<(XOR GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_XOR GPRC:$rs1, GPRC:$rs2)>;
+def : CompressPat<(XOR GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(XOR GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(XOR GPRNoX0:$rs1, X0, X0),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 def : CompressPat<(OR GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
                   (C_OR GPRC:$rs1, GPRC:$rs2)>;
+def : CompressPat<(OR GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(OR GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(OR GPRNoX0:$rs1, X0, X0),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 let isCompressOnly = true in
 def : CompressPat<(OR GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_OR GPRC:$rs1, GPRC:$rs2)>;
@@ -936,6 +956,10 @@ def : CompressPat<(AND GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
 let isCompressOnly = true in
 def : CompressPat<(AND GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
                   (C_AND GPRC:$rs1, GPRC:$rs2)>;
+def : CompressPat<(AND GPRNoX0:$rs1, X0, GPR),
+                  (C_LI GPRNoX0:$rs1, 0)>;
+def : CompressPat<(AND GPRNoX0:$rs1, GPR, X0),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 } // Predicates = [HasStdExtCOrZca]
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
@@ -970,6 +994,10 @@ def : CompressPat<(BNE X0, GPRC:$rs1, simm9_lsb0:$imm),
 let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(SLLI GPRNoX0:$rs1, GPRNoX0:$rs1, uimmlog2xlennonzero:$imm),
                   (C_SLLI GPRNoX0:$rs1, uimmlog2xlennonzero:$imm)>;
+def : CompressPat<(SLL GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SLL GPRNoX0:$rs1, X0, GPR),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 } // Predicates = [HasStdExtCOrZca]
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
@@ -996,6 +1024,8 @@ let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(JALR X0, GPRNoX0:$rs1, 0),
                   (C_JR GPRNoX0:$rs1)>;
 let isCompressOnly = true in {
+def : CompressPat<(ADD GPRNoX0:$rs1, X0, X0),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
