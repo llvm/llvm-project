@@ -7962,7 +7962,7 @@ public:
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
-    if (auto *Info = FD->getDefaultedFunctionInfo()) {
+    if (auto *Info = FD->getExtraFunctionInfo()) {
       // FIXME: Change CreateOverloadedBinOp to take an ArrayRef instead of an
       // UnresolvedSet to avoid this copy.
       Fns.assign(Info->getUnqualifiedLookups().begin(),
@@ -8830,8 +8830,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
                                           FD->getOverloadedOperator());
-    FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
-        Context, Operators.pairs()));
+    FD->setExtraFunctionInfo(
+        FunctionDecl::ExtraFunctionInfo::Create(Context, Operators.pairs()));
   }
 
   // C++2a [class.compare.default]p1:
@@ -18158,7 +18158,9 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
   // C++11 [dcl.fct.def.delete]p4:
   //  A deleted function is implicitly inline.
   Fn->setImplicitlyInline();
-  Fn->setDeletedWithMessage(Message);
+  Fn->setDeletedAsWritten();
+  if (Message)
+    Fn->setDeletedMessage(Message);
 }
 
 void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {

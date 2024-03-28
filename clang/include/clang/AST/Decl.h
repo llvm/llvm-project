@@ -1981,21 +1981,35 @@ public:
 
   };
 
-  /// Stashed information about a defaulted function definition whose body has
-  /// not yet been lazily generated.
-  class DefaultedFunctionInfo final
-      : llvm::TrailingObjects<DefaultedFunctionInfo, DeclAccessPair> {
+  /// Stashed information about a defaulted/deleted function body.
+  class ExtraFunctionInfo final
+      : llvm::TrailingObjects<ExtraFunctionInfo, DeclAccessPair,
+                              StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
+    bool HasDeletedMessage;
+
+    size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+      return NumLookups;
+    }
 
   public:
-    static DefaultedFunctionInfo *Create(ASTContext &Context,
-                                         ArrayRef<DeclAccessPair> Lookups);
+    static ExtraFunctionInfo *Create(ASTContext &Context,
+                                     ArrayRef<DeclAccessPair> Lookups,
+                                     StringLiteral *DeletedMessage = nullptr);
+
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
     ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
       return {getTrailingObjects<DeclAccessPair>(), NumLookups};
     }
+
+    StringLiteral *getDeletedMessage() const {
+      return HasDeletedMessage ? *getTrailingObjects<StringLiteral *>()
+                               : nullptr;
+    }
+
+    void setDeletedMessage(StringLiteral *Message);
   };
 
 private:
@@ -2005,19 +2019,13 @@ private:
   ParmVarDecl **ParamInfo = nullptr;
 
   /// The active member of this union is determined by
-  /// FunctionDeclBits.HasDefaultedFunctionInfo.
+  /// FunctionDeclBits.HasExtraFunctionInfo.
   union {
     /// The body of the function.
     LazyDeclStmtPtr Body;
     /// Information about a future defaulted function definition.
-    DefaultedFunctionInfo *DefaultedInfo;
+    ExtraFunctionInfo *ExtraInfo;
   };
-
-  /// Message that indicates why this function was deleted.
-  ///
-  /// FIXME: Figure out where to actually put this; maybe in the
-  /// 'DefaultedInfo' above?
-  StringLiteral *DeletedMessage;
 
   unsigned ODRHash;
 
@@ -2274,18 +2282,18 @@ public:
 
   /// Returns whether this specific declaration of the function has a body.
   bool doesThisDeclarationHaveABody() const {
-    return (!FunctionDeclBits.HasDefaultedFunctionInfo && Body) ||
+    return (!FunctionDeclBits.HasExtraFunctionInfo && Body) ||
            isLateTemplateParsed();
   }
 
   void setBody(Stmt *B);
   void setLazyBody(uint64_t Offset) {
-    FunctionDeclBits.HasDefaultedFunctionInfo = false;
+    FunctionDeclBits.HasExtraFunctionInfo = false;
     Body = LazyDeclStmtPtr(Offset);
   }
 
-  void setDefaultedFunctionInfo(DefaultedFunctionInfo *Info);
-  DefaultedFunctionInfo *getDefaultedFunctionInfo() const;
+  void setExtraFunctionInfo(ExtraFunctionInfo *Info);
+  ExtraFunctionInfo *getExtraFunctionInfo() const;
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -2489,10 +2497,9 @@ public:
   }
 
   void setDeletedAsWritten(bool D = true) { FunctionDeclBits.IsDeleted = D; }
-  void setDeletedWithMessage(StringLiteral *Message) {
-    FunctionDeclBits.IsDeleted = true;
-    DeletedMessage = Message;
-  }
+
+  /// Only valid if isDeletedAsWritten() returns true.
+  void setDeletedMessage(StringLiteral *Message);
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.
@@ -2649,7 +2656,11 @@ public:
   }
 
   /// Get the message that indicates why this function was deleted.
-  StringLiteral *getDeletedMessage() const { return DeletedMessage; }
+  StringLiteral *getDeletedMessage() const {
+    return FunctionDeclBits.HasExtraFunctionInfo
+               ? ExtraInfo->getDeletedMessage()
+               : nullptr;
+  }
 
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 

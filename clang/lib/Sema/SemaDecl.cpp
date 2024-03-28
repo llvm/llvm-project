@@ -16092,7 +16092,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // This is meant to pop the context added in ActOnStartOfFunctionDef().
     ExitFunctionBodyRAII ExitRAII(*this, isLambdaCallOperator(FD));
     if (FD) {
-      FD->setBody(Body);
+      // Do not overwrite the potentially present ExtraInfo of a deleted
+      // function declaration.
+      if (!FD->isDeletedAsWritten())
+        FD->setBody(Body);
       FD->setWillHaveBody(false);
       CheckImmediateEscalatingFunctionDefinition(FD, FSI);
 

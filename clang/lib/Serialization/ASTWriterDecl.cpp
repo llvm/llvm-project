@@ -749,8 +749,15 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
-  if (D->isDefaulted()) {
-    if (auto *FDI = D->getDefaultedFunctionInfo()) {
+  if (D->isDefaulted() || D->isDeletedAsWritten()) {
+    if (auto *FDI = D->getExtraFunctionInfo()) {
+      // Store both that there is an ExtraFunctionInfo and whether it contains
+      // a DeletedMessage.
+      StringLiteral *DeletedMessage = FDI->getDeletedMessage();
+      Record.push_back(1 | (DeletedMessage ? 2 : 0));
+      if (DeletedMessage)
+        Record.AddStmt(DeletedMessage);
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -760,13 +767,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       Record.push_back(0);
     }
   }
-
-  // FIXME: Hack: We're out of bits in FunctionDeclBits, so always
-  // add this even though it's 0 in the vast majority of cases. We
-  // might really want to consider storing this in the DefaultedFunctionInfo
-  // instead.
-  if (D->isDeletedAsWritten())
-    Record.AddStmt(D->getDeletedMessage());
 
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
