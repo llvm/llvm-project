@@ -347,6 +347,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
@@ -486,6 +487,15 @@ private:
   public:
     _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
+    template <typename _Tp2 = _Tp, __enable_if_t<is_trivially_destructible<_Tp2>::value, int> = 0>
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
+      if (__vec_.__begin_ != nullptr) {
+        __vec_.__annotate_delete();
+        __alloc_traits::deallocate(__vec_.__alloc(), __vec_.__begin_, __vec_.capacity());
+      }
+    }
+
+    template <typename _Tp2 = _Tp, __enable_if_t<!is_trivially_destructible<_Tp2>::value, int> = 0>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
       if (__vec_.__begin_ != nullptr) {
         __vec_.__clear();
