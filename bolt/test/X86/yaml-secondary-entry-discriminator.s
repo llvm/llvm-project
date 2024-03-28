@@ -19,6 +19,10 @@
 # CHECK-NEXT:       insns: 1
 # CHECK-NEXT:       hash:  0x36A303CBA4360014
 # CHECK-NEXT:       calls: [ { off: 0x0, fid: 1, disc: 1, cnt: 1 } ]
+# CHECK:          - bid:   2
+# CHECK-NEXT:       insns: 5
+# CHECK-NEXT:       hash:  0x8B2F5747CD0019
+# CHECK-NEXT:       calls: [ { off: 0x0, fid: 1, disc: 1, cnt: 1, mis: 1 } ]
 
 # Make sure that the profile is attached correctly
 # RUN: llvm-bolt %t.exe -o %t.out --data %t.yaml --print-profile \
@@ -27,13 +31,12 @@
 # CHECK-CFG: Binary Function "main" after attaching profile {
 # CHECK-CFG:      callq secondary_entry # Offset: [[#]] # Count: 1
 # CHECK-CFG:      callq *%rax # Offset: [[#]] # CallProfile: 1 (1 misses) :
-# XXX: uncomment after discriminator is set correctly for indirect calls
-# COM: CHECK-CFG-NEXT:     { secondary_entry: 1 (1 misses) }
-# CHECK-CFG: }
+# CHECK-CFG-NEXT:     { secondary_entry: 1 (1 misses) }
 
 .globl func
 .type	func, @function
 func:
+# FDATA: 0 [unknown] 0 1 func 0 1 0
   .cfi_startproc
   pushq   %rbp
   movq    %rsp, %rbp
