@@ -489,7 +489,6 @@ define void @bar(i8* %r, i32 %s, i32 %w, i32 %x, i8* %j, i32 %d) nounwind {
 ; CHECK-NEXT:    jb LBB1_4
 ; CHECK-NEXT:  ## %bb.5: ## %bb9
 ; CHECK-NEXT:    ## in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    incl %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    addl %edi, %edx
