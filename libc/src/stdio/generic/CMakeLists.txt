@@ -122,6 +122,32 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fseeko
+  SRCS
+    fseeko.cpp
+  HDRS
+    ../fseeko.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ftello
+  SRCS
+    ftello.cpp
+  HDRS
+    ../ftello.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fopen
   SRCS
     fopen.cpp
