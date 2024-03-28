@@ -5314,6 +5314,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.abandon<BranchProbabilityAnalysis>();
   return PA;
 }
 
