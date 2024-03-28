@@ -34,6 +34,12 @@ entry:
   %addr = addrspacecast ptr addrspace(1) %lptr to ptr addrspace(4)
   %object = bitcast ptr addrspace(4) %addr to ptr addrspace(4)
   call spir_func void @foo(ptr addrspace(4) %object, i32 3)
+  %halfptr = getelementptr inbounds half, ptr addrspace(1) %_arg_cum, i64 1
+  %halfaddr = addrspacecast ptr addrspace(1) %halfptr to ptr addrspace(4)
+  call spir_func void @foo(ptr addrspace(4) %halfaddr, i32 3)
+  %dblptr = getelementptr inbounds double, ptr addrspace(1) %_arg_cum, i64 1
+  %dbladdr = addrspacecast ptr addrspace(1) %dblptr to ptr addrspace(4)
+  call spir_func void @foo(ptr addrspace(4) %dbladdr, i32 3)
   ret void
 }
 
@@ -49,4 +55,3 @@ define void @foo(ptr addrspace(4) noundef %foo_object, i32 noundef %mem_order) {
   tail call void @foo_stub(ptr addrspace(4) noundef %foo_object, i32 noundef %mem_order)
   ret void
 }
-
