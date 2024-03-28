@@ -32,7 +32,7 @@ public:
   std::error_code writeProfile(const RewriteInstance &RI);
 
   /// Callback to determine if a function is covered by BAT.
-  using IsBATCallbackTy = std::optional<function_ref<bool (uint64_t Address)>>;
+  using IsBATCallbackTy = std::optional<function_ref<bool(uint64_t Address)>>;
   /// Callback to get secondary entry point id for a given function and offset.
   using GetBATSecondaryEntryPointIdCallbackTy =
       std::optional<function_ref<unsigned(uint64_t Address, uint32_t Offset)>>;

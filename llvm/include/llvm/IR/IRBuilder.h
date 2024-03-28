@@ -221,6 +221,12 @@ public:
     AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
   }
 
+  /// Set nosanitize metadata.
+  void SetNoSanitizeMetadata() {
+    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
+                              llvm::MDNode::get(getContext(), std::nullopt));
+  }
+
   /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
   /// added to all created instructions. Entries present in MedataDataToCopy but
   /// not on \p Src will be dropped from MetadataToCopy.
@@ -1712,18 +1718,13 @@ public:
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
-  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNUW = false,
-                   bool HasNSW = false) {
-    return CreateSub(Constant::getNullValue(V->getType()), V, Name, HasNUW,
-                     HasNSW);
+  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNSW = false) {
+    return CreateSub(Constant::getNullValue(V->getType()), V, Name,
+                     /*HasNUW=*/0, HasNSW);
   }
 
   Value *CreateNSWNeg(Value *V, const Twine &Name = "") {
-    return CreateNeg(V, Name, false, true);
-  }
-
-  Value *CreateNUWNeg(Value *V, const Twine &Name = "") {
-    return CreateNeg(V, Name, true, false);
+    return CreateNeg(V, Name, /*HasNSW=*/true);
   }
 
   Value *CreateFNeg(Value *V, const Twine &Name = "",
@@ -2707,6 +2708,7 @@ public:
   IRBuilder(const IRBuilder &) = delete;
 
   InserterTy &getInserter() { return Inserter; }
+  const InserterTy &getInserter() const { return Inserter; }
 };
 
 template <typename FolderTy, typename InserterTy>

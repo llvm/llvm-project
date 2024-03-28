@@ -110,17 +110,22 @@ yaml::bolt::BinaryFunctionProfile YAMLProfileWriter::convert(
         if (!ICSP)
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
+          StringRef TargetName = "";
           const BinaryFunction *Callee = setCSIDestination(
               BC, CSI, CSP.Symbol, IsBATFunction, GetBATSecondaryEntryPointId);
+          if (Callee)
+            TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
-          if (CSI.Count && Callee)
-            CSTargets.emplace_back(Callee->getOneName(), CSI);
+          CSTargets.emplace_back(TargetName, CSI);
         }
       } else { // direct call or a tail call
+        StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *Callee = setCSIDestination(
             BC, CSI, CalleeSymbol, IsBATFunction, GetBATSecondaryEntryPointId);
+        if (Callee)
+          TargetName = Callee->getOneName();
 
         auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
           return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);
@@ -132,8 +137,8 @@ yaml::bolt::BinaryFunctionProfile YAMLProfileWriter::convert(
           CSI.Count = getAnnotationWithDefault(Instr, "Count");
         }
 
-        if (CSI.Count && Callee)
-          CSTargets.emplace_back(Callee->getOneName(), CSI);
+        if (CSI.Count)
+          CSTargets.emplace_back(TargetName, CSI);
       }
       // Sort targets in a similar way to getBranchData, see Location::operator<
       llvm::sort(CSTargets, [](const auto &RHS, const auto &LHS) {
