@@ -55,6 +55,26 @@ public:
     __set(static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
+
+#  define _LIBCXX_SIMD_REFERENCE_OP_(__op)                                                                             \
+    template <class _Up>                                                                                               \
+    enable_if_t<is_void_v<void_t<decltype(std::declval<value_type&>() __op## = std::declval<_Up>())>>,                 \
+                __simd_reference> _LIBCPP_HIDE_FROM_ABI                                                                \
+    operator __op##=(_Up&& __v)&& noexcept {                                                                           \
+      __set(__get() __op static_cast<value_type>(std::forward<_Up>(__v)));                                             \
+      return {__s_, __idx_};                                                                                           \
+    }
+  _LIBCXX_SIMD_REFERENCE_OP_(+)
+  _LIBCXX_SIMD_REFERENCE_OP_(-)
+  _LIBCXX_SIMD_REFERENCE_OP_(*)
+  _LIBCXX_SIMD_REFERENCE_OP_(/)
+  _LIBCXX_SIMD_REFERENCE_OP_(%)
+  _LIBCXX_SIMD_REFERENCE_OP_(&)
+  _LIBCXX_SIMD_REFERENCE_OP_(|)
+  _LIBCXX_SIMD_REFERENCE_OP_(^)
+  _LIBCXX_SIMD_REFERENCE_OP_(<<)
+  _LIBCXX_SIMD_REFERENCE_OP_(>>)
+#  undef _LIBCXX_SIMD_REFERENCE_OP_
 };
 
 } // namespace parallelism_v2
