@@ -291,6 +291,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         } else {
           const InlineAsm::Flag F(MI->getOperand(OpNo).getImm());
           ++OpNo; // Skip over the ID number.
+
           // FIXME: Shouldn't arch-independent output template handling go into
           // PrintAsmOperand?
           // Labels are target independent.
