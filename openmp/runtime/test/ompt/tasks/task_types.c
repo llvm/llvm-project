@@ -41,19 +41,19 @@ int main() {
 #pragma omp task untied
     {
       // Output of thread_id is needed to know on which thread task is executed
-      printf("%" PRIu64 ": explicit_untied\n", ompt_get_thread_data()->value);
+      printf("%" PRIu64 ": explicit_untied\n", get_current_thread_id());
       print_ids(0);
       print_frame(1);
       x++;
 #pragma omp taskyield
       printf("%" PRIu64 ": explicit_untied(2)\n",
-             ompt_get_thread_data()->value);
+             get_current_thread_id());
       print_ids(0);
       print_frame(1);
       x++;
 #pragma omp taskwait
       printf("%" PRIu64 ": explicit_untied(3)\n",
-             ompt_get_thread_data()->value);
+             get_current_thread_id());
       print_ids(0);
       print_frame(1);
       x++;

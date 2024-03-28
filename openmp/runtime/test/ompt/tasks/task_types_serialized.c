@@ -13,7 +13,7 @@ void print_task_type(int id)
     char buffer[2048];
     ompt_get_task_info(0, &task_type, NULL, NULL, NULL, NULL);
     format_task_type(task_type, buffer);
-    printf("%" PRIu64 ": id=%d task_type=%s=%d\n", ompt_get_thread_data()->value, id, buffer, task_type);
+    printf("%" PRIu64 ": id=%d task_type=%s=%d\n", get_current_thread_id(), id, buffer, task_type);
   }
 };
 

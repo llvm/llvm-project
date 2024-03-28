@@ -22,7 +22,7 @@ int main() {
 #pragma omp master
     {
       print_ids(0);
-      printf("%" PRIu64 ": address of x: %p\n", ompt_get_thread_data()->value,
+      printf("%" PRIu64 ": address of x: %p\n", get_current_thread_id(),
              &x);
 #pragma omp task depend(out : x)
       {

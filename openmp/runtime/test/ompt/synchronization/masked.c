@@ -18,7 +18,7 @@ int main() {
     print_current_address(2);
   }
 
-  printf("%" PRIu64 ": x=%d\n", ompt_get_thread_data()->value, x);
+  printf("%" PRIu64 ": x=%d\n", get_current_thread_id(), x);
 
   return 0;
 }
