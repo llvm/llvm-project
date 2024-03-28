@@ -239,3 +239,12 @@ F s(0);
 // CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
 // CHECK: | `-CXXRecord {{.*}} 'F'
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+
+template<typename T>
+struct G { T t; };
+
+G g = {1};
+// CHECK-LABEL: Dumping <deduction guide for G>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for G> 'auto (T) -> G<T>' aggregate
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation aggregate
