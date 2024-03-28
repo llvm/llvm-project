@@ -179,14 +179,15 @@ public:
 
 } // end namespace llvm
 
-InstrProfWriter::InstrProfWriter(bool Sparse,
-                                 uint64_t TemporalProfTraceReservoirSize,
-                                 uint64_t MaxTemporalProfTraceLength,
-                                 bool WritePrevVersion)
+InstrProfWriter::InstrProfWriter(
+    bool Sparse, uint64_t TemporalProfTraceReservoirSize,
+    uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
+    memprof::MemProfVersion MemProfVersionRequested)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
-      WritePrevVersion(WritePrevVersion) {}
+      WritePrevVersion(WritePrevVersion),
+      MemProfVersionRequested(MemProfVersionRequested) {}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
@@ -528,7 +529,15 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // OnDiskChainedHashTable MemProfFrameData
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
+    assert((MemProfVersionRequested == memprof::MemProfVersion0 ||
+            MemProfVersionRequested == memprof::MemProfVersion1) &&
+           "Requested MemProf version not supported");
+
     MemProfSectionStart = OS.tell();
+
+    if (MemProfVersionRequested == memprof::MemProfVersion1)
+      OS.write(memprof::MemProfVersion1);
+
     OS.write(0ULL); // Reserve space for the memprof record table offset.
     OS.write(0ULL); // Reserve space for the memprof frame payload offset.
     OS.write(0ULL); // Reserve space for the memprof frame table offset.
@@ -570,12 +579,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
     uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 
-    PatchItem PatchItems[] = {
-        {MemProfSectionStart, &RecordTableOffset, 1},
-        {MemProfSectionStart + sizeof(uint64_t), &FramePayloadOffset, 1},
-        {MemProfSectionStart + 2 * sizeof(uint64_t), &FrameTableOffset, 1},
-    };
-    OS.patch(PatchItems);
+    uint64_t Header[] = {RecordTableOffset, FramePayloadOffset,
+                         FrameTableOffset};
+    uint64_t HeaderUpdatePos = MemProfSectionStart;
+    if (MemProfVersionRequested == memprof::MemProfVersion1)
+      // The updates goes just after the version field.
+      HeaderUpdatePos += sizeof(uint64_t);
+    OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
   }
 
   // BinaryIdSection has two parts:
