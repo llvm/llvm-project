@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -140,7 +141,7 @@ static bool refineInstruction(SCCPSolver &Solver,
         Changed = true;
       }
     }
-  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+  } else if (isa<PossiblyNonNegInst>(Inst) && !Inst.hasNonNeg()) {
     auto Range = GetRange(Inst.getOperand(0));
     if (Range.isAllNonNegative()) {
       Inst.setNonNeg();
@@ -170,14 +171,16 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 
   Instruction *NewInst = nullptr;
   switch (Inst.getOpcode()) {
-  // Note: We do not fold sitofp -> uitofp here because that could be more
-  // expensive in codegen and may not be reversible in the backend.
+  case Instruction::SIToFP:
   case Instruction::SExt: {
-    // If the source value is not negative, this is a zext.
+    // If the source value is not negative, this is a zext/uitofp.
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
+    NewInst = CastInst::Create(Inst.getOpcode() == Instruction::SExt
+                                   ? Instruction::ZExt
+                                   : Instruction::UIToFP,
+                               Op0, Inst.getType(), "", Inst.getIterator());
     NewInst->setNonNeg();
     break;
   }
