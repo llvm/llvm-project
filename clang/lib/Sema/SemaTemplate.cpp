@@ -2974,7 +2974,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     if (auto *FPrime = SemaRef.InstantiateFunctionDeclaration(
             F, TemplateArgListForBuildingFPrime, AliasTemplate->getLocation(),
             Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
-      auto *GG = dyn_cast<CXXDeductionGuideDecl>(FPrime);
+      auto *GG = cast<CXXDeductionGuideDecl>(FPrime);
       buildDeductionGuide(SemaRef, AliasTemplate, FPrimeTemplateParamList,
                           GG->getCorrespondingConstructor(),
                           GG->getExplicitSpecifier(), GG->getTypeSourceInfo(),

@@ -289,7 +289,7 @@ public:
                                         const BinOpInfo &Op);
 
   QualType GetHigherPrecisionFPType(QualType ElementType) {
-    const auto *CurrentBT = dyn_cast<BuiltinType>(ElementType);
+    const auto *CurrentBT = cast<BuiltinType>(ElementType);
     switch (CurrentBT->getKind()) {
     case BuiltinType::Kind::Float16:
       return CGF.getContext().FloatTy;
