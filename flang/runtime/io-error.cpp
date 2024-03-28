@@ -56,9 +56,6 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
 #endif
           ioMsg_ = SaveDefaultCharacter(
               buffer, Fortran::runtime::strlen(buffer) + 1, *this);
-#if !defined(RT_DEVICE_COMPILATION)
-          va_end(ap);
-#endif
         }
       }
       return;
