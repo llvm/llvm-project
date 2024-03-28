@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 
 using namespace mlir;
 
@@ -149,4 +149,4 @@ DiagnosedSilenceableFailure transform::expandTargetSpecification(
 // Generated interface implementation.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.cpp.inc"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.cpp.inc"
