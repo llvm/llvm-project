@@ -44,6 +44,30 @@
 # RUN: not ld.lld a.o b.o c.o diff_stack_align.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
 # STACK_ALIGN: error: diff_stack_align.o:(.riscv.attributes) has stack_align=32 but a.o:(.riscv.attributes) has stack_align=16
 
+## merging atomic_abi values for A6C and A7 lead to an error.
+# RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6C.s -o atomic_abi_A6C.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A7.s -o atomic_abi_A7.o
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
+# ATOMIC_ABI_ERROR: error: atomic_abi_A6C.o:(.riscv.attributes) has atomic_abi=1 but atomic_abi_A7.o:(.riscv.attributes) has atomic_abi=3
+
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6S.s -o atomic_abi_A6S.o
+# RUN: ld.lld atomic_abi_A6S.o atomic_abi_A6C.o -o atomic_abi_A6C_A6S
+# RUN: llvm-readobj -A atomic_abi_A6C_A6S | FileCheck %s --check-prefix=A6C_A6S
+
+# RUN: ld.lld atomic_abi_A6S.o atomic_abi_A7.o -o atomic_abi_A6S_A7
+# RUN: llvm-readobj -A atomic_abi_A6S_A7 | FileCheck %s --check-prefix=A6S_A7
+
+# RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_unknown.s -o atomic_abi_unknown.o
+# RUN: ld.lld atomic_abi_unknown.o atomic_abi_A6C.o -o atomic_abi_A6C_unknown
+# RUN: llvm-readobj -A atomic_abi_A6C_unknown | FileCheck %s --check-prefixes=UNKNOWN_A6C
+
+# RUN: ld.lld atomic_abi_unknown.o atomic_abi_A6S.o -o atomic_abi_A6S_unknown
+# RUN: llvm-readobj -A atomic_abi_A6S_unknown | FileCheck %s --check-prefix=UNKNOWN_A6S
+
+# RUN: ld.lld atomic_abi_unknown.o atomic_abi_A7.o -o atomic_abi_A7_unknown
+# RUN: llvm-readobj -A atomic_abi_A7_unknown | FileCheck %s --check-prefix=UNKNOWN_A7
+
 ## The deprecated priv_spec is not handled as GNU ld does.
 ## Differing priv_spec attributes lead to an absent attribute.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 diff_priv_spec.s -o diff_priv_spec.o
@@ -285,6 +309,108 @@
 #--- diff_priv_spec.s
 .attribute priv_spec, 3
 .attribute priv_spec_minor, 3
+
+#--- atomic_abi_unknown.s
+.attribute atomic_abi, 0
+
+#--- atomic_abi_A6C.s
+.attribute atomic_abi, 1
+
+#--- atomic_abi_A6S.s
+.attribute atomic_abi, 2
+
+#--- atomic_abi_A7.s
+.attribute atomic_abi, 3
+
+#      UNKNOWN_A6C: BuildAttributes {
+# UNKNOWN_A6C-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A6C-NEXT:   Section 1 {
+# UNKNOWN_A6C-NEXT:     SectionLength: 17
+# UNKNOWN_A6C-NEXT:     Vendor: riscv
+# UNKNOWN_A6C-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A6C-NEXT:     Size: 7
+# UNKNOWN_A6C-NEXT:     FileAttributes {
+# UNKNOWN_A6C-NEXT:       Attribute {
+# UNKNOWN_A6C-NEXT:         Tag: 14
+# UNKNOWN_A6C-NEXT:         Value: 1
+# UNKNOWN_A6C-NEXT:         TagName: atomic_abi
+# UNKNOWN_A6C-NEXT:         Description: Atomic ABI is 1
+# UNKNOWN_A6C-NEXT:       }
+# UNKNOWN_A6C-NEXT:     }
+# UNKNOWN_A6C-NEXT:   }
+# UNKNOWN_A6C-NEXT: }
+
+#      UNKNOWN_A6S: BuildAttributes {
+# UNKNOWN_A6S-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A6S-NEXT:   Section 1 {
+# UNKNOWN_A6S-NEXT:     SectionLength: 17
+# UNKNOWN_A6S-NEXT:     Vendor: riscv
+# UNKNOWN_A6S-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A6S-NEXT:     Size: 7
+# UNKNOWN_A6S-NEXT:     FileAttributes {
+# UNKNOWN_A6S-NEXT:       Attribute {
+# UNKNOWN_A6S-NEXT:         Tag: 14
+# UNKNOWN_A6S-NEXT:         Value: 2
+# UNKNOWN_A6S-NEXT:         TagName: atomic_abi
+# UNKNOWN_A6S-NEXT:         Description: Atomic ABI is 2
+# UNKNOWN_A6S-NEXT:       }
+# UNKNOWN_A6S-NEXT:     }
+# UNKNOWN_A6S-NEXT:   }
+# UNKNOWN_A6S-NEXT: }
+
+#      UNKNOWN_A7: BuildAttributes {
+# UNKNOWN_A7-NEXT:   FormatVersion: 0x41
+# UNKNOWN_A7-NEXT:   Section 1 {
+# UNKNOWN_A7-NEXT:     SectionLength: 17
+# UNKNOWN_A7-NEXT:     Vendor: riscv
+# UNKNOWN_A7-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_A7-NEXT:     Size: 7
+# UNKNOWN_A7-NEXT:     FileAttributes {
+# UNKNOWN_A7-NEXT:       Attribute {
+# UNKNOWN_A7-NEXT:         Tag: 14
+# UNKNOWN_A7-NEXT:         Value: 3
+# UNKNOWN_A7-NEXT:         TagName: atomic_abi
+# UNKNOWN_A7-NEXT:         Description: Atomic ABI is 3
+# UNKNOWN_A7-NEXT:       }
+# UNKNOWN_A7-NEXT:     }
+# UNKNOWN_A7-NEXT:   }
+# UNKNOWN_A7-NEXT: }
+
+#      A6C_A6S: BuildAttributes {
+# A6C_A6S-NEXT:   FormatVersion: 0x41
+# A6C_A6S-NEXT:   Section 1 {
+# A6C_A6S-NEXT:     SectionLength: 17
+# A6C_A6S-NEXT:     Vendor: riscv
+# A6C_A6S-NEXT:     Tag: Tag_File (0x1)
+# A6C_A6S-NEXT:     Size: 7
+# A6C_A6S-NEXT:     FileAttributes {
+# A6C_A6S-NEXT:       Attribute {
+# A6C_A6S-NEXT:         Tag: 14
+# A6C_A6S-NEXT:         Value: 1
+# A6C_A6S-NEXT:         TagName: atomic_abi
+# A6C_A6S-NEXT:         Description: Atomic ABI is 1
+# A6C_A6S-NEXT:       }
+# A6C_A6S-NEXT:     }
+# A6C_A6S-NEXT:   }
+# A6C_A6S-NEXT: }
+
+#      A6S_A7: BuildAttributes {
+# A6S_A7-NEXT:   FormatVersion: 0x41
+# A6S_A7-NEXT:   Section 1 {
+# A6S_A7-NEXT:     SectionLength: 17
+# A6S_A7-NEXT:     Vendor: riscv
+# A6S_A7-NEXT:     Tag: Tag_File (0x1)
+# A6S_A7-NEXT:     Size: 7
+# A6S_A7-NEXT:     FileAttributes {
+# A6S_A7-NEXT:       Attribute {
+# A6S_A7-NEXT:         Tag: 14
+# A6S_A7-NEXT:         Value: 3
+# A6S_A7-NEXT:         TagName: atomic_abi
+# A6S_A7-NEXT:         Description: Atomic ABI is 3
+# A6S_A7-NEXT:       }
+# A6S_A7-NEXT:     }
+# A6S_A7-NEXT:   }
+# A6S_A7-NEXT: }
 
 #--- unknown13.s
 .attribute 13, "0"
