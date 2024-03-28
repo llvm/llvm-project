@@ -12060,7 +12060,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformDialectInterfacesIncGen",
-	":TransformDialectMatchInterfacesIncGen",
+        ":TransformDialectMatchInterfacesIncGen",
         ":TransformDialectUtils",
         ":Transforms",
         "//llvm:Support",
