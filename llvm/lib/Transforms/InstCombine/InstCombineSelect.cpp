@@ -1566,7 +1566,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
   if (C0->getType() != Sel.getType())
     return nullptr;
 
-  // ULT with 'add' of a constant is canonical. See foldICmpAddConstant().
+  // ULT with 'add' of a constant is canonical. See foldICmpAddLikeConstant().
   // FIXME: Are there more magic icmp predicate+constant pairs we must avoid?
   //        Or should we just abandon this transform entirely?
   if (Pred == CmpInst::ICMP_ULT && match(X, m_Add(m_Value(), m_Constant())))
