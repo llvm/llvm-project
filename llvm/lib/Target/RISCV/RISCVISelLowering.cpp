@@ -1427,6 +1427,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
+                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                          ISD::INSERT_VECTOR_ELT, ISD::ABS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -12936,12 +12937,14 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
 // mul (zext, zext) -> zext (mul (zext, zext))
+// sdiv (zext, zext) -> zext (sdiv (zext, zext))
+// udiv (zext, zext) -> zext (udiv (zext, zext))
+// srem (zext, zext) -> zext (srem (zext, zext))
+// urem (zext, zext) -> zext (urem (zext, zext))
 //
 // where the sum of the extend widths match, and the the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
 // use a power of two for both inner and outer extend.)
-//
-// TODO: Extend this to other binary ops
 static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
@@ -15894,6 +15897,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
     return performMULCombine(N, DAG);
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM:
+    if (SDValue V = combineBinOpOfZExt(N, DAG))
+      return V;
+    break;
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
