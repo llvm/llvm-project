@@ -6958,10 +6958,9 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
       (PairedReg == ARM::SP && !hasV8Ops()))
     return;
 
-  Operands.insert(
-      Operands.begin() + IdX + 1,
-      ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(), 
-      Op2.getEndLoc(), *this));
+  Operands.insert(Operands.begin() + IdX + 1,
+                  ARMOperand::CreateReg(PairedReg, Op2.getStartLoc(),
+                                        Op2.getEndLoc(), *this));
 }
 
 // Dual-register instruction have the following syntax:
