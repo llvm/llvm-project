@@ -88,6 +88,7 @@ entry:
   ret i64 %retval
 }
 
+;; TODO: The extra COPY after LGDR is unnecessary (machine-scheduler introduces the overlap).
 ; CHECK-LABEL: call_vararg_both0:
 ; CHECK:         stmg 6, 7, 1872(4)
 ; CHECK-NEXT:    aghi 4, -192
