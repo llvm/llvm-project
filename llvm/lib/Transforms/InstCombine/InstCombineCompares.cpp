@@ -7147,6 +7147,39 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
   if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
     return replaceInstUsesWith(CxtI, V);
 
+  // Folding (X / Y) pred X => X ~pred 0 for some constant Y other than 0 or 1
+  {
+    const APInt *Divisor;
+    if (match(Op0, m_UDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if (!ICmpInst::isUnsigned(Pred) &&
+        match(Op0, m_SDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
+
+  // Another case of this fold is (X >> Y) pred X => X ~pred 0 if Y != 0
+  {
+    const APInt *Shift;
+    if (match(Op0, m_LShr(m_Specific(Op1), m_APInt(Shift))) && Shift->ugt(0)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
+        match(Op0, m_AShr(m_Specific(Op1), m_APInt(Shift))) &&
+        Shift->ugt(0)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
+
   return nullptr;
 }
 
