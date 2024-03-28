@@ -688,6 +688,7 @@ struct tzdb {                                                                   
   string                 version;
   vector<time_zone>      zones;
   vector<time_zone_link> links;
+  vector<leap_second>    leap_seconds;
 };
 
 class tzdb_list {                                                                // C++20
@@ -730,6 +731,43 @@ class time_zone {
 };
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
+
+// [time.zone.leap], leap second support
+class leap_second {                                                              // C++20
+public:
+  leap_second(const leap_second&)            = default;
+  leap_second& operator=(const leap_second&) = default;
+
+  // unspecified additional constructors
+
+  constexpr sys_seconds date() const noexcept;
+  constexpr seconds value() const noexcept;
+};
+
+constexpr bool operator==(const leap_second& x, const leap_second& y);           // C++20
+constexpr strong_ordering operator<=>(const leap_second& x, const leap_second& y);
+
+template<class Duration>                                                         // C++20
+  constexpr bool operator==(const leap_second& x, const sys_time<Duration>& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator< (const leap_second& x, const sys_time<Duration>& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator< (const sys_time<Duration>& x, const leap_second& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator> (const leap_second& x, const sys_time<Duration>& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator> (const sys_time<Duration>& x, const leap_second& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator<=(const leap_second& x, const sys_time<Duration>& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator<=(const sys_time<Duration>& x, const leap_second& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator>=(const leap_second& x, const sys_time<Duration>& y);
+template<class Duration>                                                         // C++20
+  constexpr bool operator>=(const sys_time<Duration>& x, const leap_second& y);
+template<class Duration>                                                         // C++20
+  requires three_way_comparable_with<sys_seconds, sys_time<Duration>>
+  constexpr auto operator<=>(const leap_second& x, const sys_time<Duration>& y);
 
 // [time.zone.link], class time_zone_link
 class time_zone_link {                                                           // C++20
@@ -862,6 +900,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 #if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
     !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#  include <__chrono/leap_second.h>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/time_zone_link.h>
 #  include <__chrono/tzdb.h>

@@ -1145,6 +1145,7 @@ module std_private_chrono_high_resolution_clock  [system] {
   export std_private_chrono_steady_clock
   export std_private_chrono_system_clock
 }
+module std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
 module std_private_chrono_literals               [system] { header "__chrono/literals.h" }
 module std_private_chrono_month                  [system] { header "__chrono/month.h" }
 module std_private_chrono_month_weekday          [system] { header "__chrono/month_weekday.h" }
