@@ -80,6 +80,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -1326,7 +1327,8 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   bool NodeInserted = false;
   std::unique_ptr<SelectionDAG::DAGNodeInsertedListener> InsertedListener;
   MDNode *PCSectionsMD = I.getMetadata(LLVMContext::MD_pcsections);
-  if (PCSectionsMD) {
+  MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra);
+  if (PCSectionsMD || MMRA) {
     InsertedListener = std::make_unique<SelectionDAG::DAGNodeInsertedListener>(
         DAG, [&](SDNode *) { NodeInserted = true; });
   }
@@ -1338,14 +1340,17 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     CopyToExportRegsIfNeeded(&I);
 
   // Handle metadata.
-  if (PCSectionsMD) {
+  if (PCSectionsMD || MMRA) {
     auto It = NodeMap.find(&I);
     if (It != NodeMap.end()) {
-      DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (PCSectionsMD)
+        DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (MMRA)
+        DAG.addMMRAMetadata(It->second.getNode(), MMRA);
     } else if (NodeInserted) {
       // This should not happen; if it does, don't let it go unnoticed so we can
       // fix it. Relevant visit*() function is probably missing a setValue().
-      errs() << "warning: loosing !pcsections metadata ["
+      errs() << "warning: loosing !pcsections and/or !mmra metadata ["
              << I.getModule()->getName() << "]\n";
       LLVM_DEBUG(I.dump());
       assert(false);
@@ -5282,9 +5287,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result =
           DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
     }
-
-    setValue(&I, Result);
   }
+
+  setValue(&I, Result);
 }
 
 /// GetSignificand - Get the significand and build it into a floating-point

@@ -904,6 +904,13 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       MD->printAsOperand(OS, G->getMachineFunction().getFunction().getParent());
       OS << ']';
     }
+
+    if (MDNode *MMRA = G ? G->getMMRAMetadata(this) : nullptr) {
+      OS << " [mmra ";
+      MMRA->printAsOperand(OS,
+                           G->getMachineFunction().getFunction().getParent());
+      OS << ']';
+    }
   }
 }
 

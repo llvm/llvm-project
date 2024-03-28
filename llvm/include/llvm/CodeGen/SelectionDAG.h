@@ -285,6 +285,7 @@ class SelectionDAG {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
+    MDNode *MMRA = nullptr;
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -2280,10 +2281,20 @@ public:
   void addPCSections(const SDNode *Node, MDNode *MD) {
     SDEI[Node].PCSections = MD;
   }
+  /// Set MMRAMetadata to be associated with Node.
+  void addMMRAMetadata(const SDNode *Node, MDNode *MMRA) {
+    SDEI[Node].MMRA = MMRA;
+  }
   /// Return PCSections associated with Node, or nullptr if none exists.
   MDNode *getPCSections(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.PCSections : nullptr;
+  }
+  /// Return the MMRA MDNode associated with Node, or nullptr if none
+  /// exists.
+  MDNode *getMMRAMetadata(const SDNode *Node) const {
+    auto It = SDEI.find(Node);
+    return It != SDEI.end() ? It->second.MMRA : nullptr;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {

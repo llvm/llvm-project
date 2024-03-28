@@ -367,7 +367,7 @@ bool MergedLoadStoreMotion::run(Function &F, AliasAnalysis &AA) {
 
   // Merge unconditional branches, allowing PRE to catch more
   // optimization opportunities.
-  // This loop doesn't care about newly inserted/split blocks 
+  // This loop doesn't care about newly inserted/split blocks
   // since they never will be diamond heads.
   for (BasicBlock &BB : make_early_inc_range(F))
     // Hoist equivalent loads and sink stores

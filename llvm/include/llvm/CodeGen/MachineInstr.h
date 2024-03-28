@@ -160,24 +160,27 @@ private:
                              MCSymbol *PreInstrSymbol = nullptr,
                              MCSymbol *PostInstrSymbol = nullptr,
                              MDNode *HeapAllocMarker = nullptr,
-                             MDNode *PCSections = nullptr,
-                             uint32_t CFIType = 0) {
+                             MDNode *PCSections = nullptr, uint32_t CFIType = 0,
+                             MDNode *MMRAs = nullptr) {
       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
       bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
+      bool HasMMRAs = MMRAs != nullptr;
       bool HasCFIType = CFIType != 0;
       bool HasPCSections = PCSections != nullptr;
       auto *Result = new (Allocator.Allocate(
           totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t>(
               MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
-              HasHeapAllocMarker + HasPCSections, HasCFIType),
+              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType),
           alignof(ExtraInfo)))
           ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
-                    HasHeapAllocMarker, HasPCSections, HasCFIType);
+                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs);
 
       // Copy the actual data into the trailing objects.
       std::copy(MMOs.begin(), MMOs.end(),
                 Result->getTrailingObjects<MachineMemOperand *>());
+
+      unsigned MDNodeIdx = 0;
 
       if (HasPreInstrSymbol)
         Result->getTrailingObjects<MCSymbol *>()[0] = PreInstrSymbol;
@@ -185,12 +188,13 @@ private:
         Result->getTrailingObjects<MCSymbol *>()[HasPreInstrSymbol] =
             PostInstrSymbol;
       if (HasHeapAllocMarker)
-        Result->getTrailingObjects<MDNode *>()[0] = HeapAllocMarker;
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = HeapAllocMarker;
       if (HasPCSections)
-        Result->getTrailingObjects<MDNode *>()[HasHeapAllocMarker] =
-            PCSections;
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = PCSections;
       if (HasCFIType)
         Result->getTrailingObjects<uint32_t>()[0] = CFIType;
+      if (HasMMRAs)
+        Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = MMRAs;
 
       return Result;
     }
@@ -223,6 +227,12 @@ private:
       return HasCFIType ? getTrailingObjects<uint32_t>()[0] : 0;
     }
 
+    MDNode *getMMRAMetadata() const {
+      return HasMMRAs ? getTrailingObjects<MDNode *>()[HasHeapAllocMarker +
+                                                       HasPCSections]
+                      : nullptr;
+    }
+
   private:
     friend TrailingObjects;
 
@@ -237,6 +247,7 @@ private:
     const bool HasHeapAllocMarker;
     const bool HasPCSections;
     const bool HasCFIType;
+    const bool HasMMRAs;
 
     // Implement the `TrailingObjects` internal API.
     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
@@ -255,11 +266,12 @@ private:
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.
     ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
-              bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType)
+              bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType,
+              bool HasMMRAs)
         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
           HasPostInstrSymbol(HasPostInstrSymbol),
           HasHeapAllocMarker(HasHeapAllocMarker), HasPCSections(HasPCSections),
-          HasCFIType(HasCFIType) {}
+          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs) {}
   };
 
   /// Enumeration of the kinds of inline extra info available. It is important
@@ -835,6 +847,15 @@ public:
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getPCSections();
 
+    return nullptr;
+  }
+
+  /// Helper to extract mmra.op metadata.
+  MDNode *getMMRAMetadata() const {
+    if (!Info)
+      return nullptr;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getMMRAMetadata();
     return nullptr;
   }
 
@@ -1902,6 +1923,8 @@ public:
   // addresses into.
   void setPCSections(MachineFunction &MF, MDNode *MD);
 
+  void setMMRAMetadata(MachineFunction &MF, MDNode *MMRAs);
+
   /// Set the CFI type for the instruction.
   void setCFIType(MachineFunction &MF, uint32_t Type);
 
@@ -2014,7 +2037,7 @@ private:
   void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
-                    uint32_t CFIType);
+                    uint32_t CFIType, MDNode *MMRAs);
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

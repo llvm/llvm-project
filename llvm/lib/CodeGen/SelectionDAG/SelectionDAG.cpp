@@ -12913,7 +12913,7 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   // Use of operator[] on the DenseMap may cause an insertion, which invalidates
   // the iterator, hence the need to make a copy to prevent a use-after-free.
   NodeExtraInfo NEI = I->second;
-  if (LLVM_LIKELY(!NEI.PCSections)) {
+  if (LLVM_LIKELY(!NEI.PCSections) && LLVM_LIKELY(!NEI.MMRA)) {
     // No deep copy required for the types of extra info set.
     //
     // FIXME: Investigate if other types of extra info also need deep copy. This
