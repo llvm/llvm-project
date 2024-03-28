@@ -616,7 +616,7 @@ external dibuild_insert_declare_before :
   expr:Llvm.llmetadata ->
   location:Llvm.llmetadata ->
   instr:Llvm.llvalue ->
-  Llvm.llvalue
+  Llvm.lldbgrecord
   = "llvm_dibuild_insert_declare_before_bytecode" "llvm_dibuild_insert_declare_before_native"
 
 external dibuild_insert_declare_at_end :
@@ -626,7 +626,7 @@ external dibuild_insert_declare_at_end :
   expr:Llvm.llmetadata ->
   location:Llvm.llmetadata ->
   block:Llvm.llbasicblock ->
-  Llvm.llvalue
+  Llvm.lldbgrecord
   = "llvm_dibuild_insert_declare_at_end_bytecode" "llvm_dibuild_insert_declare_at_end_native"
 
 external dibuild_expression :
@@ -634,3 +634,9 @@ external dibuild_expression :
   Int64.t array ->
   Llvm.llmetadata
   = "llvm_dibuild_expression"
+
+external is_new_dbg_info_format : Llvm.llmodule -> bool
+                                = "llvm_is_new_dbg_info_format"
+
+external set_is_new_dbg_info_format : Llvm.llmodule -> bool -> unit
+                                    = "llvm_set_is_new_dbg_info_format"
