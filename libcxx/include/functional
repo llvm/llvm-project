@@ -205,7 +205,9 @@ template <class Predicate> // deprecated in C++17, removed in C++20
 binary_negate<Predicate> not2(const Predicate& pred);
 
 template <class F>
-constexpr unspecified not_fn(F&& f); // C++17, constexpr in C++20
+  constexpr unspecified not_fn(F&& f);     // C++17, constexpr in C++20
+template <auto f>
+  constexpr unspecified not_fn() noexcept; // C++26
 
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;

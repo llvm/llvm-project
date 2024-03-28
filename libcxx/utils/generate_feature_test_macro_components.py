@@ -835,8 +835,8 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_not_fn",
             "values": {
-                "c++17": 201603,
-                # "c++26": 202306, # P2714R1 Bind front and back to NTTP callables
+                "c++17": 201603,  # P0005R4 Adopt not_fn from Library Fundamentals 2 for C++17
+                "c++26": 202306,  # P2714R1 Bind front and back to NTTP callables
             },
             "headers": ["functional"],
         },

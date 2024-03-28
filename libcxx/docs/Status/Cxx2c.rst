@@ -40,6 +40,7 @@ Paper Status
 .. note::
 
    .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P2714R1] ``not_fn`` is done.
 
 .. _issues-status-cxx2c:
 

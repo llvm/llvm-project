@@ -154,7 +154,8 @@ __cpp_lib_nonmember_container_access                    201411L <array> <deque> 
                                                                 <iterator> <list> <map>
                                                                 <regex> <set> <string>
                                                                 <unordered_map> <unordered_set> <vector>
-__cpp_lib_not_fn                                        201603L <functional>
+__cpp_lib_not_fn                                        202306L <functional>
+                                                        201603L // C++17
 __cpp_lib_null_iterators                                201304L <iterator>
 __cpp_lib_optional                                      202110L <optional>
                                                         201606L // C++17
@@ -507,6 +508,8 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_function_ref                         202306L
 // # define __cpp_lib_hazard_pointer                       202306L
 // # define __cpp_lib_linalg                               202311L
+# undef  __cpp_lib_not_fn
+# define __cpp_lib_not_fn                               202306L
 # undef  __cpp_lib_out_ptr
 // # define __cpp_lib_out_ptr                              202311L
 # define __cpp_lib_ratio                                202306L
