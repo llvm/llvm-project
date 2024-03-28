@@ -14398,11 +14398,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
     // The x86 definition of "undef" is not the same as the LLVM definition
-    // (PR32176). We leave optimizing away an unnecessary zero constant to the
-    // IR optimizer and backend.
-    // TODO: If we had a "freeze" IR instruction to generate a fixed undef
-    // value, we should use that here instead of a zero.
-    return llvm::Constant::getNullValue(ConvertType(E->getType()));
+    // (PR32176). Use a "freeze" IR instruction to generate a fixed undef
+    // value.
+    return Builder.CreateFreeze(UndefValue::get(ConvertType(E->getType())));
   case X86::BI__builtin_ia32_vec_init_v8qi:
   case X86::BI__builtin_ia32_vec_init_v4hi:
   case X86::BI__builtin_ia32_vec_init_v2si:
