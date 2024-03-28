@@ -137,6 +137,19 @@ def sm3p0 : RISCVBuiltin<"unsigned int(unsigned int)">;
 def sm3p1 : RISCVBuiltin<"unsigned int(unsigned int)">;
 } // Features = "zksh"
 
+//===----------------------------------------------------------------------===//
+// Zimop extension.
+//===----------------------------------------------------------------------===//
+let Features = "experimental-zimop" in {
+def mopr_32 : RISCVBuiltin<"unsigned int(unsigned int, _Constant unsigned int)">;
+def moprr_32 : RISCVBuiltin<"unsigned int(unsigned int, unsigned int, _Constant unsigned int)">;
+} // Features = "experimental-zimop"
+
+let Features = "experimental-zimop,64bit" in {
+def mopr_64 : RISCVBuiltin<"uint64_t(uint64_t, _Constant uint64_t)">;
+def moprr_64 : RISCVBuiltin<"uint64_t(uint64_t, uint64_t, _Constant uint64_t)">;
+} // Features = "experimental-zimop,64bit"
+
 } // Attributes = [Const, NoThrow]
 
 //===----------------------------------------------------------------------===//
