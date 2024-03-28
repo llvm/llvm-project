@@ -707,8 +707,16 @@ public:
     unsigned ShiftVal = AArch64_AM::getArithShiftValue(OperandExtension);
     AArch64_AM::ShiftExtendType ExtendType =
         AArch64_AM::getArithExtendType(OperandExtension);
-    if (ShiftVal != 2)
-      llvm_unreachable("Failed to match indirect branch! (fragment 2)");
+    if (ShiftVal != 2) {
+      // In this case the left shift amount is zero.
+      // The range could be 0 to 4.
+      //   adr     x6, 0x219fb0 <sigall_set+0x88>
+      //   add     x6, x6, x14, lsl #2
+      //   ldr     w7, [x6]
+      //   add     x6, x6, w7, sxtw => no shift amount
+      //   br      x6
+      return false;
+    }
 
     if (ExtendType == AArch64_AM::SXTB)
       ScaleValue = 1LL;
@@ -751,6 +759,16 @@ public:
       // (hoisted). Return with no jump table info.
       JumpTable = nullptr;
       return true;
+    }
+
+    if (DefJTBaseAdd->getOpcode() == AArch64::ADR) {
+      // Array indexing 'table branch'
+      //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
+      //  ldrh    w13, [x13, w12, uxtw #1]
+      //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
+      //  add     x13, x12, w13, sxth #2
+      //  br      x13
+      return false;
     }
 
     assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
