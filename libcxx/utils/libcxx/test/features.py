@@ -280,6 +280,7 @@ DEFAULT_FEATURES = [
         # This is not allowed per C11 7.1.2 Standard headers/6
         #  Any declaration of a library function shall have external linkage.
         when=lambda cfg: "__ANDROID__" in compilerMacros(cfg)
+        or "__FreeBSD__" in compilerMacros(cfg)
         or "_WIN32" in compilerMacros(cfg)
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
@@ -419,6 +420,56 @@ DEFAULT_FEATURES += [
             #endif
             int main(int, char**) { return 0; }
           """,
+        ),
+    ),
+    Feature(
+        name="can-create-symlinks",
+        when=lambda cfg: "_WIN32" not in compilerMacros(cfg)
+        or programSucceeds(
+            cfg,
+            # Creation of symlinks require elevated privileges on Windows unless
+            # Windows developer mode is enabled.
+            """
+            #include <stdio.h>
+            #include <windows.h>
+            int main() {
+              CHAR tempDirPath[MAX_PATH];
+              DWORD tempPathRet = GetTempPathA(MAX_PATH, tempDirPath);
+              if (tempPathRet == 0 || tempPathRet > MAX_PATH) {
+                return 1;
+              }
+
+              CHAR tempFilePath[MAX_PATH];
+              UINT uRetVal = GetTempFileNameA(
+                tempDirPath,
+                "cxx", // Prefix
+                0, // Unique=0 also implies file creation.
+                tempFilePath);
+              if (uRetVal == 0) {
+                return 1;
+              }
+
+              CHAR symlinkFilePath[MAX_PATH];
+              int ret = sprintf_s(symlinkFilePath, MAX_PATH, "%s_symlink", tempFilePath);
+              if (ret == -1) {
+                DeleteFileA(tempFilePath);
+                return 1;
+              }
+
+              // Requires either administrator, or developer mode enabled.
+              BOOL bCreatedSymlink = CreateSymbolicLinkA(symlinkFilePath,
+                tempFilePath,
+                SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE);
+              if (!bCreatedSymlink) {
+                DeleteFileA(tempFilePath);
+                return 1;
+              }
+
+              DeleteFileA(tempFilePath);
+              DeleteFileA(symlinkFilePath);
+              return 0;
+            }
+            """,
         ),
     ),
 ]

@@ -472,7 +472,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
   Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
-  Op = CallInst::Create(Int, Op, CI->getName(), CI);
+  Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());
 
   CI->replaceAllUsesWith(Op);
   CI->eraseFromParent();

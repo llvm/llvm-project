@@ -479,6 +479,8 @@ private:
                           int OpIdx = -1) const;
   void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
                           int OpIdx = -1) const;
+  void renderUbsanTrap(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
   void renderFPImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
   void renderFPImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -2852,8 +2854,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    uint64_t MemSizeInBytes = LdSt.getMemSize();
-    unsigned MemSizeInBits = LdSt.getMemSizeInBits();
+    uint64_t MemSizeInBytes = LdSt.getMemSize().getValue();
+    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue();
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
@@ -3276,7 +3278,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
           RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID;
       if (LoadMI && IsGPR) {
         const MachineMemOperand *MemOp = *LoadMI->memoperands_begin();
-        unsigned BytesLoaded = MemOp->getSize();
+        unsigned BytesLoaded = MemOp->getSize().getValue();
         if (BytesLoaded < 4 && SrcTy.getSizeInBytes() == BytesLoaded)
           return selectCopy(I, TII, MRI, TRI, RBI);
       }
@@ -6159,16 +6161,6 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
     break;
   }
-  case Intrinsic::trap:
-    MIB.buildInstr(AArch64::BRK, {}, {}).addImm(1);
-    break;
-  case Intrinsic::debugtrap:
-    MIB.buildInstr(AArch64::BRK, {}, {}).addImm(0xF000);
-    break;
-  case Intrinsic::ubsantrap:
-    MIB.buildInstr(AArch64::BRK, {}, {})
-        .addImm(I.getOperand(1).getImm() | ('U' << 8));
-    break;
   case Intrinsic::aarch64_neon_ld1x2: {
     LLT Ty = MRI.getType(I.getOperand(0).getReg());
     unsigned Opc = 0;
@@ -7661,6 +7653,14 @@ void AArch64InstructionSelector::renderLogicalImm64(
   uint64_t CstVal = I.getOperand(1).getCImm()->getZExtValue();
   uint64_t Enc = AArch64_AM::encodeLogicalImmediate(CstVal, 64);
   MIB.addImm(Enc);
+}
+
+void AArch64InstructionSelector::renderUbsanTrap(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_UBSANTRAP && OpIdx == 0 &&
+         "Expected G_UBSANTRAP");
+  MIB.addImm(MI.getOperand(0).getImm() | ('U' << 8));
 }
 
 void AArch64InstructionSelector::renderFPImm16(MachineInstrBuilder &MIB,

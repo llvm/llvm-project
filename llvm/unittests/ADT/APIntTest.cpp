@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include <array>
 #include <climits>
+#include <limits>
 #include <optional>
 
 using namespace llvm;
@@ -2918,7 +2919,7 @@ TEST(APIntTest, Average) {
   APInt A100(32, 100);
   APInt A101(32, 101);
   APInt A200(32, 200, false);
-  APInt ApUMax(32, UINT_MAX, false);
+  APInt ApUMax = APInt::getMaxValue(32);
 
   EXPECT_EQ(APInt(32, 150), APIntOps::avgFloorU(A100, A200));
   EXPECT_EQ(APIntOps::RoundingUDiv(A100 + A200, A2, APInt::Rounding::DOWN),
@@ -2945,8 +2946,8 @@ TEST(APIntTest, Average) {
   APInt Am100(32, -100);
   APInt Am101(32, -101);
   APInt Am200(32, -200);
-  APInt AmSMin(32, INT_MIN);
-  APInt ApSMax(32, INT_MAX);
+  APInt AmSMin = APInt::getSignedMinValue(32);
+  APInt ApSMax = APInt::getSignedMaxValue(32);
 
   EXPECT_EQ(APInt(32, +150), APIntOps::avgFloorS(Ap100, Ap200));
   EXPECT_EQ(APIntOps::RoundingSDiv(Ap100 + Ap200, A2, APInt::Rounding::DOWN),
@@ -3046,6 +3047,69 @@ TEST(APIntTest, smul_ov) {
         EXPECT_EQ(Wide.trunc(Bits), Narrow);
         EXPECT_EQ(Narrow.sext(2 * Bits) != Wide, Overflow);
       }
+}
+
+TEST(APIntTest, sfloordiv_ov) {
+  // int16 test overflow
+  {
+    using IntTy = int16_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int32 test overflow
+  {
+    using IntTy = int32_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // int64 test overflow
+  {
+    using IntTy = int64_t;
+    APInt divisor(8 * sizeof(IntTy), std::numeric_limits<IntTy>::lowest(),
+                  true);
+    APInt dividend(8 * sizeof(IntTy), IntTy(-1), true);
+    bool Overflow = false;
+    (void)divisor.sfloordiv_ov(dividend, Overflow);
+    EXPECT_TRUE(Overflow);
+  }
+  // test all of int8
+  {
+    bool Overflow = false;
+    for (int i = -128; i < 128; ++i) {
+      for (int j = -128; j < 128; ++j) {
+        if (j == 0)
+          continue;
+
+        int8_t a = static_cast<int8_t>(i);
+        int8_t b = static_cast<int8_t>(j);
+
+        APInt divisor(8, a, true);
+        APInt dividend(8, b, true);
+        APInt quotient = divisor.sfloordiv_ov(dividend, Overflow);
+
+        if (i == -128 && j == -1) {
+          EXPECT_TRUE(Overflow);
+          continue;
+        }
+
+        if (((i >= 0 && j > 0) || (i <= 0 && j < 0)) ||
+            (i % j == 0)) // if quotient >= 0 and remain == 0 floordiv
+                          // equivalent to div
+          EXPECT_EQ(quotient.getSExtValue(), a / b);
+        else
+          EXPECT_EQ(quotient.getSExtValue(), a / b - 1);
+        EXPECT_FALSE(Overflow);
+      }
+    }
+  }
 }
 
 TEST(APIntTest, SolveQuadraticEquationWrap) {

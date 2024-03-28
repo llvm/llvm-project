@@ -9,7 +9,7 @@ func.func @tanh(%arg: f32) -> f32 {
 // CHECK-DAG: %[[ONE:.+]] = arith.constant 1.000000e+00 : f32
 // CHECK-DAG: %[[TWO:.+]] = arith.constant -2.000000e+00 : f32
 // CHECK: %[[VAL0:.+]] = arith.cmpf olt, %arg0, %[[ZERO]] : f32
-// CHECK: %[[VAL1:.+]] = arith.sitofp %[[VAL0]] : i1 to f32
+// CHECK: %[[VAL1:.+]] = arith.uitofp %[[VAL0]] : i1 to f32
 // CHECK: %[[VAL2:.+]] = arith.mulf %[[VAL1]], %[[TWO]] : f32
 // CHECK: %[[SIGN:.+]] = arith.addf %[[VAL2]], %[[ONE]] : f32
 // CHECK: %[[POSX:.+]] = arith.mulf %[[SIGN]], %arg0 : f32

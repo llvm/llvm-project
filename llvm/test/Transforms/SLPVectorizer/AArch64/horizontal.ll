@@ -228,7 +228,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; YAML-NEXT: Function:        test_unrolled_select
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-40'
+; YAML-NEXT:   - Cost:            '-41'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '10'
 
@@ -250,11 +250,11 @@ define i32 @test_unrolled_select(ptr noalias nocapture readonly %blk1, ptr noali
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P2_045]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i16> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <8 x i16> [[TMP4]] to <8 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i1> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i16> [[TMP4]] to <8 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <8 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <8 x i16> zeroinitializer, [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <8 x i1> [[TMP6]], <8 x i16> [[TMP7]], <8 x i16> [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <8 x i16> [[TMP8]] to <8 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <8 x i16> [[TMP8]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP10]], [[S_047]]
 ; CHECK-NEXT:    [[CMP83:%.*]] = icmp slt i32 [[OP_RDX]], [[LIM:%.*]]

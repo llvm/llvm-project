@@ -9,9 +9,8 @@
 #ifndef FORTRAN_RUNTIME_ENVIRONMENT_H_
 #define FORTRAN_RUNTIME_ENVIRONMENT_H_
 
+#include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
-#include "flang/Runtime/api-attrs.h"
-#include <optional>
 
 struct EnvironmentDefaultList;
 
@@ -19,6 +18,7 @@ namespace Fortran::runtime {
 
 class Terminator;
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
 #if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
 #elif FLANG_LITTLE_ENDIAN
@@ -26,11 +26,13 @@ constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
 #endif
+RT_OFFLOAD_VAR_GROUP_END
 
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 
-std::optional<Convert> GetConvertFromString(const char *, std::size_t);
+Fortran::common::optional<Convert> GetConvertFromString(
+    const char *, std::size_t);
 
 struct ExecutionEnvironment {
 #if !defined(_OPENMP)

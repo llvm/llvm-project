@@ -6078,7 +6078,7 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
 
       if (Matched && T->isArrayType()) {
         if (const ConstantArrayType *CAT = Self.Context.getAsConstantArrayType(T))
-          return CAT->getSize().getLimitedValue();
+          return CAT->getLimitedSize();
       }
     }
     return 0;

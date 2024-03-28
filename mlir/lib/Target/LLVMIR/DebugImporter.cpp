@@ -13,6 +13,7 @@
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -51,10 +52,9 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
   return DICompileUnitAttr::get(
-      context, DistinctAttr::create(UnitAttr::get(context)),
-      node->getSourceLanguage(), translate(node->getFile()),
-      getStringAttrOrNull(node->getRawProducer()), node->isOptimized(),
-      emissionKind.value());
+      context, getOrCreateDistinctID(node), node->getSourceLanguage(),
+      translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
+      node->isOptimized(), emissionKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -64,11 +64,7 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
     assert(element && "expected a non-null element type");
     elements.push_back(translate(element));
   }
-  // Drop the elements parameter if a cyclic dependency is detected. We
-  // currently cannot model these cycles and thus drop the parameter if
-  // required. A cyclic dependency is detected if one of the element nodes
-  // translates to a nullptr since the node is already on the translation stack.
-  // TODO: Support debug metadata with cyclic dependencies.
+  // Drop the elements parameter if any of the elements are invalid.
   if (llvm::is_contained(elements, nullptr))
     elements.clear();
   DITypeAttr baseType = translate(node->getBaseType());
@@ -77,21 +73,24 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (node->getTag() == llvm::dwarf::DW_TAG_array_type && !baseType)
     return nullptr;
   return DICompositeTypeAttr::get(
-      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
-      translate(node->getFile()), node->getLine(), translate(node->getScope()),
-      baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
+      context, node->getTag(), /*recId=*/{},
+      getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
+      node->getLine(), translate(node->getScope()), baseType,
+      flags.value_or(DIFlags::Zero), node->getSizeInBits(),
       node->getAlignInBits(), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
-  // Return nullptr if the base type is a cyclic dependency.
+  // Return nullptr if the base type is invalid.
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
+  DINodeAttr extraData =
+      translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits());
+      node->getOffsetInBits(), extraData);
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -179,13 +178,14 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   // Only definitions require a distinct identifier.
   mlir::DistinctAttr id;
   if (node->isDistinct())
-    id = DistinctAttr::create(UnitAttr::get(context));
-  std::optional<DISubprogramFlags> subprogramFlags =
-      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
-  // Return nullptr if the scope or type is a cyclic dependency.
+    id = getOrCreateDistinctID(node);
+  // Return nullptr if the scope or type is invalid.
   DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
     return nullptr;
+  std::optional<DISubprogramFlags> subprogramFlags =
+      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
+  assert(subprogramFlags && "expected valid subprogram flags");
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
@@ -193,8 +193,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
-                               node->getScopeLine(), subprogramFlags.value(),
-                               type);
+                               node->getScopeLine(), *subprogramFlags, type);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
@@ -229,7 +228,7 @@ DebugImporter::translateImpl(llvm::DISubroutineType *node) {
     }
     types.push_back(translate(type));
   }
-  // Return nullptr if any of the types is a cyclic dependency.
+  // Return nullptr if any of the types is invalid.
   if (llvm::is_contained(types, nullptr))
     return nullptr;
   return DISubroutineTypeAttr::get(context, node->getCC(), types);
@@ -247,12 +246,42 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = nodeToAttr.lookup(node))
     return attr;
 
-  // Return nullptr if a cyclic dependency is detected since the same node is
-  // being traversed twice. This check avoids infinite recursion if the debug
-  // metadata contains cycles.
-  if (!translationStack.insert(node))
-    return nullptr;
-  auto guard = llvm::make_scope_exit([&]() { translationStack.pop_back(); });
+  // If the node type is capable of being recursive, check if it's seen before.
+  auto recSelfCtor = getRecSelfConstructor(node);
+  if (recSelfCtor) {
+    // If a cyclic dependency is detected since the same node is being traversed
+    // twice, emit a recursive self type, and mark the duplicate node on the
+    // translationStack so it can emit a recursive decl type.
+    auto [iter, inserted] = translationStack.try_emplace(node, nullptr);
+    if (!inserted) {
+      // The original node may have already been assigned a recursive ID from
+      // a different self-reference. Use that if possible.
+      DistinctAttr recId = iter->second;
+      if (!recId) {
+        recId = DistinctAttr::create(UnitAttr::get(context));
+        iter->second = recId;
+      }
+      unboundRecursiveSelfRefs.back().insert(recId);
+      return cast<DINodeAttr>(recSelfCtor(recId));
+    }
+  }
+
+  unboundRecursiveSelfRefs.emplace_back();
+
+  auto guard = llvm::make_scope_exit([&]() {
+    if (recSelfCtor)
+      translationStack.pop_back();
+
+    // Copy unboundRecursiveSelfRefs down to the previous level.
+    if (unboundRecursiveSelfRefs.size() == 1)
+      assert(unboundRecursiveSelfRefs.back().empty() &&
+             "internal error: unbound recursive self reference at top level.");
+    else
+      unboundRecursiveSelfRefs[unboundRecursiveSelfRefs.size() - 2].insert(
+          unboundRecursiveSelfRefs.back().begin(),
+          unboundRecursiveSelfRefs.back().end());
+    unboundRecursiveSelfRefs.pop_back();
+  });
 
   // Convert the debug metadata if possible.
   auto translateNode = [this](llvm::DINode *node) -> DINodeAttr {
@@ -289,7 +318,19 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
   };
   if (DINodeAttr attr = translateNode(node)) {
-    nodeToAttr.insert({node, attr});
+    // If this node was marked as recursive, set its recId.
+    if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(attr)) {
+      if (DistinctAttr recId = translationStack.lookup(node)) {
+        attr = cast<DINodeAttr>(recType.withRecId(recId));
+        // Remove the unbound recursive ID from the set of unbound self
+        // references in the translation stack.
+        unboundRecursiveSelfRefs.back().erase(recId);
+      }
+    }
+
+    // Only cache fully self-contained nodes.
+    if (unboundRecursiveSelfRefs.back().empty())
+      nodeToAttr.try_emplace(node, attr);
     return attr;
   }
   return nullptr;
@@ -345,4 +386,21 @@ StringAttr DebugImporter::getStringAttrOrNull(llvm::MDString *stringNode) {
   if (!stringNode)
     return StringAttr();
   return StringAttr::get(context, stringNode->getString());
+}
+
+DistinctAttr DebugImporter::getOrCreateDistinctID(llvm::DINode *node) {
+  DistinctAttr &id = nodeToDistinctAttr[node];
+  if (!id)
+    id = DistinctAttr::create(UnitAttr::get(context));
+  return id;
+}
+
+function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+DebugImporter::getRecSelfConstructor(llvm::DINode *node) {
+  using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
+  return TypeSwitch<llvm::DINode *, CtorType>(node)
+      .Case([&](llvm::DICompositeType *concreteNode) {
+        return CtorType(DICompositeTypeAttr::getRecSelf);
+      })
+      .Default(CtorType());
 }
