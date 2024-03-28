@@ -103,7 +103,6 @@ add_entrypoint_object(
     ../fseek.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -116,7 +115,6 @@ add_entrypoint_object(
     ../ftell.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -129,7 +127,6 @@ add_entrypoint_object(
     ../fseeko.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -142,7 +139,6 @@ add_entrypoint_object(
     ../ftello.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
