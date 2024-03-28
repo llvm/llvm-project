@@ -137,6 +137,7 @@ def SPMem : MemOperand<SP>;
 
 def GPRCMem : MemOperand<GPRC>;
 
+
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
 }
@@ -1952,6 +1953,29 @@ def : Pat<(zext GPR:$src), (SRLI (i64 (SLLI GPR:$src, 32)), 32)>;
 def : Pat<(shl (zext GPR:$rs), uimm5:$shamt),
           (SRLI (i64 (SLLI GPR:$rs, 32)), (ImmSubFrom32 uimm5:$shamt))>;
 }
+
+def riscv_strcmp : SDNode<
+  "RISCVISD::STRCMP",
+  SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]
+>;
+
+let usesCustomInserter = 1, mayLoad = 1, mayStore = 0, hasSideEffects = 0 in
+def PseudoSTRCMPI : Pseudo<
+  (outs GPR:$rd),
+  (ins GPR:$str1, i64imm:$str2, i64imm:$constant_str_idx),
+  []
+>;
+
+def : Pat<
+  (XLenVT (riscv_strcmp tglobaladdr:$str1, iPTR:$str2)),
+  (PseudoSTRCMPI GPR:$str2, tglobaladdr:$str1, 0)
+>;
+
+def : Pat<
+  (XLenVT (riscv_strcmp iPTR:$str1, tglobaladdr:$str2)),
+  (PseudoSTRCMPI GPR:$str1, tglobaladdr:$str2, 1)
+>;
 
 //===----------------------------------------------------------------------===//
 // Standard extensions
