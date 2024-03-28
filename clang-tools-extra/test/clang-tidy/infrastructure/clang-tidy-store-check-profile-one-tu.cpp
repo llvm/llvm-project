@@ -14,22 +14,31 @@
 // CHECK-FILE: {
 // CHECK-FILE-NEXT:"file": "{{.*}}clang-tidy-store-check-profile-one-tu.cpp",
 // CHECK-FILE-NEXT:"timestamp": "{{[0-9]+}}-{{[0-9]+}}-{{[0-9]+}} {{[0-9]+}}:{{[0-9]+}}:{{[0-9]+}}.{{[0-9]+}}",
-// CHECK-FILE-NEXT:"profile": {
-// CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NEXT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
-// If available on the platform, we also have a "time.clang-tidy.readability-function-size.instr" entry
-// CHECK-FILE: }
+// CHECK-FILE-NEXT:"profile": [
+// CHECK-FILE-NEXT:  "check": {
+// CHECK-FILE-NEXT:	"name": "clang-tidy.readability-function-size",
+// CHECK-FILE-NEXT:     "wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
+// CHECK-FILE-NEXT:	"user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
+// CHECK-FILE-NEXT:	"sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
+// CHECK-FILE-NEXT:	"mem": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
+// CHECK-FILE-NEXT:	"instr": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}
+// CHECK-FILE-NEXT:  }
+// CHECK-FILE: ]
 // CHECK-FILE-NEXT: }
 
 // CHECK-FILE-NOT: {
 // CHECK-FILE-NOT: "file": {{.*}}clang-tidy-store-check-profile-one-tu.cpp{{.*}},
 // CHECK-FILE-NOT: "timestamp": "{{[0-9]+}}-{{[0-9]+}}-{{[0-9]+}} {{[0-9]+}}:{{[0-9]+}}:{{[0-9]+}}.{{[0-9]+}}",
-// CHECK-FILE-NOT: "profile": {
-// CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
-// CHECK-FILE-NOT:	"time.clang-tidy.readability-function-size.sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
+// CHECK-FILE-NOT: "profile": [
+// CHECK-FILE-NOT:  "check": {
+// CHECK-FILE-NOT:	"name": "clang-tidy.readability-function-size",
+// CHECK-FILE-NOT:	"wall": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
+// CHECK-FILE-NOT:	"user": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}},
+// CHECK-FILE-NOT:	"sys": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
+// CHECK-FILE-NOT:	"mem": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
+// CHECK-FILE-NOT:	"instr": {{.*}}{{[0-9]}}.{{[0-9]+}}e{{[-+]}}{{[0-9]}}{{[0-9]}}{{,?}}
 // CHECK-FILE-NOT: }
+// CHECK-FILE-NOT: ]
 // CHECK-FILE-NOT: }
 
 class A {
