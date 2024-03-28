@@ -996,6 +996,8 @@ let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(JALR X0, GPRNoX0:$rs1, 0),
                   (C_JR GPRNoX0:$rs1)>;
 let isCompressOnly = true in {
+def : CompressPat<(ADD GPRNoX0:$rs1, X0, X0),
+                  (C_LI GPRNoX0:$rs1, 0)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, X0),

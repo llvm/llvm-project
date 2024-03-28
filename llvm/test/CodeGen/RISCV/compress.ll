@@ -174,3 +174,12 @@ define i32 @neg_i32_hi20_only() #0 {
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -65536
 }
+
+define i32 @add_zero_zero_to_li() #0 {
+; RV32IC-LABEL: <add_zero_zero_to_li>:
+; RV32IC:       c.li a0, 0
+; RV32IC:       c.jr ra
+entry:
+  %0 = tail call i32 asm "add $0, zero, zero", "=r"()
+  ret i32 %0
+}
