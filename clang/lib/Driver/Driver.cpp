@@ -4749,6 +4749,14 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    // With '-fmodules-reduced-bmi', we don't want to run the precompile phase
+    // unless the user specified '--precompile'. In the case the '--precompile'
+    // flag is enabled, we will try to emit the reduced BMI as a by product
+    // in GenerateModuleInterfaceAction.
+    if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
+        !Args.getLastArg(options::OPT__precompile))
+      return Input;
+
     types::ID OutputTy = getPrecompiledType(Input->getType());
     assert(OutputTy != types::TY_INVALID &&
            "Cannot precompile this input type!");
@@ -5814,19 +5822,8 @@ static const char *GetModuleOutputPath(Compilation &C, const JobAction &JA,
          (C.getArgs().hasArg(options::OPT_fmodule_output) ||
           C.getArgs().hasArg(options::OPT_fmodule_output_EQ)));
 
-  if (Arg *ModuleOutputEQ =
-          C.getArgs().getLastArg(options::OPT_fmodule_output_EQ))
-    return C.addResultFile(ModuleOutputEQ->getValue(), &JA);
-
-  SmallString<64> OutputPath;
-  Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
-  if (FinalOutput && C.getArgs().hasArg(options::OPT_c))
-    OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
-
-  const char *Extension = types::getTypeTempSuffix(JA.getType());
-  llvm::sys::path::replace_extension(OutputPath, Extension);
+  SmallString<256> OutputPath =
+      tools::getCXX20NamedModuleOutputPath(C.getArgs(), BaseInput);
   return C.addResultFile(C.getArgs().MakeArgString(OutputPath.c_str()), &JA);
 }
 
@@ -5913,8 +5910,10 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // If we're emitting a module output with the specified option
   // `-fmodule-output`.
   if (!AtTopLevel && isa<PrecompileJobAction>(JA) &&
-      JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput)
+      JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput) {
+    assert(!C.getArgs().hasArg(options::OPT_modules_reduced_bmi));
     return GetModuleOutputPath(C, JA, BaseInput);
+  }
 
   // Output to a temporary file?
   if ((!AtTopLevel && !isSaveTempsEnabled() &&

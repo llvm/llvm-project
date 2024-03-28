@@ -14,6 +14,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTReader.h"
@@ -23,8 +24,8 @@
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-    const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-    StringRef OutputFile, StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    Preprocessor &PP, InMemoryModuleCache &ModuleCache, StringRef OutputFile,
+    StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
@@ -88,7 +89,7 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
-ReducedBMIGenerator::ReducedBMIGenerator(const Preprocessor &PP,
+ReducedBMIGenerator::ReducedBMIGenerator(Preprocessor &PP,
                                          InMemoryModuleCache &ModuleCache,
                                          StringRef OutputFile)
     : PCHGenerator(
@@ -101,12 +102,26 @@ ReducedBMIGenerator::ReducedBMIGenerator(const Preprocessor &PP,
 
 Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
   Module *M = Ctx.getCurrentNamedModule();
-  assert(M->isNamedModuleUnit() &&
+  assert(M && M->isNamedModuleUnit() &&
          "ReducedBMIGenerator should only be used with C++20 Named modules.");
   return M;
 }
 
 void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+  // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions.
+  getPreprocessor()
+      .getHeaderSearchInfo()
+      .getHeaderSearchOpts()
+      .ModulesSkipDiagnosticOptions = true;
+  getPreprocessor()
+      .getHeaderSearchInfo()
+      .getHeaderSearchOpts()
+      .ModulesSkipHeaderSearchPaths = true;
+  getPreprocessor()
+      .getHeaderSearchInfo()
+      .getHeaderSearchOpts()
+      .ModulesSkipPragmaDiagnosticMappings = true;
+
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())
