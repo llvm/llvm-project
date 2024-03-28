@@ -1069,6 +1069,10 @@ Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
 
+  // Empty records are ignored for parameter passing purposes on non-Windows.
+  if (!IsWin32StructABI && isEmptyRecord(getContext(), Ty, true))
+    return CGF.CreateMemTemp(Ty);
+
   // x86-32 changes the alignment of certain arguments on the stack.
   //
   // Just messing with TypeInfo like this works because we never pass
