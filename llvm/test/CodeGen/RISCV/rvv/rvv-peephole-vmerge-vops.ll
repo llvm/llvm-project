@@ -1192,11 +1192,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_false_becomes_tail(<vscale x 2 x i32
 define <vscale x 2 x i64> @vpmerge_vwsub.w_tied(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %mask, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vwsub.w_tied:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vwsub.wv v10, v10, v12
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vwsub.wv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %vl.zext = zext i32 %vl to i64
   %a = call <vscale x 2 x i64> @llvm.riscv.vwsub.w.nxv2i64.nxv2i32(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %passthru, <vscale x 2 x i32> %y, i64 %vl.zext)
