@@ -62,6 +62,8 @@ std::atomic<uint64_t> llvm::omp::target::ompt::TracingTypesEnabled{0};
 
 bool llvm::omp::target::ompt::TracingActive = false;
 
+void llvm::omp::target::ompt::resetTimestamp(uint64_t *T) { *T = 0; }
+
 ompt_callback_buffer_request_t
 llvm::omp::target::ompt::getBufferRequestFn(int DeviceId) {
   std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
@@ -220,8 +222,10 @@ void Interface::setTraceRecordCommon(ompt_record_ompt_t *DataPtr,
 
   if (CallbackType == ompt_callback_target)
     DataPtr->time = 0; // Currently, no consumer, so no need to set it
-  else
+  else {
     DataPtr->time = TraceRecordStartTime;
+    resetTimestamp(&TraceRecordStartTime);
+  }
 
   DataPtr->thread_id = getThreadId();
   DataPtr->target_id = TargetData.value;
@@ -239,7 +243,10 @@ void Interface::setTraceRecordTargetDataOp(ompt_record_target_data_op_t *Record,
   Record->dest_addr = DstAddr;
   Record->dest_device_num = DstDeviceNum;
   Record->bytes = Bytes;
+
   Record->end_time = TraceRecordStopTime;
+  resetTimestamp(&TraceRecordStopTime);
+
   Record->codeptr_ra = CodePtr;
 }
 
@@ -248,7 +255,9 @@ void Interface::setTraceRecordTargetKernel(ompt_record_target_kernel_t *Record,
   Record->host_op_id = HostOpId;
   Record->requested_num_teams = NumTeams;
   Record->granted_num_teams = TraceRecordNumGrantedTeams;
+
   Record->end_time = TraceRecordStopTime;
+  resetTimestamp(&TraceRecordStopTime);
 }
 
 void Interface::setTraceRecordTarget(ompt_record_target_t *Record,

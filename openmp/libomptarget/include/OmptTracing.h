@@ -30,6 +30,9 @@ namespace omp {
 namespace target {
 namespace ompt {
 
+/// After a timestamp has been read, reset it.
+void resetTimestamp(uint64_t *T);
+
 /// A tool may register unique buffer-request and buffer-completion
 /// callback functions for a device. The following are utility functions to
 /// manage those functions.
