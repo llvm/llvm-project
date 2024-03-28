@@ -24,6 +24,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -1230,10 +1231,39 @@ Error IndexedInstrProfReader::readHeader() {
             Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
-    // The value returned from RecordTableGenerator.Emit.
-    const uint64_t RecordTableOffset =
+
+    // Read the first 64-bit word, which may be RecordTableOffset in
+    // memprof::MemProfVersion0 or the MemProf version number in
+    // memprof::MemProfVersion1.
+    const uint64_t FirstWord =
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
+
+    memprof::IndexedVersion Version = memprof::Version0;
+    if (FirstWord == memprof::Version1) {
+      // Everything is good.  We can proceed to deserialize the rest.
+      Version = memprof::Version1;
+    } else if (FirstWord >= 24) {
+      // This is a heuristic/hack to detect memprof::MemProfVersion0,
+      // which does not have a version field in the header.
+      // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
+      // which should be at least 24 because of the MemProf header size.
+      Version = memprof::Version0;
+    } else {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          formatv("MemProf version {} not supported; "
+                  "requires version between {} and {}, inclusive",
+                  FirstWord, memprof::MinimumSupportedVersion,
+                  memprof::MaximumSupportedVersion));
+    }
+
+    // The value returned from RecordTableGenerator.Emit.
+    const uint64_t RecordTableOffset =
+        Version == memprof::Version0
+            ? FirstWord
+            : support::endian::readNext<uint64_t, llvm::endianness::little,
+                                        unaligned>(Ptr);
     // The offset in the stream right before invoking
     // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
