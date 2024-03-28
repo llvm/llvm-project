@@ -286,6 +286,11 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
                                                          Location loc, Value t,
                                                          unsigned tid, Level l);
 
+/// Helper function to create a TensorLevel object from given `tensor`.
+std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
+                                                         ValueRange buffers,
+                                                         unsigned tid, Level l);
+
 /// Helper function to create a simple SparseIterator object that iterate over
 /// the SparseTensorLevel.
 std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
