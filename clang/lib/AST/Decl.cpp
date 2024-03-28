@@ -49,6 +49,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
@@ -3625,6 +3626,12 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // If this is a static function, it's not a builtin.
   if (!ConsiderWrapperFunctions && getStorageClass() == SC_Static)
     return 0;
+
+  // AMDGCN implementation supports printf as a builtin
+  // for OpenCL
+  if (Context.getTargetInfo().getTriple().isAMDGCN() &&
+      Context.getLangOpts().OpenCL && BuiltinID == AMDGPU::BIprintf)
+    return BuiltinID;
 
   // OpenCL v1.2 s6.9.f - The library functions defined in
   // the C99 standard headers are not available.

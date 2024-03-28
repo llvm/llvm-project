@@ -13,6 +13,8 @@
 
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/MathExtras.h"
@@ -181,7 +183,8 @@ RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
 RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().getArch() == llvm::Triple::amdgcn);
   assert(E->getBuiltinCallee() == Builtin::BIprintf ||
-         E->getBuiltinCallee() == Builtin::BI__builtin_printf);
+         E->getBuiltinCallee() == Builtin::BI__builtin_printf ||
+         E->getBuiltinCallee() == AMDGPU::BIprintf);
   assert(E->getNumArgs() >= 1); // printf always has at least one arg.
 
   CallArgList CallArgs;
@@ -189,6 +192,8 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
                E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
                E->arguments(), E->getDirectCallee(),
                /* ParamsToSkip = */ 0);
+  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
+  IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
 
   SmallVector<llvm::Value *, 8> Args;
   for (const auto &A : CallArgs) {
@@ -202,12 +207,17 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     Args.push_back(Arg);
   }
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
-  IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
+  auto PFK = CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal;
+  bool isBuffered = (PFK == clang::TargetOptions::AMDGPUPrintfKind::Buffered);
 
-  bool isBuffered = (CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
-                     clang::TargetOptions::AMDGPUPrintfKind::Buffered);
-  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
+  StringRef FmtStr;
+  if (llvm::getConstantStringInfo(Args[0], FmtStr)) {
+    if (FmtStr.empty())
+      FmtStr = StringRef("", 1);
+  }
+
+  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, FmtStr, isBuffered,
+                                           CGM.getLangOpts().OpenCL);
   Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);
 }
