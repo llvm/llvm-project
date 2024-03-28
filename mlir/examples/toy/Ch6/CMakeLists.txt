@@ -55,6 +55,7 @@ target_link_libraries(toyc-ch6
     MLIRLLVMCommonConversion
     MLIRLLVMDialect
     MLIRLLVMToLLVMIRTranslation
+    MLIRPtrToLLVMIRTranslation
     MLIRMemRefDialect
     MLIRParser
     MLIRPass

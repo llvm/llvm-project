@@ -94,7 +94,7 @@ spirv.module Logical GLSL450 {
 // CHECK-LABEL: @load
 spirv.func @load() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  //  CHECK: llvm.load %{{.*}} : !llvm.ptr -> f32
+  //  CHECK: ptr.load %{{.*}} : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 : f32
   spirv.Return
 }
@@ -102,7 +102,7 @@ spirv.func @load() "None" {
 // CHECK-LABEL: @load_none
 spirv.func @load_none() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  //  CHECK: llvm.load %{{.*}} : !llvm.ptr -> f32
+  //  CHECK: ptr.load %{{.*}} : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["None"] : f32
   spirv.Return
 }
@@ -110,7 +110,7 @@ spirv.func @load_none() "None" {
 // CHECK-LABEL: @load_with_alignment
 spirv.func @load_with_alignment() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: ptr.load %{{.*}} {alignment = 4 : i64} : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -118,7 +118,7 @@ spirv.func @load_with_alignment() "None" {
 // CHECK-LABEL: @load_volatile
 spirv.func @load_volatile() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load volatile %{{.*}} : !llvm.ptr -> f32
+  // CHECK: ptr.load volatile %{{.*}} : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Volatile"] : f32
   spirv.Return
 }
@@ -126,7 +126,7 @@ spirv.func @load_volatile() "None" {
 // CHECK-LABEL: @load_nontemporal
 spirv.func @load_nontemporal() "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
+  // CHECK: ptr.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
   %1 = spirv.Load "Function" %0 ["Nontemporal"] : f32
   spirv.Return
 }
@@ -138,7 +138,7 @@ spirv.func @load_nontemporal() "None" {
 // CHECK-LABEL: @store
 spirv.func @store(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} : f32, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 : f32
   spirv.Return
 }
@@ -146,7 +146,7 @@ spirv.func @store(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_composite
 spirv.func @store_composite(%arg0 : !spirv.struct<(f64)>) "None" {
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f64)>, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.struct<packed (f64)>, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} : !llvm.struct<packed (f64)>, !llvm.ptr
   spirv.Store "Function" %0, %arg0 : !spirv.struct<(f64)>
   spirv.Return
 }
@@ -154,7 +154,7 @@ spirv.func @store_composite(%arg0 : !spirv.struct<(f64)>) "None" {
 // CHECK-LABEL: @store_with_alignment
 spirv.func @store_with_alignment(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} {alignment = 4 : i64} : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Aligned", 4] : f32
   spirv.Return
 }
@@ -162,7 +162,7 @@ spirv.func @store_with_alignment(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_volatile
 spirv.func @store_volatile(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} : f32, !llvm.ptr
+  // CHECK: ptr.store volatile %{{.*}}, %{{.*}} : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Volatile"] : f32
   spirv.Return
 }
@@ -170,7 +170,7 @@ spirv.func @store_volatile(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_nontemporal
 spirv.func @store_nontemporal(%arg0 : f32) "None" {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} {nontemporal} : f32, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} {nontemporal} : f32, !llvm.ptr
   spirv.Store "Function" %0, %arg0 ["Nontemporal"] : f32
   spirv.Return
 }
@@ -195,7 +195,7 @@ spirv.func @variable_scalar_with_initialization() "None" {
   // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : i64, !llvm.ptr
+  // CHECK: ptr.store %[[VALUE]], %[[ALLOCATED]] : i64, !llvm.ptr
   %c = spirv.Constant 0 : i64
   %0 = spirv.Variable init(%c) : !spirv.ptr<i64, Function>
   spirv.Return
@@ -214,7 +214,7 @@ spirv.func @variable_vector_with_initialization() "None" {
   // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(dense<false> : vector<3xi1>) : vector<3xi1>
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x vector<3xi1> : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : vector<3xi1>, !llvm.ptr
+  // CHECK: ptr.store %[[VALUE]], %[[ALLOCATED]] : vector<3xi1>, !llvm.ptr
   %c = spirv.Constant dense<false> : vector<3xi1>
   %0 = spirv.Variable init(%c) : !spirv.ptr<vector<3xi1>, Function>
   spirv.Return

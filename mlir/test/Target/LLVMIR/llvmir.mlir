@@ -198,14 +198,14 @@ llvm.func @global_refs() {
   // Check load from globals.
   // CHECK: load i32, ptr @i32_global
   %0 = llvm.mlir.addressof @i32_global : !llvm.ptr
-  %1 = llvm.load %0 : !llvm.ptr -> i32
+  %1 = ptr.load %0 : !llvm.ptr -> i32
 
   // Check the contracted form of load from array constants.
   // CHECK: load i8, ptr @string_const
   %2 = llvm.mlir.addressof @string_const : !llvm.ptr
   %c0 = llvm.mlir.constant(0 : index) : i64
   %3 = llvm.getelementptr %2[%c0, %c0] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.array<6 x i8>
-  %4 = llvm.load %3 : !llvm.ptr -> i8
+  %4 = ptr.load %3 : !llvm.ptr -> i8
 
   llvm.return
 }
@@ -589,7 +589,7 @@ llvm.func @store_load_static() {
   %12 = llvm.mlir.constant(10 : index) : i64
   %13 = llvm.extractvalue %6[0] : !llvm.struct<(ptr)>
   %14 = llvm.getelementptr %13[%10] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %7, %14 : f32, !llvm.ptr
+  ptr.store %7, %14 : f32, !llvm.ptr
   %15 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %16 = llvm.add %10, %15 : i64
@@ -614,7 +614,7 @@ llvm.func @store_load_static() {
   %21 = llvm.mlir.constant(10 : index) : i64
   %22 = llvm.extractvalue %6[0] : !llvm.struct<(ptr)>
   %23 = llvm.getelementptr %22[%19] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  %24 = llvm.load %23 : !llvm.ptr -> f32
+  %24 = ptr.load %23 : !llvm.ptr -> f32
   %25 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %26 = llvm.add %19, %25 : i64
@@ -657,7 +657,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
   %11 = llvm.extractvalue %6[1] : !llvm.struct<(ptr, i64)>
   %12 = llvm.extractvalue %6[0] : !llvm.struct<(ptr, i64)>
   %13 = llvm.getelementptr %12[%9] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %7, %13 : f32, !llvm.ptr
+  ptr.store %7, %13 : f32, !llvm.ptr
   %14 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %15 = llvm.add %9, %14 : i64
@@ -682,7 +682,7 @@ llvm.func @store_load_dynamic(%arg0: i64) {
   %19 = llvm.extractvalue %6[1] : !llvm.struct<(ptr, i64)>
   %20 = llvm.extractvalue %6[0] : !llvm.struct<(ptr, i64)>
   %21 = llvm.getelementptr %20[%17] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  %22 = llvm.load %21 : !llvm.ptr -> f32
+  %22 = ptr.load %21 : !llvm.ptr -> f32
   %23 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %24 = llvm.add %17, %23 : i64
@@ -747,7 +747,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
   %28 = llvm.add %27, %17 : i64
   %29 = llvm.extractvalue %13[0] : !llvm.struct<(ptr, i64, i64)>
   %30 = llvm.getelementptr %29[%28] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %18, %30 : f32, !llvm.ptr
+  ptr.store %18, %30 : f32, !llvm.ptr
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64, i64 } %{{[0-9]+}}, 2
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, %{{[0-9]+}}
@@ -771,7 +771,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
   %40 = llvm.add %39, %14 : i64
   %41 = llvm.extractvalue %13[0] : !llvm.struct<(ptr, i64, i64)>
   %42 = llvm.getelementptr %41[%40] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  %43 = llvm.load %42 : !llvm.ptr -> f32
+  %43 = ptr.load %42 : !llvm.ptr -> f32
 // CHECK-NEXT: ret void
   llvm.return
 }
@@ -788,7 +788,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
   %3 = llvm.mlir.constant(10 : index) : i64
   %4 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr)>
   %5 = llvm.getelementptr %4[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %2, %5 : f32, !llvm.ptr
+  ptr.store %2, %5 : f32, !llvm.ptr
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, ptr %{{[0-9]+}}, i64 7
@@ -796,7 +796,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
   %6 = llvm.extractvalue %arg1[1] : !llvm.struct<(ptr, i64)>
   %7 = llvm.extractvalue %arg1[0] : !llvm.struct<(ptr, i64)>
   %8 = llvm.getelementptr %7[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %2, %8 : f32, !llvm.ptr
+  ptr.store %2, %8 : f32, !llvm.ptr
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { ptr, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 7, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, %{{[0-9]+}}
@@ -809,7 +809,7 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr)>, %arg1: !llvm.struct<(ptr
   %12 = llvm.add %11, %1 : i64
   %13 = llvm.extractvalue %arg2[0] : !llvm.struct<(ptr, i64)>
   %14 = llvm.getelementptr %13[%12] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %2, %14 : f32, !llvm.ptr
+  ptr.store %2, %14 : f32, !llvm.ptr
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 10, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
 // CHECK-NEXT: %{{[0-9]+}} = call ptr @malloc(i64 %{{[0-9]+}})
@@ -901,7 +901,7 @@ llvm.func @multireturn_caller() {
   %18 = llvm.add %17, %8 : i64
   %19 = llvm.extractvalue %3[0] : !llvm.struct<(ptr, i64, i64)>
   %20 = llvm.getelementptr %19[%18] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  %21 = llvm.load %20 : !llvm.ptr -> f32
+  %21 = ptr.load %20 : !llvm.ptr -> f32
   llvm.return
 }
 
@@ -1246,8 +1246,8 @@ llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
 llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
 // CHECK:      %2 = inttoptr i32 %0 to ptr
 // CHECK-NEXT: %3 = ptrtoint ptr %2 to i32
-  %1 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
-  %2 = llvm.ptrtoint %1 : !llvm.ptr to i32
+  %1 = ptr.inttoptr %arg0 : i32 to !llvm.ptr
+  %2 = ptr.ptrtoint %1 : !llvm.ptr to i32
   llvm.return %2 : i32
 }
 
@@ -1266,7 +1266,7 @@ llvm.func @fpconversion(%arg0 : i32) -> i32 {
 // CHECK-LABEL: @addrspace
 llvm.func @addrspace(%arg0 : !llvm.ptr) -> !llvm.ptr<2> {
 // CHECK: %2 = addrspacecast ptr %0 to ptr addrspace(2)
-  %1 = llvm.addrspacecast %arg0 : !llvm.ptr to !llvm.ptr<2>
+  %1 = ptr.addrspacecast %arg0 : !llvm.ptr to !llvm.ptr<2>
   llvm.return %1 : !llvm.ptr<2>
 }
 
@@ -1468,60 +1468,56 @@ llvm.func @atomicrmw(
     %f32_ptr : !llvm.ptr, %f32 : f32,
     %i32_ptr : !llvm.ptr, %i32 : i32) {
   // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic
-  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  %0 = ptr.atomicrmw fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw fsub ptr %{{.*}}, float %{{.*}} monotonic
-  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  %1 = ptr.atomicrmw fsub %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw fmax ptr %{{.*}}, float %{{.*}} monotonic
-  %2 = llvm.atomicrmw fmax %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  %2 = ptr.atomicrmw fmax %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw fmin ptr %{{.*}}, float %{{.*}} monotonic
-  %3 = llvm.atomicrmw fmin %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  %3 = ptr.atomicrmw fmin %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw xchg ptr %{{.*}}, float %{{.*}} monotonic
-  %4 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.ptr, f32
+  %4 = ptr.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   // CHECK: atomicrmw add ptr %{{.*}}, i32 %{{.*}} acquire
-  %5 = llvm.atomicrmw add %i32_ptr, %i32 acquire : !llvm.ptr, i32
+  %5 = ptr.atomicrmw add %i32_ptr, %i32 acquire : !llvm.ptr, i32
   // CHECK: atomicrmw sub ptr %{{.*}}, i32 %{{.*}} release
-  %6 = llvm.atomicrmw sub %i32_ptr, %i32 release : !llvm.ptr, i32
+  %6 = ptr.atomicrmw sub %i32_ptr, %i32 release : !llvm.ptr, i32
   // CHECK: atomicrmw and ptr %{{.*}}, i32 %{{.*}} acq_rel
-  %7 = llvm.atomicrmw _and %i32_ptr, %i32 acq_rel : !llvm.ptr, i32
+  %7 = ptr.atomicrmw _and %i32_ptr, %i32 acq_rel : !llvm.ptr, i32
   // CHECK: atomicrmw nand ptr %{{.*}}, i32 %{{.*}} seq_cst
-  %8 = llvm.atomicrmw nand %i32_ptr, %i32 seq_cst : !llvm.ptr, i32
+  %8 = ptr.atomicrmw nand %i32_ptr, %i32 seq_cst : !llvm.ptr, i32
   // CHECK: atomicrmw or ptr %{{.*}}, i32 %{{.*}} monotonic
-  %9 = llvm.atomicrmw _or %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %9 = ptr.atomicrmw _or %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw xor ptr %{{.*}}, i32 %{{.*}} monotonic
-  %10 = llvm.atomicrmw _xor %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %10 = ptr.atomicrmw _xor %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw max ptr %{{.*}}, i32 %{{.*}} monotonic
-  %11 = llvm.atomicrmw max %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %11 = ptr.atomicrmw max %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw min ptr %{{.*}}, i32 %{{.*}} monotonic
-  %12 = llvm.atomicrmw min %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %12 = ptr.atomicrmw min %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw umax ptr %{{.*}}, i32 %{{.*}} monotonic
-  %13 = llvm.atomicrmw umax %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %13 = ptr.atomicrmw umax %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw umin ptr %{{.*}}, i32 %{{.*}} monotonic
-  %14 = llvm.atomicrmw umin %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %14 = ptr.atomicrmw umin %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw uinc_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
-  %15 = llvm.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %15 = ptr.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw udec_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
-  %16 = llvm.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  %16 = ptr.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %17 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %17 = ptr.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
 // CHECK-LABEL: @cmpxchg
 llvm.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %val: i32) {
   // CHECK: cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} acq_rel monotonic
-  %0 = llvm.cmpxchg %ptr, %cmp, %val acq_rel monotonic : !llvm.ptr, i32
-  // CHECK: %{{[0-9]+}} = extractvalue { i32, i1 } %{{[0-9]+}}, 0
-  %1 = llvm.extractvalue %0[0] : !llvm.struct<(i32, i1)>
-  // CHECK: %{{[0-9]+}} = extractvalue { i32, i1 } %{{[0-9]+}}, 1
-  %2 = llvm.extractvalue %0[1] : !llvm.struct<(i32, i1)>
+  %0, %1 = ptr.cmpxchg %ptr, %cmp, %val acq_rel monotonic : !llvm.ptr, i32
 
   // CHECK:  cmpxchg weak volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %3 = llvm.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %2, %3 = ptr.cmpxchg weak volatile %ptr, %cmp, %val syncscope("singlethread") acq_rel monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
@@ -1593,7 +1589,7 @@ llvm.func @invoke_result(%arg0 : !llvm.ptr) attributes { personality = @__gxx_pe
 // CHECK-NEXT: store i8 %[[a1]], ptr %[[a0]]
 // CHECK-NEXT: ret void
 ^bb1:
-    llvm.store %0, %arg0 : i8, !llvm.ptr
+    ptr.store %0, %arg0 : i8, !llvm.ptr
     llvm.return
 
 // CHECK: [[unwind]]:
@@ -1887,9 +1883,9 @@ llvm.func @volatile_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: store volatile i32 5, ptr %{{.*}}
-  llvm.store volatile %val, %0 : i32, !llvm.ptr
+  ptr.store volatile %val, %0 : i32, !llvm.ptr
   // CHECK: %{{.*}} = load volatile i32, ptr %{{.*}}
-  %1 = llvm.load volatile %0: !llvm.ptr -> i32
+  %1 = ptr.load volatile %0: !llvm.ptr -> i32
   llvm.return
 }
 
@@ -1901,9 +1897,9 @@ llvm.func @nontemporal_store_and_load() {
   %size = llvm.mlir.constant(1 : i64) : i64
   %0 = llvm.alloca %size x i32 : (i64) -> (!llvm.ptr)
   // CHECK: !nontemporal ![[NODE:[0-9]+]]
-  llvm.store %val, %0 {nontemporal} : i32, !llvm.ptr
+  ptr.store %val, %0 {nontemporal} : i32, !llvm.ptr
   // CHECK: !nontemporal ![[NODE]]
-  %1 = llvm.load %0 {nontemporal} : !llvm.ptr -> i32
+  %1 = ptr.load %0 {nontemporal} : !llvm.ptr -> i32
   llvm.return
 }
 
@@ -1914,7 +1910,7 @@ llvm.func @nontemporal_store_and_load() {
 // Check that invariantLoad attribute is exported as metadata node.
 llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: !invariant.load ![[NODE:[0-9]+]]
-  %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
+  %1 = ptr.load %ptr invariant : !llvm.ptr -> i32
   llvm.return %1 : i32
 }
 
@@ -1925,17 +1921,17 @@ llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
-  %1 = llvm.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = ptr.load %ptr atomic acquire {alignment = 4 : i64} : !llvm.ptr -> f32
   // CHECK: load atomic
   // CHECK-SAME:  syncscope("singlethread") acquire, align 4
-  %2 = llvm.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
+  %2 = ptr.load %ptr atomic syncscope("singlethread") acquire {alignment = 4 : i64} : !llvm.ptr -> f32
 
   // CHECK: store atomic
   // CHECK-SAME:  release, align 4
-  llvm.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
+  ptr.store %1, %ptr atomic release {alignment = 4 : i64} : f32, !llvm.ptr
   // CHECK: store atomic
   // CHECK-SAME:  syncscope("singlethread") release, align 4
-  llvm.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
+  ptr.store %2, %ptr atomic syncscope("singlethread") release {alignment = 4 : i64} : f32, !llvm.ptr
   llvm.return
 }
 
@@ -2386,7 +2382,7 @@ llvm.func @zeroinit_complex_local_aggregate() {
 
   // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
   %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
-  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+  ptr.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
 
   llvm.return
 }

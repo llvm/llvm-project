@@ -592,6 +592,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   options.useBarePtrCallConv = hostBarePtrCallConv;
   RewritePatternSet patterns(context);
   ConversionTarget target(*context);
+  target.addLegalDialect<ptr::PtrDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
   LLVMTypeConverter converter(context, options);
 

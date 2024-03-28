@@ -7,12 +7,12 @@
 //   integer, intent(inout) :: a(:)
 //   a(1) = a(2)
 // end subroutine
-#tbaa_root = #llvm.tbaa_root<id = "Flang function root _QPsimple">
-#tbaa_type_desc = #llvm.tbaa_type_desc<id = "any access", members = {<#tbaa_root, 0>}>
-#tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "any data access", members = {<#tbaa_type_desc, 0>}>
-#tbaa_type_desc2 = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#tbaa_type_desc1, 0>}>
-#tbaa_type_desc3 = #llvm.tbaa_type_desc<id = "dummy arg data/_QFfuncEa", members = {<#tbaa_type_desc2, 0>}>
-#tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc3, access_type = #tbaa_type_desc3, offset = 0>
+#tbaa_root = #ptr.tbaa_root<id = "Flang function root _QPsimple">
+#tbaa_type_desc = #ptr.tbaa_type_desc<id = "any access", members = {<#tbaa_root, 0>}>
+#tbaa_type_desc1 = #ptr.tbaa_type_desc<id = "any data access", members = {<#tbaa_type_desc, 0>}>
+#tbaa_type_desc2 = #ptr.tbaa_type_desc<id = "dummy arg data", members = {<#tbaa_type_desc1, 0>}>
+#tbaa_type_desc3 = #ptr.tbaa_type_desc<id = "dummy arg data/_QFfuncEa", members = {<#tbaa_type_desc2, 0>}>
+#tbaa_tag = #ptr.tbaa_tag<base_type = #tbaa_type_desc3, access_type = #tbaa_type_desc3, offset = 0>
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "aarch64-unknown-linux-gnu"} {
   func.func @_QPsimple(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
     %c1 = arith.constant 1 : index

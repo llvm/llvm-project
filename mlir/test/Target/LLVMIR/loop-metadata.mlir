@@ -235,8 +235,8 @@ llvm.func @unswitchOptions() {
 
 llvm.func @foo(%arg0: i32)
 
-#group1 = #llvm.access_group<id = distinct[0]<>>
-#group2 = #llvm.access_group<id = distinct[1]<>>
+#group1 = #ptr.access_group<id = distinct[0]<>>
+#group2 = #ptr.access_group<id = distinct[1]<>>
 
 // CHECK-LABEL: @loopOptions
 llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
@@ -254,13 +254,13 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
   ^bb4:
     %3 = llvm.add %1, %arg2  : i32
     // CHECK: = load i32, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE:[0-9]+]]
-    %5 = llvm.load %4 {access_groups = [#group1, #group2]} : !llvm.ptr -> i32
+    %5 = ptr.load %4 {access_groups = [#group1, #group2]} : !llvm.ptr -> i32
     // CHECK: store i32 %{{.*}}, ptr %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    llvm.store %5, %4 {access_groups = [#group1, #group2]} : i32, !llvm.ptr
+    ptr.store %5, %4 {access_groups = [#group1, #group2]} : i32, !llvm.ptr
     // CHECK: = atomicrmw add ptr %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    %6 = llvm.atomicrmw add %4, %5 monotonic {access_groups = [#group1, #group2]} : !llvm.ptr, i32
+    %6 = ptr.atomicrmw add %4, %5 monotonic {access_groups = [#group1, #group2]} : !llvm.ptr, i32
     // CHECK: = cmpxchg ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [#group1, #group2]} : !llvm.ptr, i32
+    %7, %8 = ptr.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [#group1, #group2]} : !llvm.ptr, i32
     %9 = llvm.mlir.constant(42 : i8) : i8
     // CHECK: llvm.memcpy{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
     "llvm.intr.memcpy"(%4, %4, %0) <{isVolatile = false}> {access_groups = [#group1, #group2]} : (!llvm.ptr, !llvm.ptr, i32) -> ()

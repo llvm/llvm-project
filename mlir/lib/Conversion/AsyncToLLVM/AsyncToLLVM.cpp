@@ -1072,6 +1072,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   ConversionTarget target(*ctx);
   target.addLegalOp<arith::ConstantOp, func::ConstantOp,
                     UnrealizedConversionCastOp>();
+  target.addLegalDialect<ptr::PtrDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
   // All operations from Async dialect must be lowered to the runtime API and

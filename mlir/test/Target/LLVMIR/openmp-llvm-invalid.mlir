@@ -78,14 +78,14 @@ llvm.func @omp_threadprivate() {
   // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
   %5 = omp.threadprivate %4 : !llvm.ptr -> !llvm.ptr
 
-  llvm.store %1, %5 : i32, !llvm.ptr
+  ptr.store %1, %5 : i32, !llvm.ptr
 
   omp.parallel  {
     %6 = omp.threadprivate %4 : !llvm.ptr -> !llvm.ptr
-    llvm.store %2, %6 : i32, !llvm.ptr
+    ptr.store %2, %6 : i32, !llvm.ptr
     omp.terminator
   }
 
-  llvm.store %3, %5 : i32, !llvm.ptr
+  ptr.store %3, %5 : i32, !llvm.ptr
   llvm.return
 }

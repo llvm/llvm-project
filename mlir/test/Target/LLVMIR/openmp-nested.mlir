@@ -14,12 +14,12 @@ module {
       omp.wsloop for (%arg2) : i64 = (%2) to (%1) step (%0)  {
         omp.parallel   {
           omp.wsloop for (%arg3) : i64 = (%2) to (%0) step (%0)  {
-            llvm.store %2, %12 : i64, !llvm.ptr
+            ptr.store %2, %12 : i64, !llvm.ptr
             omp.yield
           }
           omp.terminator
         }
-        %19 = llvm.load %12 : !llvm.ptr -> i64
+        %19 = ptr.load %12 : !llvm.ptr -> i64
         %20 = llvm.trunc %19 : i64 to i32
         %5 = llvm.mlir.addressof @str0 : !llvm.ptr
         %6 = llvm.getelementptr %5[%4, %4] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.array<29 x i8>

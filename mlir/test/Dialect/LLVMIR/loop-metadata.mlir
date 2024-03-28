@@ -42,10 +42,10 @@
 // CHECK-DAG: #[[UNSWITCH:.*]] = #llvm.loop_unswitch<partialDisable = true>
 #unswitch = #llvm.loop_unswitch<partialDisable = true>
 
-// CHECK-DAG: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
-// CHECK-DAG: #[[GROUP2:.*]] = #llvm.access_group<id = {{.*}}>
-#group1 = #llvm.access_group<id = distinct[0]<>>
-#group2 = #llvm.access_group<id = distinct[1]<>>
+// CHECK-DAG: #[[GROUP1:.*]] = #ptr.access_group<id = {{.*}}>
+// CHECK-DAG: #[[GROUP2:.*]] = #ptr.access_group<id = {{.*}}>
+#group1 = #ptr.access_group<id = distinct[0]<>>
+#group2 = #ptr.access_group<id = distinct[1]<>>
 
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false
@@ -99,10 +99,10 @@ llvm.func @loop_annotation() {
 // CHECK-DAG: #[[END_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[END_LOC]]]
 #end_loc_fused= loc(fused<#di_subprogram>[#loc2])
 
-// CHECK-DAG: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
-// CHECK-DAG: #[[GROUP2:.*]] = #llvm.access_group<id = {{.*}}>
-#group1 = #llvm.access_group<id = distinct[0]<>>
-#group2 = #llvm.access_group<id = distinct[1]<>>
+// CHECK-DAG: #[[GROUP1:.*]] = #ptr.access_group<id = {{.*}}>
+// CHECK-DAG: #[[GROUP2:.*]] = #ptr.access_group<id = {{.*}}>
+#group1 = #ptr.access_group<id = distinct[0]<>>
+#group2 = #ptr.access_group<id = distinct[1]<>>
 
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false

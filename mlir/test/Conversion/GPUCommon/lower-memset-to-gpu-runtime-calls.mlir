@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     // CHECK: %[[t0:.*]] = llvm.call @mgpuStreamCreate
     %t0 = gpu.wait async
     // CHECK: %[[size_bytes:.*]] = llvm.mlir.constant
-    // CHECK: %[[addr_cast:.*]] = llvm.addrspacecast
+    // CHECK: %[[addr_cast:.*]] = ptr.addrspacecast
     // CHECK: llvm.call @mgpuMemset32(%[[addr_cast]], %{{.*}}, %[[size_bytes]], %[[t0]])
     %t1 = gpu.memset async [%t0] %dst, %value : memref<7xf32, 1>, f32
     // CHECK: llvm.call @mgpuStreamSynchronize(%[[t0]])

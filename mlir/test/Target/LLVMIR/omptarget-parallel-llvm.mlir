@@ -10,7 +10,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     ^bb0(%arg2: !llvm.ptr):
       omp.parallel {
         %1 = llvm.mlir.constant(1 : i32) : i32
-        llvm.store %1, %arg2 : i32, !llvm.ptr
+        ptr.store %1, %arg2 : i32, !llvm.ptr
         omp.terminator
       }
     omp.terminator
@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       %1 = llvm.mlir.constant(156 : i32) : i32
       omp.parallel num_threads(%1 : i32) {
         %2 = llvm.mlir.constant(1 : i32) : i32
-        llvm.store %2, %arg2 : i32, !llvm.ptr
+        ptr.store %2, %arg2 : i32, !llvm.ptr
         omp.terminator
       }
     omp.terminator
@@ -41,11 +41,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     omp.target map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     ^bb0(%arg1: !llvm.ptr, %arg2: !llvm.ptr):
       %4 = llvm.mlir.constant(10 : i32) : i32
-      %5 = llvm.load %arg2 : !llvm.ptr -> i32
+      %5 = ptr.load %arg2 : !llvm.ptr -> i32
       %6 = llvm.mlir.constant(0 : i64) : i32
       %7 = llvm.icmp "ne" %5, %6 : i32
       omp.parallel if(%7 : i1) {
-        llvm.store %4, %arg1 : i32, !llvm.ptr
+        ptr.store %4, %arg1 : i32, !llvm.ptr
         omp.terminator
       }
       omp.terminator

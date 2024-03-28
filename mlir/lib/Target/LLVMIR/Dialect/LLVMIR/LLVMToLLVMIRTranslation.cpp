@@ -28,6 +28,27 @@ using mlir::LLVM::detail::getLLVMConstant;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
+static ::llvm::AtomicOrdering
+convertAtomicOrderingToLLVM(AtomicOrdering value) {
+  switch (value) {
+  case AtomicOrdering::not_atomic:
+    return ::llvm::AtomicOrdering::NotAtomic;
+  case AtomicOrdering::unordered:
+    return ::llvm::AtomicOrdering::Unordered;
+  case AtomicOrdering::monotonic:
+    return ::llvm::AtomicOrdering::Monotonic;
+  case AtomicOrdering::acquire:
+    return ::llvm::AtomicOrdering::Acquire;
+  case AtomicOrdering::release:
+    return ::llvm::AtomicOrdering::Release;
+  case AtomicOrdering::acq_rel:
+    return ::llvm::AtomicOrdering::AcquireRelease;
+  case AtomicOrdering::seq_cst:
+    return ::llvm::AtomicOrdering::SequentiallyConsistent;
+  }
+  llvm_unreachable("unknown AtomicOrdering type");
+}
+
 static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
   using llvmFMF = llvm::FastMathFlags;
   using FuncT = void (llvmFMF::*)(bool);

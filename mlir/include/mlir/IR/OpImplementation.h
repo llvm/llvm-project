@@ -1715,7 +1715,10 @@ public:
     OverridableAlias,
     /// An alias was provided and it should be used
     /// (no other hooks will be checked).
-    FinalAlias
+    FinalAlias,
+    /// A dialect alias was provided and it will be used
+    /// (no other hooks will be checked).
+    DialectAlias
   };
 
   /// Hooks for getting an alias identifier alias for a given symbol, that is
@@ -1727,6 +1730,29 @@ public:
   }
   virtual AliasResult getAlias(Type type, raw_ostream &os) const {
     return AliasResult::NoAlias;
+  }
+
+  /// Hooks for parsing a dialect alias. The method returns success if the
+  /// dialect has an alias for the symbol, otherwise it must return failure.
+  /// If there was an error during parsing, this method should return success
+  /// and set the attribute to null.
+  virtual LogicalResult parseDialectAlias(DialectAsmParser &parser,
+                                          Attribute &attr, Type type) const {
+    return failure();
+  }
+  virtual LogicalResult parseDialectAlias(DialectAsmParser &parser,
+                                          Type &type) const {
+    return failure();
+  }
+  /// Hooks for printing a dialect alias. The method returns success if the
+  /// dialect has an alias for the symbol, otherwise it must return failure.
+  virtual LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                          Attribute attr) const {
+    return failure();
+  }
+  virtual LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                          Type type) const {
+    return failure();
   }
 
   //===--------------------------------------------------------------------===//

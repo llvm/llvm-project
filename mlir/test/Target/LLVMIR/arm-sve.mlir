@@ -249,7 +249,7 @@ llvm.func @memcopy(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
   // CHECK: getelementptr float, ptr
   %19 = llvm.getelementptr %18[%16] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   // CHECK: load <vscale x 4 x float>, ptr
-  %21 = llvm.load %19 : !llvm.ptr -> vector<[4]xf32>
+  %21 = ptr.load %19 : !llvm.ptr -> vector<[4]xf32>
   // CHECK: extractvalue { ptr, ptr, i64, [1 x i64], [1 x i64] }
   %22 = llvm.extractvalue %11[1] : !llvm.struct<(ptr, ptr, i64,
                                                  array<1 x i64>,
@@ -257,7 +257,7 @@ llvm.func @memcopy(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
   // CHECK: getelementptr float, ptr
   %23 = llvm.getelementptr %22[%16] : (!llvm.ptr, i64) -> !llvm.ptr, f32
   // CHECK: store <vscale x 4 x float> %{{[0-9]+}}, ptr %{{[0-9]+}}
-  llvm.store %21, %23 : vector<[4]xf32>, !llvm.ptr
+  ptr.store %21, %23 : vector<[4]xf32>, !llvm.ptr
   %25 = llvm.add %16, %15  : i64
   llvm.br ^bb1(%25 : i64)
 ^bb3:

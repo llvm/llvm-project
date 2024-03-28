@@ -21,9 +21,9 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   omp.parallel reduction(@add_f32 %0 -> %prv : !llvm.ptr) {
     %1 = llvm.mlir.constant(2.0 : f32) : f32
-    %2 = llvm.load %prv : !llvm.ptr -> f32
+    %2 = ptr.load %prv : !llvm.ptr -> f32
     %3 = llvm.fadd %1, %2 : f32
-    llvm.store %3, %prv : f32, !llvm.ptr
+    ptr.store %3, %prv : f32, !llvm.ptr
     omp.terminator
   }
   llvm.return

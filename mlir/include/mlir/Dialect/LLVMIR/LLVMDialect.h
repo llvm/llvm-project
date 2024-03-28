@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/PtrOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -58,6 +59,14 @@ struct LLVMDialectImpl;
 
 namespace mlir {
 namespace LLVM {
+using AtomicRMWOp = ::mlir::ptr::AtomicRMWOp;
+using AtomicCmpXchgOp = ::mlir::ptr::AtomicCmpXchgOp;
+using LoadOp = ::mlir::ptr::LoadOp;
+using StoreOp = ::mlir::ptr::StoreOp;
+using AddrSpaceCastOp = ::mlir::ptr::AddrSpaceCastOp;
+using IntToPtrOp = ::mlir::ptr::IntToPtrOp;
+using PtrToIntOp = ::mlir::ptr::PtrToIntOp;
+
 template <typename Values>
 class GEPIndicesAdaptor;
 

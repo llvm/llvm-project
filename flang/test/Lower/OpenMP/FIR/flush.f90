@@ -33,10 +33,10 @@ subroutine flush_parallel(a, b, c)
 !FIRDialect: %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i32
 !FIRDialect: fir.store %{{.*}} to %{{.*}} : !fir.ref<i32>
 
-!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr -> i32
-!LLVMIRDialect: %{{.*}} = llvm.load %{{.*}} : !llvm.ptr -> i32
+!LLVMIRDialect: %{{.*}} = ptr.load %{{.*}} : !llvm.ptr -> i32
+!LLVMIRDialect: %{{.*}} = ptr.load %{{.*}} : !llvm.ptr -> i32
 !LLVMIRDialect: %{{.*}} = llvm.add %{{.*}}, %{{.*}} : i32
-!LLVMIRDialect: llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
+!LLVMIRDialect: ptr.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
     c = a + b
 
 !OMPDialect: omp.terminator

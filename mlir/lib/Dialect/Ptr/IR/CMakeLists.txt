@@ -1,0 +1,18 @@
+add_mlir_dialect_library(
+  MLIRPtrDialect
+  PtrTypes.cpp
+  PtrDialect.cpp
+  PtrMemorySlot.cpp
+  ADDITIONAL_HEADER_DIRS
+  ${PROJECT_SOURCE_DIR}/mlir/Dialect/Pointer
+  DEPENDS
+  MLIRPtrOpsIncGen
+  MLIRPtrOpsEnumsGen
+  MLIRPtrOpsAttributesIncGen
+  MLIRPtrMemorySpaceInterfacesIncGen
+  LINK_LIBS
+  PUBLIC
+  MLIRIR
+  MLIRDataLayoutInterfaces
+  MLIRMemorySlotInterfaces
+)

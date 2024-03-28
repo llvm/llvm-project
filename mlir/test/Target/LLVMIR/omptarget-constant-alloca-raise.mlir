@@ -22,10 +22,10 @@ module attributes {omp.is_target_device = true} {
       %6 = llvm.mlir.constant(50 : i32) : i32
       %7 = llvm.mlir.constant(1 : i64) : i64
       %8 = llvm.alloca %7 x i32 : (i64) -> !llvm.ptr
-      llvm.store %6, %8 : i32, !llvm.ptr
+      ptr.store %6, %8 : i32, !llvm.ptr
       %9 = llvm.mlir.undef : !llvm.struct<(ptr)>
       %10 = llvm.insertvalue %8, %9[0] : !llvm.struct<(ptr)> 
-      llvm.store %10, %5 : !llvm.struct<(ptr)>, !llvm.ptr
+      ptr.store %10, %5 : !llvm.struct<(ptr)>, !llvm.ptr
       %88 = llvm.call @_ExternalCall(%arg0, %5) : (!llvm.ptr, !llvm.ptr) -> !llvm.struct<()>
       omp.terminator
     }

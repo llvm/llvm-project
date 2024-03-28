@@ -10,17 +10,17 @@ module attributes {omp.is_target_device = false} {
     %5 = llvm.alloca %4 x i32 {bindc_name = "b", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEb"} : (i64) -> !llvm.ptr
     %6 = llvm.mlir.constant(1 : i64) : i64
     %7 = llvm.alloca %6 x i32 {bindc_name = "c", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_regionEc"} : (i64) -> !llvm.ptr
-    llvm.store %1, %3 : i32, !llvm.ptr
-    llvm.store %0, %5 : i32, !llvm.ptr
+    ptr.store %1, %3 : i32, !llvm.ptr
+    ptr.store %0, %5 : i32, !llvm.ptr
     %map1 = omp.map.info var_ptr(%3 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     %map2 = omp.map.info var_ptr(%5 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     %map3 = omp.map.info var_ptr(%7 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
     omp.target map_entries(%map1 -> %arg0, %map2 -> %arg1, %map3 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
     ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr):
-      %8 = llvm.load %arg0 : !llvm.ptr -> i32
-      %9 = llvm.load %arg1 : !llvm.ptr -> i32
+      %8 = ptr.load %arg0 : !llvm.ptr -> i32
+      %9 = ptr.load %arg1 : !llvm.ptr -> i32
       %10 = llvm.add %8, %9  : i32
-      llvm.store %10, %arg2 : i32, !llvm.ptr
+      ptr.store %10, %arg2 : i32, !llvm.ptr
       omp.terminator
     }
     llvm.return

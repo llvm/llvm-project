@@ -37,7 +37,7 @@ define target("spirv.Event") @func2() {
   ; CHECK-NEXT:    %1 = llvm.mlir.poison : !llvm.target<"spirv.Event">
   ; CHECK-NEXT:    %2 = llvm.alloca %0 x !llvm.target<"spirv.Event"> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %mem = alloca target("spirv.Event")
-  ; CHECK-NEXT:    %3 = llvm.load %2 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
+  ; CHECK-NEXT:    %3 = ptr.load %2 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
   %val = load target("spirv.Event"), ptr %mem
   ; CHECK-NEXT:    llvm.return %1 : !llvm.target<"spirv.Event">
   ret target("spirv.Event") poison

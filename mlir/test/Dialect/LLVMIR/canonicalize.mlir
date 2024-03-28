@@ -105,7 +105,7 @@ llvm.func @fold_bitcast2(%x : i32) -> i32 {
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
 llvm.func @fold_addrcast(%x : !llvm.ptr) -> !llvm.ptr {
-  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr
+  %c = ptr.addrspacecast %x : !llvm.ptr to !llvm.ptr
   llvm.return %c : !llvm.ptr
 }
 
@@ -113,8 +113,8 @@ llvm.func @fold_addrcast(%x : !llvm.ptr) -> !llvm.ptr {
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
 llvm.func @fold_addrcast2(%x : !llvm.ptr) -> !llvm.ptr {
-  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<5>
-  %d = llvm.addrspacecast %c : !llvm.ptr<5> to !llvm.ptr
+  %c = ptr.addrspacecast %x : !llvm.ptr to !llvm.ptr<5>
+  %d = ptr.addrspacecast %c : !llvm.ptr<5> to !llvm.ptr
   llvm.return %d : !llvm.ptr
 }
 
@@ -171,7 +171,7 @@ llvm.func @llvm_constant() -> i32 {
 // CHECK-LABEL: load_dce
 // CHECK-NEXT: llvm.return
 llvm.func @load_dce(%x : !llvm.ptr) {
-  %0 = llvm.load %x : !llvm.ptr -> i8
+  %0 = ptr.load %x : !llvm.ptr -> i8
   llvm.return
 }
 
@@ -198,13 +198,13 @@ llvm.func @alloca_dce() {
 llvm.func @volatile_load(%x : !llvm.ptr) {
   // A volatile load may have side-effects such as a write operation to arbitrary memory.
   // Make sure it is not removed.
-  // CHECK: llvm.load volatile
-  %0 = llvm.load volatile %x : !llvm.ptr -> i8
+  // CHECK: ptr.load volatile
+  %0 = ptr.load volatile %x : !llvm.ptr -> i8
   // Same with monotonic atomics and any stricter modes.
-  // CHECK: llvm.load %{{.*}} atomic monotonic
-  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  // CHECK: ptr.load %{{.*}} atomic monotonic
+  %2 = ptr.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
   // But not unordered!
-  // CHECK-NOT: llvm.load %{{.*}} atomic unordered
-  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  // CHECK-NOT: ptr.load %{{.*}} atomic unordered
+  %3 = ptr.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
   llvm.return
 }

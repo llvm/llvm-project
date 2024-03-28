@@ -15,6 +15,8 @@
 #define MLIR_DIALECT_LLVMIR_LLVMATTRS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemoryModel.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "mlir/IR/OpImplementation.h"
 #include <optional>
 
@@ -22,6 +24,16 @@
 
 namespace mlir {
 namespace LLVM {
+using AliasScopeDomainAttr = ::mlir::ptr::AliasScopeDomainAttr;
+using AliasScopeAttr = ::mlir::ptr::AliasScopeAttr;
+using AccessGroupAttr = ::mlir::ptr::AccessGroupAttr;
+using TBAARootAttr = ::mlir::ptr::TBAARootAttr;
+using TBAAMemberAttr = ::mlir::ptr::TBAAMemberAttr;
+using TBAATypeDescriptorAttr = ::mlir::ptr::TBAATypeDescriptorAttr;
+using TBAATagAttr = ::mlir::ptr::TBAATagAttr;
+using TBAANodeAttr = ::mlir::ptr::TBAANodeAttr;
+using AtomicOrdering = ::mlir::ptr::AtomicOrdering;
+using AtomicBinOp = ::mlir::ptr::AtomicBinOp;
 
 /// This class represents the base attribute for all debug info attributes.
 class DINodeAttr : public Attribute {
@@ -58,20 +70,6 @@ public:
 
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
-};
-
-/// Base class for LLVM attributes participating in the TBAA graph.
-class TBAANodeAttr : public Attribute {
-public:
-  using Attribute::Attribute;
-
-  /// Support LLVM type casting.
-  static bool classof(Attribute attr);
-
-  /// Required by DenseMapInfo to create empty and tombstone key.
-  static TBAANodeAttr getFromOpaquePointer(const void *pointer) {
-    return TBAANodeAttr(reinterpret_cast<const ImplType *>(pointer));
-  }
 };
 
 // Inline the LLVM generated Linkage enum and utility.

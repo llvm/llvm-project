@@ -35,7 +35,7 @@ llvm.func @test_flush_construct(%arg0: !llvm.ptr) {
   // CHECK: call void @__kmpc_flush(ptr @{{[0-9]+}}
   omp.flush
   //  CHECK: load i32, ptr
-  %2 = llvm.load %1 : !llvm.ptr -> i32
+  %2 = ptr.load %1 : !llvm.ptr -> i32
 
   // CHECK-NEXT:    ret void
   llvm.return
@@ -328,7 +328,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
       // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-      llvm.store %3, %4 : f32, !llvm.ptr
+      ptr.store %3, %4 : f32, !llvm.ptr
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
     }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
@@ -349,7 +349,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
     omp.yield
   }) {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
@@ -367,7 +367,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
     omp.yield
   }) {inclusive, operandSegmentSizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
   llvm.return
@@ -465,7 +465,7 @@ llvm.func @body(i32)
 llvm.func @test_omp_wsloop_dynamic_chunk_var(%lb : i32, %ub : i32, %step : i32) -> () {
  %1 = llvm.mlir.constant(1 : i64) : i64
  %chunk_size_alloca = llvm.alloca %1 x i16 {bindc_name = "chunk_size", in_type = i16, uniq_name = "_QFsub1Echunk_size"} : (i64) -> !llvm.ptr
- %chunk_size_var = llvm.load %chunk_size_alloca : !llvm.ptr -> i16
+ %chunk_size_var = ptr.load %chunk_size_alloca : !llvm.ptr -> i16
  omp.wsloop schedule(dynamic = %chunk_size_var : i16)
  for (%iv) : i32 = (%lb) to (%ub) step (%step) {
   // CHECK: %[[CHUNK_SIZE:.*]] = sext i16 %{{.*}} to i32
@@ -486,7 +486,7 @@ llvm.func @body(i32)
 llvm.func @test_omp_wsloop_dynamic_chunk_var2(%lb : i32, %ub : i32, %step : i32) -> () {
  %1 = llvm.mlir.constant(1 : i64) : i64
  %chunk_size_alloca = llvm.alloca %1 x i64 {bindc_name = "chunk_size", in_type = i64, uniq_name = "_QFsub1Echunk_size"} : (i64) -> !llvm.ptr
- %chunk_size_var = llvm.load %chunk_size_alloca : !llvm.ptr -> i64
+ %chunk_size_var = ptr.load %chunk_size_alloca : !llvm.ptr -> i64
  omp.wsloop schedule(dynamic = %chunk_size_var : i64)
  for (%iv) : i32 = (%lb) to (%ub) step (%step) {
   // CHECK: %[[CHUNK_SIZE:.*]] = trunc i64 %{{.*}} to i32
@@ -647,7 +647,7 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) 
       // tested there. Just check that the right metadata is added.
       // CHECK: llvm.access.group
       %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-      llvm.store %3, %4 : f32, !llvm.ptr
+      ptr.store %3, %4 : f32, !llvm.ptr
       omp.yield
   }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} :
     (i64, i64, i64) -> ()
@@ -684,8 +684,8 @@ llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 :
     // CHECK-NEXT: llvm.access.group
     %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %5 : f32, !llvm.ptr
     omp.yield
   }
   llvm.return
@@ -705,8 +705,8 @@ llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64
     // CHECK-NEXT: llvm.access.group
     %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %5 : f32, !llvm.ptr
     omp.yield
   }
   llvm.return
@@ -723,8 +723,8 @@ llvm.func @simdloop_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %5 : f32, !llvm.ptr
     omp.yield
   }
   llvm.return
@@ -740,8 +740,8 @@ llvm.func @simdloop_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %ste
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
     %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
+    ptr.store %3, %4 : f32, !llvm.ptr
+    ptr.store %3, %5 : f32, !llvm.ptr
     omp.yield
   }
   llvm.return
@@ -758,16 +758,16 @@ llvm.func @simdloop_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFtest_simdEi"} : (i64) -> !llvm.ptr
   %4 = llvm.mlir.constant(0 : i32) : i32
-  %5 = llvm.load %arg0 : !llvm.ptr -> i32
+  %5 = ptr.load %arg0 : !llvm.ptr -> i32
   %6 = llvm.mlir.constant(1 : i32) : i32
-  %7 = llvm.load %arg0 : !llvm.ptr -> i32
-  %8 = llvm.load %arg1 : !llvm.ptr -> i32
+  %7 = ptr.load %arg0 : !llvm.ptr -> i32
+  %8 = ptr.load %arg1 : !llvm.ptr -> i32
   %9 = llvm.icmp "sge" %7, %8 : i32
   omp.simdloop   if(%9) for  (%arg2) : i32 = (%4) to (%5) inclusive step (%6) {
     // The form of the emitted IR is controlled by OpenMPIRBuilder and
     // tested there. Just check that the right metadata is added.
     // CHECK: llvm.access.group
-    llvm.store %arg2, %1 : i32, !llvm.ptr
+    ptr.store %arg2, %1 : i32, !llvm.ptr
     omp.yield
   }
   llvm.return
@@ -959,7 +959,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_.var{{.*}})
@@ -969,7 +969,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_none) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_none.var{{.*}})
@@ -979,7 +979,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_uncontended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_uncontended.var{{.*}})
@@ -989,7 +989,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_contended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_contended.var{{.*}})
@@ -999,7 +999,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_nonspeculative) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative.var{{.*}})
@@ -1009,7 +1009,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_nonspeculative_uncontended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative_uncontended.var{{.*}})
@@ -1019,7 +1019,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_nonspeculative_contended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_nonspeculative_contended.var{{.*}})
@@ -1029,7 +1029,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_speculative) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative.var{{.*}})
@@ -1039,7 +1039,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_speculative_uncontended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative_uncontended.var{{.*}})
@@ -1049,7 +1049,7 @@ llvm.func @omp_critical(%x : !llvm.ptr, %xval : i32) -> () {
   // CHECK: omp.critical.region
   omp.critical(@mutex_speculative_contended) {
   // CHECK: store
-    llvm.store %xval, %x : i32, !llvm.ptr
+    ptr.store %xval, %x : i32, !llvm.ptr
     omp.terminator
   }
   // CHECK: call void @__kmpc_end_critical({{.*}}critical_user_mutex_speculative_contended.var{{.*}})
@@ -1105,11 +1105,11 @@ llvm.func @collapse_wsloop(
     // CHECK: call void @__kmpc_for_static_init_4u
     omp.wsloop
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
-      %31 = llvm.load %20 : !llvm.ptr -> i32
+      %31 = ptr.load %20 : !llvm.ptr -> i32
       %32 = llvm.add %31, %arg0 : i32
       %33 = llvm.add %32, %arg1 : i32
       %34 = llvm.add %33, %arg2 : i32
-      llvm.store %34, %20 : i32, !llvm.ptr
+      ptr.store %34, %20 : i32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -1166,11 +1166,11 @@ llvm.func @collapse_wsloop_dynamic(
     // CHECK: call void @__kmpc_dispatch_init_4u
     omp.wsloop schedule(dynamic)
     for (%arg0, %arg1, %arg2) : i32 = (%0, %1, %2) to (%3, %4, %5) step (%6, %7, %8) {
-      %31 = llvm.load %20 : !llvm.ptr -> i32
+      %31 = ptr.load %20 : !llvm.ptr -> i32
       %32 = llvm.add %31, %arg0 : i32
       %33 = llvm.add %32, %arg1 : i32
       %34 = llvm.add %33, %arg2 : i32
-      llvm.store %34, %20 : i32, !llvm.ptr
+      ptr.store %34, %20 : i32, !llvm.ptr
       omp.yield
     }
     omp.terminator
@@ -2085,7 +2085,7 @@ llvm.func @omp_sections(%arg0 : i32, %arg1 : i32, %arg2 : !llvm.ptr) -> () {
       %add = llvm.add %arg0, %arg1 : i32
       // CHECK:   store i32 %{{.*}}, ptr %{{.*}}, align 4
       // CHECK:   br label %{{.*}}
-      llvm.store %add, %arg2 : i32, !llvm.ptr
+      ptr.store %add, %arg2 : i32, !llvm.ptr
       omp.terminator
     }
     omp.terminator
@@ -2138,13 +2138,13 @@ llvm.func @single(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   // CHECK: %[[a:.*]] = sub i32 %[[x]], %[[y]]
   %a = llvm.sub %x, %y : i32
   // CHECK: store i32 %[[a]], ptr %[[zaddr]]
-  llvm.store %a, %zaddr : i32, !llvm.ptr
+  ptr.store %a, %zaddr : i32, !llvm.ptr
   // CHECK: call i32 @__kmpc_single
   omp.single {
     // CHECK: %[[z:.*]] = add i32 %[[x]], %[[y]]
     %z = llvm.add %x, %y : i32
     // CHECK: store i32 %[[z]], ptr %[[zaddr]]
-    llvm.store %z, %zaddr : i32, !llvm.ptr
+    ptr.store %z, %zaddr : i32, !llvm.ptr
     // CHECK: call void @__kmpc_end_single
     // CHECK: call void @__kmpc_barrier
     omp.terminator
@@ -2152,7 +2152,7 @@ llvm.func @single(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   // CHECK: %[[b:.*]] = mul i32 %[[x]], %[[y]]
   %b = llvm.mul %x, %y : i32
   // CHECK: store i32 %[[b]], ptr %[[zaddr]]
-  llvm.store %b, %zaddr : i32, !llvm.ptr
+  ptr.store %b, %zaddr : i32, !llvm.ptr
   // CHECK: ret void
   llvm.return
 }
@@ -2165,13 +2165,13 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   // CHECK: %[[a:.*]] = sub i32 %[[x]], %[[y]]
   %a = llvm.sub %x, %y : i32
   // CHECK: store i32 %[[a]], ptr %[[zaddr]]
-  llvm.store %a, %zaddr : i32, !llvm.ptr
+  ptr.store %a, %zaddr : i32, !llvm.ptr
   // CHECK: call i32 @__kmpc_single
   omp.single nowait {
     // CHECK: %[[z:.*]] = add i32 %[[x]], %[[y]]
     %z = llvm.add %x, %y : i32
     // CHECK: store i32 %[[z]], ptr %[[zaddr]]
-    llvm.store %z, %zaddr : i32, !llvm.ptr
+    ptr.store %z, %zaddr : i32, !llvm.ptr
     // CHECK: call void @__kmpc_end_single
     // CHECK-NOT: call void @__kmpc_barrier
     omp.terminator
@@ -2179,7 +2179,7 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   // CHECK: %[[t:.*]] = mul i32 %[[x]], %[[y]]
   %t = llvm.mul %x, %y : i32
   // CHECK: store i32 %[[t]], ptr %[[zaddr]]
-  llvm.store %t, %zaddr : i32, !llvm.ptr
+  ptr.store %t, %zaddr : i32, !llvm.ptr
   // CHECK: ret void
   llvm.return
 }
@@ -2197,17 +2197,17 @@ llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
   // CHECK: call i32 @__kmpc_single
   omp.single copyprivate(%ip -> @copy_i32 : !llvm.ptr, %fp -> @copy_f32 : !llvm.ptr) {
     // CHECK: %[[i:.*]] = load i32, ptr %[[ip]]
-    %i = llvm.load %ip : !llvm.ptr -> i32
+    %i = ptr.load %ip : !llvm.ptr -> i32
     // CHECK: %[[i2:.*]] = add i32 %[[i]], %[[i]]
     %i2 = llvm.add %i, %i : i32
     // CHECK: store i32 %[[i2]], ptr %[[ip]]
-    llvm.store %i2, %ip : i32, !llvm.ptr
+    ptr.store %i2, %ip : i32, !llvm.ptr
     // CHECK: %[[f:.*]] = load float, ptr %[[fp]]
-    %f = llvm.load %fp : !llvm.ptr -> f32
+    %f = ptr.load %fp : !llvm.ptr -> f32
     // CHECK: %[[f2:.*]] = fadd float %[[f]], %[[f]]
     %f2 = llvm.fadd %f, %f : f32
     // CHECK: store float %[[f2]], ptr %[[fp]]
-    llvm.store %f2, %fp : f32, !llvm.ptr
+    ptr.store %f2, %fp : f32, !llvm.ptr
     // CHECK: store i32 1, ptr %[[didit_addr]]
     // CHECK: call void @__kmpc_end_single
     // CHECK: %[[didit:.*]] = load i32, ptr %[[didit_addr]]
@@ -2245,15 +2245,15 @@ llvm.func @omp_threadprivate() {
   %3 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr
   %4 = omp.threadprivate %3 : !llvm.ptr -> !llvm.ptr
 
-  llvm.store %0, %4 : i32, !llvm.ptr
+  ptr.store %0, %4 : i32, !llvm.ptr
 
   omp.parallel  {
     %5 = omp.threadprivate %3 : !llvm.ptr -> !llvm.ptr
-    llvm.store %1, %5 : i32, !llvm.ptr
+    ptr.store %1, %5 : i32, !llvm.ptr
     omp.terminator
   }
 
-  llvm.store %2, %4 : i32, !llvm.ptr
+  ptr.store %2, %4 : i32, !llvm.ptr
   llvm.return
 }
 
@@ -2272,9 +2272,9 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   omp.task {
     %n = llvm.mlir.constant(1 : i64) : i64
     %valaddr = llvm.alloca %n x i32 : (i64) -> !llvm.ptr
-    %val = llvm.load %valaddr : !llvm.ptr -> i32
+    %val = ptr.load %valaddr : !llvm.ptr -> i32
     %double = llvm.add %val, %val : i32
-    llvm.store %double, %valaddr : i32, !llvm.ptr
+    ptr.store %double, %valaddr : i32, !llvm.ptr
     omp.terminator
   }
   llvm.return
@@ -2338,9 +2338,9 @@ llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr) {
   omp.task depend(taskdependin -> %zaddr : !llvm.ptr) {
     %n = llvm.mlir.constant(1 : i64) : i64
     %valaddr = llvm.alloca %n x i32 : (i64) -> !llvm.ptr
-    %val = llvm.load %valaddr : !llvm.ptr -> i32
+    %val = ptr.load %valaddr : !llvm.ptr -> i32
     %double = llvm.add %val, %val : i32
-    llvm.store %double, %valaddr : i32, !llvm.ptr
+    ptr.store %double, %valaddr : i32, !llvm.ptr
     omp.terminator
   }
   llvm.return
@@ -2369,7 +2369,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
     // CHECK: %[[diff:.+]] = sub i32 %[[x]], %[[y]]
     %diff = llvm.sub %x, %y : i32
     // CHECK: store i32 %[[diff]], ptr %2
-    llvm.store %diff, %zaddr : i32, !llvm.ptr
+    ptr.store %diff, %zaddr : i32, !llvm.ptr
     // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
     // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
     // CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 40, i64 16,
@@ -2379,13 +2379,13 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
     // CHECK: call i32 @__kmpc_omp_task(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]])
     omp.task {
       %z = llvm.add %x, %y : i32
-      llvm.store %z, %zaddr : i32, !llvm.ptr
+      ptr.store %z, %zaddr : i32, !llvm.ptr
       omp.terminator
     }
     // CHECK: %[[prod:.+]] = mul i32 %[[x]], %[[y]]
     %b = llvm.mul %x, %y : i32
     // CHECK: store i32 %[[prod]], ptr %[[zaddr]]
-    llvm.store %b, %zaddr : i32, !llvm.ptr
+    ptr.store %b, %zaddr : i32, !llvm.ptr
     llvm.return
   }
 }
@@ -2409,7 +2409,7 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
   %0 = llvm.mlir.constant(1 : i32) : i32
   omp.task   {
     omp.parallel   {
-      llvm.store %0, %arg0 : i32, !llvm.ptr
+      ptr.store %0, %arg0 : i32, !llvm.ptr
       omp.terminator
     }
     omp.terminator

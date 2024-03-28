@@ -61,12 +61,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK-NEXT:  %[[ALLOCA:.*]] = llvm.alloca %[[I32]] x f64 : (i32) -> !llvm.ptr
 // CHECK-NEXT:  %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][%[[I32]]] : (!llvm.ptr, i32) -> !llvm.ptr, f64
-// CHECK-NEXT:  %[[VALUE:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> f64
-// CHECK-NEXT:  llvm.store %[[VALUE]], %[[ALLOCA]] : f64, !llvm.ptr
+// CHECK-NEXT:  %[[VALUE:.*]] = ptr.load %[[GEP]] : !llvm.ptr -> f64
+// CHECK-NEXT:  ptr.store %[[VALUE]], %[[ALLOCA]] : f64, !llvm.ptr
   %13 = llvm.alloca %arg0 x f64 : (i32) -> !llvm.ptr
   %14 = llvm.getelementptr %13[%arg0] : (!llvm.ptr, i32) -> !llvm.ptr, f64
-  %15 = llvm.load %14 : !llvm.ptr -> f64
-  llvm.store %15, %13 : f64, !llvm.ptr
+  %15 = ptr.load %14 : !llvm.ptr -> f64
+  ptr.store %15, %13 : f64, !llvm.ptr
 
 // Function call-related operations.
 //
@@ -150,10 +150,10 @@ func.func @ops(%arg0: i32, %arg1: f32,
 
 // Integer to pointer and pointer to integer conversions.
 //
-// CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
-// CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
-  %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
-  %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+// CHECK: %[[PTR:.*]] = ptr.inttoptr %[[I32]] : i32 to !llvm.ptr
+// CHECK: %{{.*}} = ptr.ptrtoint %[[PTR]] : !llvm.ptr to i32
+  %25 = ptr.inttoptr %arg0 : i32 to !llvm.ptr
+  %26 = ptr.ptrtoint %25 : !llvm.ptr to i32
 
 // Extended and Quad floating point
 //
@@ -290,8 +290,8 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %8 = llvm.fptosi %7 : f32 to i32
 // CHECK:  = llvm.fptoui %[[FLOAT]] : f32 to i32
   %9 = llvm.fptoui %7 : f32 to i32
-// CHECK:  = llvm.addrspacecast %[[PTR]] : !llvm.ptr to !llvm.ptr<2>
-  %10 = llvm.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
+// CHECK:  = ptr.addrspacecast %[[PTR]] : !llvm.ptr to !llvm.ptr<2>
+  %10 = ptr.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
 // CHECK:  = llvm.bitcast %[[I64]] : i64 to f64
   %11 = llvm.bitcast %arg1 : i64 to f64
   llvm.return
@@ -374,44 +374,44 @@ func.func @zero() {
 
 // CHECK-LABEL: @atomic_load
 func.func @atomic_load(%ptr : !llvm.ptr) {
-  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
-  %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
-  // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
-  %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  // CHECK: ptr.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  %0 = ptr.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: ptr.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  %1 = ptr.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_store
 func.func @atomic_store(%val : f32, %ptr : !llvm.ptr) {
-  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
-  llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
-  // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
-  llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  ptr.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: ptr.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  ptr.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @atomicrmw
 func.func @atomicrmw(%ptr : !llvm.ptr, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
-  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : !llvm.ptr, f32
-  // CHECK: llvm.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
-  %1 = llvm.atomicrmw volatile fsub %ptr, %val syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  // CHECK: ptr.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %0 = ptr.atomicrmw fadd %ptr, %val monotonic : !llvm.ptr, f32
+  // CHECK: ptr.atomicrmw volatile fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
+  %1 = ptr.atomicrmw volatile fsub %ptr, %val syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   llvm.return
 }
 
 // CHECK-LABEL: @cmpxchg
 func.func @cmpxchg(%ptr : !llvm.ptr, %cmp : i32, %new : i32) {
-  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
-  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
-  // CHECK: llvm.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
-  %1 = llvm.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
+  // CHECK: ptr.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
+  %0, %1 = ptr.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.ptr, i32
+  // CHECK: ptr.cmpxchg weak volatile %{{.*}}, %{{.*}}, %{{.*}} syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
+  %2, %3 = ptr.cmpxchg weak volatile %ptr, %cmp, %new syncscope("singlethread") acq_rel monotonic {alignment = 16 : i64} : !llvm.ptr, i32
   llvm.return
 }
 
 // CHECK-LABEL: @invariant_load
 func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
-  // CHECK: llvm.load %{{.+}} invariant {alignment = 4 : i64} : !llvm.ptr -> i32
-  %0 = llvm.load %ptr invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK: ptr.load %{{.+}} invariant {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = ptr.load %ptr invariant {alignment = 4 : i64} : !llvm.ptr -> i32
   func.return %0 : i32
 }
 
@@ -638,8 +638,8 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
   llvm.return
 }
 
-#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = "The domain">
-#alias_scope = #llvm.alias_scope<id = distinct[0]<>, domain = #alias_scope_domain, description = "The domain">
+#alias_scope_domain = #ptr.alias_scope_domain<id = distinct[0]<>, description = "The domain">
+#alias_scope = #ptr.alias_scope<id = distinct[0]<>, domain = #alias_scope_domain, description = "The domain">
 
 // CHECK-LABEL: @experimental_noalias_scope_decl
 llvm.func @experimental_noalias_scope_decl() {

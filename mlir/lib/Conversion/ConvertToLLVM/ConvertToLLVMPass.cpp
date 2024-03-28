@@ -75,6 +75,7 @@ public:
   LogicalResult initialize(MLIRContext *context) final {
     RewritePatternSet tempPatterns(context);
     auto target = std::make_shared<ConversionTarget>(*context);
+    target->addLegalDialect<ptr::PtrDialect>();
     target->addLegalDialect<LLVM::LLVMDialect>();
     auto typeConverter = std::make_shared<LLVMTypeConverter>(context);
 

@@ -2,6 +2,13 @@ add_mlir_interface(OpAsmInterface)
 add_mlir_interface(SymbolInterfaces)
 add_mlir_interface(RegionKindInterface)
 
+set(LLVM_TARGET_DEFINITIONS AsmInterfaces.td)
+mlir_tablegen(AsmAttrInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(AsmAttrInterfaces.cpp.inc -gen-attr-interface-defs)
+mlir_tablegen(AsmTypeInterfaces.h.inc -gen-type-interface-decls)
+mlir_tablegen(AsmTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_public_tablegen_target(MLIRAsmInterfacesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS BuiltinAttributes.td)
 mlir_tablegen(BuiltinAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(BuiltinAttributes.cpp.inc -gen-attrdef-defs)

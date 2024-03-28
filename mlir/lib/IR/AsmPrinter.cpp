@@ -13,6 +13,7 @@
 
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/AsmInterfaces.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -542,7 +543,9 @@ public:
         aliasOS(aliasBuffer) {}
 
   void initialize(Operation *op, const OpPrintingFlags &printerFlags,
-                  llvm::MapVector<const void *, SymbolAlias> &attrTypeToAlias);
+                  llvm::MapVector<const void *, SymbolAlias> &attrTypeToAlias,
+                  llvm::DenseMap<const void *, const OpAsmDialectInterface *>
+                      &attrTypeToDialectAlias);
 
   /// Visit the given attribute to see if it has an alias. `canBeDeferred` is
   /// set to true if the originator of this attribute can resolve the alias
@@ -570,6 +573,10 @@ private:
     InProgressAliasInfo(StringRef alias, bool isType, bool canBeDeferred)
         : alias(alias), aliasDepth(1), isType(isType),
           canBeDeferred(canBeDeferred) {}
+    InProgressAliasInfo(const OpAsmDialectInterface *aliasDialect, bool isType,
+                        bool canBeDeferred)
+        : alias(std::nullopt), aliasDepth(1), isType(isType),
+          canBeDeferred(canBeDeferred), aliasDialect(aliasDialect) {}
 
     bool operator<(const InProgressAliasInfo &rhs) const {
       // Order first by depth, then by attr/type kind, and then by name.
@@ -577,6 +584,8 @@ private:
         return aliasDepth < rhs.aliasDepth;
       if (isType != rhs.isType)
         return isType;
+      if (aliasDialect != rhs.aliasDialect)
+        return aliasDialect < rhs.aliasDialect;
       return alias < rhs.alias;
     }
 
@@ -592,6 +601,8 @@ private:
     bool canBeDeferred : 1;
     /// Indices for child aliases.
     SmallVector<size_t> childIndices;
+    /// Dialect interface used to print the alias.
+    const OpAsmDialectInterface *aliasDialect{};
   };
 
   /// Visit the given attribute or type to see if it has an alias.
@@ -617,7 +628,9 @@ private:
   /// symbol to a given alias.
   static void initializeAliases(
       llvm::MapVector<const void *, InProgressAliasInfo> &visitedSymbols,
-      llvm::MapVector<const void *, SymbolAlias> &symbolToAlias);
+      llvm::MapVector<const void *, SymbolAlias> &symbolToAlias,
+      llvm::DenseMap<const void *, const OpAsmDialectInterface *>
+          &attrTypeToDialectAlias);
 
   /// The set of asm interfaces within the context.
   DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
@@ -1027,7 +1040,9 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
 /// symbol to a given alias.
 void AliasInitializer::initializeAliases(
     llvm::MapVector<const void *, InProgressAliasInfo> &visitedSymbols,
-    llvm::MapVector<const void *, SymbolAlias> &symbolToAlias) {
+    llvm::MapVector<const void *, SymbolAlias> &symbolToAlias,
+    llvm::DenseMap<const void *, const OpAsmDialectInterface *>
+        &attrTypeToDialectAlias) {
   SmallVector<std::pair<const void *, InProgressAliasInfo>, 0>
       unprocessedAliases = visitedSymbols.takeVector();
   llvm::stable_sort(unprocessedAliases, [](const auto &lhs, const auto &rhs) {
@@ -1036,8 +1051,12 @@ void AliasInitializer::initializeAliases(
 
   llvm::StringMap<unsigned> nameCounts;
   for (auto &[symbol, aliasInfo] : unprocessedAliases) {
-    if (!aliasInfo.alias)
+    if (!aliasInfo.alias && !aliasInfo.aliasDialect)
       continue;
+    if (aliasInfo.aliasDialect) {
+      attrTypeToDialectAlias.insert({symbol, aliasInfo.aliasDialect});
+      continue;
+    }
     StringRef alias = *aliasInfo.alias;
     unsigned nameIndex = nameCounts[alias]++;
     symbolToAlias.insert(
@@ -1048,7 +1067,9 @@ void AliasInitializer::initializeAliases(
 
 void AliasInitializer::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
-    llvm::MapVector<const void *, SymbolAlias> &attrTypeToAlias) {
+    llvm::MapVector<const void *, SymbolAlias> &attrTypeToAlias,
+    llvm::DenseMap<const void *, const OpAsmDialectInterface *>
+        &attrTypeToDialectAlias) {
   // Use a dummy printer when walking the IR so that we can collect the
   // attributes/types that will actually be used during printing when
   // considering aliases.
@@ -1056,7 +1077,7 @@ void AliasInitializer::initialize(
   aliasPrinter.printCustomOrGenericOp(op);
 
   // Initialize the aliases.
-  initializeAliases(aliases, attrTypeToAlias);
+  initializeAliases(aliases, attrTypeToAlias, attrTypeToDialectAlias);
 }
 
 template <typename T, typename... PrintArgs>
@@ -1113,15 +1134,25 @@ template <typename T>
 void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
                                      bool canBeDeferred) {
   SmallString<32> nameBuffer;
+  const OpAsmDialectInterface *dialectAlias = nullptr;
   for (const auto &interface : interfaces) {
     OpAsmDialectInterface::AliasResult result =
         interface.getAlias(symbol, aliasOS);
+    if (result == OpAsmDialectInterface::AliasResult::DialectAlias) {
+      dialectAlias = &interface;
+      break;
+    }
     if (result == OpAsmDialectInterface::AliasResult::NoAlias)
       continue;
     nameBuffer = std::move(aliasBuffer);
     assert(!nameBuffer.empty() && "expected valid alias name");
     if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
       break;
+  }
+  if (dialectAlias) {
+    alias = InProgressAliasInfo(
+        dialectAlias, /*isType=*/std::is_base_of_v<Type, T>, canBeDeferred);
+    return;
   }
 
   if (nameBuffer.empty())
@@ -1157,6 +1188,13 @@ public:
   /// Returns success if an alias was printed, failure otherwise.
   LogicalResult getAlias(Type ty, raw_ostream &os) const;
 
+  /// Get a dialect alias for the given attribute if it has one or return
+  /// nullptr.
+  const OpAsmDialectInterface *getDialectAlias(Attribute attr) const;
+
+  /// Get a dialect alias for the given type if it has one or return nullptr.
+  const OpAsmDialectInterface *getDialectAlias(Type ty) const;
+
   /// Print all of the referenced aliases that can not be resolved in a deferred
   /// manner.
   void printNonDeferredAliases(AsmPrinter::Impl &p, NewLineCounter &newLine) {
@@ -1177,6 +1215,10 @@ private:
   /// Mapping between attribute/type and alias.
   llvm::MapVector<const void *, SymbolAlias> attrTypeToAlias;
 
+  /// Mapping between attribute/type and alias dialect interfaces.
+  llvm::DenseMap<const void *, const OpAsmDialectInterface *>
+      attrTypeToDialectAlias;
+
   /// An allocator used for alias names.
   llvm::BumpPtrAllocator aliasAllocator;
 };
@@ -1186,7 +1228,8 @@ void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
     DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
   AliasInitializer initializer(interfaces, aliasAllocator);
-  initializer.initialize(op, printerFlags, attrTypeToAlias);
+  initializer.initialize(op, printerFlags, attrTypeToAlias,
+                         attrTypeToDialectAlias);
 }
 
 LogicalResult AliasState::getAlias(Attribute attr, raw_ostream &os) const {
@@ -1204,6 +1247,20 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
 
   it->second.print(os);
   return success();
+}
+
+const OpAsmDialectInterface *AliasState::getDialectAlias(Attribute attr) const {
+  auto it = attrTypeToDialectAlias.find(attr.getAsOpaquePointer());
+  if (it == attrTypeToDialectAlias.end())
+    return nullptr;
+  return it->second;
+}
+
+const OpAsmDialectInterface *AliasState::getDialectAlias(Type ty) const {
+  auto it = attrTypeToDialectAlias.find(ty.getAsOpaquePointer());
+  if (it == attrTypeToDialectAlias.end())
+    return nullptr;
+  return it->second;
 }
 
 void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
@@ -2189,11 +2246,43 @@ static void printElidedElementsAttr(raw_ostream &os) {
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
-  return state.getAliasState().getAlias(attr, os);
+  if (succeeded(state.getAliasState().getAlias(attr, os)))
+    return success();
+  const OpAsmDialectInterface *iface =
+      state.getAliasState().getDialectAlias(attr);
+  if (!iface)
+    return failure();
+  // Ask the dialect to serialize the attribute to a string.
+  std::string attrName;
+  {
+    llvm::raw_string_ostream attrNameStr(attrName);
+    Impl subPrinter(attrNameStr, state);
+    DialectAsmPrinter printer(subPrinter);
+    if (failed(iface->printDialectAlias(printer, attr)))
+      return failure();
+  }
+  printDialectSymbol(os, "#", iface->getDialect()->getNamespace(), attrName);
+  return success();
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Type type) {
-  return state.getAliasState().getAlias(type, os);
+  if (succeeded(state.getAliasState().getAlias(type, os)))
+    return success();
+  const OpAsmDialectInterface *iface =
+      state.getAliasState().getDialectAlias(type);
+  if (!iface)
+    return failure();
+  // Ask the dialect to serialize the type to a string.
+  std::string typeName;
+  {
+    llvm::raw_string_ostream typeNameStr(typeName);
+    Impl subPrinter(typeNameStr, state);
+    DialectAsmPrinter printer(subPrinter);
+    if (failed(iface->printDialectAlias(printer, type)))
+      return failure();
+  }
+  printDialectSymbol(os, "!", iface->getDialect()->getNamespace(), typeName);
+  return success();
 }
 
 void AsmPrinter::Impl::printAttribute(Attribute attr,
@@ -2701,7 +2790,9 @@ void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
 }
 
 void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
-  auto &dialect = attr.getDialect();
+  Dialect *dialect = &attr.getDialect();
+  if (auto iface = dyn_cast<AttrAsmAliasAttrInterface>(attr))
+    dialect = iface.getAliasDialect();
 
   // Ask the dialect to serialize the attribute to a string.
   std::string attrName;
@@ -2709,13 +2800,15 @@ void AsmPrinter::Impl::printDialectAttribute(Attribute attr) {
     llvm::raw_string_ostream attrNameStr(attrName);
     Impl subPrinter(attrNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    dialect.printAttribute(attr, printer);
+    dialect->printAttribute(attr, printer);
   }
-  printDialectSymbol(os, "#", dialect.getNamespace(), attrName);
+  printDialectSymbol(os, "#", dialect->getNamespace(), attrName);
 }
 
 void AsmPrinter::Impl::printDialectType(Type type) {
-  auto &dialect = type.getDialect();
+  Dialect *dialect = &type.getDialect();
+  if (auto iface = dyn_cast<TypeAsmAliasTypeInterface>(type))
+    dialect = iface.getAliasDialect();
 
   // Ask the dialect to serialize the type to a string.
   std::string typeName;
@@ -2723,9 +2816,9 @@ void AsmPrinter::Impl::printDialectType(Type type) {
     llvm::raw_string_ostream typeNameStr(typeName);
     Impl subPrinter(typeNameStr, state);
     DialectAsmPrinter printer(subPrinter);
-    dialect.printType(type, printer);
+    dialect->printType(type, printer);
   }
-  printDialectSymbol(os, "!", dialect.getNamespace(), typeName);
+  printDialectSymbol(os, "!", dialect->getNamespace(), typeName);
 }
 
 void AsmPrinter::Impl::printEscapedString(StringRef str) {
