@@ -643,6 +643,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::ppcf128, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f64, Custom);
@@ -10748,6 +10749,88 @@ static bool getVectorCompareInfo(SDValue Intrin, int &CompareOpc,
   return true;
 }
 
+static SDValue getRotateInsert32(SelectionDAG &DAG, SDLoc Loc, SDValue Dst,
+                                 SDValue Src, unsigned SH, unsigned MB,
+                                 unsigned ME) {
+  assert(SH < 32 && MB < 32 && ME < 32 &&
+         "Invalid argument for rotate insert!");
+  return SDValue(
+      DAG.getMachineNode(PPC::RLWIMI, Loc, MVT::i32,
+                         {Dst, Src, DAG.getTargetConstant(SH, Loc, MVT::i32),
+                          DAG.getTargetConstant(MB, Loc, MVT::i32),
+                          DAG.getTargetConstant(ME, Loc, MVT::i32)}),
+      0);
+}
+
+static SDValue getRotateInsert64(SelectionDAG &DAG, SDLoc Loc, SDValue Dst,
+                                 SDValue Src, unsigned SH, unsigned MB,
+                                 unsigned ME, bool IsPPC64) {
+  assert(SH < 64 && MB < 64 && ME < 64 &&
+         "Invalid argument for rotate insert!");
+  if (IsPPC64) {
+    // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
+    if (ME < 63 - SH) {
+      Src = DAG.getNode(ISD::ROTL, Loc, MVT::i64, Src,
+                        DAG.getConstant(ME + SH + 1, Loc, MVT::i32));
+    } else if (ME > 63 - SH) {
+      Src = DAG.getNode(ISD::ROTL, Loc, MVT::i64, Src,
+                        DAG.getConstant(ME + SH - 63, Loc, MVT::i32));
+    }
+    return SDValue(DAG.getMachineNode(
+                       PPC::RLDIMI, Loc, MVT::i64,
+                       {Dst, Src, DAG.getTargetConstant(63 - ME, Loc, MVT::i32),
+                        DAG.getTargetConstant(MB, Loc, MVT::i32)}),
+                   0);
+  }
+
+  // To implement rldimi(Dst, Src) on 32-bit target, four parts are needed. SH
+  // is adjusted to simplify cases. Invalid ranges will be skipped.
+  // - SrcHi inserted into DstHi with [0, 32-SH)
+  // - SrcLo inserted into DstHi with [32-SH, 32)
+  // - SrcHi inserted into DstLo with [32, 64-SH)
+  // - SrcLo inserted into DstLo with [64-SH, 64)
+  auto [SrcLo, SrcHi] = DAG.SplitScalar(Src, Loc, MVT::i32, MVT::i32);
+  auto [DstLo, DstHi] = DAG.SplitScalar(Dst, Loc, MVT::i32, MVT::i32);
+  if (SH >= 32) {
+    SH -= 32;
+    std::swap(SrcLo, SrcHi);
+  }
+  auto GetSubInsert = [&DAG, &Loc, SH](unsigned Left, unsigned Right,
+                                       SDValue Src, SDValue Dst, unsigned MB,
+                                       unsigned ME) {
+    if (Left > Right)
+      return Dst;
+
+    if (MB <= ME) {
+      if (MB <= Right && ME >= Left)
+        return getRotateInsert32(DAG, Loc, Dst, Src, SH,
+                                 std::max(MB, Left) % 32,
+                                 std::min(ME, Right) % 32);
+    } else {
+      if (MB < Left || ME > Right)
+        return getRotateInsert32(DAG, Loc, Dst, Src, SH, Left % 32, Right % 32);
+
+      if (MB <= Right && ME < Left)
+        return getRotateInsert32(DAG, Loc, Dst, Src, SH, MB % 32, Right % 32);
+
+      if (MB <= Right && ME <= Right)
+        return getRotateInsert32(
+            DAG, Loc,
+            getRotateInsert32(DAG, Loc, Dst, Src, SH, Left % 32, ME % 32), Src,
+            SH, MB % 32, Right % 32);
+
+      if (MB > Right && ME >= Left && ME <= Right)
+        return getRotateInsert32(DAG, Loc, Dst, Src, SH, Left % 32, ME % 32);
+    }
+    return Dst;
+  };
+  DstHi = GetSubInsert(0, 31 - SH, SrcHi, DstHi, MB, ME);
+  DstHi = GetSubInsert(32 - SH, 31, SrcLo, DstHi, MB, ME);
+  DstLo = GetSubInsert(32, 63 - SH, SrcLo, DstLo, MB, ME);
+  DstLo = GetSubInsert(64 - SH, 63, SrcHi, DstLo, MB, ME);
+  return DAG.getNode(ISD::BUILD_PAIR, Loc, MVT::i64, DstLo, DstHi);
+}
+
 /// LowerINTRINSIC_WO_CHAIN - If this is an intrinsic that we want to custom
 /// lower, do it, otherwise return null.
 SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -10764,7 +10847,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
 
   case Intrinsic::ppc_rldimi: {
-    assert(Subtarget.isPPC64() && "rldimi is only available in 64-bit!");
     SDValue Src = Op.getOperand(1);
     APInt Mask = Op.getConstantOperandAPInt(4);
     if (Mask.isZero())
@@ -10775,20 +10857,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned MB = 0, ME = 0;
     if (!isRunOfOnes64(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rldimi mask!");
-    // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
-    if (ME < 63 - SH) {
-      Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
-                        DAG.getConstant(ME + SH + 1, dl, MVT::i32));
-    } else if (ME > 63 - SH) {
-      Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
-                        DAG.getConstant(ME + SH - 63, dl, MVT::i32));
-    }
-    return SDValue(
-        DAG.getMachineNode(PPC::RLDIMI, dl, MVT::i64,
-                           {Op.getOperand(2), Src,
-                            DAG.getTargetConstant(63 - ME, dl, MVT::i32),
-                            DAG.getTargetConstant(MB, dl, MVT::i32)}),
-        0);
+    return getRotateInsert64(DAG, dl, Op.getOperand(2), Op.getOperand(1), SH,
+                             MB, ME, Subtarget.isPPC64());
   }
 
   case Intrinsic::ppc_rlwimi: {
@@ -10801,12 +10871,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned MB = 0, ME = 0;
     if (!isRunOfOnes(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rlwimi mask!");
-    return SDValue(DAG.getMachineNode(
-                       PPC::RLWIMI, dl, MVT::i32,
-                       {Op.getOperand(2), Op.getOperand(1), Op.getOperand(3),
-                        DAG.getTargetConstant(MB, dl, MVT::i32),
-                        DAG.getTargetConstant(ME, dl, MVT::i32)}),
-                   0);
+    return getRotateInsert32(DAG, dl, Op.getOperand(2), Op.getOperand(1),
+                             Op.getConstantOperandVal(3), MB, ME);
   }
 
   case Intrinsic::ppc_rlwnm: {
@@ -11824,6 +11890,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::ppc_maxfe:
     case Intrinsic::ppc_minfe:
     case Intrinsic::ppc_fnmsub:
+    case Intrinsic::ppc_rldimi:
     case Intrinsic::ppc_convert_f128_to_ppcf128:
       Results.push_back(LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG));
       break;
