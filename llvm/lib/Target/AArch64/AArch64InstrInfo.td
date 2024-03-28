@@ -1021,6 +1021,9 @@ include "SMEInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 1, isCodeGenOnly = 1 in {
+
+def STORETPIDR2 : Pseudo<(outs), (ins GPR64:$addr, GPR64sp:$frameindex, i32imm:$offset), []>, Sched<[]>;
+
 let Defs = [SP] in {
 
 def STACKALLOC : Pseudo<(outs GPR64:$addr), (ins GPR64:$size, GPR64:$sp), []>, Sched<[]>;

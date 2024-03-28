@@ -3036,30 +3036,12 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
       .addReg(SPCopy);
   MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-  // expand pseudo in expand pass or remove pseudo and remove stack object
-
   unsigned TPIDR2Object = TPIDR2->FrameIndex;
 
-  Register Zero32 = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-  MachineInstrBuilder Wzr =
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Zero32)
-          .addReg(AArch64::WZR);
-
-  // Store the buffer pointer to the TPIDR2 stack object.
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
-      .addReg(BufferAddr)
-      .addFrameIndex(TPIDR2Object)
-      .addImm(0);
-  // Set the reserved bytes (10-15) to zero
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
-      .addReg(Wzr.getReg(0))
-      .addFrameIndex(TPIDR2Object)
-      .addImm(5);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
-      .addReg(Wzr.getReg(0))
-      .addFrameIndex(TPIDR2Object)
-      .addImm(3);
-
+  auto MI2 = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STORETPIDR2))
+                 .addReg(BufferAddr)
+                 .addFrameIndex(TPIDR2Object)
+                 .addImm(0);
   BB->remove_instr(&MI);
   return BB;
 }

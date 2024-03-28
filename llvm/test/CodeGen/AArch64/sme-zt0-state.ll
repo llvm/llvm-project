@@ -42,12 +42,12 @@ define void @za_zt0_shared_caller_no_state_callee() "aarch64_inout_za" "aarch64_
 ; CHECK-NEXT:    mul x8, x8, x8
 ; CHECK-NEXT:    sub x8, x9, x8
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sub x19, x29, #80
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    str x8, [x9]
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    strh wzr, [x9, #10]
+; CHECK-NEXT:    str wzr, [x9, #12]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    str zt0, [x19]
@@ -182,9 +182,10 @@ define void @new_za_zt0_caller() "aarch64_new_za" "aarch64_new_zt0" nounwind {
 ; CHECK-NEXT:    mul x8, x8, x8
 ; CHECK-NEXT:    sub x8, x9, x8
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    sub x9, x29, #16
+; CHECK-NEXT:    str x8, [x9]
+; CHECK-NEXT:    strh wzr, [x9, #10]
+; CHECK-NEXT:    str wzr, [x9, #12]
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    cbz x8, .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %save.za

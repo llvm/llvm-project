@@ -3640,6 +3640,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRDui:
   case AArch64::STRXui:
   case AArch64::STRDui:
+  case AArch64::STORETPIDR2:
     Scale = TypeSize::getFixed(8);
     Width = TypeSize::getFixed(8);
     MinOffset = 0;
