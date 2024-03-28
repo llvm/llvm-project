@@ -95,6 +95,10 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_float128",
     hdrs = ["include/llvm-libc-types/float128.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":llvm_libc_macros_float_macros"],
 )
 
@@ -972,11 +976,17 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_syscall",
     hdrs = ["src/__support/OSUtil/syscall.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/syscall.h",
-        "src/__support/OSUtil/linux/aarch64/syscall.h",
-        "src/__support/OSUtil/linux/x86_64/syscall.h",
-    ],
+    textual_hdrs = select({
+        "@platforms//os:macos": [
+            "src/__support/OSUtil/darwin/syscall.h",
+            "src/__support/OSUtil/darwin/arm/syscall.h",
+        ],
+        "//conditions:default": [
+            "src/__support/OSUtil/linux/syscall.h",
+            "src/__support/OSUtil/linux/aarch64/syscall.h",
+            "src/__support/OSUtil/linux/x86_64/syscall.h",
+        ],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
@@ -986,9 +996,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_io",
     hdrs = ["src/__support/OSUtil/io.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/io.h",
-    ],
+    textual_hdrs = select({
+        "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
+        "//conditions:default": ["src/__support/OSUtil/linux/io.h"],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_string_view",
@@ -999,8 +1010,12 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_osutil_quick_exit",
-    hdrs = ["src/__support/OSUtil/quick_exit.h"],
     srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
+    hdrs = ["src/__support/OSUtil/quick_exit.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_osutil_syscall",
     ],
@@ -1019,6 +1034,10 @@ libc_support_library(
         "src/__support/StringUtil/error_to_string.h",
         "src/__support/StringUtil/signal_to_string.h",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_span",
@@ -1036,6 +1055,10 @@ libc_support_library(
         "src/__support/threads/mutex.h",
         "src/__support/threads/mutex_common.h",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     textual_hdrs = [
         "src/__support/threads/linux/mutex.h",
         "src/__support/threads/linux/futex_word.h",
@@ -1932,7 +1955,12 @@ libc_math_function(name = "copysignf")
 
 libc_math_function(name = "copysignl")
 
-libc_math_function(name = "copysignf128")
+libc_math_function(
+    name = "copysignf128",
+    additional_deps = [
+        ":llvm_libc_types_float128",
+    ],
+)
 
 libc_math_function(name = "ilogb")
 
@@ -2597,6 +2625,10 @@ libc_function(
     name = "open",
     srcs = ["src/fcntl/linux/open.cpp"],
     hdrs = ["src/fcntl/open.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2608,6 +2640,10 @@ libc_function(
     name = "openat",
     srcs = ["src/fcntl/linux/openat.cpp"],
     hdrs = ["src/fcntl/openat.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2687,6 +2723,10 @@ libc_function(
     name = "dup3",
     srcs = ["src/unistd/linux/dup3.cpp"],
     hdrs = ["src/unistd/dup3.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2856,6 +2896,10 @@ libc_function(
     name = "pread",
     srcs = ["src/unistd/linux/pread.cpp"],
     hdrs = ["src/unistd/pread.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2867,6 +2911,10 @@ libc_function(
     name = "pwrite",
     srcs = ["src/unistd/linux/pwrite.cpp"],
     hdrs = ["src/unistd/pwrite.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3269,6 +3317,10 @@ libc_function(
     name = "rename",
     srcs = ["src/stdio/linux/rename.cpp"],
     hdrs = ["src/stdio/rename.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3307,6 +3359,10 @@ libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
     hdrs = ["src/sys/epoll/epoll_wait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     weak = True,
     deps = [
         ":__support_osutil_syscall",
@@ -3318,6 +3374,10 @@ libc_function(
     name = "epoll_pwait",
     srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
     hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     weak = True,
     deps = [
         ":__support_osutil_syscall",
