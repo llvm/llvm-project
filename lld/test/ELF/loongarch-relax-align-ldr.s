@@ -1,4 +1,5 @@
 # REQUIRES: loongarch
+## Test `ld -r` not changes the addend of R_LARCH_ALIGN.
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.64.o
 # RUN: ld.lld -r %t.64.o %t.64.o -o %t.64.r
