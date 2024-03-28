@@ -15,3 +15,6 @@ entry:
   %elt.trunc = call half @llvm.trunc.f16(half %a)
   ret half %elt.trunc
 }
+
+declare half @llvm.trunc.f16(half)
+declare float @llvm.trunc.f32(float)

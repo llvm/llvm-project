@@ -25,3 +25,7 @@ entry:
   %elt.bitreverse = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %elt.bitreverse
 }
+
+declare i16 @llvm.bitreverse.i16(i16)
+declare i32 @llvm.bitreverse.i32(i32)
+declare i64 @llvm.bitreverse.i64(i64)
