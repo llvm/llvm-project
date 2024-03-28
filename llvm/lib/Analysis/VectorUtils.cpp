@@ -173,6 +173,12 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   if (Constant *C = dyn_cast<Constant>(V))
     return C->getAggregateElement(EltNo);
 
+  if (auto *F = dyn_cast<FreezeInst>(V)) {
+    if (isGuaranteedNotToBeUndefOrPoison(F)) {
+      return findScalarElement(F->getOperand(0), EltNo);
+    }
+  }
+
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
     if (!isa<ConstantInt>(III->getOperand(2)))
