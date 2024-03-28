@@ -21,7 +21,7 @@ void print_task_info_at(int ancestor_level, int id)
     printf("%" PRIu64 ": ancestor_level=%d id=%d task_type=%s=%d "
                       "parallel_id=%" PRIu64 " task_id=%" PRIu64
                       " thread_num=%d\n",
-        ompt_get_thread_data()->value, ancestor_level, id, buffer,
+        get_current_thread_id(), ancestor_level, id, buffer,
         task_type, parallel_data->value, task_data->value, thread_num);
   }
 };

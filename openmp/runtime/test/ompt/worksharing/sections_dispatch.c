@@ -13,11 +13,11 @@ int main()
   {
     #pragma omp section
     {
-      printf("%lu: section 1\n", ompt_get_thread_data()->value);
+      printf("%lu: section 1\n", get_current_thread_id());
     }
     #pragma omp section
     {
-      printf("%lu: section 2\n", ompt_get_thread_data()->value);
+      printf("%lu: section 2\n", get_current_thread_id());
     }
   }
 

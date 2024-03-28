@@ -24,9 +24,9 @@ int main()
         {
           x++;
         }
-        printf("%" PRIu64 ": before yield\n", ompt_get_thread_data()->value);
+        printf("%" PRIu64 ": before yield\n", get_current_thread_id());
         #pragma omp taskyield
-        printf("%" PRIu64 ": after yield\n", ompt_get_thread_data()->value);
+        printf("%" PRIu64 ": after yield\n", get_current_thread_id());
         OMPT_SIGNAL(condition);
     }
   }

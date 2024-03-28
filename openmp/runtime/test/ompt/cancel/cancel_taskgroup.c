@@ -56,6 +56,17 @@ int main()
       }
     }
     #pragma omp barrier
+
+    # pragma omp taskgroup
+    {
+      # pragma omp task if(0)
+      {
+          # pragma omp cancel taskgroup
+      }
+
+      # pragma omp task // B
+      {}
+    }
   }
 
   // Check if libomp supports the callbacks for this test.
@@ -66,6 +77,7 @@ int main()
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_thread_begin'
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
+  // CHECK-NOT: 0: wrong task_schedule
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_masked_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
   // CHECK-SAME: task_id=[[PARENT_TASK_ID:[0-9]+]],
