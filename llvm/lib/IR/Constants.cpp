@@ -976,24 +976,6 @@ Constant *ConstantFP::get(Type *Ty, double V) {
   return C;
 }
 
-#ifdef __FLOAT128__
-Constant *ConstantFP::get128(Type *Ty, float128 V) {
-  LLVMContext &Context = Ty->getContext();
-
-  APFloat FV(V);
-  bool ignored;
-  FV.convert(Ty->getScalarType()->getFltSemantics(),
-             APFloat::rmNearestTiesToEven, &ignored);
-  Constant *C = get(Context, FV);
-
-  // For vectors, broadcast the value.
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
-}
-#endif
-
 Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
   ConstantFP *C = get(Ty->getContext(), V);
   assert(C->getType() == Ty->getScalarType() &&

@@ -51,7 +51,6 @@ set(ANALYSIS_TEST_SOURCES
   ValueLatticeTest.cpp
   ValueTrackingTest.cpp
   VectorUtilsTest.cpp
-  ConstantLogf128.cpp
   )
 
 set(MLGO_TESTS TFUtilsTest.cpp)
