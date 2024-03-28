@@ -450,7 +450,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     // Store the result in the destination va_list
     MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
         MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, Alignment);
-    MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
+    MIRBuilder.buildStore(Tmp, DstLst, *StoreMMO);
 
     MI.eraseFromParent();
     return true;
