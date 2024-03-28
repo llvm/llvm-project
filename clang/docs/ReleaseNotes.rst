@@ -48,6 +48,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
   This error can be disabled via `-Wno-strict-primary-template-shadow` for compatibility with previous versions of clang.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
