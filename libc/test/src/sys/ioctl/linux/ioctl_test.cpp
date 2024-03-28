@@ -1,4 +1,4 @@
-//===-- Unittests for ioctl ---------------------------------------------===//
+//===-- Unittests for ioctl -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,12 +9,10 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"
 #include "src/sys/ioctl/ioctl.h"
-#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
