@@ -34,7 +34,7 @@ public:
 
 /// Preprocessor-based frontend action that also loads PCH files.
 class ReadPCHAndPreprocessAction : public FrontendAction {
-  llvm::function_ref<void(CompilerInstance &)> OnCI;
+  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
 
   void ExecuteAction() override;
 
@@ -42,8 +42,9 @@ class ReadPCHAndPreprocessAction : public FrontendAction {
                                                  StringRef InFile) override;
 
 public:
-  ReadPCHAndPreprocessAction(llvm::function_ref<void(CompilerInstance &)> OnCI)
-      : OnCI(OnCI) {}
+  ReadPCHAndPreprocessAction(
+      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
+      : AdjustCI(std::move(AdjustCI)) {}
 
   bool usesPreprocessorOnly() const override { return false; }
 };
@@ -326,14 +327,15 @@ protected:
 
 class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
   StringRef ModuleName;
-  llvm::function_ref<void(CompilerInstance &)> OnCI;
+  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
 
   void ExecuteAction() override;
 
 public:
   GetDependenciesByModuleNameAction(
-      StringRef ModuleName, llvm::function_ref<void(CompilerInstance &)> OnCI)
-      : ModuleName(ModuleName), OnCI(OnCI) {}
+      StringRef ModuleName,
+      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
+      : ModuleName(ModuleName), AdjustCI(std::move(AdjustCI)) {}
 };
 
 }  // end namespace clang

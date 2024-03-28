@@ -377,7 +377,8 @@ public:
         return std::nullopt;
       };
 
-      CI.getPreprocessor().setDependencyDirectivesFn(GetDependencyDirectives);
+      CI.getPreprocessor().setDependencyDirectivesFn(
+          std::move(GetDependencyDirectives));
     };
 
     // Create the dependency collector that will collect the produced
@@ -430,10 +431,11 @@ public:
     std::unique_ptr<FrontendAction> Action;
 
     if (ModuleName)
-      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName,
-                                                                   AdjustCI);
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(
+          *ModuleName, std::move(AdjustCI));
     else
-      Action = std::make_unique<ReadPCHAndPreprocessAction>(AdjustCI);
+      Action =
+          std::make_unique<ReadPCHAndPreprocessAction>(std::move(AdjustCI));
 
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;

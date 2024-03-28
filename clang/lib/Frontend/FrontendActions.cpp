@@ -70,7 +70,7 @@ void InitOnlyAction::ExecuteAction() {
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  OnCI(CI);
+  AdjustCI(CI);
 
   Preprocessor &PP = CI.getPreprocessor();
 
@@ -1191,7 +1191,7 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  OnCI(CI);
+  AdjustCI(CI);
 
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();

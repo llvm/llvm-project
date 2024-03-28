@@ -745,7 +745,7 @@ private:
   /// Enables a client to cache the directives for a file and provide them
   /// across multiple compiler invocations.
   /// FIXME: Allow returning an error.
-  using DependencyDirectivesFn = std::function<std::optional<
+  using DependencyDirectivesFn = llvm::unique_function<std::optional<
       ArrayRef<dependency_directives_scan::Directive>>(FileEntryRef)>;
   DependencyDirectivesFn DependencyDirectivesForFile;
 
