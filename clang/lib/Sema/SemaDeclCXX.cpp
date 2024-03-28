@@ -5282,7 +5282,7 @@ static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
     return true;
 
   while (const ConstantArrayType *ArrayT = Context.getAsConstantArrayType(T)) {
-    if (!ArrayT->getSize())
+    if (ArrayT->isZeroSize())
       return true;
 
     T = ArrayT->getElementType();
@@ -13589,6 +13589,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       Diag(UsingLoc, diag::err_alias_template_extra_headers)
         << SourceRange(TemplateParamLists[1]->getTemplateLoc(),
          TemplateParamLists[TemplateParamLists.size()-1]->getRAngleLoc());
+      Invalid = true;
     }
     TemplateParameterList *TemplateParams = TemplateParamLists[0];
 

@@ -1098,7 +1098,7 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
     const ConstantArrayType *T =
         Context.getAsConstantArrayType(Format->getType());
     assert(T && "String literal not of constant array type!");
-    size_t TypeSize = T->getSize().getZExtValue();
+    size_t TypeSize = T->getZExtSize();
     // In case there's a null byte somewhere.
     StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, FormatStrRef.find(0));
     return true;
@@ -5541,6 +5541,14 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
                                   checkDoubleVector);
 }
 
+bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasUnsignedIntegerRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                  checkAllUnsignedTypes);
+}
+
 void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                 QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -5628,6 +5636,11 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builitns will occur elsewhere.
+  case Builtin::BI__builtin_elementwise_bitreverse: {
+    if (CheckUnsignedIntRepresentation(this, TheCall))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_elementwise_cos:
   case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_log:
@@ -5760,57 +5773,6 @@ static bool CheckInvalidVLENandLMUL(const TargetInfo &TI, CallExpr *TheCall,
 bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID,
                                          CallExpr *TheCall) {
-  // CodeGenFunction can also detect this, but this gives a better error
-  // message.
-  bool FeatureMissing = false;
-  SmallVector<StringRef> ReqFeatures;
-  StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
-  Features.split(ReqFeatures, ',', -1, false);
-
-  // Check if each required feature is included
-  for (StringRef F : ReqFeatures) {
-    SmallVector<StringRef> ReqOpFeatures;
-    F.split(ReqOpFeatures, '|');
-
-    if (llvm::none_of(ReqOpFeatures,
-                      [&TI](StringRef OF) { return TI.hasFeature(OF); })) {
-      std::string FeatureStrs;
-      bool IsExtension = true;
-      for (StringRef OF : ReqOpFeatures) {
-        // If the feature is 64bit, alter the string so it will print better in
-        // the diagnostic.
-        if (OF == "64bit") {
-          assert(ReqOpFeatures.size() == 1 && "Expected '64bit' to be alone");
-          OF = "RV64";
-          IsExtension = false;
-        }
-        if (OF == "32bit") {
-          assert(ReqOpFeatures.size() == 1 && "Expected '32bit' to be alone");
-          OF = "RV32";
-          IsExtension = false;
-        }
-
-        // Convert features like "zbr" and "experimental-zbr" to "Zbr".
-        OF.consume_front("experimental-");
-        std::string FeatureStr = OF.str();
-        FeatureStr[0] = std::toupper(FeatureStr[0]);
-        // Combine strings.
-        FeatureStrs += FeatureStrs.empty() ? "" : ", ";
-        FeatureStrs += "'";
-        FeatureStrs += FeatureStr;
-        FeatureStrs += "'";
-      }
-      // Error message
-      FeatureMissing = true;
-      Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
-          << IsExtension
-          << TheCall->getSourceRange() << StringRef(FeatureStrs);
-    }
-  }
-
-  if (FeatureMissing)
-    return true;
-
   // vmulh.vv, vmulh.vx, vmulhu.vv, vmulhu.vx, vmulhsu.vv, vmulhsu.vx,
   // vsmul.vv, vsmul.vx are not included for EEW=64 in Zve64*.
   switch (BuiltinID) {
@@ -6714,36 +6676,35 @@ bool Sema::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
   return false;
 }
 
-void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
-  const TargetInfo &TI = Context.getTargetInfo();
-
+void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
+                               const llvm::StringMap<bool> &FeatureMap) {
   ASTContext::BuiltinVectorTypeInfo Info =
       Context.getBuiltinVectorTypeInfo(Ty->castAs<BuiltinType>());
   unsigned EltSize = Context.getTypeSize(Info.ElementType);
   unsigned MinElts = Info.EC.getKnownMinValue();
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
-      !TI.hasFeature("zve64d"))
+      !FeatureMap.lookup("zve64d"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
   else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
             MinElts == 1) &&
-           !TI.hasFeature("zve64x"))
+           !FeatureMap.lookup("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
-  else if (Info.ElementType->isFloat16Type() && !TI.hasFeature("zvfh") &&
-           !TI.hasFeature("zvfhmin"))
+  else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
+           !FeatureMap.lookup("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
   else if (Info.ElementType->isBFloat16Type() &&
-           !TI.hasFeature("experimental-zvfbfmin"))
+           !FeatureMap.lookup("experimental-zvfbfmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
-           !TI.hasFeature("zve32f"))
+           !FeatureMap.lookup("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
   // Given that caller already checked isRVVType() before calling this function,
   // if we don't have at least zve32x supported, then we need to emit error.
-  else if (!TI.hasFeature("zve32x"))
+  else if (!FeatureMap.lookup("zve32x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32x";
 }
 
@@ -13044,7 +13005,7 @@ static void CheckFormatString(
   const ConstantArrayType *T =
     S.Context.getAsConstantArrayType(FExpr->getType());
   assert(T && "String literal not of constant array type!");
-  size_t TypeSize = T->getSize().getZExtValue();
+  size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
   const unsigned numDataArgs = Args.size() - firstDataArg;
 
@@ -13104,7 +13065,7 @@ bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
   // Account for cases where the string literal is truncated in a declaration.
   const ConstantArrayType *T = Context.getAsConstantArrayType(FExpr->getType());
   assert(T && "String literal not of constant array type!");
-  size_t TypeSize = T->getSize().getZExtValue();
+  size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
   return analyze_format_string::ParseFormatStringHasSArg(Str, Str + StrLen,
                                                          getLangOpts(),
@@ -14067,7 +14028,7 @@ static bool isConstantSizeArrayWithMoreThanOneElement(QualType Ty,
   // Only handle constant-sized or VLAs, but not flexible members.
   if (const ConstantArrayType *CAT = Context.getAsConstantArrayType(Ty)) {
     // Only issue the FIXIT for arrays of size > 1.
-    if (CAT->getSize().getSExtValue() <= 1)
+    if (CAT->getZExtSize() <= 1)
       return false;
   } else if (!Ty->isVariableArrayType()) {
     return false;

@@ -8837,7 +8837,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       return;
     }
     const auto *ATy = dyn_cast<ConstantArrayType>(T.getTypePtr());
-    if (!ATy || ATy->getSize().getSExtValue() != 0) {
+    if (!ATy || ATy->getZExtSize() != 0) {
       Diag(NewVD->getLocation(),
            diag::err_typecheck_wasm_table_must_have_zero_length);
       NewVD->setInvalidDecl();
@@ -8962,8 +8962,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  if (T->isRVVSizelessBuiltinType())
-    checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext));
+  if (T->isRVVSizelessBuiltinType() && isa<FunctionDecl>(CurContext)) {
+    const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
+    llvm::StringMap<bool> CallerFeatureMap;
+    Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+    checkRVVTypeSupport(T, NewVD->getLocation(), cast<Decl>(CurContext),
+                        CallerFeatureMap);
+  }
 }
 
 /// Perform semantic checking on a newly-created variable
@@ -19424,15 +19429,11 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         } else if (Record->isUnion())
           DiagID = getLangOpts().MicrosoftExt
                        ? diag::ext_flexible_array_union_ms
-                       : getLangOpts().CPlusPlus
-                             ? diag::ext_flexible_array_union_gnu
-                             : diag::err_flexible_array_union;
+                       : diag::ext_flexible_array_union_gnu;
         else if (NumNamedMembers < 1)
           DiagID = getLangOpts().MicrosoftExt
                        ? diag::ext_flexible_array_empty_aggregate_ms
-                       : getLangOpts().CPlusPlus
-                             ? diag::ext_flexible_array_empty_aggregate_gnu
-                             : diag::err_flexible_array_empty_aggregate;
+                       : diag::ext_flexible_array_empty_aggregate_gnu;
 
         if (DiagID)
           Diag(FD->getLocation(), DiagID)

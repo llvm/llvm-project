@@ -236,6 +236,4 @@ void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
   OS << "}";
 }
 
-void RISCVZC::printSpimm(int64_t Spimm, raw_ostream &OS) { OS << Spimm; }
-
 } // namespace llvm
