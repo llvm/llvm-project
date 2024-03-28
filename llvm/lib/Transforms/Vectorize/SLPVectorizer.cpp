@@ -190,6 +190,10 @@ static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
 
+static cl::opt<bool> VectorizeNonPowerOf2(
+    "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
+    cl::desc("Try to vectorize with non-power-of-2 number of elements."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -2785,6 +2789,9 @@ private:
                           SmallVectorImpl<Value *> *OpScalars = nullptr,
                           SmallVectorImpl<Value *> *AltScalars = nullptr) const;
 
+    /// Return true if this is a non-power-of-2 node.
+    bool isNonPowOf2Vec() const { return !isPowerOf2_32(Scalars.size()); }
+
 #ifndef NDEBUG
     /// Debug printer.
     LLVM_DUMP_METHOD void dump() const {
@@ -2950,9 +2957,11 @@ private:
       MustGather.insert(VL.begin(), VL.end());
     }
 
-    if (UserTreeIdx.UserTE)
+    if (UserTreeIdx.UserTE) {
       Last->UserTreeIndices.push_back(UserTreeIdx);
-
+      assert((!Last->isNonPowOf2Vec() || Last->ReorderIndices.empty()) &&
+             "Reordering isn't implemented for non-power-of-2 nodes yet");
+    }
     return Last;
   }
 
@@ -4201,6 +4210,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   auto *VecTy = FixedVectorType::get(ScalarTy, Sz);
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
+  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+  if (!Order.empty() && !isPowerOf2_32(VL.size())) {
+    assert(VectorizeNonPowerOf2 && "non-power-of-2 number of loads only "
+                                   "supported with VectorizeNonPowerOf2");
+    return LoadsState::Gather;
+  }
+
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted && Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy) &&
       TTI->isLegalStridedLoadStore(VecTy, CommonAlignment) &&
@@ -4520,6 +4536,10 @@ static bool areTwoInsertFromSameBuildVector(
 
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
+  // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
+  if (TE.isNonPowOf2Vec())
+    return std::nullopt;
+
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
@@ -5098,6 +5118,10 @@ bool BoUpSLP::canReorderOperands(
     TreeEntry *UserTE, SmallVectorImpl<std::pair<unsigned, TreeEntry *>> &Edges,
     ArrayRef<TreeEntry *> ReorderableGathers,
     SmallVectorImpl<TreeEntry *> &GatherOps) {
+  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+  if (UserTE->isNonPowOf2Vec())
+    return false;
+
   for (unsigned I = 0, E = UserTE->getNumOperands(); I < E; ++I) {
     if (any_of(Edges, [I](const std::pair<unsigned, TreeEntry *> &OpData) {
           return OpData.first == I &&
@@ -5271,6 +5295,9 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
         const auto AllowsReordering = [&](const TreeEntry *TE) {
+          // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+          if (TE->isNonPowOf2Vec())
+            return false;
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
@@ -5786,7 +5813,10 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
-    if (Reuse || !CurrentOrder.empty())
+    // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
+    if (!isPowerOf2_32(VL.size()))
+      return TreeEntry::NeedToGather;
+    if ((Reuse || !CurrentOrder.empty()))
       return TreeEntry::Vectorize;
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
     return TreeEntry::NeedToGather;
@@ -6111,6 +6141,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           if (PWSz == VL.size()) {
             ReuseShuffleIndicies.clear();
           } else {
+            if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+              LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                                   "for nodes with padding.\n");
+              newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+              return false;
+            }
             NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
             NonUniqueValueVL.append(PWSz - UniqueValues.size(),
                                     UniqueValues.back());
@@ -6119,6 +6155,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           return true;
         }
         LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return false;
+      }
+      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported for "
+                             "nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
         return false;
       }
@@ -7662,7 +7704,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         for (unsigned I = 0, End = VL.size(); I < End; I += VF) {
           if (VectorizedLoads.contains(VL[I]))
             continue;
-          GatherCost += getBuildVectorCost(VL.slice(I, VF), Root);
+          GatherCost +=
+              getBuildVectorCost(VL.slice(I, std::min(End - I, VF)), Root);
         }
         // Exclude potentially vectorized loads from list of gathered
         // scalars.
@@ -10423,6 +10466,9 @@ BoUpSLP::isGatherShuffledEntry(
   Entries.clear();
   // No need to check for the topmost gather node.
   if (TE == VectorizableTree.front().get())
+    return {};
+  // FIXME: Gathering for non-power-of-2 nodes not implemented yet.
+  if (TE->isNonPowOf2Vec())
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
   assert(TE->UserTreeIndices.size() == 1 &&
@@ -14597,8 +14643,13 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
-    return false;
+  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF) {
+    // Check if vectorizing with a non-power-of-2 VF should be considered. At
+    // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
+    // all vector lanes are used.
+    if (!VectorizeNonPowerOf2 || (VF < MinVF && VF + 1 != MinVF))
+      return false;
+  }
 
   LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << Idx
                     << "\n");
@@ -14697,14 +14748,23 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         continue;
       }
 
+      std::optional<unsigned> NonPowerOf2VF;
+      if (VectorizeNonPowerOf2) {
+        // First try vectorizing with a non-power-of-2 VF. At the moment, only
+        // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
+        // lanes are used.
+        unsigned CandVF = Operands.size();
+        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF) {
+          NonPowerOf2VF = CandVF;
+        }
+      }
+
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz);
-      // FIXME: Is division-by-2 the correct step? Should we assert that the
-      // register size is a power-of-2?
-      unsigned Size = MaxVF;
-      for_each(CandidateVFs, [&](unsigned &VF) {
-        VF = Size;
-        Size /= 2;
+      SmallVector<unsigned> CandidateVFs(Sz + bool(NonPowerOf2VF));
+      unsigned Size = MinVF;
+      for_each(reverse(CandidateVFs), [&](unsigned &VF) {
+        VF = Size > MaxVF ? *NonPowerOf2VF : Size;
+        Size *= 2;
       });
       unsigned StartIdx = 0;
       for (unsigned Size : CandidateVFs) {
