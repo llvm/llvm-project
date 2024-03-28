@@ -48,6 +48,8 @@
 ;    }
 ;  }
 
+; Verify not running profile matching for checksum matched function.
+; CHECK-NOT: Run stale profile matching for bar
 
 ; CHECK: Run stale profile matching for main
 
