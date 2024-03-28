@@ -192,7 +192,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
     //            |            |           | (−1)**s × m × 2**−16382
     // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
-    //  Values    |            |           |
+    //  Values    |            |           | 
     bool bit63 = sx.get_implicit_bit();
     UInt128 mantissa = sx.get_explicit_mantissa();
     bool bit62 = static_cast<bool>((mantissa & (1ULL << 62)) >> 62);

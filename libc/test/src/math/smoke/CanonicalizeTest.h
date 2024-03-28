@@ -138,32 +138,32 @@ public:
       // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
       //  Values    |            |           |
 
-      FPBits test5_1(UInt128(0x0000000000000001));
+      FPBits test5_1((UInt128(0x0040) << 64) + UInt128(0x0000000000000001));
       const T test5_1_val = test5_1.get_val();
       TEST_SPECIAL(cx, test5_1_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test5_2(UInt128(0x0000004270000001));
+      FPBits test5_2((UInt128(0x0230) << 64) + UInt128(0x0000004270000001));
       const T test5_2_val = test5_2.get_val();
       TEST_SPECIAL(cx, test5_2_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test5_3(UInt128(0x0000000008261001));
+      FPBits test5_3((UInt128(0x0560) << 64) + UInt128(0x0000000008261001));
       const T test5_3_val = test5_3.get_val();
       TEST_SPECIAL(cx, test5_3_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test5_4(UInt128(0x0000002816000000));
+      FPBits test5_4((UInt128(0x0780) << 64) + UInt128(0x0000002816000000));
       const T test5_4_val = test5_4.get_val();
       TEST_SPECIAL(cx, test5_4_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test5_5(UInt128(0x0000004270000001));
+      FPBits test5_5((UInt128(0x0900) << 64) + UInt128(0x0000004270000001));
       const T test5_5_val = test5_5.get_val();
       TEST_SPECIAL(cx, test5_5_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test5_6(UInt128(0x0000000008261001));
+      FPBits test5_6((UInt128(0x0ab0) << 64) + UInt128(0x0000000008261001));
       const T test5_6_val = test5_6.get_val();
       TEST_SPECIAL(cx, test5_6_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
