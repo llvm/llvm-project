@@ -458,6 +458,7 @@ Bug Fixes to C++ Support
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
 - Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
