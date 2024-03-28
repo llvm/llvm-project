@@ -19,6 +19,7 @@
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
@@ -26,6 +27,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ConvertEBCDIC.h"
@@ -985,12 +987,12 @@ void SystemZAsmPrinter::emitADASection() {
 
   const unsigned PointerSize = getDataLayout().getPointerSize();
   OutStreamer->switchSection(getObjFileLowering().getADASection());
-
+  OutStreamer->emitLabel(ADASym);
   unsigned EmittedBytes = 0;
   for (auto &Entry : ADATable.getTable()) {
-    const MCSymbol *Sym;
-    unsigned SlotKind;
-    std::tie(Sym, SlotKind) = Entry.first;
+    MCSymbolGOFF *Sym =
+        static_cast<MCSymbolGOFF *>(const_cast<MCSymbol *>(Entry.first.first));
+    unsigned SlotKind = Entry.first.second;
     unsigned Offset = Entry.second;
     assert(Offset == EmittedBytes && "Offset not as expected");
     (void)EmittedBytes;
@@ -1014,6 +1016,8 @@ void SystemZAsmPrinter::emitADASection() {
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
+      Sym->setExecutable(GOFF::ESD_EXE_CODE);
+      Sym->setTemporary(false);
       EmittedBytes += PointerSize * 2;
       break;
     case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
@@ -1023,6 +1027,7 @@ void SystemZAsmPrinter::emitADASection() {
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
+      Sym->setExecutable(GOFF::ESD_EXE_DATA);
       EmittedBytes += PointerSize;
       break;
     case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
@@ -1420,9 +1425,89 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
                                       4);
 }
 
+void SystemZAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (TM.getTargetTriple().isOSzOS()) {
+    auto *Sym = cast<MCSymbolGOFF>(getSymbol(GV));
+    Sym->setExecutable(GOFF::ESD_EXE_DATA);
+  }
+
+  return AsmPrinter::emitGlobalVariable(GV);
+}
+
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
+  if (!TM.getTargetTriple().isOSzOS()) {
+    AsmPrinter::emitGlobalAlias(M, GA);
+    return;
+  }
+
+  MCSymbol *Name = getSymbol(&GA);
+  bool IsFunc = isa<Function>(GA.getAliasee()->stripPointerCasts());
+
+  if (GA.hasExternalLinkage() || !MAI->getWeakRefDirective())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
+  else if (GA.hasWeakLinkage() || GA.hasLinkOnceLinkage())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
+  else
+    assert(GA.hasLocalLinkage() && "Invalid alias linkage");
+
+  emitVisibility(Name, GA.getVisibility());
+
+  const MCExpr *Expr;
+
+  // For XPLINK, create a VCON relocation in case of a function, and
+  // a direct reference else.
+  MCSymbol *Sym = getSymbol(GA.getAliaseeObject());
+  if (IsFunc)
+    Expr = SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                 MCSymbolRefExpr::create(Sym, OutContext),
+                                 OutContext);
+
+  else
+    Expr = MCSymbolRefExpr::create(Sym, OutContext);
+
+  OutStreamer->emitAssignment(Name, Expr);
+}
+
+const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
+  const Triple &TargetTriple = TM.getTargetTriple();
+  if (TargetTriple.isOSzOS()) {
+    const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
+    const Function *FV = dyn_cast<Function>(CV);
+    bool IsFunc = FV || (GA && isa<Function>(GA->getAliaseeObject()));
+    MCSymbolGOFF *Sym = nullptr;
+
+    if (auto GValue = dyn_cast<GlobalValue>(CV))
+      Sym = cast<MCSymbolGOFF>(getSymbol(GValue));
+    // TODO: Is it necessary to assert if CV is of type GlobalIFunc?
+
+    if (IsFunc) {
+      Sym->setExecutable(GOFF::ESD_EXE_CODE);
+      if (Sym->isExternal())
+        return SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
+                                     MCSymbolRefExpr::create(Sym, OutContext),
+                                     OutContext);
+      // Trigger creation of function descriptor in ADA for internal
+      // functions.
+      unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+      return MCBinaryExpr::createAdd(
+          SystemZMCExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
+                                OutContext),
+          MCConstantExpr::create(Disp, OutContext), OutContext);
+    } else if (Sym) {
+      Sym->setExecutable(GOFF::ESD_EXE_DATA);
+      return MCSymbolRefExpr::create(Sym, OutContext);
+    }
+  }
+
+  return AsmPrinter::lowerConstant(CV);
+}
+
 void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSzOS())
+  if (TM.getTargetTriple().isOSzOS()) {
+    ADASym = OutContext.createTempSymbol("ada_sec_start");
     emitPPA2(M);
+  }
   AsmPrinter::emitStartOfAsmFile(M);
 }
 
@@ -1433,6 +1518,10 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
+  auto *GStartSym = static_cast<MCSymbolGOFF *>(CELQSTRT);
+  GStartSym->setExecutable(GOFF::ESD_EXE_CODE);
+  GStartSym->setOSLinkage();
+  GStartSym->setExternal(true);
 
   // Create symbol and assign to class field for use in PPA1.
   PPA2Sym = OutContext.createTempSymbol("PPA2", false);

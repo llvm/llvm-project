@@ -136,6 +136,9 @@ private:
   // Optional compiler version.
   std::string CompilerVersion;
 
+  /// GOFF Csect names.
+  std::pair<std::string, std::string> CsectNames;
+
   MCDwarfLineTableParams LTParams;
 
   /// The set of function symbols for which a .thumb_func directive has
@@ -486,6 +489,10 @@ public:
 
   void addFileName(StringRef FileName) {
     FileNames.emplace_back(std::string(FileName), Symbols.size());
+  }
+
+  std::pair<std::string, std::string> const &getCsectNames() {
+    return CsectNames;
   }
 
   void setCompilerVersion(std::string CompilerVers) {

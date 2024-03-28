@@ -897,10 +897,13 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
+
+protected:
   virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
-  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:
+  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
+
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 

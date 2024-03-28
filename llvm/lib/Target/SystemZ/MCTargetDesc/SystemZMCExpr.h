@@ -36,6 +36,8 @@ public:
   static const SystemZMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                      MCContext &Ctx);
 
+  static const SystemZMCExpr *create(const MCExpr *Expr, MCContext &Ctx);
+
   /// getOpcode - Get the kind of this expression.
   VariantKind getKind() const { return Kind; }
 

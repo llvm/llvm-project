@@ -548,6 +548,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr, nullptr);
   BSSSection =
       Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr, nullptr);
+  ReadOnlySection =
+      Ctx->getGOFFSection(".rodata", SectionKind::getReadOnly(), TextSection,
+                          MCConstantExpr::create(GOFF::SK_ReadOnly, *Ctx));
   PPA1Section =
       Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
