@@ -908,10 +908,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnoseErrors);
   }
 
-  SharedRuntime =
-      Args.hasFlag(options::OPT_shared_libsan, options::OPT_static_libsan,
-                   TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
-                       TC.getTriple().isOSDarwin());
+  SharedRuntime = Args.hasFlag(
+      options::OPT_shared_libsan, options::OPT_static_libsan,
+      TC.getTriple().isAndroid() || TC.getTriple().isOSFuchsia() ||
+          TC.getTriple().isOSDarwin() || TC.getTriple().isOSWindows());
+  if (!SharedRuntime && TC.getTriple().isOSWindows()) {
+    Arg *A =
+        Args.getLastArg(options::OPT_shared_libsan, options::OPT_static_libsan);
+    D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << TC.getTriple().str();
+  }
 
   ImplicitCfiRuntime = TC.getTriple().isAndroid();
 
