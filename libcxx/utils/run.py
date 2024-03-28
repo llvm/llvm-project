@@ -64,6 +64,21 @@ def main():
         if "TEMP" in os.environ:
             env["TEMP"] = os.environ.get("TEMP")
 
+    # Forwarding the environment variable CUDA_VISIBLE_DEVICES which configures
+    # the visible NVIDIA GPUs.
+    if "CUDA_VISIBLE_DEVICES" in os.environ:
+        env["CUDA_VISIBLE_DEVICES"] = os.environ["CUDA_VISIBLE_DEVICES"]
+
+    # Forwarding the environment variable ROCR_VISIBLE_DEVICES which configures
+    # the visible AMD GPUs.
+    if "ROCR_VISIBLE_DEVICES" in os.environ:
+        env["ROCR_VISIBLE_DEVICES"] = os.environ["ROCR_VISIBLE_DEVICES"]
+
+    # Pass the OpenMP debug flag. Can be used to print information about the
+    # GPU execution of the tests.
+    if "LIBOMPTARGET_DEBUG" in os.environ:
+        env["LIBOMPTARGET_DEBUG"] = os.environ["LIBOMPTARGET_DEBUG"]
+
     # Run the command line with the given environment in the execution directory.
     return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
 

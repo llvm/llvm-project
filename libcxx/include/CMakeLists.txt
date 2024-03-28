@@ -87,6 +87,17 @@ set(files
   __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
+  __algorithm/pstl_backends/openmp.h
+  __algorithm/pstl_backends/openmp/any_of.h
+  __algorithm/pstl_backends/openmp/backend.h
+  __algorithm/pstl_backends/openmp/fill.h
+  __algorithm/pstl_backends/openmp/find_if.h
+  __algorithm/pstl_backends/openmp/for_each.h
+  __algorithm/pstl_backends/openmp/merge.h
+  __algorithm/pstl_backends/openmp/omp_offload.h
+  __algorithm/pstl_backends/openmp/stable_sort.h
+  __algorithm/pstl_backends/openmp/transform.h
+  __algorithm/pstl_backends/openmp/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
   __algorithm/pstl_equal.h

@@ -512,6 +512,11 @@ generic-optimized-speed)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
+generic-pstl-openmp)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-pstl-openmp.cmake"
+    check-runtimes
+;;
 apple-system)
     clean
 

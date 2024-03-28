@@ -412,6 +412,14 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
+# If the OpenMP PSTL backend has been enabled for libcxx, OpenMP must be
+# enabled during compilation
+if (DEFINED LIBCXX_PSTL_BACKEND)
+  if (LIBCXX_PSTL_BACKEND STREQUAL "openmp")
+    add_compile_options(-fopenmp)
+  endif()
+endif()
+
 #===============================================================================
 # Setup Source Code
 #===============================================================================

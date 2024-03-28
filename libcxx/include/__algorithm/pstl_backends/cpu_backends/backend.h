@@ -12,7 +12,7 @@
 #include <__config>
 #include <cstddef>
 
-#if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL)
+#if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_BACKEND_OPENMP)
 #  include <__algorithm/pstl_backends/cpu_backends/serial.h>
 #elif defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
 #  include <__algorithm/pstl_backends/cpu_backends/thread.h>

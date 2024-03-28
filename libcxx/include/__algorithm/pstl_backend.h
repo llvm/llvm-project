@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_PSTL_BACKEND_H
 
 #include <__algorithm/pstl_backends/cpu_backend.h>
+#include <__algorithm/pstl_backends/openmp.h>
 #include <__config>
 #include <execution>
 
@@ -208,6 +209,7 @@ struct __select_backend<std::execution::unsequenced_policy> {
 
 #  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD) ||                          \
       defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+
 template <>
 struct __select_backend<std::execution::parallel_policy> {
   using type = __cpu_backend_tag;
@@ -216,6 +218,18 @@ struct __select_backend<std::execution::parallel_policy> {
 template <>
 struct __select_backend<std::execution::parallel_unsequenced_policy> {
   using type = __cpu_backend_tag;
+};
+
+#  elif defined(_LIBCPP_PSTL_BACKEND_OPENMP)
+
+template <>
+struct __select_backend<std::execution::parallel_policy> {
+  using type = __cpu_backend_tag;
+};
+
+template <>
+struct __select_backend<std::execution::parallel_unsequenced_policy> {
+  using type = __omp_backend_tag;
 };
 
 #  else
