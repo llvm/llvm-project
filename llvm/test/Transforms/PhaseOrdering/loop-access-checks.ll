@@ -279,7 +279,7 @@ define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I_I:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB_I_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I_I]], [[SUB_PTR_RHS_CAST_I_I]]
 ; CHECK-NEXT:    [[SUB_PTR_DIV_I_I:%.*]] = ashr exact i64 [[SUB_PTR_SUB_I_I]], 3
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[SUB_PTR_DIV_I_I]], 0
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[SUB_PTR_SUB_I_I]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void

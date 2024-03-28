@@ -2481,7 +2481,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   // constant-value-based preconditions in the folds below, then we could assert
   // those conditions rather than checking them. This is difficult because of
   // undef/poison (PR34838).
-  if (IsAShr && Shr->hasOneUse()) {
+  if (IsAShr) {
     if (IsExact || Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT) {
       // When ShAmtC can be shifted losslessly:
       // icmp PRED (ashr exact X, ShAmtC), C --> icmp PRED X, (C << ShAmtC)
@@ -7196,9 +7196,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = canonicalizeICmpPredicate(I))
     return Res;
 
-  if (Instruction *Res = foldICmpWithConstant(I))
-    return Res;
-
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
@@ -7227,6 +7224,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       if (SPR.Flavor != SPF_UNKNOWN)
         return nullptr;
     }
+
+  if (Instruction *Res = foldICmpWithConstant(I))
+    return Res;
 
   // Do this after checking for min/max to prevent infinite looping.
   if (Instruction *Res = foldICmpWithZero(I))
