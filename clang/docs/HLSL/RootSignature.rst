@@ -44,7 +44,7 @@ point):
     [RootSignature(RS)]
     float4 main(float4 coord : COORD) : SV_Target
     {
-    "…"
+    …
     }
 
 The compiler will create and verify the root signature blob for the shader and 
@@ -349,6 +349,12 @@ a simple struct to collect all the information in the root signature string.
       std::vector<RootParameter> Parameters;
       std::vector<StaticSamplerDesc> StaticSamplers;
       RootSignatureFlags Flags;
+    };
+
+    enum class RootSignatureVersion {
+      Version_1 = 1,
+      Version_1_0 = 1,
+      Version_1_1 = 2
     };
 
     struct VersionedRootSignatureDesc {
