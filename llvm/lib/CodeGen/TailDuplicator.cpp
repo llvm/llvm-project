@@ -649,27 +649,6 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
       return false;
   }
 
-  // Check if any of the successors of TailBB has a PHI node in which the
-  // value corresponding to TailBB uses a subregister.
-  // If a phi node uses a register paired with a subregister, the actual
-  // "value type" of the phi may differ from the type of the register without
-  // any subregisters. Due to a bug, tail duplication may add a new operand
-  // without a necessary subregister, producing an invalid code. This is
-  // demonstrated by test/CodeGen/Hexagon/tail-dup-subreg-abort.ll.
-  // Disable tail duplication for this case for now, until the problem is
-  // fixed.
-  for (auto *SB : TailBB.successors()) {
-    for (auto &I : *SB) {
-      if (!I.isPHI())
-        break;
-      unsigned Idx = getPHISrcRegOpIdx(&I, &TailBB);
-      assert(Idx != 0);
-      MachineOperand &PU = I.getOperand(Idx);
-      if (PU.getSubReg() != 0)
-        return false;
-    }
-  }
-
   if (HasIndirectbr && PreRegAlloc)
     return true;
 
