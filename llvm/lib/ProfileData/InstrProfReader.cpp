@@ -1239,27 +1239,28 @@ Error IndexedInstrProfReader::readHeader() {
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
 
-    memprof::MemProfVersion Version = memprof::MemProfVersion0;
-    if (static_cast<memprof::MemProfVersion>(FirstWord) ==
-        memprof::MemProfVersion1) {
+    memprof::IndexedVersion Version = memprof::Version0;
+    if (FirstWord == memprof::Version1) {
       // Everything is good.  We can proceed to deserialize the rest.
-      Version = memprof::MemProfVersion1;
+      Version = memprof::Version1;
     } else if (FirstWord >= 24) {
       // This is a heuristic/hack to detect memprof::MemProfVersion0,
       // which does not have a version field in the header.
-      // In memprof::MemProfVersion0, FirstWord should be RecordTableOffset,
+      // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
       // which should be at least 24 because of the MemProf header size.
-      Version = memprof::MemProfVersion0;
+      Version = memprof::Version0;
     } else {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
-          formatv("MemProf version {} not supported; version 0 or 1 required",
-                  FirstWord));
+          formatv("MemProf version {} not supported; "
+                  "requires version between {} and {}, inclusive",
+                  FirstWord, memprof::MinimumSupportedVersion,
+                  memprof::MaximumSupportedVersion));
     }
 
     // The value returned from RecordTableGenerator.Emit.
     const uint64_t RecordTableOffset =
-        Version == memprof::MemProfVersion0
+        Version == memprof::Version0
             ? FirstWord
             : support::endian::readNext<uint64_t, llvm::endianness::little,
                                         unaligned>(Ptr);

@@ -300,12 +300,12 @@ cl::opt<bool> DoWritePrevVersion(
     cl::desc("Write the previous version of indexed format, to enable "
              "some forward compatibility."));
 
-cl::opt<memprof::MemProfVersion> MemProfVersionRequested(
+cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
-    cl::init(memprof::MemProfVersion0),
-    cl::values(clEnumValN(memprof::MemProfVersion0, "0", "version 0"),
-               clEnumValN(memprof::MemProfVersion1, "1", "version 1")));
+    cl::init(memprof::Version0),
+    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
+               clEnumValN(memprof::Version1, "1", "version 1")));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,

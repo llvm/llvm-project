@@ -16,13 +16,18 @@ namespace llvm {
 namespace memprof {
 
 // The versions of the indexed MemProf format
-enum MemProfVersion {
-  // Version 0: This version didn't have a version field have a version in the
-  // header.
-  MemProfVersion0 = 0,
+enum IndexedVersion : uint64_t {
+  // Version 0: This version didn't have a version field.
+  Version0 = 0,
   // Version 1: Added a version field to the header.
-  MemProfVersion1 = 1,
+  Version1 = 1,
 };
+
+constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MaximumSupportedVersion = Version1;
+
+// Verify that the minimum and maximum satisfy the obvious constraint.
+static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
 
 enum class Meta : uint64_t {
   Start = 0,
