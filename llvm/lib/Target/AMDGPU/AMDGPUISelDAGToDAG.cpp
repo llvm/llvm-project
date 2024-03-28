@@ -132,6 +132,7 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
