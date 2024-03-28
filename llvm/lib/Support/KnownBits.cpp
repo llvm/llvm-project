@@ -979,7 +979,9 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
 
-  if (LHS.isZero() || RHS.isZero()) {
+  // if LHS < RHS, then LHS / RHS is 0.
+  std::optional<bool> ult = KnownBits::ult(LHS, RHS);
+  if (LHS.isZero() || RHS.isZero() || (ult && *ult)) {
     // Result is either known Zero or UB. Return Zero either way.
     // Checking this earlier saves us a lot of special cases later on.
     Known.setAllZero();
