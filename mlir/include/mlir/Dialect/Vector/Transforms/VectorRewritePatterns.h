@@ -376,7 +376,8 @@ FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
 /// ops over wider types.
 /// Warning: these patterns currently only work for little endian targets.
 void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
-                                             PatternBenefit benefit = 1);
+                                             PatternBenefit benefit = 1,
+                                             unsigned shiftDepth = 0);
 
 /// Appends patterns for emulating a sub-byte vector transpose.
 void populateVectorTransposeNarrowTypeRewritePatterns(

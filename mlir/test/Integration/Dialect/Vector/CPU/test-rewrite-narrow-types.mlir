@@ -124,6 +124,36 @@ func.func @f3(%v: vector<2xi48>) {
   return
 }
 
+func.func @print_as_i1_2xi8(%v : vector<2xi8>) {
+  %bitsi16 = vector.bitcast %v : vector<2xi8> to vector<16xi1>
+  vector.print %bitsi16 : vector<16xi1>
+  return
+}
+
+func.func @print_as_i1_4xi4(%v : vector<4xi4>) {
+  %bitsi16 = vector.bitcast %v : vector<4xi4> to vector<16xi1>
+  vector.print %bitsi16 : vector<16xi1>
+  return
+}
+
+func.func @ftrunc_splat(%v: vector<2xi24>) {
+  %trunc = arith.trunci %v : vector<2xi24> to vector<2xi8>
+  func.call @print_as_i1_2xi8(%trunc) : (vector<2xi8>) -> ()
+  //      CHECK: (
+  // CHECK-SAME: 0, 1, 1, 1, 1, 1, 1, 1,
+  // CHECK-SAME: 1, 1, 0, 0, 0, 0, 1, 1 )
+
+  %bitcast = vector.bitcast %trunc : vector<2xi8> to vector<4xi4>
+  func.call @print_as_i1_4xi4(%bitcast) : (vector<4xi4>) -> ()
+  //      CHECK: (
+  // CHECK-SAME: 0, 1, 1, 1,
+  // CHECK-SAME: 1, 1, 1, 1,
+  // CHECK-SAME: 1, 1, 0, 0,
+  // CHECK-SAME: 0, 0, 1, 1 )
+
+  return
+}
+
 func.func @print_as_i1_8xi5(%v : vector<8xi5>) {
   %bitsi40 = vector.bitcast %v : vector<8xi5> to vector<40xi1>
   vector.print %bitsi40 : vector<40xi1>
@@ -164,6 +194,32 @@ func.func @fext(%a: vector<5xi8>) {
   return
 }
 
+func.func @print_as_i1_4xi8(%v : vector<4xi8>) {
+  %bitsi32 = vector.bitcast %v : vector<4xi8> to vector<32xi1>
+  vector.print %bitsi32 : vector<32xi1>
+  return
+}
+
+func.func @fext_splat(%a: vector<2xi8>) {
+  %0 = vector.bitcast %a : vector<2xi8> to vector<4xi4>
+  func.call @print_as_i1_4xi4(%0) : (vector<4xi4>) -> ()
+  //      CHECK: (
+  // CHECK-SAME: 0, 1, 1, 1,
+  // CHECK-SAME: 1, 1, 1, 1,
+  // CHECK-SAME: 1, 1, 0, 0,
+  // CHECK-SAME: 0, 0, 1, 1 )
+
+  %1 = arith.extui %0 : vector<4xi4> to vector<4xi8>
+  func.call @print_as_i1_4xi8(%1) : (vector<4xi8>) -> ()
+  //      CHECK: (
+  // CHECK-SAME: 0, 1, 1, 1, 0, 0, 0, 0,
+  // CHECK-SAME: 1, 1, 1, 1, 0, 0, 0, 0,
+  // CHECK-SAME: 1, 1, 0, 0, 0, 0, 0, 0,
+  // CHECK-SAME: 0, 0, 1, 1, 0, 0, 0, 0 )
+
+  return
+}
+
 func.func @fcst_maskedload(%A: memref<?xi4>, %passthru: vector<6xi4>) -> vector<6xi4> {
   %c0 = arith.constant 0: index
   %mask = vector.constant_mask [3] : vector<6xi1>
@@ -190,9 +246,19 @@ func.func @entry() {
   func.call @f3(%v3) : (vector<2xi48>) -> ()
 
   %v4 = arith.constant dense<[
+    0xafe, 0xbc3
+  ]> : vector<2xi24>
+  func.call @ftrunc_splat(%v4) : (vector<2xi24>) -> ()
+
+  %v5 = arith.constant dense<[
     0xef, 0xee, 0xed, 0xec, 0xeb
   ]> : vector<5xi8>
-  func.call @fext(%v4) : (vector<5xi8>) -> ()
+  func.call @fext(%v5) : (vector<5xi8>) -> ()
+
+  %v6 = arith.constant dense<[
+    0xfe, 0xc3
+  ]> : vector<2xi8>
+  func.call @fext_splat(%v6) : (vector<2xi8>) -> ()
 
   // Set up memory.
   %c0 = arith.constant 0: index
@@ -218,7 +284,7 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
 
     transform.apply_patterns to %f {
-      transform.apply_patterns.vector.rewrite_narrow_types
+      transform.apply_patterns.vector.rewrite_narrow_types { max_cycle_len = 4 }
     } : !transform.any_op
     transform.yield
   }

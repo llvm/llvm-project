@@ -166,7 +166,8 @@ void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
 
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  populateVectorNarrowTypeRewritePatterns(patterns);
+  populateVectorNarrowTypeRewritePatterns(patterns, /*default=*/1,
+                                          getMaxCycleLen());
   populateVectorTransposeNarrowTypeRewritePatterns(patterns);
 }
 

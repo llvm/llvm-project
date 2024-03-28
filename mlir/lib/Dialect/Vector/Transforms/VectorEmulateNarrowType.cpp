@@ -546,6 +546,14 @@ struct SourceElementRangeList : public SmallVector<SourceElementRange> {
 /// and `vector.bitcast ... : vector<2xi15> to vector<3xi10>` is decomposed as:
 ///   [0] = {0, [0, 10)}, {1, [0, 5)}
 ///   [1] = {1, [5, 10)}, {2, [0, 10)}
+/// and `vector.bitcast ... : vector<4xi4> to vector<2xi8>` is decomposed as:
+///   [0] = {0, [0, 4)}, {1, [0, 4)}
+///   [1] = {2, [0, 4)}, {3, [0, 4)}
+/// and `vector.bitcast ... : vector<2xi8> to vector<4xi4>` is decomposed as:
+///   [0] = {0, [0, 4)}
+///   [1] = {0, [4, 8)}
+///   [2] = {1, [0, 4)}
+///   [3] = {1, [4, 8)}
 struct BitCastBitsEnumerator {
   BitCastBitsEnumerator(VectorType sourceVectorType,
                         VectorType targetVectorType);
@@ -633,6 +641,35 @@ struct BitCastBitsEnumerator {
 /// `(shuffle -> and -> shiftright -> shiftleft -> or)` to iteratively update
 /// the result vector (i.e. the `shiftright -> shiftleft -> or` part) with the
 /// bits extracted from the source vector (i.e. the `shuffle -> and` part).
+///
+///
+/// When we consider the above algorithm to rewrite our vector.bitcast, we rely
+/// on using dynamic shift amounts for the left and right shifts. This can be
+/// inefficient on certain targets (RDNA GPUs) in contrast to a splat constant
+/// value. So when possible we can rewrite this as a combination of shifts with
+/// a constant splat value and then regroup the selected terms.
+///
+/// Eg. Instead of:
+///    res = arith.shrui x [0, 4, 8, 0, 4, 8]
+/// use:
+///    y = arith.shrui x [0, 0, 0, 0, 0, 0]  (can be folded away)
+///    y1 = arith.shrui x [4, 4, 4, 4, 4, 4]
+///    y2 = arith.shrui x [8, 8, 8, 8, 8, 8]
+///    y3 = vector.shuffle y y1 [0, 7, 3, 10]
+///    res = vector.shuffle y3 y2 [0, 1, 7, 2, 3, 10]
+///
+/// This is possible when the precomputed shift amounts following a cyclic
+/// pattern of [x, y, z, ..., x, y, z, ...] such that the cycle length,
+/// cycleLen, satisifies 1 < cycleLen < size(shiftAmounts). And the shuffles are
+/// of the form [0, 0, 0, ..., 1, 1, 1, ...]. A common pattern in
+/// (de)quantization, i24 -> 3xi8 or 3xi8 -> i24. The modified algorithm follows
+/// the same 2 steps as above, then it proceeds as follows:
+///
+///   2. for each element in the cycle, x, of the rightShiftAmounts create a
+///   shrui with a splat constant of x.
+///   3. repeat 2. with the respective leftShiftAmounts
+///   4. construct a chain of vector.shuffles that will reconstruct the result
+///   from the chained shifts
 struct BitCastRewriter {
   /// Helper metadata struct to hold the static quantities for the rewrite.
   struct Metadata {
@@ -656,10 +693,25 @@ struct BitCastRewriter {
                            Value initialValue, Value runningResult,
                            const BitCastRewriter::Metadata &metadata);
 
+  /// Rewrite one step of the sequence when able to use a splat constant for the
+  /// shiftright and shiftleft.
+  Value splatRewriteStep(PatternRewriter &rewriter, Location loc,
+                         Value initialValue, Value runningResult,
+                         const BitCastRewriter::Metadata &metadata);
+
+  bool useSplatStep(unsigned maxCycleLen) {
+    return 1 < cycleLen && cycleLen <= maxCycleLen;
+  }
+
 private:
   /// Underlying enumerator that encodes the provenance of the bits in the each
   /// element of the result vector.
   BitCastBitsEnumerator enumerator;
+
+  // Underlying cycleLen computed during precomputeMetadata. A cycleLen > 1
+  // denotes that there is a cycle in the precomputed shift amounts and we are
+  // able to use the splatRewriteStep.
+  int64_t cycleLen = 0;
 };
 
 } // namespace
@@ -775,8 +827,40 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   return success();
 }
 
+// Check if the vector is a cycle of the first cycleLen elements.
+template <class T>
+static bool isCyclic(SmallVector<T> xs, int64_t cycleLen) {
+  for (int64_t idx = cycleLen, n = xs.size(); idx < n; idx++) {
+    if (xs[idx] != xs[idx % cycleLen])
+      return false;
+  }
+  return true;
+}
+
+static SmallVector<int64_t> constructShuffles(int64_t inputSize,
+                                              int64_t numCycles,
+                                              int64_t cycleLen, int64_t idx) {
+  // If idx == 1, then the first operand of the shuffle will be the mask which
+  // will have the original size. So we need to step through the mask with a
+  // stride of cycleSize.
+  // When idx > 1, then the first operand will be the size of (idx * cycleSize)
+  // and so we take the first idx elements of the input and then append the
+  // strided mask value.
+  int64_t inputStride = idx == 1 ? cycleLen : idx;
+
+  SmallVector<int64_t> shuffles;
+  for (int64_t cycle = 0; cycle < numCycles; cycle++) {
+    for (int64_t inputIdx = 0; inputIdx < idx; inputIdx++) {
+      shuffles.push_back(cycle * inputStride + inputIdx);
+    }
+    shuffles.push_back(inputSize + cycle * cycleLen + idx);
+  }
+  return shuffles;
+}
+
 SmallVector<BitCastRewriter::Metadata>
 BitCastRewriter::precomputeMetadata(IntegerType shuffledElementType) {
+  bool cyclicShifts = true;
   SmallVector<BitCastRewriter::Metadata> result;
   for (int64_t shuffleIdx = 0, e = enumerator.getMaxNumberOfEntries();
        shuffleIdx < e; ++shuffleIdx) {
@@ -811,8 +895,71 @@ BitCastRewriter::precomputeMetadata(IntegerType shuffledElementType) {
           IntegerAttr::get(shuffledElementType, shiftLeft));
     }
 
+    // Compute a potential cycle size by detecting the number of sourceElements
+    // at the start of shuffle that are the same
+    cycleLen = 1;
+    for (int64_t n = shuffles.size(); cycleLen < n; cycleLen++)
+      if (shuffles[cycleLen] != shuffles[0])
+        break;
+
+    cyclicShifts = cyclicShifts && (cycleLen < (int64_t)shuffles.size()) &&
+                   isCyclic(shiftRightAmounts, cycleLen) &&
+                   isCyclic(shiftLeftAmounts, cycleLen);
+
     result.push_back({shuffles, masks, shiftRightAmounts, shiftLeftAmounts});
   }
+
+  cycleLen = cyclicShifts ? cycleLen : 0;
+  return result;
+}
+
+Value BitCastRewriter::splatRewriteStep(
+    PatternRewriter &rewriter, Location loc, Value initialValue,
+    Value runningResult, const BitCastRewriter::Metadata &metadata) {
+
+  // Initial result will be the Shifted Mask which will have the shuffles size.
+  int64_t inputSize = metadata.shuffles.size();
+  int64_t numCycles = inputSize / cycleLen;
+
+  auto shuffleOp = rewriter.create<vector::ShuffleOp>(
+      loc, initialValue, initialValue, metadata.shuffles);
+
+  // Intersect with the mask.
+  VectorType shuffledVectorType = shuffleOp.getResultVectorType();
+  auto constOp = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(shuffledVectorType, metadata.masks));
+  Value andValue = rewriter.create<arith::AndIOp>(loc, shuffleOp, constOp);
+
+  Value result;
+  for (int64_t idx = 0; idx < cycleLen; idx++) {
+    auto shiftRightConstantOp = rewriter.create<arith::ConstantOp>(
+        loc, SplatElementsAttr::get(shuffledVectorType,
+                                    metadata.shiftRightAmounts[idx]));
+    Value shiftedRight =
+        rewriter.create<arith::ShRUIOp>(loc, andValue, shiftRightConstantOp);
+
+    auto shiftLeftConstantOp = rewriter.create<arith::ConstantOp>(
+        loc, SplatElementsAttr::get(shuffledVectorType,
+                                    metadata.shiftLeftAmounts[idx]));
+    Value shiftedLeft =
+        rewriter.create<arith::ShLIOp>(loc, shiftedRight, shiftLeftConstantOp);
+
+    if (result) {
+      SmallVector<int64_t> shuffles =
+          constructShuffles(inputSize, numCycles, cycleLen, idx);
+      result = rewriter.create<vector::ShuffleOp>(loc, result, shiftedLeft,
+                                                  shuffles);
+
+      // After the first shuffle in the chain, the size of the input result will
+      // grow as we append more shuffles together to reconstruct the
+      // shuffledVectorType size. Each iteration they will retain numCycles more
+      // elements.
+      inputSize = numCycles * (idx + 1);
+    } else {
+      result = shiftedLeft;
+    }
+  }
+
   return result;
 }
 
@@ -939,6 +1086,11 @@ namespace {
 struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
   using OpRewritePattern::OpRewritePattern;
 
+  RewriteBitCastOfTruncI(MLIRContext *context, PatternBenefit benefit,
+                         unsigned maxCycleLen)
+      : OpRewritePattern<vector::BitCastOp>(context, benefit),
+        maxCycleLen{maxCycleLen} {}
+
   LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
                                 PatternRewriter &rewriter) const override {
     // The source must be a trunc op.
@@ -961,8 +1113,12 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
     Value runningResult;
     for (const BitCastRewriter ::Metadata &metadata :
          bcr.precomputeMetadata(shuffledElementType)) {
-      runningResult = bcr.genericRewriteStep(
-          rewriter, bitCastOp->getLoc(), truncValue, runningResult, metadata);
+      runningResult =
+          bcr.useSplatStep(maxCycleLen)
+              ? bcr.splatRewriteStep(rewriter, bitCastOp->getLoc(), truncValue,
+                                     runningResult, metadata)
+              : bcr.genericRewriteStep(rewriter, bitCastOp->getLoc(),
+                                       truncValue, runningResult, metadata);
     }
 
     // Finalize the rewrite.
@@ -986,6 +1142,9 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
 
     return success();
   }
+
+private:
+  unsigned maxCycleLen;
 };
 } // namespace
 
@@ -1001,8 +1160,10 @@ template <typename ExtOpType>
 struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
   using OpRewritePattern<ExtOpType>::OpRewritePattern;
 
-  RewriteExtOfBitCast(MLIRContext *context, PatternBenefit benefit)
-      : OpRewritePattern<ExtOpType>(context, benefit) {}
+  RewriteExtOfBitCast(MLIRContext *context, PatternBenefit benefit,
+                      unsigned maxCycleLen)
+      : OpRewritePattern<ExtOpType>(context, benefit),
+        maxCycleLen{maxCycleLen} {}
 
   LogicalResult matchAndRewrite(ExtOpType extOp,
                                 PatternRewriter &rewriter) const override {
@@ -1026,8 +1187,12 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
         cast<IntegerType>(getElementTypeOrSelf(sourceValue.getType()));
     for (const BitCastRewriter::Metadata &metadata :
          bcr.precomputeMetadata(shuffledElementType)) {
-      runningResult = bcr.genericRewriteStep(
-          rewriter, bitCastOp->getLoc(), sourceValue, runningResult, metadata);
+      runningResult =
+          bcr.useSplatStep(maxCycleLen)
+              ? bcr.splatRewriteStep(rewriter, bitCastOp->getLoc(), sourceValue,
+                                     runningResult, metadata)
+              : bcr.genericRewriteStep(rewriter, bitCastOp->getLoc(),
+                                       sourceValue, runningResult, metadata);
     }
 
     // Finalize the rewrite.
@@ -1044,6 +1209,9 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 
     return success();
   }
+
+private:
+  unsigned maxCycleLen;
 };
 
 /// Rewrite the i4 -> i8 part of any conversion into a sequence of shuffles and
@@ -1222,10 +1390,10 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
+    RewritePatternSet &patterns, PatternBenefit benefit, unsigned maxCycleLen) {
   patterns.add<RewriteBitCastOfTruncI, RewriteExtOfBitCast<arith::ExtUIOp>,
                RewriteExtOfBitCast<arith::ExtSIOp>>(patterns.getContext(),
-                                                    benefit);
+                                                    benefit, maxCycleLen);
 
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.

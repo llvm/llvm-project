@@ -318,6 +318,8 @@ def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
     Warning: these patterns currently only work for little endian targets.
   }];
 
+  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$max_cycle_len);
+
   let assemblyFormat = "attr-dict";
 }
 
