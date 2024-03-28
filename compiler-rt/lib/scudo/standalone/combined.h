@@ -181,13 +181,15 @@ public:
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
   }
 
-  void enableRingBuffer() {
+  void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
+    RingBufferInitLock.unlock();
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->enable();
   }
 
-  void disableRingBuffer() {
+  void disableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
+    RingBufferInitLock.lock();
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->disable();
@@ -1093,6 +1095,9 @@ private:
                     0,
                 "invalid alignment");
 
+  // Lock to initialize the RingBuffer
+  HybridMutex RingBufferInitLock;
+
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
   atomic_uptr RingBufferAddress = {};
@@ -1548,8 +1553,7 @@ private:
   }
 
   void initRingBufferMaybe() {
-    static HybridMutex RingBufferLock;
-    ScopedLock L(RingBufferLock);
+    ScopedLock L(RingBufferInitLock);
     if (getRingBuffer() != nullptr)
       return;
 
