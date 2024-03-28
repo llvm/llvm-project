@@ -372,10 +372,11 @@ public:
         PushedBlocks += Region->FreeListInfo.PushedBlocks;
       }
     }
+    const s32 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
     Str->append("Stats: SizeClassAllocator64: %zuM mapped (%uM rss) in %zu "
-                "allocations; remains %zu\n",
+                "allocations; remains %zu; ReleaseToOsIntervalMs = %d\n",
                 TotalMapped >> 20, 0U, PoppedBlocks,
-                PoppedBlocks - PushedBlocks);
+                PoppedBlocks - PushedBlocks, IntervalMs >= 0 ? IntervalMs : -1);
 
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
