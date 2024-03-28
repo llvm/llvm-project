@@ -30,36 +30,32 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmin(T x, T y) {
   const FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) {
+  if (bitx.is_nan())
     return y;
-  } else if (bity.is_nan()) {
+  if (bity.is_nan())
     return x;
-  } else if (bitx.sign() != bity.sign()) {
+  if (bitx.sign() != bity.sign())
     // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with negative sign.
-    return (bitx.is_neg()) ? x : y;
-  } else {
-    return (x < y ? x : y);
-  }
+    return bitx.is_neg() ? x : y;
+  return x < y ? x : y;
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T fmax(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
-  if (bitx.is_nan()) {
+  if (bitx.is_nan())
     return y;
-  } else if (bity.is_nan()) {
+  if (bity.is_nan())
     return x;
-  } else if (bitx.sign() != bity.sign()) {
+  if (bitx.sign() != bity.sign())
     // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
     // y has different signs and both are not NaNs, we return the number
     // with positive sign.
-    return (bitx.is_neg() ? y : x);
-  } else {
-    return (x > y ? x : y);
-  }
+    return bitx.is_neg() ? y : x;
+  return x > y ? x : y;
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
