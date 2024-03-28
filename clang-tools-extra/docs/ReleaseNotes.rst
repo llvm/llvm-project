@@ -129,6 +129,12 @@ New checks
   Replaces certain conditional statements with equivalent calls to
   ``std::min`` or ``std::max``.
 
+- New :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+
+  Check for missing parentheses in mathematical expressions that involve
+  operators of different priorities.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
