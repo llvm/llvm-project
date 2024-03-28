@@ -648,6 +648,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   auto m_V =
       m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));
 
+  Value *Y;
   const APInt *Mask, *C;
   uint64_t ShAmt;
   switch (Pred) {
@@ -656,16 +657,18 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
     if (match(LHS, m_V) && match(RHS, m_APInt(C))) {
       Known = Known.unionWith(KnownBits::makeConstant(*C));
       // assume(V & Mask = C)
-    } else if (match(LHS, m_And(m_V, m_APInt(Mask))) &&
+    } else if (match(LHS, m_c_And(m_V, m_Value(Y))) &&
                match(RHS, m_APInt(C))) {
       // For one bits in Mask, we can propagate bits from C to V.
-      Known.Zero |= ~*C & *Mask;
-      Known.One |= *C & *Mask;
+      Known.One |= *C;
+      if (match(Y, m_APInt(Mask)))
+        Known.Zero |= ~*C & *Mask;
       // assume(V | Mask = C)
-    } else if (match(LHS, m_Or(m_V, m_APInt(Mask))) && match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_Or(m_V, m_Value(Y))) && match(RHS, m_APInt(C))) {
       // For zero bits in Mask, we can propagate bits from C to V.
-      Known.Zero |= ~*C & ~*Mask;
-      Known.One |= *C & ~*Mask;
+      Known.Zero |= ~*C;
+      if (match(Y, m_APInt(Mask)))
+        Known.One |= *C & ~*Mask;
       // assume(V ^ Mask = C)
     } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
                match(RHS, m_APInt(C))) {
@@ -9276,11 +9279,17 @@ void llvm::findValuesAffectedByCondition(
 
       if (ICmpInst::isEquality(Pred)) {
         if (match(B, m_ConstantInt())) {
+          Value *Y;
           // (X & C) or (X | C) or (X ^ C).
           // (X << C) or (X >>_s C) or (X >>_u C).
           if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
               match(A, m_Shift(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          else if (match(A, m_And(m_Value(X), m_Value(Y))) ||
+                   match(A, m_Or(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
         }
       } else {
         // Handle (A + C1) u< C2, which is the canonical form of
