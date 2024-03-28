@@ -41,6 +41,25 @@ if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
 endif()
 
+set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
+set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
+    "Semicolon-separated list of plugins to use, or \"all\".")
+
+if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
+  set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
+endif()
+
+set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS "")
+foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
+  set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS
+      "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}PLUGIN_TARGET(${plugin})\n")
+endforeach()
+string(STRIP ${LIBOMPTARGET_ENUM_PLUGIN_TARGETS} LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
+)
+
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # This is a list of all the targets that are supported/tested right now.
@@ -126,6 +145,7 @@ set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LLVM_LIBC_GPU_BUILD} CACHE BOOL
 pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
@@ -143,6 +163,12 @@ set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+
+macro(check_plugin_target target)
+if (TARGET omptarget.rtl.${target})
+	list(APPEND LIBOMPTARGET_PLUGINS_TO_LOAD ${target})
+endif()
+endmacro()
 
 # Build target agnostic offloading library.
 add_subdirectory(src)

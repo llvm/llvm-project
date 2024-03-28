@@ -69,9 +69,12 @@ function(add_target_library target_name lib_name)
   set_target_properties(${target_name} PROPERTIES CXX_VISIBILITY_PRESET protected)
 endfunction()
 
-add_subdirectory(amdgpu)
-add_subdirectory(cuda)
-add_subdirectory(host)
+foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
+  if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${plugin})
+    message(FATAL_ERROR "Unknown plugin target '${plugin}'")
+  endif()
+  add_subdirectory(${plugin})
+endforeach()
 
 # Make sure the parent scope can see the plugins that will be created.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
