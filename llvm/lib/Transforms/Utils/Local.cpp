@@ -588,10 +588,10 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
     // dead as we go.
     for (Use &OpU : I->operands()) {
       Value *OpV = OpU.get();
-      OpU.set(nullptr);
-
       if (!OpV->use_empty())
         continue;
+      
+      OpU.set(nullptr);
 
       // If the operand is an instruction that became dead as we nulled out the
       // operand, and if it is 'trivially' dead, delete it in a future loop
