@@ -328,18 +328,24 @@ public:
     return getTLI()->isLegalAddImmediate(imm);
   }
 
+  bool isLegalAddScalableImmediate(int64_t Imm) {
+    return getTLI()->isLegalAddScalableImmediate(Imm);
+  }
+
   bool isLegalICmpImmediate(int64_t imm) {
     return getTLI()->isLegalICmpImmediate(imm);
   }
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace, Instruction *I = nullptr) {
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
+    AM.ScalableOffset = ScalableOffset;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 

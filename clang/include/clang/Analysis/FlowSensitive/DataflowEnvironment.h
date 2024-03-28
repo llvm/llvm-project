@@ -210,6 +210,14 @@ public:
   bool equivalentTo(const Environment &Other,
                     Environment::ValueModel &Model) const;
 
+  /// How to treat expression state (`ExprToLoc` and `ExprToVal`) in a join.
+  /// If the join happens within a full expression, expression state should be
+  /// kept; otherwise, we can discard it.
+  enum ExprJoinBehavior {
+    DiscardExprState,
+    KeepExprState,
+  };
+
   /// Joins two environments by taking the intersection of storage locations and
   /// values that are stored in them. Distinct values that are assigned to the
   /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
@@ -218,7 +226,8 @@ public:
   ///
   ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
   static Environment join(const Environment &EnvA, const Environment &EnvB,
-                          Environment::ValueModel &Model);
+                          Environment::ValueModel &Model,
+                          ExprJoinBehavior ExprBehavior);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -435,6 +444,11 @@ public:
   StorageLocation &createObject(const ValueDecl &D, const Expr *InitExpr) {
     return createObjectInternal(&D, D.getType(), InitExpr);
   }
+
+  /// Initializes the fields (including synthetic fields) of `Loc` with values,
+  /// unless values of the field type are not supported or we hit one of the
+  /// limits at which we stop producing values.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc);
 
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
@@ -729,6 +743,35 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 /// `Init->getType()` must be a record type.
 std::vector<const FieldDecl *>
 getFieldsForInitListExpr(const InitListExpr *InitList);
+
+/// Helper class for initialization of a record with an `InitListExpr`.
+/// `InitListExpr::inits()` contains the initializers for both the base classes
+/// and the fields of the record; this helper class separates these out into two
+/// different lists. In addition, it deals with special cases associated with
+/// unions.
+class RecordInitListHelper {
+public:
+  // `InitList` must have record type.
+  RecordInitListHelper(const InitListExpr *InitList);
+
+  // Base classes with their associated initializer expressions.
+  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
+    return BaseInits;
+  }
+
+  // Fields with their associated initializer expressions.
+  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
+    return FieldInits;
+  }
+
+private:
+  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
+  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
+
+  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
+  // member variable because we store a pointer to it in `FieldInits`.
+  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
+};
 
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);

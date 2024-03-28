@@ -997,6 +997,44 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                 I, 1, (DemandedMask & ~LHSKnown.Zero).zextOrTrunc(MaskWidth)))
           return I;
 
+        // Combine:
+        // (ptrmask (getelementptr i8, ptr p, imm i), imm mask)
+        //   -> (ptrmask (getelementptr i8, ptr p, imm (i & mask)), imm mask)
+        // where only the low bits known to be zero in the pointer are changed
+        Value *InnerPtr;
+        uint64_t GEPIndex;
+        uint64_t PtrMaskImmediate;
+        if (match(I, m_Intrinsic<Intrinsic::ptrmask>(
+                         m_PtrAdd(m_Value(InnerPtr), m_ConstantInt(GEPIndex)),
+                         m_ConstantInt(PtrMaskImmediate)))) {
+
+          LHSKnown = computeKnownBits(InnerPtr, Depth + 1, I);
+          if (!LHSKnown.isZero()) {
+            const unsigned trailingZeros = LHSKnown.countMinTrailingZeros();
+            uint64_t PointerAlignBits = (uint64_t(1) << trailingZeros) - 1;
+
+            uint64_t HighBitsGEPIndex = GEPIndex & ~PointerAlignBits;
+            uint64_t MaskedLowBitsGEPIndex =
+                GEPIndex & PointerAlignBits & PtrMaskImmediate;
+
+            uint64_t MaskedGEPIndex = HighBitsGEPIndex | MaskedLowBitsGEPIndex;
+
+            if (MaskedGEPIndex != GEPIndex) {
+              auto *GEP = cast<GetElementPtrInst>(II->getArgOperand(0));
+              Builder.SetInsertPoint(I);
+              Type *GEPIndexType =
+                  DL.getIndexType(GEP->getPointerOperand()->getType());
+              Value *MaskedGEP = Builder.CreateGEP(
+                  GEP->getSourceElementType(), InnerPtr,
+                  ConstantInt::get(GEPIndexType, MaskedGEPIndex),
+                  GEP->getName(), GEP->isInBounds());
+
+              replaceOperand(*I, 0, MaskedGEP);
+              return I;
+            }
+          }
+        }
+
         break;
       }
 

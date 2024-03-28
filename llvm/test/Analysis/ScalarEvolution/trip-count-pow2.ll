@@ -7,8 +7,6 @@ define void @test1(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (96 * %n)) /u 32)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (96 * %n)) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -31,8 +29,6 @@ define i32 @test2(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (32 * (%n /u 32))<nuw>) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -54,8 +50,6 @@ define void @test3(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-32 + (32 * %n)) /u 32)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 134217727
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-32 + (32 * %n)) /u 32)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -77,8 +71,6 @@ define void @test4(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (-1431655764 * %n)) /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -100,8 +92,6 @@ define void @test5(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (4 * %n)) /u 4)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1073741823
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-4 + (4 * %n)) /u 4)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

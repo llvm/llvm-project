@@ -405,12 +405,22 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("-type=o");
   CmdArgs.push_back("-bundle-align=4096");
 
+  if (Args.hasArg(OPT_compress))
+    CmdArgs.push_back("-compress");
+  if (auto *Arg = Args.getLastArg(OPT_compression_level_eq))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
+
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
   for (const auto &[File, Arch] : InputFiles)
     Targets.push_back(Saver.save("hipv4-amdgcn-amd-amdhsa--" + Arch));
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
+#ifdef _WIN32
+  CmdArgs.push_back("-input=NUL");
+#else
   CmdArgs.push_back("-input=/dev/null");
+#endif
   for (const auto &[File, Arch] : InputFiles)
     CmdArgs.push_back(Saver.save("-input=" + File));
 
@@ -552,6 +562,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::systemz:
     return generic::clang(InputFiles, Args);
   default:
     return createStringError(inconvertibleErrorCode(),

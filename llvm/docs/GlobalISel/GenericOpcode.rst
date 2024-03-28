@@ -607,6 +607,52 @@ See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
 Vector Specific Operations
 --------------------------
 
+G_VSCALE
+^^^^^^^^
+
+Puts the value of the runtime ``vscale`` multiplied by the value in the source
+operand into the destination register. This can be useful in determining the
+actual runtime number of elements in a vector.
+
+.. code-block::
+
+  %0:_(s32) = G_VSCALE 4
+
+G_INSERT_SUBVECTOR
+^^^^^^^^^^^^^^^^^^
+
+Insert the second source vector into the first source vector. The index operand
+represents the starting index in the first source vector at which the second
+source vector should be inserted into.
+
+The index must be a constant multiple of the second source vector's minimum
+vector length. If the vectors are scalable, then the index is first scaled by
+the runtime scaling factor. The indices inserted in the source vector must be
+valid indicies of that vector. If this condition cannot be determined statically
+but is false at runtime, then the result vector is undefined.
+
+.. code-block:: none
+
+  %2:_(<vscale x 4 x i64>) = G_INSERT_SUBVECTOR %0:_(<vscale x 4 x i64>), %1:_(<vscale x 2 x i64>), 0
+
+G_EXTRACT_SUBVECTOR
+^^^^^^^^^^^^^^^^^^^
+
+Extract a vector of destination type from the source vector. The index operand
+represents the starting index from which a subvector is extracted from
+the source vector.
+
+The index must be a constant multiple of the source vector's minimum vector
+length. If the source vector is a scalable vector, then the index is first
+scaled by the runtime scaling factor. The indices extracted from the source
+vector must be valid indicies of that vector. If this condition cannot be
+determined statically but is false at runtime, then the result vector is
+undefined.
+
+.. code-block:: none
+
+  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
+
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
@@ -638,6 +684,11 @@ G_SHUFFLE_VECTOR
 Concatenate two vectors and shuffle the elements according to the mask operand.
 The mask operand should be an IR Constant which exactly matches the
 corresponding mask for the IR shufflevector instruction.
+
+G_SPLAT_VECTOR
+^^^^^^^^^^^^^^^^
+
+Create a vector where all elements are the scalar from the source operand.
 
 Vector Reduction Operations
 ---------------------------
@@ -739,11 +790,17 @@ G_ATOMIC_CMPXCHG
 Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
 operands.
 
-G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-G_ATOMICRMW_NAND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MAX,
-G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
-G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX, G_ATOMICRMW_FMIN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+|all_g_atomicrmw|
+^^^^^^^^^^^^^^^^^
+
+.. |all_g_atomicrmw| replace:: G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
+                               G_ATOMICRMW_NAND, G_ATOMICRMW_OR,
+                               G_ATOMICRMW_XOR, G_ATOMICRMW_MAX,
+                               G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
+                               G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
+                               G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
+                               G_ATOMICRMW_FMIN
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.
@@ -881,6 +938,25 @@ The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
 
   Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
   to have zero, one, or multiple results.
+
+G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+trap instructions.
+
+.. code-block:: none
+
+  G_TRAP
+
+.. code-block:: none
+
+  G_DEBUGTRAP
+
+.. code-block:: none
+
+  G_UBSANTRAP 12
 
 Variadic Arguments
 ------------------

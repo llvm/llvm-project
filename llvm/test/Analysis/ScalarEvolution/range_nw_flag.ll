@@ -17,8 +17,6 @@ define void @test-add-nuw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -53,8 +51,6 @@ define void @test-addrec-nuw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -91,8 +87,6 @@ define void @test-addrec-nsw-start-neg-strip-neg(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %numIterations))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -129,8 +123,6 @@ define void @test-addrec-nsw-start-pos-strip-neg(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %numIterations))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + (-1 * %numIterations))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -167,8 +159,6 @@ define void @test-addrec-nsw-start-pos-strip-pos(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -205,8 +195,6 @@ define void @test-addrec-nsw-start-neg-strip-pos(ptr %input, i32 %offset, i32 %n
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %numIterations)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %numIterations)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

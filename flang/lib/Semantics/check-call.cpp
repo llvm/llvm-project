@@ -332,7 +332,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
-  if (!typesCompatible && dummyRank == 0 && allowActualArgumentConversions) {
+  if (typesCompatible) {
+    if (const auto *constantChar{
+            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+        constantChar && constantChar->wasHollerith() &&
+        dummy.type.type().IsUnlimitedPolymorphic()) {
+      messages.Say(
+          "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
+    }
+  } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
     if (auto converted{evaluate::HollerithToBOZ(
             foldingContext, actual, dummy.type.type())}) {
@@ -1580,6 +1588,9 @@ static void CheckReduce(
       procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a pure function of two data arguments"_err_en_US);
+  } else if (procChars->attrs.test(characteristics::Procedure::Attr::BindC)) {
+    messages.Say(
+        "A BIND(C) OPERATION= argument of REDUCE() is not supported"_err_en_US);
   } else if (!result || result->Rank() != 0) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);

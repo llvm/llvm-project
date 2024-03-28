@@ -179,6 +179,19 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
   return ParseRHSOfBinaryExpression(LHS, prec::Assignment);
 }
 
+ExprResult Parser::ParseConditionalExpression() {
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompleteExpression(getCurScope(),
+                                   PreferredType.get(Tok.getLocation()));
+    return ExprError();
+  }
+
+  ExprResult LHS = ParseCastExpression(
+      AnyCastExpr, /*isAddressOfOperand=*/false, NotTypeCast);
+  return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+}
+
 /// Parse an assignment expression where part of an Objective-C message
 /// send has already been parsed.
 ///
@@ -1810,7 +1823,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     }
     goto ExpectedExpression;
   case tok::l_square:
-    if (getLangOpts().CPlusPlus11) {
+    if (getLangOpts().CPlusPlus) {
       if (getLangOpts().ObjC) {
         // C++11 lambda expressions and Objective-C message sends both start with a
         // square bracket.  There are three possibilities here:
@@ -3863,7 +3876,8 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     StringRef Platform =
         AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
-    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
+    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty() ||
+        (GivenPlatform.contains("xros") || GivenPlatform.contains("xrOS"))) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;

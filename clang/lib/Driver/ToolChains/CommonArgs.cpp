@@ -740,7 +740,8 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
-    SupportedArgument = V == "gnu";
+    SupportedArgument = V == "gnu" || V == "gnu2";
+    EnableTLSDESC = V == "gnu2";
   } else {
     Unsupported = true;
   }
@@ -757,15 +758,15 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
-  const bool IsOSAIX = ToolChain.getTriple().isOSAIX();
-  const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
+  const llvm::Triple &Triple = ToolChain.getTriple();
+  const bool IsOSAIX = Triple.isOSAIX();
+  const bool IsAMDGCN = Triple.isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" &&
-      !ToolChain.getTriple().isOSOpenBSD()) {
+      llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -834,7 +835,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, Triple);
   if (!CPU.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
@@ -965,10 +966,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
                                  options::OPT_mno_xcoff_roptr, false);
     StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
-
     if (!IsOSAIX)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << OptStr << ToolChain.getTriple().str();
+          << OptStr << Triple.str();
 
     if (HasRoptr) {
       // The data sections option is on by default on AIX. We only need to error
@@ -1031,7 +1031,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
-                   ToolChain.getTriple().hasDefaultEmulatedTLS())) {
+                   Triple.hasDefaultEmulatedTLS())) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
@@ -1141,7 +1141,11 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                     options::OPT_fno_rtlib_add_rpath, false))
     return;
 
-  for (const auto &CandidateRPath : TC.getArchSpecificLibPaths()) {
+  SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
+  if (const auto CandidateRPath = TC.getStdlibPath())
+    CandidateRPaths.emplace_back(*CandidateRPath);
+
+  for (const auto &CandidateRPath : CandidateRPaths) {
     if (TC.getVFS().exists(CandidateRPath)) {
       CmdArgs.push_back("-rpath");
       CmdArgs.push_back(Args.MakeArgString(CandidateRPath));
@@ -2829,7 +2833,7 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                                  llvm::opt::ArgStringList &CmdArgs) {
   if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
       !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_no_hip_rt)) {
+      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
     // Claim "no HIP libraries" arguments if any
@@ -2862,4 +2866,16 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
+}
+
+void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
+                                   llvm::opt::ArgStringList &CmdArgs) {
+  if (TCArgs.hasFlag(options::OPT_offload_compress,
+                     options::OPT_no_offload_compress, false))
+    CmdArgs.push_back("-compress");
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("-verbose");
+  if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
+    CmdArgs.push_back(
+        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 }

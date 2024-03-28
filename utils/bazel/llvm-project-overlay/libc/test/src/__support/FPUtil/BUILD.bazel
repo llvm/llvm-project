@@ -17,6 +17,7 @@ libc_test(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_integer_literals",
+        "//libc:__support_sign",
     ],
 )
 

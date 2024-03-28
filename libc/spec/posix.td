@@ -42,10 +42,6 @@ def StructDirentPtr : PtrType<StructDirent>;
 def StructDirentPtrPtr : PtrType<StructDirentPtr>;
 def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
-def StructTimeSpec : NamedType<"struct timespec">;
-def StructTimeSpecPtr : PtrType<StructTimeSpec>;
-def ConstStructTimeSpecPtr : ConstType<StructTimeSpecPtr>;
-
 def StructSchedParam : NamedType<"struct sched_param">;
 def StructSchedParamPtr : PtrType<StructSchedParam>;
 def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
@@ -89,6 +85,10 @@ def StructSockAddrPtr : PtrType<StructSockAddr>;
 def ConstStructSockAddrPtr : ConstType<StructSockAddrPtr>;
 
 def StructSockAddrUn : NamedType<"struct sockaddr_un">;
+
+def StructStatvfs : NamedType<"struct statvfs">;
+def StructStatvfsPtr : PtrType<StructStatvfs>;
+def RestrictedStructStatvfsPtr : RestrictedPtrType<StructStatvfs>;
 
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
@@ -250,6 +250,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SizeTType,
         OffTType,
+        ModeTType,
       ],
       [], // Enumerations
       [
@@ -308,6 +309,21 @@ def POSIX : StandardSpec<"POSIX"> {
           "munlockall",
           RetValSpec<IntType>,
           [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+          "msync",
+          RetValSpec<IntType>,
+          [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "shm_open",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+          "shm_unlink",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
         >,
       ]
   >;
@@ -876,6 +892,31 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysStatvfs = HeaderSpec<
+      "sys/statvfs.h",
+      [], // Macros
+      [StructStatvfs], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "statvfs",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<ConstRestrictedCharPtr>,
+            ArgSpec<RestrictedStructStatvfsPtr>
+          ]
+        >,
+        FunctionSpec<
+          "fstatvfs",
+          RetValSpec<IntType>,
+          [
+            ArgSpec<IntType>,
+            ArgSpec<StructStatvfsPtr>
+          ]
+        >,
+      ]  // Functions
+    >;
+
   NamedType StructUtsName = NamedType<"struct utsname">;
   PtrType StructUtsNamePtr = PtrType<StructUtsName>;
   HeaderSpec SysUtsName = HeaderSpec<
@@ -1156,6 +1197,11 @@ def POSIX : StandardSpec<"POSIX"> {
               "getchar_unlocked",
               RetValSpec<IntType>,
               [ArgSpec<VoidType>]
+          >,
+          FunctionSpec<
+            "fileno",
+            RetValSpec<IntType>,
+            [ArgSpec<FILEPtr>]
           >,
       ]
   >;
@@ -1488,6 +1534,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysSelect,
     SysSocket,
     SysStat,
+    SysStatvfs,
     SysTypes,
     SysUtsName,
     SysWait,

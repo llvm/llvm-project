@@ -125,10 +125,11 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_integral_v<ValType> ||
-                                 cpp::is_fixed_point_v<ValType>,
-                             int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
+                           cpp::is_fixed_point_v<ValType>,
+                       int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);

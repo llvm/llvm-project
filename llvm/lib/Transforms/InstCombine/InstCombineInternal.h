@@ -98,6 +98,7 @@ public:
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
+  Instruction *foldPowiReassoc(BinaryOperator &I);
   Instruction *foldFMulReassoc(BinaryOperator &I);
   Instruction *visitFMul(BinaryOperator &I);
   Instruction *visitURem(BinaryOperator &I);
@@ -379,6 +380,11 @@ private:
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
+  Instruction *foldFBinOpOfIntCasts(BinaryOperator &I);
+  // Should only be called by `foldFBinOpOfIntCasts`.
+  Instruction *foldFBinOpOfIntCastsFromSign(
+      BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+      Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown);
   Instruction *foldBinopOfSextBoolToSelect(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
@@ -752,10 +758,9 @@ public:
   void tryToSinkInstructionDbgValues(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
       BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
-  void tryToSinkInstructionDPValues(Instruction *I,
-                                    BasicBlock::iterator InsertPos,
-                                    BasicBlock *SrcBlock, BasicBlock *DestBlock,
-                                    SmallVectorImpl<DPValue *> &DPUsers);
+  void tryToSinkInstructionDbgVariableRecords(
+      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableRecord *> &DPUsers);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   void addDeadEdge(BasicBlock *From, BasicBlock *To,

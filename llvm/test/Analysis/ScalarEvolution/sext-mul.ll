@@ -32,8 +32,6 @@ define void @foo(ptr nocapture %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:  Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
 ; CHECK-NEXT:  Loop %bb7: constant max backedge-taken count is i64 2147483646
 ; CHECK-NEXT:  Loop %bb7: symbolic max backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
-; CHECK-NEXT:  Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb7: Trip multiple is 1
 ;
 bb:
@@ -99,8 +97,6 @@ define void @goo(ptr nocapture %arg3, i32 %arg4, i32 %arg5) {
 ; CHECK-NEXT:  Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
 ; CHECK-NEXT:  Loop %bb7: constant max backedge-taken count is i128 2147483646
 ; CHECK-NEXT:  Loop %bb7: symbolic max backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
-; CHECK-NEXT:  Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %bb7: Trip multiple is 1
 ;
 bb:

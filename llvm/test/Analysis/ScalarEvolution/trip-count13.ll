@@ -9,8 +9,6 @@ define void @u_0(i8 %rhs) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) umax %rhs))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -100, actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) umax %rhs)), actual taken count either this or zero.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) umax %rhs))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -35,8 +33,6 @@ define void @u_1(i8 %start) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + ((-100 + %start) umax %start))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -100, actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + ((-100 + %start) umax %start)), actual taken count either this or zero.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) + ((-100 + %start) umax %start))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -62,8 +58,6 @@ define void @s_0(i8 %rhs) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) smax %rhs))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -100, actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) smax %rhs)), actual taken count either this or zero.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) smax %rhs))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -89,8 +83,6 @@ define void @s_1(i8 %start) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + ((-100 + %start) smax %start))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -100, actual taken count either this or zero.
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + ((-100 + %start) smax %start)), actual taken count either this or zero.
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) + ((-100 + %start) smax %start))
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -116,8 +108,6 @@ define void @s_2(i8 %start) {
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
-; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

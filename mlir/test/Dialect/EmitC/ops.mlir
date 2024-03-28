@@ -71,6 +71,11 @@ func.func @bitwise(%arg0: i32, %arg1: i32) -> () {
   return
 }
 
+func.func @cond(%cond: i1, %arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.conditional %cond, %arg0, %arg1 : i32
+  return
+}
+
 func.func @div_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.div" (%arg0, %arg1) : (i32, i32) -> i32
   return
@@ -131,6 +136,12 @@ func.func @logical(%arg0: i32, %arg1: i32) {
   %0 = emitc.logical_and %arg0, %arg1 : i32, i32
   %1 = emitc.logical_not %arg0 : i32
   %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
+func.func @unary(%arg0: i32) {
+  %0 = emitc.unary_minus %arg0 : (i32) -> i32
+  %1 = emitc.unary_plus %arg0 : (i32) -> i32
   return
 }
 

@@ -1,5 +1,5 @@
 ! Test that the produced hlfir.elemental had proper result type and the mold.
-! RUN: bbc --emit-hlfir --polymorphic-type -I nowhere -o - %s | FileCheck %s
+! RUN: bbc --emit-hlfir -I nowhere -o - %s | FileCheck %s
 
 subroutine test_polymorphic_merge(x, y, r, m)
   type t

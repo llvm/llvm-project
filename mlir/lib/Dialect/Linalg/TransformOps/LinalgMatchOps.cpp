@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/Support/Debug.h"

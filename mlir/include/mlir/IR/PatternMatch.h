@@ -432,11 +432,22 @@ public:
     /// Note: This notification is not triggered when unlinking an operation.
     virtual void notifyOperationErased(Operation *op) {}
 
-    /// Notify the listener that the pattern failed to match the given
-    /// operation, and provide a callback to populate a diagnostic with the
-    /// reason why the failure occurred. This method allows for derived
-    /// listeners to optionally hook into the reason why a rewrite failed, and
-    /// display it to users.
+    /// Notify the listener that the specified pattern is about to be applied
+    /// at the specified root operation.
+    virtual void notifyPatternBegin(const Pattern &pattern, Operation *op) {}
+
+    /// Notify the listener that a pattern application finished with the
+    /// specified status. "success" indicates that the pattern was applied
+    /// successfully. "failure" indicates that the pattern could not be
+    /// applied. The pattern may have communicated the reason for the failure
+    /// with `notifyMatchFailure`.
+    virtual void notifyPatternEnd(const Pattern &pattern,
+                                  LogicalResult status) {}
+
+    /// Notify the listener that the pattern failed to match, and provide a
+    /// callback to populate a diagnostic with the reason why the failure
+    /// occurred. This method allows for derived listeners to optionally hook
+    /// into the reason why a rewrite failed, and display it to users.
     virtual void
     notifyMatchFailure(Location loc,
                        function_ref<void(Diagnostic &)> reasonCallback) {}
@@ -478,6 +489,15 @@ public:
       if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
         rewriteListener->notifyOperationErased(op);
     }
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternBegin(pattern, op);
+    }
+    void notifyPatternEnd(const Pattern &pattern,
+                          LogicalResult status) override {
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyPatternEnd(pattern, status);
+    }
     void notifyMatchFailure(
         Location loc,
         function_ref<void(Diagnostic &)> reasonCallback) override {
@@ -497,42 +517,19 @@ public:
                           Region::iterator before);
   void inlineRegionBefore(Region &region, Block *before);
 
-  /// This method replaces the uses of the results of `op` with the values in
-  /// `newValues` when the provided `functor` returns true for a specific use.
-  /// The number of values in `newValues` is required to match the number of
-  /// results of `op`. `allUsesReplaced`, if non-null, is set to true if all of
-  /// the uses of `op` were replaced. Note that in some rewriters, the given
-  /// 'functor' may be stored beyond the lifetime of the rewrite being applied.
-  /// As such, the function should not capture by reference and instead use
-  /// value capture as necessary.
-  virtual void
-  replaceOpWithIf(Operation *op, ValueRange newValues, bool *allUsesReplaced,
-                  llvm::unique_function<bool(OpOperand &) const> functor);
-  void replaceOpWithIf(Operation *op, ValueRange newValues,
-                       llvm::unique_function<bool(OpOperand &) const> functor) {
-    replaceOpWithIf(op, newValues, /*allUsesReplaced=*/nullptr,
-                    std::move(functor));
-  }
-
-  /// This method replaces the uses of the results of `op` with the values in
-  /// `newValues` when a use is nested within the given `block`. The number of
-  /// values in `newValues` is required to match the number of results of `op`.
-  /// If all uses of this operation are replaced, the operation is erased.
-  void replaceOpWithinBlock(Operation *op, ValueRange newValues, Block *block,
-                            bool *allUsesReplaced = nullptr);
-
-  /// This method replaces the results of the operation with the specified list
-  /// of values. The number of provided values must match the number of results
-  /// of the operation. The replaced op is erased.
+  /// Replace the results of the given (original) operation with the specified
+  /// list of values (replacements). The result types of the given op and the
+  /// replacements must match. The original op is erased.
   virtual void replaceOp(Operation *op, ValueRange newValues);
 
-  /// This method replaces the results of the operation with the specified
-  /// new op (replacement). The number of results of the two operations must
-  /// match. The replaced op is erased.
+  /// Replace the results of the given (original) operation with the specified
+  /// new op (replacement). The result types of the two ops must match. The
+  /// original op is erased.
   virtual void replaceOp(Operation *op, Operation *newOp);
 
-  /// Replaces the result op with a new op that is created without verification.
-  /// The result values of the two ops must be the same types.
+  /// Replace the results of the given (original) op with a new op that is
+  /// created without verification (replacement). The result values of the two
+  /// ops must match. The original op is erased.
   template <typename OpTy, typename... Args>
   OpTy replaceOpWithNewOp(Operation *op, Args &&...args) {
     auto newOp = create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
@@ -634,9 +631,8 @@ public:
     finalizeOpModification(root);
   }
 
-  /// Find uses of `from` and replace them with `to`. It also marks every
-  /// modified uses and notifies the rewriter that an in-place operation
-  /// modification is about to happen.
+  /// Find uses of `from` and replace them with `to`. Also notify the listener
+  /// about every in-place op modification (for every use that was replaced).
   void replaceAllUsesWith(Value from, Value to) {
     return replaceAllUsesWith(from.getImpl(), to);
   }
@@ -652,22 +648,49 @@ public:
     for (auto it : llvm::zip(from, to))
       replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
   }
+  // Note: This function cannot be called `replaceAllUsesWith` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceAllOpUsesWith(Operation *from, ValueRange to) {
+    replaceAllUsesWith(from->getResults(), to);
+  }
 
   /// Find uses of `from` and replace them with `to` if the `functor` returns
-  /// true. It also marks every modified uses and notifies the rewriter that an
-  /// in-place operation modification is about to happen.
+  /// true. Also notify the listener about every in-place op modification (for
+  /// every use that was replaced). The optional `allUsesReplaced` flag is set
+  /// to "true" if all uses were replaced.
   void replaceUsesWithIf(Value from, Value to,
-                         function_ref<bool(OpOperand &)> functor);
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
   void replaceUsesWithIf(ValueRange from, ValueRange to,
-                         function_ref<bool(OpOperand &)> functor) {
-    assert(from.size() == to.size() && "incorrect number of replacements");
-    for (auto it : llvm::zip(from, to))
-      replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor);
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
+  // Note: This function cannot be called `replaceOpUsesWithIf` because the
+  // overload resolution, when called with an op that can be implicitly
+  // converted to a Value, would be ambiguous.
+  void replaceOpUsesWithIf(Operation *from, ValueRange to,
+                           function_ref<bool(OpOperand &)> functor,
+                           bool *allUsesReplaced = nullptr) {
+    replaceUsesWithIf(from->getResults(), to, functor, allUsesReplaced);
+  }
+
+  /// Find uses of `from` within `block` and replace them with `to`. Also notify
+  /// the listener about every in-place op modification (for every use that was
+  /// replaced). The optional `allUsesReplaced` flag is set to "true" if all
+  /// uses were replaced.
+  void replaceOpUsesWithinBlock(Operation *op, ValueRange newValues,
+                                Block *block, bool *allUsesReplaced = nullptr) {
+    replaceOpUsesWithIf(
+        op, newValues,
+        [block](OpOperand &use) {
+          return block->getParentOp()->isProperAncestor(use.getOwner());
+        },
+        allUsesReplaced);
   }
 
   /// Find uses of `from` and replace them with `to` except if the user is
-  /// `exceptedUser`. It also marks every modified uses and notifies the
-  /// rewriter that an in-place operation modification is about to happen.
+  /// `exceptedUser`. Also notify the listener about every in-place op
+  /// modification (for every use that was replaced).
   void replaceAllUsesExcept(Value from, Value to, Operation *exceptedUser) {
     return replaceUsesWithIf(from, to, [&](OpOperand &use) {
       Operation *user = use.getOwner();
@@ -675,7 +698,7 @@ public:
     });
   }
 
-  /// Used to notify the rewriter that the IR failed to be rewritten because of
+  /// Used to notify the listener that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the
   /// reason why the failure occurred. This method allows for derived rewriters
   /// to optionally hook into the reason why a rewrite failed, and display it to
@@ -713,6 +736,8 @@ protected:
       : OpBuilder(ctx, listener) {}
   explicit RewriterBase(const OpBuilder &otherBuilder)
       : OpBuilder(otherBuilder) {}
+  explicit RewriterBase(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : OpBuilder(op, listener) {}
   virtual ~RewriterBase();
 
 private:
@@ -733,6 +758,8 @@ public:
   explicit IRRewriter(MLIRContext *ctx, OpBuilder::Listener *listener = nullptr)
       : RewriterBase(ctx, listener) {}
   explicit IRRewriter(const OpBuilder &builder) : RewriterBase(builder) {}
+  explicit IRRewriter(Operation *op, OpBuilder::Listener *listener = nullptr)
+      : RewriterBase(op, listener) {}
 };
 
 //===----------------------------------------------------------------------===//
