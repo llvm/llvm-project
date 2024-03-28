@@ -3368,6 +3368,40 @@ private:
     // memmove with memcpy, and we don't need to worry about all manner of
     // downsides to splitting and transforming the operations.
 
+    // The tbaa.struct is only being explicit about byte padding. Here we assume
+    // that if the derived type used for the NewAI maps to a single scalar type,
+    // as given by the tbaa.struct, then it is safe to assume that we can use
+    // that type when doing the copying even if it include bit padding. If there
+    // for example would be a union of "_BitInt(3)" and "char" types the
+    // tbaa.struct would have multiple entries indicating the different types
+    // (or there wouldn't be any tbaa.struct)..
+    auto IsSingleTypeAccordingToTBAA = [&]() -> bool {
+      // Only consider the case when we have a tbaa.struct.
+      if (!(AATags && AATags.TBAAStruct))
+        return false;
+      MDNode *MD = AATags.TBAAStruct;
+      uint64_t Offset = NewBeginOffset - BeginOffset;
+      unsigned Count = 0;
+      for (size_t i = 0, size = MD->getNumOperands(); i < size; i += 3) {
+        uint64_t InnerOffset =
+            mdconst::extract<ConstantInt>(MD->getOperand(i))->getZExtValue();
+        uint64_t InnerSize =
+            mdconst::extract<ConstantInt>(MD->getOperand(i + 1))
+                ->getZExtValue();
+        // Ignore entries that aren't overlapping with our slice.
+        if (InnerOffset + InnerSize <= Offset ||
+            InnerOffset >= Offset + SliceSize)
+          continue;
+        // Only allow a single match (no unions).
+        if (++Count > 1)
+          return false;
+        // Size/offset must match up.
+        if (InnerSize != SliceSize || Offset != InnerOffset)
+          return false;
+      }
+      return Count == 1;
+    };
+
     // If this doesn't map cleanly onto the alloca type, and that type isn't
     // a single value type, just emit a memcpy.
     bool EmitMemCpy =
@@ -3375,8 +3409,9 @@ private:
         (BeginOffset > NewAllocaBeginOffset || EndOffset < NewAllocaEndOffset ||
          SliceSize !=
              DL.getTypeStoreSize(NewAI.getAllocatedType()).getFixedValue() ||
-         !DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) ||
-         !NewAI.getAllocatedType()->isSingleValueType());
+         !NewAI.getAllocatedType()->isSingleValueType() ||
+         (!DL.typeSizeEqualsStoreSize(NewAI.getAllocatedType()) &&
+          !IsSingleTypeAccordingToTBAA()));
 
     // If we're just going to emit a memcpy, the alloca hasn't changed, and the
     // size hasn't been shrunk based on analysis of the viable range, this is
