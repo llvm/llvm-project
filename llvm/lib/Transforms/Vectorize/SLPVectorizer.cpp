@@ -14190,6 +14190,28 @@ bool BoUpSLP::collectValuesToDemote(
       return false;
     break;
   }
+  case Instruction::UDiv:
+  case Instruction::URem: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
+    // UDiv and URem can be truncated if all the truncated bits are zero.
+    if (!AttemptCheckBitwidth(
+            [&](unsigned BitWidth, unsigned OrigBitWidth) {
+              assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+              APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+              return MaskedValueIsZero(I->getOperand(0), Mask,
+                                       SimplifyQuery(*DL)) &&
+                     MaskedValueIsZero(I->getOperand(1), Mask,
+                                       SimplifyQuery(*DL));
+            },
+            NeedToExit))
+      return false;
+    if (NeedToExit)
+      return true;
+    if (!ProcessOperands({I->getOperand(0), I->getOperand(1)}, NeedToExit))
+      return false;
+    break;
+  }
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
