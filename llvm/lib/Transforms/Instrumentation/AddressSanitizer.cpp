@@ -2586,6 +2586,11 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB, Module &M,
     // zero so we can copy the metadata over as is.
     NewGlobal->copyMetadata(G, 0);
 
+    // Set sanitizer metadata for newly created global,
+    // if it doesn't have it.
+    if (!NewGlobal->hasSanitizerMetadata())
+      NewGlobal->setSanitizerMetadata(MD);
+
     Value *Indices2[2];
     Indices2[0] = IRB.getInt32(0);
     Indices2[1] = IRB.getInt32(0);
