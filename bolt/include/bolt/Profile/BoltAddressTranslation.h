@@ -123,6 +123,9 @@ public:
   std::unordered_map<uint32_t, std::vector<uint32_t>>
   getBFBranches(uint64_t FuncOutputAddress) const;
 
+  /// Returns a secondary entry point id for a given function and offset.
+  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be

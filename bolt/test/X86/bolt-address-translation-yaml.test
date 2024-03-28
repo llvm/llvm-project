@@ -36,9 +36,14 @@ YAML-BAT-CHECK-NEXT:   - bid:   0
 YAML-BAT-CHECK-NEXT:     insns: 26
 YAML-BAT-CHECK-NEXT:     hash:  0xA900AE79CFD40000
 YAML-BAT-CHECK-NEXT:     succ:  [ { bid: 3, cnt: 0 }, { bid: 1, cnt: 0 } ]
+# Calls from no-BAT to BAT function
+YAML-BAT-CHECK:        - bid:   28
+YAML-BAT-CHECK-NEXT:     insns: 13
+YAML-BAT-CHECK-NEXT:     hash:  0xB2F04C1F25F00400
+YAML-BAT-CHECK-NEXT:     calls: [ { off: 0x21, fid: [[#SOLVECUBIC:]], cnt: 25 }, { off: 0x2D, fid: [[#]], cnt: 9 } ]
 # Function covered by BAT with calls
 YAML-BAT-CHECK:      - name:    SolveCubic
-YAML-BAT-CHECK-NEXT:   fid:     [[#]]
+YAML-BAT-CHECK-NEXT:   fid:     [[#SOLVECUBIC]]
 YAML-BAT-CHECK-NEXT:   hash:    0x6AF7E61EA3966722
 YAML-BAT-CHECK-NEXT:   exec:    25
 YAML-BAT-CHECK-NEXT:   nblocks: 15
