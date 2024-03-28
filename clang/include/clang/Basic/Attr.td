@@ -318,7 +318,7 @@ class VariadicEnumArgument<string name, string type, bit is_string,
 }
 
 // Represents an attribute wrapped by another attribute.
-class AttrArgument<string name, bit opt = 0> : Argument<name, opt>;
+class WrappedAttr<string name, bit opt = 0> : Argument<name, opt>;
 
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety, int version = 1> {
@@ -2746,11 +2746,11 @@ def SwiftPrivate : InheritableAttr {
   let SimpleHandler = 1;
 }
 
-def SwiftVersioned : Attr {
+def SwiftVersionedAddition : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
-  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">,
+  let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
               BoolArgument<"IsReplacedByActive">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];

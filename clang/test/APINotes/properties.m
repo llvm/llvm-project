@@ -15,25 +15,25 @@
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyInVersion3 'id'
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
-// CHECK-4-NEXT: SwiftVersionedAttr {{.+}} 3.0{{$}}
+// CHECK-4-NEXT: SwiftVersionedAdditionAttr {{.+}} 3.0{{$}}
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyForClassInVersion3 'id'
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
-// CHECK-4-NEXT: SwiftVersionedAttr {{.+}} 3.0{{$}}
+// CHECK-4-NEXT: SwiftVersionedAdditionAttr {{.+}} 3.0{{$}}
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyExceptInVersion3 'id'
-// CHECK-3-NEXT: SwiftVersionedAttr {{.+}} Implicit 3.0 IsReplacedByActive{{$}}
+// CHECK-3-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 IsReplacedByActive{{$}}
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-4-NEXT: SwiftVersionedRemovalAttr {{.+}} Implicit 3.0 {{[0-9]+}}
 // CHECK-NOT: Attr
 
 // CHECK-LABEL: ObjCPropertyDecl {{.+}} accessorsOnlyForClassExceptInVersion3 'id'
-// CHECK-3-NEXT: SwiftVersionedAttr {{.+}} Implicit 3.0 IsReplacedByActive{{$}}
+// CHECK-3-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 IsReplacedByActive{{$}}
 // CHECK-3-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-4-NEXT: SwiftImportPropertyAsAccessorsAttr {{.+}} <<invalid sloc>>
 // CHECK-4-NEXT: SwiftVersionedRemovalAttr {{.+}} Implicit 3.0 {{[0-9]+}}

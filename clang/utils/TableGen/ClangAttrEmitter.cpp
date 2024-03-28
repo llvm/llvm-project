@@ -1415,11 +1415,10 @@ namespace {
     }
   };
 
-  class AttrArgument : public SimpleArgument {
+  class WrappedAttr : public SimpleArgument {
   public:
-    AttrArgument(const Record &Arg, StringRef Attr)
-      : SimpleArgument(Arg, Attr, "Attr *")
-    {}
+    WrappedAttr(const Record &Arg, StringRef Attr)
+        : SimpleArgument(Arg, Attr, "Attr *") {}
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
@@ -1430,7 +1429,7 @@ namespace {
     }
 
     void writeDump(raw_ostream &OS) const override {}
-  
+
     void writeDumpChildren(raw_ostream &OS) const override {
       OS << "    Visit(SA->get" << getUpperName() << "());\n";
     }
@@ -1494,8 +1493,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = std::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
-  else if (ArgName == "AttrArgument")
-    Ptr = std::make_unique<AttrArgument>(Arg, Attr);
+  else if (ArgName == "WrappedAttr")
+    Ptr = std::make_unique<WrappedAttr>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
     Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
   else if (ArgName == "VariadicOMPInteropInfoArgument")
