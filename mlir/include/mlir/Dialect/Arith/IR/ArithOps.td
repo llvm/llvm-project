@@ -1227,17 +1227,32 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
 // TruncFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_TruncFOp : Arith_FToFCastOp<"truncf"> {
+def Arith_TruncFOp :
+    Arith_Op<"truncf",
+      [Pure, SameOperandsAndResultShape,
+       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+       DeclareOpInterfaceMethods<CastOpInterface>]>,
+    Arguments<(ins FloatLike:$in,
+                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode)>,
+    Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point-typed value.
     The destination type must be strictly narrower than the source type.
-    If the value cannot be exactly represented, it is rounded using the default
-    rounding mode. When operating on vectors, casts elementwise.
+    If the value cannot be exactly represented, it is rounded using the
+    provided rounding mode or the default one if no rounding mode is provided.
+    When operating on vectors, casts elementwise.
   }];
+  let builders = [
+    OpBuilder<(ins "Type":$out, "Value":$in), [{
+      $_state.addOperands(in);
+      $_state.addTypes(out);
+    }]>
+  ];
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let assemblyFormat = "$in ($roundingmode^)? attr-dict `:` type($in) `to` type($out)";
 }
 
 //===----------------------------------------------------------------------===//

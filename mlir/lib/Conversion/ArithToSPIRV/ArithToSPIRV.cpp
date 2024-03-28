@@ -805,6 +805,15 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
     } else {
       rewriter.template replaceOpWithNewOp<SPIRVOp>(op, dstType,
                                                     adaptor.getOperands());
+      if (auto roundingModeOp =
+              dyn_cast<arith::ArithRoundingModeInterface>(*op)) {
+        if (arith::RoundingModeAttr roundingMode =
+                roundingModeOp.getRoundingModeAttr()) {
+          // TODO: Perform rounding mode attribute conversion and attach to new
+          // operation when defined in the dialect.
+          return failure();
+        }
+      }
     }
     return success();
   }

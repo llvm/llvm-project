@@ -91,6 +91,29 @@ arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
   llvm_unreachable("unknown cmpi predicate kind");
 }
 
+/// Equivalent to
+/// convertRoundingModeToLLVM(convertArithRoundingModeToLLVM(roundingMode)).
+///
+/// Not possible to implement as chain of calls as this would introduce a
+/// circular dependency with MLIRArithAttrToLLVMConversion and make arith depend
+/// on the LLVM dialect and on translation to LLVM.
+static llvm::RoundingMode
+convertArithRoundingModeToLLVMIR(RoundingMode roundingMode) {
+  switch (roundingMode) {
+  case RoundingMode::downward:
+    return llvm::RoundingMode::TowardNegative;
+  case RoundingMode::tonearestaway:
+    return llvm::RoundingMode::NearestTiesToAway;
+  case RoundingMode::tonearesteven:
+    return llvm::RoundingMode::NearestTiesToEven;
+  case RoundingMode::towardzero:
+    return llvm::RoundingMode::TowardZero;
+  case RoundingMode::upward:
+    return llvm::RoundingMode::TowardPositive;
+  }
+  llvm_unreachable("Unhandled rounding mode");
+}
+
 static arith::CmpIPredicateAttr invertPredicate(arith::CmpIPredicateAttr pred) {
   return arith::CmpIPredicateAttr::get(pred.getContext(),
                                        invertPredicate(pred.getValue()));
@@ -1233,13 +1256,12 @@ static bool checkWidthChangeCast(TypeRange inputs, TypeRange outputs) {
 }
 
 /// Attempts to convert `sourceValue` to an APFloat value with
-/// `targetSemantics`, without any information loss or rounding.
-static FailureOr<APFloat>
-convertFloatValue(APFloat sourceValue,
-                  const llvm::fltSemantics &targetSemantics) {
+/// `targetSemantics` and `roundingMode`, without any information loss.
+static FailureOr<APFloat> convertFloatValue(
+    APFloat sourceValue, const llvm::fltSemantics &targetSemantics,
+    llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
   bool losesInfo = false;
-  auto status = sourceValue.convert(
-      targetSemantics, llvm::RoundingMode::NearestTiesToEven, &losesInfo);
+  auto status = sourceValue.convert(targetSemantics, roundingMode, &losesInfo);
   if (losesInfo || status != APFloat::opOK)
     return failure();
 
@@ -1398,8 +1420,15 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
-      [&targetSemantics](const APFloat &a, bool &castStatus) {
-        FailureOr<APFloat> result = convertFloatValue(a, targetSemantics);
+      [this, &targetSemantics](const APFloat &a, bool &castStatus) {
+        FailureOr<APFloat> result;
+        if (std::optional<RoundingMode> roundingMode = getRoundingmode()) {
+          llvm::RoundingMode llvmRoundingMode =
+            convertArithRoundingModeToLLVMIR(*roundingMode);
+          result = convertFloatValue(a, targetSemantics, llvmRoundingMode);
+        } else {
+          result = convertFloatValue(a, targetSemantics);
+        }
         if (failed(result)) {
           castStatus = false;
           return a;

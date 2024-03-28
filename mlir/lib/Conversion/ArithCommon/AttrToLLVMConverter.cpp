@@ -55,3 +55,34 @@ LLVM::IntegerOverflowFlagsAttr mlir::arith::convertArithOverflowAttrToLLVM(
   return LLVM::IntegerOverflowFlagsAttr::get(
       flagsAttr.getContext(), convertArithOverflowFlagsToLLVM(arithFlags));
 }
+
+LLVM::RoundingMode
+mlir::arith::convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode) {
+  switch (roundingMode) {
+  case arith::RoundingMode::downward:
+    return LLVM::RoundingMode::TowardNegative;
+  case arith::RoundingMode::tonearestaway:
+    return LLVM::RoundingMode::NearestTiesToAway;
+  case arith::RoundingMode::tonearesteven:
+    return LLVM::RoundingMode::NearestTiesToEven;
+  case arith::RoundingMode::towardzero:
+    return LLVM::RoundingMode::TowardZero;
+  case arith::RoundingMode::upward:
+    return LLVM::RoundingMode::TowardPositive;
+  }
+  llvm_unreachable("Unhandled rounding mode");
+}
+
+LLVM::RoundingModeAttr mlir::arith::convertArithRoundingModeAttrToLLVM(
+    arith::RoundingModeAttr roundingModeAttr) {
+  assert(roundingModeAttr && "Expecting valid attribute");
+  return LLVM::RoundingModeAttr::get(
+      roundingModeAttr.getContext(),
+      convertArithRoundingModeToLLVM(roundingModeAttr.getValue()));
+}
+
+LLVM::FPExceptionBehaviorAttr
+mlir::arith::getLLVMDefaultFPExceptionBehavior(MLIRContext &context) {
+  return LLVM::FPExceptionBehaviorAttr::get(&context,
+                                            LLVM::FPExceptionBehavior::Ignore);
+}
