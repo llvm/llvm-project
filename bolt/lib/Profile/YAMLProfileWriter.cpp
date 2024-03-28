@@ -48,7 +48,8 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
     if (SymbolValue.getError())
       return Callee;
     if (uint32_t Offset = SymbolValue.get() - Callee->getAddress())
-      EntryID = (*GetBATSecondaryEntryPointId)(Callee->getAddress(), Offset);
+      EntryID =
+          (*GetBATSecondaryEntryPointId)(Callee->getAddress(), Offset) + 1;
   } else {
     BC.getFunctionForSymbol(Symbol, &EntryID);
   }
