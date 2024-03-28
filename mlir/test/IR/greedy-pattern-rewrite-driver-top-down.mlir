@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-patterns="max-iterations=1 top-down=true" \
-// RUN:     -allow-unregistered-dialect --split-input-file | FileCheck %s
+// RUN:     --split-input-file | FileCheck %s
 
 // Tests for https://github.com/llvm/llvm-project/issues/86765. Ensure
 // that operands of a dead op are added to the worklist even if the same value

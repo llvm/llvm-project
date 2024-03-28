@@ -690,17 +690,20 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
 
 void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
   for (Value operand : op->getOperands()) {
-    // If this operand was only used by the op under consideration, we re-add
-    // the operation that defined it to the worklist. Indeed, if the op is about
-    // to be deleted and it was the sole user of the operand, the operand may
-    // also be deleted.
-    // TODO: if the operand has a single use besides the op under consideration,
-    // there may be further canonicalization opportunities, so it should be
-    // added to the worklist.
+    // If this operand currently has at most 2 users, add its defining op to the
+    // worklist. Indeed, after the op is deleted, then the operand will have at
+    // most 1 user left. If it has 0 users left, it can be deleted too,
+    // and if it has 1 user left, there may be further canonicalization
+    // opportunities.
     if (!operand)
       continue;
-    if (!llvm::all_of(operand.getUsers(),
-                      [&op](Operation *u) { return u == op; }))
+    Operation *otherUser = nullptr;
+    if (!llvm::all_of(operand.getUsers(), [&](Operation *user) {
+      if (user == op) return true;
+      if (otherUser && user != otherUser) return false;
+      otherUser = user;
+      return true;
+    }))
       continue;
     if (auto *defOp = operand.getDefiningOp())
       addToWorklist(defOp);
