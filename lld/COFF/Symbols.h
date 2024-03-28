@@ -286,6 +286,15 @@ private:
   uint32_t offset;
 };
 
+// Keep track of symbols with the same name exposed by archives. This is
+// required to later resolve unresolved symbols in the same order as required
+// by the MSVC spec. These are indexes in the specific bump allocator for
+// SymbolUnion.
+struct LazyIntrusiveNode {
+  uint32_t next = 0;
+  uint32_t last = 0;
+};
+
 // This class represents a symbol defined in an archive file. It is
 // created from an archive file header, and it knows how to load an
 // object file from an archive to replace itself with a defined
@@ -302,6 +311,7 @@ public:
 
   ArchiveFile *file;
   const Archive::Symbol sym;
+  LazyIntrusiveNode node;
 };
 
 class LazyObject : public Symbol {
@@ -309,6 +319,7 @@ public:
   LazyObject(InputFile *f, StringRef n) : Symbol(LazyObjectKind, n), file(f) {}
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
   InputFile *file;
+  LazyIntrusiveNode node;
 };
 
 // MinGW only.

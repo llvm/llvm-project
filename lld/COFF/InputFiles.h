@@ -66,7 +66,6 @@ public:
   enum Kind {
     ArchiveKind,
     ObjectKind,
-    LazyObjectKind,
     PDBKind,
     ImportKind,
     BitcodeKind,
@@ -105,7 +104,7 @@ private:
 
 public:
   // True if this is a lazy ObjFile or BitcodeFile.
-  bool lazy = false;
+  bool lazy;
 };
 
 // .lib or .a file.
@@ -113,23 +112,30 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
-  void parse() override;
+  void parse() override{};
+  void parseLazy();
 
   // Enqueues an archive member load for the given symbol. If we've already
   // enqueued a load for the same archive member, this function does nothing,
   // which ensures that we don't load the same member more than once.
   void addMember(const Archive::Symbol &sym);
 
-private:
   std::unique_ptr<Archive> file;
+
+  // The order this archive was seen on the cmd-line. This is later needed for
+  // resolving undefined symbols in archive OBJs.
+  uint32_t CmdLineIndex;
+
+private:
   llvm::DenseSet<uint64_t> seen;
 };
 
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false)
-      : InputFile(ctx, ObjectKind, m, lazy) {}
+  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false,
+                   ArchiveFile *parent = nullptr)
+      : InputFile(ctx, ObjectKind, m, lazy), parent(parent) {}
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
@@ -181,6 +187,9 @@ public:
 
   // True if this file was compiled with /guard:ehcont.
   bool hasGuardEHCont() { return feat00Flags & 0x4000; }
+
+  // Whether this Obj buffer is part of an archive.
+  ArchiveFile *parent;
 
   // Pointer to the PDB module descriptor builder. Various debug info records
   // will reference object files by "module index", which is here. Things like
@@ -369,13 +378,16 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                        StringRef archiveName, uint64_t offsetInArchive,
-                       bool lazy);
+                       bool lazy = false, ArchiveFile *parent = nullptr);
   ~BitcodeFile();
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
   MachineTypes getMachineType() override;
   void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
+
+  // Whether this bitcode buffer is part of an archive.
+  ArchiveFile *parent;
 
 private:
   void parse() override;

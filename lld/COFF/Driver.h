@@ -22,6 +22,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
+#include <future>
 #include <memory>
 #include <optional>
 #include <set>
@@ -91,13 +92,20 @@ public:
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
-                            StringRef parentName);
+                            StringRef parentName,
+                            ArchiveFile *parent = nullptr);
 
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+  void enqueuePDB(StringRef Path) {
+    enqueuePath(Path, false, false, /*parent=*/std::nullopt);
+  }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  void enqueuePath(
+      StringRef path, bool wholeArchive, bool lazy,
+      std::optional<std::shared_future<ArchiveFile *>> parent = std::nullopt);
+
+  void enqueueLazyFile(InputFile *file);
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
@@ -182,10 +190,11 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
-  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
-                 bool lazy);
+  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive, bool lazy,
+                 ArchiveFile *parent = nullptr);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
-                        StringRef parentName, uint64_t offsetInArchive);
+                        StringRef parentName, uint64_t offsetInArchive,
+                        ArchiveFile *parent = nullptr);
 
   void enqueueTask(std::function<void()> task);
   bool run();

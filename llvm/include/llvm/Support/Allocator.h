@@ -278,6 +278,32 @@ public:
     return Out / alignof(T);
   }
 
+  /// Gets an already allocated object from an index that was previously
+  /// retrieved with `identifyKnownAlignedObject`.
+  template <typename T> T *fromAlignedIndex(int64_t Index) {
+    Index *= alignof(T);
+
+    int64_t InSlabIdx = 0;
+    for (size_t Idx = 0, E = Slabs.size(); Idx < E; Idx++) {
+      char *S = static_cast<char *>(Slabs[Idx]);
+      if (Index >= InSlabIdx &&
+          Index < InSlabIdx + static_cast<int64_t>(computeSlabSize(Idx)))
+        return reinterpret_cast<T *>(S + (Index - InSlabIdx));
+      InSlabIdx += static_cast<int64_t>(computeSlabSize(Idx));
+    }
+
+    // Use negative index to denote custom sized slabs.
+    int64_t InCustomSizedSlabIdx = -1;
+    for (size_t Idx = 0, E = CustomSizedSlabs.size(); Idx < E; Idx++) {
+      char *S = static_cast<char *>(CustomSizedSlabs[Idx].first);
+      int64_t Size = static_cast<int64_t>(CustomSizedSlabs[Idx].second);
+      if (Index <= InCustomSizedSlabIdx && Index > InCustomSizedSlabIdx - Size)
+        return reinterpret_cast<T *>(S - (Index - InCustomSizedSlabIdx));
+      InCustomSizedSlabIdx -= static_cast<int64_t>(Size);
+    }
+    return nullptr;
+  }
+
   size_t getTotalMemory() const {
     size_t TotalMemory = 0;
     for (auto I = Slabs.begin(), E = Slabs.end(); I != E; ++I)
@@ -380,9 +406,9 @@ typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
 /// This allows calling the destructor in DestroyAll() and when the allocator is
 /// destroyed.
 template <typename T> class SpecificBumpPtrAllocator {
+public:
   BumpPtrAllocator Allocator;
 
-public:
   SpecificBumpPtrAllocator() {
     // Because SpecificBumpPtrAllocator walks the memory to call destructors,
     // it can't have red zones between allocations.

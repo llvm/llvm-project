@@ -94,9 +94,12 @@ static bool ignoredSymbolName(StringRef name) {
 }
 
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx, ArchiveKind, m) {}
+    : InputFile(ctx, ArchiveKind, m, /*lazy=*/true) {
+  static unsigned Order = 0;
+  CmdLineIndex = Order++;
+}
 
-void ArchiveFile::parse() {
+void ArchiveFile::parseLazy() {
   // Parse a MemoryBufferRef as an archive file.
   file = CHECK(Archive::create(mb), this);
 
@@ -115,7 +118,7 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
   if (!seen.insert(c.getChildOffset()).second)
     return;
 
-  ctx.driver.enqueueArchiveMember(c, sym, getName());
+  ctx.driver.enqueueArchiveMember(c, sym, getName(), this);
 }
 
 std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
@@ -1000,8 +1003,8 @@ void ImportFile::parse() {
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                          StringRef archiveName, uint64_t offsetInArchive,
-                         bool lazy)
-    : InputFile(ctx, BitcodeKind, mb, lazy) {
+                         bool lazy, ArchiveFile *parent)
+    : InputFile(ctx, BitcodeKind, mb, lazy), parent(parent) {
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.config.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier(),
