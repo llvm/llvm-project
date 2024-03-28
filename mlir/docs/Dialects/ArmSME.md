@@ -14,6 +14,14 @@ integration tests for reference:
 * [Linalg/CPU/ArmSME/matmul.mlir](https://github.com/llvm/llvm-project/blob/main/mlir/test/Integration/Dialect/Linalg/CPU/ArmSME/matmul.mlir)
 * [Vector/CPU/ArmSME/test-outerproduct-f64.mlir](https://github.com/llvm/llvm-project/blob/main/mlir/test/Integration/Dialect/Vector/CPU/ArmSME/test-outerproduct-f64.mlir)
 
+In order to run ArmSME integration tests, include these flags in the CMake
+invokation when configuring LLVM and MLIR:
+```bash
+  -DMLIR_INCLUDE_INTEGRATION_TESTS=On
+  -DMLIR_RUN_ARM_SME_TESTS=On
+  -DARM_EMULATOR_EXECUTABLE=<path-to-emulator> 
+```
+
 These tests are run "post-commit" by the
 [clang-aarch64-sve-vla](https://lab.llvm.org/buildbot/#/builders/197) LLVM
 BuildBot worker.
