@@ -5595,9 +5595,13 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
   case X86::FROM:                                                              \
     return X86::TO;
     FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(CCMP64rr, CCMP64ri32)
     FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CTEST32rr, CTEST32ri)
     FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   }
 }
@@ -5697,7 +5701,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       UseMI.findRegisterUseOperandIdx(Reg) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
-  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
+  if (((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) ||
+       (NewOpc == X86::CCMP64ri32 || NewOpc == X86::CCMP32ri)) &&
       UseMI.findRegisterUseOperandIdx(Reg) != 1)
     return false;
 
@@ -5742,7 +5747,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
       unsigned ImmOpNum = 2;
       if (!UseMI.getOperand(0).isDef()) {
-        Op1 = 0; // TEST, CMP
+        Op1 = 0; // TEST, CMP, CTEST, CCMP
         ImmOpNum = 1;
       }
       if (Opc == TargetOpcode::COPY)
