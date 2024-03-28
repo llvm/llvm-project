@@ -401,11 +401,12 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
               size_t ret = mbstowcs(dst, members[m_i], len);
               if (ret == static_cast<size_t>(-1)) {
                 fprintf(stderr, "mbstowcs failed unexpectedly");
+                free(dst);
                 return 1;
               }
 
               for (size_t i = 0; i < len; ++i) {
-                if (dst[i] >= 0x7F) {
+                if (dst[i] > 0x7F) {
                   printf("\\u%%04x", dst[i]);
                 } else {
                   // c++03 does not allow basic ascii-range characters in UCNs
