@@ -109,6 +109,8 @@ def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value)>;
+def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
+                                          VS1Constraint.Value)>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").

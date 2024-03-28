@@ -263,6 +263,7 @@ private:
     this->ImpreciseLifetime = false;
     this->Nontemporal = false;
     this->ThreadLocalRef = false;
+    this->IsKnownNonNull = false;
     this->BaseIvarExp = nullptr;
   }
 

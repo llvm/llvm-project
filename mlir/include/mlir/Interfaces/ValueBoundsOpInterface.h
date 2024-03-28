@@ -259,6 +259,10 @@ public:
   /// Return an expression that represents a constant.
   AffineExpr getExpr(int64_t constant);
 
+  /// Debugging only: Dump the constraint set and the column-to-value/dim
+  /// mapping to llvm::errs.
+  void dump() const;
+
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for
   /// internal data structures/API only.
