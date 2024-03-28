@@ -196,10 +196,6 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
   MCAsmLexer &Lexer;
 
-  // Much like WebAssemblyAsmPrinter in the backend, we have to own these.
-  std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
-  std::vector<std::unique_ptr<std::string>> Names;
-
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
   // and yet we have to be feeding data to the streamer in a very particular
@@ -285,16 +281,6 @@ public:
 
   bool error(const Twine &Msg, SMLoc Loc = SMLoc()) {
     return Parser.Error(Loc.isValid() ? Loc : Lexer.getTok().getLoc(), Msg);
-  }
-
-  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
-    Signatures.push_back(std::move(Sig));
-  }
-
-  StringRef storeName(StringRef Name) {
-    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
-    Names.push_back(std::move(N));
-    return *Names.back();
   }
 
   std::pair<StringRef, StringRef> nestingString(NestingType NT) {
@@ -640,21 +626,20 @@ public:
       // represent as a signature, such that we can re-build this signature,
       // attach it to an anonymous symbol, which is what WasmObjectWriter
       // expects to be able to recreate the actual unique-ified type indices.
+      auto &Ctx = getContext();
       auto Loc = Parser.getTok();
-      auto Signature = std::make_unique<wasm::WasmSignature>();
-      if (parseSignature(Signature.get()))
+      auto Signature = Ctx.createWasmSignature();
+      if (parseSignature(Signature))
         return true;
       // Got signature as block type, don't need more
-      TC.setLastSig(*Signature.get());
+      TC.setLastSig(*Signature);
       if (ExpectBlockType)
-        NestingStack.back().Sig = *Signature.get();
+        NestingStack.back().Sig = *Signature;
       ExpectBlockType = false;
-      auto &Ctx = getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       const MCExpr *Expr = MCSymbolRefExpr::create(
           WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
@@ -887,12 +872,11 @@ public:
         CurrentState = FunctionStart;
         LastFunctionLabel = WasmSym;
       }
-      auto Signature = std::make_unique<wasm::WasmSignature>();
-      if (parseSignature(Signature.get()))
+      auto Signature = Ctx.createWasmSignature();
+      if (parseSignature(Signature))
         return ParseStatus::Failure;
       TC.funcDecl(*Signature);
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
@@ -909,7 +893,7 @@ public:
       if (ExportName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setExportName(storeName(ExportName));
+      WasmSym->setExportName(Ctx.allocateGenericString(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -924,7 +908,7 @@ public:
       if (ImportModule.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportModule(storeName(ImportModule));
+      WasmSym->setImportModule(Ctx.allocateGenericString(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -939,7 +923,7 @@ public:
       if (ImportName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      WasmSym->setImportName(storeName(ImportName));
+      WasmSym->setImportName(Ctx.allocateGenericString(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
@@ -949,11 +933,10 @@ public:
       if (SymName.empty())
         return ParseStatus::Failure;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
-      auto Signature = std::make_unique<wasm::WasmSignature>();
+      auto Signature = Ctx.createWasmSignature();
       if (parseRegTypeList(Signature->Params))
         return ParseStatus::Failure;
-      WasmSym->setSignature(Signature.get());
-      addSignature(std::move(Signature));
+      WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
       TOut.emitTagType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
