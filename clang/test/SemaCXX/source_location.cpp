@@ -94,6 +94,7 @@ static_assert(is_same<decltype(__builtin_LINE()), unsigned>);
 static_assert(is_same<decltype(__builtin_COLUMN()), unsigned>);
 static_assert(is_same<decltype(__builtin_FILE()), const char *>);
 static_assert(is_same<decltype(__builtin_FILE_NAME()), const char *>);
+static_assert(is_same<decltype(__builtin_VARIABLE_NAME()), const char *>);
 static_assert(is_same<decltype(__builtin_FUNCTION()), const char *>);
 #ifdef MS
 static_assert(is_same<decltype(__builtin_FUNCSIG()), const char *>);
@@ -105,6 +106,7 @@ static_assert(noexcept(__builtin_LINE()));
 static_assert(noexcept(__builtin_COLUMN()));
 static_assert(noexcept(__builtin_FILE()));
 static_assert(noexcept(__builtin_FILE_NAME()));
+static_assert(noexcept(__builtin_VARIABLE_NAME()));
 static_assert(noexcept(__builtin_FUNCTION()));
 #ifdef MS
 static_assert(noexcept(__builtin_FUNCSIG()));
@@ -410,6 +412,43 @@ void test_aggr_class() {
 }
 
 } // namespace test_file_name
+
+//===----------------------------------------------------------------------===//
+//                            __builtin_VARIABLE_NAME()
+//===----------------------------------------------------------------------===//
+
+namespace test_variable_name {
+
+struct Class {
+  const char *Actual;
+  constexpr Class(const char *N = __builtin_VARIABLE_NAME()) : Actual(N) {}
+};
+
+constexpr Class halide;
+
+constexpr void test_named_decl() {
+  // FIXME: I don't understand why this doesn't work. Maybe there is something I
+  // don't understand about constexpr?
+  //static_assert(is_equal(halide.Actual, "test_variable_name::halide"), "");
+}
+
+constexpr void test_anonymous() {
+  static_assert(is_equal(Class().Actual, ""));
+}
+
+constexpr const char *check_function(const char *Name = __builtin_VARIABLE_NAME()) {
+  return Name;
+}
+
+constexpr void test_function() {
+  static_assert(is_equal(check_function(), ""), "");
+}
+
+constexpr void test_expr() {
+  static_assert(is_equal(__builtin_VARIABLE_NAME(), ""), "");
+}
+
+} // namespace test_variable_name
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCTION()
