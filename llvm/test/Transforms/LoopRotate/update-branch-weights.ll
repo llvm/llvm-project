@@ -240,7 +240,7 @@ loop_exit:
 
 ; BFI_AFTER-LABEL: block-frequency-info: func6_inaccurate_branch_weight
 ; BFI_AFTER: - entry: {{.*}} count = 1024
-; BFI_AFTER: - loop_body: {{.*}} count = 4294967296
+; BFI_AFTER: - loop_body: {{.*}} count = 1024
 ; BFI_AFTER: - loop_exit: {{.*}} count = 1024
 
 ; IR-LABEL: define void @func6_inaccurate_branch_weight(
@@ -292,4 +292,4 @@ loop_exit:
 ; IR: [[PROF_FUNC3_0]] = !{!"branch_weights", i32 0, i32 1}
 ; IR: [[PROF_FUNC4_0]] = !{!"branch_weights", i32 1, i32 0}
 ; IR: [[PROF_FUNC5_0]] = !{!"branch_weights", i32 0, i32 0}
-; IR: [[PROF_FUNC6_0]] = !{!"branch_weights", i32 -1, i32 1024}
+; IR: [[PROF_FUNC6_0]] = !{!"branch_weights", i32 0, i32 1024}
