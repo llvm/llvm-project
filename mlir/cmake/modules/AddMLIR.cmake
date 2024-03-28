@@ -136,6 +136,31 @@ function(add_mlir_pdll_library target inputFile ofn)
   add_public_tablegen_target(${target})
 endfunction()
 
+# Declare a function to generate ODS with mlir-linalg-ods-yaml-gen
+function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
+  set(YAML_AST_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${yaml_ast_file})
+  set(GEN_ODS_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.td)
+  set(GEN_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${output_file}.yamlgen.cpp.inc)
+  set_source_files_properties(
+    ${GEN_ODS_FILE}
+    PROPERTIES GENERATED TRUE)
+  set_source_files_properties(
+    ${GEN_CPP_FILE}
+    PROPERTIES GENERATED TRUE)
+  add_custom_command(
+    OUTPUT ${GEN_ODS_FILE} ${GEN_CPP_FILE}
+    COMMAND ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_EXE} ${YAML_AST_SOURCE} -o-ods-decl=${GEN_ODS_FILE} -o-impl=${GEN_CPP_FILE}
+    MAIN_DEPENDENCY
+    ${YAML_AST_SOURCE}
+    DEPENDS
+    ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_EXE}
+    ${MLIR_LINALG_ODS_YAML_GEN_TABLEGEN_TARGET}
+    ${LLVM_TARGET_DEPENDS})
+    
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${GEN_ODS_FILE} ${GEN_CPP_FILE}
+      PARENT_SCOPE)
+endfunction()
+
 # Declare a dialect in the include directory
 function(add_mlir_dialect dialect dialect_namespace)
   set(LLVM_TARGET_DEFINITIONS ${dialect}.td)

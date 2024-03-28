@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
 
   DEPENDS
   MLIRLinalgInterfacesIncGen
+  MLIRLinalgNamedStructuredOpsYamlIncGen
   MLIRLinalgOpsAttributesIncGen
   MLIRLinalgOpsEnumsIncGen
   MLIRLinalgOpsIncGen
