@@ -7983,7 +7983,7 @@ class SIMDInsFromMain<string size, ValueType vectype,
                    "|" # size # "\t$Rd$idx, $Rn}",
                    "$Rd = $dst",
             [(set V128:$dst,
-              (vector_insert (vectype V128:$Rd), regtype:$Rn, idxtype:$idx))]> {
+              (vector_insert (vectype V128:$Rd), regtype:$Rn, (i64 idxtype:$idx)))]> {
   let Inst{14-11} = 0b0011;
 }
 
@@ -7997,8 +7997,8 @@ class SIMDInsFromElement<string size, ValueType vectype,
          [(set V128:$dst,
                (vector_insert
                  (vectype V128:$Rd),
-                 (elttype (vector_extract (vectype V128:$Rn), idxtype:$idx2)),
-                 idxtype:$idx))]>;
+                 (elttype (vector_extract (vectype V128:$Rn), (i64 idxtype:$idx2))),
+                 (i64 idxtype:$idx)))]>;
 
 class SIMDInsMainMovAlias<string size, Instruction inst,
                           RegisterClass regtype, Operand idxtype>

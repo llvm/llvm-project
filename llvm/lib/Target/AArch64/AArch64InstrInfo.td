@@ -6601,6 +6601,15 @@ def : Pat<(v8i8 (vector_insert (v8i8 V64:$Rn), (i32 GPR32:$Rm), (i64 VectorIndex
                        VectorIndexB:$imm, GPR32:$Rm),
             dsub)>;
 
+def : Pat<(v8i8 (vector_insert (v8i8 V64:$Rn), (i8 FPR8:$Rm), (i64 VectorIndexB:$imm))),
+          (EXTRACT_SUBREG
+            (INSvi8lane (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), V64:$Rn, dsub)),
+                       VectorIndexB:$imm, (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rm, bsub)), (i64 0)),
+            dsub)>;
+def : Pat<(v16i8 (vector_insert (v16i8 V128:$Rn), (i8 FPR8:$Rm), (i64 VectorIndexB:$imm))),
+          (INSvi8lane V128:$Rn, VectorIndexB:$imm,
+             (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rm, bsub)), (i64 0))>;
+
 // Copy an element at a constant index in one vector into a constant indexed
 // element of another.
 // FIXME refactor to a shared class/dev parameterized on vector type, vector
@@ -6633,26 +6642,26 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
 multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
                                 ValueType VTScal, Instruction INS> {
   def : Pat<(VT128 (vector_insert V128:$src,
-                        (VTScal (vector_extract (VT128 V128:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd, V128:$Rn, imm:$Immn)>;
 
   def : Pat<(VT128 (vector_insert V128:$src,
-                        (VTScal (vector_extract (VT64 V64:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd,
                  (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn)>;
 
   def : Pat<(VT64 (vector_insert V64:$src,
-                        (VTScal (vector_extract (VT128 V128:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub),
                                  imm:$Immd, V128:$Rn, imm:$Immn),
                             dsub)>;
 
   def : Pat<(VT64 (vector_insert V64:$src,
-                        (VTScal (vector_extract (VT64 V64:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG
                 (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub), imm:$Immd,
                      (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn),
@@ -6671,14 +6680,14 @@ defm : Neon_INS_elt_pattern<v2i64, v1i64, i64, INSvi64lane>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
-def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), imm:$Immd)),
+def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
           (INSvi32lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0)>;
-def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), imm:$Immd)),
+def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
           (EXTRACT_SUBREG
             (INSvi32lane (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$src, dsub)),
                          imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0),
             dsub)>;
-def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), imm:$Immd)),
+def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), (i64 imm:$Immd))),
           (INSvi64lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$Sn, dsub), 0)>;
 
 // bitcast of an extract
@@ -8100,7 +8109,7 @@ def : Pat<(v8bf16 (AArch64dup (bf16 (load GPR64sp:$Rn)))),
 class Ld1Lane128Pat<SDPatternOperator scalar_load, Operand VecIndex,
                     ValueType VTy, ValueType STy, Instruction LD1>
   : Pat<(vector_insert (VTy VecListOne128:$Rd),
-           (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+           (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, VecIndex:$idx, GPR64sp:$Rn)>;
 
 def : Ld1Lane128Pat<extloadi8,  VectorIndexB, v16i8, i32, LD1i8>;
@@ -8123,14 +8132,14 @@ class Ld1Lane128IdxOpPat<SDPatternOperator scalar_load, Operand
                          VecIndex, ValueType VTy, ValueType STy,
                          Instruction LD1, SDNodeXForm IdxOp>
   : Pat<(vector_insert (VTy VecListOne128:$Rd),
-                       (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+                       (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, (IdxOp VecIndex:$idx), GPR64sp:$Rn)>;
 
 class Ld1Lane64IdxOpPat<SDPatternOperator scalar_load, Operand VecIndex,
                         ValueType VTy, ValueType STy, Instruction LD1,
                         SDNodeXForm IdxOp>
   : Pat<(vector_insert (VTy VecListOne64:$Rd),
-                       (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+                       (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (EXTRACT_SUBREG
             (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
                 (IdxOp VecIndex:$idx), GPR64sp:$Rn),
@@ -8170,7 +8179,7 @@ let Predicates = [IsNeonAvailable] in {
 class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                    ValueType VTy, ValueType STy, Instruction LD1>
   : Pat<(vector_insert (VTy VecListOne64:$Rd),
-           (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+           (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (EXTRACT_SUBREG
             (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
                           VecIndex:$idx, GPR64sp:$Rn),

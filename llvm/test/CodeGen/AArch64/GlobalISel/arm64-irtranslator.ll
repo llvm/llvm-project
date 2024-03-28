@@ -1538,7 +1538,8 @@ define <2 x i32> @test_insertelement(<2 x i32> %vec, i32 %elt, i32 %idx){
 ; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[ELT:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[IDX:%[0-9]+]]:_(s32) = COPY $w1
-; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX]](s32)
+; CHECK: [[IDX2:%[0-9]+]]:_(s64) = G_ZEXT [[IDX]]
+; CHECK: [[RES:%[0-9]+]]:_(<2 x s32>) = G_INSERT_VECTOR_ELT [[VEC]], [[ELT]](s32), [[IDX2]](s64)
 ; CHECK: $d0 = COPY [[RES]](<2 x s32>)
   %res = insertelement <2 x i32> %vec, i32 %elt, i32 %idx
   ret <2 x i32> %res

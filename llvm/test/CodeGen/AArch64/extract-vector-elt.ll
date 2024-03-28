@@ -2,11 +2,6 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for extract_v4i32_vector_insert
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_insert_const
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for extract_v4i32_vector_extract_const
-
 define i64 @extract_v2i64_undef_index(<2 x i64> %a, i32 %c) {
 ; CHECK-SD-LABEL: extract_v2i64_undef_index:
 ; CHECK-SD:       // %bb.0: // %entry
@@ -113,9 +108,24 @@ entry:
 }
 
 define i64 @extract_v2i64_extract_of_insert(<2 x i64> %a, i64 %element, i64 %c) {
-; CHECK-LABEL: extract_v2i64_extract_of_insert:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2i64_extract_of_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2i64_extract_of_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #32
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    mov x8, sp
+; CHECK-GI-NEXT:    and x9, x1, #0x1
+; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    str x0, [x8, x9, lsl #3]
+; CHECK-GI-NEXT:    add x8, sp, #16
+; CHECK-GI-NEXT:    ldr q0, [sp]
+; CHECK-GI-NEXT:    str q0, [sp, #16]
+; CHECK-GI-NEXT:    ldr x0, [x8, x9, lsl #3]
+; CHECK-GI-NEXT:    add sp, sp, #32
+; CHECK-GI-NEXT:    ret
 entry:
   %vector = insertelement <2 x i64> %a, i64 %element, i64 %c
   %d = extractelement <2 x i64> %vector, i64 %c
