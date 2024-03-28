@@ -8016,6 +8016,38 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   Constant *RHSC;
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
+    case Instruction::FSub:
+      switch (Pred) {
+      default:
+        break;
+      case FCmpInst::FCMP_UGT:
+      case FCmpInst::FCMP_ULT:
+      case FCmpInst::FCMP_UNE:
+      case FCmpInst::FCMP_OEQ:
+      case FCmpInst::FCMP_OGE:
+      case FCmpInst::FCMP_OLE: {
+        BinaryOperator *SubI = cast<BinaryOperator>(LHSI);
+        if (!computeKnownFPClass(SubI->getOperand(0), SubI->getFastMathFlags(),
+                                 fcInf, LHSI, 0)
+                 .isKnownNeverInfinity() &&
+            !computeKnownFPClass(SubI->getOperand(1), SubI->getFastMathFlags(),
+                                 fcInf, LHSI, 0)
+                 .isKnownNeverInfinity())
+          break;
+      }
+        LLVM_FALLTHROUGH;
+      case FCmpInst::FCMP_OGT:
+      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_ONE:
+      case FCmpInst::FCMP_UEQ:
+      case FCmpInst::FCMP_UGE:
+      case FCmpInst::FCMP_ULE:
+        if (match(RHSC, m_AnyZeroFP()) &&
+            match(LHSI, m_FSub(m_Value(X), m_Value(Y))))
+          return new FCmpInst(Pred, X, Y);
+        break;
+      }
+      break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
         return NV;
