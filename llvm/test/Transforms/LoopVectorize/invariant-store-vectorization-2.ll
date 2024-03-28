@@ -120,7 +120,7 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-LABEL: @inv_val_store_to_inv_address_conditional_inv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NTRUNC]], [[K:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[NTRUNC]], [[K:%.*]]
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
@@ -136,9 +136,9 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX2]], 9223372036854775804
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[NTRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 3
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 3
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[BROADCAST_SPLAT]], <4 x i32> [[BROADCAST_SPLAT6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 3
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[BROADCAST_SPLAT6]], <4 x i32> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -165,7 +165,7 @@ define void @inv_val_store_to_inv_address_conditional_inv(ptr %a, i64 %n, ptr %b
 ; CHECK:       cond_store_k:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[STOREVAL:%.*]] = phi i32 [ [[NTRUNC]], [[COND_STORE]] ], [ [[K]], [[COND_STORE_K]] ]
+; CHECK-NEXT:    [[STOREVAL:%.*]] = phi i32 [ [[NTRUNC]], [[COND_STORE_K]] ], [ [[K]], [[COND_STORE]] ]
 ; CHECK-NEXT:    store i32 [[STOREVAL]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
