@@ -3629,8 +3629,12 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // OpenCL v1.2 s6.9.f - The library functions defined in
   // the C99 standard headers are not available.
   if (Context.getLangOpts().OpenCL &&
-      Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
+      Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID)) {
+    if (Context.getLangOpts().getOpenCLCompatibleVersion() >= 120 &&
+        (BuiltinID == Builtin::BIprintf))
+      return BuiltinID;
     return 0;
+  }
 
   // CUDA does not have device-side standard library. printf and malloc are the
   // only special cases that are supported by device-side runtime.

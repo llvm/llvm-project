@@ -235,7 +235,8 @@ bool Builtin::Context::performsCallback(unsigned ID,
 
 bool Builtin::Context::canBeRedeclared(unsigned ID) const {
   return ID == Builtin::NotBuiltin || ID == Builtin::BI__va_start ||
-         ID == Builtin::BI__builtin_assume_aligned ||
+         ID == Builtin::BI__builtin_assume_aligned || ID == Builtin::BIprintf ||
+         ID == Builtin::BI__builtin_printf ||
          (!hasReferenceArgsOrResult(ID) && !hasCustomTypechecking(ID)) ||
          isInStdNamespace(ID);
 }
