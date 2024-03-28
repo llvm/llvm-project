@@ -500,6 +500,44 @@ static bool isSelect01(const APInt &C1I, const APInt &C2I) {
   return C1I.isOne() || C1I.isAllOnes() || C2I.isOne() || C2I.isAllOnes();
 }
 
+/// Try to simplify a select instruction when the user of its select user
+/// indicates the condition.
+static bool simplifySeqSelectWithSameCond(SelectInst &SI,
+                                          const SimplifyQuery &SQ,
+                                          InstCombinerImpl &IC) {
+  Value *CondVal = SI.getCondition();
+  if (match(CondVal, m_ImmConstant()))
+    return false;
+
+  auto trySimplifySeqSelect = [=, &SI, &IC](unsigned OpIndex) {
+    assert((OpIndex == 1 || OpIndex == 2) && "Unexpected operand index");
+    SelectInst *SINext = &SI;
+    Value *ValOp = SINext->getOperand(OpIndex);
+    Value *CondNext;
+    while (match(ValOp, m_Select(m_Value(CondNext), m_Value(), m_Value()))) {
+      if (CondNext == CondVal) {
+        IC.replaceOperand(*SINext, OpIndex,
+                          cast<SelectInst>(ValOp)->getOperand(OpIndex));
+        return true;
+      }
+
+      SINext = cast<SelectInst>(ValOp);
+      ValOp = SINext->getOperand(OpIndex);
+    }
+    return false;
+  };
+
+  // Try to simplify the true value of select.
+  if (trySimplifySeqSelect(/*OpIndex=*/1))
+    return true;
+
+  // Try to simplify the false value of select.
+  if (trySimplifySeqSelect(/*OpIndex=*/2))
+    return true;
+
+  return false;
+}
+
 /// Try to fold the select into one of the operands to allow further
 /// optimization.
 Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
@@ -566,6 +604,9 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 
   if (Instruction *R = TryFoldSelectIntoOp(SI, FalseVal, TrueVal, true))
     return R;
+
+  if (simplifySeqSelectWithSameCond(SI, SQ, *this))
+    return &SI;
 
   return nullptr;
 }
