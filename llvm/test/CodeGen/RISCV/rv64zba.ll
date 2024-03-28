@@ -209,6 +209,24 @@ define i64 @sh1adduw_2(i64 %0, i64 %1) {
   ret i64 %5
 }
 
+define i64 @sh1adduw_3(i64 %0, i64 %1) {
+; RV64I-LABEL: sh1adduw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 31
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh1adduw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %3 = shl i64 %0, 1
+  %4 = and i64 %3, 8589934590
+  %5 = or disjoint i64 %4, %1
+  ret i64 %5
+}
+
 define signext i32 @sh2adduw(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: sh2adduw:
 ; RV64I:       # %bb.0:
@@ -247,6 +265,24 @@ define i64 @sh2adduw_2(i64 %0, i64 %1) {
   ret i64 %5
 }
 
+define i64 @sh2adduw_3(i64 %0, i64 %1) {
+; RV64I-LABEL: sh2adduw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 30
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh2adduw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %3 = shl i64 %0, 2
+  %4 = and i64 %3, 17179869180
+  %5 = or disjoint i64 %4, %1
+  ret i64 %5
+}
+
 define i64 @sh3adduw(i32 signext %0, ptr %1) {
 ; RV64I-LABEL: sh3adduw:
 ; RV64I:       # %bb.0:
@@ -282,6 +318,24 @@ define i64 @sh3adduw_2(i64 %0, i64 %1) {
   %3 = shl i64 %0, 3
   %4 = and i64 %3, 34359738360
   %5 = add i64 %4, %1
+  ret i64 %5
+}
+
+define i64 @sh3adduw_3(i64 %0, i64 %1) {
+; RV64I-LABEL: sh3adduw_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 29
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: sh3adduw_3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %3 = shl i64 %0, 3
+  %4 = and i64 %3, 34359738360
+  %5 = or disjoint i64 %4, %1
   ret i64 %5
 }
 
@@ -332,6 +386,24 @@ define i64 @addmul6(i64 %a, i64 %b) {
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 6
   %d = add i64 %c, %b
+  ret i64 %d
+}
+
+define i64 @disjointormul6(i64 %a, i64 %b) {
+; RV64I-LABEL: disjointormul6:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 6
+; RV64I-NEXT:    mul a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: disjointormul6:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, 6
+  %d = or disjoint i64 %c, %b
   ret i64 %d
 }
 
@@ -1096,6 +1168,23 @@ define i64 @add4104(i64 %a) {
 ; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
   %c = add i64 %a, 4104
+  ret i64 %c
+}
+
+define i64 @add4104_2(i64 %a) {
+; RV64I-LABEL: add4104_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: add4104_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    li a1, 1026
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+  %c = or disjoint i64 %a, 4104
   ret i64 %c
 }
 
