@@ -134,9 +134,8 @@ define void @test8(i64 %a, ptr noalias %src, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:    b.hs .LBB7_1
 ; CHECK-NEXT:  // %bb.3: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB7_2 Depth=1
-; CHECK-NEXT:    lsl x10, x8, #3
-; CHECK-NEXT:    ldr x11, [x1, x10]
-; CHECK-NEXT:    str x11, [x2, x10]
+; CHECK-NEXT:    ldr x10, [x1, x8, lsl #3]
+; CHECK-NEXT:    str x10, [x2, x8, lsl #3]
 ; CHECK-NEXT:    b .LBB7_1
 ; CHECK-NEXT:  .LBB7_4: // %exit
 ; CHECK-NEXT:    ret
