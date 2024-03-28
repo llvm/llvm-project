@@ -336,9 +336,11 @@ TEST(FileIndexTest, RebuildWithPreamble) {
 
   FileIndex Index;
   bool IndexUpdated = false;
+
+  MockCompilationDatabase CDB;
   buildPreamble(
       FooCpp, *CI, PI,
-      /*StoreInMemory=*/true,
+      /*StoreInMemory=*/true, /*RequiredModuleBuilder=*/nullptr,
       [&](CapturedASTCtx ASTCtx,
           std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         auto &Ctx = ASTCtx.getASTContext();
