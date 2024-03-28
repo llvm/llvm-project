@@ -1281,6 +1281,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
       S, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
       {InstLocBegin, InstLocEnd});
+  if (Inst.isInvalid())
+    return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
     return true;
 
