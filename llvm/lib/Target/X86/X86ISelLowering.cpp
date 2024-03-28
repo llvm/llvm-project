@@ -54522,14 +54522,27 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold ADC(C1,C2,Carry) -> ADC(0,C1+C2,Carry)
-  // iff the flag result is dead.
-  // TODO: Allow flag result if C1+C2 doesn't signed/unsigned overflow.
-  if (LHSC && RHSC && !LHSC->isZero() && !N->hasAnyUseOfValue(1)) {
-    SDLoc DL(N);
-    APInt Sum = LHSC->getAPIntValue() + RHSC->getAPIntValue();
-    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(),
-                       DAG.getConstant(0, DL, LHS.getValueType()),
-                       DAG.getConstant(Sum, DL, LHS.getValueType()), CarryIn);
+  // if the flag result is dead, or if C1+C2 doesn't signed/unsigned overflow.
+  if (LHSC && RHSC && !LHSC->isZero()) {
+    // Calculate the sum and check for overflow.
+    bool Overflow;
+
+    // Check for signed overflow first. Because it is more involved, let sadd_ov
+    // do the work
+    APInt Sum = LHSC->getAPIntValue().sadd_ov(RHSC->getAPIntValue(), Overflow);
+
+    // Manually check for unsigned overflow. Luckily, this is relatively easy:
+    // just check for wrap-around
+    Overflow |= Sum.ult(RHSC->getAPIntValue());
+
+    // Only apply the optimization if there is no overflow or the flag result is
+    // not used.
+    if (!Overflow || !N->hasAnyUseOfValue(1)) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(),
+                         DAG.getConstant(0, DL, LHS.getValueType()),
+                         DAG.getConstant(Sum, DL, LHS.getValueType()), CarryIn);
+    }
   }
 
   if (SDValue Flags = combineCarryThroughADD(CarryIn, DAG)) {
@@ -54539,9 +54552,14 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold ADC(ADD(X,Y),0,Carry) -> ADC(X,Y,Carry)
-  // iff the flag result is dead.
+  // iff the flag result is dead or if X + Y are known to not overflow.
   if (LHS.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
-      !N->hasAnyUseOfValue(1))
+      (!N->hasAnyUseOfValue(1) ||
+       (DAG.computeOverflowForSignedAdd(LHS.getOperand(0), LHS.getOperand(1)) ==
+            SelectionDAG::OverflowKind::OFK_Never &&
+        DAG.computeOverflowForUnsignedAdd(LHS.getOperand(0),
+                                          LHS.getOperand(1)) ==
+            SelectionDAG::OverflowKind::OFK_Never)))
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
                        LHS.getOperand(1), CarryIn);
 
