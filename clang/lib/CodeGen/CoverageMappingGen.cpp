@@ -2177,7 +2177,8 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitOpaqueValueExpr(const OpaqueValueExpr* OVE) {
-    Visit(OVE->getSourceExpr());
+    if (const Expr *SE = OVE->getSourceExpr())
+      Visit(SE);
   }
 };
 
