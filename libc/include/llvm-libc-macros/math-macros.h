@@ -31,10 +31,15 @@
 #define NAN __builtin_nanf("")
 
 #define FP_ILOGB0 (-INT_MAX - 1)
-#define FP_ILOGBNAN INT_MAX
-
 #define FP_LLOGB0 (-LONG_MAX - 1)
+
+#ifdef __FP_LOGBNAN_MIN
+#define FP_ILOGBNAN (-INT_MAX - 1)
+#define FP_LLOGBNAN (-LONG_MAX - 1)
+#else
+#define FP_ILOGBNAN INT_MAX
 #define FP_LLOGBNAN LONG_MAX
+#endif
 
 #ifdef __FAST_MATH__
 #define math_errhandling 0

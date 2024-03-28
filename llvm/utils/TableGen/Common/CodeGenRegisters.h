@@ -68,8 +68,7 @@ class CodeGenSubRegIndex {
   std::string Namespace;
 
 public:
-  uint16_t Size;
-  uint16_t Offset;
+  SubRegRangeByHwMode Range;
   const unsigned EnumValue;
   mutable LaneBitmask LaneMask;
   mutable SmallVector<MaskRolPair, 1> CompositionLaneMaskTransform;
@@ -86,7 +85,7 @@ public:
   // indexes are not used to create new register classes.
   bool Artificial;
 
-  CodeGenSubRegIndex(Record *R, unsigned Enum);
+  CodeGenSubRegIndex(Record *R, unsigned Enum, const CodeGenHwModes &CGH);
   CodeGenSubRegIndex(StringRef N, StringRef Nspace, unsigned Enum);
   CodeGenSubRegIndex(CodeGenSubRegIndex &) = delete;
 
@@ -108,19 +107,42 @@ public:
 
   // Add a composite subreg index: this+A = B.
   // Return a conflicting composite, or NULL
-  CodeGenSubRegIndex *addComposite(CodeGenSubRegIndex *A,
-                                   CodeGenSubRegIndex *B) {
+  CodeGenSubRegIndex *addComposite(CodeGenSubRegIndex *A, CodeGenSubRegIndex *B,
+                                   const CodeGenHwModes &CGH) {
     assert(A && B);
     std::pair<CompMap::iterator, bool> Ins = Composed.insert(std::pair(A, B));
+
     // Synthetic subreg indices that aren't contiguous (for instance ARM
     // register tuples) don't have a bit range, so it's OK to let
     // B->Offset == -1. For the other cases, accumulate the offset and set
     // the size here. Only do so if there is no offset yet though.
-    if ((Offset != (uint16_t)-1 && A->Offset != (uint16_t)-1) &&
-        (B->Offset == (uint16_t)-1)) {
-      B->Offset = Offset + A->Offset;
-      B->Size = A->Size;
+    unsigned NumModes = CGH.getNumModeIds();
+    // Skip default mode.
+    for (unsigned M = 0; M < NumModes; ++M) {
+      // Handle DefaultMode last.
+      if (M == DefaultMode)
+        continue;
+      SubRegRange &Range = this->Range.get(M);
+      SubRegRange &ARange = A->Range.get(M);
+      SubRegRange &BRange = B->Range.get(M);
+
+      if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
+          BRange.Offset == (uint16_t)-1) {
+        BRange.Offset = Range.Offset + ARange.Offset;
+        BRange.Size = ARange.Size;
+      }
     }
+
+    // Now handle default.
+    SubRegRange &Range = this->Range.get(DefaultMode);
+    SubRegRange &ARange = A->Range.get(DefaultMode);
+    SubRegRange &BRange = B->Range.get(DefaultMode);
+    if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
+        BRange.Offset == (uint16_t)-1) {
+      BRange.Offset = Range.Offset + ARange.Offset;
+      BRange.Size = ARange.Size;
+    }
+
     return (Ins.second || Ins.first->second == B) ? nullptr : Ins.first->second;
   }
 
@@ -681,7 +703,8 @@ public:
   // Find or create a sub-register index representing the concatenation of
   // non-overlapping sibling indices.
   CodeGenSubRegIndex *
-  getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &);
+  getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &,
+                       const CodeGenHwModes &CGH);
 
   const std::deque<CodeGenRegister> &getRegisters() const { return Registers; }
 
