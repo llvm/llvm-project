@@ -3367,15 +3367,21 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
-  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
+    bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
+    bool HasAIXSmallTLSGlobalAttr = false;
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
     SDValue TLSReg;
+
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasAttribute("aix-small-tls"))
+        HasAIXSmallTLSGlobalAttr = true;
+
     if (Is64Bit) {
       // For local-exec and initial-exec on AIX (64-bit), the sequence generated
       // involves a load of the variable offset (from the TOC), followed by an
@@ -3385,14 +3391,16 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    add reg2, reg1, r13     // r13 contains the thread pointer
       TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
 
-      // With the -maix-small-local-exec-tls option, produce a faster access
-      // sequence for local-exec TLS variables where the offset from the TLS
-      // base is encoded as an immediate operand.
+      // With the -maix-small-local-exec-tls option, or with the "aix-small-tls"
+      // global variable attribute, produce a faster access sequence for
+      // local-exec TLS variables where the offset from the TLS base is encoded
+      // as an immediate operand.
       //
       // We only utilize the faster local-exec access sequence when the TLS
       // variable has a size within the policy limit. We treat types that are
       // not sized or are empty as being over the policy size limit.
-      if (HasAIXSmallLocalExecTLS && IsTLSLocalExecModel) {
+      if ((HasAIXSmallLocalExecTLS || HasAIXSmallTLSGlobalAttr) &&
+          IsTLSLocalExecModel) {
         Type *GVType = GV->getValueType();
         if (GVType->isSized() && !GVType->isEmptyTy() &&
             GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
@@ -3410,8 +3418,9 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       TLSReg = DAG.getNode(PPCISD::GET_TPOINTER, dl, PtrVT);
 
       // We do not implement the 32-bit version of the faster access sequence
-      // for local-exec that is controlled by -maix-small-local-exec-tls.
-      if (HasAIXSmallLocalExecTLS)
+      // for local-exec that is controlled by the -maix-small-local-exec-tls
+      // option, or the "aix-small-tls" global variable attribute.
+      if (HasAIXSmallLocalExecTLS || HasAIXSmallTLSGlobalAttr)
         report_fatal_error("The small-local-exec TLS access sequence is "
                            "currently only supported on AIX (64-bit mode).");
     }
