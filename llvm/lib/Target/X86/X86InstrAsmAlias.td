@@ -791,6 +791,11 @@ let Predicates = [In64BitMode] in {
 
   def : InstAlias<"set"#Cond#"\t$dst", (SETCCr GR8:$dst, CC), 0>;
   def : InstAlias<"set"#Cond#"\t$dst", (SETCCm i8mem:$dst, CC), 0>;
+
+  def : InstAlias<"setzu"#Cond#"\t$dst", (SETZUCCr GR8:$dst, CC), 0>;
+  def : InstAlias<"setzu"#Cond#"\t$dst", (SETZUCCm i8mem:$dst, CC), 0>;
+  def : InstAlias<"set"#Cond#"\t$dst", (SETCCr_EVEX GR8:$dst, CC), 0>;
+  def : InstAlias<"set"#Cond#"\t$dst", (SETCCm_EVEX i8mem:$dst, CC), 0>;
 }
 
 defm : CMOV_SETCC_Aliases<"o" ,  0>;
