@@ -551,8 +551,9 @@ define i64 @add_mul_combine_infinite_loop(i64 %x) {
 ; RV32IMB-NEXT:    sh3add a1, a1, a2
 ; RV32IMB-NEXT:    sh1add a0, a0, a0
 ; RV32IMB-NEXT:    slli a2, a0, 3
-; RV32IMB-NEXT:    addi a0, a2, 2047
-; RV32IMB-NEXT:    addi a0, a0, 1
+; RV32IMB-NEXT:    li a3, 1
+; RV32IMB-NEXT:    slli a3, a3, 11
+; RV32IMB-NEXT:    sh3add a0, a0, a3
 ; RV32IMB-NEXT:    sltu a2, a0, a2
 ; RV32IMB-NEXT:    add a1, a1, a2
 ; RV32IMB-NEXT:    ret
@@ -561,8 +562,8 @@ define i64 @add_mul_combine_infinite_loop(i64 %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    addi a0, a0, 86
 ; RV64IMB-NEXT:    sh1add a0, a0, a0
-; RV64IMB-NEXT:    li a1, -16
-; RV64IMB-NEXT:    sh3add a0, a0, a1
+; RV64IMB-NEXT:    slli a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, -16
 ; RV64IMB-NEXT:    ret
   %tmp0 = mul i64 %x, 24
   %tmp1 = add i64 %tmp0, 2048
@@ -879,12 +880,31 @@ define i64 @mulneg3000_sub8990_c(i64 %x) {
 define i1 @pr53831(i32 %x) {
 ; RV32IMB-LABEL: pr53831:
 ; RV32IMB:       # %bb.0:
-; RV32IMB-NEXT:    li a0, 0
+; RV32IMB-NEXT:    addi a1, a0, 1
+; RV32IMB-NEXT:    sh1add a1, a1, a1
+; RV32IMB-NEXT:    slli a1, a1, 3
+; RV32IMB-NEXT:    addi a1, a1, 1
+; RV32IMB-NEXT:    sh1add a0, a0, a0
+; RV32IMB-NEXT:    li a2, 1
+; RV32IMB-NEXT:    slli a2, a2, 11
+; RV32IMB-NEXT:    sh3add a0, a0, a2
+; RV32IMB-NEXT:    xor a0, a0, a1
+; RV32IMB-NEXT:    seqz a0, a0
 ; RV32IMB-NEXT:    ret
 ;
 ; RV64IMB-LABEL: pr53831:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    li a0, 0
+; RV64IMB-NEXT:    addi a1, a0, 1
+; RV64IMB-NEXT:    sh1add a1, a1, a1
+; RV64IMB-NEXT:    slliw a1, a1, 3
+; RV64IMB-NEXT:    addi a1, a1, 1
+; RV64IMB-NEXT:    sh1add a0, a0, a0
+; RV64IMB-NEXT:    li a2, 1
+; RV64IMB-NEXT:    slli a2, a2, 11
+; RV64IMB-NEXT:    sh3add a0, a0, a2
+; RV64IMB-NEXT:    sext.w a0, a0
+; RV64IMB-NEXT:    xor a0, a0, a1
+; RV64IMB-NEXT:    seqz a0, a0
 ; RV64IMB-NEXT:    ret
   %tmp0 = add i32 %x, 1
   %tmp1 = mul i32 %tmp0, 24

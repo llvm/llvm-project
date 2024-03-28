@@ -20393,8 +20393,8 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
         (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
       return true;
 
-    // Optimize the MUL to (SH*ADD x, (SLLI x, bits)) if Imm is not simm12.
-    if (Subtarget.hasStdExtZba() && !Imm.isSignedIntN(12) &&
+    // Optimize the MUL to (SH*ADD x, (SLLI x, bits)).
+    if (Subtarget.hasStdExtZba() &&
         ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
          (Imm - 8).isPowerOf2()))
       return true;

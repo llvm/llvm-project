@@ -271,31 +271,49 @@ define i32 @mul288(i32 %a) {
 }
 
 define i32 @mul258(i32 %a) {
-; CHECK-LABEL: mul258:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 258
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul258:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 258
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul258:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh1add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 258
   ret i32 %c
 }
 
 define i32 @mul260(i32 %a) {
-; CHECK-LABEL: mul260:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 260
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul260:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 260
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul260:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh2add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 260
   ret i32 %c
 }
 
 define i32 @mul264(i32 %a) {
-; CHECK-LABEL: mul264:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 264
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: mul264:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 264
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: mul264:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    slli a1, a0, 8
+; RV32ZBA-NEXT:    sh3add a0, a0, a1
+; RV32ZBA-NEXT:    ret
   %c = mul i32 %a, 264
   ret i32 %c
 }
