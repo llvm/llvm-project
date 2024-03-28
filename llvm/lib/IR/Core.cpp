@@ -990,6 +990,20 @@ char* LLVMPrintValueToString(LLVMValueRef Val) {
   return strdup(buf.c_str());
 }
 
+char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record) {
+  std::string buf;
+  raw_string_ostream os(buf);
+
+  if (unwrap(Record))
+    unwrap(Record)->print(os);
+  else
+    os << "Printing <null> DbgRecord";
+
+  os.flush();
+
+  return strdup(buf.c_str());
+}
+
 void LLVMReplaceAllUsesWith(LLVMValueRef OldVal, LLVMValueRef NewVal) {
   unwrap(OldVal)->replaceAllUsesWith(unwrap(NewVal));
 }
