@@ -72,6 +72,84 @@ exit:
   ret void
 }
 
+define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @cse_matching_load_from_previous_unrolled_iteration(
+; CHECK-SAME: i32 [[N:%.*]], ptr nocapture readonly [[SRC:%.*]], ptr noalias nocapture writeonly [[DST:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SRC_4:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[SRC_12:%.*]] = getelementptr i8, ptr [[SRC]], i64 12
+; CHECK-NEXT:    [[CMP141:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP141]], label [[LOOP_LATCH_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.latch.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[N]] to i64
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 1
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]], label [[LOOP_LATCH_PREHEADER_NEW:%.*]]
+; CHECK:       loop.latch.preheader.new:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483646
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[GEP_SRC_12:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[L_12:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12]], align 8
+; CHECK-NEXT:    [[GEP_SRC_4:%.*]] = getelementptr <2 x i32>, ptr [[SRC_4]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[L_4:%.*]] = load <2 x i32>, ptr [[GEP_SRC_4]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[L_4]], [[L_12]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store <2 x i32> [[MUL]], ptr [[GEP_DST]], align 8
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[L_12_1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_1]], align 8
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul <2 x i32> [[L_12]], [[L_12_1]]
+; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store <2 x i32> [[MUL_1]], ptr [[GEP_DST_1]], align 8
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA]], label [[LOOP_LATCH]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       exit.loopexit.unr-lcssa:
+; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[EXIT]], label [[LOOP_LATCH_EPIL:%.*]]
+; CHECK:       loop.latch.epil:
+; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[L_12_EPIL:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_EPIL]], align 8
+; CHECK-NEXT:    [[GEP_SRC_4_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[SRC_4]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[L_4_EPIL:%.*]] = load <2 x i32>, ptr [[GEP_SRC_4_EPIL]], align 8
+; CHECK-NEXT:    [[MUL_EPIL:%.*]] = mul <2 x i32> [[L_4_EPIL]], [[L_12_EPIL]]
+; CHECK-NEXT:    [[GEP_DST_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    store <2 x i32> [[MUL_EPIL]], ptr [[GEP_DST_EPIL]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %src.4 = getelementptr i8, ptr %src, i64 4
+  %src.12 = getelementptr i8, ptr %src, i64 12
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp14 = icmp slt i32 %iv, %N
+  br i1 %cmp14, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.ext = zext i32 %iv to i64
+  %gep.src.12 = getelementptr <2 x i32>, ptr %src.12, i64 %iv.ext
+  %l.12 = load <2 x i32>, ptr %gep.src.12, align 8
+  %gep.src.4 = getelementptr <2 x i32>, ptr %src.4, i64 %iv.ext
+  %l.4 = load <2 x i32>, ptr %gep.src.4, align 8
+  %mul = mul <2 x i32> %l.12, %l.4
+  %gep.dst = getelementptr <2 x i32>, ptr %dst, i64 %iv.ext
+  store <2 x i32> %mul, ptr %gep.dst
+  %iv.next = add nuw nsw i32 %iv, 1
+  br label %loop.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.unroll.count", i32 2}
@@ -79,4 +157,5 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ;.
