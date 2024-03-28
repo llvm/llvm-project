@@ -1179,6 +1179,177 @@ protected:
     return (DeviceId >= 0 && DeviceId < getNumDevices());
   }
 
+public:
+  // TODO: This plugin interface needs to be cleaned up.
+
+  /// Returns non-zero if the provided \p Image can be executed by the runtime.
+  int32_t is_valid_binary(__tgt_device_image *Image);
+
+  /// Checks if the image is not supported.
+  void check_invalid_image(__tgt_device_image *InvalidImage);
+
+  /// Unused in current implementation.
+  int32_t supports_empty_images();
+
+  /// Initialize the device inside of the plugin.
+  int32_t init_device(int32_t DeviceId);
+
+  /// Return the number of devices this plugin can support.
+  int32_t number_of_devices();
+
+  /// Returns the number of processors available on the device.
+  int number_of_team_procs(int DeviceId);
+
+  /// Returns if this device is an APU.
+  bool has_apu_device(int32_t DeviceId);
+
+  /// Returns if this discrete GPU supports USM.
+  bool has_USM_capable_dGPU(int32_t DeviceId);
+
+  /// Returns if this device supports USM.
+  bool supports_unified_memory(int32_t DeviceId);
+
+  /// Returns if fine grained memory is supported.
+  bool is_fine_grained_memory_enabled(int32_t DeviceId);
+
+  /// Returns if managed memory is supported.
+  bool is_system_supporting_managed_memory(int32_t DeviceId);
+
+  /// Initializes the OpenMP register requires information.
+  int64_t init_requires(int64_t RequiresFlags);
+
+  /// Returns non-zero if the data can be exchanged between the two devices.
+  int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
+
+  /// Initializes the record and replay mechanism inside the plugin.
+  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
+                                   void *VAddr, bool isRecord, bool SaveOutput,
+                                   uint64_t &ReqPtrArgOffset);
+
+  /// Loads the associated binary into the plugin and returns a handle to it.
+  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
+                      __tgt_device_binary *Binary);
+
+  /// Allocates memory that is accessively to the given device.
+  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind);
+
+  /// Deallocates memory on the given device.
+  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
+
+  /// Locks / pins host memory using the plugin runtime.
+  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
+                    void **LockedPtr);
+
+  /// Unlocks / unpins host memory using the plugin runtime.
+  int32_t data_unlock(int32_t DeviceId, void *Ptr);
+
+  /// Notify the runtime about a new mapping that has been created outside.
+  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
+
+  /// Notify t he runtime about a mapping that has been deleted.
+  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
+
+  /// Copy data to the given device.
+  int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                      int64_t Size);
+
+  /// Copy data to the given device asynchronously.
+  int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+
+  /// Copy data from the given device.
+  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                        int64_t Size);
+
+  /// Copy data from the given device asynchornously.
+  int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
+
+  /// Exchange memory addresses between two devices.
+  int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
+                        void *DstPtr, int64_t Size);
+
+  /// Exchange memory addresses between two devices asynchronously.
+  int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
+                              int DstDeviceId, void *DstPtr, int64_t Size,
+                              __tgt_async_info *AsyncInfo);
+
+  /// Begin executing a kernel on the given device.
+  int32_t launch_kernel_sync(int32_t DeviceId, void *TgtEntryPtr,
+                             void **TgtArgs, ptrdiff_t *TgtOffsets,
+                             KernelArgsTy *KernelArgs);
+
+  /// Begin executing a kernel on the given device.
+  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
+                        ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
+                        __tgt_async_info *AsyncInfoPtr);
+
+  /// Synchronize an asyncrhonous queue with the plugin runtime.
+  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Query the current state of an asynchronous queue.
+  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Prints information about the given devices supported by the plugin.
+  void print_device_info(int32_t DeviceId);
+
+  /// Creates an event in the given plugin if supported.
+  int32_t create_event(int32_t DeviceId, void **EventPtr);
+
+  /// Records an event that has occurred.
+  int32_t record_event(int32_t DeviceId, void *EventPtr,
+                       __tgt_async_info *AsyncInfoPtr);
+
+  /// Wait until an event has occurred.
+  int32_t wait_event(int32_t DeviceId, void *EventPtr,
+                     __tgt_async_info *AsyncInfoPtr);
+
+  /// Syncrhonize execution until an event is done.
+  int32_t sync_event(int32_t DeviceId, void *EventPtr);
+
+  /// Remove the event from the plugin.
+  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
+
+  /// Creates an asynchronous queue for the given plugin.
+  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
+
+  /// Creates device information to be used for diagnostics.
+  int32_t init_device_info(int32_t DeviceId, __tgt_device_info *DeviceInfo,
+                           const char **ErrStr);
+
+  /// Sets the region of memory that is considered coarse grained.
+  int set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64_t size);
+
+  /// Sets the offset into the devices for use by OMPT.
+  int32_t set_device_offset(int32_t DeviceIdOffset);
+
+  /// Populates the device page table.
+  int prepopulate_page_table(int32_t DeviceId, void *ptr, int64_t size);
+
+  /// Gets the coarse grained memory region.
+  int32_t query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr,
+                                        int64_t size);
+
+  /// Look up a global symbol in the given binary.
+  int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
+                     const char *Name, void **DevicePtr);
+
+  /// Look up a kernel function in the given binary.
+  int32_t get_function(__tgt_device_binary Binary, const char *Name,
+                       void **KernelPtr);
+
+  /// Returns if we can use automatic zero copy.
+  int32_t use_auto_zero_copy(int32_t DeviceId);
+
+  /// Make sure a pointer can be accessed by all agents.
+  int32_t enable_access_to_all_agents(int32_t DeviceId, void *ptr);
+
+  /// Perform some checks when using automatic zero copy.
+  int32_t zero_copy_sanity_checks_and_diag(int32_t DeviceId,
+                                           bool isUnifiedSharedMemory,
+                                           bool isAutoZeroCopy,
+                                           bool isEagerMaps);
+
 private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
