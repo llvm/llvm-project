@@ -3635,6 +3635,9 @@ defm preserve_as_comments : BoolFOption<"preserve-as-comments",
           "Do not preserve comments in inline assembly">,
   PosFlag<SetTrue>>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
+def reexport_framework : Separate<["-"], "reexport_framework">, Flags<[LinkerInput]>;
+def reexport_l : Joined<["-"], "reexport-l">, Flags<[LinkerInput]>;
+def reexport_library : JoinedOrSeparate<["-"], "reexport_library">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
