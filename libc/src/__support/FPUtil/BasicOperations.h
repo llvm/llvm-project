@@ -185,7 +185,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     // More precisely :
     // Exponent   |       Significand      | Meaning
     //            | Bits 63-62 | Bits 61-0 |
-    // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = Infinty
+    // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = SNaN
     // All Ones   |     00     |  Non-Zero | Pseudo NaN, Value = SNaN
     // All Ones   |     01     | Anything  | Pseudo NaN, Value = SNaN
     //            |   Bit 63   | Bits 62-0 |
@@ -199,9 +199,11 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     int exponent = sx.get_biased_exponent();
     if (exponent == 0x7FFF) {
       if (!bit63 && !bit62) {
-        if (mantissa == 0)
-          cx = FPBits<T>::inf(sx.sign()).get_val();
-        else {
+        if (mantissa == 0) {
+          cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
+          raise_except_if_required(FE_INVALID);
+          return 1;
+        } else {
           cx = FPBits<T>::quiet_nan(sx.sign(), mantissa).get_val();
           raise_except_if_required(FE_INVALID);
           return 1;

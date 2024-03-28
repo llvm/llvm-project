@@ -55,12 +55,12 @@ public:
       T cx;
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
-      // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = Infinty
+      // All Ones   |     00     |    Zero   | Pseudo Infinity, Value = SNaN
 
       FPBits test1((UInt128(0x7FFF) << 64) + UInt128(0x0000000000000000));
       const T test1_val = test1.get_val();
-      TEST_SPECIAL(cx, test1_val, 0, 0);
-      EXPECT_FP_EQ(cx, inf);
+      TEST_SPECIAL(cx, test1_val, 1, FE_INVALID);
+      EXPECT_FP_EQ(cx, aNaN);
 
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
