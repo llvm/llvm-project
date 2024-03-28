@@ -804,6 +804,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
                     ParamName).str(),
             inconvertibleErrorCode());
       Result.bonusInstThreshold(BonusInstThreshold.getSExtValue());
+    } else if (ParamName == "switch-to-select") {
+      Result.convertSwitchToSelect(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid SimplifyCFG pass parameter '{0}' ", ParamName).str(),

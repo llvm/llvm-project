@@ -552,6 +552,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "no-forward-switch-cond;forward-switch-cond;no-switch-range-to-icmp;"
     "switch-range-to-icmp;no-switch-to-lookup;switch-to-lookup;no-keep-loops;"
     "keep-loops;no-hoist-common-insts;hoist-common-insts;no-sink-common-insts;"
+    "switch-to-select"
     "sink-common-insts;bonus-inst-threshold=N")
 FUNCTION_PASS_WITH_PARAMS(
     "speculative-execution", "SpeculativeExecutionPass",
