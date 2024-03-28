@@ -516,6 +516,7 @@ namespace {
 class ASTInfoCollector : public ASTReaderListener {
   Preprocessor &PP;
   ASTContext *Context;
+  FileSystemOptions &FSOpts;
   HeaderSearchOptions &HSOpts;
   PreprocessorOptions &PPOpts;
   LangOptions &LangOpt;
@@ -523,17 +524,17 @@ class ASTInfoCollector : public ASTReaderListener {
   IntrusiveRefCntPtr<TargetInfo> &Target;
   unsigned &Counter;
   bool InitializedLanguage = false;
-  bool InitializedHeaderSearchPaths = false;
+  bool InitializedFileSystem = false;
 
 public:
   ASTInfoCollector(Preprocessor &PP, ASTContext *Context,
-                   HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
-                   LangOptions &LangOpt,
+                   FileSystemOptions &FSOpts, HeaderSearchOptions &HSOpts,
+                   PreprocessorOptions &PPOpts, LangOptions &LangOpt,
                    std::shared_ptr<TargetOptions> &TargetOpts,
                    IntrusiveRefCntPtr<TargetInfo> &Target, unsigned &Counter)
-      : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
-        LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
-        Counter(Counter) {}
+      : PP(PP), Context(Context), FSOpts(FSOpts), HSOpts(HSOpts),
+        PPOpts(PPOpts), LangOpt(LangOpt), TargetOpts(TargetOpts),
+        Target(Target), Counter(Counter) {}
 
   bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
                            bool AllowCompatibleDifferences) override {
@@ -565,7 +566,6 @@ public:
         this->HSOpts.ForceCheckCXX20ModulesInputFiles;
     llvm::SaveAndRestore X(this->HSOpts.UserEntries);
     llvm::SaveAndRestore Y(this->HSOpts.SystemHeaderPrefixes);
-    llvm::SaveAndRestore Z(this->HSOpts.VFSOverlayFiles);
 
     this->HSOpts = HSOpts;
     this->HSOpts.ForceCheckCXX20ModulesInputFiles =
@@ -574,24 +574,29 @@ public:
     return false;
   }
 
-  bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+  bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override {
-    if (InitializedHeaderSearchPaths)
+    if (InitializedFileSystem)
       return false;
 
-    this->HSOpts.UserEntries = HSOpts.UserEntries;
-    this->HSOpts.SystemHeaderPrefixes = HSOpts.SystemHeaderPrefixes;
-    this->HSOpts.VFSOverlayFiles = HSOpts.VFSOverlayFiles;
+    this->FSOpts.VFSOverlayFiles = FSOpts.VFSOverlayFiles;
 
     // Initialize the FileManager. We can't do this in update(), since that
     // performs the initialization too late (once both target and language
     // options are read).
     PP.getFileManager().setVirtualFileSystem(createVFSFromOverlayFiles(
-        HSOpts.VFSOverlayFiles, PP.getDiagnostics(),
+        FSOpts.VFSOverlayFiles, PP.getDiagnostics(),
         PP.getFileManager().getVirtualFileSystemPtr()));
 
-    InitializedHeaderSearchPaths = true;
+    InitializedFileSystem = true;
 
+    return false;
+  }
+
+  bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
+                             bool Complain) override {
+    this->HSOpts.UserEntries = HSOpts.UserEntries;
+    this->HSOpts.SystemHeaderPrefixes = HSOpts.SystemHeaderPrefixes;
     return false;
   }
 
@@ -862,8 +867,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   unsigned Counter = 0;
   AST->Reader->setListener(std::make_unique<ASTInfoCollector>(
-      *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
-      AST->TargetOpts, AST->Target, Counter));
+      *AST->PP, AST->Ctx.get(), AST->FileSystemOpts, *AST->HSOpts, *AST->PPOpts,
+      *AST->LangOpts, AST->TargetOpts, AST->Target, Counter));
 
   // Attach the AST reader to the AST context as an external AST
   // source, so that declarations will be deserialized from the

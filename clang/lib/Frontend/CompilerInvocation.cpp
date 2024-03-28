@@ -2319,6 +2319,9 @@ static void GenerateFileSystemArgs(const FileSystemOptions &Opts,
   GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
+
+  for (const std::string &F : Opts.VFSOverlayFiles)
+    GenerateArg(Consumer, OPT_ivfsoverlay, F);
 }
 
 static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
@@ -2331,6 +2334,9 @@ static bool ParseFileSystemArgs(FileSystemOptions &Opts, const ArgList &Args,
   PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
 #include "clang/Driver/Options.inc"
 #undef FILE_SYSTEM_OPTION_WITH_MARSHALLING
+
+  for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
+    Opts.VFSOverlayFiles.push_back(std::string(A->getValue()));
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -3142,9 +3148,6 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
                                         : OPT_no_system_header_prefix;
     GenerateArg(Consumer, Opt, P.Prefix);
   }
-
-  for (const std::string &F : Opts.VFSOverlayFiles)
-    GenerateArg(Consumer, OPT_ivfsoverlay, F);
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3282,9 +3285,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
        Args.filtered(OPT_system_header_prefix, OPT_no_system_header_prefix))
     Opts.AddSystemHeaderPrefix(
         A->getValue(), A->getOption().matches(OPT_system_header_prefix));
-
-  for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
-    Opts.AddVFSOverlayFile(A->getValue());
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4713,7 +4713,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // to determine the PGO type.
   if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty()) {
     auto FS =
-        createVFSFromOverlayFiles(Res.getHeaderSearchOpts().VFSOverlayFiles,
+        createVFSFromOverlayFiles(Res.getFileSystemOpts().VFSOverlayFiles,
                                   Diags, llvm::vfs::getRealFileSystem());
     setPGOUseInstrumentor(Res.getCodeGenOpts(),
                           Res.getCodeGenOpts().ProfileInstrumentUsePath, *FS,
@@ -4805,7 +4805,7 @@ std::string CompilerInvocation::getModuleHash() const {
   if (hsOpts.ModulesStrictContextHash) {
     HBuilder.addRange(hsOpts.SystemHeaderPrefixes);
     HBuilder.addRange(hsOpts.UserEntries);
-    HBuilder.addRange(hsOpts.VFSOverlayFiles);
+    HBuilder.addRange(getFileSystemOpts().VFSOverlayFiles);
 
     const DiagnosticOptions &diagOpts = getDiagnosticOpts();
 #define DIAGOPT(Name, Bits, Default) HBuilder.add(diagOpts.Name);
@@ -4925,7 +4925,7 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  return createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
+  return createVFSFromOverlayFiles(CI.getFileSystemOpts().VFSOverlayFiles,
                                    Diags, std::move(BaseFS));
 }
 

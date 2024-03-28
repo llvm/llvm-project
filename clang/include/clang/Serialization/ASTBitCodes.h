@@ -376,9 +376,6 @@ enum OptionsRecordTypes {
   /// Record code for the target options table.
   TARGET_OPTIONS,
 
-  /// Record code for the filesystem options table.
-  FILE_SYSTEM_OPTIONS,
-
   /// Record code for the headers search options table.
   HEADER_SEARCH_OPTIONS,
 
@@ -396,6 +393,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the diagnostic options table.
   DIAGNOSTIC_OPTIONS,
+
+  /// Record code for the filesystem options table.
+  FILE_SYSTEM_OPTIONS,
 
   /// Record code for the headers search paths.
   HEADER_SEARCH_PATHS,

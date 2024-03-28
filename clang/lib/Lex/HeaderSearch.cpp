@@ -155,7 +155,8 @@ std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
       RFS->clearHasBeenUsed();
     }
   });
-  assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
+  assert(VFSUsage.size() ==
+             FileMgr.getFileSystemOpts().VFSOverlayFiles.size() &&
          "A different number of RedirectingFileSystem's were present than "
          "-ivfsoverlay options passed to Clang!");
   // VFS visit order is the opposite of VFSOverlayFiles order.

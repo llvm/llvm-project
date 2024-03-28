@@ -2773,14 +2773,6 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
       break;
     }
 
-    case FILE_SYSTEM_OPTIONS: {
-      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
-          ParseFileSystemOptions(Record, Complain, Listener))
-        Result = ConfigurationMismatch;
-      break;
-    }
-
     case HEADER_SEARCH_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (!AllowCompatibleConfigurationMismatch &&
@@ -4978,6 +4970,13 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
         Result = OutOfDate; // Don't return early.  Read the signature.
       break;
     }
+    case FILE_SYSTEM_OPTIONS: {
+      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
+      if (Listener && !AllowCompatibleConfigurationMismatch &&
+          ParseFileSystemOptions(Record, Complain, *Listener))
+        Result = ConfigurationMismatch;
+      break;
+    }
     case HEADER_SEARCH_PATHS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (Listener && !AllowCompatibleConfigurationMismatch &&
@@ -6103,7 +6102,12 @@ bool ASTReader::ParseFileSystemOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener) {
   FileSystemOptions FSOpts;
   unsigned Idx = 0;
+
   FSOpts.WorkingDir = ReadString(Record, Idx);
+
+  for (unsigned N = Record[Idx++]; N; --N)
+    FSOpts.VFSOverlayFiles.emplace_back(ReadString(Record, Idx));
+
   return Listener.ReadFileSystemOptions(FSOpts, Complain);
 }
 
@@ -6152,12 +6156,6 @@ bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
     std::string Prefix = ReadString(Record, Idx);
     bool IsSystemHeader = Record[Idx++];
     HSOpts.SystemHeaderPrefixes.emplace_back(std::move(Prefix), IsSystemHeader);
-  }
-
-  // VFS overlay files.
-  for (unsigned N = Record[Idx++]; N; --N) {
-    std::string VFSOverlayFile = ReadString(Record, Idx);
-    HSOpts.VFSOverlayFiles.emplace_back(std::move(VFSOverlayFile));
   }
 
   return Listener.ReadHeaderSearchPaths(HSOpts, Complain);

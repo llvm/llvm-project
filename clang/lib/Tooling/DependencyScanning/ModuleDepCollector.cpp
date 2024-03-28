@@ -29,72 +29,71 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
-static void
-optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
-                         const serialization::ModuleFile &MF,
-                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
-                         ScanningOptimizations OptimizeArgs) {
-  if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
-    // Only preserve search paths that were used during the dependency scan.
-    std::vector<HeaderSearchOptions::Entry> Entries;
-    std::swap(Opts.UserEntries, Entries);
+static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
+                                     const serialization::ModuleFile &MF) {
+  // Only preserve search paths that were used during the dependency scan.
+  std::vector<HeaderSearchOptions::Entry> Entries;
+  std::swap(Opts.UserEntries, Entries);
 
-    llvm::BitVector SearchPathUsage(Entries.size());
-    llvm::DenseSet<const serialization::ModuleFile *> Visited;
-    std::function<void(const serialization::ModuleFile *)> VisitMF =
-        [&](const serialization::ModuleFile *MF) {
-          SearchPathUsage |= MF->SearchPathUsage;
-          Visited.insert(MF);
+  llvm::BitVector SearchPathUsage(Entries.size());
+  llvm::DenseSet<const serialization::ModuleFile *> Visited;
+  std::function<void(const serialization::ModuleFile *)> VisitMF =
+      [&](const serialization::ModuleFile *MF) {
+        SearchPathUsage |= MF->SearchPathUsage;
+        Visited.insert(MF);
+        for (const serialization::ModuleFile *Import : MF->Imports)
+          if (!Visited.contains(Import))
+            VisitMF(Import);
+      };
+  VisitMF(&MF);
+
+  if (SearchPathUsage.size() != Entries.size())
+    llvm::report_fatal_error(
+        "Inconsistent search path options between modules detected");
+
+  for (auto Idx : SearchPathUsage.set_bits())
+    Opts.UserEntries.push_back(std::move(Entries[Idx]));
+}
+
+static void
+optimizeFileSystemOpts(FileSystemOptions &Opts,
+                       const serialization::ModuleFile &MF,
+                       const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap) {
+  std::vector<std::string> VFSOverlayFiles;
+  std::swap(Opts.VFSOverlayFiles, VFSOverlayFiles);
+
+  llvm::BitVector VFSUsage(VFSOverlayFiles.size());
+  llvm::DenseSet<const serialization::ModuleFile *> Visited;
+  std::function<void(const serialization::ModuleFile *)> VisitMF =
+      [&](const serialization::ModuleFile *MF) {
+        Visited.insert(MF);
+        if (MF->Kind == serialization::MK_ImplicitModule) {
+          VFSUsage |= MF->VFSUsage;
+          // We only need to recurse into implicit modules. Other module types
+          // will have the correct set of VFSs for anything they depend on.
           for (const serialization::ModuleFile *Import : MF->Imports)
             if (!Visited.contains(Import))
               VisitMF(Import);
-        };
-    VisitMF(&MF);
-
-    if (SearchPathUsage.size() != Entries.size())
-      llvm::report_fatal_error(
-          "Inconsistent search path options between modules detected");
-
-    for (auto Idx : SearchPathUsage.set_bits())
-      Opts.UserEntries.push_back(std::move(Entries[Idx]));
-  }
-  if (any(OptimizeArgs & ScanningOptimizations::VFS)) {
-    std::vector<std::string> VFSOverlayFiles;
-    std::swap(Opts.VFSOverlayFiles, VFSOverlayFiles);
-
-    llvm::BitVector VFSUsage(VFSOverlayFiles.size());
-    llvm::DenseSet<const serialization::ModuleFile *> Visited;
-    std::function<void(const serialization::ModuleFile *)> VisitMF =
-        [&](const serialization::ModuleFile *MF) {
-          Visited.insert(MF);
-          if (MF->Kind == serialization::MK_ImplicitModule) {
-            VFSUsage |= MF->VFSUsage;
-            // We only need to recurse into implicit modules. Other module types
-            // will have the correct set of VFSs for anything they depend on.
-            for (const serialization::ModuleFile *Import : MF->Imports)
-              if (!Visited.contains(Import))
-                VisitMF(Import);
-          } else {
-            // This is not an implicitly built module, so it may have different
-            // VFS options. Fall back to a string comparison instead.
-            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
-            if (VFSMap == PrebuiltModuleVFSMap.end())
-              return;
-            for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
-              if (VFSMap->second.contains(VFSOverlayFiles[I]))
-                VFSUsage[I] = true;
-            }
+        } else {
+          // This is not an implicitly built module, so it may have different
+          // VFS options. Fall back to a string comparison instead.
+          auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
+          if (VFSMap == PrebuiltModuleVFSMap.end())
+            return;
+          for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
+            if (VFSMap->second.contains(VFSOverlayFiles[I]))
+              VFSUsage[I] = true;
           }
-        };
-    VisitMF(&MF);
+        }
+      };
+  VisitMF(&MF);
 
-    if (VFSUsage.size() != VFSOverlayFiles.size())
-      llvm::report_fatal_error(
-          "Inconsistent -ivfsoverlay options between modules detected");
+  if (VFSUsage.size() != VFSOverlayFiles.size())
+    llvm::report_fatal_error(
+        "Inconsistent -ivfsoverlay options between modules detected");
 
-    for (auto Idx : VFSUsage.set_bits())
-      Opts.VFSOverlayFiles.push_back(std::move(VFSOverlayFiles[Idx]));
-  }
+  for (auto Idx : VFSUsage.set_bits())
+    Opts.VFSOverlayFiles.push_back(std::move(VFSOverlayFiles[Idx]));
 }
 
 static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
@@ -607,12 +606,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.OptimizeArgs & (ScanningOptimizations::HeaderSearch |
-                                        ScanningOptimizations::VFS)))
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
-                                       *MDC.ScanInstance.getASTReader(), *MF,
-                                       MDC.PrebuiltModuleVFSMap,
-                                       MDC.OptimizeArgs);
+                                       *MF);
+            if (any(MDC.OptimizeArgs & ScanningOptimizations::VFS))
+              optimizeFileSystemOpts(BuildInvocation.getMutFileSystemOpts(),
+                                     *MF, MDC.PrebuiltModuleVFSMap);
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),

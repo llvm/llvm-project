@@ -695,6 +695,15 @@ namespace {
       return false;
     }
 
+    bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
+                               bool Complain) override {
+      Out.indent(2) << "File system options:\n";
+      Out.indent(4) << "VFS overlay files:\n";
+      for (const auto &Overlay : FSOpts.VFSOverlayFiles)
+        Out.indent(6) << Overlay << "\n";
+      return false;
+    }
+
     bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                                bool Complain) override {
       Out.indent(2) << "Header search paths:\n";
@@ -704,9 +713,6 @@ namespace {
       Out.indent(4) << "System header prefixes:\n";
       for (const auto &Prefix : HSOpts.SystemHeaderPrefixes)
         Out.indent(6) << Prefix.Prefix << "\n";
-      Out.indent(4) << "VFS overlay files:\n";
-      for (const auto &Overlay : HSOpts.VFSOverlayFiles)
-        Out.indent(6) << Overlay << "\n";
       return false;
     }
 
