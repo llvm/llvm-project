@@ -305,7 +305,32 @@ static bool isCommutative(Instruction *I) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return BO->isCommutative();
+    return BO->isCommutative() ||
+           (BO->getOpcode() == Instruction::Sub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(
+                BO->uses(),
+                [](const Use &U) {
+                  // Commutative, if icmp eq/ne sub, 0
+                  ICmpInst::Predicate Pred;
+                  if (match(U.getUser(),
+                            m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
+                    return true;
+                  // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  ConstantInt *Flag;
+                  return match(U.getUser(),
+                               m_Intrinsic<Intrinsic::abs>(
+                                   m_Specific(U.get()), m_ConstantInt(Flag))) &&
+                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
+                          Flag->isOne());
+                })) ||
+           (BO->getOpcode() == Instruction::FSub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(BO->uses(), [](const Use &U) {
+              return match(U.getUser(),
+                           m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
+            }));
   // TODO: This should check for generic Instruction::isCommutative(), but
   //       we need to confirm that the caller code correctly handles Intrinsics
   //       for example (does not have 2 operands).
@@ -6671,7 +6696,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Sort operands of the instructions so that each side is more likely to
       // have the same opcode.
-      if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
+      if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
         TE->setOperand(0, Left);
@@ -12322,8 +12347,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
       propagateIRFlags(V, E->Scalars, VL0, !MinBWs.contains(E));
-      if (auto *I = dyn_cast<Instruction>(V))
+      if (auto *I = dyn_cast<Instruction>(V)) {
         V = propagateMetadata(I, E->Scalars);
+        // Drop nuw flags for abs(sub(commutative), true).
+        if (!MinBWs.contains(E) && ShuffleOrOp == Instruction::Sub &&
+            any_of(E->Scalars, [](Value *V) {
+              return isCommutative(cast<Instruction>(V));
+            }))
+          I->setHasNoUnsignedWrap(/*b=*/false);
+      }
 
       V = FinalShuffle(V, E, VecTy);
 
@@ -12624,6 +12656,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
       propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
+      // Drop nuw flags for abs(sub(commutative), true).
+      if (auto *I0 = dyn_cast<Instruction>(V0);
+          I0 && !MinBWs.contains(E) && E->getOpcode() == Instruction::Sub &&
+          any_of(E->Scalars, [](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return I->getOpcode() == Instruction::Sub &&
+                   isCommutative(cast<Instruction>(V));
+          }))
+        I0->setHasNoUnsignedWrap(/*b=*/false);
+      if (auto *I1 = dyn_cast<Instruction>(V1);
+          I1 && !MinBWs.contains(E) && E->getAltOpcode() == Instruction::Sub &&
+          any_of(E->Scalars, [](Value *V) {
+            auto *I = cast<Instruction>(V);
+            return I->getOpcode() == Instruction::Sub &&
+                   isCommutative(cast<Instruction>(V));
+          }))
+        I1->setHasNoUnsignedWrap(/*b=*/false);
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
