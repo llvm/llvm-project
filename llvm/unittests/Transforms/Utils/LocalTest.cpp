@@ -114,6 +114,78 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   return Mod;
 }
 
+TEST(Local, RemoveDuplicateCyclicPHINodes) {
+  LLVMContext C;
+
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare i64 @f() #0
+      declare void @f.2()
+
+      define void @f.3(i1 %flag1, i1 %flag2, i1 %flag3, i1 %flag4) {
+      bb:
+        %0 = call i64 @f()
+        br label %bb1
+
+      bb1:
+        %1 = phi i64 [ %7, %bb7 ], [ 5, %bb ]
+        %2 = phi i64 [ %8, %bb7 ], [ 5, %bb ]
+        br i1 %flag1, label %bb2, label %bb3
+
+      bb2:
+        br label %bb3
+
+      bb3:
+        %3 = phi i64 [ 1, %bb2 ], [ %1, %bb1 ]
+        %4 = phi i64 [ 1, %bb2 ], [ %2, %bb1 ]
+        br i1 %flag2, label %bb4, label %bb5
+
+      bb4:
+        br label %bb5
+
+      bb5:
+        %5 = phi i64 [ 2, %bb4 ], [ %3, %bb3 ]
+        %6 = phi i64 [ 2, %bb4 ], [ %4, %bb3 ]
+        br i1 %flag3, label %bb6, label %bb7
+
+      bb6:
+        br label %bb7
+
+      bb7:
+        %7 = phi i64 [ 3, %bb6 ], [ %5, %bb5 ]
+        %8 = phi i64 [ 3, %bb6 ], [ %6, %bb5 ]
+        br i1 %flag4, label %bb1, label %bb8
+
+      bb8:
+        call void @f.2()
+        ret void
+      }
+      )");
+
+  auto *GV = M->getNamedValue("f.3");
+  ASSERT_TRUE(GV);
+  auto *F = dyn_cast<Function>(GV);
+  ASSERT_TRUE(F);
+
+  for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
+    BasicBlock *BB = &*I++;
+    EliminateDuplicatePHINodes(BB);
+  }
+
+  // No block should have more than 2 PHIs
+  for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
+    BasicBlock *BB = &*I++;
+    int PHICount = 0;
+    for (BasicBlock::iterator J = BB->begin(), JE = BB->end(); J != JE; ++J) {
+      Instruction *Inst = &*J;
+      if (isa<PHINode>(Inst)) {
+        PHICount++;
+        EXPECT_TRUE(PHICount < 2);
+      }
+    }
+  }
+}
+
 TEST(Local, ReplaceDbgDeclare) {
   LLVMContext C;
 

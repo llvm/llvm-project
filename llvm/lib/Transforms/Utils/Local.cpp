@@ -111,6 +111,9 @@ static cl::opt<unsigned> PHICSENumPHISmallSize(
         "When the basic block contains not more than this number of PHI nodes, "
         "perform a (faster!) exhaustive search instead of set-driven one."));
 
+static cl::opt<unsigned> DeduplicatePhisMaxDepth("deduplicate-phi-max-depth",
+                                                 cl::Hidden, cl::init(8));
+
 // Max recursion depth for collectBitParts used when detecting bswap and
 // bitreverse idioms.
 static const unsigned BitPartRecursionMaxDepth = 48;
@@ -1345,6 +1348,41 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 }
 
 static bool
+matchPhiStructures(PHINode *P1, PHINode *P2,
+                   SmallSet<std::pair<PHINode *, PHINode *>, 8> &MatchingPhis) {
+  assert(P1->getParent() == P2->getParent() && "Must have the same parent!");
+  if (P1->getType() != P2->getType())
+    return false;
+  // Don't analyze too complex phi structures
+  if (MatchingPhis.size() > DeduplicatePhisMaxDepth)
+    return false;
+
+  if (P2 > P1)
+    std::swap(P1, P2);
+  if (!MatchingPhis.insert(std::make_pair(P1, P2)).second)
+    return true;
+
+  SmallDenseMap<BasicBlock *, Value *, 8> IncomingValues;
+  for (int i = 0, e = P1->getNumIncomingValues(); i != e; ++i)
+    IncomingValues[P1->getIncomingBlock(i)] = P1->getIncomingValue(i);
+
+  for (int i = 0, e = P2->getNumIncomingValues(); i != e; ++i) {
+    Value *I1 = IncomingValues[P2->getIncomingBlock(i)];
+    Value *I2 = P2->getIncomingValue(i);
+    if (I1 == I2)
+      continue;
+    if (auto *I1Phi = dyn_cast<PHINode>(I1))
+      if (auto *I2Phi = dyn_cast<PHINode>(I2))
+        if (I1Phi->getParent() == I2Phi->getParent())
+          if (matchPhiStructures(I1Phi, I2Phi, MatchingPhis))
+            continue;
+    return false;
+  }
+
+  return true;
+}
+
+static bool
 EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
                                     SmallPtrSetImpl<PHINode *> &ToRemove) {
   // This implementation doesn't currently consider undef operands
@@ -1364,7 +1402,9 @@ EliminateDuplicatePHINodesNaiveImpl(BasicBlock *BB,
     for (auto J = I; PHINode *DuplicatePN = dyn_cast<PHINode>(J); ++J) {
       if (ToRemove.contains(DuplicatePN))
         continue;
-      if (!DuplicatePN->isIdenticalToWhenDefined(PN))
+      SmallSet<std::pair<PHINode *, PHINode *>, 8> MatchingPhis;
+      if (!DuplicatePN->isIdenticalToWhenDefined(PN) &&
+          !matchPhiStructures(PN, DuplicatePN, MatchingPhis))
         continue;
       // A duplicate. Replace this PHI with the base PHI.
       ++NumPHICSEs;
@@ -1400,15 +1440,16 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       return PN == getEmptyKey() || PN == getTombstoneKey();
     }
 
-    // WARNING: this logic must be kept in sync with
-    //          Instruction::isIdenticalToWhenDefined()!
     static unsigned getHashValueImpl(PHINode *PN) {
-      // Compute a hash value on the operands. Instcombine will likely have
-      // sorted them, which helps expose duplicates, but we have to check all
-      // the operands to be safe in case instcombine hasn't run.
-      return static_cast<unsigned>(hash_combine(
-          hash_combine_range(PN->value_op_begin(), PN->value_op_end()),
-          hash_combine_range(PN->block_begin(), PN->block_end())));
+      unsigned Result = 0;
+      for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+        auto *Incoming = PN->getIncomingValue(i);
+        if (!isa<PHINode>(Incoming))
+          Result +=
+              1 +
+              ((intptr_t(PN->getIncomingBlock(i)) ^ intptr_t(Incoming)) >> 3);
+      }
+      return Result;
     }
 
     static unsigned getHashValue(PHINode *PN) {
@@ -1423,18 +1464,19 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       return getHashValueImpl(PN);
     }
 
-    static bool isEqualImpl(PHINode *LHS, PHINode *RHS) {
-      if (isSentinel(LHS) || isSentinel(RHS))
-        return LHS == RHS;
-      return LHS->isIdenticalTo(RHS);
-    }
-
     static bool isEqual(PHINode *LHS, PHINode *RHS) {
       // These comparisons are nontrivial, so assert that equality implies
       // hash equality (DenseMap demands this as an invariant).
-      bool Result = isEqualImpl(LHS, RHS);
-      assert(!Result || (isSentinel(LHS) && LHS == RHS) ||
-             getHashValueImpl(LHS) == getHashValueImpl(RHS));
+      if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
+          RHS == getEmptyKey() || RHS == getTombstoneKey())
+        return LHS == RHS;
+      SmallSet<std::pair<PHINode *, PHINode *>, 8> MatchingPhis;
+      bool Result = matchPhiStructures(LHS, RHS, MatchingPhis);
+#ifndef NDEBUG
+      SmallSet<std::pair<PHINode *, PHINode *>, 8> MatchingPhis2;
+      bool Result2 = matchPhiStructures(RHS, LHS, MatchingPhis2);
+      assert(Result2 == Result && "Must be symmetric");
+#endif
       return Result;
     }
   };
