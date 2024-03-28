@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -441,11 +442,8 @@ public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
 private:
-  struct VTableProfData {
-    uint64_t StartAddr;
-    uint64_t EndAddr;
-    uint64_t MD5Hash;
-  };
+  using AddrIntervalMap =
+      IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
   StringRef Data;
   uint64_t Address = 0;
   // Unique name strings. Used to ensure entries in MD5NameMap (a vector that's
@@ -467,8 +465,10 @@ private:
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
-  // This vector is only populated and used by raw instr profile reader.
-  std::vector<VTableProfData> VTableProfDataArray;
+
+  AddrIntervalMap::Allocator VTableAddrMapAllocator;
+  // This map is only populated and used by raw instr profile reader.
+  AddrIntervalMap VTableAddrMap;
   bool Sorted = false;
 
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
@@ -493,7 +493,7 @@ private:
   inline void finalizeSymtab();
 
 public:
-  InstrProfSymtab() = default;
+  InstrProfSymtab() : VTableAddrMap(VTableAddrMapAllocator) {}
 
   // Not copyable or movable.
   // Consider std::unique_ptr for move.
@@ -591,7 +591,7 @@ public:
   /// to  its names' MD5 hash. This interface is only used by the raw profile
   /// reader.
   void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
-    VTableProfDataArray.push_back(VTableProfData{StartAddr, EndAddr, MD5Val});
+    VTableAddrMap.insert(StartAddr, EndAddr, MD5Val);
   }
 
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
@@ -673,19 +673,6 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
-  // VTable object address ranges should not overlap; so sort by either
-  // beginning address or end address is fine.
-  llvm::sort(VTableProfDataArray,
-             [](const VTableProfData &LHS, const VTableProfData &RHS) {
-               return LHS.StartAddr < RHS.StartAddr;
-             });
-  VTableProfDataArray.erase(
-      std::unique(VTableProfDataArray.begin(), VTableProfDataArray.end(),
-                  [](const VTableProfData &LHS, const VTableProfData &RHS) {
-                    return LHS.StartAddr == RHS.StartAddr &&
-                           LHS.EndAddr == RHS.EndAddr;
-                  }),
-      VTableProfDataArray.end());
   Sorted = true;
 }
 

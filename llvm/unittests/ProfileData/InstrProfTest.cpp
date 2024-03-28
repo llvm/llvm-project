@@ -1393,6 +1393,9 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   auto getVTableEndAddr = [](const uint64_t *vtable) -> uint64_t {
     return uint64_t(vtable) + 16;
   };
+  auto getVTableMidAddr = [](const uint64_t *vtable) -> uint64_t {
+    return uint64_t(vtable) + 8;
+  };
   // vtable1, vtable2, vtable3, vtable4 get mapped; vtable5, vtable6 are not
   // mapped.
   Symtab.mapVTableAddress(getVTableStartAddr(vtable1),
@@ -1409,6 +1412,17 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   // Now read data from Record and sanity check the data
   ASSERT_EQ(6U, Record.getNumValueSites(IPVK_IndirectCallTarget));
   ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+
+  // Look up the value correpsonding to the middle of a vtable in symtab and
+  // test that it's the hash of the name.
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable1)),
+            MD5Hash("vtable1"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable2)),
+            MD5Hash("vtable2"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable3)),
+            MD5Hash("vtable3"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable4)),
+            MD5Hash("vtable4"));
 
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
     return VD1.Count > VD2.Count;

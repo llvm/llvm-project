@@ -609,29 +609,9 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 }
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
-  // Call 'finalizeSymtab' to make sure vectors are sorted for lower_bound.
-
-  // 'finalizeSymtab' runs 'llvm::sort' the first time it's called and sets
-  // 'Sorted' to true ; subsequent calls returns early if Sorted is true.
-  finalizeSymtab();
-
-  // Find the first address range of which end address is larger than `Addr`.
-  auto It =
-      lower_bound(VTableProfDataArray, Address,
-                  [](const VTableProfData &VTableRangeAddr, uint64_t Addr) {
-                    // The profiled address within a vtable should be
-                    // [start-address, end-address), so if Entry.EndAddr <=
-                    // Addr, Entry is not the range for Addr.
-                    return VTableRangeAddr.EndAddr <= Addr;
-                  });
-  // Returns the MD5 hash if Address is within the address range of an entry.
-  if (It != VTableProfDataArray.end() && It->StartAddr <= Address)
-    return It->MD5Hash;
-
-  // The virtual table address collected from value profiler could be defined
-  // in another module that is not instrumented. Force the value to be 0 in
-  // this case.
-  return 0;
+  // Given a runtime address, look up the hash value in the interval map, and
+  // fallback to value 0 if a hash value is not found.
+  return VTableAddrMap.lookup(Address, 0);
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
