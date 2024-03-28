@@ -101,6 +101,9 @@ Improvements to clang-tidy
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
 
+- Fixed ``--verify-config`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config.
+
 New checks
 ^^^^^^^^^^
 
