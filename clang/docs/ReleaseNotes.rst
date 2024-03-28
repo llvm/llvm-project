@@ -357,6 +357,8 @@ Bug Fixes in This Version
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
 
+- ``__is_array`` no longer returns ``true`` for zero-sized arrays. Fixes (#GH54705).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
