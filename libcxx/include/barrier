@@ -257,7 +257,7 @@ public:
 #  endif // !_LIBCPP_HAS_NO_TREE_BARRIER
 
 template <class _CompletionF = __empty_completion>
-class barrier {
+class _LIBCPP_DEPRECATED_ATOMIC_SYNC barrier {
   __barrier_base<_CompletionF> __b_;
 
 public:
