@@ -274,7 +274,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
   if (!isa<llvm::GlobalVariable>(GV))
     return;
 
-  auto *GVar = dyn_cast<llvm::GlobalVariable>(GV);
+  auto *GVar = cast<llvm::GlobalVariable>(GV);
   auto GVId = GV->getName();
 
   // Is this a global variable specified by the user as toc-data?
@@ -513,10 +513,9 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     CharUnits RegSize = CharUnits::fromQuantity((isInt || IsSoftFloatABI) ? 4 : 8);
     llvm::Value *RegOffset =
         Builder.CreateMul(NumRegs, Builder.getInt8(RegSize.getQuantity()));
-    RegAddr = Address(Builder.CreateInBoundsGEP(
-                          CGF.Int8Ty, RegAddr.emitRawPointer(CGF), RegOffset),
-                      DirectTy,
-                      RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
+    RegAddr = Address(
+        Builder.CreateInBoundsGEP(CGF.Int8Ty, RegAddr.getPointer(), RegOffset),
+        DirectTy, RegAddr.getAlignment().alignmentOfArrayElement(RegSize));
 
     // Increase the used-register count.
     NumRegs =
@@ -552,7 +551,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     // Round up address of argument to alignment
     CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
     if (Align > OverflowAreaAlign) {
-      llvm::Value *Ptr = OverflowArea.emitRawPointer(CGF);
+      llvm::Value *Ptr = OverflowArea.getPointer();
       OverflowArea = Address(emitRoundPointerUpToAlignment(CGF, Ptr, Align),
                              OverflowArea.getElementType(), Align);
     }
@@ -561,7 +560,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
     // Increase the overflow area.
     OverflowArea = Builder.CreateConstInBoundsByteGEP(OverflowArea, Size);
-    Builder.CreateStore(OverflowArea.emitRawPointer(CGF), OverflowAreaAddr);
+    Builder.CreateStore(OverflowArea.getPointer(), OverflowAreaAddr);
     CGF.EmitBranch(Cont);
   }
 
