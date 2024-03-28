@@ -219,8 +219,7 @@ define i64 @sh1adduw_3(i64 %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: sh1adduw_3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli.uw a0, a0, 1
-; RV64ZBA-NEXT:    or a0, a0, a1
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %3 = shl i64 %0, 1
   %4 = and i64 %3, 8589934590
@@ -276,8 +275,7 @@ define i64 @sh2adduw_3(i64 %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: sh2adduw_3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli.uw a0, a0, 2
-; RV64ZBA-NEXT:    or a0, a0, a1
+; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %3 = shl i64 %0, 2
   %4 = and i64 %3, 17179869180
@@ -333,8 +331,7 @@ define i64 @sh3adduw_3(i64 %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: sh3adduw_3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli.uw a0, a0, 3
-; RV64ZBA-NEXT:    or a0, a0, a1
+; RV64ZBA-NEXT:    sh3add.uw a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %3 = shl i64 %0, 3
   %4 = and i64 %3, 34359738360
@@ -403,8 +400,7 @@ define i64 @disjointormul6(i64 %a, i64 %b) {
 ; RV64ZBA-LABEL: disjointormul6:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
-; RV64ZBA-NEXT:    slli a0, a0, 1
-; RV64ZBA-NEXT:    or a0, a0, a1
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 6
   %d = or disjoint i64 %c, %b
@@ -1176,12 +1172,18 @@ define i64 @add4104(i64 %a) {
 }
 
 define i64 @add4104_2(i64 %a) {
-; CHECK-LABEL: add4104_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    addiw a1, a1, 8
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: add4104_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1
+; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: add4104_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    li a1, 1026
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
+; RV64ZBA-NEXT:    ret
   %c = or disjoint i64 %a, 4104
   ret i64 %c
 }
