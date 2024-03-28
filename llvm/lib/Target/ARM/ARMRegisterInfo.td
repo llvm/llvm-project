@@ -369,7 +369,8 @@ def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)> {
 def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
   let AltOrders = [(and tcGPR, tGPR)];
   let AltOrderSelect = [{
-      return MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      return MF.getSubtarget<ARMSubtarget>().isThumb1Only() ||
+        MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true);
   }];
 }
 
