@@ -123,6 +123,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
+#ifndef __riscv
 struct dirent64 {
   uint64_t d_ino;          /* Inode number */
   int64_t d_off;           /* Offset to next linux_dirent */
@@ -150,9 +151,12 @@ struct timespec {
   uint64_t tv_sec;  /* seconds */
   uint64_t tv_nsec; /* nanoseconds */
 };
+#endif
 
 #if defined(__aarch64__)
 #include "sys_aarch64.h"
+#elif defined(__riscv)
+#include "sys_riscv64.h"
 #else
 #include "sys_x86_64.h"
 #endif
