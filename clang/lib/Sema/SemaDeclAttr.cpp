@@ -4413,6 +4413,14 @@ void Sema::AddAlignValueAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E) {
   D->addAttr(::new (Context) AlignValueAttr(Context, CI, E));
 }
 
+static void handleWrapsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  S.AddWrapsAttr(D, AL);
+}
+
+void Sema::AddWrapsAttr(Decl *D, const AttributeCommonInfo &CI) {
+  D->addAttr(::new (Context) WrapsAttr(Context, CI));
+}
+
 static void handleAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.hasParsedType()) {
     const ParsedType &TypeArg = AL.getTypeArg();
@@ -9690,9 +9698,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
     handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
     break;
-
   case ParsedAttr::AT_CountedBy:
     handleCountedByAttrField(S, D, AL);
+    break;
+  case ParsedAttr::AT_Wraps:
+    handleWrapsAttr(S, D, AL);
     break;
 
   // Microsoft attributes:

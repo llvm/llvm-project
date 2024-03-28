@@ -3810,6 +3810,10 @@ public:
   void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
                          StringRef Annot, MutableArrayRef<Expr *> Args);
 
+  /// AddWrapsAttr - Adds the "wraps" attribute to a particular
+  /// declaration.
+  void AddWrapsAttr(Decl *D, const AttributeCommonInfo &CI);
+
   bool checkMSInheritanceAttrOnDefinition(CXXRecordDecl *RD, SourceRange Range,
                                           bool BestCase,
                                           MSInheritanceModel SemanticSpelling);

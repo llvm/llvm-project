@@ -2775,7 +2775,8 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
   Result = Value.trunc(LHS.getBitWidth());
   if (Result.extend(BitWidth) != Value) {
-    if (Info.checkingForUndefinedBehavior())
+    if (Info.checkingForUndefinedBehavior() &&
+        !E->getType().getTypePtr()->hasAttr(attr::Wraps))
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
           << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
@@ -13982,7 +13983,8 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
     if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
-      if (Info.checkingForUndefinedBehavior())
+      if (Info.checkingForUndefinedBehavior() &&
+          !E->getType().getTypePtr()->hasAttr(attr::Wraps))
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
             << toString(Value, 10, Value.isSigned(), /*formatAsCLiteral=*/false,

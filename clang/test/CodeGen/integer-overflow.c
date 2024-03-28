@@ -105,3 +105,59 @@ void test1(void) {
   // TRAPV:    call ptr @llvm.frameaddress.p0(i32 0)
   // CATCH_UB: call ptr @llvm.frameaddress.p0(i32 0)
 }
+
+// Tests for integer overflow using __attribute__((wraps))
+typedef int __attribute__((wraps)) wrapping_int;
+
+void test2(void) {
+  // DEFAULT-LABEL: define{{.*}} void @test2
+  // WRAPV-LABEL: define{{.*}} void @test2
+  // TRAPV-LABEL: define{{.*}} void @test2
+  extern volatile wrapping_int a, b, c;
+
+  // Basically, all cases should match the WRAPV case since this attribute
+  // effectively enables wrapv for expressions containing wrapping types.
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32
+  a = b + c;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: sub i32
+  a = b - c;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: mul i32
+  a = b * c;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: sub i32 0,
+  a = -b;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32 {{.*}}, 1
+  ++b;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32 {{.*}}, -1
+  --b;
+
+  // Less trivial cases
+  extern volatile wrapping_int u, v;
+  extern volatile int w;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32
+  if (u + v < u) {}
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32
+  for (;u + v < u;) {}
+
+  // this (w+1) should have instrumentation
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: call {{.*}} @llvm.sadd.with.overflow.i32
+  u = (w+1) + v;
+
+  // no parts of this expression should have instrumentation
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: add i32 {{.*}}, 1
+  u = (v+1) + w;
+
+  // downcast off the wraps attribute
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: call { i32, i1 } @llvm.sadd.with.overflow.i32
+  u = (int) u + (int) v;
+
+  // DEFAULT,WRAPV,TRAPV,CATCH_UB,TRAPV_HANDLER: call { i32, i1 } @llvm.sadd.with.overflow.i32
+  u = (int) u + w;
+}

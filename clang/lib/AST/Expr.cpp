@@ -2243,6 +2243,21 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   return true;
 }
 
+bool BinaryOperator::oneOfWraps(const ASTContext &Ctx) const {
+  llvm::SmallVector<Expr *, 2> Both = {getLHS(), getRHS()};
+
+  for (const Expr *oneOf : Both) {
+    if (!oneOf)
+      continue;
+    if (auto *TypePtr =
+            oneOf->IgnoreParenImpCasts()->getType().getTypePtrOrNull())
+      if (TypePtr->hasAttr(attr::Wraps)) {
+        return true;
+      }
+  }
+  return false;
+}
+
 SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
                              QualType ResultTy, SourceLocation BLoc,
                              SourceLocation RParenLoc,
@@ -4757,6 +4772,8 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
   setDependence(computeDependence(this));
+  if (oneOfWraps(Ctx))
+    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
 }
 
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
@@ -4774,6 +4791,8 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
   setDependence(computeDependence(this));
+  if (oneOfWraps(Ctx))
+    setType(Ctx.getAttributedType(attr::Wraps, getType(), getType()));
 }
 
 BinaryOperator *BinaryOperator::CreateEmpty(const ASTContext &C,

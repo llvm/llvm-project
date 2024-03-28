@@ -4084,6 +4084,9 @@ protected:
   static unsigned sizeOfTrailingObjects(bool HasFPFeatures) {
     return HasFPFeatures * sizeof(FPOptionsOverride);
   }
+
+  /// Do one of the subexpressions have the wraps attribute?
+  bool oneOfWraps(const ASTContext &Ctx) const;
 };
 
 /// CompoundAssignOperator - For compound assignments (e.g. +=), we keep
