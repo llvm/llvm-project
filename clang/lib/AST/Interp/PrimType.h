@@ -46,6 +46,10 @@ enum PrimType : unsigned {
   PT_FnPtr,
 };
 
+inline constexpr bool isPtrType(PrimType T) {
+  return T == PT_Ptr || T == PT_FnPtr;
+}
+
 enum class CastKind : uint8_t {
   Reinterpret,
   Atomic,

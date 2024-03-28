@@ -168,6 +168,7 @@ public:
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());
