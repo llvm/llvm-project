@@ -357,6 +357,10 @@ Bug Fixes in This Version
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
 
+- Clang now allows for member function templates of class templates declared with a deduced return type
+  to be explicitly specialized for a given implicit instantiation of the class template.
+
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
