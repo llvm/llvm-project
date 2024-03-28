@@ -343,10 +343,11 @@ IntegerRelation::subtract(const PresburgerRelation &set) const {
   return PresburgerRelation(*this).subtract(set);
 }
 
-unsigned IntegerRelation::insertVar(VarKind kind, unsigned pos, unsigned num) {
+unsigned IntegerRelation::insertVar(VarKind kind, unsigned pos, unsigned num,
+                                    Identifier id) {
   assert(pos <= getNumVarKind(kind));
 
-  unsigned insertPos = space.insertVar(kind, pos, num);
+  unsigned insertPos = space.insertVar(kind, pos, num, id);
   inequalities.insertColumns(insertPos, num);
   equalities.insertColumns(insertPos, num);
   return insertPos;
@@ -2544,11 +2545,11 @@ void IntegerRelation::print(raw_ostream &os) const {
 
 void IntegerRelation::dump() const { print(llvm::errs()); }
 
-unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
-                                      unsigned num) {
+unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos, unsigned num,
+                                      Identifier id) {
   assert((kind != VarKind::Domain || num == 0) &&
          "Domain has to be zero in a set");
-  return IntegerRelation::insertVar(kind, pos, num);
+  return IntegerRelation::insertVar(kind, pos, num, id);
 }
 IntegerPolyhedron
 IntegerPolyhedron::intersect(const IntegerPolyhedron &other) const {

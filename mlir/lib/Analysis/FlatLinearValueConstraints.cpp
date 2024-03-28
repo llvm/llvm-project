@@ -9,6 +9,7 @@
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -870,8 +871,8 @@ unsigned FlatLinearValueConstraints::insertSymbolVar(unsigned pos,
 }
 
 unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
-                                               unsigned num) {
-  unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
+                                               unsigned num, Identifier id) {
+  unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num, id);
 
   if (kind != VarKind::Local) {
     values.insert(values.begin() + absolutePos, num, std::nullopt);
