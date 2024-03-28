@@ -147,6 +147,12 @@ void AArch64GISelUtils::changeFCMPPredToAArch64CC(
   case CmpInst::FCMP_UNE:
     CondCode = AArch64CC::NE;
     break;
+  case CmpInst::FCMP_TRUE:
+    CondCode = AArch64CC::AL;
+    break;
+  case CmpInst::FCMP_FALSE:
+    CondCode = AArch64CC::NV;
+    break;
   }
 }
 
