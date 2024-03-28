@@ -1,6 +1,6 @@
 // RUN: %clang_tsan %s -lstdc++ -o %t && %run %t 2>&1 | FileCheck %s
 
-#include "test.h"
+#include "../test.h"
 #include <errno.h>
 #include <linux/futex.h>
 #include <pthread.h>
