@@ -229,7 +229,7 @@ public:
 
   bool onCall(llvm::StringRef Method, llvm::json::Value Params,
               llvm::json::Value ID) override {
-    WithContext HandlerContext(handlerContext());
+    WithContext HandlerContext(handlerContext(llvm::to_string(ID)));
     // Calls can be canceled by the client. Add cancellation context.
     WithContext WithCancel(cancelableRequestContext(ID));
     trace::Span Tracer(Method, LSPLatency);
@@ -252,7 +252,7 @@ public:
 
   bool onReply(llvm::json::Value ID,
                llvm::Expected<llvm::json::Value> Result) override {
-    WithContext HandlerContext(handlerContext());
+    WithContext HandlerContext(handlerContext(llvm::to_string(ID)));
 
     Callback<llvm::json::Value> ReplyHandler = nullptr;
     if (auto IntID = ID.getAsInteger()) {
@@ -413,6 +413,13 @@ private:
     return Context::current().derive(
         kCurrentOffsetEncoding,
         Server.Opts.Encoding.value_or(OffsetEncoding::UTF16));
+  }
+
+  Context handlerContext(const std::string &ID) const {
+    return Context::current()
+        .derive(kCurrentOffsetEncoding,
+                Server.Opts.Encoding.value_or(OffsetEncoding::UTF16))
+        .derive(trace::EventTracer::kRequestId, ID);
   }
 
   // We run cancelable requests in a context that does two things:

@@ -99,6 +99,8 @@ public:
   /// Called whenever a metrics records a measurement.
   virtual void record(const Metric &Metric, double Value,
                       llvm::StringRef Label) {}
+  /// A key to store json request id in the context used in tracers
+  static Key<std::string> kRequestId;
 };
 
 /// Sets up a global EventTracer that consumes events produced by Span and
