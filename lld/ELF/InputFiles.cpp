@@ -971,8 +971,8 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
         reportFatal(place, "program property is too short");
-      uint32_t type = read32<ELFT::TargetEndianness>(desc.data());
-      uint32_t size = read32<ELFT::TargetEndianness>(desc.data() + 4);
+      uint32_t type = read32<ELFT::Endianness>(desc.data());
+      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
       desc = desc.slice(8);
       if (desc.size() < size)
         reportFatal(place, "program property is too short");
@@ -983,7 +983,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
         // accumulate the bits set.
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
-        featuresSet |= read32<ELFT::TargetEndianness>(desc.data());
+        featuresSet |= read32<ELFT::Endianness>(desc.data());
       }
 
       // Padding is present in the note descriptor, if necessary.
