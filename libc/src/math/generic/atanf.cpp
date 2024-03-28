@@ -60,11 +60,15 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
     }
     // Use Taylor polynomial:
     //   atan(x) ~ x * (1 - x^2 / 3 + x^4 / 5 - x^6 / 7 + x^8 / 9 - x^10 / 11).
+    constexpr double ATAN_TAYLOR[6] = {
+        0x1.0000000000000p+0,  -0x1.5555555555555p-2, 0x1.999999999999ap-3,
+        -0x1.2492492492492p-3, 0x1.c71c71c71c71cp-4,  -0x1.745d1745d1746p-4,
+    };
     double x2 = x_d * x_d;
     double x4 = x2 * x2;
-    double c0 = fputil::multiply_add(x2, ATAN_COEFFS[0][1], ATAN_COEFFS[0][0]);
-    double c1 = fputil::multiply_add(x2, ATAN_COEFFS[0][3], ATAN_COEFFS[0][2]);
-    double c2 = fputil::multiply_add(x2, ATAN_COEFFS[0][5], ATAN_COEFFS[0][4]);
+    double c0 = fputil::multiply_add(x2, ATAN_TAYLOR[1], ATAN_TAYLOR[0]);
+    double c1 = fputil::multiply_add(x2, ATAN_TAYLOR[3], ATAN_TAYLOR[2]);
+    double c2 = fputil::multiply_add(x2, ATAN_TAYLOR[5], ATAN_TAYLOR[4]);
     double p = fputil::polyeval(x4, c0, c1, c2);
     double r = fputil::multiply_add(x_d, p, const_term);
     return static_cast<float>(r);

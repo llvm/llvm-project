@@ -275,25 +275,9 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   int idx = static_cast<int>(k_d);
   q_d = fputil::multiply_add(k_d, -0x1.0p-4, q_d);
 
-  double p, r;
-
-  if (LIBC_UNLIKELY(idx == 0)) {
-    // For |x| < 1/16, we use Taylor polynomial:
-    //   atan(x) ~ x - x^3/3 + x^5/5 - x^7/7 + x^9/9 - x^11/11 + x^13/13
-    double q2 = q_d * q_d;
-    double c0 = fputil::multiply_add(q2, ATAN_COEFFS[0][2], ATAN_COEFFS[0][1]);
-    double c1 = fputil::multiply_add(q2, ATAN_COEFFS[0][4], ATAN_COEFFS[0][3]);
-    double c2 = fputil::multiply_add(q2, ATAN_COEFFS[0][6], ATAN_COEFFS[0][5]);
-    double q4 = q2 * q2;
-    double q3 = q_d * q2;
-    double d0 = fputil::polyeval(q4, c0, c1, c2);
-    p = fputil::multiply_add(q3, d0, q_d);
-    r = final_sign * (p + const_term.hi);
-  } else {
-    p = atan_eval(q_d, idx);
-    r = final_sign *
-        fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
-  }
+  double p = atan_eval(q_d, idx);
+  double r = final_sign *
+             fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
 
   constexpr uint32_t LOWER_ERR = 4;
   // Mask sticky bits in double precision before rounding to single precision.

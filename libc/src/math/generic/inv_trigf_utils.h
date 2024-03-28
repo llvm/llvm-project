@@ -21,7 +21,7 @@ constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 
 extern double ATAN_COEFFS[17][9];
 
-// For |x| <= 1/32 and 1 <= i <= 16, return Q(x) such that:
+// For |x| <= 1/32 and 0 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
 LIBC_INLINE double atan_eval(double x, int i) {
   double x2 = x * x;
