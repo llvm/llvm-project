@@ -3859,6 +3859,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (InGlue.getNode())
     Ops.push_back(InGlue);
 
+  // NOTE: This potentially results in *two* glue operands, and the wrong one
+  // might possibly show up where the other was intended. In particular,
+  // Emitter::EmitMachineNode() expects only the glued convergence token if it
+  // exists. Similarly, the selection of the call expects to match only the
+  // InGlue operand if it exists.
   if (SDValue Token = CLI.ConvergenceControlToken) {
     Ops.push_back(SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE,
                                              DL, MVT::Glue, Token),
