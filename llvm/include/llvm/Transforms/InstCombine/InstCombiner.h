@@ -198,6 +198,24 @@ public:
                                                 PatternMatch::m_Value()));
   }
 
+  /// Assumes that we have `Op eq/ne Vals` (either icmp or switch). Will try to
+  /// constant fold `Vals` so that we can use `Op' eq/ne Vals'`. For example if
+  /// we have `Op` as `add X, C0`, it will simplify all `Vals` as `Vals[i] - C0`
+  /// and return `X`.
+  Value *simplifyOpWithConstantEqConsts(Value *Op, BuilderTy &Builder,
+                                        SmallVector<Constant *> &Vals,
+                                        bool ReqOneUseAdd = true);
+
+  Value *simplifyOpWithConstantEqConsts(Value *Op, BuilderTy &Builder,
+                                        Constant *&Val,
+                                        bool ReqOneUseAdd = true) {
+    SmallVector<Constant *> CVals;
+    CVals.push_back(Val);
+    Value *R = simplifyOpWithConstantEqConsts(Op, Builder, CVals, ReqOneUseAdd);
+    Val = CVals[0];
+    return R;
+  }
+
   /// Return nonnull value if V is free to invert under the condition of
   /// WillInvertAllUses.
   /// If Builder is nonnull, it will return a simplified ~V.

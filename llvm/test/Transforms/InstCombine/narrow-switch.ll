@@ -104,13 +104,13 @@ return:
 
 define void @trunc64to58(i64 %a) {
 ; ALL-LABEL: @trunc64to58(
-; CHECK32:         switch i58
-; CHECK32-NEXT:    i58 0, label %sw.bb1
-; CHECK32-NEXT:    i58 18717182647723699, label %sw.bb2
+; CHECK32:         switch i4
+; CHECK32-NEXT:    i4 0, label %sw.bb1
+; CHECK32-NEXT:    i4 1, label %sw.bb2
 ; CHECK32-NEXT:    ]
 ; CHECK64:         switch i64
 ; CHECK64-NEXT:    i64 0, label %sw.bb1
-; CHECK64-NEXT:    i64 18717182647723699, label %sw.bb2
+; CHECK64-NEXT:    i64 1, label %sw.bb2
 ; CHECK64-NEXT:    ]
 ;
 entry:
@@ -170,10 +170,10 @@ case124:
 ; condition is evaluated on the original type
 define i32 @trunc32to16(i32 %a0) #0 {
 ; ALL-LABEL: @trunc32to16(
-; ALL:         switch i16
-; ALL-NEXT:    i16 63, label %sw.bb
-; ALL-NEXT:    i16 1, label %sw.bb1
-; ALL-NEXT:    i16 100, label %sw.bb2
+; ALL:         switch i32
+; ALL-NEXT:    i32 1033306112, label %sw.bb
+; ALL-NEXT:    i32 1034485760, label %sw.bb1
+; ALL-NEXT:    i32 1036779520, label %sw.bb2
 ; ALL-NEXT:    ]
 ;
 entry:
