@@ -74,14 +74,42 @@ namespace llvm {
 /// virtual function call overhead.  Defining and using an InstVisitor is just
 /// as efficient as having your own switch statement over the instruction
 /// opcode.
-template<typename SubClass, typename RetTy=void>
+
+/// Helper type to manage the current context of an InstVisitor.
+struct DefaultCtxManager {
+  void pushCtx(const Value *V) {}
+  void popCtx() {}
+};
+
+template <typename SubClass, typename RetTy = void,
+          typename CtxManager = DefaultCtxManager>
 class InstVisitor {
+  CtxManager *ctxMgr;
+
+  struct ContextUpdater {
+    CtxManager *ctxMgr;
+    llvm::SmallVector<const Value *, 4> path;
+    ContextUpdater(CtxManager *ctxMgr, const Value *V) : ctxMgr(ctxMgr) {
+      path.push_back(V);
+      if (ctxMgr)
+        ctxMgr->pushCtx(V);
+    }
+    ~ContextUpdater() {
+      if (ctxMgr)
+        ctxMgr->popCtx();
+    }
+  };
+
   //===--------------------------------------------------------------------===//
   // Interface code - This is the public interface of the InstVisitor that you
   // use to visit instructions...
   //
 
 public:
+  // Ctors
+  InstVisitor() : ctxMgr(nullptr) {}
+  InstVisitor(CtxManager *ctxMgr) : ctxMgr(ctxMgr) {}
+
   // Generic visit method - Allow visitation to all instructions in a range
   template<class Iterator>
   void visit(Iterator Start, Iterator End) {
@@ -96,10 +124,12 @@ public:
     visit(M.begin(), M.end());
   }
   void visit(Function &F) {
+    ContextUpdater ctxManager(ctxMgr, &F);
     static_cast<SubClass*>(this)->visitFunction(F);
     visit(F.begin(), F.end());
   }
   void visit(BasicBlock &BB) {
+    ContextUpdater ctxManager(ctxMgr, &BB);
     static_cast<SubClass*>(this)->visitBasicBlock(BB);
     visit(BB.begin(), BB.end());
   }
@@ -113,6 +143,7 @@ public:
   // visit - Finally, code to visit an instruction...
   //
   RetTy visit(Instruction &I) {
+    ContextUpdater ctxManager(ctxMgr, &I);
     static_assert(std::is_base_of<InstVisitor, SubClass>::value,
                   "Must pass the derived type to this template!");
 
