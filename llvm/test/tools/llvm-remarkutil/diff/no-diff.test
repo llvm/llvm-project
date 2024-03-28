@@ -1,0 +1,4 @@
+RUN: llvm-remarkutil diff %p/Inputs/1-loc-2-args.yaml %p/Inputs/1-loc-2-args.yaml --parser=yaml | FileCheck %s 
+
+; CHECK: File A: {{.*}}/Inputs/1-loc-2-args.yaml
+; CHECK: File B: {{.*}}/Inputs/1-loc-2-args.yaml
