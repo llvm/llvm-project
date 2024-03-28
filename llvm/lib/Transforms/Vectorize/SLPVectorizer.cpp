@@ -14415,6 +14415,13 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
         IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+    if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
+      if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
+        ReductionBitWidth = bit_ceil(MaxBitWidth);
+      else if (MaxBitWidth == 0)
+        ReductionBitWidth = 0;
+    }
+
     for (unsigned Idx : RootDemotes)
       ToDemote.append(VectorizableTree[Idx]->Scalars.begin(),
                       VectorizableTree[Idx]->Scalars.end());
