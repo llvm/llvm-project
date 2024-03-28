@@ -143,6 +143,7 @@ int main(void) {
   P(signbit, (1.0));
 
   R(launder, (&N));
+  R(start_object_lifetime, (&N));
 
   return 0;
 }
@@ -509,6 +510,15 @@ void test_builtin_launder(int *p) {
   // CHECK-NOT: @llvm.launder
   // CHECK: store ptr [[TMP]],
   int *d = __builtin_launder(p);
+}
+
+/// It should be a NOP in C since there are no vtables.
+// CHECK-LABEL: define{{.*}} void @test_builtin_start_object_lifetime
+void test_builtin_start_object_lifetime(int *p) {
+  // CHECK: [[TMP:%.*]] = load ptr,
+  // CHECK-NOT: @llvm.launder
+  // CHECK: store ptr [[TMP]],
+  int *d = __builtin_start_object_lifetime(p);
 }
 
 // __warn_memset_zero_len should be NOP, see https://sourceware.org/bugzilla/show_bug.cgi?id=25399

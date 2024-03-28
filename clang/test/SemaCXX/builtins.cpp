@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++11 -fcxx-exceptions
+// RUN: %clang_cc1 %s -fsyntax-only -verify -DCXX11 -std=c++11 -fcxx-exceptions
 // RUN: %clang_cc1 %s -fsyntax-only -verify -std=c++1z -fcxx-exceptions
 typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
@@ -155,6 +155,37 @@ void test_noexcept(int *i) {
 }
 #undef TEST_TYPE
 } // end namespace test_launder
+
+namespace test_start_object_lifetime {
+// The builtin is non-constant.
+constexpr int test_non_constexpr(int i) { // expected-error {{constexpr function never produces a constant expression}}
+  __builtin_start_object_lifetime(&i); // expected-note {{subexpression not valid in a constant expression}}
+#ifdef CXX11
+  // expected-warning@-2 {{use of this statement in a constexpr function is a C++14 extension}}
+#endif
+  return 0;
+}
+
+struct Incomplete; // expected-note {{forward declaration}}
+void test_incomplete(Incomplete *i) {
+   // Requires a complete type
+   __builtin_start_object_lifetime(i); // expected-error {{incomplete type 'Incomplete' where a complete type is required}}
+}
+
+// The builtin is type-generic.
+#define TEST_TYPE(Ptr, Type) \
+  static_assert(__is_same(decltype(__builtin_launder(Ptr)), Type), "expected same type")
+void test_type_generic() {
+  char * p;
+  int * i;
+  TEST_TYPE(p, char*);
+  TEST_TYPE(i, int*);
+}
+// The builtin is noexcept.
+void test_noexcept(int *i) {
+  static_assert(noexcept(__builtin_start_object_lifetime(i)), "");
+}
+}
 
 template<typename T> void test_builtin_complex(T v, double d) {
   (void)__builtin_complex(v, d); // expected-error {{different types}} expected-error {{not a real floating}}
