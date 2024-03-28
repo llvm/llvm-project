@@ -14384,9 +14384,17 @@ static SDValue CombineANDShift(SDNode *N,
     }
   }
 
-  // FIXME: Transform "(and (shl x, c2) c1)" ->
-  // "(shl (and x, c1>>c2), c2)" if "c1 >> c2" is a cheaper immediate than
-  // c1.
+  // Transform "(and (shl x, c2) c1)" into "(shl (and x, c1>>c2), c2)"
+  // if "c1 >> c2" is a cheaper immediate than "c1"
+  if (LeftShift &&
+      HasLowerConstantMaterializationCost(C1 >> C2, C1, Subtarget)) {
+
+    SDValue And = DAG.getNode(ISD::AND, DL, MVT::i32, N0->getOperand(0),
+                              DAG.getConstant(C1 >> C2, DL, MVT::i32));
+    return DAG.getNode(ISD::SHL, DL, MVT::i32, And,
+                       DAG.getConstant(C2, DL, MVT::i32));
+  }
+
   return SDValue();
 }
 
