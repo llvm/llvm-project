@@ -395,7 +395,9 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
                 fprintf(stderr, "mbstowcs failed unexpectedly");
                 return 1;
               }
-              wchar_t* dst = new wchar_t[len + 1]; // Include room for null terminator
+              // Include room for null terminator. Use malloc as these features
+              // are also used by lit configs that don't use -lc++ (libunwind tests).
+              wchar_t* dst = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
               size_t ret = mbstowcs(dst, members[m_i], len);
               if (ret == static_cast<size_t>(-1)) {
                 fprintf(stderr, "mbstowcs failed unexpectedly");
@@ -411,7 +413,7 @@ def _getLocaleFlagsAction(cfg, locale, alts, members):
                 }
               }
               printf("\n");
-              delete[] dst;
+              free(dst);
             }
             return 0;
           }
