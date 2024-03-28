@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -456,9 +455,7 @@ private:
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
-  // A map from MD5 keys to virtual table definitions. Only populated when
-  // building the Symtab from a module.
-  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
+
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
@@ -621,8 +618,6 @@ public:
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
-  // Return vtable from the name's MD5 hash. Return nullptr if not found.
-  inline GlobalVariable *getGlobalVariable(uint64_t GlobalVariableMD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -700,16 +695,6 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
                                      uint64_t RHS) { return LHS.first < RHS; });
   if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
-  return nullptr;
-}
-
-GlobalVariable *
-InstrProfSymtab::getGlobalVariable(uint64_t GlobalVariableMD5Hash) {
-  auto Iter = MD5VTableMap.find(GlobalVariableMD5Hash);
-  // Iter->second should not be nullptr.
-  // Skip an assert since 'MD5VTableMap' is an internal state.
-  if (Iter != MD5VTableMap.end())
-    return Iter->second;
   return nullptr;
 }
 

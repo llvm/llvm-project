@@ -476,18 +476,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
       return E;
   }
 
-  // Iterates vtables with type metadata in the module.
-  for (GlobalVariable &G : M.globals()) {
-    if (!G.hasName())
-      continue;
-    if (G.hasMetadata(LLVMContext::MD_type)) {
-      auto [It, Inserted] = MD5VTableMap.try_emplace(G.getGUID(), &G);
-      if (!Inserted)
-        LLVM_DEBUG(
-            dbgs() << "Duplicated GUID found. This indicates MD5 conflict for "
-                      "vtables in one module, which should be really rare.");
-    }
-  }
   Sorted = false;
   finalizeSymtab();
   return Error::success();
