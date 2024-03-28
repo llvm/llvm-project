@@ -136,6 +136,11 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionOperator>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpReductionClause>(
+    maybe(
+    ("INSCAN" >> pure(OmpReductionClause::ReductionModifier::Inscan) ||
+    "TASK" >> pure(OmpReductionClause::ReductionModifier::Task) ||
+        "DEFAULT" >> pure(OmpReductionClause::ReductionModifier::Default)) /
+    ","),
     Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)

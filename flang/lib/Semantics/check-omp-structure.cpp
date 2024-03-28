@@ -2289,7 +2289,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
 
-  const auto &definedOp{std::get<0>(x.v.t)};
+  const auto &definedOp{std::get<1>(x.v.t)};
   bool ok = false;
   common::visit(
       common::visitors{
