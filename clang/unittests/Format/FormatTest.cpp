@@ -13765,20 +13765,18 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "                                CDDDP83848_RBR_REGISTER};",
                NoBinPacking);
 
-  // FIXME: The alignment of these trailing comments might be bad. Then again,
-  // this might be utterly useless in real code.
   verifyFormat("Constructor::Constructor()\n"
-               "    : some_value{         //\n"
-               "                 aaaaaaa, //\n"
-               "                 bbbbbbb} {}");
+               "    : some_value{  //\n"
+               "          aaaaaaa, //\n"
+               "          bbbbbbb} {}");
 
   // In braced lists, the first comment is always assumed to belong to the
   // first element. Thus, it can be moved to the next or previous line as
   // appropriate.
-  verifyFormat("function({// First element:\n"
-               "          1,\n"
-               "          // Second element:\n"
-               "          2});",
+  verifyFormat("function({ // First element:\n"
+               "           1,\n"
+               "           // Second element:\n"
+               "           2});",
                "function({\n"
                "    // First element:\n"
                "    1,\n"
@@ -13900,7 +13898,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
   verifyFormat("vector< int > x{ 1, 2, 3, 4 };", SpaceBetweenBraces);
   verifyFormat("f( {}, { {}, {} }, MyMap[ { k, v } ] );", SpaceBetweenBraces);
   verifyFormat("vector< int > x{ // comment 1\n"
-               "                 1, 2, 3, 4 };",
+               "    1, 2, 3, 4 };",
                SpaceBetweenBraces);
   SpaceBetweenBraces.ColumnLimit = 20;
   verifyFormat("vector< int > x{\n"

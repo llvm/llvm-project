@@ -3907,16 +3907,9 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   while (Current) {
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
-      if (Prev->is(BK_BracedInit) && Prev->opensScope()) {
-        Current->SpacesRequiredBefore =
-            (Style.Cpp11BracedListStyle && !Style.SpacesInParensOptions.Other)
-                ? 0
-                : 1;
-      } else if (Prev->is(TT_VerilogMultiLineListLParen)) {
-        Current->SpacesRequiredBefore = 0;
-      } else {
-        Current->SpacesRequiredBefore = Style.SpacesBeforeTrailingComments;
-      }
+      Current->SpacesRequiredBefore = Prev->is(TT_VerilogMultiLineListLParen)
+                                          ? 0
+                                          : Style.SpacesBeforeTrailingComments;
 
       // If we find a trailing comment, iterate backwards to determine whether
       // it seems to relate to a specific parameter. If so, break before that

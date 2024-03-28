@@ -1388,12 +1388,12 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
   verifyFormat("S s = {{a, b, c},  // Group #1\n"
                "       {d, e, f},  // Group #2\n"
                "       {g, h, i}}; // Group #3");
-  verifyFormat("S s = {{// Group #1\n"
-               "        a, b, c},\n"
-               "       {// Group #2\n"
-               "        d, e, f},\n"
-               "       {// Group #3\n"
-               "        g, h, i}};");
+  verifyFormat("S s = {{ // Group #1\n"
+               "         a, b, c},\n"
+               "       { // Group #2\n"
+               "         d, e, f},\n"
+               "       { // Group #3\n"
+               "         g, h, i}};");
 
   EXPECT_EQ("S s = {\n"
             "    // Some comment\n"
@@ -4594,6 +4594,55 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 / 
   )",
                    getLLVMStyleWithColumns(10)));
+}
+
+TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_TRUE(Style.Cpp11BracedListStyle);
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "    arg};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "        arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "       arg});",
+               Style);
+
+  Style.Cpp11BracedListStyle = false;
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "       arg\n"
+               "};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "        arg });",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "       arg });",
+               Style);
 }
 
 } // end namespace
