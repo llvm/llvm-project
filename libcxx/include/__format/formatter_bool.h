@@ -70,7 +70,11 @@ public:
   __format_spec::__parser<_CharT> __parser_;
 };
 
-#endif //_LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<bool> = true;
+#  endif //_LIBCPP_STD_VER >= 23
+#endif   //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
