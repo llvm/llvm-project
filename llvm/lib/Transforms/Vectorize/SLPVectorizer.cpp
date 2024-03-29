@@ -14450,9 +14450,15 @@ void BoUpSLP::computeMinimumValueSizes() {
         ReductionBitWidth = 0;
     }
 
-    for (unsigned Idx : RootDemotes)
-      ToDemote.append(VectorizableTree[Idx]->Scalars.begin(),
-                      VectorizableTree[Idx]->Scalars.end());
+    for (unsigned Idx : RootDemotes) {
+      Value *V = VectorizableTree[Idx]->Scalars.front();
+      uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+      if (OrigBitWidth > MaxBitWidth) {
+      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
+      if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
+        ToDemote.push_back(V);
+      }
+    }
     RootDemotes.clear();
     IsTopRoot = false;
     IsProfitableToDemoteRoot = true;
