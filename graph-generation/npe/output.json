@@ -3,18 +3,46 @@
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
     "results": [
         {
+            "type": "test-source-in-header",
+            "nodes": [
+                3,
+                2
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 21,
+                    "content": "return *data",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; //\n    }"
+                }
+            ]
+        },
+        {
             "type": "test-no-sink",
             "nodes": [
-                2,
-                21,
-                20,
+                7,
                 26,
                 25,
+                4,
+                3,
+                2,
                 24,
-                19,
-                18,
-                1,
-                0
+                23,
+                6,
+                5
             ],
             "locations": [
                 {
@@ -58,31 +86,31 @@
                 },
                 {
                     "type": "entry",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 5,
-                    "beginColumn": 1,
-                    "endLine": 7,
-                    "endColumn": 2,
-                    "content": "int A::getValue() const {\n    return *data; //\n}"
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; //\n    }"
                 },
                 {
                     "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 6,
-                    "beginColumn": 5,
-                    "endLine": 6,
-                    "endColumn": 17,
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 21,
                     "content": "return *data",
                     "stmtKind": "ReturnStmt"
                 },
                 {
                     "type": "exit",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 5,
-                    "beginColumn": 1,
-                    "endLine": 7,
-                    "endColumn": 2,
-                    "content": "int A::getValue() const {\n    return *data; //\n}"
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; //\n    }"
                 },
                 {
                     "type": "stmt",
@@ -137,21 +165,21 @@
         {
             "type": "npe",
             "nodes": [
-                3,
-                17,
-                16,
-                15,
-                14,
-                13,
-                11,
-                10,
-                2,
+                8,
+                22,
                 21,
                 20,
+                19,
+                18,
+                16,
+                15,
+                7,
                 26,
                 25,
-                24,
-                19
+                4,
+                3,
+                2,
+                24
             ],
             "locations": [
                 {
@@ -273,31 +301,31 @@
                 },
                 {
                     "type": "entry",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 5,
-                    "beginColumn": 1,
-                    "endLine": 7,
-                    "endColumn": 2,
-                    "content": "int A::getValue() const {\n    return *data; //\n}"
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; //\n    }"
                 },
                 {
                     "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 6,
-                    "beginColumn": 5,
-                    "endLine": 6,
-                    "endColumn": 17,
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 21,
                     "content": "return *data",
                     "stmtKind": "ReturnStmt"
                 },
                 {
                     "type": "exit",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "beginLine": 5,
-                    "beginColumn": 1,
-                    "endLine": 7,
-                    "endColumn": 2,
-                    "content": "int A::getValue() const {\n    return *data; //\n}"
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 6,
+                    "content": "int getValue() const {\n        return *data; //\n    }"
                 },
                 {
                     "type": "stmt",

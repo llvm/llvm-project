@@ -3,6 +3,17 @@
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
     "results": [
         {
+            "type": "test-source-in-header",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "line": 10,
+                    "column": 17
+                }
+            ]
+        },
+        {
             "type": "test-no-sink",
             "locations": [
                 {
@@ -13,9 +24,9 @@
                 },
                 {
                     "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "line": 6,
-                    "column": 5
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "line": 10,
+                    "column": 9
                 }
             ]
         },
@@ -36,9 +47,9 @@
                 },
                 {
                     "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.cpp",
-                    "line": 6,
-                    "column": 5
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/A.h",
+                    "line": 10,
+                    "column": 9
                 },
                 {
                     "type": "sink",
