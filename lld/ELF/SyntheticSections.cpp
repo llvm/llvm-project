@@ -3128,8 +3128,8 @@ void DebugNamesSection<ELFT>::collectMergedCounts(
                   data.hdr.AugmentationString)) {
         // There are conflicting augmentation strings, so it's best for the
         // merged index to not use an augmentation string.
-        mergedHdr.AugmentationStringSize = 8;
         mergedHdr.AugmentationString = "        ";
+        mergedHdr.AugmentationStringSize = mergedHdr.AugmentationString.size();
       }
     }
   }
