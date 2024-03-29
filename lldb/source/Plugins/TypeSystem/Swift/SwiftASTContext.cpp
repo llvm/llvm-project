@@ -243,7 +243,7 @@ SwiftASTContext::GetCanonicalSwiftType(opaque_compiler_type_t opaque_type) {
 ConstString SwiftASTContext::GetMangledTypeName(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
-  return GetMangledTypeName(GetSwiftType({weak_from_this(), type}).getPointer());
+  return GetMangledTypeName(GetSwiftType(type).getPointer());
 }
 
 typedef lldb_private::ThreadSafeDenseMap<swift::ASTContext *, SwiftASTContext *>
@@ -6248,7 +6248,7 @@ CompilerType SwiftASTContext::GetPointeeType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  auto swift_type = GetSwiftType({weak_from_this(), type});
+  auto swift_type = GetSwiftType(type);
   auto pointer_type =
       swift_type->wrapInPointer(swift::PointerTypeKind::PTK_UnsafePointer);
   if (pointer_type)
@@ -6260,7 +6260,7 @@ CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetTypedefedType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  swift::Type swift_type(GetSwiftType({weak_from_this(), type}));
+  swift::Type swift_type(GetSwiftType(type));
   swift::TypeAliasType *name_alias_type =
       swift::dyn_cast<swift::TypeAliasType>(swift_type.getPointer());
   if (name_alias_type) {
