@@ -100,7 +100,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
-    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(OutputAddress)));
+    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(InputAddress)));
     LLVM_DEBUG(dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints
                       << '\n');
 
@@ -197,8 +197,10 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
             ? SecondaryEntryPointsMap[Address].size()
             : 0;
     if (Cold) {
-      size_t HotIndex =
-          std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
+      // `Maps` is keyed by output addresses.
+      auto HotEntryIt = Maps.find(ColdPartSource[Address]);
+      assert(HotEntryIt != Maps.end());
+      size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
     } else {
@@ -597,5 +599,17 @@ BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
   return Branches;
 }
 
+unsigned
+BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
+                                                 uint32_t Offset) const {
+  auto FunctionIt = SecondaryEntryPointsMap.find(Address);
+  if (FunctionIt == SecondaryEntryPointsMap.end())
+    return UINT_MAX;
+  const std::vector<uint32_t> &Offsets = FunctionIt->second;
+  auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
+  if (OffsetIt == Offsets.end())
+    return UINT_MAX;
+  return OffsetIt - Offsets.begin();
+}
 } // namespace bolt
 } // namespace llvm
