@@ -989,7 +989,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // return value. Initialize the flag to 'true' and refine it in EmitParmDecl.
   if (SanOpts.has(SanitizerKind::NullabilityReturn)) {
     auto Nullability = FnRetTy->getNullability();
-    if (Nullability && *Nullability == NullabilityKind::NonNull) {
+    if (Nullability && *Nullability == NullabilityKind::NonNull &&
+        !FnRetTy->isRecordType()) {
       if (!(SanOpts.has(SanitizerKind::ReturnsNonnullAttribute) &&
             CurCodeDecl && CurCodeDecl->getAttr<ReturnsNonNullAttr>()))
         RetValNullabilityPrecondition =
