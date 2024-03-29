@@ -7252,3 +7252,69 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
 
   return false;
 }
+
+void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
+                                    BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  Builder.setInstrAndDebugLoc(*Root);
+  MatchInfo(Builder);
+  Root->eraseFromParent();
+}
+
+bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GSext *Sext = getOpcodeDef<GSext>(MO.getReg(), MRI);
+  if (!Sext)
+    return false;
+
+  GTrunc *Trunc = getOpcodeDef<GTrunc>(Sext->getSrcReg(), MRI);
+  if (!Trunc)
+    return false;
+
+  // The trunc must have the nsw flag.
+  if (!Trunc->getFlag(MachineInstr::MIFlag::NoSWrap))
+    return false;
+
+  Register Dst = Sext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  // The types have to match for a no-op.
+  if (DstTy != SrcTy)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+
+  return true;
+}
+
+bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GZext *Zext = getOpcodeDef<GZext>(MO.getReg(), MRI);
+  if (!Zext)
+    return false;
+
+  GTrunc *Trunc = getOpcodeDef<GTrunc>(Zext->getSrcReg(), MRI);
+  if (!Trunc)
+    return false;
+
+  // The trunc must have the nuw flag.
+  if (!Trunc->getFlag(MachineInstr::MIFlag::NoUWrap))
+    return false;
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  // The types have to match for a no-op.
+  if (DstTy != SrcTy)
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+
+  return true;
+}
