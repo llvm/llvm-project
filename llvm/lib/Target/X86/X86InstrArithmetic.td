@@ -336,52 +336,40 @@ let Predicates = [In64BitMode] in {
 }
 
 // IMULZU instructions
-let Defs = [EFLAGS], ForceDisassemble = 1, OpEnc = EncEVEX, hasSideEffects = 0,
-  Predicates = [HasEGPR, In64BitMode] in {
-  let SchedRW = [WriteIMul16Imm] in {
-    def IMULZU16rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi16, MRMSrcReg,
-                      (outs GR16:$dst)>, T_MAP4, PD, EVEX_B;
-    def IMULZU16rri : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi16, MRMSrcReg,
-                      (outs GR16:$dst), []>, T_MAP4, PD, EVEX_B;
-    let mayLoad = 1 in {
-      def IMULZU16rmi : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi16, MRMSrcMem,
-                        (outs GR16:$dst), []>, T_MAP4, PD, EVEX_B;
-      let Opcode = 0x6B in {
-        def IMULZU16rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi16, MRMSrcMem,
-                          (outs GR16:$dst)>, T_MAP4, PD, EVEX_B;
-      }
-    }
-  }
+class IMulZUOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI8<0x6B, "imulzu", binop_ndd_args, t, MRMSrcReg,
+             (outs t.RegClass:$dst)> {
+  let SchedRW = [sched];
+}
+class IMulZUOpRI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI<0x69, "imulzu", binop_ndd_args, t, MRMSrcReg,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched];
+}
+class IMulZUOpMI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI8<"imulzu", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)> {
+  let Opcode = 0x6B;
+  let SchedRW = [sched.Folded];
+}
+class IMulZUOpMI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI<0x69, "imulzu", binop_ndd_args, t, MRMSrcMem,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched.Folded];
+}
 
-  let SchedRW = [WriteIMul32Imm] in {
-    def IMULZU32rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi32, MRMSrcReg,
-                      (outs GR32:$dst)>, T_MAP4, PS, EVEX_B;
-    def IMULZU32rri : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi32, MRMSrcReg,
-                      (outs GR32:$dst), []>, T_MAP4, PS, EVEX_B;
-    let mayLoad = 1 in {
-      def IMULZU32rmi : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi32, MRMSrcMem,
-                        (outs GR32:$dst), []>, T_MAP4, PS, EVEX_B;
-        let Opcode = 0x6B in {
-          def IMULZU32rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi32, MRMSrcMem,
-                            (outs GR32:$dst)>, T_MAP4, PS, EVEX_B;
-        }
-    }
-  }
-
-  let SchedRW = [WriteIMul64Imm] in {
-    def IMULZU64rri8 : BinOpRI8<0x6B, "imulzu", binop_ndd_args, Xi64, MRMSrcReg,
-                      (outs GR64:$dst)>, T_MAP4, PS, EVEX_B;
-    def IMULZU64rri32 : BinOpRI<0x69, "imulzu", binop_ndd_args, Xi64, MRMSrcReg,
-                      (outs GR64:$dst), []>, T_MAP4, PS, EVEX_B;
-    let mayLoad = 1 in {
-      def IMULZU64rmi32 : BinOpMI<0x69, "imulzu", binop_ndd_args, Xi64, MRMSrcMem,
-                        (outs GR64:$dst), []>, T_MAP4, PS, EVEX_B;
-      let Opcode = 0x6B in {
-        def IMULZU64rmi8 : BinOpMI8<"imulzu", binop_ndd_args, Xi64, MRMSrcMem,
-                          (outs GR64:$dst)>, T_MAP4, PS, EVEX_B;
-      }
-    }
-  }
+let Defs = [EFLAGS], Predicates = [HasEGPR, In64BitMode] in {
+  def IMULZU16rri8 : IMulZUOpRI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi8 : IMulZUOpMI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rri : IMulZUOpRI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi : IMulZUOpMI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU32rri8 : IMulZUOpRI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi8 : IMulZUOpMI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rri : IMulZUOpRI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi : IMulZUOpMI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU64rri8 : IMulZUOpRI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi8 : IMulZUOpMI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rri32 : IMulZUOpRI_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi32 : IMulZUOpMI_R<Xi64, WriteIMul64Imm>, ZU;
 }
 
 //===----------------------------------------------------------------------===//
