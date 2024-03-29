@@ -8,85 +8,29 @@
 
 #include "MinMaxUseInitializerListCheck.h"
 #include "../utils/ASTUtils.h"
+#include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 
-using namespace clang::ast_matchers;
+using namespace clang;
 
-namespace clang::tidy::modernize {
+namespace {
 
 struct FindArgsResult {
   const Expr *First;
   const Expr *Last;
   const Expr *Compare;
-  std::vector<const Expr *> Args;
+  std::vector<const clang::Expr *> Args;
 };
 
-static const FindArgsResult findArgs(const MatchFinder::MatchResult &Match,
-                                     const CallExpr *Call);
-static const std::string
-generateReplacement(const MatchFinder::MatchResult &Match,
-                    const CallExpr *TopCall, const FindArgsResult &Result);
+} // anonymous namespace
 
-MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
-    StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM),
-               areDiagsSelfContained()) {}
+using namespace clang::ast_matchers;
 
-void MinMaxUseInitializerListCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
-}
+namespace clang::tidy::modernize {
 
-void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
-  auto createMatcher = [](const std::string &functionName) {
-    auto funcDecl = functionDecl(hasName(functionName));
-    auto expr = callExpr(callee(funcDecl));
-
-    return callExpr(callee(funcDecl),
-                    anyOf(hasArgument(0, expr), hasArgument(1, expr)),
-                    unless(hasParent(expr)))
-        .bind("topCall");
-  };
-
-  Finder->addMatcher(createMatcher("::std::max"), this);
-  Finder->addMatcher(createMatcher("::std::min"), this);
-}
-
-void MinMaxUseInitializerListCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  Inserter.registerPreprocessor(PP);
-}
-
-void MinMaxUseInitializerListCheck::check(
-    const MatchFinder::MatchResult &Match) {
-
-  const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
-  FindArgsResult Result = findArgs(Match, TopCall);
-
-  if (Result.Args.size() <= 2) {
-    return;
-  }
-
-  const std::string ReplacementText =
-      generateReplacement(Match, TopCall, Result);
-
-  diag(TopCall->getBeginLoc(),
-       "do not use nested 'std::%0' calls, use '%1' instead")
-      << TopCall->getDirectCallee()->getName() << ReplacementText
-      << FixItHint::CreateReplacement(
-             CharSourceRange::getTokenRange(TopCall->getSourceRange()),
-             ReplacementText)
-      << Inserter.createIncludeInsertion(
-             Match.SourceManager->getFileID(TopCall->getBeginLoc()),
-             "<algorithm>");
-}
-
-static const FindArgsResult findArgs(const MatchFinder::MatchResult &Match,
-                                     const CallExpr *Call) {
+static FindArgsResult findArgs(const CallExpr *Call) {
   FindArgsResult Result;
   Result.First = nullptr;
   Result.Last = nullptr;
@@ -101,22 +45,19 @@ static const FindArgsResult findArgs(const MatchFinder::MatchResult &Match,
 
     if (const auto *InitListExpr =
             dyn_cast<CXXStdInitializerListExpr>(*ArgIterator)) {
-      if (const auto *TempExpr =
-              dyn_cast<MaterializeTemporaryExpr>(InitListExpr->getSubExpr())) {
-        if (const auto *InitList =
-                dyn_cast<clang::InitListExpr>(TempExpr->getSubExpr())) {
-          for (const Expr *Init : InitList->inits()) {
-            Result.Args.push_back(Init);
-          }
-          Result.First = *ArgIterator;
-          Result.Last = *ArgIterator;
+      if (const auto *InitList = dyn_cast<clang::InitListExpr>(
+              InitListExpr->getSubExpr()->IgnoreImplicit())) {
+        Result.Args.insert(Result.Args.begin(), InitList->inits().begin(),
+                           InitList->inits().end());
 
-          std::advance(ArgIterator, 1);
-          if (ArgIterator != Call->arguments().end()) {
-            Result.Compare = *ArgIterator;
-          }
-          return Result;
+        Result.First = *ArgIterator;
+        Result.Last = *ArgIterator;
+
+        std::advance(ArgIterator, 1);
+        if (ArgIterator != Call->arguments().end()) {
+          Result.Compare = *ArgIterator;
         }
+        return Result;
       }
     }
   }
@@ -128,33 +69,6 @@ static const FindArgsResult findArgs(const MatchFinder::MatchResult &Match,
     if (Arg == Result.Compare)
       continue;
 
-    const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
-
-    if (InnerCall) {
-      printf("InnerCall: %s\n",
-             InnerCall->getDirectCallee()->getQualifiedNameAsString().c_str());
-      printf("Call: %s\n",
-             Call->getDirectCallee()->getQualifiedNameAsString().c_str());
-    }
-
-    if (InnerCall && InnerCall->getDirectCallee() &&
-        InnerCall->getDirectCallee()->getQualifiedNameAsString() ==
-            Call->getDirectCallee()->getQualifiedNameAsString()) {
-      FindArgsResult InnerResult = findArgs(Match, InnerCall);
-
-      const bool ProcessInnerResult =
-          (!Result.Compare && !InnerResult.Compare) ||
-          utils::areStatementsIdentical(Result.Compare, InnerResult.Compare,
-                                        *Match.Context);
-
-      if (ProcessInnerResult) {
-        Result.Args.insert(Result.Args.end(), InnerResult.Args.begin(),
-                           InnerResult.Args.end());
-        Result.Last = InnerResult.Last;
-        continue;
-      }
-    }
-
     Result.Args.push_back(Arg);
     Result.Last = Arg;
   }
@@ -162,74 +76,178 @@ static const FindArgsResult findArgs(const MatchFinder::MatchResult &Match,
   return Result;
 }
 
-static const std::string
+static std::vector<FixItHint>
 generateReplacement(const MatchFinder::MatchResult &Match,
                     const CallExpr *TopCall, const FindArgsResult &Result) {
+  std::vector<FixItHint> FixItHints;
 
   const QualType ResultType = TopCall->getDirectCallee()
                                   ->getReturnType()
                                   .getNonReferenceType()
                                   .getUnqualifiedType()
                                   .getCanonicalType();
+  const bool IsInitializerList = Result.First == Result.Last;
 
-  std::string ReplacementText =
-      Lexer::getSourceText(
-          CharSourceRange::getTokenRange(
-              TopCall->getBeginLoc(),
-              Result.First->getBeginLoc().getLocWithOffset(-1)),
-          *Match.SourceManager, Match.Context->getLangOpts())
-          .str() +
-      "{";
+  if (!IsInitializerList)
+    FixItHints.push_back(
+        FixItHint::CreateInsertion(Result.First->getBeginLoc(), "{"));
 
   for (const Expr *Arg : Result.Args) {
+    if (const auto *InnerCall =
+            dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts())) {
+      const auto InnerResult = findArgs(InnerCall);
+      const auto InnerReplacement =
+          generateReplacement(Match, InnerCall, InnerResult);
+      if (InnerCall->getDirectCallee()->getQualifiedNameAsString() ==
+              TopCall->getDirectCallee()->getQualifiedNameAsString() &&
+          ((!Result.Compare && !InnerResult.Compare) ||
+           utils::areStatementsIdentical(Result.Compare, InnerResult.Compare,
+                                         *Match.Context))) {
+
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                InnerCall->getCallee()->getSourceRange())));
+
+        const auto LParen = utils::lexer::findNextTokenSkippingComments(
+            InnerCall->getCallee()->getEndLoc(), *Match.SourceManager,
+            Match.Context->getLangOpts());
+        if (LParen && LParen->getKind() == tok::l_paren)
+          FixItHints.push_back(
+              FixItHint::CreateRemoval(SourceRange(LParen->getLocation())));
+
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
+
+        if (InnerResult.First == InnerResult.Last) {
+          FixItHints.insert(FixItHints.end(), InnerReplacement.begin(),
+                            InnerReplacement.end());
+
+          FixItHints.push_back(
+              FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                  InnerResult.First->getBeginLoc())));
+          FixItHints.push_back(FixItHint::CreateRemoval(
+              CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
+        } else
+          FixItHints.insert(FixItHints.end(), InnerReplacement.begin() + 1,
+                            InnerReplacement.end() - 1);
+
+        if (InnerResult.Compare) {
+          const std::optional<Token> Comma =
+              utils::lexer::findNextTokenSkippingComments(
+                  InnerResult.Last->getEndLoc(), *Match.SourceManager,
+                  Match.Context->getLangOpts());
+          if (Comma && Comma->getKind() == tok::comma)
+            FixItHints.push_back(
+                FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
+
+          if (utils::lexer::getPreviousToken(
+                  InnerResult.Compare->getExprLoc(), *Match.SourceManager,
+                  Match.Context->getLangOpts(), false)
+                  .getLocation() == Comma->getLocation()) {
+            FixItHints.push_back(
+                FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                    Comma->getLocation(), InnerResult.Compare->getEndLoc())));
+          } else {
+            FixItHints.push_back(
+                FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                    InnerResult.Compare->getSourceRange())));
+          }
+        }
+      }
+      continue;
+    }
+
     const QualType ArgType = Arg->IgnoreParenImpCasts()
                                  ->getType()
                                  .getUnqualifiedType()
                                  .getCanonicalType();
 
-    if (const auto *InnerCall = dyn_cast<CallExpr>(Arg)) {
-      if (InnerCall->getDirectCallee()) {
-        const std::string InnerCallNameStr =
-            InnerCall->getDirectCallee()->getQualifiedNameAsString();
+    if (ArgType != ResultType) {
+      const std::string ArgText =
+          Lexer::getSourceText(
+              CharSourceRange::getTokenRange(Arg->getSourceRange()),
+              *Match.SourceManager, Match.Context->getLangOpts())
+              .str();
 
-        if (InnerCallNameStr !=
-                TopCall->getDirectCallee()->getQualifiedNameAsString() &&
-            (InnerCallNameStr == "std::min" ||
-             InnerCallNameStr == "std::max")) {
-          FindArgsResult innerResult = findArgs(Match, InnerCall);
-          if (innerResult.Args.size() > 2) {
-            ReplacementText +=
-                generateReplacement(Match, InnerCall, innerResult) + ", ";
-
-            continue;
-          }
-        }
-      }
+      FixItHints.push_back(FixItHint::CreateReplacement(
+          Arg->getSourceRange(),
+          "static_cast<" + ResultType.getAsString() + ">(" + ArgText + ")"));
     }
-
-    const bool CastNeeded = ArgType != ResultType;
-
-    if (CastNeeded)
-      ReplacementText += "static_cast<" + ResultType.getAsString() + ">(";
-
-    ReplacementText += Lexer::getSourceText(
-        CharSourceRange::getTokenRange(Arg->getSourceRange()),
-        *Match.SourceManager, Match.Context->getLangOpts());
-
-    if (CastNeeded)
-      ReplacementText += ")";
-    ReplacementText += ", ";
   }
-  ReplacementText = ReplacementText.substr(0, ReplacementText.size() - 2) + "}";
-  if (Result.Compare) {
-    ReplacementText += ", ";
-    ReplacementText += Lexer::getSourceText(
-        CharSourceRange::getTokenRange(Result.Compare->getSourceRange()),
-        *Match.SourceManager, Match.Context->getLangOpts());
-  }
-  ReplacementText += ")";
 
-  return ReplacementText;
+  if (!IsInitializerList) {
+    if (Result.Compare)
+      FixItHints.push_back(FixItHint::CreateInsertion(
+          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0,
+                                     *Match.SourceManager,
+                                     Match.Context->getLangOpts()),
+          "}"));
+    else
+      FixItHints.push_back(
+          FixItHint::CreateInsertion(TopCall->getEndLoc(), "}"));
+  }
+
+  return FixItHints;
+}
+
+MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Inserter(Options.getLocalOrGlobal("IncludeStyle",
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()) {}
+
+void MinMaxUseInitializerListCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
+}
+
+void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
+  auto CreateMatcher = [](const StringRef &FunctionName) {
+    auto FuncDecl = functionDecl(hasName(FunctionName));
+    auto Expression = callExpr(callee(FuncDecl));
+
+    return callExpr(callee(FuncDecl),
+                    anyOf(hasArgument(0, Expression),
+                          hasArgument(1, Expression),
+                          hasArgument(0, cxxStdInitializerListExpr())),
+                    unless(hasParent(Expression)))
+        .bind("topCall");
+  };
+
+  Finder->addMatcher(CreateMatcher("::std::max"), this);
+  Finder->addMatcher(CreateMatcher("::std::min"), this);
+}
+
+void MinMaxUseInitializerListCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter.registerPreprocessor(PP);
+}
+
+void MinMaxUseInitializerListCheck::check(
+    const MatchFinder::MatchResult &Match) {
+
+  const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
+
+  const FindArgsResult Result = findArgs(TopCall);
+  const std::vector<FixItHint> Replacement =
+      generateReplacement(Match, TopCall, Result);
+
+  if (Replacement.size() <= 2) {
+    return;
+  }
+
+  const DiagnosticBuilder Diagnostic =
+      diag(TopCall->getBeginLoc(),
+           "do not use nested 'std::%0' calls, use an initializer list instead")
+      << TopCall->getDirectCallee()->getName()
+      << Inserter.createIncludeInsertion(
+             Match.SourceManager->getFileID(TopCall->getBeginLoc()),
+             "<algorithm>");
+
+  for (const auto &FixIt : Replacement) {
+    Diagnostic << FixIt;
+  }
 }
 
 } // namespace clang::tidy::modernize
