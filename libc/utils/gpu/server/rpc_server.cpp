@@ -248,126 +248,74 @@ struct Device {
   std::unordered_map<uint16_t, void *> callback_data;
 };
 
-// A struct containing all the runtime state required to run the RPC server.
-struct State {
-  State(uint32_t num_devices)
-      : num_devices(num_devices), devices(num_devices), reference_count(0u) {}
-  uint32_t num_devices;
-  std::vector<std::unique_ptr<Device>> devices;
-  std::atomic_uint32_t reference_count;
-};
-
-static std::mutex startup_mutex;
-
-static State *state;
-
-rpc_status_t rpc_init(uint32_t num_devices) {
-  std::scoped_lock<decltype(startup_mutex)> lock(startup_mutex);
-  if (!state)
-    state = new State(num_devices);
-
-  if (state->reference_count == std::numeric_limits<uint32_t>::max())
-    return RPC_STATUS_ERROR;
-
-  state->reference_count++;
-
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_shutdown(void) {
-  if (state && state->reference_count-- == 1)
-    delete state;
-
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
+rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
                              uint32_t lane_size, rpc_alloc_ty alloc,
                              void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
+  if (!rpc_device)
+    return RPC_STATUS_ERROR;
   if (lane_size != 1 && lane_size != 32 && lane_size != 64)
     return RPC_STATUS_INVALID_LANE_SIZE;
 
-  if (!state->devices[device_id]) {
-    uint64_t size = rpc::Server::allocation_size(lane_size, num_ports);
-    void *buffer = alloc(size, data);
+  uint64_t size = rpc::Server::allocation_size(lane_size, num_ports);
+  void *buffer = alloc(size, data);
 
-    if (!buffer)
-      return RPC_STATUS_ERROR;
+  if (!buffer)
+    return RPC_STATUS_ERROR;
 
-    state->devices[device_id] =
-        std::make_unique<Device>(lane_size, num_ports, buffer);
-    if (!state->devices[device_id])
-      return RPC_STATUS_ERROR;
-  }
+  Device *device = new Device(lane_size, num_ports, buffer);
+  if (!device)
+    return RPC_STATUS_ERROR;
 
+  rpc_device->handle = reinterpret_cast<uintptr_t>(device);
   return RPC_STATUS_SUCCESS;
 }
 
-rpc_status_t rpc_server_shutdown(uint32_t device_id, rpc_free_ty dealloc,
+rpc_status_t rpc_server_shutdown(rpc_device_t rpc_device, rpc_free_ty dealloc,
                                  void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
-  dealloc(state->devices[device_id]->buffer, data);
-  if (state->devices[device_id])
-    state->devices[device_id].release();
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+  dealloc(device->buffer, data);
+  delete device;
 
   return RPC_STATUS_SUCCESS;
 }
 
-rpc_status_t rpc_handle_server(uint32_t device_id) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+rpc_status_t rpc_handle_server(rpc_device_t rpc_device) {
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
   uint32_t index = 0;
   for (;;) {
-    Device &device = *state->devices[device_id];
-    rpc_status_t status = device.handle_server(index);
+    rpc_status_t status = device->handle_server(index);
     if (status != RPC_STATUS_CONTINUE)
       return status;
   }
 }
 
-rpc_status_t rpc_register_callback(uint32_t device_id, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
-  state->devices[device_id]->callbacks[opcode] = callback;
-  state->devices[device_id]->callback_data[opcode] = data;
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+
+  device->callbacks[opcode] = callback;
+  device->callback_data[opcode] = data;
   return RPC_STATUS_SUCCESS;
 }
 
-const void *rpc_get_client_buffer(uint32_t device_id) {
-  if (!state || device_id >= state->num_devices || !state->devices[device_id])
+const void *rpc_get_client_buffer(rpc_device_t rpc_device) {
+  if (!rpc_device.handle)
     return nullptr;
-  return &state->devices[device_id]->client;
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+  return &device->client;
 }
 
 uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
-
-using ServerPort = std::variant<rpc::Server::Port *>;
-
-ServerPort get_port(rpc_port_t ref) {
-  return reinterpret_cast<rpc::Server::Port *>(ref.handle);
-}
 
 void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
   auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);
