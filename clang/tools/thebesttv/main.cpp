@@ -10,7 +10,6 @@
 
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Program.h"
 
 class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
   private:
@@ -459,39 +458,6 @@ void generateICFG(const std::vector<std::string> &allFiles) {
     Tool.setDiagnosticConsumer(&DC);
 
     Tool.run(newFrontendActionFactory<GenICFGAction>().get());
-}
-
-/**
- * FIXME: all files 应该只有
- * .c/.cpp，不包括头文件，所以统计会不准。以及，buildPath
- * 现在是一个 JSON 文件了，不是目录。
- */
-void printCloc(const std::vector<std::string> &allFiles) {
-    // save all files to "compile_files.txt" under build path
-    fs::path resultFiles =
-        fs::path(Global.projectDirectory) / "compile_files.txt";
-    std::ofstream ofs(resultFiles);
-    if (!ofs.is_open()) {
-        llvm::errs() << "Error: cannot open file " << resultFiles << "\n";
-        exit(1);
-    }
-    for (auto &file : allFiles)
-        ofs << file << "\n";
-    ofs.close();
-
-    // run cloc on all files
-    if (ErrorOr<std::string> P = sys::findProgramByName("cloc")) {
-        std::string programPath = *P;
-        std::vector<StringRef> args;
-        args.push_back("cloc");
-        args.push_back("--list-file");
-        args.push_back(resultFiles.c_str()); // don't use .string() here
-        std::string errorMsg;
-        if (sys::ExecuteAndWait(programPath, args, std::nullopt, {}, 0, 0,
-                                &errorMsg)) {
-            llvm::errs() << "Error: " << errorMsg << "\n";
-        }
-    }
 }
 
 int main(int argc, const char **argv) {
