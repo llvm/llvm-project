@@ -145,8 +145,7 @@ struct EncodingIDAndOpcode {
 };
 
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
-using NamespacesHwModesMap =
-    std::map<std::string, std::map<StringRef, unsigned>>;
+using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
 
 raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
   if (Value.EncodingDef != Value.Inst->TheDef)
@@ -2446,10 +2445,10 @@ static void collectHwModesReferencedForEncodings(
         std::string DecoderNamespace =
             std::string(P.second->getValueAsString("DecoderNamespace"));
         if (P.first == DefaultMode) {
-          NamespacesWithHwModes[DecoderNamespace][""] = 1;
+          NamespacesWithHwModes[DecoderNamespace].insert("");
         } else {
-          NamespacesWithHwModes[DecoderNamespace][HWM.getMode(P.first).Name] =
-              1;
+          NamespacesWithHwModes[DecoderNamespace].insert(
+              HWM.getMode(P.first).Name);
         }
         BV.set(P.first);
       }
@@ -2478,16 +2477,14 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
   case SUPPRESSION_LEVEL1: {
     std::string DecoderNamespace =
         std::string(InstDef->getValueAsString("DecoderNamespace"));
-    for (StringRef HwModeName : HwModeNames) {
-      if (NamespacesWithHwModes.count(DecoderNamespace) > 0) {
-        if (NamespacesWithHwModes[DecoderNamespace].count(HwModeName) > 0)
-          GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
-      } else {
-        // Only emit the encoding once, as it's DecoderNamespace doesn't
-        // contain any HwModes.
-        GlobalEncodings.emplace_back(InstDef, Instr, "");
-        break;
-      }
+    auto It = NamespacesWithHwModes.find(DecoderNamespace);
+    if (It != NamespacesWithHwModes.end()) {
+      for (StringRef HwModeName : It->second)
+        GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
+    } else {
+      // Only emit the encoding once, as it's DecoderNamespace doesn't
+      // contain any HwModes.
+      GlobalEncodings.emplace_back(InstDef, Instr, "");
     }
     break;
   }
