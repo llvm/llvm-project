@@ -307,6 +307,9 @@ Improvements to Clang's diagnostics
 - ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
   flexible array members in a union or alone in a struct. Fixes GH#84565.
 
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
