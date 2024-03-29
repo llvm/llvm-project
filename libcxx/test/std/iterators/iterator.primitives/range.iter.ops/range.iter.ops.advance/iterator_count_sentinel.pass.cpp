@@ -234,7 +234,7 @@ constexpr bool test() {
       // not apply for them.
       if (n > 0) {
         int* expected = n > size ? range : range + size - n;
-        check_backward<bidirectional_iterator<int*>>(range, range+size, -n, expected);
+        check_backward<bidirectional_iterator<int*>>(range, range + size, -n, expected);
         check_backward<random_access_iterator<int*>>(range, range+size, -n, expected);
         check_backward<contiguous_iterator<int*>>(   range, range+size, -n, expected);
         check_backward<int*>(                        range, range+size, -n, expected);
