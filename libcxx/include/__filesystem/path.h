@@ -812,7 +812,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI path extension() const { return string_type(__extension()); }
 
   // query
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __pn_.empty(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __pn_.empty(); }
 
   _LIBCPP_HIDE_FROM_ABI bool has_root_name() const { return !__root_name().empty(); }
   _LIBCPP_HIDE_FROM_ABI bool has_root_directory() const { return !__root_directory().empty(); }

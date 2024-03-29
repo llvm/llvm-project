@@ -1536,7 +1536,10 @@ module std_private_memory_shared_ptr                      [system] {
 }
 module std_private_memory_swap_allocator                  [system] { header "__memory/swap_allocator.h" }
 module std_private_memory_temp_value                      [system] { header "__memory/temp_value.h" }
-module std_private_memory_temporary_buffer                [system] { header "__memory/temporary_buffer.h" }
+module std_private_memory_temporary_buffer                [system] {
+  header "__memory/temporary_buffer.h"
+  export std_private_utility_pair
+}
 module std_private_memory_uninitialized_algorithms        [system] {
   header "__memory/uninitialized_algorithms.h"
   export std_private_algorithm_copy

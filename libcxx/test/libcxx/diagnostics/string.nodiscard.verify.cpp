@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <new>
+// UNSUPPORTED: c++03
 
-// template <class T> constexpr T* launder(T* p) noexcept;
+// check that <string> functions are marked [[nodiscard]]
 
-// UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: c++17 && !stdlib=libc++
+#include <string>
 
-#include <new>
-
-void f() {
-    int *p = nullptr;
-    std::launder(p); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+void test() {
+  std::string string;
+  string.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

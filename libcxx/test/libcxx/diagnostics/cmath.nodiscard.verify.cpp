@@ -14,6 +14,8 @@
 // Check that functions from `<cmath>` that Clang marks with the `[[gnu::const]]` attribute are declared
 // `[[nodiscard]]`.
 
+// clang-format off
+
 #include <cmath>
 #include "test_macros.h"
 
