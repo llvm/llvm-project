@@ -24,14 +24,19 @@ second:                                           ; preds = %first
   %ts = trunc nsw i32 %a to i16
   %tus = trunc nuw nsw i32 %a to i16
   %t = trunc i32 %a to i16
+  %tuv = trunc nuw <2 x i32> %aa to <2 x i16>
+  %tsv = trunc nsw <2 x i32> %aa to <2 x i16>
+  %tusv = trunc nuw nsw <2 x i32> %aa to <2 x i16>
+  %tv = trunc <2 x i32> %aa to <2 x i16>
   unreachable
 
-first:                                            ; preds = %entry
-  %a = bitcast i32 0 to i32                       ; <i32> [#uses=8]
-  %uu = add nuw i32 %a, 0                         ; <i32> [#uses=0]
-  %ss = add nsw i32 %a, 0                         ; <i32> [#uses=0]
-  %uuss = add nuw nsw i32 %a, 0                   ; <i32> [#uses=0]
-  %zz = add i32 %a, 0                             ; <i32> [#uses=0]
+first:                                                    ; preds = %entry
+  %aa = bitcast <2 x i32> <i32 0, i32 0> to <2 x i32>
+  %a = bitcast i32 0 to i32                               ; <i32> [#uses=8]
+  %uu = add nuw i32 %a, 0                                 ; <i32> [#uses=0]
+  %ss = add nsw i32 %a, 0                                 ; <i32> [#uses=0]
+  %uuss = add nuw nsw i32 %a, 0                           ; <i32> [#uses=0]
+  %zz = add i32 %a, 0                                     ; <i32> [#uses=0]
   %kk = zext nneg i32 %a to i64
   %rr = zext i32 %ss to i64
   %mm = or disjoint i32 %a, 0
@@ -40,5 +45,9 @@ first:                                            ; preds = %entry
   %tss = trunc nsw i32 %a to i16
   %tuss = trunc nuw nsw i32 %a to i16
   %tt = trunc i32 %a to i16
+  %ttuv = trunc nuw <2 x i32> %aa to <2 x i16>
+  %ttsv = trunc nsw <2 x i32> %aa to <2 x i16>
+  %ttusv = trunc nuw nsw <2 x i32> %aa to <2 x i16>
+  %ttv = trunc <2 x i32> %aa to <2 x i16>
   br label %second
 }

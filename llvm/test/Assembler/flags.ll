@@ -285,3 +285,27 @@ define i32 @test_trunc_both_reversed(i64 %a) {
   %res = trunc nsw nuw i64 %a to i32
   ret i32 %res
 }
+
+define <2 x i32> @test_trunc_signed_vector(<2 x i64> %a) {
+; CHECK: %res = trunc nsw <2 x i64> %a to <2 x i32>
+  %res = trunc nsw <2 x i64> %a to <2 x i32>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_trunc_unsigned_vector(<2 x i64> %a) {
+; CHECK: %res = trunc nuw <2 x i64> %a to <2 x i32>
+  %res = trunc nuw <2 x i64> %a to <2 x i32>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_trunc_both_vector(<2 x i64> %a) {
+; CHECK: %res = trunc nuw nsw <2 x i64> %a to <2 x i32>
+  %res = trunc nuw nsw <2 x i64> %a to <2 x i32>
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_trunc_both_reversed_vector(<2 x i64> %a) {
+; CHECK: %res = trunc nuw nsw <2 x i64> %a to <2 x i32>
+  %res = trunc nsw nuw <2 x i64> %a to <2 x i32>
+  ret <2 x i32> %res
+}
