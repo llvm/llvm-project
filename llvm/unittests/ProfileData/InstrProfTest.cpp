@@ -1311,9 +1311,9 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
       Record.getValueForSite(IPVK_IndirectCallTarget, 3));
   llvm::sort(&VD_3[0], &VD_3[2], Cmp);
   EXPECT_STREQ((const char *)VD_3[0].Value, "callee3");
-  EXPECT_EQ(2000U, VD_3[0].Count);
+  EXPECT_EQ(VD_3[0].Count, 2000U);
   EXPECT_STREQ((const char *)VD_3[1].Value, "callee2");
-  EXPECT_EQ(1800U, VD_3[1].Count);
+  EXPECT_EQ(VD_3[1].Count, 1800U);
 
   ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
   ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
@@ -1321,8 +1321,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
   ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
 
-  std::unique_ptr<InstrProfValueData[]> VD0(
-      Record.getValueForSite(IPVK_VTableTarget, 0));
+  auto VD0(Record.getValueForSite(IPVK_VTableTarget, 0));
   llvm::sort(&VD0[0], &VD0[5], Cmp);
   EXPECT_EQ(VD0[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD0[0].Count, 1000U);
@@ -1335,8 +1334,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD0[4].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD0[4].Count, 100U);
 
-  std::unique_ptr<InstrProfValueData[]> VD1(
-      Record.getValueForSite(IPVK_VTableTarget, 1));
+  auto VD1(Record.getValueForSite(IPVK_VTableTarget, 1));
   llvm::sort(&VD1[0], &VD1[4], Cmp);
   EXPECT_EQ(VD1[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD1[0].Count, 2500U);
@@ -1347,8 +1345,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD1[3].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD1[3].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD2(
-      Record.getValueForSite(IPVK_VTableTarget, 2));
+  auto VD2(Record.getValueForSite(IPVK_VTableTarget, 2));
   llvm::sort(&VD2[0], &VD2[3], Cmp);
   EXPECT_EQ(VD2[0].Value, getCalleeAddress(vtable4));
   EXPECT_EQ(VD2[0].Count, 5500U);
@@ -1357,8 +1354,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD2[2].Value, getCalleeAddress(vtable6));
   EXPECT_EQ(VD2[2].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD3(
-      Record.getValueForSite(IPVK_VTableTarget, 3));
+  auto VD3(Record.getValueForSite(IPVK_VTableTarget, 3));
   llvm::sort(&VD3[0], &VD3[2], Cmp);
   EXPECT_EQ(VD3[0].Value, getCalleeAddress(vtable3));
   EXPECT_EQ(VD3[0].Count, 2000U);
@@ -1420,8 +1416,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
     return VD1.Count > VD2.Count;
   };
-  std::unique_ptr<InstrProfValueData[]> VD_0(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 0));
+  auto VD_0(Record.getValueForSite(IPVK_IndirectCallTarget, 0));
   llvm::sort(&VD_0[0], &VD_0[5], Cmp);
   ASSERT_EQ(VD_0[0].Value, 0x2000ULL);
   ASSERT_EQ(VD_0[0].Count, 1000U);
@@ -1438,8 +1433,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The first vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 0));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 0));
     ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
     llvm::sort(&VD[0], &VD[5], Cmp);
     EXPECT_EQ(VD[0].Count, 1000U);
@@ -1458,8 +1452,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The second vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 1));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 1));
     ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
     llvm::sort(&VD[0], &VD[4], Cmp);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable2"));
@@ -1476,8 +1469,7 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The third vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 2));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 2));
     ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
     llvm::sort(&VD[0], &VD[3], Cmp);
     EXPECT_EQ(VD[0].Count, 5500U);
@@ -1491,9 +1483,8 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The fourth vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 3));
-    ASSERT_EQ(2U, Record.getNumValueDataForSite(IPVK_VTableTarget, 3));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 3));
+    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
     llvm::sort(&VD[0], &VD[2], Cmp);
     EXPECT_EQ(VD[0].Count, 2000U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable3"));
