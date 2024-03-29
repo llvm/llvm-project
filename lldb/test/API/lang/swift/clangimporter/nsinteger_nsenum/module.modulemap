@@ -1,0 +1,4 @@
+module Enum {
+  header "header.h"
+  export *
+}
