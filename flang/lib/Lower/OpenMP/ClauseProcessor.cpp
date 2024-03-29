@@ -31,57 +31,33 @@ static void checkMapType(mlir::Location location, mlir::Type type) {
 }
 
 static mlir::omp::ScheduleModifier
-translateScheduleModifier(const omp::clause::Schedule::ModType &m) {
+translateScheduleModifier(const omp::clause::Schedule::OrderingModifier &m) {
   switch (m) {
-  case omp::clause::Schedule::ModType::Monotonic:
+  case omp::clause::Schedule::OrderingModifier::Monotonic:
     return mlir::omp::ScheduleModifier::monotonic;
-  case omp::clause::Schedule::ModType::Nonmonotonic:
+  case omp::clause::Schedule::OrderingModifier::Nonmonotonic:
     return mlir::omp::ScheduleModifier::nonmonotonic;
-  case omp::clause::Schedule::ModType::Simd:
-    return mlir::omp::ScheduleModifier::simd;
   }
   return mlir::omp::ScheduleModifier::none;
 }
 
 static mlir::omp::ScheduleModifier
 getScheduleModifier(const omp::clause::Schedule &clause) {
-  using ScheduleModifier = omp::clause::Schedule::ScheduleModifier;
-  const auto &modifier = std::get<std::optional<ScheduleModifier>>(clause.t);
-  // The input may have the modifier any order, so we look for one that isn't
-  // SIMD. If modifier is not set at all, fall down to the bottom and return
-  // "none".
-  if (modifier) {
-    using ModType = omp::clause::Schedule::ModType;
-    const auto &modType1 = std::get<ModType>(modifier->t);
-    if (modType1 == ModType::Simd) {
-      const auto &modType2 = std::get<std::optional<ModType>>(modifier->t);
-      if (modType2 && *modType2 != ModType::Simd)
-        return translateScheduleModifier(*modType2);
-      return mlir::omp::ScheduleModifier::none;
-    }
-
-    return translateScheduleModifier(modType1);
-  }
+  using Schedule = omp::clause::Schedule;
+  const auto &modifier =
+      std::get<std::optional<Schedule::OrderingModifier>>(clause.t);
+  if (modifier)
+    return translateScheduleModifier(*modifier);
   return mlir::omp::ScheduleModifier::none;
 }
 
 static mlir::omp::ScheduleModifier
 getSimdModifier(const omp::clause::Schedule &clause) {
-  using ScheduleModifier = omp::clause::Schedule::ScheduleModifier;
-  const auto &modifier = std::get<std::optional<ScheduleModifier>>(clause.t);
-  // Either of the two possible modifiers in the input can be the SIMD modifier,
-  // so look in either one, and return simd if we find one. Not found = return
-  // "none".
-  if (modifier) {
-    using ModType = omp::clause::Schedule::ModType;
-    const auto &modType1 = std::get<ModType>(modifier->t);
-    if (modType1 == ModType::Simd)
-      return mlir::omp::ScheduleModifier::simd;
-
-    const auto &modType2 = std::get<std::optional<ModType>>(modifier->t);
-    if (modType2 && *modType2 == ModType::Simd)
-      return mlir::omp::ScheduleModifier::simd;
-  }
+  using Schedule = omp::clause::Schedule;
+  const auto &modifier =
+      std::get<std::optional<Schedule::ChunkModifier>>(clause.t);
+  if (modifier && *modifier == Schedule::ChunkModifier::Simd)
+    return mlir::omp::ScheduleModifier::simd;
   return mlir::omp::ScheduleModifier::none;
 }
 
@@ -94,36 +70,31 @@ genAllocateClause(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
-  const omp::ObjectList &objectList = std::get<omp::ObjectList>(clause.t);
-  const auto &modifier =
-      std::get<std::optional<omp::clause::Allocate::Modifier>>(clause.t);
+  auto &objects = std::get<omp::ObjectList>(clause.t);
 
-  // If the allocate modifier is present, check if we only use the allocator
-  // submodifier.  ALIGN in this context is unimplemented
-  const bool onlyAllocator =
-      modifier &&
-      std::holds_alternative<omp::clause::Allocate::Modifier::Allocator>(
-          modifier->u);
-
-  if (modifier && !onlyAllocator) {
+  using Allocate = omp::clause::Allocate;
+  // ALIGN in this context is unimplemented
+  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
-  }
 
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  if (onlyAllocator) {
-    const auto &value =
-        std::get<omp::clause::Allocate::Modifier::Allocator>(modifier->u);
-    mlir::Value operand =
-        fir::getBase(converter.genExprValue(value.v, stmtCtx));
-    allocatorOperands.append(objectList.size(), operand);
+  using SimpleModifier = Allocate::AllocatorSimpleModifier;
+  using ComplexModifier = Allocate::AllocatorComplexModifier;
+  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
+    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
+    allocatorOperands.append(objects.size(), operand);
+  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+    mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
+    allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
         currentLocation, firOpBuilder.getI32Type(), 1);
-    allocatorOperands.append(objectList.size(), operand);
+    allocatorOperands.append(objects.size(), operand);
   }
-  genObjectList(objectList, converter, allocateOperands);
+
+  genObjectList(objects, converter, allocateOperands);
 }
 
 static mlir::omp::ClauseProcBindKindAttr
@@ -131,16 +102,16 @@ genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
                     const omp::clause::ProcBind &clause) {
   mlir::omp::ClauseProcBindKind procBindKind;
   switch (clause.v) {
-  case omp::clause::ProcBind::Type::Master:
+  case omp::clause::ProcBind::AffinityPolicy::Master:
     procBindKind = mlir::omp::ClauseProcBindKind::Master;
     break;
-  case omp::clause::ProcBind::Type::Close:
+  case omp::clause::ProcBind::AffinityPolicy::Close:
     procBindKind = mlir::omp::ClauseProcBindKind::Close;
     break;
-  case omp::clause::ProcBind::Type::Spread:
+  case omp::clause::ProcBind::AffinityPolicy::Spread:
     procBindKind = mlir::omp::ClauseProcBindKind::Spread;
     break;
-  case omp::clause::ProcBind::Type::Primary:
+  case omp::clause::ProcBind::AffinityPolicy::Primary:
     procBindKind = mlir::omp::ClauseProcBindKind::Primary;
     break;
   }
@@ -150,21 +121,22 @@ genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::omp::ClauseTaskDependAttr
 genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
-                  const omp::clause::Depend &clause) {
+                  const omp::clause::Depend::TaskDependenceType kind) {
   mlir::omp::ClauseTaskDepend pbKind;
-  const auto &inOut = std::get<omp::clause::Depend::InOut>(clause.u);
-  switch (std::get<omp::clause::Depend::Type>(inOut.t)) {
-  case omp::clause::Depend::Type::In:
+  switch (kind) {
+  case omp::clause::Depend::TaskDependenceType::In:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependin;
     break;
-  case omp::clause::Depend::Type::Out:
+  case omp::clause::Depend::TaskDependenceType::Out:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependout;
     break;
-  case omp::clause::Depend::Type::Inout:
+  case omp::clause::Depend::TaskDependenceType::Inout:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
-  default:
-    llvm_unreachable("unknown parser task dependence type");
+  case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
+  case omp::clause::Depend::TaskDependenceType::Inoutset:
+  case omp::clause::Depend::TaskDependenceType::Depobj:
+    llvm_unreachable("unhandled parser task dependence type");
     break;
   }
   return mlir::omp::ClauseTaskDependAttr::get(firOpBuilder.getContext(),
@@ -295,16 +267,16 @@ bool ClauseProcessor::processDefault() const {
   if (auto *clause = findUniqueClause<omp::clause::Default>()) {
     // Private, Firstprivate, Shared, None
     switch (clause->v) {
-    case omp::clause::Default::Type::Shared:
-    case omp::clause::Default::Type::None:
+    case omp::clause::Default::DataSharingAttribute::Shared:
+    case omp::clause::Default::DataSharingAttribute::None:
       // Default clause with shared or none do not require any handling since
       // Shared is the default behavior in the IR and None is only required
       // for semantic checks.
       break;
-    case omp::clause::Default::Type::Private:
+    case omp::clause::Default::DataSharingAttribute::Private:
       // TODO Support default(private)
       break;
-    case omp::clause::Default::Type::Firstprivate:
+    case omp::clause::Default::DataSharingAttribute::Firstprivate:
       // TODO Support default(firstprivate)
       break;
     }
@@ -337,13 +309,13 @@ bool ClauseProcessor::processDeviceType(
   if (auto *clause = findUniqueClause<omp::clause::DeviceType>()) {
     // Case: declare target ... device_type(any | host | nohost)
     switch (clause->v) {
-    case omp::clause::DeviceType::Type::Nohost:
+    case omp::clause::DeviceType::DeviceTypeDescription::Nohost:
       result = mlir::omp::DeclareTargetDeviceType::nohost;
       break;
-    case omp::clause::DeviceType::Type::Host:
+    case omp::clause::DeviceType::DeviceTypeDescription::Host:
       result = mlir::omp::DeclareTargetDeviceType::host;
       break;
-    case omp::clause::DeviceType::Type::Any:
+    case omp::clause::DeviceType::DeviceTypeDescription::Any:
       result = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
@@ -391,7 +363,9 @@ bool ClauseProcessor::processNumTeams(Fortran::lower::StatementContext &stmtCtx,
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    result = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBound = std::get<ExprTy>(clause->t);
+    result = fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;
   }
   return false;
@@ -456,24 +430,23 @@ bool ClauseProcessor::processSchedule(
   if (auto *clause = findUniqueClause<omp::clause::Schedule>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::MLIRContext *context = firOpBuilder.getContext();
-    const auto &scheduleType =
-        std::get<omp::clause::Schedule::ScheduleType>(clause->t);
+    const auto &scheduleType = std::get<omp::clause::Schedule::Kind>(clause->t);
 
     mlir::omp::ClauseScheduleKind scheduleKind;
     switch (scheduleType) {
-    case omp::clause::Schedule::ScheduleType::Static:
+    case omp::clause::Schedule::Kind::Static:
       scheduleKind = mlir::omp::ClauseScheduleKind::Static;
       break;
-    case omp::clause::Schedule::ScheduleType::Dynamic:
+    case omp::clause::Schedule::Kind::Dynamic:
       scheduleKind = mlir::omp::ClauseScheduleKind::Dynamic;
       break;
-    case omp::clause::Schedule::ScheduleType::Guided:
+    case omp::clause::Schedule::Kind::Guided:
       scheduleKind = mlir::omp::ClauseScheduleKind::Guided;
       break;
-    case omp::clause::Schedule::ScheduleType::Auto:
+    case omp::clause::Schedule::Kind::Auto:
       scheduleKind = mlir::omp::ClauseScheduleKind::Auto;
       break;
-    case omp::clause::Schedule::ScheduleType::Runtime:
+    case omp::clause::Schedule::Kind::Runtime:
       scheduleKind = mlir::omp::ClauseScheduleKind::Runtime;
       break;
     }
@@ -749,13 +722,15 @@ bool ClauseProcessor::processDepend(
   return findRepeatableClause<omp::clause::Depend>(
       [&](const omp::clause::Depend &clause,
           const Fortran::parser::CharBlock &) {
-        assert(std::holds_alternative<omp::clause::Depend::InOut>(clause.u) &&
-               "Only InOut is handled at the moment");
-        const auto &inOut = std::get<omp::clause::Depend::InOut>(clause.u);
-        const auto &objects = std::get<omp::ObjectList>(inOut.t);
+        using Depend = omp::clause::Depend;
+        assert(std::holds_alternative<Depend::WithLocators>(clause.u) &&
+               "Only the modern form is handled at the moment");
+        auto &modern = std::get<Depend::WithLocators>(clause.u);
+        auto kind = std::get<Depend::TaskDependenceType>(modern.t);
+        auto &objects = std::get<omp::ObjectList>(modern.t);
 
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-            genDependKindAttr(firOpBuilder, clause);
+            genDependKindAttr(firOpBuilder, kind);
         dependTypeOperands.append(objects.size(), dependTypeOperand);
 
         for (const omp::Object &object : objects) {
@@ -844,39 +819,42 @@ bool ClauseProcessor::processMap(
           const Fortran::parser::CharBlock &source) {
         using Map = omp::clause::Map;
         mlir::Location clauseLocation = converter.genLocation(source);
-        const auto &oMapType = std::get<std::optional<Map::MapType>>(clause.t);
+        const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
         // If the map type is specified, then process it else Tofrom is the
         // default.
-        if (oMapType) {
-          const Map::MapType::Type &mapType =
-              std::get<Map::MapType::Type>(oMapType->t);
-          switch (mapType) {
-          case Map::MapType::Type::To:
+        if (mapType) {
+          switch (*mapType) {
+          case Map::MapType::To:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
             break;
-          case Map::MapType::Type::From:
+          case Map::MapType::From:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Map::MapType::Type::Tofrom:
+          case Map::MapType::Tofrom:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Map::MapType::Type::Alloc:
-          case Map::MapType::Type::Release:
+          case Map::MapType::Alloc:
+          case Map::MapType::Release:
             // alloc and release is the default map_type for the Target Data
             // Ops, i.e. if no bits for map_type is supplied then alloc/release
             // is implicitly assumed based on the target directive. Default
             // value for Target Data and Enter Data is alloc and for Exit Data
             // it is release.
             break;
-          case Map::MapType::Type::Delete:
+          case Map::MapType::Delete:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
           }
 
-          if (std::get<std::optional<Map::MapType::Always>>(oMapType->t))
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+          auto &modTypeMods =
+              std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
+          if (modTypeMods) {
+            if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+              mapTypeBits |=
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+          }
         } else {
           mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
@@ -972,7 +950,7 @@ bool ClauseProcessor::processTo(
   return findRepeatableClause<omp::clause::To>(
       [&](const omp::clause::To &clause, const Fortran::parser::CharBlock &) {
         // Case: declare target to(func, var1, var2)...
-        gatherFuncAndVarSyms(clause.v,
+        gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
                              mlir::omp::DeclareTargetCaptureClause::to, result);
       });
 }
