@@ -2332,11 +2332,6 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
       type = cast<DecayedType>(ty)->getPointeeType();
       break;
 
-    case Type::ArrayParameter:
-      // Losing element qualification here is fine.
-      type = cast<ArrayParameterType>(ty)->getElementType();
-      break;
-
     case Type::Pointer:
       type = cast<PointerType>(ty)->getPointeeType();
       break;
@@ -2354,6 +2349,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
       type = cast<MemberPointerType>(ty)->getPointeeType();
       break;
 
+    case Type::ArrayParameter:
     case Type::ConstantArray:
     case Type::IncompleteArray:
       // Losing element qualification here is fine.
