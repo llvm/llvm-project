@@ -6367,7 +6367,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto C_SizeM8 = B.buildConstant(Ty, Size - 8);
 
     auto IsMulSupported = [this](const LLT Ty) {
-      auto Action = LI.getAction({TargetOpcode::G_MUL, {Ty, Ty}}).Action;
+      auto Action = LI.getAction({TargetOpcode::G_MUL, {Ty}}).Action;
       return Action == Legal || Action == WidenScalar || Action == Custom;
     };
     if (IsMulSupported(Ty)) {
