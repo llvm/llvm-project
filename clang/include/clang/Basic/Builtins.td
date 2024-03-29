@@ -678,7 +678,7 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Clzg : Builtin {
   let Spellings = ["__builtin_clzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -690,7 +690,7 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Ctzg : Builtin {
   let Spellings = ["__builtin_ctzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -4597,6 +4597,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

@@ -75,6 +75,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::support;
 using namespace ELF;
 
 #define LLVM_READOBJ_ENUM_CASE(ns, enum)                                       \
@@ -3420,13 +3421,13 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
     return;
   }
 
-  if (Error E = StackMapParser<ELFT::TargetEndianness>::validateHeader(
-          *ContentOrErr)) {
+  if (Error E =
+          StackMapParser<ELFT::Endianness>::validateHeader(*ContentOrErr)) {
     Warn(std::move(E));
     return;
   }
 
-  prettyPrintStackMap(W, StackMapParser<ELFT::TargetEndianness>(*ContentOrErr));
+  prettyPrintStackMap(W, StackMapParser<ELFT::Endianness>(*ContentOrErr));
 }
 
 template <class ELFT>
@@ -5214,7 +5215,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5241,7 +5242,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5267,7 +5268,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5504,16 +5505,14 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
   case ELF::NT_FREEBSD_ABI_TAG:
     if (Desc.size() != 4)
       return std::nullopt;
-    return FreeBSDNote{
-        "ABI tag",
-        utostr(support::endian::read32<ELFT::TargetEndianness>(Desc.data()))};
+    return FreeBSDNote{"ABI tag",
+                       utostr(endian::read32<ELFT::Endianness>(Desc.data()))};
   case ELF::NT_FREEBSD_ARCH_TAG:
     return FreeBSDNote{"Arch tag", toStringRef(Desc).str()};
   case ELF::NT_FREEBSD_FEATURE_CTL: {
     if (Desc.size() != 4)
       return std::nullopt;
-    unsigned Value =
-        support::endian::read32<ELFT::TargetEndianness>(Desc.data());
+    unsigned Value = endian::read32<ELFT::Endianness>(Desc.data());
     std::string FlagsStr;
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
@@ -6094,7 +6093,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
@@ -7867,7 +7866,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
           printCoreNoteLLVMStyle(*N, W);
