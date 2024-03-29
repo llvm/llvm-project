@@ -36,6 +36,10 @@ module Namespaces {
   header "Namespaces.h"
 }
 
+module Templates {
+  header "Templates.h"
+}
+
 module SwiftImportAs {
   header "SwiftImportAs.h"
 }
