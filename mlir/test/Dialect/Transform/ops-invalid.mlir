@@ -771,3 +771,14 @@ module attributes { transform.with_named_sequence } {
     transform.yield %arg0 : !transform.any_op
   }
 }
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_matmul(%entry: !transform.any_op) -> () {
+    %c3 = transform.param.constant 1 : i64 -> !transform.param<i64>
+    // expected-error @below {{op operand #0 must be TransformHandleTypeInterface instance}}
+    transform.print %c3 : !transform.param<i64>
+    transform.yield
+  }
+}

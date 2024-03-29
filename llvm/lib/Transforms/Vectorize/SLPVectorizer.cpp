@@ -2022,9 +2022,8 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, const TargetLibraryInfo &TLI,
-               const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R)
-        : TLI(TLI), DL(DL), SE(SE), R(R) {
+    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
+        : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R) {
       // Append all the operands of RootVL.
       appendOperandsOfVL(RootVL);
     }
@@ -2506,10 +2505,10 @@ private:
 
   /// Reorder commutative or alt operands to get better probability of
   /// generating vectorized code.
-  static void reorderInputsAccordingToOpcode(
-      ArrayRef<Value *> VL, SmallVectorImpl<Value *> &Left,
-      SmallVectorImpl<Value *> &Right, const TargetLibraryInfo &TLI,
-      const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R);
+  static void reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
+                                             SmallVectorImpl<Value *> &Left,
+                                             SmallVectorImpl<Value *> &Right,
+                                             const BoUpSLP &R);
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
@@ -6626,7 +6625,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         // so that each side is more likely to have the same opcode.
         assert(P0 == CmpInst::getSwappedPredicate(P0) &&
                "Commutative Predicate mismatch");
-        reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
       } else {
         // Collect operands - commute if it uses the swapped predicate.
         for (Value *V : VL) {
@@ -6673,7 +6672,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // have the same opcode.
       if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
-        reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         TE->setOperand(0, Left);
         TE->setOperand(1, Right);
         buildTree_rec(Left, Depth + 1, {TE, 0});
@@ -6810,8 +6809,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!CI || all_of(VL, [](Value *V) {
               return cast<CmpInst>(V)->isCommutative();
             })) {
-          reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE,
-                                         *this);
+          reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         } else {
           auto *MainCI = cast<CmpInst>(S.MainOp);
           auto *AltCI = cast<CmpInst>(S.AltOp);
@@ -9275,11 +9273,18 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere.
-  if (any_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+  bool IsAllowedSingleBVNode =
+      VectorizableTree.size() > 1 ||
+      (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       VectorizableTree.front()->getOpcode() != Instruction::PHI &&
+       VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
+       allSameBlock(VectorizableTree.front()->Scalars));
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->State == TreeEntry::NeedToGather &&
-               all_of(TE->Scalars, [](Value *V) {
+               all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, UndefValue>(V) ||
-                        (!V->hasNUsesOrMore(UsesLimit) &&
+                        (IsAllowedSingleBVNode &&
+                         !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), [](User *U) {
                            return isa<InsertElementInst>(U);
                          }));
@@ -10513,13 +10518,13 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
 
 // Perform operand reordering on the instructions in VL and return the reordered
 // operands in Left and Right.
-void BoUpSLP::reorderInputsAccordingToOpcode(
-    ArrayRef<Value *> VL, SmallVectorImpl<Value *> &Left,
-    SmallVectorImpl<Value *> &Right, const TargetLibraryInfo &TLI,
-    const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R) {
+void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
+                                             SmallVectorImpl<Value *> &Left,
+                                             SmallVectorImpl<Value *> &Right,
+                                             const BoUpSLP &R) {
   if (VL.empty())
     return;
-  VLOperands Ops(VL, TLI, DL, SE, R);
+  VLOperands Ops(VL, R);
   // Reorder the operands in place.
   Ops.reorder();
   Left = Ops.getVL(0);
@@ -11919,7 +11924,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert((getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
+          assert((It != MinBWs.end() ||
+                  getOperandEntry(E, I)->State == TreeEntry::NeedToGather ||
                   MinBWs.contains(getOperandEntry(E, I))) &&
                  "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, GetOperandSignedness(I));
@@ -12468,12 +12474,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
+      auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
-          CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(I);
           OpVecs.push_back(CEI->getArgOperand(I));
           if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
@@ -12485,6 +12491,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
+        }
+        ScalarArg = CEI->getArgOperand(I);
+        if (cast<VectorType>(OpVec->getType())->getElementType() !=
+            ScalarArg->getType()) {
+          auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
+                                              VecTy->getNumElements());
+          OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
@@ -12607,8 +12620,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars);
-      propagateIRFlags(V1, AltScalars);
+      propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
+      propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
@@ -13913,25 +13926,28 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // that feed it. The type of the loaded value may indicate a more suitable
   // width than V's type. We want to base the vector element size on the width
   // of memory operations where possible.
-  SmallVector<std::pair<Instruction *, BasicBlock *>, 16> Worklist;
+  SmallVector<std::tuple<Instruction *, BasicBlock *, unsigned>> Worklist;
   SmallPtrSet<Instruction *, 16> Visited;
   if (auto *I = dyn_cast<Instruction>(V)) {
-    Worklist.emplace_back(I, I->getParent());
+    Worklist.emplace_back(I, I->getParent(), 0);
     Visited.insert(I);
   }
 
   // Traverse the expression tree in bottom-up order looking for loads. If we
   // encounter an instruction we don't yet handle, we give up.
   auto Width = 0u;
+  Value *FirstNonBool = nullptr;
   while (!Worklist.empty()) {
-    Instruction *I;
-    BasicBlock *Parent;
-    std::tie(I, Parent) = Worklist.pop_back_val();
+    auto [I, Parent, Level] = Worklist.pop_back_val();
 
     // We should only be looking at scalar instructions here. If the current
     // instruction has a vector type, skip.
     auto *Ty = I->getType();
     if (isa<VectorType>(Ty))
+      continue;
+    if (Ty != Builder.getInt1Ty() && !FirstNonBool)
+      FirstNonBool = I;
+    if (Level > RecursionMaxDepth)
       continue;
 
     // If the current instruction is a load, update MaxWidth to reflect the
@@ -13945,11 +13961,16 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     // user or the use is a PHI node, we add it to the worklist.
     else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
                  BinaryOperator, UnaryOperator>(I)) {
-      for (Use &U : I->operands())
+      for (Use &U : I->operands()) {
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
-              (isa<PHINode>(I) || J->getParent() == Parent))
-            Worklist.emplace_back(J, J->getParent());
+              (isa<PHINode>(I) || J->getParent() == Parent)) {
+            Worklist.emplace_back(J, J->getParent(), Level + 1);
+            continue;
+          }
+        if (!FirstNonBool && U.get()->getType() != Builder.getInt1Ty())
+          FirstNonBool = U.get();
+      }
     } else {
       break;
     }
@@ -13959,8 +13980,8 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   // gave up for some reason, just return the width of V. Otherwise, return the
   // maximum width we found.
   if (!Width) {
-    if (auto *CI = dyn_cast<CmpInst>(V))
-      V = CI->getOperand(0);
+    if (V->getType() == Builder.getInt1Ty() && FirstNonBool)
+      V = FirstNonBool;
     Width = DL->getTypeSizeInBits(V->getType());
   }
 
@@ -13995,7 +14016,7 @@ bool BoUpSLP::collectValuesToDemote(
     if (MultiNodeScalars.contains(V))
       return false;
     uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
-    if (OrigBitWidth < BitWidth) {
+    if (OrigBitWidth > BitWidth) {
       APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
       if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
         return true;
@@ -14078,12 +14099,14 @@ bool BoUpSLP::collectValuesToDemote(
       MaxDepthLevel = 1;
     if (IsProfitableToDemoteRoot)
       IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
     if (!IsTruncRoot)
       MaxDepthLevel = 1;
     IsProfitableToDemote = true;
+    (void)IsPotentiallyTruncated(V, BitWidth);
     break;
 
   // We can demote certain binary operations if we can demote both of their
@@ -14165,6 +14188,28 @@ bool BoUpSLP::collectValuesToDemote(
       return false;
     break;
   }
+  case Instruction::UDiv:
+  case Instruction::URem: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
+    // UDiv and URem can be truncated if all the truncated bits are zero.
+    if (!AttemptCheckBitwidth(
+            [&](unsigned BitWidth, unsigned OrigBitWidth) {
+              assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+              APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+              return MaskedValueIsZero(I->getOperand(0), Mask,
+                                       SimplifyQuery(*DL)) &&
+                     MaskedValueIsZero(I->getOperand(1), Mask,
+                                       SimplifyQuery(*DL));
+            },
+            NeedToExit))
+      return false;
+    if (NeedToExit)
+      return true;
+    if (!ProcessOperands({I->getOperand(0), I->getOperand(1)}, NeedToExit))
+      return false;
+    break;
+  }
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
@@ -14237,6 +14282,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   // resize to the final type.
   bool IsTruncRoot = false;
   bool IsProfitableToDemoteRoot = !IsStoreOrInsertElt;
+  SmallVector<unsigned> RootDemotes;
   if (NodeIdx != 0 &&
       VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
       (VectorizableTree[NodeIdx]->getOpcode() == Instruction::ZExt ||
@@ -14244,6 +14290,7 @@ void BoUpSLP::computeMinimumValueSizes() {
        VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc)) {
     assert(IsStoreOrInsertElt && "Expected store/insertelement seeded graph.");
     IsTruncRoot = VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc;
+    RootDemotes.push_back(NodeIdx);
     IsProfitableToDemoteRoot = true;
     ++NodeIdx;
   }
@@ -14380,6 +14427,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   while (NodeIdx < VectorizableTree.size() &&
          VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
          VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
+    RootDemotes.push_back(NodeIdx);
     ++NodeIdx;
     IsTruncRoot = true;
   }
@@ -14395,14 +14443,35 @@ void BoUpSLP::computeMinimumValueSizes() {
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
         IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+    if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
+      if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
+        ReductionBitWidth = bit_ceil(MaxBitWidth);
+      else if (MaxBitWidth == 0)
+        ReductionBitWidth = 0;
+    }
+
+    for (unsigned Idx : RootDemotes) {
+      Value *V = VectorizableTree[Idx]->Scalars.front();
+      uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+      if (OrigBitWidth > MaxBitWidth) {
+      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
+      if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
+        ToDemote.push_back(V);
+      }
+    }
+    RootDemotes.clear();
     IsTopRoot = false;
     IsProfitableToDemoteRoot = true;
 
     if (TruncNodes.empty()) {
       NodeIdx = VectorizableTree.size();
     } else {
-      NodeIdx = *TruncNodes.begin() + 1;
-      TruncNodes.erase(TruncNodes.begin());
+      unsigned NewIdx = 0;
+      do {
+        NewIdx = *TruncNodes.begin() + 1;
+        TruncNodes.erase(TruncNodes.begin());
+      } while (NewIdx <= NodeIdx && !TruncNodes.empty());
+      NodeIdx = NewIdx;
       IsTruncRoot = true;
     }
 
@@ -15803,7 +15872,9 @@ public:
           RegMaxNumber * llvm::bit_floor(MaxVecRegSize / EltSize);
 
       unsigned ReduxWidth = std::min<unsigned>(
-          llvm::bit_floor(NumReducedVals), std::max(RedValsMaxNumber, MaxElts));
+          llvm::bit_floor(NumReducedVals),
+          std::clamp<unsigned>(MaxElts, RedValsMaxNumber,
+                               RegMaxNumber * RedValsMaxNumber));
       unsigned Start = 0;
       unsigned Pos = Start;
       // Restarts vectorization attempt with lower vector factor.
@@ -15945,7 +16016,7 @@ public:
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
-          return nullptr;
+          break;
         if (Cost >= -SLPCostThreshold) {
           V.getORE()->emit([&]() {
             return OptimizationRemarkMissed(

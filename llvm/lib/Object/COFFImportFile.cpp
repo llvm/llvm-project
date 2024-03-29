@@ -690,12 +690,12 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       if (ImportType == IMPORT_CODE && isArm64EC(M)) {
         if (std::optional<std::string> MangledName =
                 getArm64ECMangledFunctionName(Name)) {
-          if (ExportName.empty()) {
+          if (!E.Noname && ExportName.empty()) {
             NameType = IMPORT_NAME_EXPORTAS;
             ExportName.swap(Name);
           }
           Name = std::move(*MangledName);
-        } else if (ExportName.empty()) {
+        } else if (!E.Noname && ExportName.empty()) {
           NameType = IMPORT_NAME_EXPORTAS;
           ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
         }

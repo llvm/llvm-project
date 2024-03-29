@@ -5015,13 +5015,19 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s2, v10
 ; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
 ; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s4, v6
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s5, v7
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s6, v8
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s7, v9
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v3, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; PRE-GFX10-NEXT:    ; implicit-def: $vgpr10
 ; PRE-GFX10-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
-; PRE-GFX10-NEXT:    s_nop 4
+; PRE-GFX10-NEXT:    s_nop 0
 ; PRE-GFX10-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; PRE-GFX10-NEXT:    ; implicit-def: $vgpr5
 ; PRE-GFX10-NEXT:    s_xor_b64 exec, exec, s[2:3]
@@ -5043,13 +5049,19 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v10
 ; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s1, s1, v10
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s1, s1
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s5, v7
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s6, v8
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr10
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
-; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX10-32-NEXT:    ; implicit-def: $vgpr5
 ; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
@@ -5071,13 +5083,19 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v10
 ; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s5, v7
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s6, v8
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr10
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
-; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX10-64-NEXT:    ; implicit-def: $vgpr5
 ; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[2:3]
@@ -5101,13 +5119,19 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct(
 ; GFX1150-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v10
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
+; GFX1150-NEXT:    s_waitcnt vmcnt(0)
+; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1150-NEXT:    v_readfirstlane_b32 s4, v6
 ; GFX1150-NEXT:    v_readfirstlane_b32 s5, v7
 ; GFX1150-NEXT:    v_readfirstlane_b32 s6, v8
 ; GFX1150-NEXT:    v_readfirstlane_b32 s7, v9
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX1150-NEXT:    ; implicit-def: $vgpr10
 ; GFX1150-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
-; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[4:7], 0 idxen tfe
 ; GFX1150-NEXT:    ; implicit-def: $vgpr5
 ; GFX1150-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX1150-NEXT:    s_cbranch_execnz .LBB22_1
@@ -5134,41 +5158,68 @@ define amdgpu_ps {<4 x float>,float} @test_waterfall_multi_end_struct_uniform(
 ; PRE-GFX10-LABEL: test_waterfall_multi_end_struct_uniform:
 ; PRE-GFX10:       ; %bb.0:
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v5, v4
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s2, v2
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s3, v3
-; PRE-GFX10-NEXT:    s_nop 4
-; PRE-GFX10-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v2, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v3, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v4, v0
+; PRE-GFX10-NEXT:    s_nop 0
+; PRE-GFX10-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[0:3], 0 idxen tfe
 ; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PRE-GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-32-LABEL: test_waterfall_multi_end_struct_uniform:
 ; GFX10-32:       ; %bb.0:
-; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v5, v4
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX10-32-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX10-32-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-32-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-32-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[0:3], 0 idxen tfe
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-64-LABEL: test_waterfall_multi_end_struct_uniform:
 ; GFX10-64:       ; %bb.0:
-; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v5, v4
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX10-64-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX10-64-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10-64-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10-64-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[0:3], 0 idxen tfe
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    ; return to shader part epilog
 ;
 ; GFX1150-LABEL: test_waterfall_multi_end_struct_uniform:
 ; GFX1150:       ; %bb.0:
-; GFX1150-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1150-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1150-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX1150-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX1150-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v4, s[0:3], 0 idxen tfe
+; GFX1150-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1150-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1150-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1150-NEXT:    buffer_load_format_xyzw v[0:4], v5, s[0:3], 0 idxen tfe
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    ; return to shader part epilog
               i32 inreg %idx, <4 x i32> %s_idx, i32 %v_inp) #1 {
