@@ -47,10 +47,6 @@ set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
 
-# Codegen options.
-option(LLVM_LIBC_KEEP_FRAME_POINTER "Keep frame pointers in LLVM libc" ON)
-option(LLVM_LIBC_ENABLE_STACK_PROTECTOR "Enable stack protector for LLVM libc" ON)
-
 if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
