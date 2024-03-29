@@ -780,7 +780,6 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
     libc.src.errno.errno
     libc.src.math.exp2m1f
 )
