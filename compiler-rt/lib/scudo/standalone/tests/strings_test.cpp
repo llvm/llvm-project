@@ -143,7 +143,8 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
 
   // qemu does not honor the setrlimit, so verify before proceeding.
   scudo::MemMapT MemMap;
-  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test", MAP_ALLOWNOMEM)) {
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
+                 MAP_ALLOWNOMEM)) {
     MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
     setrlimit(RLIMIT_AS, &Limit);
     GTEST_SKIP() << "Limiting address space does not prevent mmap.";
