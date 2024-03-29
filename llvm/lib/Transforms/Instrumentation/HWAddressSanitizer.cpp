@@ -1104,6 +1104,8 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     // FIXME: the interceptor is not as fast as real memset. Consider lowering
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
+    // Mechanical proof of this address calculation can be found at:
+    // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
     if (ShadowSize)
       IRB.CreateMemSet(ShadowPtr, Tag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
@@ -1238,7 +1240,15 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // Prepare ring buffer data.
   Value *PC = memtag::getPC(TargetTriple, IRB);
   Value *FP = getCachedFP(IRB);
-  return memtag::getFrameRecordInfo(IRB, PC, FP);
+
+  // Mix FP and PC.
+  // Assumptions:
+  // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
+  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
+  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
+  //       0xFFFFPPPPPPPPPPPP
+  FP = IRB.CreateShl(FP, 44);
+  return IRB.CreateOr(PC, FP);
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {

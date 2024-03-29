@@ -283,16 +283,5 @@ Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
 }
 
-Value *getFrameRecordInfo(IRBuilder<> &IRB, Value *PC, Value *FP) {
-  // Mix FP and PC.
-  // Assumptions:
-  // PC is 0x0000PPPPPPPPPPPP  (48 bits are meaningful, others are zero)
-  // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
-  // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
-  //       0xFFFFPPPPPPPPPPPP
-  FP = IRB.CreateShl(FP, 44);
-  return IRB.CreateOr(PC, FP);
-}
-
 } // namespace memtag
 } // namespace llvm

@@ -85,7 +85,6 @@ Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
-Value *getFrameRecordInfo(IRBuilder<> &IRB, Value *PC, Value *FP);
 
 } // namespace memtag
 } // namespace llvm

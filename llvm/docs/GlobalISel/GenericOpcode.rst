@@ -939,6 +939,25 @@ The _CONVERGENT variant corresponds to an LLVM IR intrinsic marked `convergent`.
   Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
   to have zero, one, or multiple results.
 
+G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+trap instructions.
+
+.. code-block:: none
+
+  G_TRAP
+
+.. code-block:: none
+
+  G_DEBUGTRAP
+
+.. code-block:: none
+
+  G_UBSANTRAP 12
+
 Variadic Arguments
 ------------------
 
