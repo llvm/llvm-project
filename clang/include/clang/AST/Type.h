@@ -3383,6 +3383,7 @@ class ConstantArrayType : public ArrayType {
                                    QualType Can, const llvm::APInt &Sz,
                                    const Expr *SzExpr, ArraySizeModifier SzMod,
                                    unsigned Qual);
+
 protected:
   ConstantArrayType(TypeClass Tc, const ConstantArrayType *ATy, QualType Can)
       : ArrayType(Tc, ATy->getElementType(), Can, ATy->getSizeModifier(),
