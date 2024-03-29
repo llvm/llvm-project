@@ -26,6 +26,7 @@
 //   void print(ostream& os, format_string<Args...> fmt, Args&&... args);
 // template<class... Args>
 //   void println(ostream& os, format_string<Args...> fmt, Args&&... args);
+// void println(ostream& os);                                                // since C++26
 //
 // void vprint_unicode(ostream& os, string_view fmt, format_args args);
 // void vprint_nonunicode(ostream& os, string_view fmt, format_args args);
@@ -86,10 +87,11 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   }
   // *** println ***
   {
-    expected += '\n'; // Tested last since it changes the expected value.
+    expected += "\n\n"; // Tested last since it changes the expected value.
     stream.str("");
     ;
     std::println(stream, fmt, std::forward<Args>(args)...);
+    std::println(stream);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
                  TEST_WRITE_CONCATENATED(

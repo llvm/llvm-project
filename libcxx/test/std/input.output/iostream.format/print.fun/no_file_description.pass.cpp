@@ -25,8 +25,10 @@
 
 // template<class... Args>
 //   void print(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println();                                                          // Since C++26
 // template<class... Args>
 //   void println(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println(FILE* stream);                                              // Since C++26
 // void vprint_unicode(FILE* stream, string_view fmt, format_args args);
 // void vprint_nonunicode(FILE* stream, string_view fmt, format_args args);
 
@@ -55,12 +57,13 @@ static void test_println() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
+  std::println(file);
   std::println(file, "hello world{}", '!');
   long pos = std::ftell(file);
   std::fclose(file);
 
   assert(pos > 0);
-  assert(std::string_view(buffer.data(), pos) == "hello world!\n");
+  assert(std::string_view(buffer.data(), pos) == "\nhello world!\n");
 }
 
 static void test_vprint_unicode() {

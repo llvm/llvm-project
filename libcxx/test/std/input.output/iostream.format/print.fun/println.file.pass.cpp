@@ -112,6 +112,17 @@ static void test_new_line() {
     FILE* file = fopen(filename.c_str(), "w");
     assert(file);
 
+    std::println(file);
+#ifndef _WIN32
+    assert(std::ftell(file) == 1);
+#else
+    assert(std::ftell(file) == 2);
+#endif
+  }
+  {
+    FILE* file = fopen(filename.c_str(), "w");
+    assert(file);
+
     std::println(file, "");
 #ifndef _WIN32
     assert(std::ftell(file) == 1);
@@ -120,6 +131,13 @@ static void test_new_line() {
 #endif
   }
   // Binary no newline translation.
+  {
+    FILE* file = fopen(filename.c_str(), "wb");
+    assert(file);
+
+    std::println(file);
+    assert(std::ftell(file) == 1);
+  }
   {
     FILE* file = fopen(filename.c_str(), "wb");
     assert(file);
