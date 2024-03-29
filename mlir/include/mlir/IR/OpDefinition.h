@@ -22,6 +22,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 #include <optional>
@@ -2142,6 +2143,34 @@ struct DenseMapInfo<T,
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
+
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<
+        std::is_base_of_v<mlir::OpInterface<To, typename To::InterfaceTraits>,
+                          To> &&
+            std::is_base_of_v<mlir::OpInterface<std::remove_const_t<From>,
+                                                typename std::remove_const_t<
+                                                    From>::InterfaceTraits>,
+                              std::remove_const_t<From>>,
+        void>> : NullableValueCastFailed<To>,
+                 DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+
+  static bool isPossible(From &val) {
+    if constexpr (std::is_same_v<To, From>)
+      return true;
+    else
+      return mlir::OpInterface<To, typename To::InterfaceTraits>::
+          InterfaceBase::classof(
+              const_cast<std::remove_const_t<From> &>(val).getOperation());
+  }
+
+  static To doCast(From &val) {
+    return To(const_cast<std::remove_const_t<From> &>(val).getOperation());
+  }
+};
+
 } // namespace llvm
 
 #endif

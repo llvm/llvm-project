@@ -17,6 +17,9 @@
 #include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestOps.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Parser/Parser.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
@@ -83,4 +86,41 @@ TEST(InterfaceTest, TestImplicitConversion) {
   typeB = TestType::get(&context);
   typeA = typeB;
   EXPECT_EQ(typeA, typeB);
+}
+
+TEST(OperationInterfaceTest, CastOpToInterface) {
+  DialectRegistry registry;
+  MLIRContext ctx;
+
+  const char *ir = R"MLIR(
+      func.func @map(%arg : tensor<1xi64>) {
+        %0 = arith.constant dense<[10]> : tensor<1xi64>
+        %1 = arith.addi %arg, %0 : tensor<1xi64>
+        return
+      }
+    )MLIR";
+
+  registry.insert<func::FuncDialect, arith::ArithDialect>();
+  ctx.appendDialectRegistry(registry);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  Operation &op = cast<func::FuncOp>(module->front()).getBody().front().front();
+
+  OpAsmOpInterface interface = llvm::cast<OpAsmOpInterface>(op);
+
+  bool constantOp =
+      llvm::TypeSwitch<OpAsmOpInterface, bool>(interface)
+          .Case<VectorUnrollOpInterface, arith::ConstantOp>([&](auto op) {
+            return std::is_same_v<decltype(op), arith::ConstantOp>;
+          });
+
+  EXPECT_TRUE(constantOp);
+
+  EXPECT_FALSE(llvm::isa<VectorUnrollOpInterface>(interface));
+  EXPECT_FALSE(llvm::dyn_cast<VectorUnrollOpInterface>(interface));
+
+  EXPECT_TRUE(llvm::isa<InferTypeOpInterface>(interface));
+  EXPECT_TRUE(llvm::dyn_cast<InferTypeOpInterface>(interface));
+
+  EXPECT_TRUE(llvm::isa<OpAsmOpInterface>(interface));
+  EXPECT_TRUE(llvm::dyn_cast<OpAsmOpInterface>(interface));
 }
