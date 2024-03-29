@@ -1277,16 +1277,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // Note the name of the module we're building.
   Invocation->getLangOpts().CurrentModule = std::string(ModuleName);
 
-  // Make sure that the failed-module structure has been allocated in
-  // the importing instance, and propagate the pointer to the newly-created
-  // instance.
-  PreprocessorOptions &ImportingPPOpts
-    = ImportingInstance.getInvocation().getPreprocessorOpts();
-  if (!ImportingPPOpts.FailedModules)
-    ImportingPPOpts.FailedModules =
-        std::make_shared<PreprocessorOptions::FailedModulesSet>();
-  PPOpts.FailedModules = ImportingPPOpts.FailedModules;
-
   // If there is a module map file, build the module using the module map.
   // Set up the inputs/outputs so that we build the module from its umbrella
   // header.
@@ -1342,6 +1332,13 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
     ImportingInstance.getSourceManager().getModuleBuildStack());
   SourceMgr.pushModuleBuildStack(ModuleName,
     FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
+
+  // Make sure that the failed-module structure has been allocated in
+  // the importing instance, and propagate the pointer to the newly-created
+  // instance.
+  if (!ImportingInstance.hasFailedModulesSet())
+    ImportingInstance.createFailedModulesSet();
+  Instance.setFailedModulesSet(ImportingInstance.getFailedModulesSetPtr());
 
   // Pass along the GenModuleActionWrapper callback
   auto WrapGenModuleAction = ImportingInstance.getGenModuleActionWrapper();
@@ -2089,10 +2086,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     return nullptr;
   }
 
-  // Check whether we have already attempted to build this module (but
-  // failed).
-  if (getPreprocessorOpts().FailedModules &&
-      getPreprocessorOpts().FailedModules->hasAlreadyFailed(ModuleName)) {
+  // Check whether we have already attempted to build this module (but failed).
+  if (FailedModules && FailedModules->hasAlreadyFailed(ModuleName)) {
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
         << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
     return nullptr;
@@ -2103,8 +2098,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
                                ModuleFilename)) {
     assert(getDiagnostics().hasErrorOccurred() &&
            "undiagnosed error in compileModuleAndReadAST");
-    if (getPreprocessorOpts().FailedModules)
-      getPreprocessorOpts().FailedModules->addFailed(ModuleName);
+    if (FailedModules)
+      FailedModules->addFailed(ModuleName);
     return nullptr;
   }
 
