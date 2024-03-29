@@ -1075,6 +1075,8 @@ static const char *getImportFailureString(swift::serialization::Status status) {
            "was required to do so.";
   case swift::serialization::Status::SDKMismatch:
     return "The module file was built with a different SDK version.";
+  case swift::serialization::Status::ChannelIncompatible:
+    return "The distribution channel doesn't match.";
   }
 }
 
@@ -8598,6 +8600,9 @@ static void DescribeFileUnit(Stream &s, const swift::FileUnit *file_unit) {
         break;
       case swift::SourceFileKind::Interface:
         s.PutCString("Interface");
+        break;
+      case swift::SourceFileKind::DefaultArgument:
+        s.PutCString("Default Argument");
         break;
       }
     }
