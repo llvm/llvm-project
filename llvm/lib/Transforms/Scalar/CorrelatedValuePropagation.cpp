@@ -310,6 +310,15 @@ static bool processEqualityICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if ((*RHSC)[0] == ShouldBeOdd) {
     IRBuilder<> B{Cmp};
     Value *Trunc = B.CreateTrunc(Op0, Cmp->getType());
+    if (auto *I = dyn_cast<TruncInst>(Trunc)) {
+      // if Range == [0, 1], i.e. the value is already valid boolean
+      if (Range.getLower() == 0)
+        I->setHasNoUnsignedWrap(true);
+      // if Range == [-1, 0]
+      if (Range.getUpper() == 1)
+        I->setHasNoSignedWrap(true);
+    }
+
     Cmp->replaceAllUsesWith(Trunc);
     Cmp->eraseFromParent();
     return true;
