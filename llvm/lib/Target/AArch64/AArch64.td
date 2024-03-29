@@ -1270,6 +1270,7 @@ def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1
                                       "Neoverse N1 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
+                                      FeatureAddrLSLSlow14,
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
@@ -1297,6 +1298,7 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       "Neoverse V1 ARM processors", [
                                       FeatureFuseAES,
                                       FeatureFuseAdrpAdd,
+                                      FeatureAddrLSLSlow14,
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
