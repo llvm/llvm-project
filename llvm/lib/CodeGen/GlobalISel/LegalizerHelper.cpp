@@ -6389,12 +6389,26 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
-    auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
 
     // Shift count result from 8 high bits to low bits.
     auto C_SizeM8 = B.buildConstant(Ty, Size - 8);
-    B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
 
+    auto IsMulSupported = [this](const LLT Ty) {
+      auto Action = LI.getAction({TargetOpcode::G_MUL, {Ty}}).Action;
+      return Action == Legal || Action == WidenScalar || Action == Custom;
+    };
+    if (IsMulSupported(Ty)) {
+      auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
+      B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
+    } else {
+      auto ResTmp = B8Count;
+      for (unsigned Shift = 8; Shift < Size; Shift *= 2) {
+        auto ShiftC = B.buildConstant(Ty, Shift);
+        auto Shl = B.buildShl(Ty, ResTmp, ShiftC);
+        ResTmp = B.buildAdd(Ty, ResTmp, Shl);
+      }
+      B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
+    }
     MI.eraseFromParent();
     return Legalized;
   }
