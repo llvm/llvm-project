@@ -312,7 +312,7 @@ them.
 .. option:: --compress-sections <section>=<format>
 
  Compress or decompress sections matched by ``<section>`` using the specified
- format. Supported formatss are ``zlib`` and ``zstd``. Specify ``none`` for
+ format. Supported formats are ``zlib`` and ``zstd``. Specify ``none`` for
  decompression. When a section is matched by multiple options, the last one
  wins. A wildcard ``<section>`` starting with '!' is disallowed.
  Sections within a segment cannot be (de)compressed.
