@@ -8,6 +8,7 @@
 
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -26,11 +27,17 @@ bool isCompositeConstruct(Directive D) {
   // OpenMP Spec 5.2: [17.3, 8-9]
   // If directive-name-A and directive-name-B both correspond to loop-
   // associated constructs then directive-name is a composite construct
+  llvm::ArrayRef<Directive> Leafs{getLeafConstructs(D)};
+  if (Leafs.empty())
+    return false;
+  if (getDirectiveAssociation(Leafs.front()) != Association::Loop)
+    return false;
+
   size_t numLoopConstructs =
-      llvm::count_if(getLeafConstructs(D), [](Directive L) {
+      llvm::count_if(Leafs.drop_front(), [](Directive L) {
         return getDirectiveAssociation(L) == Association::Loop;
       });
-  return numLoopConstructs > 1;
+  return numLoopConstructs != 0;
 }
 
 bool isCombinedConstruct(Directive D) {
