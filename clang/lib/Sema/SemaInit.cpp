@@ -2329,11 +2329,11 @@ void InitListChecker::CheckStructUnionTypes(
       break;
     }
 
-    // We've already initialized a member of a union. We're done.
+    // We've already initialized a member of a union. We can stop entirely.
     if (InitializedSomething && RD->isUnion())
-      break;
+      return;
 
-    // If we've hit the flexible array member at the end, we're done.
+    // Stop if we've hit a flexible array member.
     if (Field->getType()->isIncompleteArrayType())
       break;
 
@@ -2456,6 +2456,11 @@ void InitListChecker::CheckStructUnionTypes(
   else
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
+
+  if (RD->isUnion() && StructuredList) {
+    // Initialize the first field within the union.
+    StructuredList->setInitializedFieldInUnion(*Field);
+  }
 }
 
 /// Expand a field designator that refers to a member of an
@@ -7073,6 +7078,11 @@ PerformConstructorInitialization(Sema &S,
       Kind.AllowExplicit() && !Kind.isCopyInit() && Args.size() == 1 &&
       hasCopyOrMoveCtorParam(S.Context,
                              getConstructorInfo(Step.Function.FoundDecl));
+
+  // A smart pointer constructed from a nullable pointer is nullable.
+  if (NumArgs == 1 && !Kind.isExplicitCast())
+    S.diagnoseNullableToNonnullConversion(
+        Entity.getType(), Args.front()->getType(), Kind.getLocation());
 
   // Determine the arguments required to actually perform the constructor
   // call.

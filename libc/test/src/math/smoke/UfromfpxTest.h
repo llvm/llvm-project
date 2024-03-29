@@ -25,22 +25,22 @@ public:
       EXPECT_FP_EQ(zero, func(zero, rnd, 32U));
       EXPECT_FP_EQ(neg_zero, func(neg_zero, rnd, 32U));
 
-      EXPECT_FP_EQ(aNaN, func(inf, rnd, 32U));
-      EXPECT_FP_EQ(aNaN, func(neg_inf, rnd, 32U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(inf, rnd, 32U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(neg_inf, rnd, 32U), FE_INVALID);
 
-      EXPECT_FP_EQ(aNaN, func(aNaN, rnd, 32U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(aNaN, rnd, 32U), FE_INVALID);
     }
   }
 
   void testSpecialNumbersZeroWidth(UfromfpxFunc func) {
     for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
-      EXPECT_FP_EQ(aNaN, func(zero, rnd, 0U));
-      EXPECT_FP_EQ(aNaN, func(neg_zero, rnd, 0U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(zero, rnd, 0U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(neg_zero, rnd, 0U), FE_INVALID);
 
-      EXPECT_FP_EQ(aNaN, func(inf, rnd, 0U));
-      EXPECT_FP_EQ(aNaN, func(neg_inf, rnd, 0U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(inf, rnd, 0U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(neg_inf, rnd, 0U), FE_INVALID);
 
-      EXPECT_FP_EQ(aNaN, func(aNaN, rnd, 0U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(aNaN, rnd, 0U), FE_INVALID);
     }
   }
 
@@ -49,16 +49,17 @@ public:
       EXPECT_FP_EQ(T(1.0), func(T(1.0), rnd, 1U));
       EXPECT_FP_EQ(T(10.0), func(T(10.0), rnd, 4U));
       EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 11U));
+      EXPECT_FP_EQ(T(1234.0), func(T(1234.0), rnd, 64U));
     }
   }
 
   void testRoundedNumbersOutsideRange(UfromfpxFunc func) {
     for (int rnd : MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN) {
-      EXPECT_FP_EQ(aNaN, func(T(-1.0), rnd, 32U));
-      EXPECT_FP_EQ(aNaN, func(T(10.0), rnd, 3U));
-      EXPECT_FP_EQ(aNaN, func(T(-10.0), rnd, 32U));
-      EXPECT_FP_EQ(aNaN, func(T(1234.0), rnd, 10U));
-      EXPECT_FP_EQ(aNaN, func(T(-1234.0), rnd, 32U));
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.0), rnd, 32U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.0), rnd, 3U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.0), rnd, 32U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.0), rnd, 10U), FE_INVALID);
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.0), rnd, 32U), FE_INVALID);
     }
   }
 
@@ -92,20 +93,34 @@ public:
   }
 
   void testFractionsUpwardOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(1.3), FP_INT_UPWARD, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), FP_INT_UPWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.5), FP_INT_UPWARD, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), FP_INT_UPWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.75), FP_INT_UPWARD, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), FP_INT_UPWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), FP_INT_UPWARD, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), FP_INT_UPWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), FP_INT_UPWARD, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), FP_INT_UPWARD, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), FP_INT_UPWARD, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), FP_INT_UPWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), FP_INT_UPWARD, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), FP_INT_UPWARD, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1.3), FP_INT_UPWARD, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.3), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1.5), FP_INT_UPWARD, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.5), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1.75), FP_INT_UPWARD, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.75), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.32), FP_INT_UPWARD, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.32), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.65), FP_INT_UPWARD, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.65), FP_INT_UPWARD, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.38), FP_INT_UPWARD, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.38), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.96), FP_INT_UPWARD, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.96), FP_INT_UPWARD, 32U),
+                                FE_INVALID);
   }
 
   void testFractionsDownwardWithinRange(UfromfpxFunc func) {
@@ -132,20 +147,34 @@ public:
   }
 
   void testFractionsDownwardOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(-0.5), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-0.115), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-0.715), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), FP_INT_DOWNWARD, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), FP_INT_DOWNWARD, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), FP_INT_DOWNWARD, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), FP_INT_DOWNWARD, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), FP_INT_DOWNWARD, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), FP_INT_DOWNWARD, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-0.5), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-0.115), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-0.715), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.3), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.5), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.75), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.32), FP_INT_DOWNWARD, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.32), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.65), FP_INT_DOWNWARD, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.65), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.38), FP_INT_DOWNWARD, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.38), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.96), FP_INT_DOWNWARD, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.96), FP_INT_DOWNWARD, 32U),
+                                FE_INVALID);
   }
 
   void testFractionsTowardZeroWithinRange(UfromfpxFunc func) {
@@ -178,17 +207,28 @@ public:
   }
 
   void testFractionsTowardZeroOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), FP_INT_TOWARDZERO, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), FP_INT_TOWARDZERO, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), FP_INT_TOWARDZERO, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), FP_INT_TOWARDZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), FP_INT_TOWARDZERO, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), FP_INT_TOWARDZERO, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.3), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.5), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.75), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.32), FP_INT_TOWARDZERO, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.32), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.65), FP_INT_TOWARDZERO, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.65), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.38), FP_INT_TOWARDZERO, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.38), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.96), FP_INT_TOWARDZERO, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.96), FP_INT_TOWARDZERO, 32U),
+                                FE_INVALID);
   }
 
   void testFractionsToNearestFromZeroWithinRange(UfromfpxFunc func) {
@@ -217,21 +257,36 @@ public:
   }
 
   void testFractionsToNearestFromZeroOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(-0.5), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-0.715), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.5), FP_INT_TONEARESTFROMZERO, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.75), FP_INT_TONEARESTFROMZERO, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), FP_INT_TONEARESTFROMZERO, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), FP_INT_TONEARESTFROMZERO, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), FP_INT_TONEARESTFROMZERO, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), FP_INT_TONEARESTFROMZERO, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), FP_INT_TONEARESTFROMZERO, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), FP_INT_TONEARESTFROMZERO, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-0.5), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-0.715), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.3), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1.5), FP_INT_TONEARESTFROMZERO, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.5), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1.75), FP_INT_TONEARESTFROMZERO, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.75), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(10.32), FP_INT_TONEARESTFROMZERO, 3U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-10.32), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(10.65), FP_INT_TONEARESTFROMZERO, 3U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-10.65), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1234.38), FP_INT_TONEARESTFROMZERO, 10U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1234.38), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1234.96), FP_INT_TONEARESTFROMZERO, 10U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1234.96), FP_INT_TONEARESTFROMZERO, 32U), FE_INVALID);
   }
 
   void testFractionsToNearestWithinRange(UfromfpxFunc func) {
@@ -275,33 +330,59 @@ public:
   }
 
   void testFractionsToNearestOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(-0.715), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.5), FP_INT_TONEAREST, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.75), FP_INT_TONEAREST, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), FP_INT_TONEAREST, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), FP_INT_TONEAREST, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), FP_INT_TONEAREST, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), FP_INT_TONEAREST, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), FP_INT_TONEAREST, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-0.715), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.3), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1.5), FP_INT_TONEAREST, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.5), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1.75), FP_INT_TONEAREST, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1.75), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.32), FP_INT_TONEAREST, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.32), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(10.65), FP_INT_TONEAREST, 3U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-10.65), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.38), FP_INT_TONEAREST, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.38), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(1234.96), FP_INT_TONEAREST, 10U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-1234.96), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
 
-    EXPECT_FP_EQ(aNaN, func(T(2.3), FP_INT_TONEAREST, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.3), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(2.5), FP_INT_TONEAREST, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.5), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(2.75), FP_INT_TONEAREST, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.75), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.3), FP_INT_TONEAREST, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.3), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.5), FP_INT_TONEAREST, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.5), FP_INT_TONEAREST, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.75), FP_INT_TONEAREST, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.75), FP_INT_TONEAREST, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(2.3), FP_INT_TONEAREST, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-2.3), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(2.5), FP_INT_TONEAREST, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-2.5), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(2.75), FP_INT_TONEAREST, 1U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-2.75), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(5.3), FP_INT_TONEAREST, 2U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-5.3), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(5.5), FP_INT_TONEAREST, 2U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-5.5), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(5.75), FP_INT_TONEAREST, 2U),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(T(-5.75), FP_INT_TONEAREST, 32U),
+                                FE_INVALID);
   }
 
   void testFractionsToNearestFallbackWithinRange(UfromfpxFunc func) {
@@ -353,33 +434,66 @@ public:
   }
 
   void testFractionsToNearestFallbackOutsideRange(UfromfpxFunc func) {
-    EXPECT_FP_EQ(aNaN, func(T(-0.715), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U));
-    EXPECT_FP_EQ(aNaN, func(T(-10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 10U));
-    EXPECT_FP_EQ(aNaN, func(T(-1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-0.715), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-10.32), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 3U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-10.65), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 10U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1234.38), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 10U),
+        FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-1234.96), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U),
+        FE_INVALID);
 
-    EXPECT_FP_EQ(aNaN, func(T(2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U));
-    EXPECT_FP_EQ(aNaN, func(T(-2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
-    EXPECT_FP_EQ(aNaN, func(T(5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U));
-    EXPECT_FP_EQ(aNaN, func(T(-5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U));
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-2.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-2.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 1U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-2.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-5.3), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-5.5), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 2U), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, func(T(-5.75), UNKNOWN_MATH_ROUNDING_DIRECTION, 32U), FE_INVALID);
   }
 };
 

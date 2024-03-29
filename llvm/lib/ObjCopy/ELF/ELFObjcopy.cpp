@@ -216,7 +216,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
 
 Error Object::compressOrDecompressSections(const CommonConfig &Config) {
   // Build a list of sections we are going to replace.
-  // We can't call `AddSection` while iterating over sections,
+  // We can't call `addSection` while iterating over sections,
   // because it would mutate the sections array.
   SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
       ToReplace;

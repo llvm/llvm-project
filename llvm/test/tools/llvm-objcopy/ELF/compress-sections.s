@@ -2,7 +2,9 @@
 
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o a.o
-# RUN: llvm-objcopy a.o out --compress-sections='*0=zlib' --compress-sections '*0=none' --compress-sections 'nomatch=none'
+## '*0=none' wins. '*0' sections are decompressed (if originally compressed) or kept unchanged (if uncompressed).
+## No section is named 'nomatch'. The third option is a no-op.
+# RUN: llvm-objcopy a.o out --compress-sections='*0=zlib' --compress-sections '*0=none' --compress-sections 'nomatch=none' 2>&1 | count 0
 # RUN: llvm-readelf -S out | FileCheck %s --check-prefix=CHECK1
 
 # CHECK1:      Name           Type          Address     Off      Size     ES Flg Lk Inf Al
