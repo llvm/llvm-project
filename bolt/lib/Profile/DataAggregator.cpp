@@ -2324,13 +2324,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
   BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
                                            : BinaryFunction::PF_LBR;
 
-  auto IsBATFunction = [&](uint64_t Address) {
-    return BAT->isBATFunction(Address);
-  };
-  auto GetSecondaryEntryPointId = [&](uint64_t Address, uint32_t Offset) {
-    return BAT->getSecondaryEntryPointId(Address, Offset);
-  };
-
   if (!opts::BasicAggregation) {
     // Convert profile for functions not covered by BAT
     for (auto &BFI : BC.getBinaryFunctions()) {
@@ -2339,8 +2332,8 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
-      BP.Functions.emplace_back(YAMLProfileWriter::convert(
-          Function, /*UseDFS=*/false, IsBATFunction, GetSecondaryEntryPointId));
+      BP.Functions.emplace_back(
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
     }
 
     for (const auto &KV : NamesToBranches) {

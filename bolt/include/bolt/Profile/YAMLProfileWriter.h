@@ -15,6 +15,7 @@
 
 namespace llvm {
 namespace bolt {
+class BoltAddressTranslation;
 class RewriteInstance;
 
 class YAMLProfileWriter {
@@ -31,17 +32,9 @@ public:
   /// Save execution profile for that instance.
   std::error_code writeProfile(const RewriteInstance &RI);
 
-  /// Callback to determine if a function is covered by BAT.
-  using IsBATCallbackTy = std::optional<function_ref<bool(uint64_t Address)>>;
-  /// Callback to get secondary entry point id for a given function and offset.
-  using GetBATSecondaryEntryPointIdCallbackTy =
-      std::optional<function_ref<unsigned(uint64_t Address, uint32_t Offset)>>;
-
   static yaml::bolt::BinaryFunctionProfile
   convert(const BinaryFunction &BF, bool UseDFS,
-          IsBATCallbackTy IsBATFunction = std::nullopt,
-          GetBATSecondaryEntryPointIdCallbackTy GetBATSecondaryEntryPointId =
-              std::nullopt);
+          const BoltAddressTranslation *BAT = nullptr);
 };
 
 } // namespace bolt
