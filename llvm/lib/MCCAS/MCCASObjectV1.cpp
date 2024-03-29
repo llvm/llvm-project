@@ -124,7 +124,7 @@ struct CUInfo {
 };
 static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
     MutableArrayRef<char> CUData, endianness Endian,
-    std::optional<uint32_t> NewOffset = std::nullopt);
+    std::optional<uint32_t> NewOffset, uint8_t AddressSize);
 Expected<cas::ObjectProxy>
 MCSchema::createFromMCAssemblerImpl(MachOCASWriter &ObjectWriter,
                                     MCAssembler &Asm, const MCAsmLayout &Layout,
