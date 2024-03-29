@@ -280,9 +280,9 @@ public:
     while (!blockOps.empty())
       blockOps.remove(blockOps.begin());
     block->dropAllDefinedValueUses();
-    if (block->getParent())
+    if (block->getParent()) {
       block->erase();
-    else {
+    } else {
       block->dropAllDefinedValueUses();
       delete block;
     }
