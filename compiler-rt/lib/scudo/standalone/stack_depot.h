@@ -112,7 +112,7 @@ public:
     if (TabMask == 0)
       return false;
     uptr TabSize = TabMask + 1;
-    if (!isPowerOfTwo(TabSize))
+    if (TabSize == 0 || !isPowerOfTwo(TabSize))
       return false;
     uptr TabBytes = sizeof(atomic_u32) * TabSize;
 
