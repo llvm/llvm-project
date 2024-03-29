@@ -27,8 +27,10 @@ int main(int argc, char *argv[]) {
   int *src_ptr = omp_target_alloc(length, src_device);
   int *dst_ptr = omp_target_alloc(length, dst_device);
 
-  assert(src_ptr && "src_ptr is NULL");
-  assert(dst_ptr && "dst_ptr is NULL");
+  if (!src_ptr || !dst_ptr) {
+    printf("FAIL\n");
+    return 1;
+  }
 
 #pragma omp target teams distribute parallel for device(src_device)            \
     is_device_ptr(src_ptr)
@@ -36,14 +38,17 @@ int main(int argc, char *argv[]) {
     src_ptr[i] = magic_num;
   }
 
-  int rc =
-      omp_target_memcpy(dst_ptr, src_ptr, length, 0, 0, dst_device, src_device);
-
-  assert(rc == 0 && "error in omp_target_memcpy");
+  if (omp_target_memcpy(dst_ptr, src_ptr, length, 0, 0, dst_device,
+                        src_device)) {
+    printf("FAIL\n");
+    return 1;
+  }
 
   int *buffer = malloc(length);
-
-  assert(buffer && "failed to allocate host buffer");
+  if (!buffer) {
+    printf("FAIL\n");
+    return 1;
+  }
 
 #pragma omp target teams distribute parallel for device(dst_device)            \
     map(from : buffer[0 : N]) is_device_ptr(dst_ptr)
