@@ -1314,7 +1314,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       // Mechanical proof of this address calculation can be found at:
       // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
       //
-      // Example of the wrap case for NN = 1
+      // Example of the wrap case for N = 1
       // Pointer:   0x01AAAAAAAAAAAFF8
       //                     +
       //            0x0000000000000008
