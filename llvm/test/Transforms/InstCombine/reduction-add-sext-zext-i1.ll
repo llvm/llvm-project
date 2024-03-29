@@ -5,8 +5,7 @@ define i1 @reduce_add_self(<8 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_self(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8 [[TMP3]], 0
+; CHECK-NEXT:    [[RES:%.*]] = trunc i8 [[TMP2]] to i1
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %res = call i1 @llvm.vector.reduce.add.v8i32(<8 x i1> %x)
