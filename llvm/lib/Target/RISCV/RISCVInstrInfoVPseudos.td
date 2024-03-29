@@ -2133,19 +2133,6 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
-multiclass VPseudoBinaryNoMask<VReg RetClass,
-                               VReg Op1Class,
-                               DAGOperand Op2Class,
-                               LMULInfo MInfo,
-                               string Constraint = "",
-                               int sew = 0> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint>;
-  }
-}
-
 multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      VReg Op1Class,
                                      DAGOperand Op2Class,
