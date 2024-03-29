@@ -597,5 +597,17 @@ BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
   return Branches;
 }
 
+unsigned
+BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
+                                                 uint32_t Offset) const {
+  auto FunctionIt = SecondaryEntryPointsMap.find(Address);
+  if (FunctionIt == SecondaryEntryPointsMap.end())
+    return UINT_MAX;
+  const std::vector<uint32_t> &Offsets = FunctionIt->second;
+  auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
+  if (OffsetIt == Offsets.end())
+    return UINT_MAX;
+  return OffsetIt - Offsets.begin();
+}
 } // namespace bolt
 } // namespace llvm

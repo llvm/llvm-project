@@ -9,6 +9,7 @@
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
@@ -27,17 +28,46 @@ namespace bolt {
 
 /// Set CallSiteInfo destination fields from \p Symbol and return a target
 /// BinaryFunction for that symbol.
-static const BinaryFunction *setCSIDestination(const BinaryContext &BC,
-                                               yaml::bolt::CallSiteInfo &CSI,
-                                               const MCSymbol *Symbol) {
+static const BinaryFunction *
+setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+                  const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
+  auto setBATSecondaryEntry = [&](const BinaryFunction *const Callee) {
+    // The symbol could be a secondary entry in a cold fragment.
+    ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Symbol);
+    if (SymbolValue.getError())
+      return;
+
+    // Containing function, not necessarily the same as symbol value.
+    const uint64_t CalleeAddress = Callee->getAddress();
+    const uint32_t OutputOffset = SymbolValue.get() - CalleeAddress;
+
+    const uint64_t ParentAddress = BAT->fetchParentAddress(CalleeAddress);
+    const uint64_t HotAddress = ParentAddress ? ParentAddress : CalleeAddress;
+
+    if (const BinaryFunction *ParentBF =
+            BC.getBinaryFunctionAtAddress(HotAddress))
+      CSI.DestId = ParentBF->getFunctionNumber();
+
+    const uint32_t InputOffset =
+        BAT->translate(CalleeAddress, OutputOffset, /*IsBranchSrc*/ false);
+
+    if (!InputOffset)
+      return;
+
+    CSI.EntryDiscriminator =
+        BAT->getSecondaryEntryPointId(HotAddress, InputOffset) + 1;
+  };
+
   if (Symbol) {
     uint64_t EntryID = 0;
     if (const BinaryFunction *const Callee =
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        setBATSecondaryEntry(Callee);
       return Callee;
     }
   }
@@ -45,7 +75,8 @@ static const BinaryFunction *setCSIDestination(const BinaryContext &BC,
 }
 
 yaml::bolt::BinaryFunctionProfile
-YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
+YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
 
@@ -98,7 +129,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
           StringRef TargetName = "";
-          const BinaryFunction *Callee = setCSIDestination(BC, CSI, CSP.Symbol);
+          const BinaryFunction *Callee =
+              setCSIDestination(BC, CSI, CSP.Symbol, BAT);
           if (Callee)
             TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
@@ -109,7 +141,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
-            setCSIDestination(BC, CSI, CalleeSymbol);
+            setCSIDestination(BC, CSI, CalleeSymbol, BAT);
         if (Callee)
           TargetName = Callee->getOneName();
 

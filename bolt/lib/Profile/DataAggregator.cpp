@@ -2333,7 +2333,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
       BP.Functions.emplace_back(
-          YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
     }
 
     for (const auto &KV : NamesToBranches) {
