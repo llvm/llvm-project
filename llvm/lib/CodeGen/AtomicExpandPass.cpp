@@ -135,10 +135,13 @@ public:
 // IRBuilder to be used for replacement atomic instructions.
 struct ReplacementIRBuilder : IRBuilder<InstSimplifyFolder> {
   // Preserves the DebugLoc from I, and preserves still valid metadata.
+  // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
       : IRBuilder(I->getContext(), DL) {
     SetInsertPoint(I);
     this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
+    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+      this->setIsFPConstrained(true);
   }
 };
 
