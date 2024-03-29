@@ -5,17 +5,17 @@
 
 define noundef float @round_float(float noundef %a) {
 entry:
-; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] Round %[[#]]
-  %elt.round = call float @llvm.round.f32(float %a)
-  ret float %elt.round
+; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] RoundEven %[[#]]
+  %elt.roundeven = call float @llvm.roundeven.f32(float %a)
+  ret float %elt.roundeven
 }
 
 define noundef half @round_half(half noundef %a) {
 entry:
-; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] Round %[[#]]
-  %elt.round = call half @llvm.round.f16(half %a)
-  ret half %elt.round
+; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] RoundEven %[[#]]
+  %elt.roundeven = call half @llvm.roundeven.f16(half %a)
+  ret half %elt.roundeven
 }
 
-declare half @llvm.round.f16(half)
-declare float @llvm.round.f32(float)
+declare half @llvm.roundeven.f16(half)
+declare float @llvm.roundeven.f32(float)
