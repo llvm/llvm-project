@@ -10,7 +10,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 define i32 @test_thread_id(i32 %a) #0 {
 entry:
 ; CHECK:call i32 @dx.op.threadId.i32(i32 93, i32 %{{.*}})
-  %0 = call i32 @llvm.dx.thread.id(i32 %a)
+  %0 = call i32 @llvm.hlsl.thread.id(i32 %a)
   ret i32 %0
 }
 
@@ -42,7 +42,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.dx.thread.id(i32) #1
+declare i32 @llvm.hlsl.thread.id(i32) #1
 declare i32 @llvm.dx.group.id(i32) #1
 declare i32 @llvm.dx.flattened.thread.id.in.group() #1
 declare i32 @llvm.dx.thread.id.in.group(i32) #1

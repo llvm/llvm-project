@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/IntrinsicsHLSL.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -346,10 +347,8 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     llvm::Function *ThreadIDIntrinsic;
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil:
-      ThreadIDIntrinsic = CGM.getIntrinsic(Intrinsic::dx_thread_id);
-      break;
     case llvm::Triple::spirv:
-      ThreadIDIntrinsic = CGM.getIntrinsic(Intrinsic::spv_thread_id);
+      ThreadIDIntrinsic = CGM.getIntrinsic(Intrinsic::hlsl_thread_id);
       break;
     default:
       llvm_unreachable("Input semantic not supported by target");
