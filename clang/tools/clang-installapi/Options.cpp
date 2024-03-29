@@ -241,6 +241,9 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
   if (const Arg *A = ParsedArgs.getLastArg(OPT_verify_against))
     DriverOpts.DylibToVerify = A->getValue();
 
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_dsym))
+    DriverOpts.DSYMPath = A->getValue();
+
   // Handle exclude & extra header directories or files.
   auto handleAdditionalInputArgs = [&](PathSeq &Headers,
                                        clang::installapi::ID OptID) {
@@ -522,7 +525,8 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle);
+      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle,
+      DriverOpts.DSYMPath);
   return Ctx;
 }
 
