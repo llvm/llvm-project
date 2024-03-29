@@ -125,7 +125,7 @@ public:
     for (uptr I = 0; I < NumClasses; I++)
       getRegionInfo(I)->RandState = getRandomU32(&Seed);
 
-    if (Config::getPreserveAllRegions()) {
+    if (Config::getEnableContiguousRegions()) {
       ReservedMemoryT ReservedMemory = {};
       // Reserve the space required for the Primary.
       CHECK(ReservedMemory.create(/*Addr=*/0U, RegionSize * NumClasses,
@@ -565,7 +565,7 @@ private:
     RegionInfo *Region = getRegionInfo(ClassId);
     Region->MMLock.assertHeld();
 
-    if (!Config::getPreserveAllRegions() &&
+    if (!Config::getEnableContiguousRegions() &&
         !Region->MemMapInfo.MemMap.isAllocated()) {
       return 0U;
     }
@@ -1010,7 +1010,7 @@ private:
                                             CompactPtrT *ToArray,
                                             const u16 MaxBlockCount)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-    if (!Config::getPreserveAllRegions() &&
+    if (!Config::getEnableContiguousRegions() &&
         !Region->MemMapInfo.MemMap.isAllocated()) {
       ReservedMemoryT ReservedMemory;
       if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize,
