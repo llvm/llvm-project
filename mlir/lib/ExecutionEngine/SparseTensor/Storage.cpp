@@ -68,6 +68,14 @@ MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETPOSITIONS)
 MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATES)
 #undef IMPL_GETCOORDINATES
 
+#define IMPL_GETCOORDINATESBUFFER(CNAME, C)                                    \
+  void SparseTensorStorageBase::getCoordinatesBuffer(std::vector<C> **,        \
+                                                     uint64_t) {               \
+    FATAL_PIV("getCoordinatesBuffer" #CNAME);                                  \
+  }
+MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETCOORDINATESBUFFER)
+#undef IMPL_GETCOORDINATESBUFFER
+
 #define IMPL_GETVALUES(VNAME, V)                                               \
   void SparseTensorStorageBase::getValues(std::vector<V> **) {                 \
     FATAL_PIV("getValues" #VNAME);                                             \
