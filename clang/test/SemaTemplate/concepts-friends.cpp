@@ -493,7 +493,9 @@ template <X T> struct Y {
 
 template <class T>
 struct Z {
-  // FIXME: This is ill-formed per N4950 [temp.param]p12.
+  // FIXME: This is ill-formed per N3337 [temp.param]p12:
+  // A default template argument shall not be specified in a friend class
+  // template declaration.
   template <X U = void> friend struct Y;
 };
 
