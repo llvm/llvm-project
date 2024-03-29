@@ -2482,45 +2482,44 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *A, *B;
     CmpInst::Predicate Pred;
     const APFloat *TC, *FC;
-    if (!match(Sign, m_Select((m_And(m_Value(B),
-                                     m_FCmp(Pred, m_Value(A), m_PosZeroFP()))),
+    if (!match(Sign, m_Select((m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                                     m_Value(B))),
                               m_APFloat(TC), m_APFloat(FC))))
       return nullptr;
-    // Match select ?, TC, FC where the constants are equal but negated.
-    // Check for these 8 conditions
     /*
+    Match select ?, TC, FC where the constants are equal but negated.
+    Check for these conditions:
+    olt/ule
     copysign(Mag, B & (A < 0.0) ? -TC : TC) --> copysign(Mag, A) B->true, A<0.
     copysign(Mag, B & (A < 0.0) ? -TC : TC) --> copysign(Mag, A) B->true, A>0.
     copysign(Mag, B & (A < 0.0) ? -TC : TC) --> copysign(Mag, A) B->false, A>0.
     copysign(Mag, B & (A < 0.0) ? -TC : TC) --> copysign(Mag, -A) B->false, A<0.
+    ogt/uge
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) --> copysign(Mag, -A) B->true, A<0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) --> copysign(Mag, -A) B->true, A>0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) --> copysign(Mag, A) B->false, A>0.
+    copysign(Mag, B & !(A < 0.0) ? -TC : TC) --> copysign(Mag, -A) B->false,
+    A<0.
     */
-    /*
-    copysign(Mag, B & (A > 0.0) ? -TC : TC) --> copysign(Mag, -A) B->true, A<0.
-    copysign(Mag, B & (A > 0.0) ? -TC : TC) --> copysign(Mag, -A) B->true, A>0.
-    copysign(Mag, B & (A > 0.0) ? -TC : TC) --> copysign(Mag, A) B->false, A>0.
-    copysign(Mag, B & (A > 0.0) ? -TC : TC) --> copysign(Mag, -A) B->false, A<0.
-    */
-    assert(TC != FC);
-
-    if (Pred == CmpInst::FCMP_OLT)
-      if (match(A, m_Negative())) {
+    if (Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_ULE)
+      if (match(A, m_Negative()))
         if (!match(B, m_ZeroInt()) && TC->isNegative())
           return replaceOperand(*II, 1, A);
         if (match(B, m_ZeroInt()) && TC->isNegative())
           A = Builder.CreateFNeg(A);
         return replaceOperand(*II, 1, A);
-      } else
         return replaceOperand(*II, 1, A);
-    if (Pred == CmpInst::FCMP_OGT)
-      if (match(A, m_Negative())) {
-        A = Builder.CreateFNeg(A);
+        if (Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGE)
+          if (match(A, m_Negative())) {
+            A = Builder.CreateFNeg(A);
+            return replaceOperand(*II, 1, A);
+          }
+        if (!match(B, m_ZeroInt()) && TC->isNegative())
+          A = Builder.CreateFNeg(A);
         return replaceOperand(*II, 1, A);
-      } else if (!match(B, m_ZeroInt()) && TC->isNegative())
-        A = Builder.CreateFNeg(A);
-    return replaceOperand(*II, 1, A);
-    if (match(B, m_ZeroInt()) && TC->isNegative())
-      return replaceOperand(*II, 1, A);
-    break;
+        if (match(B, m_ZeroInt()) && TC->isNegative())
+          return replaceOperand(*II, 1, A);
+        break;
   }
   case Intrinsic::fabs: {
     Value *Cond, *TVal, *FVal;
