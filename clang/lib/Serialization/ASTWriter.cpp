@@ -193,17 +193,17 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
   const ModuleMap &MM = HS.getModuleMap();
   SourceManager &SourceMgr = PP.getSourceManager();
 
-  std::set<const FileEntry *> ModuleMaps{};
-  auto CollectIncludingModuleMaps = [&](FileEntryRef F) {
+  std::set<const FileEntry *> ModuleMaps;
+  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
     if (!ModuleMaps.insert(F).second)
       return;
-    FileID FID = SourceMgr.translateFile(F);
     SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
     // The include location of inferred module maps can point into the header
     // file that triggered the inferring. Cut off the walk if that's the case.
     while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
       FID = SourceMgr.getFileID(Loc);
-      if (!ModuleMaps.insert(*SourceMgr.getFileEntryRefForID(FID)).second)
+      F = *SourceMgr.getFileEntryRefForID(FID);
+      if (!ModuleMaps.insert(F).second)
         break;
       Loc = SourceMgr.getIncludeLoc(FID);
     }
@@ -216,13 +216,13 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
         break;
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
-      if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
-        CollectIncludingModuleMaps(*ModuleMapFile);
+      if (FileID FID = MM.getContainingModuleMapFileID(Mod); FID.isValid())
+        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
       // For inferred modules, the module map that allowed inferring is not in
       // the include chain of the virtual containing module map file. It did
       // affect the compilation, though.
-      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-        CollectIncludingModuleMaps(*ModuleMapFile);
+      if (FileID FID = MM.getModuleMapFileIDForUniquing(Mod); FID.isValid())
+        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
     }
   };
 
@@ -512,6 +512,10 @@ void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
+}
+
+void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  // Nothing to do
 }
 
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -3191,6 +3195,10 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   if (DC->decls_empty())
     return 0;
 
+  // In reduced BMI, we don't care the declarations in functions.
+  if (GeneratingReducedBMI && DC->isFunctionOrMethod())
+    return 0;
+
   uint64_t Offset = Stream.GetCurrentBitNo();
   SmallVector<uint32_t, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
@@ -4623,10 +4631,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer,
                      InMemoryModuleCache &ModuleCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-                     bool IncludeTimestamps, bool BuildingImplicitModule)
+                     bool IncludeTimestamps, bool BuildingImplicitModule,
+                     bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
       IncludeTimestamps(IncludeTimestamps),
-      BuildingImplicitModule(BuildingImplicitModule) {
+      BuildingImplicitModule(BuildingImplicitModule),
+      GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
@@ -4722,7 +4732,6 @@ void ASTWriter::computeNonAffectingInputFiles() {
       continue;
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
-        AffectingModuleMaps.empty() ||
         llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
@@ -5457,18 +5466,20 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
-    if (HasUpdatedBody) {
-      const auto *Def = cast<FunctionDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
-      Record.push_back(Def->isInlined());
-      Record.AddSourceLocation(Def->getInnerLocStart());
-      Record.AddFunctionDefinition(Def);
-    } else if (HasAddedVarDefinition) {
-      const auto *VD = cast<VarDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
-      Record.push_back(VD->isInline());
-      Record.push_back(VD->isInlineSpecified());
-      Record.AddVarDeclInit(VD);
+    if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
+      if (HasUpdatedBody) {
+        const auto *Def = cast<FunctionDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
+        Record.push_back(Def->isInlined());
+        Record.AddSourceLocation(Def->getInnerLocStart());
+        Record.AddFunctionDefinition(Def);
+      } else if (HasAddedVarDefinition) {
+        const auto *VD = cast<VarDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
+        Record.push_back(VD->isInline());
+        Record.push_back(VD->isInlineSpecified());
+        Record.AddVarDeclInit(VD);
+      }
     }
 
     OffsetsRecord.push_back(GetDeclRef(D));
@@ -6056,7 +6067,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \

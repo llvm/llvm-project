@@ -28,4 +28,4 @@ entry:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 600}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 600}

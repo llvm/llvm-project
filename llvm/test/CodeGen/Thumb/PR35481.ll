@@ -18,10 +18,11 @@ define <4 x i32> @f() local_unnamed_addr #0 {
 ; CHECK-V4T-NEXT:    movs r2, #3
 ; CHECK-V4T-NEXT:    movs r3, #4
 ; CHECK-V4T-NEXT:    bl g
-; CHECK-V4T-NEXT:    ldr r7, [sp, #4]
-; CHECK-V4T-NEXT:    mov lr, r7
 ; CHECK-V4T-NEXT:    pop {r7}
-; CHECK-V4T-NEXT:    add sp, #4
+; CHECK-V4T-NEXT:    mov r12, r0
+; CHECK-V4T-NEXT:    pop {r0}
+; CHECK-V4T-NEXT:    mov lr, r0
+; CHECK-V4T-NEXT:    mov r0, r12
 ; CHECK-V4T-NEXT:    bx lr
 ;
 ; CHECK-V8M-LABEL: f:
@@ -35,10 +36,11 @@ define <4 x i32> @f() local_unnamed_addr #0 {
 ; CHECK-V8M-NEXT:    movs r1, #2
 ; CHECK-V8M-NEXT:    movs r2, #3
 ; CHECK-V8M-NEXT:    movs r3, #4
-; CHECK-V8M-NEXT:    ldr r7, [sp, #4]
-; CHECK-V8M-NEXT:    mov lr, r7
 ; CHECK-V8M-NEXT:    pop {r7}
-; CHECK-V8M-NEXT:    add sp, #4
+; CHECK-V8M-NEXT:    mov r12, r0
+; CHECK-V8M-NEXT:    pop {r0}
+; CHECK-V8M-NEXT:    mov lr, r0
+; CHECK-V8M-NEXT:    mov r0, r12
 ; CHECK-V8M-NEXT:    b g
 entry:
   %call = tail call i32 @h(i32 1)

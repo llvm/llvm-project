@@ -547,6 +547,10 @@ public:
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
+
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(AArch64LoopIdiomTransformPass());
@@ -599,7 +603,7 @@ void AArch64PassConfig::addIRPasses() {
       addPass(createFalkorMarkStridedAccessesPass());
   }
 
-  if (TM->getOptLevel() == CodeGenOptLevel::Aggressive && EnableGEPOpt) {
+  if (EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.
@@ -820,9 +824,6 @@ void AArch64PassConfig::addPreSched2() {
   // info.
   addPass(createAArch64SpeculationHardeningPass());
 
-  addPass(createAArch64IndirectThunks());
-  addPass(createAArch64SLSHardeningPass());
-
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableFalkorHWPFFix)
       addPass(createFalkorHWPFFixPass());
@@ -855,6 +856,8 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
+  addPass(createAArch64IndirectThunks());
+  addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());

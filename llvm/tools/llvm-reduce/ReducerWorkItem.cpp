@@ -414,7 +414,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   if (!DstMF->cloneInfoFrom(*SrcMF, Src2DstMBB))
     report_fatal_error("target does not implement MachineFunctionInfo cloning");
 
-  DstMRI->freezeReservedRegs(*DstMF);
+  DstMRI->freezeReservedRegs();
 
   DstMF->verify(nullptr, "", /*AbortOnError=*/true);
   return DstMF;

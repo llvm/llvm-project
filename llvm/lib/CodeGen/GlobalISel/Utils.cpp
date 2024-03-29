@@ -355,18 +355,17 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MaybeVal)
     return std::nullopt;
   APInt &Val = *MaybeVal;
-  while (!SeenOpcodes.empty()) {
-    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
-    switch (OpcodeAndSize.first) {
+  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
+    switch (Opcode) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(OpcodeAndSize.second);
+      Val = Val.trunc(Size);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(OpcodeAndSize.second);
+      Val = Val.sext(Size);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(OpcodeAndSize.second);
+      Val = Val.zext(Size);
       break;
     }
   }
@@ -967,14 +966,15 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
 }
 
 std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
+llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
+                             std::function<unsigned(APInt)> CB) {
   LLT Ty = MRI.getType(Src);
   SmallVector<unsigned> FoldedCTLZs;
   auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
     auto MaybeCst = getIConstantVRegVal(R, MRI);
     if (!MaybeCst)
       return std::nullopt;
-    return MaybeCst->countl_zero();
+    return CB(*MaybeCst);
   };
   if (Ty.isVector()) {
     // Try to constant fold each element.

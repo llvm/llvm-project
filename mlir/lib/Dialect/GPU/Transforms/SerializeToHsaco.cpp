@@ -340,7 +340,6 @@ LogicalResult SerializeToHsacoPass::assembleIsa(const std::string &isa,
       target->createMCRegInfo(this->triple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
       target->createMCAsmInfo(*mri, this->triple, mcOptions));
-  mai->setRelaxELFRelocations(true);
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
       target->createMCSubtargetInfo(this->triple, this->chip, this->features));
 

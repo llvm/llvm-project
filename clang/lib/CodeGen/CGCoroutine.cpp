@@ -141,7 +141,7 @@ static bool FunctionCanThrow(const FunctionDecl *D) {
          Proto->canThrow() != CT_Cannot;
 }
 
-static bool ResumeStmtCanThrow(const Stmt *S) {
+static bool StmtCanThrow(const Stmt *S) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
     const auto *Callee = CE->getDirectCallee();
     if (!Callee)
@@ -167,7 +167,7 @@ static bool ResumeStmtCanThrow(const Stmt *S) {
   }
 
   for (const auto *child : S->children())
-    if (ResumeStmtCanThrow(child))
+    if (StmtCanThrow(child))
       return true;
 
   return false;
@@ -178,18 +178,31 @@ static bool ResumeStmtCanThrow(const Stmt *S) {
 //   auto && x = CommonExpr();
 //   if (!x.await_ready()) {
 //      llvm_coro_save();
-//      x.await_suspend(...);     (*)
-//      llvm_coro_suspend(); (**)
+//      llvm_coro_await_suspend(&x, frame, wrapper) (*) (**)
+//      llvm_coro_suspend(); (***)
 //   }
 //   x.await_resume();
 //
 // where the result of the entire expression is the result of x.await_resume()
 //
-//   (*) If x.await_suspend return type is bool, it allows to veto a suspend:
+//   (*) llvm_coro_await_suspend_{void, bool, handle} is lowered to
+//      wrapper(&x, frame) when it's certain not to interfere with
+//      coroutine transform. await_suspend expression is
+//      asynchronous to the coroutine body and not all analyses
+//      and transformations can handle it correctly at the moment.
+//
+//      Wrapper function encapsulates x.await_suspend(...) call and looks like:
+//
+//      auto __await_suspend_wrapper(auto& awaiter, void* frame) {
+//        std::coroutine_handle<> handle(frame);
+//        return awaiter.await_suspend(handle);
+//      }
+//
+//  (**) If x.await_suspend return type is bool, it allows to veto a suspend:
 //      if (x.await_suspend(...))
 //        llvm_coro_suspend();
 //
-//  (**) llvm_coro_suspend() encodes three possible continuations as
+//  (***) llvm_coro_suspend() encodes three possible continuations as
 //       a switch instruction:
 //
 //  %where-to = call i8 @llvm.coro.suspend(...)
@@ -212,9 +225,10 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
                                     bool ignoreResult, bool forLValue) {
   auto *E = S.getCommonExpr();
 
-  auto Binder =
+  auto CommonBinder =
       CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindOnExit = llvm::make_scope_exit([&] { Binder.unbind(CGF); });
+  auto UnbindCommonOnExit =
+      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
 
   auto Prefix = buildSuspendPrefixStr(Coro, Kind);
   BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
@@ -232,16 +246,73 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
+  auto SuspendWrapper = CodeGenFunction(CGF.CGM).generateAwaitSuspendWrapper(
+      CGF.CurFn->getName(), Prefix, S);
+
   CGF.CurCoro.InSuspendBlock = true;
-  auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
+
+  assert(CGF.CurCoro.Data && CGF.CurCoro.Data->CoroBegin &&
+         "expected to be called in coroutine context");
+
+  SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
+  SuspendIntrinsicCallArgs.push_back(
+      CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF));
+
+  SuspendIntrinsicCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
+  SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
+
+  const auto SuspendReturnType = S.getSuspendReturnType();
+  llvm::Intrinsic::ID AwaitSuspendIID;
+
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_void;
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendBool:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_bool;
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_handle;
+    break;
+  }
+
+  llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
+
+  const auto AwaitSuspendCanThrow = StmtCanThrow(S.getSuspendExpr());
+
+  llvm::CallBase *SuspendRet = nullptr;
+  // FIXME: add call attributes?
+  if (AwaitSuspendCanThrow)
+    SuspendRet =
+        CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendIntrinsicCallArgs);
+  else
+    SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
+                                             SuspendIntrinsicCallArgs);
+
+  assert(SuspendRet);
   CGF.CurCoro.InSuspendBlock = false;
 
-  if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+    assert(SuspendRet->getType()->isVoidTy());
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
+    assert(SuspendRet->getType()->isIntegerTy());
+
     // Veto suspension if requested by bool returning await_suspend.
     BasicBlock *RealSuspendBlock =
         CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
     CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
     CGF.EmitBlock(RealSuspendBlock);
+    break;
+  }
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle: {
+    assert(SuspendRet->getType()->isPointerTy());
+
+    auto ResumeIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_resume);
+    Builder.CreateCall(ResumeIntrinsic, SuspendRet);
+    break;
+  }
   }
 
   // Emit the suspend point.
@@ -267,7 +338,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // is marked as 'noexcept', we avoid generating this additional IR.
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      ResumeStmtCanThrow(S.getResumeExpr())) {
+      StmtCanThrow(S.getResumeExpr())) {
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
@@ -337,6 +408,69 @@ static QualType getCoroutineSuspendExprReturnType(const ASTContext &Ctx,
   return cast<CallExpr>(RE)->getCallReturnType(Ctx);
 }
 #endif
+
+llvm::Function *
+CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
+                                             Twine const &SuspendPointName,
+                                             CoroutineSuspendExpr const &S) {
+  std::string FuncName = "__await_suspend_wrapper_";
+  FuncName += CoroName.str();
+  FuncName += '_';
+  FuncName += SuspendPointName.str();
+
+  ASTContext &C = getContext();
+
+  FunctionArgList args;
+
+  ImplicitParamDecl AwaiterDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  ImplicitParamDecl FrameDecl(C, C.VoidPtrTy, ImplicitParamKind::Other);
+  QualType ReturnTy = S.getSuspendExpr()->getType();
+
+  args.push_back(&AwaiterDecl);
+  args.push_back(&FrameDecl);
+
+  const CGFunctionInfo &FI =
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
+
+  llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
+
+  llvm::Function *Fn = llvm::Function::Create(
+      LTy, llvm::GlobalValue::PrivateLinkage, FuncName, &CGM.getModule());
+
+  Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
+  Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
+
+  Fn->addParamAttr(1, llvm::Attribute::AttrKind::NoUndef);
+
+  Fn->setMustProgress();
+  Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
+
+  // FIXME: add TBAA metadata to the loads
+  llvm::Value *AwaiterPtr = Builder.CreateLoad(GetAddrOfLocalVar(&AwaiterDecl));
+  auto AwaiterLValue =
+      MakeNaturalAlignAddrLValue(AwaiterPtr, AwaiterDecl.getType());
+
+  CurAwaitSuspendWrapper.FramePtr =
+      Builder.CreateLoad(GetAddrOfLocalVar(&FrameDecl));
+
+  auto AwaiterBinder = CodeGenFunction::OpaqueValueMappingData::bind(
+      *this, S.getOpaqueValue(), AwaiterLValue);
+
+  auto *SuspendRet = EmitScalarExpr(S.getSuspendExpr());
+
+  auto UnbindCommonOnExit =
+      llvm::make_scope_exit([&] { AwaiterBinder.unbind(*this); });
+  if (SuspendRet != nullptr) {
+    Fn->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+    Builder.CreateStore(SuspendRet, ReturnValue);
+  }
+
+  CurAwaitSuspendWrapper.FramePtr = nullptr;
+  FinishFunction();
+  return Fn;
+}
 
 LValue
 CodeGenFunction::EmitCoawaitLValue(const CoawaitExpr *E) {
@@ -733,8 +867,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
-    auto *PromiseAddrVoidPtr =
-        new llvm::BitCastInst(PromiseAddr.getPointer(), VoidPtrTy, "", CoroId);
+    auto *PromiseAddrVoidPtr = new llvm::BitCastInst(
+        PromiseAddr.emitRawPointer(*this), VoidPtrTy, "", CoroId);
     // Update CoroId to refer to the promise. We could not do it earlier because
     // promise local variable was not emitted yet.
     CoroId->setArgOperand(1, PromiseAddrVoidPtr);
@@ -834,6 +968,11 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     if (CurCoro.Data && CurCoro.Data->CoroBegin) {
       return RValue::get(CurCoro.Data->CoroBegin);
     }
+
+    if (CurAwaitSuspendWrapper.FramePtr) {
+      return RValue::get(CurAwaitSuspendWrapper.FramePtr);
+    }
+
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "
                                 "has been used earlier in this function");
     auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());

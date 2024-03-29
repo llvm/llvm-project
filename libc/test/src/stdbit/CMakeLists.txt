@@ -13,6 +13,8 @@ set(prefixes
   count_ones
   has_single_bit
   bit_width
+  bit_floor
+  bit_ceil
 )
 set(suffixes c s i l ll)
 foreach(prefix IN LISTS prefixes)

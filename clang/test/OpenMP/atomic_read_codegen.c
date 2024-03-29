@@ -128,13 +128,11 @@ int main(void) {
 // CHECK: store i64
 #pragma omp atomic read
   ullv = ullx;
-// CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
-// CHECK: bitcast i32 {{.*}} to float
+// CHECK: load atomic float, ptr {{.*}} monotonic, align 4
 // CHECK: store float
 #pragma omp atomic read
   fv = fx;
-// CHECK: load atomic i64, ptr {{.*}} monotonic, align 8
-// CHECK: bitcast i64 {{.*}} to double
+// CHECK: load atomic double, ptr {{.*}} monotonic, align 8
 // CHECK: store double
 #pragma omp atomic read
   dv = dx;
@@ -194,11 +192,11 @@ int main(void) {
 // CHECK: store i64
 #pragma omp atomic read
   lv = cix;
-// CHECK: load atomic i32, ptr {{.*}} monotonic, align 4
+// CHECK: load atomic float, ptr {{.*}} monotonic, align 4
 // CHECK: store i64
 #pragma omp atomic read
   ulv = fx;
-// CHECK: load atomic i64, ptr {{.*}} monotonic, align 8
+// CHECK: load atomic double, ptr {{.*}} monotonic, align 8
 // CHECK: store i64
 #pragma omp atomic read
   llv = dx;
@@ -294,7 +292,7 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read
   ldv = bfx4.a;
-// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @bfx4_packed, i64 2) monotonic, align 1
+// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @bfx4_packed, i32 0, i32 1) monotonic, align 1
 // CHECK: store i8 [[LD]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
 // CHECK: [[SHL:%.+]] = shl i8 [[LD]], 7
@@ -311,7 +309,7 @@ int main(void) {
 // CHECK: store x86_fp80
 #pragma omp atomic read relaxed
   ldv = bfx4.b;
-// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @bfx4_packed, i64 2) acquire, align 1
+// CHECK: [[LD:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @bfx4_packed, i32 0, i32 1) acquire, align 1
 // CHECK: store i8 [[LD]], ptr [[LDTEMP:%.+]]
 // CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
 // CHECK: [[ASHR:%.+]] = ashr i8 [[LD]], 1

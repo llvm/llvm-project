@@ -710,23 +710,23 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp q4, q1, [x0, #48]
-; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    ldr d0, [x0, #80]
-; CHECK-NEXT:    ldr q5, [x0, #32]
-; CHECK-NEXT:    add x0, x0, #128
-; CHECK-NEXT:    uzp1.4s v4, v5, v4
-; CHECK-NEXT:    uzp1.4s v2, v3, v2
-; CHECK-NEXT:    uzp1.4s v0, v1, v0
-; CHECK-NEXT:    uzp1.8h v1, v2, v4
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    uzp1.16b v1, v1, v0
-; CHECK-NEXT:    xtn.8b v0, v0
-; CHECK-NEXT:    st1.h { v1 }[4], [x9]
 ; CHECK-NEXT:    add x9, x1, #10
-; CHECK-NEXT:    st1.b { v0 }[2], [x9]
-; CHECK-NEXT:    str d1, [x1], #16
+; CHECK-NEXT:    ldr d0, [x0, #80]
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    ldr q5, [x0, #32]
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    add x0, x0, #128
+; CHECK-NEXT:    uzp1.4s v0, v1, v0
+; CHECK-NEXT:    uzp1.4s v1, v5, v4
+; CHECK-NEXT:    uzp1.4s v2, v3, v2
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    uzp1.8h v1, v2, v1
+; CHECK-NEXT:    uzp1.8b v2, v0, v0
+; CHECK-NEXT:    uzp1.16b v0, v1, v0
+; CHECK-NEXT:    st1.b { v2 }[2], [x9]
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    st1.h { v0 }[4], [x9]
+; CHECK-NEXT:    str d0, [x1], #16
 ; CHECK-NEXT:    b.eq LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -755,7 +755,7 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-BE-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
 ; CHECK-BE-NEXT:    uzp1 v1.16b, v1.16b, v0.16b
-; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-BE-NEXT:    rev16 v2.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    st1 { v0.b }[2], [x9]
@@ -790,7 +790,7 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-DISABLE-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    uzp1 v1.16b, v1.16b, v0.16b
-; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
+; CHECK-DISABLE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-DISABLE-NEXT:    rev16 v2.16b, v1.16b
 ; CHECK-DISABLE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-DISABLE-NEXT:    st1 { v0.b }[2], [x9]

@@ -5,7 +5,7 @@
 
 subroutine sub1()
   use cuf_mod
-  md = 1.0
+!  md = 1.0 ! currently a TODO
 end
 
 ! CHECK-LABEL: func.func @_QPsub1()

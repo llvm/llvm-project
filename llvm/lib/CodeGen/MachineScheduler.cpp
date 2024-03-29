@@ -85,6 +85,7 @@ namespace MISchedPostRASched {
 enum Direction {
   TopDown,
   BottomUp,
+  Bidirectional,
 };
 } // end namespace MISchedPostRASched
 cl::opt<MISchedPostRASched::Direction> PostRADirection(
@@ -93,10 +94,13 @@ cl::opt<MISchedPostRASched::Direction> PostRADirection(
     // Default to top-down because it was implemented first and existing targets
     // expect that behavior by default.
     cl::init(MISchedPostRASched::TopDown),
-    cl::values(clEnumValN(MISchedPostRASched::TopDown, "topdown",
-                          "Force top-down post reg-alloc list scheduling"),
-               clEnumValN(MISchedPostRASched::BottomUp, "bottomup",
-                          "Force bottom-up post reg-alloc list scheduling")));
+    cl::values(
+        clEnumValN(MISchedPostRASched::TopDown, "topdown",
+                   "Force top-down post reg-alloc list scheduling"),
+        clEnumValN(MISchedPostRASched::BottomUp, "bottomup",
+                   "Force bottom-up post reg-alloc list scheduling"),
+        clEnumValN(MISchedPostRASched::Bidirectional, "bidirectional",
+                   "Force bidirectional post reg-alloc list scheduling")));
 cl::opt<bool>
 DumpCriticalPathLength("misched-dcpl", cl::Hidden,
                        cl::desc("Print critical path length to stdout"));
@@ -500,8 +504,10 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   ScheduleDAGMI::DumpDirection D;
   if (PostRADirection == MISchedPostRASched::TopDown)
     D = ScheduleDAGMI::DumpDirection::TopDown;
-  else
+  else if (PostRADirection == MISchedPostRASched::BottomUp)
     D = ScheduleDAGMI::DumpDirection::BottomUp;
+  else
+    D = ScheduleDAGMI::DumpDirection::Bidirectional;
   Scheduler->setDumpDirection(D);
   scheduleRegions(*Scheduler, true);
 
@@ -1729,11 +1735,11 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     SUnit *SU;
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
-    unsigned Width;
+    LocationSize Width;
     bool OffsetIsScalable;
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset, bool OffsetIsScalable, unsigned Width)
+              int64_t Offset, bool OffsetIsScalable, LocationSize Width)
         : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
           Width(Width), OffsetIsScalable(OffsetIsScalable) {}
 
@@ -1866,11 +1872,12 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     auto MemOpb = MemOpRecords[NextIdx];
     unsigned ClusterLength = 2;
-    unsigned CurrentClusterBytes = MemOpa.Width + MemOpb.Width;
+    unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
+                                   MemOpb.Width.getValue().getKnownMinValue();
     if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
       ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes =
-          SUnit2ClusterInfo[MemOpa.SU->NodeNum].second + MemOpb.Width;
+      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
+                            MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
@@ -1940,7 +1947,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     bool OffsetIsScalable;
-    unsigned Width;
+    LocationSize Width = 0;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
       MemOpRecords.push_back(
@@ -3714,7 +3721,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand);
       assert(TCand.SU == TopCand.SU &&
-           "Last pick result should correspond to re-picking right now");
+             "Last pick result should correspond to re-picking right now");
     }
 #endif
   }
@@ -3890,6 +3897,9 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   } else if (PostRADirection == MISchedPostRASched::BottomUp) {
     RegionPolicy.OnlyTopDown = false;
     RegionPolicy.OnlyBottomUp = true;
+  } else if (PostRADirection == MISchedPostRASched::Bidirectional) {
+    RegionPolicy.OnlyBottomUp = false;
+    RegionPolicy.OnlyTopDown = false;
   }
 }
 
@@ -3969,6 +3979,87 @@ void PostGenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
   }
 }
 
+/// Pick the best candidate node from either the top or bottom queue.
+SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
+  // FIXME: This is similiar to GenericScheduler::pickNodeBidirectional. Factor
+  // out common parts.
+
+  // Schedule as far as possible in the direction of no choice. This is most
+  // efficient, but also provides the best heuristics for CriticalPSets.
+  if (SUnit *SU = Bot.pickOnlyChoice()) {
+    IsTopNode = false;
+    tracePick(Only1, false);
+    return SU;
+  }
+  if (SUnit *SU = Top.pickOnlyChoice()) {
+    IsTopNode = true;
+    tracePick(Only1, true);
+    return SU;
+  }
+  // Set the bottom-up policy based on the state of the current bottom zone and
+  // the instructions outside the zone, including the top zone.
+  CandPolicy BotPolicy;
+  setPolicy(BotPolicy, /*IsPostRA=*/true, Bot, &Top);
+  // Set the top-down policy based on the state of the current top zone and
+  // the instructions outside the zone, including the bottom zone.
+  CandPolicy TopPolicy;
+  setPolicy(TopPolicy, /*IsPostRA=*/true, Top, &Bot);
+
+  // See if BotCand is still valid (because we previously scheduled from Top).
+  LLVM_DEBUG(dbgs() << "Picking from Bot:\n");
+  if (!BotCand.isValid() || BotCand.SU->isScheduled ||
+      BotCand.Policy != BotPolicy) {
+    BotCand.reset(CandPolicy());
+    pickNodeFromQueue(Bot, BotCand);
+    assert(BotCand.Reason != NoCand && "failed to find the first candidate");
+  } else {
+    LLVM_DEBUG(traceCandidate(BotCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Bot, BotCand);
+      assert(TCand.SU == BotCand.SU &&
+             "Last pick result should correspond to re-picking right now");
+    }
+#endif
+  }
+
+  // Check if the top Q has a better candidate.
+  LLVM_DEBUG(dbgs() << "Picking from Top:\n");
+  if (!TopCand.isValid() || TopCand.SU->isScheduled ||
+      TopCand.Policy != TopPolicy) {
+    TopCand.reset(CandPolicy());
+    pickNodeFromQueue(Top, TopCand);
+    assert(TopCand.Reason != NoCand && "failed to find the first candidate");
+  } else {
+    LLVM_DEBUG(traceCandidate(TopCand));
+#ifndef NDEBUG
+    if (VerifyScheduling) {
+      SchedCandidate TCand;
+      TCand.reset(CandPolicy());
+      pickNodeFromQueue(Top, TopCand);
+      assert(TCand.SU == TopCand.SU &&
+             "Last pick result should correspond to re-picking right now");
+    }
+#endif
+  }
+
+  // Pick best from BotCand and TopCand.
+  assert(BotCand.isValid());
+  assert(TopCand.isValid());
+  SchedCandidate Cand = BotCand;
+  TopCand.Reason = NoCand;
+  if (tryCandidate(Cand, TopCand)) {
+    Cand.setBest(TopCand);
+    LLVM_DEBUG(traceCandidate(Cand));
+  }
+
+  IsTopNode = Cand.AtTop;
+  tracePick(Cand);
+  return Cand.SU;
+}
+
 /// Pick the next node to schedule.
 SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (DAG->top() == DAG->bottom()) {
@@ -3979,13 +4070,12 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   SUnit *SU;
   do {
     if (RegionPolicy.OnlyBottomUp) {
-      assert(!RegionPolicy.OnlyTopDown);
       SU = Bot.pickOnlyChoice();
       if (SU) {
         tracePick(Only1, true);
       } else {
         CandPolicy NoPolicy;
-        SchedCandidate BotCand(NoPolicy);
+        BotCand.reset(NoPolicy);
         // Set the bottom-up policy based on the state of the current bottom
         // zone and the instructions outside the zone, including the top zone.
         setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
@@ -3995,15 +4085,13 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
         SU = BotCand.SU;
       }
       IsTopNode = false;
-    } else {
-
-      assert(RegionPolicy.OnlyTopDown);
+    } else if (RegionPolicy.OnlyTopDown) {
       SU = Top.pickOnlyChoice();
       if (SU) {
         tracePick(Only1, true);
       } else {
         CandPolicy NoPolicy;
-        SchedCandidate TopCand(NoPolicy);
+        TopCand.reset(NoPolicy);
         // Set the top-down policy based on the state of the current top zone
         // and the instructions outside the zone, including the bottom zone.
         setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
@@ -4013,6 +4101,8 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
         SU = TopCand.SU;
       }
       IsTopNode = true;
+    } else {
+      SU = pickNodeBidirectional(IsTopNode);
     }
   } while (SU->isScheduled);
 

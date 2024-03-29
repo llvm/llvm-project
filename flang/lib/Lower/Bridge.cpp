@@ -618,7 +618,8 @@ public:
     assert(details && "No host-association found");
     const Fortran::semantics::Symbol &hsym = details->symbol();
     mlir::Type hSymType = genType(hsym);
-    Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
+    Fortran::lower::SymbolBox hsb =
+        lookupSymbol(hsym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
@@ -727,7 +728,8 @@ public:
   void createHostAssociateVarCloneDealloc(
       const Fortran::semantics::Symbol &sym) override final {
     mlir::Location loc = genLocation(sym.name());
-    Fortran::lower::SymbolBox hsb = lookupSymbol(sym);
+    Fortran::lower::SymbolBox hsb =
+        lookupSymbol(sym, /*symMap=*/nullptr, /*forceHlfirBase=*/true);
 
     fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
     hexv.match(
@@ -746,7 +748,8 @@ public:
 
   void copyVar(mlir::Location loc, mlir::Value dst,
                mlir::Value src) override final {
-    copyVarHLFIR(loc, dst, src);
+    copyVarHLFIR(loc, Fortran::lower::SymbolBox::Intrinsic{dst},
+                 Fortran::lower::SymbolBox::Intrinsic{src});
   }
 
   void copyHostAssociateVar(
@@ -960,13 +963,14 @@ private:
   /// Find the symbol in the local map or return null.
   Fortran::lower::SymbolBox
   lookupSymbol(const Fortran::semantics::Symbol &sym,
-               Fortran::lower::SymMap *symMap = nullptr) {
+               Fortran::lower::SymMap *symMap = nullptr,
+               bool forceHlfirBase = false) {
     symMap = symMap ? symMap : &localSymbols;
     if (lowerToHighLevelFIR()) {
       if (std::optional<fir::FortranVariableOpInterface> var =
               symMap->lookupVariableDefinition(sym)) {
-        auto exv =
-            hlfir::translateToExtendedValue(toLocation(), *builder, *var);
+        auto exv = hlfir::translateToExtendedValue(toLocation(), *builder, *var,
+                                                   forceHlfirBase);
         return exv.match(
             [](mlir::Value x) -> Fortran::lower::SymbolBox {
               return Fortran::lower::SymbolBox::Intrinsic{x};
@@ -1006,10 +1010,7 @@ private:
       // `omp.private`'s `alloc` block. If this is the case, we return this
       // `SymbolBox::Intrinsic` value.
       if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-        return v.match(
-            [&](const Fortran::lower::SymbolBox::Intrinsic &)
-                -> Fortran::lower::SymbolBox { return v; },
-            [](const auto &) -> Fortran::lower::SymbolBox { return {}; });
+        return v;
 
       return {};
     }
@@ -1057,15 +1058,16 @@ private:
                const Fortran::lower::SymbolBox &rhs_sb) {
     mlir::Location loc = genLocation(sym.name());
     if (lowerToHighLevelFIR())
-      copyVarHLFIR(loc, lhs_sb.getAddr(), rhs_sb.getAddr());
+      copyVarHLFIR(loc, lhs_sb, rhs_sb);
     else
       copyVarFIR(loc, sym, lhs_sb, rhs_sb);
   }
 
-  void copyVarHLFIR(mlir::Location loc, mlir::Value dst, mlir::Value src) {
+  void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
+                    Fortran::lower::SymbolBox src) {
     assert(lowerToHighLevelFIR());
-    hlfir::Entity lhs{dst};
-    hlfir::Entity rhs{src};
+    hlfir::Entity lhs{dst.getAddr()};
+    hlfir::Entity rhs{src.getAddr()};
     // Temporary_lhs is set to true in hlfir.assign below to avoid user
     // assignment to be used and finalization to be called on the LHS.
     // This may or may not be correct but mimics the current behaviour
@@ -1079,7 +1081,22 @@ private:
           /*keepLhsLengthInAllocatableAssignment=*/false,
           /*temporary_lhs=*/true);
     };
-    if (lhs.isAllocatable()) {
+
+    bool isBoxAllocatable = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isAllocatable(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isAllocatable();
+        },
+        [](const auto &box) { return false; });
+
+    bool isBoxPointer = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isPointer(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isPointer();
+        },
+        [](const auto &box) { return false; });
+
+    if (isBoxAllocatable) {
       // Deep copy allocatable if it is allocated.
       // Note that when allocated, the RHS is already allocated with the LHS
       // shape for copy on entry in createHostAssociateVarClone.
@@ -1094,7 +1111,7 @@ private:
             copyData(lhs, rhs);
           })
           .end();
-    } else if (lhs.isPointer()) {
+    } else if (isBoxPointer) {
       // Set LHS target to the target of RHS (do not copy the RHS
       // target data into the LHS target storage).
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
@@ -2505,19 +2522,51 @@ private:
     if (nestedLoops > 1)
       n = builder->getIntegerAttr(builder->getI64Type(), nestedLoops);
 
-    const std::list<Fortran::parser::ScalarIntExpr> &grid = std::get<1>(dir.t);
-    const std::list<Fortran::parser::ScalarIntExpr> &block = std::get<2>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &grid =
+        std::get<1>(dir.t);
+    const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr> &block =
+        std::get<2>(dir.t);
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
 
+    auto isOnlyStars =
+        [&](const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr>
+                &list) -> bool {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           list) {
+        if (expr.v)
+          return false;
+      }
+      return true;
+    };
+
+    mlir::Value zero =
+        builder->createIntegerConstant(loc, builder->getI32Type(), 0);
+
     llvm::SmallVector<mlir::Value> gridValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : grid)
-      gridValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    if (!isOnlyStars(grid)) {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           grid) {
+        if (expr.v) {
+          gridValues.push_back(fir::getBase(
+              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+        } else {
+          gridValues.push_back(zero);
+        }
+      }
+    }
     llvm::SmallVector<mlir::Value> blockValues;
-    for (const Fortran::parser::ScalarIntExpr &expr : block)
-      blockValues.push_back(fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx)));
+    if (!isOnlyStars(block)) {
+      for (const Fortran::parser::CUFKernelDoConstruct::StarOrExpr &expr :
+           block) {
+        if (expr.v) {
+          blockValues.push_back(fir::getBase(
+              genExprValue(*Fortran::semantics::GetExpr(*expr.v), stmtCtx)));
+        } else {
+          blockValues.push_back(zero);
+        }
+      }
+    }
     mlir::Value streamValue;
     if (stream)
       streamValue = fir::getBase(
@@ -3441,7 +3490,8 @@ private:
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               assign.rhs)) {
         // rhs is null(). rhs being null(pptr) is handled in genNull.
-        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        auto boxTy{
+            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
         builder->createStoreWithConvert(loc, rhs, lhs);
@@ -3657,11 +3707,40 @@ private:
     return false;
   }
 
+  static void genCUDADataTransfer(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, bool lhsIsDevice,
+                                  hlfir::Entity &lhs, bool rhsIsDevice,
+                                  hlfir::Entity &rhs) {
+    if (rhs.isBoxAddressOrValue() || lhs.isBoxAddressOrValue())
+      TODO(loc, "CUDA data transfler with descriptors");
+    if (lhsIsDevice && !rhsIsDevice) {
+      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+          builder.getContext(), fir::CUDADataTransferKind::HostDevice);
+      // device = host
+      if (!rhs.isVariable()) {
+        auto associate = hlfir::genAssociateExpr(
+            loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
+        builder.create<fir::CUDADataTransferOp>(loc, associate.getBase(), lhs,
+                                                transferKindAttr);
+        builder.create<hlfir::EndAssociateOp>(loc, associate);
+      } else {
+        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
+                                                transferKindAttr);
+      }
+      return;
+    }
+    TODO(loc, "Assignement with CUDA Fortran variables");
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
+
+    bool lhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.lhs);
+    bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+
     // Gather some information about the assignment that will impact how it is
     // lowered.
     const bool isWholeAllocatableAssignment =
@@ -3718,9 +3797,13 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      builder.create<hlfir::AssignOp>(loc, rhs, lhs,
-                                      isWholeAllocatableAssignment,
-                                      keepLhsLengthInAllocatableAssignment);
+      if (lhsIsDevice || rhsIsDevice) {
+        genCUDADataTransfer(builder, loc, lhsIsDevice, lhs, rhsIsDevice, rhs);
+      } else {
+        builder.create<hlfir::AssignOp>(loc, rhs, lhs,
+                                        isWholeAllocatableAssignment,
+                                        keepLhsLengthInAllocatableAssignment);
+      }
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted
@@ -3941,11 +4024,12 @@ private:
                     sym->Rank() == 0) {
                   // get the corresponding Cray pointer
 
-                  auto ptrSym = Fortran::lower::getCrayPointer(*sym);
+                  const Fortran::semantics::Symbol &ptrSym =
+                      Fortran::semantics::GetCrayPointer(*sym);
                   fir::ExtendedValue ptr =
                       getSymbolExtendedValue(ptrSym, nullptr);
                   mlir::Value ptrVal = fir::getBase(ptr);
-                  mlir::Type ptrTy = genType(*ptrSym);
+                  mlir::Type ptrTy = genType(ptrSym);
 
                   fir::ExtendedValue pte =
                       getSymbolExtendedValue(*sym, nullptr);

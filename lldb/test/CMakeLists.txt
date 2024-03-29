@@ -31,21 +31,6 @@ if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   endforeach()
 endif()
 
-# The "pexpect" package should come from the system environment, not from the
-# LLDB tree. However, we delay the deletion of it from the tree in case
-# users/buildbots don't have the package yet and need some time to install it.
-if (NOT LLDB_TEST_USE_VENDOR_PACKAGES)
-  unset(PY_pexpect_FOUND CACHE)
-  lldb_find_python_module(pexpect)
-  if (NOT PY_pexpect_FOUND)
-    message(FATAL_ERROR
-      "Python module 'pexpect' not found. Please install it via pip or via "
-      "your operating system's package manager. For a temporary workaround, "
-      "use a version from the LLDB tree with "
-      "`LLDB_TEST_USE_VENDOR_PACKAGES=ON`")
-  endif()
-endif()
-
 if(LLDB_BUILT_STANDALONE)
   # In order to run check-lldb-* we need the correct map_config directives in
   # llvm-lit. Because this is a standalone build, LLVM doesn't know about LLDB,

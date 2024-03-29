@@ -22,6 +22,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,16 +61,16 @@ public:
   // \c patch can only be called when all data is written and flushed.
   // For raw_string_ostream, the patch is done on the target string
   // directly and it won't be reflected in the stream's internal buffer.
-  void patch(PatchItem *P, int NItems) {
+  void patch(ArrayRef<PatchItem> P) {
     using namespace support;
 
     if (IsFDOStream) {
       raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
       const uint64_t LastPos = FDOStream.tell();
-      for (int K = 0; K < NItems; K++) {
-        FDOStream.seek(P[K].Pos);
-        for (int I = 0; I < P[K].N; I++)
-          write(P[K].D[I]);
+      for (const auto &K : P) {
+        FDOStream.seek(K.Pos);
+        for (int I = 0; I < K.N; I++)
+          write(K.D[I]);
       }
       // Reset the stream to the last position after patching so that users
       // don't accidentally overwrite data. This makes it consistent with
@@ -78,11 +79,11 @@ public:
     } else {
       raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
       std::string &Data = SOStream.str(); // with flush
-      for (int K = 0; K < NItems; K++) {
-        for (int I = 0; I < P[K].N; I++) {
+      for (const auto &K : P) {
+        for (int I = 0; I < K.N; I++) {
           uint64_t Bytes =
-              endian::byte_swap<uint64_t, llvm::endianness::little>(P[K].D[I]);
-          Data.replace(P[K].Pos + I * sizeof(uint64_t), sizeof(uint64_t),
+              endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+          Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                        (const char *)&Bytes, sizeof(uint64_t));
         }
       }
@@ -179,12 +180,15 @@ public:
 
 } // end namespace llvm
 
-InstrProfWriter::InstrProfWriter(bool Sparse,
-                                 uint64_t TemporalProfTraceReservoirSize,
-                                 uint64_t MaxTemporalProfTraceLength)
+InstrProfWriter::InstrProfWriter(
+    bool Sparse, uint64_t TemporalProfTraceReservoirSize,
+    uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
+    memprof::IndexedVersion MemProfVersionRequested)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
-      InfoObj(new InstrProfRecordWriterTrait()) {}
+      InfoObj(new InstrProfRecordWriterTrait()),
+      WritePrevVersion(WritePrevVersion),
+      MemProfVersionRequested(MemProfVersionRequested) {}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
@@ -432,7 +436,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
-  Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
+  Header.Version = WritePrevVersion
+                       ? IndexedInstrProf::ProfVersion::Version11
+                       : IndexedInstrProf::ProfVersion::CurrentVersion;
+  // The WritePrevVersion handling will either need to be removed or updated
+  // if the version is advanced beyond 12.
+  assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
+         IndexedInstrProf::ProfVersion::Version12);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -484,7 +494,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   OS.write(0);
 
   uint64_t VTableNamesOffset = OS.tell();
-  OS.write(0);
+  if (!WritePrevVersion)
+    OS.write(0);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -507,6 +518,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Write the MemProf profile data if we have it. This includes a simple schema
   // with the format described below followed by the hashtable:
+  // uint64_t Version
   // uint64_t RecordTableOffset = RecordTableGenerator.Emit
   // uint64_t FramePayloadOffset = Stream offset before emitting the frame table
   // uint64_t FrameTableOffset = FrameTableGenerator.Emit
@@ -519,7 +531,21 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // OnDiskChainedHashTable MemProfFrameData
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
+    if (MemProfVersionRequested < memprof::MinimumSupportedVersion ||
+        MemProfVersionRequested > memprof::MaximumSupportedVersion) {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          formatv("MemProf version {} not supported; "
+                  "requires version between {} and {}, inclusive",
+                  MemProfVersionRequested, memprof::MinimumSupportedVersion,
+                  memprof::MaximumSupportedVersion));
+    }
+
     MemProfSectionStart = OS.tell();
+
+    if (MemProfVersionRequested >= memprof::Version1)
+      OS.write(MemProfVersionRequested);
+
     OS.write(0ULL); // Reserve space for the memprof record table offset.
     OS.write(0ULL); // Reserve space for the memprof frame payload offset.
     OS.write(0ULL); // Reserve space for the memprof frame table offset.
@@ -561,12 +587,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
     uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 
-    PatchItem PatchItems[] = {
-        {MemProfSectionStart, &RecordTableOffset, 1},
-        {MemProfSectionStart + sizeof(uint64_t), &FramePayloadOffset, 1},
-        {MemProfSectionStart + 2 * sizeof(uint64_t), &FrameTableOffset, 1},
-    };
-    OS.patch(PatchItems, 3);
+    uint64_t Header[] = {RecordTableOffset, FramePayloadOffset,
+                         FrameTableOffset};
+    uint64_t HeaderUpdatePos = MemProfSectionStart;
+    if (MemProfVersionRequested >= memprof::Version1)
+      // The updates go just after the version field.
+      HeaderUpdatePos += sizeof(uint64_t);
+    OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
   }
 
   // BinaryIdSection has two parts:
@@ -608,27 +635,29 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   uint64_t VTableNamesSectionStart = OS.tell();
 
-  // Use a dummy (and uncompressed) string as compressed vtable names and get
-  // the necessary profile format change in place for version 12.
-  // TODO: Store the list of vtable names in InstrProfWriter and use the
-  // real compressed name.
-  std::string CompressedVTableNames = "VTableNames";
+  if (!WritePrevVersion) {
+    // Use a dummy (and uncompressed) string as compressed vtable names and get
+    // the necessary profile format change in place for version 12.
+    // TODO: Store the list of vtable names in InstrProfWriter and use the
+    // real compressed name.
+    std::string CompressedVTableNames = "VTableNames";
 
-  uint64_t CompressedStringLen = CompressedVTableNames.length();
+    uint64_t CompressedStringLen = CompressedVTableNames.length();
 
-  // Record the length of compressed string.
-  OS.write(CompressedStringLen);
+    // Record the length of compressed string.
+    OS.write(CompressedStringLen);
 
-  // Write the chars in compressed strings.
-  for (auto &c : CompressedVTableNames)
-    OS.writeByte(static_cast<uint8_t>(c));
+    // Write the chars in compressed strings.
+    for (auto &c : CompressedVTableNames)
+      OS.writeByte(static_cast<uint8_t>(c));
 
-  // Pad up to a multiple of 8.
-  // InstrProfReader would read bytes according to 'CompressedStringLen'.
-  uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
+    // Pad up to a multiple of 8.
+    // InstrProfReader would read bytes according to 'CompressedStringLen'.
+    uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
 
-  for (uint64_t K = CompressedStringLen; K < PaddedLength; K++) {
-    OS.writeByte(0);
+    for (uint64_t K = CompressedStringLen; K < PaddedLength; K++) {
+      OS.writeByte(0);
+    }
   }
 
   uint64_t TemporalProfTracesSectionStart = 0;
@@ -662,26 +691,48 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   }
   InfoObj->CSSummaryBuilder = nullptr;
 
-  // Now do the final patch:
-  PatchItem PatchItems[] = {
-      // Patch the Header.HashOffset field.
-      {HashTableStartFieldOffset, &HashTableStart, 1},
-      // Patch the Header.MemProfOffset (=0 for profiles without MemProf
-      // data).
-      {MemProfSectionOffset, &MemProfSectionStart, 1},
-      // Patch the Header.BinaryIdSectionOffset.
-      {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
-      // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
-      // traces).
-      {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
-      {VTableNamesOffset, &VTableNamesSectionStart, 1},
-      // Patch the summary data.
-      {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-       (int)(SummarySize / sizeof(uint64_t))},
-      {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-       (int)CSSummarySize}};
+  if (!WritePrevVersion) {
+    // Now do the final patch:
+    PatchItem PatchItems[] = {
+        // Patch the Header.HashOffset field.
+        {HashTableStartFieldOffset, &HashTableStart, 1},
+        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
+        // data).
+        {MemProfSectionOffset, &MemProfSectionStart, 1},
+        // Patch the Header.BinaryIdSectionOffset.
+        {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
+        // traces).
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        {VTableNamesOffset, &VTableNamesSectionStart, 1},
+        // Patch the summary data.
+        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
+         (int)(SummarySize / sizeof(uint64_t))},
+        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+         (int)CSSummarySize}};
 
-  OS.patch(PatchItems, std::size(PatchItems));
+    OS.patch(PatchItems);
+  } else {
+    // Now do the final patch:
+    PatchItem PatchItems[] = {
+        // Patch the Header.HashOffset field.
+        {HashTableStartFieldOffset, &HashTableStart, 1},
+        // Patch the Header.MemProfOffset (=0 for profiles without MemProf
+        // data).
+        {MemProfSectionOffset, &MemProfSectionStart, 1},
+        // Patch the Header.BinaryIdSectionOffset.
+        {BinaryIdSectionOffset, &BinaryIdSectionStart, 1},
+        // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
+        // traces).
+        {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+        // Patch the summary data.
+        {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
+         (int)(SummarySize / sizeof(uint64_t))},
+        {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+         (int)CSSummarySize}};
+
+    OS.patch(PatchItems);
+  }
 
   for (const auto &I : FunctionData)
     for (const auto &F : I.getValue())
