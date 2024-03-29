@@ -582,6 +582,9 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   };
 
   Value *X, *Y, *Z;
+  unsigned Opcode = I.getOpcode();
+  assert((Opcode == Instruction::FMul || Opcode == Instruction::FDiv) &&
+         "Unexpected opcode");
 
   // powi(X, Y) * X --> powi(X, Y+1)
   // X * powi(X, Y) --> powi(X, Y+1)
@@ -596,7 +599,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   // powi(x, y) * powi(x, z) -> powi(x, y + z)
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
-  if (I.isOnlyUserOfAnyOperand() &&
+  if (Opcode == Instruction::FMul && I.isOnlyUserOfAnyOperand() &&
       match(Op0, m_AllowReassoc(
                      m_Intrinsic<Intrinsic::powi>(m_Value(X), m_Value(Y)))) &&
       match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
@@ -608,7 +611,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
   // are required.
   // TODO: Multi-use may be also better off creating Powi(x,y-1)
-  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
+  if (Opcode == Instruction::FDiv && I.hasAllowReassoc() && I.hasNoNaNs() &&
       match(Op0, m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
                      m_Specific(Op1), m_Value(Y))))) &&
       willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
