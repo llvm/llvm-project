@@ -7616,23 +7616,6 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
   }
 }
 
-void CodeGenModule::emitTargetTeamsLoopCodegenStatus(
-    std::string StatusMsg, const OMPExecutableDirective &D, bool IsDevice) {
-#ifndef NDEBUG
-  if (IsDevice)
-    StatusMsg += ": DEVICE";
-  else
-    StatusMsg += ": HOST";
-  SourceLocation L = D.getBeginLoc();
-  SourceManager &SM = getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(L);
-  const char *FileName = PLoc.isValid() ? PLoc.getFilename() : nullptr;
-  unsigned LineNo =
-      PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
-  llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
-#endif
-}
-
 void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   assert(DeferredDeclsToEmit.empty() &&
          "Should have emitted all decls deferred to emit.");

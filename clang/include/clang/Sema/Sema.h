@@ -10225,10 +10225,6 @@ public:
     bool isInstantiationRecord() const;
   };
 
-  /// [target] teams loop is equivalent to parallel for if associated loop
-  /// nest meets certain critera.
-  bool teamsLoopCanBeParallelFor(Stmt *Astmt);
-
   /// A stack object to be created when performing template
   /// instantiation.
   ///

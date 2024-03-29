@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -7955,6 +7956,25 @@ void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
+static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
+                                             std::string StatusMsg,
+                                             const OMPExecutableDirective &D) {
+#ifndef NDEBUG
+  bool IsDevice = CGF.CGM.getLangOpts().OpenMPIsTargetDevice;
+  if (IsDevice)
+    StatusMsg += ": DEVICE";
+  else
+    StatusMsg += ": HOST";
+  SourceLocation L = D.getBeginLoc();
+  auto &SM = CGF.getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(L);
+  const char *FileName = PLoc.isValid() ? PLoc.getFilename() : nullptr;
+  unsigned LineNo =
+      PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
+  llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
+#endif
+}
+
 static void emitTargetTeamsGenericLoopRegionAsParallel(
     CodeGenFunction &CGF, PrePostActionTy &Action,
     const OMPTargetTeamsGenericLoopDirective &S) {
@@ -7978,9 +7998,8 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-                  CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-                      TTL_CODEGEN_TYPE " as parallel for", S,
-                      CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  emitTargetTeamsLoopCodegenStatus(
+                      CGF, TTL_CODEGEN_TYPE " as parallel for", S));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
@@ -8008,9 +8027,8 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-                  CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-                      TTL_CODEGEN_TYPE " as distribute", S,
-                      CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  emitTargetTeamsLoopCodegenStatus(
+                      CGF, TTL_CODEGEN_TYPE " as distribute", S));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });

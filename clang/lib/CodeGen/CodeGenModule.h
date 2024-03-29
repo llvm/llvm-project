@@ -1543,12 +1543,6 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
-  /// Under debug mode, print status of target teams loop transformation,
-  /// which should be either '#distribute' or '#parallel for'
-  void emitTargetTeamsLoopCodegenStatus(std::string StatusMsg,
-                                        const OMPExecutableDirective &D,
-                                        bool IsDevice);
-
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.

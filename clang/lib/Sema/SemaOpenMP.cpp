@@ -6204,8 +6204,8 @@ private:
 };
 } // namespace
 
-bool Sema::teamsLoopCanBeParallelFor(Stmt *AStmt) {
-  TeamsLoopChecker Checker(*this);
+static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
+  TeamsLoopChecker Checker(SemaRef);
   Checker.Visit(AStmt);
   return Checker.teamsLoopCanBeParallelFor();
 }
@@ -10971,7 +10971,7 @@ StmtResult Sema::ActOnOpenMPTargetTeamsGenericLoopDirective(
 
   return OMPTargetTeamsGenericLoopDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
-      teamsLoopCanBeParallelFor(AStmt));
+      teamsLoopCanBeParallelFor(AStmt, *this));
 }
 
 StmtResult Sema::ActOnOpenMPParallelGenericLoopDirective(
