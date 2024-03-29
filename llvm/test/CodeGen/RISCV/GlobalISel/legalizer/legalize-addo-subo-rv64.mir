@@ -125,8 +125,9 @@ body:             |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ICMP1]](s64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[ICMP]](s64)
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[ADD]](s64)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: $x11 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s64) = COPY $x10
@@ -261,8 +262,9 @@ body:             |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ICMP1]](s64)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[ICMP]](s64)
     ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[SUB]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: $x11 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s64) = COPY $x10
@@ -364,7 +366,8 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[ZEXT]](s64), [[AND]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY2]](s32)
     ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: $x11 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
@@ -393,7 +396,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ult), [[ADD]](s64), [[COPY1]]
-    ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[ADD]](s64)
+    ; CHECK-NEXT: $x10 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: $x11 = COPY [[ICMP]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
     %0:_(s64) = COPY $x10
