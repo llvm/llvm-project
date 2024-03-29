@@ -69,6 +69,8 @@ abilities that TableGen backends (such as ``DXILEmitter``) can rely on. Addition
 the DXIL Op specification should be declarative - as much as possible - making it
 easy to read and comprehend.
 
+.. _DesignSection:
+
 Design
 ======
 
@@ -83,6 +85,8 @@ attributes form the core of its specification.
 
 Each of the LLVM intrinsics maps to an external function represented by a call to an
 external function of the form ``dx.op.<class-name>.<overload-type>`` as noted above.
+
+.. _map class:
 
 Following is a basic TableGen class structure to encapsulate the mapping of LLVM Intrinsics to DXIL Ops.
 
@@ -219,7 +223,54 @@ not valid for an DXIL Op and thus need to be excluded from a valid overload
 type list of LLVM Intrinsic. The benefits and downsides of this are the same
 as those of specifying an override list as in Option 2a.
 
-Option 3 : Specify a function to validate accepted overload types
+Option 3 : Leverage the existing classification of DXIL Operations
+------------------------------------------------------------------
+
+Each DXIL Op belongs to a class signified by ``dxil_class`` field. A DXIL class
+is represents DXIL Ops with the same function prototype (or signature). Each
+DXIL Op has a set of valid overload types denoted by ``oload_types``. Representing
+this information in TableGen specification is another way to precisely specify
+the type constraints of a DXIL Op. This technique does not require inheriting
+OpTypes from the LLVM Intrinsic being lowered (i.e., mapped to). It does not
+require defining narrow overload types such as ``llvm_halforfloat_ty``.
+
+Following is a specification of a TableGen class ``DXILOpClass``, definition of
+the record for DXIL ``Unary`` class and definition of DXIL Op ``Sin``
+
+.. code-block::
+
+  class DXILOpClass<list<LLVMType> OpSig> {
+  list<LLVMType> OpSignature = OpSig;
+  }
+
+.. code-block::
+
+  def unary : DXILOpClass<[llvm_any_ty, llvm_any_ty]>;
+
+.. code-block::
+
+  let OpClass = unary, OpOverloadTypes = [llvm_half_ty, llvm_float_ty] in
+    def Sin  : DXILOpMapping<13, int_sin,
+                             "Returns sine(theta) for theta in radians.">;
+
+Note that the field ``OpTypes`` in ``class DXILOpMappingBase``
+specified in `DesignSection`_ is renamed as ``OpOverloadTypes``.
+
+Refer to the `changeset that implements <https://github.com/llvm/llvm-project/compare/main...bharadwajy:llvm-project:dxil_td/precise-overload-specification>`_
+this option.
+
+This specification option allows for readable, compact yet expressive
+representation of DXIL Ops without any duplication of information.
+
+Specify accepted overload types as attribute records
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Various other properties of a DXIL Op (such as the ``bool is_*`` and
+``shader_model`` viz., minimum shader model required) can
+be uniformly represented as ``DXILAttribute`` records. These attributes
+provide the filters to apply for generation of C++ code guarded by
+``#ifdef .. #endif`` in ``DXILOperation.inc`` by ``DXILEmitter`` backend code.
+
+Option 4 : Specify a function to validate accepted overload types
 -----------------------------------------------------------------
 
 Specify a validation function to verify/generate the accepted set of overload
@@ -247,17 +298,6 @@ valid overload types lacks the clear expressiveness and declarative readability
 of an explicit specification. In addition, validation functions add to the
 maintenance overhead while not necessarily making the specification more readable.
 
-Option 4 : Specify accepted overload types as attribute records
-----------------------------------------------------------------
-
-LLVM's TableGen infrastructure defines a base ``class Attr``
-(``llvm/include/llvm/IR/Attributes.td``) with an associated
-``AttrProperty``. Valid overload types of a DXIL Op can be represented as
-records of a class ``DXILAttribute``, similar to ``Attr``. This can provide the
-necessary declarative means for better readability and the expressiveness of
-specification. Additionally, the other properties of a DXIL Op (such as the
-``bool is_*``) can also be uniformly represented as ``DXILAttribute`` records.
-
 Summary
 =======
 
@@ -269,6 +309,4 @@ declarative as much as possible for readability and maintainability. The current
 implementation employs Option 2a. It is in place, primarily, to facilitate continued
 lowering of new LLVM intrinsics for HLSL functions being added in the front end. It
 serves to uncover any additional considerations necessary for an improved design of
-``DXIL.td``. The current plan is to explore the design outlined in **Option 4** to
-improve readability and maintainability while leveraging constructs in LLVM TableGen
-infrastructure for a potentially rich specification.
+``DXIL.td``.
