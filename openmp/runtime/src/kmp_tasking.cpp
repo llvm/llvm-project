@@ -3939,6 +3939,20 @@ static void __kmp_free_task_pri_list(kmp_task_team_t *task_team) {
   __kmp_release_bootstrap_lock(&task_team->tt.tt_task_pri_lock);
 }
 
+static inline void __kmp_task_team_init(kmp_task_team_t *task_team,
+                                        kmp_team_t *team) {
+  int team_nth = team->t.t_nproc;
+  // Only need to init if task team is isn't active or team size changed
+  if (!task_team->tt.tt_active || team_nth != task_team->tt.tt_nproc) {
+    TCW_4(task_team->tt.tt_found_tasks, FALSE);
+    TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
+    TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
+    TCW_4(task_team->tt.tt_nproc, team_nth);
+    KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads, team_nth);
+    TCW_4(task_team->tt.tt_active, TRUE);
+  }
+}
+
 // __kmp_allocate_task_team:
 // Allocates a task team associated with a specific team, taking it from
 // the global task team free list if possible.  Also initializes data
@@ -3946,7 +3960,6 @@ static void __kmp_free_task_pri_list(kmp_task_team_t *task_team) {
 static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
                                                  kmp_team_t *team) {
   kmp_task_team_t *task_team = NULL;
-  int nthreads;
 
   KA_TRACE(20, ("__kmp_allocate_task_team: T#%d entering; team = %p\n",
                 (thread ? __kmp_gtid_from_thread(thread) : -1), team));
@@ -3988,14 +4001,7 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
     // task_team->tt.tt_next = NULL;
   }
 
-  TCW_4(task_team->tt.tt_found_tasks, FALSE);
-  TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
-  TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
-  task_team->tt.tt_nproc = nthreads = team->t.t_nproc;
-
-  KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads, nthreads);
-  TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
-  TCW_4(task_team->tt.tt_active, TRUE);
+  __kmp_task_team_init(task_team, team);
 
   KA_TRACE(20, ("__kmp_allocate_task_team: T#%d exiting; task_team = %p "
                 "unfinished_threads init'd to %d\n",
@@ -4154,14 +4160,17 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
 
   // For serial teams, setup the first task team pointer to point to task team.
   // The other pointer is a stack of task teams from previous serial levels.
-  if (team->t.t_task_team[0] == NULL && team->t.t_nproc == 1) {
-    team->t.t_task_team[0] = __kmp_allocate_task_team(this_thr, team);
-    KA_TRACE(20,
-             ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
-              " for serial/root team %p\n",
-              __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
+  if (team->t.t_nproc == 1) {
+    if (team->t.t_task_team[0] == NULL) {
+      team->t.t_task_team[0] = __kmp_allocate_task_team(this_thr, team);
+      KA_TRACE(20,
+               ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
+                " for serial/root team %p\n",
+                __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
 
-    return;
+      return;
+    } else
+      __kmp_task_team_init(team->t.t_task_team[0], team);
   }
   // If this task_team hasn't been created yet, allocate it. It will be used in
   // the region after the next.
@@ -4198,16 +4207,7 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
     } else { // Leave the old task team struct in place for the upcoming region;
       // adjust as needed
       kmp_task_team_t *task_team = team->t.t_task_team[other_team];
-      if (!task_team->tt.tt_active ||
-          team->t.t_nproc != task_team->tt.tt_nproc) {
-        TCW_4(task_team->tt.tt_nproc, team->t.t_nproc);
-        TCW_4(task_team->tt.tt_found_tasks, FALSE);
-        TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
-        TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
-        KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads,
-                          team->t.t_nproc);
-        TCW_4(task_team->tt.tt_active, TRUE);
-      }
+      __kmp_task_team_init(task_team, team);
       // if team size has changed, the first thread to enable tasking will
       // realloc threads_data if necessary
       KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d reset next task_team "
