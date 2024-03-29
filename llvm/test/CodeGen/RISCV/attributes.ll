@@ -519,7 +519,6 @@
 ; X3SCS: .attribute 16, 2
 ; X3TMP: .attribute 16, 3
 ; X3ERR: LLVM ERROR: Cannot set multiple ABIs for X3/GP
-; X3ERR: error: Aborted
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
