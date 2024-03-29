@@ -1011,6 +1011,7 @@ cc_library(
     hdrs = ["include/llvm/TextAPI/DylibReader.h"],
     copts = llvm_copts,
     deps = [
+        ":DebugInfoDWARF",
         ":Object",
         ":Support",
         ":TargetParser",
