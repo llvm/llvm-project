@@ -2231,8 +2231,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr*>(E));
 
-  case CK_NoOp:
-  case CK_HLSLArrayRValue: {
+  case CK_NoOp: {
     return CE->changesVolatileQualification() ? EmitLoadOfLValue(CE)
                                               : Visit(const_cast<Expr *>(E));
   }
@@ -2328,6 +2327,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FloatingComplexToIntegralComplex:
   case CK_ConstructorConversion:
   case CK_ToUnion:
+  case CK_HLSLArrayRValue:
     llvm_unreachable("scalar cast to non-scalar value");
 
   case CK_LValueToRValue:

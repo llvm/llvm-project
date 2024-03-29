@@ -10966,8 +10966,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
            "Equivalent pipe types should have already been handled!");
     return {};
   case Type::ArrayParameter:
-    if (RHS != LHS)
-      return {}; // If these aren't equivalent we should fail.
+    assert(LHS != RHS &&
+           "Equivalent pipe types should have already been handled!");
     return LHS;
   case Type::BitInt: {
     // Merge two bit-precise int types, while trying to preserve typedef info.

@@ -1445,7 +1445,6 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_BitCast:
   case CK_ToUnion:
   case CK_ToVoid:
-  case CK_HLSLArrayRValue:
     // Conversions between (possibly-complex) integral, (possibly-complex)
     // floating-point, and bool.
   case CK_BooleanToSignedIntegral:
@@ -1525,6 +1524,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_LValueToRValue:
   case CK_LValueToRValueBitCast:
   case CK_UncheckedDerivedToBase:
+  case CK_HLSLArrayRValue:
     return false;
   }
   llvm_unreachable("Unhandled clang::CastKind enum");

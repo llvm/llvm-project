@@ -1126,7 +1126,6 @@ public:
     case CK_NonAtomicToAtomic:
     case CK_NoOp:
     case CK_ConstructorConversion:
-    case CK_HLSLArrayRValue:
       return Visit(subExpr, destType);
 
     case CK_ArrayToPointerDecay:
@@ -1227,6 +1226,7 @@ public:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLArrayRValue:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");
