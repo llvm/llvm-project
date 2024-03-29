@@ -7,7 +7,9 @@ define i64 @test(i1 %cond, i64 %x) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: i1 [[COND:%.*]], i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i64 [[X]], 7
-; CHECK-NEXT:    ret i64 [[OR1]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i64 [[OR1]], i64 [[X]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[SEL1]], 7
+; CHECK-NEXT:    ret i64 [[OR2]]
 ;
   %or1 = or disjoint i64 %x, 7
   %sel1 = select i1 %cond, i64 %or1, i64 %x
@@ -24,7 +26,8 @@ define i64 @pr87042(i64 %x) {
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i64 [[OR1]], i64 [[X]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[SEL1]], 16776960
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[AND2]], 0
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i64 [[OR1]], i64 [[SEL1]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[SEL1]], 7
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i64 [[OR2]], i64 [[SEL1]]
 ; CHECK-NEXT:    ret i64 [[SEL2]]
 ;
   %and1 = and i64 %x, 65535
