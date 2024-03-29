@@ -270,6 +270,7 @@ filesystem type_traits
 filesystem version
 format array
 format cctype
+format cerrno
 format clocale
 format cmath
 format cstddef
