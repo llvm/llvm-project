@@ -5,8 +5,6 @@
 // that operands of a dead op are added to the worklist even if the same value
 // appears multiple times as an operand.
 
-// -----
-
 // 2 uses of the same operand
 
 // CHECK:       func.func @f(%arg0: i1) {

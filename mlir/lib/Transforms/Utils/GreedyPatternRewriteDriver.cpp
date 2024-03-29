@@ -703,14 +703,18 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
       continue;
 
     Operation *otherUser = nullptr;
-    if (!llvm::all_of(operand.getUsers(), [&](Operation *user) {
-          if (user == op)
-            return true;
-          if (otherUser && user != otherUser)
-            return false;
-          otherUser = user;
-          return true;
-        }))
+    bool hasMoreThanTwoUses = false;
+    for (auto user : operand.getUsers()) {
+      if (user == op || user == otherUser)
+        continue;
+      if (!otherUser) {
+        otherUser = user;
+        continue;
+      }
+      hasMoreThanTwoUses = true;
+      break;
+    }
+    if (hasMoreThanTwoUses)
       continue;
 
     addToWorklist(defOp);
