@@ -298,6 +298,9 @@ def Trunc : DXILOpMapping<29, unary, int_trunc,
 def Rbits : DXILOpMapping<30, unary, int_bitreverse,
                          "Returns the specified value with its bits reversed.",
                          [llvm_anyint_ty, LLVMMatchType<0>]>;
+def Ceil : DXILOpMapping<28, unary, int_ceil,
+                         "Returns the smallest integer that is greater than or equal to the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def FMax : DXILOpMapping<35, binary, int_maxnum,
                          "Float maximum. FMax(a,b) = a > b ? a : b">;
 def FMin : DXILOpMapping<36, binary, int_minnum,
