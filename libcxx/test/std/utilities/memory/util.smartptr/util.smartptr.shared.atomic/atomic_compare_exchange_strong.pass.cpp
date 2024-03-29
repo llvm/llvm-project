@@ -5,7 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
 // UNSUPPORTED: no-threads
 
 // <memory>
@@ -15,7 +16,7 @@
 // template <class T>
 // bool
 // atomic_compare_exchange_strong(shared_ptr<T>* p, shared_ptr<T>* v,
-//                                shared_ptr<T> w);
+//                                shared_ptr<T> w);                     // Removed in C++26
 
 // UNSUPPORTED: c++03
 
