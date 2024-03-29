@@ -81,7 +81,7 @@ constexpr fputil::DoubleDouble COEFFS[9] = {
 //                     = 33.
 // Thus, the Veltkamp splitting constant is C = 2^33 + 1.
 // This is used when FMA instruction is not available.
-[[maybe_unused]] LIBC_INLINE constexpr fputil::DoubleDouble split_d(double a) {
+[[maybe_unused]] constexpr fputil::DoubleDouble split_d(double a) {
   fputil::DoubleDouble r{0.0, 0.0};
   constexpr double C = 0x1.0p33 + 1.0;
   double t1 = C * a;
@@ -98,9 +98,9 @@ constexpr fputil::DoubleDouble COEFFS[9] = {
 //   idx, k_d   = round( 2^4 * num_d / den_d )
 //   final_sign = sign of the final result
 //   const_term = the constant term in the final expression.
-LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
-                                       int idx, double k_d, double final_sign,
-                                       const fputil::DoubleDouble &const_term) {
+float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
+                           double k_d, double final_sign,
+                           const fputil::DoubleDouble &const_term) {
   fputil::DoubleDouble q;
   double num_r, den_r;
 
