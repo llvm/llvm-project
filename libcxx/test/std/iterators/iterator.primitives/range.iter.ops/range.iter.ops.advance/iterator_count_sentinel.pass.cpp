@@ -88,7 +88,11 @@ constexpr void check_forward_sized_sentinel(int* first, int* last, std::iter_dif
 
 template <typename It>
 constexpr void check_backward(int* first, int* last, std::iter_difference_t<It> n, int* expected) {
-  static_assert(std::random_access_iterator<It>, "This test doesn't support non random access iterators");
+  // Check preconditions for `advance` when called with negative `n`:
+  // <https://eel.is/c++draft/iterators#range.iter.op.advance-5>
+  assert(n < 0);
+  static_assert(std::bidirectional_iterator<It>);
+
   using Difference = std::iter_difference_t<It>;
   Difference const M = (expected - last); // expected travel distance (which is negative)
 
@@ -104,10 +108,34 @@ constexpr void check_backward(int* first, int* last, std::iter_difference_t<It> 
   {
     auto it = stride_counting_iterator(It(last));
     auto sent = stride_counting_iterator(It(first));
+    static_assert(std::bidirectional_iterator<stride_counting_iterator<It>>);
+
     (void)std::ranges::advance(it, n, sent);
-    assert(it.stride_count() <= 1);
-    assert(it.stride_displacement() <= 1);
-    assert(it.equals_count() == 0);
+
+    if constexpr (std::sized_sentinel_for<It, It>) {
+      if (expected == first) {
+        // In this case, the algorithm can just do `it = std::move(sent);`
+        // instead of doing iterator arithmetic:
+        // <https://eel.is/c++draft/iterators#range.iter.op.advance-4.1>
+        assert(it.stride_count() == 0);
+        assert(it.stride_displacement() == 0);
+      } else {
+        assert(it.stride_count() == 1);
+        assert(it.stride_displacement() == 1);
+      }
+      assert(it.equals_count() == 0);
+    } else {
+      assert(it.stride_count() == -M);
+      assert(it.stride_displacement() == M);
+      if (-n > -M) {
+        // We "hit" the bound, so there is one extra equality check.
+        assert(it.equals_count() == -M + 1);
+      } else {
+        assert(it.equals_count() == -M);
+      }
+      // In any case, there must not be more than `-n` bounds checks.
+      assert(it.equals_count() <= -n);
+    }
   }
 }
 
@@ -201,11 +229,12 @@ constexpr bool test() {
         check_forward_sized_sentinel<int*>(                        range, range+size, n, expected);
       }
 
-      {
-        // Note that we can only test ranges::advance with a negative n for iterators that
-        // are sized sentinels for themselves, because ranges::advance is UB otherwise.
-        // In particular, that excludes bidirectional_iterators since those are not sized sentinels.
+      // Exclude the `n == 0` case for the backwards checks.
+      // Input and forward iterators are not tested as the backwards case does
+      // not apply for them.
+      if (n > 0) {
         int* expected = n > size ? range : range + size - n;
+        check_backward<bidirectional_iterator<int*>>(range, range+size, -n, expected);
         check_backward<random_access_iterator<int*>>(range, range+size, -n, expected);
         check_backward<contiguous_iterator<int*>>(   range, range+size, -n, expected);
         check_backward<int*>(                        range, range+size, -n, expected);
@@ -224,20 +253,6 @@ constexpr bool test() {
     i = iota_iterator{+1};
     assert(std::ranges::advance(i, INT_MIN, iota_iterator{INT_MIN+1}) == 0);
     assert(i == iota_iterator{INT_MIN+1});
-  }
-
-  // Check that we don't do an unneeded bounds check when decrementing a
-  // `bidirectional_iterator` that doesn't model `sized_sentinel_for`.
-  {
-    static_assert(std::bidirectional_iterator<bidirectional_iterator<iota_iterator>>);
-    static_assert(
-        !std::sized_sentinel_for<bidirectional_iterator<iota_iterator>, bidirectional_iterator<iota_iterator>>);
-
-    auto it   = stride_counting_iterator(bidirectional_iterator(iota_iterator{+1}));
-    auto sent = stride_counting_iterator(bidirectional_iterator(iota_iterator{-2}));
-    assert(std::ranges::advance(it, -3, sent) == 0);
-    assert(base(base(it)) == iota_iterator{-2});
-    assert(it.equals_count() == 3);
   }
 
   return true;
