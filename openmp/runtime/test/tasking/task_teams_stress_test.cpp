@@ -6,6 +6,15 @@
 // RUN: env KMP_HOT_TEAMS_MAX_LEVEL=3 %libomp-run
 // RUN: env KMP_HOT_TEAMS_MAX_LEVEL=4 %libomp-run
 // RUN: env KMP_HOT_TEAMS_MAX_LEVEL=5 %libomp-run
+//
+// RUN: %libomp-cxx-compile -DUSE_HIDDEN_HELPERS=1
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=0 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=1 KMP_HOT_TEAMS_MODE=0 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=1 KMP_HOT_TEAMS_MODE=1 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=2 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=3 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=4 %libomp-run
+// RUN: env KMP_HOT_TEAMS_MAX_LEVEL=5 %libomp-run
 
 // This test stresses the task team mechanism by running a simple
 // increment task over and over with varying number of threads and nesting.
@@ -44,6 +53,16 @@ void task_inc_split_a(int *a, int low, int high) {
   }
 }
 
+#ifdef USE_HIDDEN_HELPERS
+// Hidden helper tasks force serial regions to create task teams
+void task_inc_a_hidden_helper(int *a) {
+#pragma omp target map(tofrom: a[0]) nowait
+  {
+#pragma omp atomic
+    (*a)++;
+  }
+}
+#else
 // Detached tasks force serial regions to create task teams
 void task_inc_a_detached(int *a, omp_event_handle_t handle) {
 #pragma omp task detach(handle)
@@ -53,6 +72,7 @@ void task_inc_a_detached(int *a, omp_event_handle_t handle) {
     omp_fulfill_event(handle);
   }
 }
+#endif
 
 void check_a(int *a, int expected) {
   if (*a != expected) {
@@ -76,7 +96,11 @@ void test_tasks(omp_event_handle_t *handles, int expected, int *a) {
   check_a(a, expected);
 #pragma omp barrier
 
-  task_inc_a_detached(a, handles[tid]);
+#ifdef USE_HIDDEN_HELPERS
+  task_inc_a_hidden_helper(a);
+#else
+  task_inc_a_detached(a, handles);
+#endif
 
 #pragma omp barrier
   check_a(a, 2 * expected);
@@ -169,7 +193,7 @@ void test_tasks_split(omp_event_handle_t *handles, int expected, int *a) {
   check_a(a, expected);
 #pragma omp barrier
 
-  task_inc_a_detached(a, handles[tid]); // task team B
+  task_inc_a_for_serial(a, handles[tid]); // task team B
 
 #pragma omp barrier
   check_a(a, 2 * expected);

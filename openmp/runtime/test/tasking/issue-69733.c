@@ -1,7 +1,7 @@
 // RUN: %libomp-compile-and-run
 #include <omp.h>
 
-void nested_parallel(int nth1, int nth2) {
+void nested_parallel_detached(int nth1, int nth2) {
 #pragma omp parallel num_threads(nth1)
   {
 #pragma omp parallel num_threads(nth2)
@@ -14,6 +14,16 @@ void nested_parallel(int nth1, int nth2) {
   }
 }
 
+void nested_parallel_hidden_helpers(int nth1, int nth2) {
+#pragma omp parallel num_threads(nth1)
+  {
+#pragma omp parallel num_threads(nth2)
+    {
+#pragma omp target nowait
+      {}
+    }
+  }
+}
 int main() {
   int i;
 
@@ -21,13 +31,22 @@ int main() {
   omp_set_dynamic(0);
 
   for (i = 0; i < 10; ++i)
-    nested_parallel(1, 1);
+    nested_parallel_detached(1, 1);
   for (i = 0; i < 10; ++i)
-    nested_parallel(1, 2);
+    nested_parallel_detached(1, 2);
   for (i = 0; i < 10; ++i)
-    nested_parallel(2, 1);
+    nested_parallel_detached(2, 1);
   for (i = 0; i < 10; ++i)
-    nested_parallel(2, 2);
+    nested_parallel_detached(2, 2);
+
+  for (i = 0; i < 10; ++i)
+    nested_parallel_hidden_helpers(1, 1);
+  for (i = 0; i < 10; ++i)
+    nested_parallel_hidden_helpers(1, 2);
+  for (i = 0; i < 10; ++i)
+    nested_parallel_hidden_helpers(2, 1);
+  for (i = 0; i < 10; ++i)
+    nested_parallel_hidden_helpers(2, 2);
 
   return 0;
 }

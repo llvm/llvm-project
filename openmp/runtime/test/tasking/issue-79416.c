@@ -9,9 +9,20 @@ void run(int teams, int th) {
 }
 
 int main() {
-  fprintf(stderr, "run(1, 2)\n");
-  run(1, 2);
-  fprintf(stderr, "run(1, 3)\n");
-  run(1, 3);
+  int i;
+  for (i = 0; i < 10; ++i) {
+    printf("run(1, 1)\n");
+    run(1, 1);
+    printf("run(1, 2)\n");
+    run(1, 2);
+    printf("run(1, 3)\n");
+    run(1, 3);
+    printf("run(2, 1)\n");
+    run(2, 1);
+    printf("run(2, 2)\n");
+    run(2, 2);
+    printf("run(2, 3)\n");
+    run(2, 3);
+  }
   return 0;
 }
