@@ -62,12 +62,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
   static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_zero requires an unsigned integer type");
+#if __has_builtin(__builtin_clzg)
+  return __builtin_clzg(__t, numeric_limits<_Tp>::digits);
+#else  // __has_builtin(__builtin_clzg)
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
 
-#if __has_builtin(__builtin_clzg)
-  return __builtin_clzg(__t);
-#else  // __has_builtin(__builtin_clzg)
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_clz(static_cast<unsigned int>(__t)) -
            (numeric_limits<unsigned int>::digits - numeric_limits<_Tp>::digits);
