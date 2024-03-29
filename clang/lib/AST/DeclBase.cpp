@@ -1102,9 +1102,13 @@ bool Decl::isInAnotherModuleUnit() const {
   return M != getASTContext().getCurrentNamedModule();
 }
 
+bool Decl::isFromExplicitGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
 bool Decl::shouldSkipCheckingODR() const {
-  return getASTContext().getLangOpts().SkipODRCheckInGMF && getOwningModule() &&
-         getOwningModule()->isExplicitGlobalModule();
+  return getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         isFromExplicitGlobalModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
