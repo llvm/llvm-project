@@ -2773,15 +2773,12 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   endian::write32<ELFT::Endianness>(buf + 0, mergedHdr.UnitLength);
   endian::write16<ELFT::Endianness>(buf + 4, mergedHdr.Version);
   endian::write32<ELFT::Endianness>(buf + 8, mergedHdr.CompUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 12,
-                                          mergedHdr.LocalTypeUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 16,
-                                          mergedHdr.ForeignTypeUnitCount);
+  endian::write32<ELFT::Endianness>(buf + 12, mergedHdr.LocalTypeUnitCount);
+  endian::write32<ELFT::Endianness>(buf + 16, mergedHdr.ForeignTypeUnitCount);
   endian::write32<ELFT::Endianness>(buf + 20, mergedHdr.BucketCount);
   endian::write32<ELFT::Endianness>(buf + 24, mergedHdr.NameCount);
   endian::write32<ELFT::Endianness>(buf + 28, mergedHdr.AbbrevTableSize);
-  endian::write32<ELFT::Endianness>(buf + 32,
-                                          mergedHdr.AugmentationStringSize);
+  endian::write32<ELFT::Endianness>(buf + 32, mergedHdr.AugmentationStringSize);
   buf += 36;
   memcpy(buf, mergedHdr.AugmentationString.c_str(), 8);
   buf += 8;
@@ -2823,8 +2820,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
 
   // Write the string offsets.
   for (const auto &entry : mergedEntries) {
-    endian::write32<ELFT::Endianness>(buf + 0,
-                                            entry.relocatedEntryOffset);
+    endian::write32<ELFT::Endianness>(buf + 0, entry.relocatedEntryOffset);
     buf += 4;
   }
 
