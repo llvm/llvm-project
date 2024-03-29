@@ -489,7 +489,6 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
 
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
     Value *SlotPtr = memtag::getAndroidSlotPtr(IRB, StackMteSlot);
-    SlotPtr->setName("TLS_SLOT_STACK_MTE");
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     Value *TaggedFP = IRB.CreateOr(
         memtag::getFP(IRB),
