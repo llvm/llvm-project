@@ -57,14 +57,14 @@ struct tzdb {
     return nullptr;
   }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const time_zone* locate_zone(string_view __name) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const time_zone* locate_zone(string_view __name) const {
     if (const time_zone* __result = __locate_zone(__name))
       return __result;
 
     std::__throw_runtime_error("tzdb: requested time zone not found");
   }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI const time_zone* current_zone() const {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI const time_zone* current_zone() const {
     return __current_zone();
   }
 

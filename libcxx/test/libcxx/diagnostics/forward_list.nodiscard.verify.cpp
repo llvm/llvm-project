@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <new>
+// UNSUPPORTED: c++03
 
-// template <class T> constexpr T* launder(T* p) noexcept;
+// check that <forward_list> functions are marked [[nodiscard]]
 
-// UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: c++17 && !stdlib=libc++
+#include <forward_list>
 
-#include <new>
-
-void f() {
-    int *p = nullptr;
-    std::launder(p); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+void test() {
+  std::forward_list<int> forward_list;
+  forward_list.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
