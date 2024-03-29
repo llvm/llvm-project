@@ -144,6 +144,9 @@ private:
   bool selectAddrSpaceCast(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
+  bool selectAll(Register ResVReg, const SPIRVType *ResType,
+                 MachineInstr &I) const;
+
   bool selectBitreverse(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -1155,6 +1158,20 @@ static unsigned getBoolCmpOpcode(unsigned PredNum) {
   }
 }
 
+bool SPIRVInstructionSelector::selectAll(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+
+  MachineBasicBlock &BB = *I.getParent();
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAll))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -1785,6 +1802,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     break;
   case Intrinsic::spv_thread_id:
     return selectSpvThreadId(ResVReg, ResType, I);
+  case Intrinsic::spv_all:
+    return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
