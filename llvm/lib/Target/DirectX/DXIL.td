@@ -285,7 +285,7 @@ def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
                          "Returns the reciprocal of the square root of the specified value."
                          "rsqrt(x) = 1 / sqrt(x).",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Round : DXILOpMapping<26, unary, int_round,
+def Round : DXILOpMapping<26, unary, int_roundeven,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
