@@ -1106,6 +1106,10 @@ Bug Fixes to C++ Support
 - Fix a crash when an unresolved overload set is encountered on the RHS of a ``.*`` operator.
   (`#53815 <https://github.com/llvm/llvm-project/issues/53815>`_)
 
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution.
+  (`#86769 <https://github.com/llvm/llvm-project/issues/86769>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.

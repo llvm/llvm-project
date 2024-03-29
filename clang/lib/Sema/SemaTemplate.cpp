@@ -1830,7 +1830,27 @@ static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
   // Make sure we get the template parameter list from the most
   // recent declaration, since that is the only one that is guaranteed to
   // have all the default template argument information.
-  return cast<TemplateDecl>(TD->getMostRecentDecl())->getTemplateParameters();
+  Decl *D = TD->getMostRecentDecl();
+  // C++11 [temp.param]p12:
+  // A default template argument shall not be specified in a friend class
+  // template declaration.
+  //
+  // Skip past friend *declarations* because they are not supposed to contain
+  // default template arguments. Moreover, these declarations may introduce
+  // template parameters living in different template depths than the
+  // corresponding template parameters in TD, causing unmatched constraint
+  // substitution.
+  //
+  // FIXME: Diagnose such cases within a class template:
+  //  template <class T>
+  //  struct S {
+  //    template <class = void> friend struct C;
+  //  };
+  //  template struct S<int>;
+  while (D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None &&
+         D->getPreviousDecl())
+    D = D->getPreviousDecl();
+  return cast<TemplateDecl>(D)->getTemplateParameters();
 }
 
 DeclResult Sema::CheckClassTemplate(
