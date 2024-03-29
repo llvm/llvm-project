@@ -44,7 +44,6 @@ TEST(ScudoVectorTest, ResizeReduction) {
 
 #if defined(__linux__)
 
-#include <sys/mman.h>
 #include <sys/resource.h>
 
 // Verify that if the reallocate fails, nothing new is added.
@@ -60,10 +59,9 @@ TEST(ScudoVectorTest, ReallocateFails) {
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
 
   // qemu does not honor the setrlimit, so verify before proceeding.
-  void *ptr = mmap(nullptr, 100, PROT_READ | PROT_WRITE,
-                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  if (ptr != MAP_FAILED) {
-    munmap(ptr, 100);
+  scudo::MemMapT MemMap;
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test", MAP_ALLOWNOMEM)) {
+    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
     setrlimit(RLIMIT_AS, &Limit);
     GTEST_SKIP() << "Limiting address space does not prevent mmap.";
   }
