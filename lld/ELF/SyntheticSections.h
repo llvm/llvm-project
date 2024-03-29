@@ -859,7 +859,7 @@ public:
     llvm::DWARFDebugNames::DWARFDebugNamesOffsets locs;
     SmallVector<uint32_t, 0> tuOffsets;
     SmallVector<Abbrev, 0> abbrevTable;
-    std::unique_ptr<uint32_t[]> entryOffsets;
+    SmallVector<uint32_t, 0> entryOffsets;
     SmallVector<NamedEntry, 0> namedEntries;
     uint16_t dwarfSize;
     uint16_t hdrSize;
@@ -895,7 +895,7 @@ public:
   void updateParentIndexEntries();
   uint64_t calculateMergedSectionSize();
 
-  llvm::BumpPtrAllocator Alloc;
+  llvm::SpecificBumpPtrAllocator<Abbrev> abbrevAlloc;
 
 private:
   size_t sectionSize;
