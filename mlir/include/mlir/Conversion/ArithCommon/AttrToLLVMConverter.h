@@ -112,8 +112,7 @@ class AttrConverterConstrainedFPToLLVM {
                 "LLVM::FPExceptionBehaviorOpInterface");
 
 public:
-  AttrConverterConstrainedFPToLLVM(
-      SourceOp srcOp) {
+  AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
 
