@@ -1204,12 +1204,9 @@ define <vscale x 2 x i64> @vpmerge_vwsub.w_tied(<vscale x 2 x i64> %passthru, <v
 define <vscale x 2 x double> @vpmerge_vfwsub.w_tied(<vscale x 2 x double> %passthru, <vscale x 2 x double> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %mask, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vfwsub.w_tied:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    fsrmi a0, 1
-; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vfwsub.wv v10, v10, v12
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vfwsub.wv v8, v8, v12, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
   %vl.zext = zext i32 %vl to i64

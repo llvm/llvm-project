@@ -2226,7 +2226,8 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
     def "_" # MInfo.MX # "_TIED":
       VPseudoTiedBinaryNoMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" :
-      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
+      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>,
+      RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
