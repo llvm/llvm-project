@@ -357,6 +357,9 @@ Bug Fixes in This Version
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
 
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution. (#GH86769).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
