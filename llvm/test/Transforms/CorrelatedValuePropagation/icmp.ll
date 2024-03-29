@@ -1569,3 +1569,37 @@ bb3:
   %6 = phi i1 [ %5, %bb1 ], [ %4, %bb2 ]
   ret i1 %6
 }
+
+define i1 @test_icmp_ne_on_nsw(i8 %x) {
+; CHECK-LABEL: @test_icmp_ne_on_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i8 [[X]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP5]], [[BB1]] ], [ [[TMP4]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %1 = icmp sle i8 %x, 0
+  %2 = icmp sge i8 %x, -1
+  %3 = and i1 %1, %2
+  br i1 %3, label %bb1, label %bb2
+
+bb2:
+  %4 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %5 = icmp eq i8 %x, -1
+  br label %bb3
+
+bb3:
+  %6 = phi i1 [ %5, %bb1 ], [ %4, %bb2 ]
+  ret i1 %6
+}
