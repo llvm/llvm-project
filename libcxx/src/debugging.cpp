@@ -39,11 +39,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  if defined(_LIBCPP_WIN32API)
 
-_LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept { DebugBreak(); }
+void __breakpoint() noexcept { DebugBreak(); }
 
 #  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
 
-_LIBCPP_EXPORTED_FROM_ABI void __breakpoint() {
+void __breakpoint() {
 #    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #    else
@@ -61,13 +61,13 @@ _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() {
 
 #  if defined(_LIBCPP_WIN32API)
 
-_LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
+bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
 #  elif defined(__APPLE__) || defined(__FreeBSD__)
 
 // Returns true if the current process is being debugged (either
 // running under the debugger or has a debugger attached post facto).
-_LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept {
+bool __is_debugger_present() noexcept {
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
@@ -103,7 +103,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept {
 
 #  elif defined(__linux__)
 
-_LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept {
+bool __is_debugger_present() noexcept {
 #    if defined(_LIBCPP_HAS_NO_FILESYSTEM)
   _LIBCPP_ASSERT_INTERNAL(false,
                           "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
@@ -145,6 +145,15 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_debugger_present() noexcept {
 #    error "'std::is_debugger_present()' is not implemented on this platform."
 
 #  endif // defined(_LIBCPP_WIN32API)
+
+_LIBCPP_EXPORTED_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
+
+_LIBCPP_EXPORTED_FROM_ABI void breakpoint_if_debugging() noexcept {
+  if (__is_debugger_present())
+    __breakpoint();
+}
+
+_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept { return __is_debugger_present(); }
 
 #endif // defined(_LIBCPP_HAS_DEBUGGING)
 
