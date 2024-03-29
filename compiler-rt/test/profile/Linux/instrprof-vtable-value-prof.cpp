@@ -1,28 +1,26 @@
 // REQUIRES: lld-available
 
-// RUN: rm -rf %t && split-file %s %t && cd %t
-//
-// RUN: %clangxx_pgogen -fuse-ld=lld -O2 -g -fprofile-generate=. -mllvm -enable-vtable-value-profiling test.cpp -o test
-// RUN: env LLVM_PROFILE_FILE=test.profraw ./test
+// RUN: %clangxx_pgogen -fuse-ld=lld -O2 -g -fprofile-generate=. -mllvm -enable-vtable-value-profiling %s -o %t-test
+// RUN: env LLVM_PROFILE_FILE=%t-test.profraw %t-test
 
 // Show vtable profiles from raw profile.
-// RUN: llvm-profdata show --function=main --ic-targets -show-vtables test.profraw | FileCheck %s --check-prefixes=COMMON,RAW
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-test.profraw | FileCheck %s --check-prefixes=COMMON,RAW
 
 // Generate indexed profile from raw profile and show the data.
-// RUN: llvm-profdata merge test.profraw -o test.profdata
-// RUN: llvm-profdata show --function=main --ic-targets --show-vtables test.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
+// RUN: llvm-profdata merge %t-test.profraw -o %t-test.profdata
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-test.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // Generate text profile from raw and indexed profiles respectively and show the data.
-// RUN: llvm-profdata merge --text test.profraw -o raw.proftext
-// RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text raw.proftext | FileCheck %s --check-prefix=ICTEXT
-// RUN: llvm-profdata merge --text test.profdata -o indexed.proftext
-// RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text indexed.proftext | FileCheck %s --check-prefix=ICTEXT
+// RUN: llvm-profdata merge --text %t-test.profraw -o %t-raw.proftext
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t-raw.proftext | FileCheck %s --check-prefix=ICTEXT
+// RUN: llvm-profdata merge --text %t-test.profdata -o %t-indexed.proftext
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
 
 // Generate indexed profile from text profiles and show the data
-// RUN: llvm-profdata merge --binary raw.proftext -o text.profraw
-// RUN: llvm-profdata show --function=main --ic-targets --show-vtables text.profraw | FileCheck %s --check-prefixes=COMMON,INDEXED
-// RUN: llvm-profdata merge --binary indexed.proftext -o text.profdata
-// RUN: llvm-profdata show --function=main --ic-targets --show-vtables text.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
+// RUN: llvm-profdata merge --binary %t-raw.proftext -o %t-text.profraw
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-text.profraw | FileCheck %s --check-prefixes=COMMON,INDEXED
+// RUN: llvm-profdata merge --binary %t-indexed.proftext -o %t-text.profdata
+// RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-text.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // COMMON: Counters:
 // COMMON-NEXT:  main:
@@ -32,23 +30,23 @@
 // COMMON-NEXT:  Number of instrumented vtables: 2
 // RAW:  Indirect Target Results:
 // RAW-NEXT:       [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
-// RAW-NEXT:       [  0, test.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii,        750 ] (75.00%)
+// RAW-NEXT:       [  0, {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii,        750 ] (75.00%)
 // RAW-NEXT:       [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
-// RAW-NEXT:       [  1, test.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii,        750 ] (75.00%)
+// RAW-NEXT:       [  1, {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii,        750 ] (75.00%)
 // RAW-NEXT:  VTable Results:
 // RAW-NEXT:       [  0, _ZTV8Derived1,        250 ] (25.00%)
-// RAW-NEXT:       [  0, test.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+// RAW-NEXT:       [  0, {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
 // RAW-NEXT:       [  1, _ZTV8Derived1,        250 ] (25.00%)
-// RAW-NEXT:       [  1, test.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+// RAW-NEXT:       [  1, {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
 // INDEXED:     Indirect Target Results:
-// INDEXED-NEXT:         [  0, test.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii,        750 ] (75.00%)
+// INDEXED-NEXT:         [  0, {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii,        750 ] (75.00%)
 // INDEXED-NEXT:         [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
-// INDEXED-NEXT:         [  1, test.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii,        750 ] (75.00%)
+// INDEXED-NEXT:         [  1, {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii,        750 ] (75.00%)
 // INDEXED-NEXT:         [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
 // INDEXED-NEXT:     VTable Results:
-// INDEXED-NEXT:         [  0, test.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+// INDEXED-NEXT:         [  0, {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
 // INDEXED-NEXT:         [  0, _ZTV8Derived1,        250 ] (25.00%)
-// INDEXED-NEXT:         [  1, test.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
+// INDEXED-NEXT:         [  1, {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E,        750 ] (75.00%)
 // INDEXED-NEXT:         [  1, _ZTV8Derived1,        250 ] (25.00%)
 // COMMON: Instrumentation level: IR  entry_first = 0
 // COMMON-NEXT: Functions shown: 1
@@ -86,23 +84,22 @@
 // ICTEXT: # NumValueSites:
 // ICTEXT: 2
 // ICTEXT: 2
-// ICTEXT: test.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii:750
+// ICTEXT: {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func1Eii:750
 // ICTEXT: _ZN8Derived15func1Eii:250
 // ICTEXT: 2
-// ICTEXT: test.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii:750
+// ICTEXT: {{.*}}instrprof-vtable-value-prof.cpp;_ZN12_GLOBAL__N_18Derived25func2Eii:750
 // ICTEXT: _ZN8Derived15func2Eii:250
 // ICTEXT: # ValueKind = IPVK_VTableTarget:
 // ICTEXT: 2
 // ICTEXT: # NumValueSites:
 // ICTEXT: 2
 // ICTEXT: 2
-// ICTEXT: test.cpp;_ZTVN12_GLOBAL__N_18Derived2E:750
+// ICTEXT: {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E:750
 // ICTEXT: _ZTV8Derived1:250
 // ICTEXT: 2
-// ICTEXT: test.cpp;_ZTVN12_GLOBAL__N_18Derived2E:750
+// ICTEXT: {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E:750
 // ICTEXT: _ZTV8Derived1:250
 
-//--- test.cpp
 #include <cstdio>
 #include <cstdlib>
 class Base {
