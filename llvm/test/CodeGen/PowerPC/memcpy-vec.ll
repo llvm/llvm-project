@@ -10,12 +10,8 @@ entry:
   ret void
 
 ; PWR7-LABEL: @foo1
-; PWR7-NOT: bl memcpy
-; PWR7-DAG: li [[OFFSET:[0-9]+]], 16
-; PWR7-DAG: lxvd2x [[TMP0:[0-9]+]], 4, [[OFFSET]]
-; PWR7-DAG: stxvd2x [[TMP0]], 3, [[OFFSET]]
-; PWR7-DAG: lxvd2x [[TMP1:[0-9]+]], 0, 4
-; PWR7-DAG: stxvd2x [[TMP1]], 0, 3
+; PWR7: lxvw4x
+; PWR7: stxvw4x
 ; PWR7: blr
 
 ; PWR8-LABEL: @foo1
@@ -34,7 +30,8 @@ entry:
   ret void
 
 ; PWR7-LABEL: @foo2
-; PWR7: bl memcpy
+; PWR7: lxvw4x
+; PWR7: stxvw4x
 ; PWR7: blr
 
 ; PWR8-LABEL: @foo2

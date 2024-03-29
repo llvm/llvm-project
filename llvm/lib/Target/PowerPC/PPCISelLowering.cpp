@@ -15965,8 +15965,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     Align ABIAlignment = DAG.getDataLayout().getABITypeAlign(Ty);
     if (LD->isUnindexed() && VT.isVector() &&
         ((Subtarget.hasAltivec() && ISD::isNON_EXTLoad(N) &&
-          // P8 and later hardware should just use LOAD.
-          !Subtarget.hasP8Vector() &&
+          // Hardware has VSX should just use LOAD.
+          !Subtarget.hasVSX() &&
           (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32 ||
            VT == MVT::v4f32))) &&
         LD->getAlign() < ABIAlignment) {
@@ -17250,8 +17250,7 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 EVT PPCTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   if (getTargetMachine().getOptLevel() != CodeGenOptLevel::None) {
-    // We should use Altivec/VSX loads and stores when available. For unaligned
-    // addresses, unaligned VSX loads are only fast starting with the P8.
+    // We should use Altivec/VSX loads and stores when available.
     if (Subtarget.hasAltivec() && Op.size() >= 16) {
       if (Op.isMemset() && Subtarget.hasVSX()) {
         uint64_t TailSize = Op.size() % 16;
@@ -17263,7 +17262,7 @@ EVT PPCTargetLowering::getOptimalMemOpType(
         }
         return MVT::v4i32;
       }
-      if (Op.isAligned(Align(16)) || Subtarget.hasP8Vector())
+      if (Op.isAligned(Align(16)) || Subtarget.hasVSX())
         return MVT::v4i32;
     }
   }
