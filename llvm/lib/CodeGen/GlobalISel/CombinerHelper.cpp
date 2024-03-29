@@ -5270,6 +5270,97 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
   return MIB.buildMul(Ty, Res, Factor);
 }
 
+bool CombinerHelper::matchDivByPow2(MachineInstr &MI, bool IsSigned) {
+  assert((MI.getOpcode() == TargetOpcode::G_SDIV ||
+          MI.getOpcode() == TargetOpcode::G_UDIV) &&
+         "Expected SDIV or UDIV");
+  auto &Div = cast<GenericMachineInstr>(MI);
+  Register RHS = Div.getReg(2);
+  auto MatchPow2 = [&](const Constant *C) {
+    auto *CI = dyn_cast<ConstantInt>(C);
+    return CI && (CI->getValue().isPowerOf2() ||
+                  (IsSigned && CI->getValue().isNegatedPowerOf2()));
+  };
+  return matchUnaryPredicate(MRI, RHS, MatchPow2, /*AllowUndefs=*/false);
+}
+
+void CombinerHelper::applySDivByPow2(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
+  auto &SDiv = cast<GenericMachineInstr>(MI);
+  Register Dst = SDiv.getReg(0);
+  Register LHS = SDiv.getReg(1);
+  Register RHS = SDiv.getReg(2);
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+  LLT CCVT =
+      Ty.isVector() ? LLT::vector(Ty.getElementCount(), 1) : LLT::scalar(1);
+
+  Builder.setInstrAndDebugLoc(MI);
+
+  // Effectively we want to lower G_SDIV %lhs, %rhs, where %rhs is a power of 2,
+  // to the following version:
+  //
+  // %c1 = G_CTTZ %rhs
+  // %inexact = G_SUB $bitwidth, %c1
+  // %sign = %G_ASHR %lhs, $(bitwidth - 1)
+  // %lshr = G_LSHR %sign, %inexact
+  // %add = G_ADD %lhs, %lshr
+  // %ashr = G_ASHR %add, %c1
+  // %ashr = G_SELECT, %isoneorallones, %lhs, %ashr
+  // %zero = G_CONSTANT $0
+  // %neg = G_NEG %ashr
+  // %isneg = G_ICMP SLT %rhs, %zero
+  // %res = G_SELECT %isneg, %neg, %ashr
+
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+  auto Zero = Builder.buildConstant(Ty, 0);
+
+  auto Bits = Builder.buildConstant(ShiftAmtTy, BitWidth);
+  auto C1 = Builder.buildCTTZ(ShiftAmtTy, RHS);
+  auto Inexact = Builder.buildSub(ShiftAmtTy, Bits, C1);
+  // Splat the sign bit into the register
+  auto Sign = Builder.buildAShr(
+      Ty, LHS, Builder.buildConstant(ShiftAmtTy, BitWidth - 1));
+
+  // Add (LHS < 0) ? abs2 - 1 : 0;
+  auto LSrl = Builder.buildLShr(Ty, Sign, Inexact);
+  auto Add = Builder.buildAdd(Ty, LHS, LSrl);
+  auto AShr = Builder.buildAShr(Ty, Add, C1);
+
+  // Special case: (sdiv X, 1) -> X
+  // Special Case: (sdiv X, -1) -> 0-X
+  auto One = Builder.buildConstant(Ty, 1);
+  auto MinusOne = Builder.buildConstant(Ty, -1);
+  auto IsOne = Builder.buildICmp(CmpInst::Predicate::ICMP_EQ, CCVT, RHS, One);
+  auto IsMinusOne =
+      Builder.buildICmp(CmpInst::Predicate::ICMP_EQ, CCVT, RHS, MinusOne);
+  auto IsOneOrMinusOne = Builder.buildOr(CCVT, IsOne, IsMinusOne);
+  AShr = Builder.buildSelect(Ty, IsOneOrMinusOne, LHS, AShr);
+
+  // If divided by a positive value, we're done. Otherwise, the result must be
+  // negated.
+  auto Neg = Builder.buildNeg(Ty, AShr);
+  auto IsNeg = Builder.buildICmp(CmpInst::Predicate::ICMP_SLT, CCVT, RHS, Zero);
+  Builder.buildSelect(MI.getOperand(0).getReg(), IsNeg, Neg, AShr);
+  MI.eraseFromParent();
+}
+
+void CombinerHelper::applyUDivByPow2(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_UDIV && "Expected UDIV");
+  auto &UDiv = cast<GenericMachineInstr>(MI);
+  Register Dst = UDiv.getReg(0);
+  Register LHS = UDiv.getReg(1);
+  Register RHS = UDiv.getReg(2);
+  LLT Ty = MRI.getType(Dst);
+  LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
+
+  Builder.setInstrAndDebugLoc(MI);
+
+  auto C1 = Builder.buildCTTZ(ShiftAmtTy, RHS);
+  Builder.buildLShr(MI.getOperand(0).getReg(), LHS, C1);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UMULH);
   Register RHS = MI.getOperand(2).getReg();
