@@ -1307,13 +1307,13 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-// TODO: revisit this and try to remove the mask operand.
+  // TODO: revisit this and try to remove the mask operand.
   // Walk VPWidenMemoryInstructionRecipe users of WideCanonicalIV and replace
   // all compares of the form (ICMP_ULE, WideCanonicalIV, backedge-taken-count),
   // used as mask in VPWidenMemoryInstructionRecipe, with an all-true-mask.
   Value *TrueMask =
       ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
-  VPValue *VPTrueMask = Plan.getVPValueOrAddLiveIn(TrueMask);
+  VPValue *VPTrueMask = Plan.getOrAddLiveIn(TrueMask);
   replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
     return isa<VPWidenMemoryInstructionRecipe>(U);
   });

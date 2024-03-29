@@ -2581,6 +2581,10 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
+  VPCanonicalIVPHIRecipe *getCanonicalIV() const {
+    return cast<VPCanonicalIVPHIRecipe>(getOperand(1));
+  }
+
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
@@ -2619,9 +2623,6 @@ public:
   }
 
   VPValue *getStartValue() const { return getOperand(0); }
-  VPCanonicalIVPHIRecipe *getCanonicalIV() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(1));
-  }
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.

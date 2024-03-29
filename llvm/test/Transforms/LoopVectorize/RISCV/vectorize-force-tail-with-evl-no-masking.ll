@@ -2,12 +2,12 @@
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=data-with-evl \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -force-target-supports-scalable-vectors -scalable-vectorization=on -S < %s | FileCheck %s
+; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
 ; RUN: opt -passes=loop-vectorize \
 ; RUN: -force-tail-folding-style=none \
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
-; RUN: -force-target-supports-scalable-vectors -scalable-vectorization=on -S < %s | FileCheck %s
+; RUN: -mtriple=riscv64 -mattr=+v -S < %s | FileCheck %s
 
 ; No need to emit predicated vector code if the vector instructions with masking are not required.
 define i32 @no_masking() {
