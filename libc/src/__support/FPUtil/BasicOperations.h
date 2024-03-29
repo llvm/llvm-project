@@ -190,7 +190,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
     // All Ones   |     01     | Anything  | Pseudo NaN, Value = SNaN
     //            |   Bit 63   | Bits 62-0 |
     // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
-    //            |            |           | (−1)*s × m × 2*−16382
+    //            |            |           | (−1)**s × m × 2**−16382
     // All Other  |   Zero     | Anything  | Unnormal, Value = SNaN
     //  Values    |            |           |
     bool bit63 = sx.get_implicit_bit();

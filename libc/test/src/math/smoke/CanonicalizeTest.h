@@ -128,7 +128,7 @@ public:
       // Exponent   |       Significand      | Meaning
       //            |   Bit 63   | Bits 62-0 |
       // All zeroes |   One      | Anything  | Pseudo Denormal, Value =
-      //            |            |           | (−1)*s × m × 2*−16382
+      //            |            |           | (−1)**s × m × 2**−16382
       FPBits test4_1(0x00000000'00000000'80000000'00000000_u128);
       //            |            |           | (−1)**s × m × 2**−16382
       FPBits test4_1(0x00000000'00000000'80000000'00000000_u128);
