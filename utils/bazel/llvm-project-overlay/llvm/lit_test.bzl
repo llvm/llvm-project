@@ -35,6 +35,7 @@ def lit_test(
         args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
+        deps = [Label("//llvm:lit")],
         **kwargs
     )
 
