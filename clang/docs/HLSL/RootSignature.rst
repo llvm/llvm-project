@@ -61,6 +61,28 @@ string is specified via the usual -E argument. For example:
 Note that the root signature string define can also be passed on the command 
 line, e.g, -D MyRS1=”…”.
 
+
+Life of a Root Signature
+========================
+
+The root signature in a compiler begins with a string in the root signature 
+attribute and ends with a serialized root signature in the DXContainer.
+
+To report errors as early as possible, root signature string parsing should 
+occur in Sema. 
+To prevent redundant work, this parsing should only be performed in Sema. 
+Consequently, the parsed root signature information must be stored in the AST.
+
+To ensure that a used resource has a binding in the root signature, this 
+information should be accessible in the backend to facilitate early error 
+reporting. 
+
+Since only the binding information is necessary for validation, one 
+approach could be to store the binding information separately for backend 
+verification and serialize the root signature information promptly, as it 
+constitutes the final output and is not utilized by any compiler passes.
+
+
 Root Signature Grammar
 ======================
 
