@@ -963,7 +963,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                            ? MVT::getIntegerVT(DstEltSize)
                            : MVT::getFloatingPointVT(DstEltSize);
       MVT DstMVT = DstLT.second.changeVectorElementType(ElementMVT);
-      DstEltSize = ISD == ISD::FP_EXTEND ? DstEltSize >> 1 : DstEltSize << 1;
+      DstEltSize =
+          (DstEltSize > SrcEltSize) ? DstEltSize >> 1 : DstEltSize << 1;
       Cost += getRISCVInstructionCost(Op, DstMVT, CostKind);
     }
     return Cost;
