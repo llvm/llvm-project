@@ -40,6 +40,10 @@ _start:
 # CHECK-REOPT-SAME: BugEntry: 2
 
   ret
+## The return instruction is reachable only via preceding ud2. Test that it is
+## treated as a reachable instruction in the Linux kernel mode.
+
+# CHECK-REOPT-NEXT: ret
   .size _start, .-_start
 
 
