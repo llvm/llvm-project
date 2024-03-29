@@ -1,7 +1,6 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for abs are generated for float, half, and double.
-
 
 ; CHECK-LABEL: fabs_half
 define noundef half @fabs_half(half noundef %a) {

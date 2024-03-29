@@ -1,4 +1,4 @@
-; RUN: not opt -S -dxil-op-lower %s 2>&1 | FileCheck %s
+; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
 
 ; This test is expected to fail with the following error
 ; CHECK: LLVM ERROR: Invalid Overload Type

@@ -15,6 +15,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <string>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -123,6 +124,11 @@ static std::string getTypeName(OverloadKind Kind, Type *Ty) {
   }
 }
 
+struct OpSMOverloadProp {
+  uint16_t ShaderModelVer;
+  uint16_t ValidTys;
+};
+
 // Static properties.
 struct OpCodeProperty {
   dxil::OpCode OpCode;
@@ -131,7 +137,7 @@ struct OpCodeProperty {
   dxil::OpCodeClass OpCodeClass;
   // Offset in DXILOpCodeClassNameTable.
   unsigned OpCodeClassNameOffset;
-  uint16_t OverloadTys;
+  std::vector<OpSMOverloadProp> OverloadProp;
   llvm::Attribute::AttrKind FuncAttr;
   int OverloadParamIndex;        // parameter index which control the overload.
                                  // When < 0, should be only 1 overload type.
@@ -249,16 +255,38 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
       ArgTys[0], ArrayRef<Type *>(&ArgTys[1], ArgTys.size() - 1), false);
 }
 
+static uint16_t getValidOverloadMask(const OpCodeProperty *Prop,
+                                     uint32_t SMVer) {
+  uint16_t ValidTyMask = 0;
+  // std::vector Prop->OverloadProp is in ascending order of SM Version
+  // Overloads of highest SM version that is not greater than SMVer
+  // are the ones that are valid for SMVer.
+  for (auto OL : Prop->OverloadProp) {
+    if (OL.ShaderModelVer <= SMVer) {
+      ValidTyMask = OL.ValidTys;
+    } else {
+      break;
+    }
+  }
+  return ValidTyMask;
+}
+
 namespace llvm {
 namespace dxil {
 
-CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
-                                          Type *OverloadTy,
+CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, uint32_t SMVer,
+                                          Type *ReturnTy, Type *OverloadTy,
                                           SmallVector<Value *> Args) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
+  uint16_t ValidTyMask = getValidOverloadMask(Prop, SMVer);
 
+  if (ValidTyMask == 0) {
+    report_fatal_error(StringRef(std::to_string(SMVer).append(
+                           ": Unhandled Shader Model Version")),
+                       /*gen_crash_diag*/ false);
+  }
   OverloadKind Kind = getOverloadKind(OverloadTy);
-  if ((Prop->OverloadTys & (uint16_t)Kind) == 0) {
+  if ((ValidTyMask & (uint16_t)Kind) == 0) {
     report_fatal_error("Invalid Overload Type", /* gen_crash_diag=*/false);
   }
 
@@ -276,14 +304,22 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   return B.CreateCall(DXILFn, Args);
 }
 
-Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
+Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, uint32_t SMVer,
+                                   FunctionType *FT) {
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   // If DXIL Op has no overload parameter, just return the
   // precise return type specified.
   if (Prop->OverloadParamIndex < 0) {
     auto &Ctx = FT->getContext();
-    switch (Prop->OverloadTys) {
+    uint16_t ValidTyMask = getValidOverloadMask(Prop, SMVer);
+    if (ValidTyMask == 0) {
+      report_fatal_error(StringRef(std::to_string(SMVer).append(
+                             ": Unhandled Shader Model Version")),
+                         /*gen_crash_diag*/ false);
+    }
+
+    switch (ValidTyMask) {
     case OverloadKind::VOID:
       return Type::getVoidTy(Ctx);
     case OverloadKind::HALF:

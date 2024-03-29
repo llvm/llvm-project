@@ -23,7 +23,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+
+#include <algorithm>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -177,7 +181,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   }
 
   // Get valid overload types of the Operation
-  auto OverloadTypeRecs = R->getValueAsListOfDefs("OpOverloadTypes");
+  std::vector<Record *> OverloadTypeRecs =
+      R->getValueAsListOfDefs("OpOverloadTypes");
+  // Sort records in ascending order of Shader Model version
+  std::sort(
+      OverloadTypeRecs.begin(), OverloadTypeRecs.end(),
+      [](Record *a, Record *b) {
+        return (
+            a->getValueAsDef("ShaderModel")->getValueAsInt("MajorAndMinor") <
+            b->getValueAsDef("ShaderModel")->getValueAsInt("MajorAndMinor"));
+      });
   unsigned OverloadTypeRecsSize = OverloadTypeRecs.size();
   // Populate OpOverloads with
   for (unsigned I = 0; I < OverloadTypeRecsSize; I++) {
@@ -268,20 +281,33 @@ static std::string getOverloadKindStr(const Record *R) {
 }
 /// Return a string representation of OverloadKind enum that maps to
 /// input LLVMType record
-/// \param R TableGen def record of class LLVMType
+/// \param Recs A vector of records of TableGen class type DXILShaderModel
 /// \return std::string string representation of OverloadKind
 
+// Constant value that is used to encode shader model version
+// denoting SM5.0
+
 static std::string
-getOverloadKindStrs(const SmallVector<Record *> OverloadTys) {
-  if (OverloadTys.empty()) {
-    return {};
-  }
+getOverloadKindStrs(const SmallVector<Record *> Recs) {
   std::string OverloadString = "";
-  auto Iter = OverloadTys.begin();
-  OverloadString.append(getOverloadKindStr(*Iter++));
-  for (; Iter != OverloadTys.end(); ++Iter) {
-    OverloadString.append(" | ").append(getOverloadKindStr(*Iter));
+  std::string Prefix = "";
+  OverloadString.append("{");
+  for (auto OvRec : Recs) {
+    OverloadString.append(Prefix).append("{");
+    OverloadString
+        .append(std::to_string(OvRec->getValueAsDef("ShaderModel")
+                                   ->getValueAsInt("MajorAndMinor")))
+        .append(", ");
+    auto OverloadTys = OvRec->getValueAsListOfDefs("OpOverloads");
+    auto Iter = OverloadTys.begin();
+    OverloadString.append(getOverloadKindStr(*Iter++));
+    for (; Iter != OverloadTys.end(); ++Iter) {
+      OverloadString.append(" | ").append(getOverloadKindStr(*Iter));
+    }
+    OverloadString.append("}");
+    Prefix = ", ";
   }
+  OverloadString.append("}");
   return OverloadString;
 }
 
@@ -403,6 +429,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
         "{\n";
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
+  std::string Prefix = "";
   for (auto &Op : Ops) {
     // Consider Op.OverloadParamIndex as the overload parameter index, by
     // default
@@ -414,13 +441,14 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     if (OLParamIdx < 0) {
       OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
     }
-    OS << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
+    OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
        << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadKindStrs(Op.OpOverloads) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
-       << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
+       << Parameters.get(ParameterMap[Op.OpClass]) << " }\n";
+       Prefix = ",";
   }
   OS << "  };\n";
 

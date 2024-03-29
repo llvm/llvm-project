@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for ceil are generated for float and half.
 
@@ -18,3 +18,4 @@ entry:
 
 declare half @llvm.ceil.f16(half)
 declare float @llvm.ceil.f32(float)
+
