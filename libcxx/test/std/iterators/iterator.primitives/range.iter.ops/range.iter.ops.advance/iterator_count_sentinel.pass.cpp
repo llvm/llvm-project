@@ -45,7 +45,13 @@ constexpr void check_forward(int* first, int* last, std::iter_difference_t<It> n
     if (n == 0) {
       assert(it.equals_count() == 0);
     } else {
-      assert(it.equals_count() == M || it.equals_count() == M + 1);
+      if (n > M) {
+        // We "hit" the bound, so there is one extra equality check.
+        assert(it.equals_count() == M + 1);
+      } else {
+        assert(it.equals_count() == M);
+      }
+      // In any case, there must not be more than `n` bounds checks.
       assert(it.equals_count() <= n);
     }
   }
