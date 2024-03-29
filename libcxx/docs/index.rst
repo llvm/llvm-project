@@ -189,6 +189,7 @@ Design Documents
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
+   DesignDocs/NodiscardPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI
