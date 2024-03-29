@@ -1837,7 +1837,7 @@ static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
   // recent declaration, since that is the only one that is guaranteed to
   // have all the default template argument information.
   Decl *D = TD->getMostRecentDecl();
-  // N3337 [temp.param]p12:
+  // C++11 N3337 [temp.param]p12:
   // A default template argument shall not be specified in a friend class
   // template declaration.
   //
