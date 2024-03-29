@@ -138,10 +138,11 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
     const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     bool needs_object_ptr) {
-  llvm::SmallVector<SwiftASTManipulator::VariableInfo> metadata_variables;
+  llvm::SmallVector<const SwiftASTManipulator::VariableInfo *>
+      metadata_variables;
   for (auto &var : local_variables)
     if (var.IsOutermostMetadataPointer())
-      metadata_variables.push_back(var);
+      metadata_variables.push_back(&var);
 
   // The number of metadata variables could be > if the function is in
   // a generic context.
@@ -167,7 +168,7 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
       index = gp.index;
     } else {
       auto di =
-          ParseSwiftGenericParameter(metadata_variables[i].GetName().str());
+          ParseSwiftGenericParameter(metadata_variables[i]->GetName().str());
       if (!di)
         return llvm::createStringError(llvm::errc::not_supported,
                                        "unexpected metadata variable");
@@ -241,7 +242,7 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     }
   for (auto &var : metadata_variables) {
     sink_stream << ", _: $__lldb_builtin_ptr_t";
-    call_stream << ", " << var.GetName().str();
+    call_stream << ", " << var->GetName().str();
   }
   sink_stream << ")";
   call_stream << ")";

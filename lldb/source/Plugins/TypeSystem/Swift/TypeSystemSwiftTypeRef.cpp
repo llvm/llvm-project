@@ -1812,9 +1812,10 @@ TypeSystemSwiftTypeRef::GetMangledTypeName(opaque_compiler_type_t type) {
 
 void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type,
                                               const ExecutionContext *exe_ctx) {
-  Status error;
   if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
-    return swift_ast_context->ReconstructType(GetMangledTypeName(type), error);
+    return llvm::expectedToStdOptional(
+               swift_ast_context->ReconstructType(GetMangledTypeName(type)))
+        .value_or(nullptr);
   return {};
 }
 
@@ -2051,8 +2052,9 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   // See comments in SwiftASTContext::ReconstructType(). For
   // SILFunctionTypes the mapping isn't bijective.
   auto ast_ctx = r.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
-  if (((void *)ast_ctx->ReconstructType(l.GetMangledTypeName())) ==
-      r.GetOpaqueQualType())
+  if (((void *)llvm::expectedToStdOptional(
+           ast_ctx->ReconstructType(l.GetMangledTypeName()))
+           .value_or(nullptr)) == r.GetOpaqueQualType())
     return true;
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();

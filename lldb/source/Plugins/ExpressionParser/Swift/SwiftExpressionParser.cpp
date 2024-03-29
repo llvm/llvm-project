@@ -204,12 +204,11 @@ public:
     if (Kind == swift::DeclKind::Func && Name.isOperator())
       return true;
 
-    const char *name_cstr = Name.get();
-    if (name_cstr && name_cstr[0] == '$') {
+    if (Name.str().starts_with("$")) {
       LLDB_LOG(m_log,
                "[LLDBExprNameLookup::shouldGlobalize] Returning true to "
                "globalizing {0}",
-               name_cstr);
+               Name.str());
       return true;
     }
     return false;
@@ -292,7 +291,7 @@ public:
     // in the "staged" list has been defined in this expr setting and
     // so is more local than local.
     if (m_persistent_vars) {
-      bool is_debugger_variable = !NameStr.empty() && NameStr.front() == '$';
+      bool is_debugger_variable = NameStr.front() == '$';
 
       size_t num_external_results = RV.size();
       if (!is_debugger_variable && num_external_results > 0) {
@@ -537,7 +536,7 @@ lldb::VariableSP SwiftExpressionParser::FindSelfVariable(Block *block) {
 /// - Returns: A `Status` instance that indicates whether the method finished
 /// successfully. If the method returns an error status, it contains a string
 /// that explain the failure.
-static Status
+static llvm::Error
 AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                    SwiftASTContextForExpressions &swift_ast_context,
                    SwiftASTManipulator &manipulator,
@@ -547,20 +546,24 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   // Alias builtin types, since we can't use them directly in source code.
   auto builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType();
-  manipulator.MakeTypealias(
+  auto alias = manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_ptr_t"),
       builtin_ptr_t, false);
+  if (!alias)
+    return alias.takeError();
   auto builtin_int_t = swift_ast_context.GetBuiltinIntType();
-  manipulator.MakeTypealias(
+  alias = manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_int_t"),
       builtin_int_t, false);
+  if (!alias)
+    return alias.takeError();
 
   // First emit the typealias for "$__lldb_context".
   lldb::VariableSP self_var_sp = SwiftExpressionParser::FindSelfVariable(block);
 
   // If there is no self we don't need to add the "$__lldb_context" alias.
   if (!self_var_sp)
-    return Status();
+    return llvm::Error::success();
 
   auto *swift_runtime =
       SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
@@ -576,8 +579,10 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   if (!self_type.IsValid() ||
       !self_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return Status("Unable to add the aliases the expression needs because "
-                  "self isn't valid.");
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Unable to add the aliases the expression needs because "
+        "self isn't valid.");
 
   // Import before getting the unbound version, because the unbound
   // version may not be in the mangled name map.
@@ -585,15 +590,18 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   CompilerType imported_self_type = ImportType(swift_ast_context, self_type);
 
   if (!imported_self_type.IsValid())
-    return Status("Unable to add the aliases the expression needs because the "
-                  "self type from an import isn't valid.");
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Unable to add the aliases the expression needs because the "
+        "self type from an import isn't valid.");
 
   auto *stack_frame = stack_frame_sp.get();
   if (bind_generic_types != lldb::eDontBind) {
     imported_self_type = swift_runtime->BindGenericTypeParameters(
         *stack_frame, imported_self_type);
     if (!imported_self_type)
-      return Status(
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't bind the type parameters for self.");
   }
@@ -602,32 +610,39 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     auto swift_type_system =
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
-      return Status("Unable to add the aliases the expression needs because "
-                    "self is not a Swift type.");
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Unable to add the aliases the expression needs because "
+          "self is not a Swift type.");
 
     // This might be a referenced type, in which case we really want to
     // extend the referent:
     imported_self_type = swift_type_system->GetReferentType(
         imported_self_type.GetOpaqueQualType());
     if (!imported_self_type)
-      return Status("Unable to add the aliases the expression needs because "
-                    "the Swift expression parser couldn't get the referent "
-                    "type for self.");
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Unable to add the aliases the expression needs because "
+          "the Swift expression parser couldn't get the referent "
+          "type for self.");
   }
 
   {
     auto swift_type_system =
         imported_self_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!swift_type_system)
-      return Status("Unable to add the aliases the expression needs because "
-                    "self is not a Swift type.");
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Unable to add the aliases the expression needs because "
+          "self is not a Swift type.");
 
     // If we are extending a generic class it's going to be a metatype,
     // and we have to grab the instance type:
     imported_self_type = swift_type_system->GetInstanceType(
         imported_self_type.GetOpaqueQualType(), stack_frame_sp.get());
     if (!imported_self_type)
-      return Status(
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't get the instance type for self.");
   }
@@ -639,12 +654,16 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     LLDB_LOG(GetLog(LLDBLog::Types | LLDBLog::Expressions),
              "Couldn't get SwiftASTContext type for self type {0}.",
              imported_self_type.GetDisplayTypeName());
-    return Status(
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the Swift "
         "expression parser couldn't get the Swift type for self.");
   }
+  if (!swift_self_type.get())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "null self type");
 
-  swift::Type object_type = swift_self_type->getWithoutSpecifierType();
+  swift::Type object_type = swift_self_type.get()->getWithoutSpecifierType();
 
   if (object_type.getPointer() &&
       (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
@@ -653,14 +672,14 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   // If 'self' is a weak storage type, it must be an optional.  Look
   // through it and unpack the argument of "optional".
   if (swift::WeakStorageType *weak_storage_type =
-          swift_ast_context.GetSwiftType(imported_self_type)
-              ->getAs<swift::WeakStorageType>()) {
+          swift_self_type.get()->getAs<swift::WeakStorageType>()) {
     swift::Type referent_type = weak_storage_type->getReferentType();
     swift::BoundGenericEnumType *optional_type =
         referent_type->getAs<swift::BoundGenericEnumType>();
 
     if (!optional_type || optional_type->getGenericArgs().empty())
-      return Status(
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Unable to add the aliases the expression needs because the Swift "
           "expression parser couldn't get an optional type for self.");
 
@@ -669,8 +688,10 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     // In Swift only class types can be weakly captured.
     if (!llvm::isa<swift::ClassType>(first_arg_type) &&
         !llvm::isa<swift::BoundGenericClassType>(first_arg_type))
-      return Status("Unable to add the aliases the expression needs because "
-                    "weakly captured type is not a class type.");
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Unable to add the aliases the expression needs because "
+          "weakly captured type is not a class type.");
 
     imported_self_type = ToCompilerType(first_arg_type);
   }
@@ -680,24 +701,28 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "SEP:AddRequiredAliases: Failed to resolve the self archetype - "
              "could not make the $__lldb_context typealias.");
-    return Status(
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
         "Unable to add the aliases the expression needs because the "
         "Swift expression parser couldn't resolve the self archetype.");
   }
-  swift::ValueDecl *type_alias_decl = manipulator.MakeTypealias(
-      swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
-      imported_self_type);
+  llvm::Expected<swift::ValueDecl *> type_alias_decl =
+      manipulator.MakeTypealias(
+          swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
+          imported_self_type);
 
   if (!type_alias_decl) {
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "SEP:AddRequiredAliases: Failed to make the $__lldb_context "
              "typealias.");
-    return Status("Unable to add the aliases the expression needs because the "
-                  "Swift expression parser couldn't create a context type "
-                  "alias for lldb");
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Unable to add the aliases the expression needs because the "
+        "Swift expression parser couldn't create a context type "
+        "alias for lldb. " + llvm::toString(type_alias_decl.takeError()));
   }
 
-  return Status();
+  return llvm::Error::success();
 }
 
 static void ResolveSpecialNames(
@@ -875,7 +900,7 @@ CreateMainFile(SwiftASTContextForExpressions &swift_ast_context,
 }
 
 /// Attempt to materialize one variable.
-static std::optional<SwiftExpressionParser::SILVariableInfo>
+static llvm::Expected<SwiftExpressionParser::SILVariableInfo>
 MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
                     SwiftUserExpression &user_expression,
                     Materializer &materializer,
@@ -888,9 +913,9 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
   bool needs_init = false;
 
   bool is_result = llvm::isa<SwiftASTManipulatorBase::VariableMetadataResult>(
-      variable.m_metadata.get());
+      variable.GetMetadata());
   bool is_error = llvm::isa<SwiftASTManipulatorBase::VariableMetadataError>(
-      variable.m_metadata.get());
+      variable.GetMetadata());
 
   auto compiler_type = variable.GetType();
   // Add the persistent variable as a typeref compiler type.
@@ -922,13 +947,16 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     } else {
       CompilerType actual_type = variable.GetType();
       // Desugar '$lldb_context', etc.
-      swift::Type actual_swift_type =
+      llvm::Expected<swift::Type> actual_swift_type =
           manipulator.GetScratchContext().GetSwiftType(actual_type);
       if (!actual_swift_type)
-        return std::nullopt;
+        return actual_swift_type.takeError();
+      if (!actual_swift_type.get())
+        return make_error<StringError>(inconvertibleErrorCode(),
+                                       "actual_swift_type is a nullptr");
 
       auto transformed_type =
-          actual_swift_type.transform([](swift::Type t) -> swift::Type {
+          actual_swift_type->transform([](swift::Type t) -> swift::Type {
             if (auto *aliasTy =
                     swift::dyn_cast<swift::TypeAliasType>(t.getPointer())) {
               if (aliasTy && aliasTy->getDecl()->isDebuggerAlias()) {
@@ -939,14 +967,16 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           });
 
       if (!transformed_type)
-        return std::nullopt;
+        return make_error<StringError>(inconvertibleErrorCode(),
+                                       "transformed type is empty");
 
       actual_type =
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
       auto swift_ast_ctx =
           actual_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
       if (!swift_ast_ctx)
-        return {};
+        return make_error<StringError>(inconvertibleErrorCode(),
+                                       "no Swift AST context");
 
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
@@ -958,35 +988,31 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           error);
     }
 
-    if (!error.Success()) {
-      diagnostic_manager.Printf(
-          eDiagnosticSeverityError, "couldn't add %s variable to struct: %s.\n",
+    if (!error.Success())
+      return llvm::createStringError(
+          inconvertibleErrorCode(), "couldn't add %s variable to struct: %s.",
           is_result ? "result" : "error", error.AsCString());
-      return std::nullopt;
-    }
 
     LLDB_LOG(log, "Added {0} variable to struct at offset {1}",
              is_result ? "result" : "error", (unsigned long long)offset);
   } else if (auto *variable_metadata = llvm::dyn_cast<
                  SwiftASTManipulatorBase::VariableMetadataVariable>(
-                 variable.m_metadata.get())) {
+                 variable.GetMetadata())) {
     Status error;
 
     offset = materializer.AddVariable(variable_metadata->m_variable_sp, error);
 
-    if (!error.Success()) {
-      diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                "couldn't add variable to struct: %s.\n",
-                                error.AsCString());
-      return std::nullopt;
-    }
+    if (!error.Success())
+      return llvm::createStringError(inconvertibleErrorCode(),
+                                     "couldn't add variable to struct: %s.\n",
+                                     error.AsCString());
 
     LLDB_LOG(log, "Added variable {0} to struct at offset {1}",
              variable_metadata->m_variable_sp->GetName(),
              (unsigned long long)offset);
   } else if (auto *variable_metadata = llvm::dyn_cast<
                  SwiftASTManipulatorBase::VariableMetadataPersistent>(
-                 variable.m_metadata.get())) {
+                 variable.GetMetadata())) {
     needs_init = llvm::cast<SwiftExpressionVariable>(
                      variable_metadata->m_persistent_variable_sp.get())
                      ->m_swift_flags &
@@ -1022,12 +1048,10 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           &user_expression.GetPersistentVariableDelegate(), error);
     }
 
-    if (!error.Success()) {
-      diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                "couldn't add variable to struct: %s.\n",
-                                error.AsCString());
-      return std::nullopt;
-    }
+    if (!error.Success())
+      return llvm::createStringError(inconvertibleErrorCode(),
+                                     "couldn't add variable to struct: %s.\n",
+                                     error.AsCString());
 
     LLDB_LOGF(
         log,
@@ -1118,22 +1142,20 @@ struct ParsedExpression {
 /// f<Int>(t: 5)
 /// \endcode
 /// \return The vector of newly created typealiases.
-static llvm::SmallVector<swift::TypeAliasDecl *>
-AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
+static llvm::Expected<llvm::SmallVector<swift::TypeAliasDecl *>>
+AddArchetypeTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
                          StackFrame &stack_frame,
                          SwiftASTContextForExpressions &swift_ast_context) {
   Log *log = GetLog(LLDBLog::Expressions);
   llvm::SmallVector<swift::TypeAliasDecl *> type_aliases;
   lldb::ProcessSP process_sp(stack_frame.CalculateProcess());
-  if (!process_sp) {
-    LLDB_LOG(log, "[AddArchetypesTypeAliases] Couldn't calculate process.");
-    return type_aliases;
-  }
+  if (!process_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no process");
   auto *runtime = SwiftLanguageRuntime::Get(process_sp);
-  if (!runtime) {
-    LLDB_LOG(log, "[AddArchetypesTypeAliases] Couldn't get runtime.");
-    return type_aliases;
-  }
+  if (!runtime)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no runtime");
 
   auto &typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
 
@@ -1143,11 +1165,10 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
           .GetFunctionName(Mangled::ePreferMangled);
   if (auto signature = SwiftLanguageRuntime::GetGenericSignature(
           func_name.GetStringRef(), typeref_typesystem))
-    if (signature->pack_expansions.size()) {
-      LLDB_LOG(log, "[AddArchetypesTypeAliases] Variadic generic functions are "
-                    "not supported.");
-      return type_aliases;
-    }
+    if (signature->pack_expansions.size())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "[AddArchetypeTypeAliases] Variadic "
+                                     "generic functions are not supported.");
 
   struct MetadataPointerInfo {
     unsigned int depth;
@@ -1165,7 +1186,7 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     llvm::StringRef type_name;
     if (auto *variable_metadata =
             llvm::dyn_cast<SwiftASTManipulatorBase::VariableMetadataVariable>(
-                variable.m_metadata.get())) {
+                variable.GetMetadata())) {
       type_name =
           variable_metadata->m_variable_sp->GetType()->GetName().GetStringRef();
     }
@@ -1205,14 +1226,14 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     if (!bound_type) {
       LLDB_LOG(
           log,
-          "[AddArchetypesTypeAliases] Could not bind dependent generic param "
+          "[AddArchetypeTypeAliases] Could not bind dependent generic param "
           "type {0}",
           dependent_type.GetMangledTypeName());
       continue;
     }
 
     LLDB_LOG(log,
-             "[AddArchetypesTypeAliases] Binding dependent generic param "
+             "[AddArchetypeTypeAliases] Binding dependent generic param "
              "type {0} to {1}",
              dependent_type.GetMangledTypeName(),
              bound_type.GetMangledTypeName());
@@ -1231,19 +1252,16 @@ AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
     // extension A where T == Int { ... }
     // Which is why we need to make the typealias inside the function with the
     // user's code, as it needs to shadow the generic type requirement.
-    auto *type_alias_decl = code_manipulator->MakeTypealias(
+    auto type_alias_decl = code_manipulator->MakeTypealias(
         identifier, bound_type, true, code_manipulator->GetFuncDecl());
     if (type_alias_decl) {
-      type_aliases.push_back(type_alias_decl);
+      type_aliases.push_back(*type_alias_decl);
       LLDB_LOG(log,
-               "[AddArchetypesTypeAliases] Adding typealias from {0} to "
+               "[AddArchetypeTypeAliases] Adding typealias from {0} to "
                "{1}",
                type_name, bound_type.GetMangledTypeName());
     } else
-      LLDB_LOG(log,
-               "[AddArchetypesTypeAliases] Could not add typealias from {0} to "
-               "{1}",
-               type_name, bound_type.GetMangledTypeName());
+      return type_alias_decl.takeError();
   }
   return type_aliases;
 }
@@ -1437,11 +1455,11 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     }
 
     if (local_context_is_swift) {
-      Status error = AddRequiredAliases(
+      llvm::Error error = AddRequiredAliases(
           sc.block, stack_frame_sp, swift_ast_context, *code_manipulator,
           options.GetUseDynamic(), options.GetBindGenericTypes());
-      if (error.Fail())
-        return error.ToError();
+      if (error)
+        return error;
     }
     //
     // Register all magic variables.
@@ -1455,14 +1473,15 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     ResolveSpecialNames(sc, exe_scope, swift_ast_context, special_names,
                         local_variables);
 
-    if (!code_manipulator->AddExternalVariables(local_variables))
-      return make_error<StringError>(inconvertibleErrorCode(),
-                                     "Could not add external variables.");
+    code_manipulator->AddExternalVariables(local_variables);
 
-    auto type_aliases = AddArchetypesTypeAliases(
+    auto type_aliases = AddArchetypeTypeAliases(
         code_manipulator, *stack_frame_sp.get(), swift_ast_context);
-
-    external_lookup->RegisterTypeAliases(type_aliases);
+    if (!type_aliases)
+      diagnostic_manager.PutString(eDiagnosticSeverityWarning,
+                                   llvm::toString(type_aliases.takeError()));
+    else
+      external_lookup->RegisterTypeAliases(*type_aliases);
     stack_frame_sp.reset();
   }
 
@@ -1784,6 +1803,18 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     dumpModule("Module after type checking:");
 
   if (expr_diagnostics->HasErrors()) {
+    // Missing debug info for a variable could cause a spurious lookup error.
+    for (auto &var : m_local_variables) {
+      llvm::Error error = var.TakeLookupError();
+      if (!error)
+        continue;
+      diagnostic_manager.Printf(
+          eDiagnosticSeverityError,
+          "Missing type debug information for variable \"%s\": %s",
+          var.GetName().str().str().c_str(),
+          llvm::toString(std::move(error)).c_str());
+    }
+
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
@@ -1791,12 +1822,13 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (repl)
     parsed_expr->code_manipulator->MakeDeclarationsPublic();
 
-  Status error;
   if (!playground) {
-    parsed_expr->code_manipulator->FixupResultAfterTypeChecking(error);
+    llvm::Error error =
+        parsed_expr->code_manipulator->FixupResultAfterTypeChecking();
 
-    if (!error.Success()) {
-      diagnostic_manager.PutString(eDiagnosticSeverityError, error.AsCString());
+    if (error) {
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                   llvm::toString(std::move(error)));
       return ParseResult::unrecoverable_error;
     }
   } else {
@@ -1869,7 +1901,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         swift_var->SetIsComputed(!decl->hasStorage());
       }
 
-      variable_info.m_metadata.reset(
+      variable_info.TakeMetadata(
           new SwiftASTManipulatorBase::VariableMetadataPersistent(
               persistent_variable));
 

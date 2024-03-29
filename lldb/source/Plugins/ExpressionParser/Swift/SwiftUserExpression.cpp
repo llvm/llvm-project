@@ -268,7 +268,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
 /// Create a \c VariableInfo record for \c variable if there isn't
 /// already shadowing inner declaration in \c processed_variables.
-static bool AddVariableInfo(
+static llvm::Error AddVariableInfo(
     lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context, SwiftLanguageRuntime *runtime,
     llvm::SmallDenseSet<const char *, 8> &processed_variables,
@@ -281,7 +281,7 @@ static bool AddVariableInfo(
   const char *name_cstr = name.data();
   assert(StringRef(name_cstr) == name && "missing null terminator");
   if (name.empty())
-    return true;
+    return llvm::Error::success();
 
   // To support "guard let self = self" the function argument "self"
   // is processed (as the special self argument) even if it is
@@ -292,13 +292,13 @@ static bool AddVariableInfo(
     overridden_name = "$__lldb_injected_self";
 
   if (processed_variables.count(overridden_name))
-    return true;
+    return llvm::Error::success();
 
   if (!stack_frame_sp)
-    return true;
+    return llvm::Error::success();
 
   if (!variable_sp || !variable_sp->GetType())
-    return true;
+    return llvm::Error::success();
 
   CompilerType target_type;
   bool is_unbound_pack =
@@ -326,17 +326,24 @@ static bool AddVariableInfo(
   if (!target_type.IsValid()) {
     // Treat an invalid type for self as a fatal error.
     if (is_self)
-      return false;
-    return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "type for self is invalid");
+    return llvm::Error::success();
   }
 
   // Report a fatal error if self can't be reconstructed as a Swift AST type.
-  if (is_self && !ast_context.GetSwiftType(target_type))
-    return false;
+  if (is_self) {
+    auto self_ty = ast_context.GetSwiftType(target_type);
+    if (!self_ty)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "type for self cannot be reconstructed: " +
+                                         llvm::toString(self_ty.takeError()));
+  }
 
   auto ts = target_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
-    return false;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "type for self has no type system");
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
@@ -351,12 +358,18 @@ static bool AddVariableInfo(
     // Not realizing self is a fatal error for an expression and the
     // Swift compiler error alone is not particularly useful.
     if (is_self)
-      return false;
-    return true;
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Discarding local %s because we couldn't fully realize it, "
+          "our best attempt was: %s.",
+          name_cstr, target_type.GetDisplayTypeName().AsCString("<unknown>"));
+    return llvm::Error::success();
   }
 
   if (log && is_self)
-    if (swift::Type swift_type = ast_context.GetSwiftType(target_type)) {
+    if (swift::Type swift_type =
+            llvm::expectedToStdOptional(ast_context.GetSwiftType(target_type))
+                .value_or(swift::Type())) {
       std::string s;
       llvm::raw_string_ostream ss(s);
       swift_type->dump(ss);
@@ -386,16 +399,14 @@ static bool AddVariableInfo(
   SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
       new SwiftASTManipulatorBase::VariableMetadataVariable(
           patched_variable_sp));
-  SwiftASTManipulator::VariableInfo variable_info(
+  local_variables.emplace_back(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
       metadata_sp,
       variable_sp->IsConstant() ? swift::VarDecl::Introducer::Let
                                 : swift::VarDecl::Introducer::Var,
       false, is_unbound_pack);
-
-  local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
-  return true;
+  return llvm::Error::success();
 }
 
 /// Collets all the variables visible in the current scope.
@@ -446,7 +457,7 @@ static bool CollectVariablesInScope(SymbolContext &sc,
 }
 
 /// Create a \c VariableInfo record for each visible variable.
-static bool RegisterAllVariables(
+static llvm::Error RegisterAllVariables(
     SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
@@ -466,11 +477,12 @@ static bool RegisterAllVariables(
   // not already shadowed by an inner declaration.
   llvm::SmallDenseSet<const char *, 8> processed_names;
   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
-    if (!AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
-                         ast_context, language_runtime, processed_names,
-                         local_variables, use_dynamic, bind_generic_types))
-      return false;
-  return true;
+    if (auto error =
+            AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
+                            ast_context, language_runtime, processed_names,
+                            local_variables, use_dynamic, bind_generic_types))
+      return error;
+  return llvm::Error::success();
 }
 
 static SwiftPersistentExpressionState *
@@ -515,7 +527,9 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
   if (!ts)
     return false;
 
-  auto swift_type = scratch_ctx.GetSwiftType(self_type);
+  auto swift_type =
+      llvm::expectedToStdOptional(scratch_ctx.GetSwiftType(self_type))
+          .value_or(swift::Type());
   if (!swift_type)
     return false;
 
@@ -539,11 +553,11 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
   if (first_param->getDepth() != 0 || first_param->getIndex() != 0)
     return false;
 
-  llvm::SmallVector<SwiftASTManipulator::VariableInfo>
+  llvm::SmallVector<const SwiftASTManipulator::VariableInfo *>
       outermost_metadata_vars;
   for (auto &variable : variables)
     if (variable.IsOutermostMetadataPointer())
-      outermost_metadata_vars.push_back(variable);
+      outermost_metadata_vars.push_back(&variable);
 
   // Check that all metadata belong to the outermost type, and check that we do
   // have the metadata pointer available.
@@ -555,8 +569,8 @@ static bool CanEvaluateExpressionWithoutBindingGenericParams(
     llvm::raw_string_ostream s(var_name);
     s << "$τ_0_" << generic_param->getIndex();
     auto found = false;
-    for (auto &metadata_var : outermost_metadata_vars) {
-      if (metadata_var.GetName().str() == var_name) {
+    for (auto *metadata_var : outermost_metadata_vars) {
+      if (metadata_var->GetName().str() == var_name) {
         found = true;
         break;
       }
@@ -590,9 +604,11 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
 
   llvm::SmallVector<SwiftASTManipulator::VariableInfo> local_variables;
 
-  if (!RegisterAllVariables(sc, stack_frame, *m_swift_ast_ctx, local_variables,
-                            m_options.GetUseDynamic(),
-                            m_options.GetBindGenericTypes())) {
+  if (llvm::Error error = RegisterAllVariables(
+          sc, stack_frame, *m_swift_ast_ctx, local_variables,
+          m_options.GetUseDynamic(), m_options.GetBindGenericTypes())) {
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 llvm::toString(std::move(error)));
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "Couldn't realize Swift AST type of self. Hint: using `v` to "

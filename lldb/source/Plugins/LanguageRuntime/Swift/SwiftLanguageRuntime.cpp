@@ -1510,7 +1510,9 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                          swift_ast_ctx->GetIdentifier(name.GetCString()),
                          module_decl);
       var_decl->setInterfaceType(
-          swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()));
+          llvm::expectedToStdOptional(
+              swift_ast_ctx->GetSwiftType(swift_ast_ctx->GetErrorType()))
+              .value_or(swift::Type()));
       var_decl->setDebuggerVar(true);
 
       SwiftPersistentExpressionState *persistent_state =
