@@ -994,6 +994,10 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
     // maybe we already know operand's element type
     if (Type *KnownTy = GR->findDeducedElementType(OpArg))
       return KnownTy;
+    // try to deduce from the operand itself
+    Visited.clear();
+    if (Type *Ty = deduceElementTypeHelper(OpArg, Visited))
+      return Ty;
     // search in actual parameter's users
     for (User *OpU : OpArg->users()) {
       Instruction *Inst = dyn_cast<Instruction>(OpU);
