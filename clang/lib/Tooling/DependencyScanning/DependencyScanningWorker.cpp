@@ -363,20 +363,22 @@ public:
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
-    // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS) {
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
-          DepFS;
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
-    }
+    auto AdjustCI = [&](CompilerInstance &CI) {
+      // Set up the dependency scanning file system callback if requested.
+      if (DepFS) {
+        auto GetDependencyDirectives = [LocalDepFS = DepFS](FileEntryRef File)
+            -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+          if (llvm::ErrorOr<EntryRef> Entry =
+                  LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+            if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+              return Entry->getDirectiveTokens();
+          return std::nullopt;
+        };
+
+        CI.getPreprocessor().setDependencyDirectivesFn(
+            std::move(GetDependencyDirectives));
+      }
+    };
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -428,9 +430,11 @@ public:
     std::unique_ptr<FrontendAction> Action;
 
     if (ModuleName)
-      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(
+          *ModuleName, std::move(AdjustCI));
     else
-      Action = std::make_unique<ReadPCHAndPreprocessAction>();
+      Action =
+          std::make_unique<ReadPCHAndPreprocessAction>(std::move(AdjustCI));
 
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;

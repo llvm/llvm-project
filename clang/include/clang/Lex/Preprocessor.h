@@ -736,6 +736,19 @@ private:
     State ConditionalStackState = Off;
   } PreambleConditionalStack;
 
+  /// Function for getting the dependency preprocessor directives of a file.
+  ///
+  /// These are directives derived from a special form of lexing where the
+  /// source input is scanned for the preprocessor directives that might have an
+  /// effect on the dependencies for a compilation unit.
+  ///
+  /// Enables a client to cache the directives for a file and provide them
+  /// across multiple compiler invocations.
+  /// FIXME: Allow returning an error.
+  using DependencyDirectivesFn = llvm::unique_function<std::optional<
+      ArrayRef<dependency_directives_scan::Directive>>(FileEntryRef)>;
+  DependencyDirectivesFn DependencyDirectivesForFile;
+
   /// The current top of the stack that we're lexing from if
   /// not expanding a macro and we are lexing directly from source code.
   ///
@@ -1269,6 +1282,11 @@ public:
   /// Returns true if the preprocessor is responsible for generating output,
   /// false if it is producing tokens to be consumed by Parse and Sema.
   bool isPreprocessedOutput() const { return PreprocessedOutput; }
+
+  /// Set the function used to get dependency directives for a file.
+  void setDependencyDirectivesFn(DependencyDirectivesFn Fn) {
+    DependencyDirectivesForFile = std::move(Fn);
+  }
 
   /// Return true if we are lexing directly from the specified lexer.
   bool isCurrentLexer(const PreprocessorLexer *L) const {
