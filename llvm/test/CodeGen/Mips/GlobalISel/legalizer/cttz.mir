@@ -139,9 +139,11 @@ body:             |
     ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD1]], [[SUB1]]
     ; MIPS32-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[SELECT]], [[C]]
     ; MIPS32-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD3]](s32), [[C]]
+    ; MIPS32-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD3]](s32)
     ; MIPS32-NEXT: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[C1]], [[C1]]
     ; MIPS32-NEXT: [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[ADD4]], [[ICMP1]]
-    ; MIPS32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ADD3]](s32), [[ADD5]](s32)
+    ; MIPS32-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD5]](s32)
+    ; MIPS32-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; MIPS32-NEXT: [[XOR2:%[0-9]+]]:_(s32) = G_XOR [[COPY]], [[C1]]
     ; MIPS32-NEXT: [[XOR3:%[0-9]+]]:_(s32) = G_XOR [[COPY1]], [[C1]]
     ; MIPS32-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[XOR2]], [[XOR3]]
