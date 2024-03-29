@@ -85,6 +85,7 @@ public:
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    HasUnalignedAccess = true;
   }
 
   StringRef getABI() const override;
