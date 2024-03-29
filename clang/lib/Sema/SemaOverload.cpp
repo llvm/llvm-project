@@ -6865,6 +6865,32 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
+static bool isNonViableMultiVersionOverload(FunctionDecl *FD) {
+  if (FD->isTargetMultiVersionDefault())
+    return false;
+
+  if (!FD->getASTContext().getTargetInfo().getTriple().isAArch64())
+    return FD->isTargetMultiVersion();
+
+  if (!FD->isMultiVersion())
+    return false;
+
+  // Among multiple target versions consider either the default,
+  // or the first non-default in the absence of default version.
+  unsigned SeenAt = 0;
+  unsigned I = 0;
+  bool HasDefault = false;
+  FD->getASTContext().forEachMultiversionedFunctionVersion(
+      FD, [&](const FunctionDecl *CurFD) {
+        if (FD == CurFD)
+          SeenAt = I;
+        else if (CurFD->isTargetMultiVersionDefault())
+          HasDefault = true;
+        ++I;
+      });
+  return HasDefault || SeenAt != 0;
+}
+
 /// AddOverloadCandidate - Adds the given function to the set of
 /// candidate functions, using the given function call arguments.  If
 /// @p SuppressUserConversions, then don't allow user-defined
@@ -6970,11 +6996,7 @@ void Sema::AddOverloadCandidate(
     }
   }
 
-  if (Function->isMultiVersion() &&
-      ((Function->hasAttr<TargetAttr>() &&
-        !Function->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Function->hasAttr<TargetVersionAttr>() &&
-        !Function->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Function)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
     return;
@@ -7637,11 +7659,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     return;
   }
 
-  if (Method->isMultiVersion() &&
-      ((Method->hasAttr<TargetAttr>() &&
-        !Method->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Method->hasAttr<TargetVersionAttr>() &&
-        !Method->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Method)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -8127,11 +8145,7 @@ void Sema::AddConversionCandidate(
     return;
   }
 
-  if (Conversion->isMultiVersion() &&
-      ((Conversion->hasAttr<TargetAttr>() &&
-        !Conversion->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Conversion->hasAttr<TargetVersionAttr>() &&
-        !Conversion->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Conversion)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -14796,6 +14810,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             }
           }
         }
+
+        // Check for nonnull = nullable.
+        // This won't be caught in the arg's initialization: the parameter to
+        // the assignment operator is not marked nonnull.
+        if (Op == OO_Equal)
+          diagnoseNullableToNonnullConversion(Args[0]->getType(),
+                                              Args[1]->getType(), OpLoc);
 
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {

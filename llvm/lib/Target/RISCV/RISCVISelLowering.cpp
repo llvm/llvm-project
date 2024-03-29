@@ -819,6 +819,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
+      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          VT, Custom);
@@ -1203,6 +1205,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(
             {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS}, VT, Custom);
 
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
@@ -1423,6 +1427,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
+                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                          ISD::INSERT_VECTOR_ELT, ISD::ABS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -6785,6 +6790,22 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (!Op.getValueType().isVector())
       return lowerSADDSAT_SSUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU: {
+    SDLoc dl(Op);
+    EVT VT = Op->getValueType(0);
+    SDValue LHS = DAG.getFreeze(Op->getOperand(0));
+    SDValue RHS = DAG.getFreeze(Op->getOperand(1));
+    bool IsSigned = Op->getOpcode() == ISD::ABDS;
+
+    // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
+    // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
+    unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
+    unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
+    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  }
   case ISD::ABS:
   case ISD::VP_ABS:
     return lowerABS(Op, DAG);
@@ -12915,12 +12936,15 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
+// mul (zext, zext) -> zext (mul (zext, zext))
+// sdiv (zext, zext) -> zext (sdiv (zext, zext))
+// udiv (zext, zext) -> zext (udiv (zext, zext))
+// srem (zext, zext) -> zext (srem (zext, zext))
+// urem (zext, zext) -> zext (urem (zext, zext))
 //
 // where the sum of the extend widths match, and the the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
 // use a power of two for both inner and outer extend.)
-//
-// TODO: Extend this to other binary ops
 static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
@@ -13359,6 +13383,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG) {
     SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N0, MulOper);
     return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
   }
+
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
 
   return SDValue();
 }
@@ -15870,6 +15897,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
     return performMULCombine(N, DAG);
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM:
+    if (SDValue V = combineBinOpOfZExt(N, DAG))
+      return V;
+    break;
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -17091,6 +17125,23 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   return 1;
+}
+
+bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+
+  // TODO: Add more target nodes.
+  switch (Op.getOpcode()) {
+  case RISCVISD::SELECT_CC:
+    // Integer select_cc cannot create poison.
+    // TODO: What are the FP poison semantics?
+    // TODO: This instruction blocks poison from the unselected operand, can
+    // we do anything with that?
+    return !Op.getValueType().isInteger();
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 const Constant *
@@ -18683,6 +18734,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::Fast:
   case CallingConv::SPIR_KERNEL:
   case CallingConv::GRAAL:
+  case CallingConv::RISCV_VectorCall:
     break;
   case CallingConv::GHC:
     if (Subtarget.isRVE())

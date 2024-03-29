@@ -288,7 +288,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> void elf::doParseFile(InputFile *file) {
+template <class ELFT> static void doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
 
@@ -330,12 +330,24 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
-  cast<ObjFile<ELFT>>(file)->importCmseSymbols();
+template <class ELFT>
+static void doParseFiles(const std::vector<InputFile *> &files,
+                         InputFile *armCmseImpLib) {
+  // Add all files to the symbol table. This will add almost all symbols that we
+  // need to the symbol table. This process might add files to the link due to
+  // addDependentLibrary.
+  for (size_t i = 0; i < files.size(); ++i) {
+    llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
+    doParseFile<ELFT>(files[i]);
+  }
+  if (armCmseImpLib)
+    cast<ObjFile<ELFT>>(*armCmseImpLib).importCmseSymbols();
 }
 
-void elf::parseArmCMSEImportLib(InputFile *file) {
-  invokeELFT(doParseArmCMSEImportLib, file);
+void elf::parseFiles(const std::vector<InputFile *> &files,
+                     InputFile *armCmseImpLib) {
+  llvm::TimeTraceScope timeScope("Parse input files");
+  invokeELFT(doParseFiles, files, armCmseImpLib);
 }
 
 // Concatenates arguments to construct a string representing an error location.
@@ -952,8 +964,8 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
         reportFatal(place, "program property is too short");
-      uint32_t type = read32<ELFT::TargetEndianness>(desc.data());
-      uint32_t size = read32<ELFT::TargetEndianness>(desc.data() + 4);
+      uint32_t type = read32<ELFT::Endianness>(desc.data());
+      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
       desc = desc.slice(8);
       if (desc.size() < size)
         reportFatal(place, "program property is too short");
@@ -964,7 +976,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
         // accumulate the bits set.
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
-        f.andFeatures |= read32<ELFT::TargetEndianness>(desc.data());
+        f.andFeatures |= read32<ELFT::Endianness>(desc.data());
       } else if (config->emachine == EM_AARCH64 &&
                  type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
         if (!f.aarch64PauthAbiCoreInfo.empty())

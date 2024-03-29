@@ -158,8 +158,10 @@ subroutine notObjects
   real, external :: x1 = 1.
 !ERROR: 'x2' is not a pointer but is initialized like one
   real, external :: x2 => sin
+!ERROR: 'x3' is not a known intrinsic procedure
 !ERROR: 'x3' is not an object that can be initialized
   real, intrinsic :: x3 = 1.
+!ERROR: 'x4' is not a known intrinsic procedure
 !ERROR: 'x4' is not a pointer but is initialized like one
   real, intrinsic :: x4 => cos
 end subroutine

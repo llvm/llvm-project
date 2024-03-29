@@ -1127,6 +1127,12 @@ public:
     return WrapFlags.HasNSW;
   }
 
+  bool isDisjoint() const {
+    assert(OpType == OperationType::DisjointOp &&
+           "recipe cannot have a disjoing flag");
+    return DisjointFlags.IsDisjoint;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printFlags(raw_ostream &O) const;
 #endif
@@ -1155,6 +1161,10 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // Add an offset in bytes (second operand) to a base pointer (first
+    // operand). Only generates scalar values (either for the first lane only or
+    // for all lanes, depending on its uses).
+    PtrAdd,
   };
 
 private:
@@ -1164,11 +1174,28 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   const std::string Name;
 
-  /// Utility method serving execute(): generates a single instance of the
-  /// modeled instruction. \returns the generated value for \p Part.
-  /// In some cases an existing value is returned rather than a generated
+  /// Returns true if this VPInstruction generates scalar values for all lanes.
+  /// Most VPInstructions generate a single value per part, either vector or
+  /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
+  /// values per all lanes, stemming from an original ingredient. This method
+  /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
+  /// underlying ingredient.
+  bool doesGeneratePerAllLanes() const;
+
+  /// Returns true if we can generate a scalar for the first lane only if
+  /// needed.
+  bool canGenerateScalarForFirstLane() const;
+
+  /// Utility methods serving execute(): generates a single instance of the
+  /// modeled instruction for a given part. \returns the generated value for \p
+  /// Part. In some cases an existing value is returned rather than a generated
   /// one.
-  Value *generateInstruction(VPTransformState &State, unsigned Part);
+  Value *generatePerPart(VPTransformState &State, unsigned Part);
+
+  /// Utility methods serving execute(): generates a scalar single instance of
+  /// the modeled instruction for a given lane. \returns the scalar generated
+  /// value for lane \p Lane.
+  Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
 
 #if !defined(NDEBUG)
   /// Return true if the VPInstruction is a floating point math operation, i.e.
@@ -1265,6 +1292,7 @@ public:
     default:
       return false;
     case VPInstruction::BranchOnCount:
+    case VPInstruction::CanonicalIVIncrementForPart:
       return true;
     };
     llvm_unreachable("switch should return");
@@ -2490,12 +2518,6 @@ class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
 
-  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
-      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp) {}
-
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
@@ -2503,6 +2525,12 @@ public:
             IndDesc.getKind(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp()),
             Start, CanonicalIV, Step) {}
+
+  VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
+                    const FPMathOperator *FPBinOp, VPValue *Start,
+                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
+      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
+        Kind(Kind), FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
@@ -2994,9 +3022,9 @@ public:
     return Value2VPValue[V];
   }
 
-  /// Gets the VPValue for \p V or adds a new live-in (if none exists yet) for
-  /// \p V.
-  VPValue *getVPValueOrAddLiveIn(Value *V) {
+  /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
+  ///  yet) for \p V.
+  VPValue *getOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
     if (!Value2VPValue.count(V)) {
       VPValue *VPV = new VPValue(V);
