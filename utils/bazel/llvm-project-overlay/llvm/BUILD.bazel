@@ -7,6 +7,7 @@ load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//mlir:tblgen.bzl", "td_library")
 load(":binary_alias.bzl", "binary_alias")
 load(":config.bzl", "llvm_config_defines")
+load(":driver.bzl", "generate_driver_selects", "generate_driver_tools_def", "llvm_driver_cc_binary", "select_driver_tools")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":targets.bzl", "llvm_targets")
 load(":tblgen.bzl", "gentbl")
@@ -603,6 +604,32 @@ cc_library(
         ":Support",
         ":TargetParser",
     ],
+)
+
+# Command line flag to control which tools get included in the llvm driver binary.
+# The macro also generates config_setting targets used by select_driver_tools().
+generate_driver_selects(name = "driver-tools")
+
+generate_driver_tools_def(
+    name = "gen_llvm_driver_tools_def",
+    out = "LLVMDriverTools.def",
+    driver_tools = select_driver_tools(":driver-tools"),
+)
+
+# Workaround inability to put `.def` files into `srcs` with a library
+cc_library(
+    name = "llvm_driver_tools_def_lib",
+    includes = ["."],
+    textual_hdrs = ["LLVMDriverTools.def"],
+)
+
+cc_binary(
+    name = "llvm",
+    srcs = glob(["tools/llvm-driver/*.cpp"]),
+    deps = [
+        ":Support",
+        ":llvm_driver_tools_def_lib",
+    ] + select_driver_tools(":driver-tools"),
 )
 
 cc_binary(
@@ -3305,22 +3332,10 @@ cc_binary(
     ],
 )
 
-expand_template(
-    name = "ar_main",
-    out = "llvm-ar-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_ar",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
-cc_binary(
-    name = "llvm-ar",
-    srcs = glob([
-        "tools/llvm-ar/*.cpp",
-    ]) + ["llvm-ar-driver.cpp"],
+cc_library(
+    name = "llvm-ar-lib",
+    srcs = glob(["tools/llvm-ar/*.cpp"]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -3332,6 +3347,12 @@ cc_binary(
         ":Support",
         ":TargetParser",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-ar",
+    stamp = 0,
+    deps = [":llvm-ar-lib"],
 )
 
 # We need to run llvm-ar with different basenames to make it run with
@@ -4151,22 +4172,10 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-expand_template(
-    name = "nm_main",
-    out = "llvm-nm-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_nm",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
-cc_binary(
-    name = "llvm-nm",
-    srcs = glob([
-        "tools/llvm-nm/*.cpp",
-    ]) + ["llvm-nm-driver.cpp"],
+cc_library(
+    name = "llvm-nm-lib",
+    srcs = glob(["tools/llvm-nm/*.cpp"]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -4181,6 +4190,12 @@ cc_binary(
         ":Symbolize",
         ":TargetParser",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-nm",
+    stamp = 0,
+    deps = [":llvm-nm-lib"],
 )
 
 gentbl(
@@ -4634,28 +4649,22 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-expand_template(
-    name = "size_main",
-    out = "llvm-size-driver.cpp",
-    substitutions = {
-        "@TOOL_NAME@": "llvm_size",
-    },
-    template = "cmake/modules/llvm-driver-template.cpp.in",
-)
-
-cc_binary(
-    name = "llvm-size",
-    srcs = glob([
-        "tools/llvm-size/*.cpp",
-    ]) + ["llvm-size-driver.cpp"],
+cc_library(
+    name = "llvm-size-lib",
+    srcs = glob(["tools/llvm-size/*.cpp"]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":Object",
         ":Option",
         ":SizeOptsTableGen",
         ":Support",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-size",
+    stamp = 0,
+    deps = [":llvm-size-lib"],
 )
 
 cc_binary(
