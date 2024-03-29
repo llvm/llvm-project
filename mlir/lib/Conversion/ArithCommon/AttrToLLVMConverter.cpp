@@ -61,11 +61,11 @@ mlir::arith::convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode) {
   switch (roundingMode) {
   case arith::RoundingMode::downward:
     return LLVM::RoundingMode::TowardNegative;
-  case arith::RoundingMode::tonearestaway:
+  case arith::RoundingMode::to_nearest_away:
     return LLVM::RoundingMode::NearestTiesToAway;
-  case arith::RoundingMode::tonearesteven:
+  case arith::RoundingMode::to_nearest_even:
     return LLVM::RoundingMode::NearestTiesToEven;
-  case arith::RoundingMode::towardzero:
+  case arith::RoundingMode::toward_zero:
     return LLVM::RoundingMode::TowardZero;
   case arith::RoundingMode::upward:
     return LLVM::RoundingMode::TowardPositive;

@@ -31,9 +31,9 @@ namespace {
 /// Operations whose conversion will depend on whether they are passed a
 /// rounding mode attribute or not.
 ///
-/// \tparam SourceOp is the source operation; \tparam TargetOp, the operation it
-/// will lower to; \tparam AttrConvert is the attribute conversion to convert
-/// the rounding mode attribute.
+/// `SourceOp` is the source operation; `TargetOp`, the operation it will lower
+/// to; `AttrConvert` is the attribute conversion to convert the rounding mode
+/// attribute.
 template <typename SourceOp, typename TargetOp, bool Constrained,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough>

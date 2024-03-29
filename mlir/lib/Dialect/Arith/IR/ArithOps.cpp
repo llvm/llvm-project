@@ -102,11 +102,11 @@ convertArithRoundingModeToLLVMIR(RoundingMode roundingMode) {
   switch (roundingMode) {
   case RoundingMode::downward:
     return llvm::RoundingMode::TowardNegative;
-  case RoundingMode::tonearestaway:
+  case RoundingMode::to_nearest_away:
     return llvm::RoundingMode::NearestTiesToAway;
-  case RoundingMode::tonearesteven:
+  case RoundingMode::to_nearest_even:
     return llvm::RoundingMode::NearestTiesToEven;
-  case RoundingMode::towardzero:
+  case RoundingMode::toward_zero:
     return llvm::RoundingMode::TowardZero;
   case RoundingMode::upward:
     return llvm::RoundingMode::TowardPositive;
@@ -1420,14 +1420,12 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
   return constFoldCastOp<FloatAttr, FloatAttr>(
       adaptor.getOperands(), getType(),
       [this, &targetSemantics](const APFloat &a, bool &castStatus) {
-        FailureOr<APFloat> result;
-        if (std::optional<RoundingMode> roundingMode = getRoundingmode()) {
-          llvm::RoundingMode llvmRoundingMode =
-              convertArithRoundingModeToLLVMIR(*roundingMode);
-          result = convertFloatValue(a, targetSemantics, llvmRoundingMode);
-        } else {
-          result = convertFloatValue(a, targetSemantics);
-        }
+        RoundingMode roundingMode =
+            getRoundingmode().value_or(RoundingMode::to_nearest_even);
+        llvm::RoundingMode llvmRoundingMode =
+            convertArithRoundingModeToLLVMIR(roundingMode);
+        FailureOr<APFloat> result =
+            convertFloatValue(a, targetSemantics, llvmRoundingMode);
         if (failed(result)) {
           castStatus = false;
           return a;

@@ -705,11 +705,11 @@ func.func @test_truncf_scalable_vector(%arg0 : vector<[8]xf32>) -> vector<[8]xbf
 
 // CHECK-LABEL: test_truncf_rounding_mode
 func.func @test_truncf_rounding_mode(%arg0 : f64) -> (f32, f32, f32, f32, f32) {
-  %0 = arith.truncf %arg0 tonearesteven : f64 to f32
+  %0 = arith.truncf %arg0 to_nearest_even : f64 to f32
   %1 = arith.truncf %arg0 downward : f64 to f32
   %2 = arith.truncf %arg0 upward : f64 to f32
-  %3 = arith.truncf %arg0 towardzero : f64 to f32
-  %4 = arith.truncf %arg0 tonearestaway : f64 to f32
+  %3 = arith.truncf %arg0 toward_zero : f64 to f32
+  %4 = arith.truncf %arg0 to_nearest_away : f64 to f32
   return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 

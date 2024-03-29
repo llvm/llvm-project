@@ -762,7 +762,7 @@ func.func @truncFPConstant() -> bf16 {
 //       CHECK:   return %[[cres]]
 func.func @truncFPToNearestEvenConstant() -> bf16 {
   %cst = arith.constant 1.000000e+00 : f32
-  %0 = arith.truncf %cst tonearesteven : f32 to bf16
+  %0 = arith.truncf %cst to_nearest_even : f32 to bf16
   return %0 : bf16
 }
 
@@ -789,7 +789,7 @@ func.func @truncFPUpwardConstant() -> bf16 {
 //       CHECK:   return %[[cres]]
 func.func @truncFPTowardZeroConstant() -> bf16 {
   %cst = arith.constant 1.000000e+00 : f32
-  %0 = arith.truncf %cst towardzero : f32 to bf16
+  %0 = arith.truncf %cst toward_zero : f32 to bf16
   return %0 : bf16
 }
 
@@ -798,7 +798,7 @@ func.func @truncFPTowardZeroConstant() -> bf16 {
 //       CHECK:   return %[[cres]]
 func.func @truncFPToNearestAwayConstant() -> bf16 {
   %cst = arith.constant 1.000000e+00 : f32
-  %0 = arith.truncf %cst tonearestaway : f32 to bf16
+  %0 = arith.truncf %cst to_nearest_away : f32 to bf16
   return %0 : bf16
 }
 

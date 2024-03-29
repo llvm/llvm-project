@@ -164,15 +164,15 @@ def Arith_IntegerOverflowAttr :
 // llvm/include/llvm/ADT/FloatingPointMode.h
 
 def Arith_RToNearestTiesToEven       // Round to nearest, ties to even
-    : I32EnumAttrCase<"tonearesteven", 0>;
+    : I32EnumAttrCase<"to_nearest_even", 0>;
 def Arith_RDownward                  // Round toward -inf
     : I32EnumAttrCase<"downward", 1>;
 def Arith_RUpward                    // Round toward +inf
     : I32EnumAttrCase<"upward", 2>;
 def Arith_RTowardZero                // Round toward 0
-    : I32EnumAttrCase<"towardzero", 3>;
+    : I32EnumAttrCase<"toward_zero", 3>;
 def Arith_RToNearestTiesAwayFromZero // Round to nearest, ties away from zero
-    : I32EnumAttrCase<"tonearestaway", 4>;
+    : I32EnumAttrCase<"to_nearest_away", 4>;
 
 def Arith_RoundingModeAttr : I32EnumAttr<
     "RoundingMode", "Floating point rounding mode",
