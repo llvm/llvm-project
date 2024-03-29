@@ -3458,7 +3458,7 @@ DebugNamesSection<ELFT> *DebugNamesSection<ELFT>::create() {
   ret->getMergedAbbrevTable(inputChunks);
   ret->getMergedSymbols(inputChunks);
   ret->computeUniqueHashes(inputChunks);
-  // inputChunks are needed any more. Reset now to save memory.
+  // inputChunks are not needed any more. Reset now to save memory.
   inputChunksPtr.reset();
   ret->generateBuckets();
   ret->calculateEntriesSizeAndOffsets();
