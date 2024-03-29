@@ -31,6 +31,7 @@ enum class VerificationMode {
 class DylibVerifier : llvm::MachO::RecordVisitor {
 private:
   struct SymbolContext;
+  struct DWARFContext;
 
 public:
   enum class Result { NoVerify, Ignore, Valid, Invalid };
@@ -54,7 +55,7 @@ public:
     DiagnosticsEngine *Diag = nullptr;
 
     // Handle diagnostics reporting for target level violations.
-    void emitDiag(llvm::function_ref<void()> Report);
+    void emitDiag(llvm::function_ref<void()> Report, RecordLoc *Loc = nullptr);
 
     VerifierContext() = default;
     VerifierContext(DiagnosticsEngine *Diag) : Diag(Diag) {}
@@ -63,9 +64,10 @@ public:
   DylibVerifier() = default;
 
   DylibVerifier(llvm::MachO::Records &&Dylib, DiagnosticsEngine *Diag,
-                VerificationMode Mode, bool Demangle)
+                VerificationMode Mode, bool Demangle, StringRef DSYMPath)
       : Dylib(std::move(Dylib)), Mode(Mode), Demangle(Demangle),
-        Exports(std::make_unique<SymbolSet>()), Ctx(VerifierContext{Diag}) {}
+        DSYMPath(DSYMPath), Exports(std::make_unique<SymbolSet>()),
+        Ctx(VerifierContext{Diag}) {}
 
   Result verify(GlobalRecord *R, const FrontendAttrs *FA);
   Result verify(ObjCInterfaceRecord *R, const FrontendAttrs *FA);
@@ -143,6 +145,12 @@ private:
   std::string getAnnotatedName(const Record *R, SymbolContext &SymCtx,
                                bool ValidSourceLoc = true);
 
+  /// Extract source location for symbol implementations.
+  /// As this is a relatively expensive operation, it is only used
+  /// when there is a violation to report and there is not a known declaration
+  /// in the interface.
+  void accumulateSrcLocForDylibSymbols();
+
   // Symbols in dylib.
   llvm::MachO::Records Dylib;
 
@@ -152,11 +160,17 @@ private:
   // Attempt to demangle when reporting violations.
   bool Demangle = false;
 
+  // File path to DSYM file.
+  StringRef DSYMPath;
+
   // Valid symbols in final text file.
   std::unique_ptr<SymbolSet> Exports = std::make_unique<SymbolSet>();
 
   // Track current state of verification while traversing AST.
   VerifierContext Ctx;
+
+  // Track DWARF provided source location for dylibs.
+  DWARFContext *DWARFCtx = nullptr;
 };
 
 } // namespace installapi

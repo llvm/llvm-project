@@ -67,6 +67,9 @@ struct DriverOptions {
   /// \brief Output path.
   std::string OutputPath;
 
+  /// \brief DSYM path.
+  std::string DSYMPath;
+
   /// \brief File encoding to print.
   FileType OutFT = FileType::TBD_V5;
 
