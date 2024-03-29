@@ -363,22 +363,21 @@ public:
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
-    // Set up the dependency scanning file system callback if requested.
     auto AdjustCI = [&](CompilerInstance &CI) {
-      if (!DepFS)
-        return;
+      // Set up the dependency scanning file system callback if requested.
+      if (DepFS) {
+        auto GetDependencyDirectives = [LocalDepFS = DepFS](FileEntryRef File)
+            -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+          if (llvm::ErrorOr<EntryRef> Entry =
+                  LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+            if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+              return Entry->getDirectiveTokens();
+          return std::nullopt;
+        };
 
-      auto GetDependencyDirectives = [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
-
-      CI.getPreprocessor().setDependencyDirectivesFn(
-          std::move(GetDependencyDirectives));
+        CI.getPreprocessor().setDependencyDirectivesFn(
+            std::move(GetDependencyDirectives));
+      }
     };
 
     // Create the dependency collector that will collect the produced
