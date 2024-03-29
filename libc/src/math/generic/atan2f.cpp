@@ -69,10 +69,17 @@ constexpr fputil::DoubleDouble COEFFS[9] = {
 
 // Veltkamp's splitting of a double precision into hi + lo, where the hi part is
 // slightly smaller than an even split, so that the product of
-//   hi * s * k is exact,
+//   hi * (s1 * k + s2) is exact,
 // where:
-//   s is single precsion,
-//   0 < k < 16 is an integer.
+//   s1, s2 are single precsion,
+//   1/16 <= s1/s2 <= 1
+//   1/16 <= k <= 1 is an integer.
+// So the maximal precision of (s1 * k + s2) is:
+//   prec(s1 * k + s2) = 2 + log2(msb(s2)) - log2(lsb(k_d * s1))
+//                     = 2 + log2(msb(s1)) + 4 - log2(lsb(k_d)) - log2(lsb(s1))
+//                     = 2 + log2(lsb(s1)) + 23 + 4 - (-4) - log2(lsb(s1))
+//                     = 33.
+// Thus, the Veltkamp splitting constant is C = 2^33 + 1.
 // This is used when FMA instruction is not available.
 [[maybe_unused]] LIBC_INLINE constexpr fputil::DoubleDouble split_d(double a) {
   fputil::DoubleDouble r{0.0, 0.0};
