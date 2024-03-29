@@ -12361,12 +12361,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
+    std::optional<APSInt> Fallback;
+    if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
+      APSInt FallbackTemp;
+      if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
+        return false;
+      Fallback = FallbackTemp;
+    }
+
     if (!Val) {
-      if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
-        if (!EvaluateInteger(E->getArg(1), Val, Info))
-          return false;
-        return Success(Val, E);
-      }
+      if (Fallback)
+        return Success(*Fallback, E);
 
       // When the argument is 0, the result of GCC builtins is undefined,
       // whereas for Microsoft intrinsics, the result is the bit-width of the
@@ -12425,12 +12430,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
+    std::optional<APSInt> Fallback;
+    if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
+      APSInt FallbackTemp;
+      if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
+        return false;
+      Fallback = FallbackTemp;
+    }
+
     if (!Val) {
-      if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
-        if (!EvaluateInteger(E->getArg(1), Val, Info))
-          return false;
-        return Success(Val, E);
-      }
+      if (Fallback)
+        return Success(*Fallback, E);
 
       return Error(E);
     }
