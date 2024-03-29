@@ -43,6 +43,7 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
+- P2872R2 - Remove ``wstring_convert`` From C++26
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
@@ -87,6 +88,9 @@ Deprecations and Removals
   many users, except perhaps users using the library with ``-ffreestanding`` with a toolchain where compiler-rt or
   libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
   on a path for supporting atomics properly on freestanding platforms.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in
+  ``<wstring_convert>`` available.
 
 
 Upcoming Deprecations and Removals
