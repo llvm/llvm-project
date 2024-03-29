@@ -676,38 +676,38 @@ let Predicates = [HasStdExtZba] in {
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(XLenVT (add_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
+  def : Pat<(XLenVT (add_like_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
 
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_op");
   // More complex cases use a ComplexPattern.
-  def : Pat<(XLenVT (add_non_imm12 pat:$rs1, GPR:$rs2)),
+  def : Pat<(XLenVT (add_like_non_imm12 pat:$rs1, GPR:$rs2)),
             (shxadd pat:$rs1, GPR:$rs2)>;
 }
 
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
           (SH1ADD (XLenVT (SH1ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
           (SH1ADD (XLenVT (SH2ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
           (SH1ADD (XLenVT (SH3ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
           (SH2ADD (XLenVT (SH1ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
           (SH2ADD (XLenVT (SH2ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
           (SH2ADD (XLenVT (SH3ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
           (SH3ADD (XLenVT (SH1ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
           (SH3ADD (XLenVT (SH2ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
+def : Pat<(add_like (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
           (SH3ADD (XLenVT (SH3ADD GPR:$rs1, GPR:$rs1)), GPR:$rs2)>;
 
-def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
+def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (SH2ADD (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))),
                   GPR:$r)>;
-def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
+def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (SH3ADD (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))),
                   GPR:$r)>;
 
@@ -762,37 +762,37 @@ def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, (XLenVT X0))>;
 
 foreach i = {1,2,3} in {
   defvar shxadd_uw = !cast<Instruction>("SH"#i#"ADD_UW");
-  def : Pat<(i64 (add_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)), (XLenVT GPR:$rs2))),
+  def : Pat<(i64 (add_like_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)), (XLenVT GPR:$rs2))),
             (shxadd_uw GPR:$rs1, GPR:$rs2)>;
 }
 
-def : Pat<(i64 (add_non_imm12 (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF), (XLenVT GPR:$rs2))),
           (SH1ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 2)), 0x3FFFFFFFF), (XLenVT GPR:$rs2))),
           (SH2ADD_UW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), (XLenVT GPR:$rs2))),
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 // More complex cases use a ComplexPattern.
 foreach i = {1,2,3} in {
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_uw_op");
-  def : Pat<(i64 (add_non_imm12 pat:$rs1, (XLenVT GPR:$rs2))),
+  def : Pat<(i64 (add_like_non_imm12 pat:$rs1, (XLenVT GPR:$rs2))),
             (!cast<Instruction>("SH"#i#"ADD_UW") pat:$rs1, GPR:$rs2)>;
 }
 
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0xFFFFFFFE), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFE), (XLenVT GPR:$rs2))),
           (SH1ADD (XLenVT (SRLIW GPR:$rs1, 1)), GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0xFFFFFFFC), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFC), (XLenVT GPR:$rs2))),
           (SH2ADD (XLenVT (SRLIW GPR:$rs1, 2)), GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0xFFFFFFF8), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFF8), (XLenVT GPR:$rs2))),
           (SH3ADD (XLenVT (SRLIW GPR:$rs1, 3)), GPR:$rs2)>;
 
 // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0x1FFFFFFFE), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x1FFFFFFFE), (XLenVT GPR:$rs2))),
           (SH1ADD_UW (XLenVT (SRLI GPR:$rs1, 1)), GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0x3FFFFFFFC), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x3FFFFFFFC), (XLenVT GPR:$rs2))),
           (SH2ADD_UW (XLenVT (SRLI GPR:$rs1, 2)), GPR:$rs2)>;
-def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0x7FFFFFFF8), (XLenVT GPR:$rs2))),
+def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0x7FFFFFFF8), (XLenVT GPR:$rs2))),
           (SH3ADD_UW (XLenVT (SRLI GPR:$rs1, 3)), GPR:$rs2)>;
 
 def : Pat<(i64 (mul (and_oneuse GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i)),
@@ -879,7 +879,7 @@ def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
+  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
 }
 }
