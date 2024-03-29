@@ -1778,7 +1778,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (TypeSize::isKnownGT(DstTy.getScalarType().getSizeInBits(),
+    if (TypeSize::isKnownGT(DstTy.getElementType().getSizeInBits(),
                             SrcTy.getSizeInBits())) {
       report("Element type of the destination must be the same size or smaller "
              "than the source type",
