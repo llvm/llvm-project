@@ -69,7 +69,10 @@ void InitOnlyAction::ExecuteAction() {
 
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
-  Preprocessor &PP = getCompilerInstance().getPreprocessor();
+  CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
+  Preprocessor &PP = CI.getPreprocessor();
 
   // Ignore unknown pragmas.
   PP.IgnorePragmas();
@@ -1190,6 +1193,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
