@@ -64,8 +64,8 @@ define float @PR39535min_switch(i64 %i, float %x) {
 ; CHECK-LABEL: @PR39535min_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i64 [[I:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[END]]
@@ -153,4 +153,34 @@ T:
 F:
   %z2 = or disjoint i32 %x, %y
   ret i32 %z2
+}
+
+define i16 @hoist_trunc_flags_preserve(i1 %C, i32 %x) {
+; CHECK-LABEL: @hoist_trunc_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = trunc nsw nuw i32 %x to i16
+  ret i16 %z1
+F:
+  %z2 = trunc nsw nuw i32 %x to i16
+  ret i16 %z2
+}
+
+define i16 @hoist_trunc_flags_drop(i1 %C, i32 %x) {
+; CHECK-LABEL: @hoist_trunc_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = trunc i32 %x to i16
+  ret i16 %z1
+F:
+  %z2 = trunc nsw nuw i32 %x to i16
+  ret i16 %z2
 }
