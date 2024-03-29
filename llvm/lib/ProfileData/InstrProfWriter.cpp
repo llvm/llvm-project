@@ -40,7 +40,7 @@ using namespace llvm;
 struct PatchItem {
   uint64_t Pos; // Where to patch.
   uint64_t *D;  // Pointer to an array of source data.
-  int N;        // Number of elements in \c D array.
+  size_t N;     // Number of elements in \c D array.
 };
 
 namespace llvm {
@@ -69,7 +69,7 @@ public:
       const uint64_t LastPos = FDOStream.tell();
       for (const auto &K : P) {
         FDOStream.seek(K.Pos);
-        for (int I = 0; I < K.N; I++)
+        for (size_t I = 0; I < K.N; I++)
           write(K.D[I]);
       }
       // Reset the stream to the last position after patching so that users
@@ -80,7 +80,7 @@ public:
       raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
       std::string &Data = SOStream.str(); // with flush
       for (const auto &K : P) {
-        for (int I = 0; I < K.N; I++) {
+        for (size_t I = 0; I < K.N; I++) {
           uint64_t Bytes =
               endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
           Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
@@ -707,9 +707,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
         {VTableNamesOffset, &VTableNamesSectionStart, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-         (int)(SummarySize / sizeof(uint64_t))},
+         SummarySize / sizeof(uint64_t)},
         {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-         (int)CSSummarySize}};
+         CSSummarySize}};
 
     OS.patch(PatchItems);
   } else {
@@ -727,9 +727,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
         {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-         (int)(SummarySize / sizeof(uint64_t))},
+         SummarySize / sizeof(uint64_t)},
         {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
-         (int)CSSummarySize}};
+         CSSummarySize}};
 
     OS.patch(PatchItems);
   }
