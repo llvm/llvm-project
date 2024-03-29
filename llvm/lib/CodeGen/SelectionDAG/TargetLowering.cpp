@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -8718,10 +8719,11 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2)
+    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+      SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::ADD, dl, VT, V,
-                      DAG.getNode(ISD::SHL, dl, VT, V,
-                                  DAG.getShiftAmountConstant(Shift, VT, dl)));
+                      DAG.getNode(ISD::SHL, dl, VT, V, ShiftC));
+    }
   }
   return DAG.getNode(ISD::SRL, dl, VT, V, DAG.getConstant(Len - 8, dl, ShVT));
 }
@@ -8784,12 +8786,12 @@ SDValue TargetLowering::expandVPCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::VP_MUL, dl, VT, Op, Mask01, Mask, VL);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2)
+    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+      SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::VP_ADD, dl, VT, V,
-                      DAG.getNode(ISD::VP_SHL, dl, VT, V,
-                                  DAG.getShiftAmountConstant(Shift, VT, dl),
-                                  Mask, VL),
+                      DAG.getNode(ISD::VP_SHL, dl, VT, V, ShiftC, Mask, VL),
                       Mask, VL);
+    }
   }
   return DAG.getNode(ISD::VP_LSHR, dl, VT, V,
                      DAG.getConstant(Len - 8, dl, ShVT), Mask, VL);
