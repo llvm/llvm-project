@@ -9,6 +9,7 @@
 #include "MathMissingParenthesesCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -16,6 +17,8 @@ namespace clang::tidy::readability {
 
 void MathMissingParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(binaryOperator(unless(hasParent(binaryOperator())),
+                                    unless(allOf(hasOperatorName("&&"),
+                                                 hasOperatorName("||"))),
                                     hasDescendant(binaryOperator()))
                          .bind("binOp"),
                      this);
@@ -42,9 +45,13 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static bool addParantheses(const BinaryOperator *BinOp,
-                           const BinaryOperator *ParentBinOp,
-                           std::vector<clang::SourceRange> &Insertions) {
+static bool addParantheses(
+    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+    std::vector<
+        std::pair<clang::SourceRange, std::pair<const clang::BinaryOperator *,
+                                                const clang::BinaryOperator *>>>
+        &Insertions,
+    const clang::SourceManager &SM, const clang::LangOptions &LangOpts) {
   bool NeedToDiagnose = false;
   if (!BinOp)
     return NeedToDiagnose;
@@ -53,32 +60,51 @@ static bool addParantheses(const BinaryOperator *BinOp,
       getPrecedence(BinOp) != getPrecedence(ParentBinOp)) {
     NeedToDiagnose = true;
     const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
-    const clang::SourceLocation EndLoc = BinOp->getEndLoc().getLocWithOffset(1);
-    Insertions.push_back(clang::SourceRange(StartLoc, EndLoc));
+    clang::SourceLocation EndLoc =
+        clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
+    Insertions.push_back(
+        {clang::SourceRange(StartLoc, EndLoc), {BinOp, ParentBinOp}});
   }
 
   NeedToDiagnose |= addParantheses(
       dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()), BinOp,
-      Insertions);
+      Insertions, SM, LangOpts);
   NeedToDiagnose |= addParantheses(
       dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()), BinOp,
-      Insertions);
+      Insertions, SM, LangOpts);
   return NeedToDiagnose;
 }
 
 void MathMissingParenthesesCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
-  std::vector<clang::SourceRange> Insertions;
+  std::vector<
+      std::pair<clang::SourceRange, std::pair<const clang::BinaryOperator *,
+                                              const clang::BinaryOperator *>>>
+      Insertions;
   const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
+  const SourceManager &SM = *Result.SourceManager;
+  const clang::LangOptions &LO = Result.Context->getLangOpts();
 
-  if (addParantheses(BinOp, nullptr, Insertions)) {
-    const auto &Diag = diag(
-        StartLoc, "add parantheses to clarify the precedence of operations");
+  if (addParantheses(BinOp, nullptr, Insertions, SM, LO)) {
     for (const auto &Insertion : Insertions) {
-      Diag << FixItHint::CreateInsertion(Insertion.getBegin(), "(");
-      Diag << FixItHint::CreateInsertion(Insertion.getEnd(), ")");
-      Diag << Insertion;
+      const clang::BinaryOperator *BinOp1 = Insertion.second.first;
+      const clang::BinaryOperator *BinOp2 = Insertion.second.second;
+
+      int Precedence1 = getPrecedence(BinOp1);
+      int Precedence2 = getPrecedence(BinOp2);
+
+      auto Diag = diag(Insertion.first.getBegin(),
+                       "'%0' has higher precedence than '%1'; add parentheses "
+                       "to make the precedence of operations explicit")
+                  << (Precedence1 > Precedence2 ? BinOp1->getOpcodeStr()
+                                                : BinOp2->getOpcodeStr())
+                  << (Precedence1 > Precedence2 ? BinOp2->getOpcodeStr()
+                                                : BinOp1->getOpcodeStr());
+
+      Diag << FixItHint::CreateInsertion(Insertion.first.getBegin(), "(");
+      Diag << FixItHint::CreateInsertion(Insertion.first.getEnd(), ")");
+      Diag << Insertion.first;
     }
   }
 }
