@@ -5,7 +5,7 @@
 #  Chapter 2 : 2D Saxpy with TMA
 # ===----------------------------------------------------------------------===//
 #
-# This program demonstrates 2D Saxpy. It is same as Chapter 1, 
+# This program demonstrates 2D Saxpy. It is same as Chapter 1,
 # but it loads data using TMA (Tensor Memory Accelerator)
 #
 # This chapter introduces demonstrates:

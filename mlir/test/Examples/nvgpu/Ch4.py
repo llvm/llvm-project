@@ -247,6 +247,7 @@ def gemm_multistage(x, y, z):
 
     grid = [(M // TILE_M), (N // TILE_N), 1]
     block = [128, 1, 1]
+
     @NVDSL.mlir_gpu_launch(grid=grid, block=block, smem=229440)
     def gemm_multistage_kernel():
         # Initialize mbarriers and prefetch TMA descriptors

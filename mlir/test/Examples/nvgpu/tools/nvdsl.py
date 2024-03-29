@@ -14,7 +14,9 @@ MLIR_DYNAMIC = -9223372036854775808
 
 def const(value: int, ty=None):
     ty = T.index() if ty is None else ty
-    if isinstance(value, ir.Value) and (value.type.isinstance(value.type) or T.bool().isinstance(value.type)):
+    if isinstance(value, ir.Value) and (
+        value.type.isinstance(value.type) or T.bool().isinstance(value.type)
+    ):
         return value
     return arith.constant(ty, value)
 
@@ -30,6 +32,7 @@ def get_type_size(ty):
     if ir.IntegerType.isinstance(ty):
         return ir.IntegerType(ty).width // 8
     raise NotImplementedError(ty)
+
 
 def get_mlir_func_obj_ty(inputArgs):
     args = []
@@ -133,19 +136,20 @@ class TMA:
     def create_descriptor(self, device_ptr):
         tma_descriptor_ty = self.tensormap_descriptor_ty
         device_unranked_memref = memref.CastOp(
-            ir.UnrankedMemRefType.get(self.memref_ty.element_type,
-                                      self.memref_ty.memory_space),
+            ir.UnrankedMemRefType.get(
+                self.memref_ty.element_type, self.memref_ty.memory_space
+            ),
             device_ptr,
         )
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty, device_unranked_memref,
-            map(const, self.tma_shape))
+            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_shape)
+        )
         return self.tma_descriptor.result
 
     def prefetch(self, predicate=None):
         nvgpu.tma_prefetch_descriptor(self.tma_descriptor, predicate=predicate)
 
-    def load(self, dest, mbarrier: Mbarriers, coords=[0,0], predicate=None):
+    def load(self, dest, mbarrier: Mbarriers, coords=[0, 0], predicate=None):
         coord_ops = [const(c) for c in coords]
         nvgpu.TmaAsyncLoadOp(
             dest,
@@ -180,7 +184,6 @@ class MatrixAccumulator:
 
 
 class Matrix:
-
     def __init__(self, smem, tma_descriptor: TMA, M, N):
         self.tma_descriptor = tma_descriptor
         self.smem = smem
@@ -189,22 +192,27 @@ class Matrix:
 
     @property
     def wgmma_ty(self):
-        return ir.Type.parse("!nvgpu.warpgroup.descriptor<tensor=memref<" +
-                             str(self.M) + "x" +
-                             str(self.N) + "x" +
-                             str(self.tma_descriptor.memref_ty.element_type) +
-                             ", #gpu.address_space<workgroup>>>")
+        return ir.Type.parse(
+            "!nvgpu.warpgroup.descriptor<tensor=memref<"
+            + str(self.M)
+            + "x"
+            + str(self.N)
+            + "x"
+            + str(self.tma_descriptor.memref_ty.element_type)
+            + ", #gpu.address_space<workgroup>>>"
+        )
 
     def matmul(lhs, rhs, acc):
         wgmma_desc_lhs = nvgpu.warpgroup_generate_descriptor(
-            lhs.wgmma_ty, lhs.smem, lhs.tma_descriptor.tma_descriptor)
+            lhs.wgmma_ty, lhs.smem, lhs.tma_descriptor.tma_descriptor
+        )
         wgmma_desc_rhs = nvgpu.warpgroup_generate_descriptor(
-            rhs.wgmma_ty, rhs.smem, rhs.tma_descriptor.tma_descriptor)
-        return nvgpu.WarpgroupMmaOp(acc.type,
-                                    wgmma_desc_lhs,
-                                    wgmma_desc_rhs,
-                                    acc,
-                                    transposeB=True)
+            rhs.wgmma_ty, rhs.smem, rhs.tma_descriptor.tma_descriptor
+        )
+        return nvgpu.WarpgroupMmaOp(
+            acc.type, wgmma_desc_lhs, wgmma_desc_rhs, acc, transposeB=True
+        )
+
 
 def get_dynamic_shared_memory(shape=None, ty=None, offset: int = 0):
     smem_space_str = "#gpu.address_space<workgroup>"
@@ -224,6 +232,7 @@ def get_dynamic_shared_memory(shape=None, ty=None, offset: int = 0):
         [],
     )
 
+
 @staticmethod
 def get_mlir_ty(arg):
     def get_mlir_ty_from_np(dtype):
@@ -238,6 +247,7 @@ def get_mlir_ty(arg):
         if dtype == np.int64:
             return T.i64()
         raise NotImplementedError(dtype)
+
     if isinstance(arg, bool):
         return T.bool()
     elif isinstance(arg, int):
@@ -250,6 +260,7 @@ def get_mlir_ty(arg):
         shape = descriptor.shape
         return memref.MemRefType.get(shape, dtype)
     raise NotImplementedError(arg)
+
 
 class NVDSL:
     @staticmethod
