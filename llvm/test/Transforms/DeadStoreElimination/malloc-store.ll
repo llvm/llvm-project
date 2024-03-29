@@ -6,8 +6,7 @@ declare void @use(ptr)
 
 define ptr @basic() {
 ; CHECK-LABEL: define ptr @basic() {
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 4)
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 1, i64 4)
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = call ptr @malloc(i64 4)
@@ -17,8 +16,7 @@ define ptr @basic() {
 
 define ptr @vec_type() {
 ; CHECK-LABEL: define ptr @vec_type() {
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 4)
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 1, i64 4)
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = call ptr @malloc(i64 4)
@@ -28,9 +26,8 @@ define ptr @vec_type() {
 
 define ptr @clobber() {
 ; CHECK-LABEL: define ptr @clobber() {
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 4)
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 1, i64 4)
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[PTR]], align 1
-; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = call ptr @malloc(i64 4)
@@ -52,8 +49,7 @@ define ptr @wrong_size() {
 
 define ptr @bigstore() {
 ; CHECK-LABEL: define ptr @bigstore() {
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr @malloc(i64 8096)
-; CHECK-NEXT:    store <8096 x i8> zeroinitializer, ptr [[PTR]], align 8192
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @calloc(i64 1, i64 8096)
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = call ptr @malloc(i64 8096)
