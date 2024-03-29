@@ -1384,7 +1384,7 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
 
   for (auto &BB : *CalledFunction) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI || !isa<CallBase>(RI->getOperand(0)))
+    if (!RI || RI->getNumOperands() == 0 || !isa<CallBase>(RI->getOperand(0)))
       continue;
     auto *RetVal = cast<CallBase>(RI->getOperand(0));
     // Check that the cloned RetVal exists and is a call, otherwise we cannot
