@@ -138,13 +138,9 @@ class CompilerInstance : public ModuleLoader {
     llvm::StringSet<> Failed;
 
   public:
-    bool hasAlreadyFailed(StringRef module) {
-      return Failed.count(module) > 0;
-    }
+    bool hasAlreadyFailed(StringRef module) { return Failed.count(module) > 0; }
 
-    void addFailed(StringRef module) {
-      Failed.insert(module);
-    }
+    void addFailed(StringRef module) { Failed.insert(module); }
   };
 
   /// The set of modules that failed to build.
