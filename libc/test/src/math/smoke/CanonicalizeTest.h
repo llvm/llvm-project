@@ -125,7 +125,7 @@ public:
       TEST_SPECIAL(cx, test4_2_val, 0, 0);
       EXPECT_FP_EQ(
           cx, FPBits::make_value(test4_2.get_explicit_mantissa(), 0).get_val());
-      
+
       FPBits test4_3(0x00000000'00000000'80000000'08261001_u128);
       const T test4_3_val = test4_3.get_val();
       TEST_SPECIAL(cx, test4_3_val, 0, 0);
