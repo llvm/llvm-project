@@ -93,16 +93,10 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   }
 
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
-  if (getPreprocessorOpts().DependencyDirectivesForFile &&
-      FID != PredefinesFileID) {
-    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
-      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
-              DepDirectives =
-                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
+  if (DependencyDirectivesForFile && FID != PredefinesFileID)
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
+      if (auto DepDirectives = DependencyDirectivesForFile(*File))
         TheLexer->DepDirectives = *DepDirectives;
-      }
-    }
-  }
 
   EnterSourceFileWithLexer(TheLexer, CurDir);
   return false;
