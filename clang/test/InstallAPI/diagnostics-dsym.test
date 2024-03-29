@@ -1,4 +1,4 @@
-; REQUIRES: system-darwin
+; REQUIRES: 86_64-darwin
 
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
