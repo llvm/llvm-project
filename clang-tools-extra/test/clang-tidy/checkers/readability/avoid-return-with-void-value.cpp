@@ -18,7 +18,8 @@ void f2() {
 void f3(bool b) {
     if (b) return f1();
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
-    // CHECK-FIXES: if (b) {f1(); return;}
+    // CHECK-FIXES: if (b)  { f1(); return;
+    // CHECK-NEXT: }
     return f2();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
     // CHECK-MESSAGES-LENIENT: :[[@LINE-2]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
@@ -76,4 +77,31 @@ VOID f13() {
     // CHECK-MESSAGES-LENIENT: :[[@LINE-2]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
     // CHECK-FIXES: f12(); return;
     // CHECK-FIXES-LENIENT: f12(); return;
+}
+
+void f14() {
+    return /* comment */  f1()  /* comment */  ;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES-LENIENT: :[[@LINE-2]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-FIXES: /* comment */  f1()  /* comment */  ; return;
+    // CHECK-FIXES-LENIENT: /* comment */  f1()  /* comment */  ; return;
+}
+
+void f15() {
+    return/*comment*/f1()/*comment*/;//comment
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-MESSAGES-LENIENT: :[[@LINE-2]]:5: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-FIXES: /*comment*/f1()/*comment*/; return;//comment
+    // CHECK-FIXES-LENIENT: /*comment*/f1()/*comment*/; return;//comment
+}
+
+void f16(bool b) {
+    if (b) return f1();
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-FIXES: if (b)  { f1(); return;
+    // CHECK-NEXT: }
+    else return f2();
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: return statement within a void function should not have a specified return value [readability-avoid-return-with-void-value]
+    // CHECK-FIXES: else  { f2(); return;
+    // CHECK-NEXT: }
 }

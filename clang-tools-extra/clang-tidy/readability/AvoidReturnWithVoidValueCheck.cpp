@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidReturnWithVoidValueCheck.h"
+#include "../utils/BracesAroundStatement.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -56,16 +57,17 @@ void AvoidReturnWithVoidValueCheck::check(
       VoidReturn->getEndLoc(), *Result.SourceManager, getLangOpts());
   if (SemicolonPos.isInvalid())
     return;
-  const StringRef ReturnExpr =
-      Lexer::getSourceText(CharSourceRange::getTokenRange(
-                               VoidReturn->getRetValue()->getSourceRange()),
-                           *Result.SourceManager, getLangOpts());
-  std::string Replacement = (ReturnExpr + "; return;").str();
-  if (!SurroundingBlock)
-    Replacement = "{" + Replacement + "}";
-  Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(VoidReturn->getBeginLoc(), SemicolonPos),
-      Replacement);
+  if (!SurroundingBlock) {
+    const auto BraceInsertionHints = utils::getBraceInsertionsHints(
+        VoidReturn, getLangOpts(), *Result.SourceManager,
+        VoidReturn->getBeginLoc());
+    if (BraceInsertionHints)
+      Diag << BraceInsertionHints.openingBraceFixIt()
+           << BraceInsertionHints.closingBraceFixIt();
+  }
+  Diag << FixItHint::CreateRemoval(VoidReturn->getReturnLoc())
+       << FixItHint::CreateInsertion(SemicolonPos.getLocWithOffset(1),
+                                     " return;", true);
 }
 
 void AvoidReturnWithVoidValueCheck::storeOptions(
