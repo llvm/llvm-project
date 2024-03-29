@@ -42,6 +42,8 @@ Implemented Papers
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
+- P2546R5 - Debugging support (AIX and Picolib support is not implemented)
+- P2810R4 - ``is_debuger_present`` is_replaceable
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
