@@ -1,4 +1,4 @@
-//===-- Linux implementation of pathconf ----------------------------------===//
+//===-- Linux implementation of fpathconf ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/pread.h"
+#include "src/unistd/fsync.h"
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
+
 #include "src/errno/libc_errno.h"
-#include <stdint.h> // For uint64_t.
-#include <sys/statvfs.h>
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
@@ -49,12 +47,14 @@ static long pathconfig(const struct statvfs &s, int name) {
   }
 }
 
-LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
-  struct statvfs sb;
-  if (statvfs(path, &sb) == -1) {
-    return -1;
+LLVM_LIBC_FUNCTION(int, fsync, (int fd)) {
+  LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
+    struct statvfs sb;
+    if (statvfs(path, &sb) == -1) {
+      return -1;
+    }
+    return pathconfig(sb, name);
   }
-  return pathconfig(sb, name);
 }
 
 } // namespace LIBC_NAMESPACE
