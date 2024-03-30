@@ -23,21 +23,21 @@ int test_omp_parallel_num_threads_strict()
 
   // Test regular runtime warning about exceeding thread limit.
   // Tolerate whatever value was given.
-#pragma omp parallel num_threads(22)
+#pragma omp parallel reduction(+:num_failed) num_threads(22)
 #pragma omp single
   num_failed = num_failed + !(omp_get_num_threads() <= 22);
 
   // Test with 4 threads and strict -- no problem, no warning.
   __kmpc_push_num_threads_strict(NULL, __kmpc_global_thread_num(NULL), 4,
                                  1, "This warning shouldn't happen.");
-#pragma omp parallel //num_threads(strict:4)
+#pragma omp parallel reduction(+:num_failed) //num_threads(strict:4)
 #pragma omp single
   num_failed = num_failed + !(omp_get_num_threads() == 4);
 
   // Exceed limit, specify user warning message. Tolerate whatever was given.
   __kmpc_push_num_threads_strict(NULL, __kmpc_global_thread_num(NULL), 20,
                                  1, "User-supplied warning for strict.");
-#pragma omp parallel //num_threads(strict:20) severity(warning)		\
+#pragma omp parallel reduction(+:num_failed) //num_threads(strict:20) severity(warning)		\
     message("User-supplied warning for strict.")
 #pragma omp single
   num_failed = num_failed + !(omp_get_num_threads() <= 20);
@@ -46,7 +46,7 @@ int test_omp_parallel_num_threads_strict()
   // Tolerate whatever value was given.
   __kmpc_push_num_threads_strict(NULL, __kmpc_global_thread_num(NULL), 21,
                                  1, NULL);
-#pragma omp parallel //num_threads(strict:21)
+#pragma omp parallel reduction(+:num_failed) //num_threads(strict:21)
 #pragma omp single
   num_failed = num_failed + !(omp_get_num_threads() <= 21);
 
@@ -56,12 +56,12 @@ int test_omp_parallel_num_threads_strict()
   __kmpc_push_num_threads_list_strict(NULL, __kmpc_global_thread_num(NULL), 2,
                                       threads3, 1,
                                       "User-supplied warning on strict list.");
-#pragma omp parallel //num_threads(strict:2,24)  severity(warning)	\
+#pragma omp parallel reduction(+:num_failed) //num_threads(strict:2,24)  severity(warning)	\
     message("User-supplied warning on strict. list") // 1st level
   {
 #pragma omp single
     num_failed = num_failed + !(omp_get_num_threads() == 2);
-#pragma omp parallel // 2nd level
+#pragma omp parallel reduction(+:num_failed) // 2nd level
     {
 #pragma omp single
       num_failed = num_failed + !(omp_get_num_threads() <= 24);
@@ -71,11 +71,11 @@ int test_omp_parallel_num_threads_strict()
   // No strict limit in nested level. Regular runtime limiting applies.
   __kmpc_push_num_threads_list(NULL, __kmpc_global_thread_num(NULL), 2,
                                threads3);
-#pragma omp parallel //num_threads(2,24) // 1st level
+#pragma omp parallel reduction(+:num_failed) //num_threads(2,24) // 1st level
   {
 #pragma omp single
     num_failed = num_failed + !(omp_get_num_threads() == 2);
-#pragma omp parallel // 2nd level
+#pragma omp parallel reduction(+:num_failed) // 2nd level
     {
 #pragma omp single
       num_failed = num_failed + !(omp_get_num_threads() <= 24);
