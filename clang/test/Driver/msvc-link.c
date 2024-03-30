@@ -38,16 +38,16 @@
 // VFSOVERLAY: "/vfsoverlay:{{.*}}" "{{.*}}.obj"
 
 // RUN: %clang -target arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
-// RUN: %clang_cl -target arm64ec-pc-windows-msvc -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
-// RUN: %clang_cl -arm64EC -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
+// RUN: %clang_cl -target arm64ec-pc-windows-msvc -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
+// RUN: %clang_cl -arm64EC -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s
 // ARM64EC: "-machine:arm64ec"
 
 // RUN: %clang -target arm64ec-pc-windows-msvc -fuse-ld=link -marm64x -### %s 2>&1 | \
 // RUN:        FileCheck --check-prefix=ARM64X %s
 // RUN: %clang -target aarch64-pc-windows-msvc -fuse-ld=link -marm64x -### %s 2>&1 | \
 // RUN:        FileCheck --check-prefix=ARM64X %s
-// RUN: %clang_cl -marm64x -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=ARM64X %s
-// RUN: %clang_cl -arm64EC -marm64x -fuse-ld=link -### %s 2>&1 | FileCheck --check-prefix=ARM64X %s
+// RUN: %clang_cl -marm64x -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X %s
+// RUN: %clang_cl -arm64EC -marm64x -fuse-ld=link -### -- %s 2>&1 | FileCheck --check-prefix=ARM64X %s
 // ARM64X: "-machine:arm64x"
 
 // RUN: not %clang -target x86_64-linux-gnu -marm64x -### %s 2>&1 | FileCheck --check-prefix=HYBRID-ERR %s
