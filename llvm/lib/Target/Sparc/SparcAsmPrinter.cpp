@@ -434,6 +434,48 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'L': // Low order register of a twin word register operand
+    case 'H': // High order register of a twin word register operand
+    {
+      if (OpNo == 0)
+        return true;
+
+      const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const Register MOReg = MO.getReg();
+
+      Register HiReg, LoReg;
+      if (SP::IntPairRegClass.contains(MOReg)) {
+        // If we're given a register pair, decompose it
+        // to its constituents and use them as-is.
+        const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+        HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+        LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
+      } else {
+        // Otherwise we should be given an even-numbered register,
+        // which will become the Hi part of the pair.
+        HiReg = MOReg;
+        LoReg = MOReg + 1;
+
+        // FIXME this really should not be an assert check, but
+        // I have no good idea on how to raise an error with explainations.
+        assert(((HiReg - SP::G0) % 2 == 0) &&
+               "Hi part of pair should point to an even-numbered register!");
+      }
+
+      Register Reg;
+      switch (ExtraCode[0]) {
+      case 'L':
+        Reg = LoReg;
+        break;
+      case 'H':
+        Reg = HiReg;
+        break;
+      }
+
+      O << '%' << SparcInstPrinter::getRegisterName(Reg);
+      return false;
+    }
     case 'f':
     case 'r':
      break;
