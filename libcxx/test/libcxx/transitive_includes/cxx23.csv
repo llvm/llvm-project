@@ -180,7 +180,6 @@ filesystem version
 format array
 format cctype
 format cerrno
-format climits
 format clocale
 format cmath
 format cstddef
@@ -617,7 +616,6 @@ thread array
 thread atomic
 thread cctype
 thread cerrno
-thread climits
 thread clocale
 thread compare
 thread cstddef

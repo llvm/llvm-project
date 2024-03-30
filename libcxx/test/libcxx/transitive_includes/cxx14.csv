@@ -870,7 +870,6 @@ thread atomic
 thread cctype
 thread cerrno
 thread chrono
-thread climits
 thread clocale
 thread compare
 thread cstddef
