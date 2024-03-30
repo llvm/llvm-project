@@ -1,0 +1,39 @@
+; REQUIRES: 86_64-darwin
+
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+// Build a simple dylib with debug info.
+; RUN: %clang --target=x86_64-apple-macos10.15 -g -dynamiclib %t/foo.c \
+; RUN: -current_version 1 -compatibility_version 1 -L%t/usr/lib \
+; RUN: -save-temps \
+; RUN: -o %t/foo.dylib -install_name %t/foo.dylib
+; RUN: dsymutil %t/foo.dylib -o %t/foo.dSYM
+
+; RUN: not clang-installapi -x c++ --target=x86_64-apple-macos10.15 \
+; RUN: -install_name %t/foo.dylib  \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -o %t/output.tbd \
+; RUN: --verify-against=%t/foo.dylib --dsym=%t/foo.dSYM \
+; RUN: --verify-mode=Pedantic 2>&1 | FileCheck %s
+
+; CHECK: violations found for x86_64 
+; CHECK: foo.c:5:0: error: no declaration found for exported symbol 'bar' in dynamic library
+; CHECK: foo.c:1:0: error: no declaration found for exported symbol 'foo' in dynamic library
+
+;--- foo.c
+int foo(void) {
+  return 1;
+}
+extern char bar;
+char bar = 'a';
+
+;--- usr/lib/libSystem.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos ]
+install-name:    '/usr/lib/libSystem.B.dylib'
+exports: 
+  - targets: [ x86_64-macos ]
+    symbols: [ dyld_stub_binder ]
+...

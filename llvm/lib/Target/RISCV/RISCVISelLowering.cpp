@@ -819,6 +819,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
+      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
                          VT, Custom);
@@ -1203,6 +1205,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(
             {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS}, VT, Custom);
 
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+
         // vXi64 MULHS/MULHU requires the V extension instead of Zve64*.
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV())
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
@@ -1423,6 +1427,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
+                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                          ISD::INSERT_VECTOR_ELT, ISD::ABS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -6785,6 +6790,22 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (!Op.getValueType().isVector())
       return lowerSADDSAT_SSUBSAT(Op, DAG);
     return lowerToScalableOp(Op, DAG);
+  case ISD::ABDS:
+  case ISD::ABDU: {
+    SDLoc dl(Op);
+    EVT VT = Op->getValueType(0);
+    SDValue LHS = DAG.getFreeze(Op->getOperand(0));
+    SDValue RHS = DAG.getFreeze(Op->getOperand(1));
+    bool IsSigned = Op->getOpcode() == ISD::ABDS;
+
+    // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
+    // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
+    unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
+    unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
+    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  }
   case ISD::ABS:
   case ISD::VP_ABS:
     return lowerABS(Op, DAG);
@@ -10364,9 +10385,15 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+    MachineMemOperand *MMO = Load->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MMO = MF.getMachineMemOperand(
+        MMO, MMO->getPointerInfo(),
+        MMO->getMemoryType().isValid()
+            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
+            : MMO->getMemoryType());
     SDValue NewLoad =
-        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
-                    Load->getMemOperand());
+        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(), MMO);
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
@@ -10424,9 +10451,17 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
-      getLMUL1VT(ContainerVT).bitsLE(ContainerVT))
+      getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
+    MachineMemOperand *MMO = Store->getMemOperand();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MMO = MF.getMachineMemOperand(
+        MMO, MMO->getPointerInfo(),
+        MMO->getMemoryType().isValid()
+            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
+            : MMO->getMemoryType());
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
-                        Store->getMemOperand());
+                        MMO);
+  }
 
   SDValue VL = getVLOp(VT.getVectorNumElements(), ContainerVT, DL, DAG,
                        Subtarget);
@@ -12899,6 +12934,58 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getConstant(CB, DL, VT));
 }
 
+// add (zext, zext) -> zext (add (zext, zext))
+// sub (zext, zext) -> sext (sub (zext, zext))
+// mul (zext, zext) -> zext (mul (zext, zext))
+// sdiv (zext, zext) -> zext (sdiv (zext, zext))
+// udiv (zext, zext) -> zext (udiv (zext, zext))
+// srem (zext, zext) -> zext (srem (zext, zext))
+// urem (zext, zext) -> zext (urem (zext, zext))
+//
+// where the sum of the extend widths match, and the the range of the bin op
+// fits inside the width of the narrower bin op. (For profitability on rvv, we
+// use a power of two for both inner and outer extend.)
+static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0.getOpcode() != ISD::ZERO_EXTEND || N1.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+  if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  SDValue Src0 = N0.getOperand(0);
+  SDValue Src1 = N1.getOperand(0);
+  EVT SrcVT = Src0.getValueType();
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SrcVT) ||
+      SrcVT != Src1.getValueType() || SrcVT.getScalarSizeInBits() < 8 ||
+      SrcVT.getScalarSizeInBits() >= VT.getScalarSizeInBits() / 2)
+    return SDValue();
+
+  LLVMContext &C = *DAG.getContext();
+  EVT ElemVT = VT.getVectorElementType().getHalfSizedIntegerVT(C);
+  EVT NarrowVT = EVT::getVectorVT(C, ElemVT, VT.getVectorElementCount());
+
+  Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
+  Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
+
+  // Src0 and Src1 are zero extended, so they're always positive if signed.
+  //
+  // sub can produce a negative from two positive operands, so it needs sign
+  // extended. Other nodes produce a positive from two positive operands, so
+  // zero extend instead.
+  unsigned OuterExtend =
+      N->getOpcode() == ISD::SUB ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+
+  return DAG.getNode(
+      OuterExtend, SDLoc(N), VT,
+      DAG.getNode(N->getOpcode(), SDLoc(N), NarrowVT, Src0, Src1));
+}
+
 // Try to turn (add (xor bool, 1) -1) into (neg bool).
 static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
@@ -12935,6 +13022,8 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
     return V;
 
   // fold (add (select lhs, rhs, cc, 0, y), x) ->
@@ -13003,28 +13092,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // sub (zext, zext) -> sext (sub (zext, zext))
-  //   where the sum of the extend widths match, and the inner zexts
-  //   add at least one bit.  (For profitability on rvv, we use a
-  //   power of two for both inner and outer extend.)
-  if (VT.isVector() && Subtarget.getTargetLowering()->isTypeLegal(VT) &&
-      N0.getOpcode() == N1.getOpcode() && N0.getOpcode() == ISD::ZERO_EXTEND &&
-      N0.hasOneUse() && N1.hasOneUse()) {
-    SDValue Src0 = N0.getOperand(0);
-    SDValue Src1 = N1.getOperand(0);
-    EVT SrcVT = Src0.getValueType();
-    if (Subtarget.getTargetLowering()->isTypeLegal(SrcVT) &&
-        SrcVT == Src1.getValueType() && SrcVT.getScalarSizeInBits() >= 8 &&
-        SrcVT.getScalarSizeInBits() < VT.getScalarSizeInBits() / 2) {
-      LLVMContext &C = *DAG.getContext();
-      EVT ElemVT = VT.getVectorElementType().getHalfSizedIntegerVT(C);
-      EVT NarrowVT = EVT::getVectorVT(C, ElemVT, VT.getVectorElementCount());
-      Src0 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src0), NarrowVT, Src0);
-      Src1 = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(Src1), NarrowVT, Src1);
-      return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), VT,
-                         DAG.getNode(ISD::SUB, SDLoc(N), NarrowVT, Src0, Src1));
-    }
-  }
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
 
   // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
   //      (select lhs, rhs, cc, x, (sub x, y))
@@ -13315,6 +13384,9 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
   }
 
+  if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+
   return SDValue();
 }
 
@@ -13458,7 +13530,7 @@ struct CombineResult;
 enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// Helper class for folding sign/zero extensions.
 /// In particular, this class is used for the following combines:
-/// add | add_vl -> vwadd(u) | vwadd(u)_w
+/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
 /// fadd -> vfwadd | vfwadd_w
@@ -13606,6 +13678,7 @@ struct NodeExtensionHelper {
     case RISCVISD::ADD_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
+    case ISD::OR:
       return RISCVISD::VWADD_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -13628,6 +13701,7 @@ struct NodeExtensionHelper {
     case RISCVISD::ADD_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
+    case ISD::OR:
       return RISCVISD::VWADDU_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -13673,6 +13747,7 @@ struct NodeExtensionHelper {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
+    case ISD::OR:
       return SupportsExt == ExtKind::SExt ? RISCVISD::VWADD_W_VL
                                           : RISCVISD::VWADDU_W_VL;
     case ISD::SUB:
@@ -13793,6 +13868,10 @@ struct NodeExtensionHelper {
     case ISD::MUL: {
       return Root->getValueType(0).isScalableVector();
     }
+    case ISD::OR: {
+      return Root->getValueType(0).isScalableVector() &&
+             Root->getFlags().hasDisjoint();
+    }
     // Vector Widening Integer Add/Sub/Mul Instructions
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
@@ -13873,7 +13952,8 @@ struct NodeExtensionHelper {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
-    case ISD::MUL: {
+    case ISD::MUL:
+    case ISD::OR: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
       return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -13896,6 +13976,7 @@ struct NodeExtensionHelper {
     switch (N->getOpcode()) {
     case ISD::ADD:
     case ISD::MUL:
+    case ISD::OR:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
     case RISCVISD::VWADD_W_VL:
@@ -13962,6 +14043,7 @@ struct CombineResult {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
+    case ISD::OR:
       Merge = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
@@ -14112,6 +14194,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   switch (Root->getOpcode()) {
   case ISD::ADD:
   case ISD::SUB:
+  case ISD::OR:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
   case RISCVISD::FADD_VL:
@@ -14155,9 +14238,9 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 
 /// Combine a binary operation to its equivalent VW or VW_W form.
 /// The supported combines are:
-/// add_vl -> vwadd(u) | vwadd(u)_w
-/// sub_vl -> vwsub(u) | vwsub(u)_w
-/// mul_vl -> vwmul(u) | vwmul_su
+/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
+/// sub | sub_vl -> vwsub(u) | vwsub(u)_w
+/// mul | mul_vl -> vwmul(u) | vwmul_su
 /// fadd_vl ->  vfwadd | vfwadd_w
 /// fsub_vl ->  vfwsub | vfwsub_w
 /// fmul_vl ->  vfwmul
@@ -15817,14 +15900,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::AND:
     return performANDCombine(N, DCI, Subtarget);
-  case ISD::OR:
+  case ISD::OR: {
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
     return performORCombine(N, DCI, Subtarget);
+  }
   case ISD::XOR:
     return performXORCombine(N, DAG, Subtarget);
   case ISD::MUL:
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
     return performMULCombine(N, DAG);
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM:
+    if (SDValue V = combineBinOpOfZExt(N, DAG))
+      return V;
+    break;
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -17046,6 +17139,23 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   }
 
   return 1;
+}
+
+bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+
+  // TODO: Add more target nodes.
+  switch (Op.getOpcode()) {
+  case RISCVISD::SELECT_CC:
+    // Integer select_cc cannot create poison.
+    // TODO: What are the FP poison semantics?
+    // TODO: This instruction blocks poison from the unselected operand, can
+    // we do anything with that?
+    return !Op.getValueType().isInteger();
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
 }
 
 const Constant *
@@ -18638,6 +18748,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::Fast:
   case CallingConv::SPIR_KERNEL:
   case CallingConv::GRAAL:
+  case CallingConv::RISCV_VectorCall:
     break;
   case CallingConv::GHC:
     if (Subtarget.isRVE())

@@ -81,8 +81,10 @@ extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
+extern cl::opt<bool> KeepNops;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
+extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 
 cl::opt<bool> AllowStripped("allow-stripped",
@@ -2031,6 +2033,15 @@ void RewriteInstance::adjustCommandLineOptions() {
 
   if (opts::Lite)
     BC->outs() << "BOLT-INFO: enabling lite mode\n";
+
+  if (BC->IsLinuxKernel) {
+    if (!opts::KeepNops.getNumOccurrences())
+      opts::KeepNops = true;
+
+    // Linux kernel may resume execution after a trap instruction in some cases.
+    if (!opts::TerminalTrap.getNumOccurrences())
+      opts::TerminalTrap = false;
+  }
 }
 
 namespace {
