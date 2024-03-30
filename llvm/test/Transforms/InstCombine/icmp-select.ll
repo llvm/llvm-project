@@ -632,8 +632,7 @@ define i1 @icmp_slt_select(i1 %cond, i32 %a, i32 %b) {
 define i8 @icmp_slt_select_or(i8 %inl) {
 ; CHECK-LABEL: @icmp_slt_select_or(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[INL]], -1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    [[S:%.*]] = call i8 @llvm.smin.i8(i8 [[OR]], i8 1)
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %or = or i8 %inl, 3
