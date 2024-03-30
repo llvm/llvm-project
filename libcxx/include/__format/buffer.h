@@ -12,6 +12,7 @@
 
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
+#include <__algorithm/for_each.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_copy.h>
@@ -34,11 +35,13 @@
 #include <__memory/construct_at.h>
 #include <__memory/destroy.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__system_error/system_error.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <stdexcept>
+#include <stdio.h> // Uses the POSIX/Windows unlocked stream I/O
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

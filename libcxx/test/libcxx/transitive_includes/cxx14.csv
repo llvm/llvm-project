@@ -125,15 +125,19 @@ atomic ratio
 atomic type_traits
 atomic version
 barrier atomic
+barrier cctype
 barrier climits
 barrier cmath
 barrier compare
 barrier concepts
 barrier cstddef
 barrier cstdint
+barrier cstdio
 barrier cstdlib
 barrier cstring
 barrier ctime
+barrier cwchar
+barrier cwctype
 barrier exception
 barrier initializer_list
 barrier iosfwd
@@ -2064,6 +2068,7 @@ stdexcept new
 stdexcept type_traits
 stdexcept typeinfo
 stdexcept version
+stop_token cstddef
 stop_token iosfwd
 stop_token version
 streambuf algorithm
