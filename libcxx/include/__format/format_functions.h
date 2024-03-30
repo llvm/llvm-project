@@ -411,7 +411,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(_OutIt __out_it,
     return std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()}, std::__format_context_create(std::move(__out_it), __args));
   else {
-    __format::__format_buffer<_OutIt, _CharT> __buffer{std::move(__out_it)};
+    typename __format::__buffer_selector<_OutIt, _CharT>::type __buffer{std::move(__out_it)};
     std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                                 std::__format_context_create(__buffer.__make_output_iterator(), __args));
     return std::move(__buffer).__out_it();
@@ -544,7 +544,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __vformat_to(
     return std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                                        std::__format_context_create(std::move(__out_it), __args, std::move(__loc)));
   else {
-    __format::__format_buffer<_OutIt, _CharT> __buffer{std::move(__out_it)};
+    typename __format::__buffer_selector<_OutIt, _CharT>::type __buffer{std::move(__out_it)};
     std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()},
         std::__format_context_create(__buffer.__make_output_iterator(), __args, std::move(__loc)));

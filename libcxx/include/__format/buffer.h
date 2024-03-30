@@ -14,6 +14,7 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
+#include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
@@ -39,6 +40,7 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <cstddef>
+#include <stdexcept>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -720,6 +722,95 @@ private:
   _LIBCPP_HIDE_FROM_ABI static void __prepare_write(__output_buffer<_CharT>& __buffer, size_t __size_hint) {
     static_cast<__allocating_buffer<_CharT>&>(__buffer).__prepare_write(__size_hint);
   }
+};
+
+// A buffer that directly writes to the underlying buffer.
+template <class _OutIt, __fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __direct_iterator_buffer : public __output_buffer<_CharT> {
+public:
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __direct_iterator_buffer(_OutIt __out_it)
+      : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write}, __out_it_(__out_it) {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && { return __out_it_ + this->__size(); }
+
+private:
+  // The function format_to expects a buffer large enough for the output. The
+  // function format_to_n has its own helper class that restricts the number of
+  // write options. So this function class can pretend to have an infinite
+  // buffer.
+  static constexpr size_t __buffer_size = -1;
+
+  _OutIt __out_it_;
+
+  _LIBCPP_HIDE_FROM_ABI static void
+  __prepare_write([[maybe_unused]] __output_buffer<_CharT>& __buffer, [[maybe_unused]] size_t __size_hint) {
+    std::__throw_length_error("__direct_iterator_buffer");
+  }
+};
+
+// A buffer that writes its output to the end of a container.
+template <class _OutIt, __fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __container_inserter_buffer : public __output_buffer<_CharT> {
+public:
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __container_inserter_buffer(_OutIt __out_it)
+      : __output_buffer<_CharT>{__buffer_, __buffer_size, __prepare_write}, __container_{__out_it.__get_container()} {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
+    __container_->insert(__container_->end(), __buffer_, __buffer_ + this->__size());
+    return std::back_inserter(*__container_);
+  }
+
+private:
+  typename __back_insert_iterator_container<_OutIt>::type* __container_;
+
+  // This class uses a fixed size buffer and appends the elements in
+  // __buffer_size chunks. An alternative would be to use an allocating buffer
+  // and append the output in one write operation. Benchmarking showed no
+  // performance difference.
+  static constexpr size_t __buffer_size = 256;
+  _CharT __buffer_[__buffer_size];
+
+  _LIBCPP_HIDE_FROM_ABI void __prepare_write() {
+    __container_->insert(__container_->end(), __buffer_, __buffer_ + this->__size());
+    this->__buffer_flused();
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static void
+  __prepare_write(__output_buffer<_CharT>& __buffer, [[maybe_unused]] size_t __size_hint) {
+    static_cast<__container_inserter_buffer<_OutIt, _CharT>&>(__buffer).__prepare_write();
+  }
+};
+
+// A buffer that writes to an iterator.
+//
+// Unlinke the __container_inserter_buffer this class' perfomance does benefit
+// from allocating and then inserting.
+template <class _OutIt, __fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __iterator_buffer : public __allocating_buffer<_CharT> {
+public:
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it)
+      : __allocating_buffer<_CharT>{}, __out_it_{std::move(__out_it)} {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
+    return std::ranges::copy(this->__view(), std::move(__out_it_)).out;
+  }
+
+private:
+  _OutIt __out_it_;
+};
+
+// Selects the type of the buffer used for the output iterator.
+template <class _OutIt, __fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __buffer_selector {
+  using _Container = __back_insert_iterator_container<_OutIt>::type;
+
+public:
+  using type =
+      conditional_t<!same_as<_Container, void>,
+                    __container_inserter_buffer<_OutIt, _CharT>,
+                    conditional_t<__enable_direct_output<_OutIt, _CharT>,
+                                  __direct_iterator_buffer<_OutIt, _CharT>,
+                                  __iterator_buffer<_OutIt, _CharT>>>;
 };
 
 // ***** ***** ***** LLVM-19 and LLVM-20 class ***** ***** *****
