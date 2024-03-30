@@ -59,13 +59,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fpathconf
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.fpathconf
-)
-
-add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
