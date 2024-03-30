@@ -599,10 +599,6 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Use a function which takes in a MachineIRBuilder to perform a combine.
-  /// By default, it erases the instruction \p MI from the function.
-  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
-
   bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
@@ -863,6 +859,9 @@ public:
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
