@@ -307,6 +307,9 @@ Improvements to Clang's diagnostics
 - ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
   flexible array members in a union or alone in a struct. Fixes GH#84565.
 
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -356,6 +359,9 @@ Bug Fixes in This Version
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
+
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution. (#GH86769).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -458,6 +464,7 @@ Bug Fixes to C++ Support
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
 - Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

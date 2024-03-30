@@ -1871,6 +1871,14 @@ void LLVMDumpValue(LLVMValueRef Val);
 char *LLVMPrintValueToString(LLVMValueRef Val);
 
 /**
+ * Return a string representation of the DbgRecord. Use
+ * LLVMDisposeMessage to free the string.
+ *
+ * @see llvm::DbgRecord::print()
+ */
+char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record);
+
+/**
  * Replace all uses of a value with another one.
  *
  * @see llvm::Value::replaceAllUsesWith()

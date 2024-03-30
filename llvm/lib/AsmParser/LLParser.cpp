@@ -6814,7 +6814,19 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
       Inst->setNonNeg();
     return 0;
   }
-  case lltok::kw_trunc:
+  case lltok::kw_trunc: {
+    bool NUW = EatIfPresent(lltok::kw_nuw);
+    bool NSW = EatIfPresent(lltok::kw_nsw);
+    if (!NUW)
+      NUW = EatIfPresent(lltok::kw_nuw);
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (NUW)
+      cast<TruncInst>(Inst)->setHasNoUnsignedWrap(true);
+    if (NSW)
+      cast<TruncInst>(Inst)->setHasNoSignedWrap(true);
+    return false;
+  }
   case lltok::kw_sext:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext:
@@ -8391,7 +8403,7 @@ int LLParser::parseInsertValue(Instruction *&Inst, PerFunctionState &PFS) {
 /// parseMDNodeVector
 ///   ::= { Element (',' Element)* }
 /// Element
-///   ::= 'null' | TypeAndValue
+///   ::= 'null' | Metadata
 bool LLParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
   if (parseToken(lltok::lbrace, "expected '{' here"))
     return true;
@@ -8401,7 +8413,6 @@ bool LLParser::parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts) {
     return false;
 
   do {
-    // Null is a special case since it is typeless.
     if (EatIfPresent(lltok::kw_null)) {
       Elts.push_back(nullptr);
       continue;

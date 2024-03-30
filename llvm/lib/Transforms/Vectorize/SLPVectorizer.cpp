@@ -2022,9 +2022,8 @@ public:
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
-    VLOperands(ArrayRef<Value *> RootVL, const TargetLibraryInfo &TLI,
-               const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R)
-        : TLI(TLI), DL(DL), SE(SE), R(R) {
+    VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
+        : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R) {
       // Append all the operands of RootVL.
       appendOperandsOfVL(RootVL);
     }
@@ -2506,10 +2505,10 @@ private:
 
   /// Reorder commutative or alt operands to get better probability of
   /// generating vectorized code.
-  static void reorderInputsAccordingToOpcode(
-      ArrayRef<Value *> VL, SmallVectorImpl<Value *> &Left,
-      SmallVectorImpl<Value *> &Right, const TargetLibraryInfo &TLI,
-      const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R);
+  static void reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
+                                             SmallVectorImpl<Value *> &Left,
+                                             SmallVectorImpl<Value *> &Right,
+                                             const BoUpSLP &R);
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It iterates over the
   /// users of \p TE and collects the stores. It returns the map from the store
@@ -6626,7 +6625,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         // so that each side is more likely to have the same opcode.
         assert(P0 == CmpInst::getSwappedPredicate(P0) &&
                "Commutative Predicate mismatch");
-        reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
       } else {
         // Collect operands - commute if it uses the swapped predicate.
         for (Value *V : VL) {
@@ -6673,7 +6672,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // have the same opcode.
       if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
-        reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE, *this);
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         TE->setOperand(0, Left);
         TE->setOperand(1, Right);
         buildTree_rec(Left, Depth + 1, {TE, 0});
@@ -6810,8 +6809,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!CI || all_of(VL, [](Value *V) {
               return cast<CmpInst>(V)->isCommutative();
             })) {
-          reorderInputsAccordingToOpcode(VL, Left, Right, *TLI, *DL, *SE,
-                                         *this);
+          reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         } else {
           auto *MainCI = cast<CmpInst>(S.MainOp);
           auto *AltCI = cast<CmpInst>(S.AltOp);
@@ -10520,13 +10518,13 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL,
 
 // Perform operand reordering on the instructions in VL and return the reordered
 // operands in Left and Right.
-void BoUpSLP::reorderInputsAccordingToOpcode(
-    ArrayRef<Value *> VL, SmallVectorImpl<Value *> &Left,
-    SmallVectorImpl<Value *> &Right, const TargetLibraryInfo &TLI,
-    const DataLayout &DL, ScalarEvolution &SE, const BoUpSLP &R) {
+void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
+                                             SmallVectorImpl<Value *> &Left,
+                                             SmallVectorImpl<Value *> &Right,
+                                             const BoUpSLP &R) {
   if (VL.empty())
     return;
-  VLOperands Ops(VL, TLI, DL, SE, R);
+  VLOperands Ops(VL, R);
   // Reorder the operands in place.
   Ops.reorder();
   Left = Ops.getVL(0);
@@ -14190,6 +14188,28 @@ bool BoUpSLP::collectValuesToDemote(
       return false;
     break;
   }
+  case Instruction::UDiv:
+  case Instruction::URem: {
+    if (ITE->UserTreeIndices.size() > 1 && !IsPotentiallyTruncated(I, BitWidth))
+      return false;
+    // UDiv and URem can be truncated if all the truncated bits are zero.
+    if (!AttemptCheckBitwidth(
+            [&](unsigned BitWidth, unsigned OrigBitWidth) {
+              assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+              APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+              return MaskedValueIsZero(I->getOperand(0), Mask,
+                                       SimplifyQuery(*DL)) &&
+                     MaskedValueIsZero(I->getOperand(1), Mask,
+                                       SimplifyQuery(*DL));
+            },
+            NeedToExit))
+      return false;
+    if (NeedToExit)
+      return true;
+    if (!ProcessOperands({I->getOperand(0), I->getOperand(1)}, NeedToExit))
+      return false;
+    break;
+  }
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
@@ -14430,9 +14450,15 @@ void BoUpSLP::computeMinimumValueSizes() {
         ReductionBitWidth = 0;
     }
 
-    for (unsigned Idx : RootDemotes)
-      ToDemote.append(VectorizableTree[Idx]->Scalars.begin(),
-                      VectorizableTree[Idx]->Scalars.end());
+    for (unsigned Idx : RootDemotes) {
+      Value *V = VectorizableTree[Idx]->Scalars.front();
+      uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+      if (OrigBitWidth > MaxBitWidth) {
+      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
+      if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
+        ToDemote.push_back(V);
+      }
+    }
     RootDemotes.clear();
     IsTopRoot = false;
     IsProfitableToDemoteRoot = true;
