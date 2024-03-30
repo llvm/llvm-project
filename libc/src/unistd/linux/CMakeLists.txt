@@ -106,6 +106,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fpathconf
+  SRCS
+    fpathconf.cpp
+  HDRS
+    ../fpathconf.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   execv
   SRCS
     execv.cpp
@@ -266,6 +279,19 @@ add_entrypoint_object(
     lseek.cpp
   HDRS
     ../lseek.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pathconf
+  SRCS
+  pathconf.cpp
+  HDRS
+    ../pathconf.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall

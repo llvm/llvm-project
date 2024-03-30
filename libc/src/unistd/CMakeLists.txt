@@ -59,6 +59,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fpathconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
   execv
   ALIAS
   DEPENDS
@@ -147,6 +154,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.lseek
+)
+
+add_entrypoint_object(
+  pathconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pathconf
 )
 
 add_entrypoint_object(

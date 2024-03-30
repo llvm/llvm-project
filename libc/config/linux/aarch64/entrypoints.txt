@@ -282,6 +282,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup3
     libc.src.unistd.execve
     libc.src.unistd.fchdir
+    libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -293,6 +294,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pathconf
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
