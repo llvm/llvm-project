@@ -272,9 +272,7 @@ namespace {
             llvm::AtomicOrdering::SequentiallyConsistent,
         llvm::AtomicOrdering Failure =
             llvm::AtomicOrdering::SequentiallyConsistent);
-    /// Emits atomic compare-and-exchange op as LLVM instruction. Operands
-    /// must be of integer or pointer type, so float must be casted.
-    /// TODO: this could change - see comment in AtomicExpandPass.cpp.
+    /// Emits atomic compare-and-exchange op as LLVM instruction.
     std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeOp(
         llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
         llvm::AtomicOrdering Success =
@@ -1403,11 +1401,15 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
       LVal.getBaseInfo(), TBAAAccessInfo()));
 }
 
+/// Return true if \param ValTy is a type that should be casted to integer
+/// around the atomic memory operation. If \param CmpXchg is true, then the
+/// cast of a floating point type is made as that instruction can not have
+/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
+/// comment in AtomicExpandPass.cpp.
 static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
-  bool KeepType =
-      (ValTy->isIntegerTy() || ValTy->isPointerTy() ||
-       (ValTy->isFloatingPointTy() && !ValTy->isX86_FP80Ty() && !CmpXchg));
-  return !KeepType;
+  if (ValTy->isFloatingPointTy())
+    return ValTy->isX86_FP80Ty() || CmpXchg;
+  return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
 }
 
 RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,
@@ -1431,7 +1433,8 @@ RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,
       assert((!ValTy->isIntegerTy() || Val->getType() == ValTy) &&
              "Different integer types.");
       return RValue::get(CGF.EmitFromMemory(Val, ValueTy));
-    } else if (llvm::CastInst::isBitCastable(Val->getType(), ValTy))
+    }
+    if (llvm::CastInst::isBitCastable(Val->getType(), ValTy))
       return RValue::get(CGF.Builder.CreateBitCast(Val, ValTy));
   }
 
