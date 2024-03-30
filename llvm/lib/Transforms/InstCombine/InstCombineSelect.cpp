@@ -1687,6 +1687,25 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
+static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
+                                       InstCombiner::BuilderTy &Builder) {
+  /* a > -1 ? 1 : (a | 3) --> smin(1, a | 3) */
+  Type *Ty = SI.getType();
+  Value *TVal = SI.getTrueValue();
+  Value *FVal = SI.getFalseValue();
+  Constant *One = ConstantInt::get(Ty, 1);
+  CmpInst::Predicate Pred = ICI->getPredicate();
+  Value *A = ICI->getOperand(0);
+  const APInt *Cmp;
+
+  if (!match(TVal, m_One()) || !match(FVal, m_Or(m_Value(A), m_SpecificInt(3))))
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_SGT && *Cmp == -1 && match(TVal, m_One()) &&
+      match(FVal, m_Or(m_Value(A), m_SpecificInt(3))))
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, One, FVal);
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -1698,6 +1717,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectInstWithICmpOr(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder))
