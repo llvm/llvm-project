@@ -29,6 +29,7 @@
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
+#include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
 #include <__memory/ranges_construct_at.h>
@@ -58,19 +59,152 @@ namespace __format {
 /// This helper is used together with the @ref back_insert_iterator to offer
 /// type-erasure for the formatting functions. This reduces the number to
 /// template instantiations.
+///
+/// The design of the class is being changed to improve performance and do some
+/// code cleanups.
+/// The original design (as shipped up to LLVM-19) uses the following design:
+/// - There is an external object that connects the buffer to the output.
+/// - The class constructor stores a function pointer to a grow function and a
+///   type-erased pointer to the object that does the grow.
+/// - When writing data to the buffer would exceed the external buffer's
+///   capacity it requests the external buffer to flush its contents.
+///
+/// The new design tries to solve some issues with the current design:
+/// - The buffer used is a fixed-size buffer, benchmarking shows that using a
+///   dynamic allocated buffer has performance benefits.
+/// - Implementing P3107R5 "Permit an efficient implementation of std::print"
+///   is not trivial with the current buffers. Using the code from this series
+///   makes it trivial.
+///
+/// This class is ABI-tagged, still the new design does not change the size of
+/// objects of this class.
+///
+/// The new design contains information regarding format_to_n changes, these
+/// will be implemented in follow-up patch.
+///
+/// The new design is the following.
+/// - There is an external object that connects the buffer to the output.
+/// - This buffer object:
+///   - inherits publicly from this class.
+///   - has a static or dynamic buffer.
+///   - has a static member function to make space in its buffer write
+///     operations. This can be done by increasing the size of the internal
+///     buffer or by writing the contents of the buffer to the output iterator.
+///
+///     This member function is a constructor argument, so its name is not
+///     fixed. The code uses the name __prepare_write.
+/// - The number of output code units can be limited by a __max_output_size
+///   object. This is used in format_to_n This object:
+///   - Contains the maximum number of code units to be written.
+///   - Contains the number of code units that are requested to be written.
+///     This number is returned to the user of format_to_n.
+///   - The write functions call objects __request_write member function.
+///     This function:
+///     - Updates the number of code units that are requested to be written.
+///     - Returns the number of code units that can be written without
+///       exceeding the maximum number of code units to be written.
+///
+/// Documentation for the buffer usage members:
+/// - __ptr_ the start of the buffer.
+/// - __capacity_ the number of code units that can be written.
+///   This means [__ptr_, __ptr_ + __capacity_) is a valid range to write to.
+/// - __size_ the number of code units written in the buffer. The next code
+///   unit will be written at __ptr_ + __size_. This __size_ may NOT contain
+///   the total number of code units written by the __output_buffer. Whether or
+///   not it does depends on the sub-class used. Typically the total number of
+///   code units written is not interesting. It is interesting for format_to_n
+///   which has its own way to track this number.
+///
+/// Documentation for the buffer changes function:
+/// The subclasses have a function with the following signature:
+///
+///   static void __prepare_write(
+///     __output_buffer<_CharT>& __buffer, size_t __code_units);
+///
+/// This function is called when a write function writes more code units than
+/// the buffer' available space. When an __max_output_size object is provided
+/// the number of code units is the number of code units returned from
+/// __max_output_size::__request_write function.
+///
+/// - The __buffer contains *this. Since the class containing this function
+///   inherits from __output_buffer it's save to cast it to the subclass being
+///   used.
+/// - The __code_units is the number of code units the caller will write + 1.
+///   - This value does not take the avaiable space of the buffer into account.
+///   - The push_back function is more efficient when writing before resizing,
+///     this means the buffer should always have room for one code unit. Hence
+///     the + 1 is the size.
+/// - When the function returns there is room for at least one code unit. There
+///   is no requirement there is room for __code_units code units:
+///   - The class has some "bulk" operations. For example, __copy which copies
+///     the contents of a basic_string_view to the output. If the sub-class has
+///     a fixed size buffer the size of the basic_string_view may be larger
+///     than the buffer. In that case it's impossible to honor the requested
+///     size.
+///   - The at least one code unit makes sure the entire output can be written.
+///     (Obviously making room one code unit at a time is slow and
+///     it's recommended to return a larger available space.)
+///   - When the buffer has room for at least one code unit the function may be
+///     a no-op.
+/// - When the function makes space for more code units it uses one for these
+///   functions to signal the change:
+///   - __buffer_flushed()
+///     - This function is typically used for a fixed sized buffer.
+///     - The current contents of [__ptr_, __ptr_ + __size_) have been
+///       processed.
+///     - __ptr_ remains unchanged.
+///     - __capacity_ remains unchanged.
+///     - __size_ will be set to 0.
+///   - __buffer_moved(_CharT* __ptr, size_t __capacity)
+///     - This function is typically used for a dynamic sized buffer. There the
+///       location of the buffer changes due to reallocations.
+///     - __ptr_ will be set to __ptr. (This value may be the old value of
+///       __ptr_).
+///     - __capacity_ will be set to __capacity. (This value may be the old
+///       value of       __capacity_).
+///     - __size_ remains unchanged,
+///     - The range [__ptr, __ptr + __size_) contains the original data of the
+///       range  [__ptr_, __ptr_ + __size_).
+///
+/// The push_back function expects a valid buffer and a capacity of at least 1.
+/// This means:
+/// - The class is constructed with a valid buffer,
+/// - __buffer_moved is called with a valid buffer is used before the first
+///   write operation,
+/// - no write function is ever called, or
+/// - the class is constructed with a __max_output_size object with __max_size 0.
+///
+/// The latter option allows formatted_size to use the output buffer without
+/// ever writing anything to the buffer.
 template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __output_buffer {
 public:
-  using value_type = _CharT;
+  using value_type           = _CharT;
+  using __prepare_write_type = void (*)(__output_buffer<_CharT>&, size_t);
 
-  template <class _Tp>
+  template <class _Tp> // Deprecated LLVM-19 function.
   _LIBCPP_HIDE_FROM_ABI explicit __output_buffer(_CharT* __ptr, size_t __capacity, _Tp* __obj)
       : __ptr_(__ptr),
         __capacity_(__capacity),
         __flush_([](_CharT* __p, size_t __n, void* __o) { static_cast<_Tp*>(__o)->__flush(__p, __n); }),
         __obj_(__obj) {}
 
+  // New LLVM-20 function.
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit __output_buffer(_CharT* __ptr, size_t __capacity, __prepare_write_type __prepare_write)
+      : __ptr_(__ptr), __capacity_(__capacity), __prepare_write_(__prepare_write), __obj_(nullptr) {}
+
+  // Deprecated LLVM-19 function.
   _LIBCPP_HIDE_FROM_ABI void __reset(_CharT* __ptr, size_t __capacity) {
+    __ptr_      = __ptr;
+    __capacity_ = __capacity;
+  }
+
+  // New LLVM-20 function.
+  _LIBCPP_HIDE_FROM_ABI void __buffer_flused() { __size_ = 0; }
+
+  // New LLVM-20 function.
+  _LIBCPP_HIDE_FROM_ABI void __buffer_moved(_CharT* __ptr, size_t __capacity) {
     __ptr_      = __ptr;
     __capacity_ = __capacity;
   }
@@ -84,7 +218,7 @@ public:
     // Profiling showed flushing after adding is more efficient than flushing
     // when entering the function.
     if (__size_ == __capacity_)
-      __flush();
+      __flush(0);
   }
 
   /// Copies the input __str to the buffer.
@@ -107,7 +241,7 @@ public:
     size_t __n = __str.size();
 
     __flush_on_overflow(__n);
-    if (__n < __capacity_) { //  push_back requires the buffer to have room for at least one character (so use <).
+    if (__n < __capacity_) { // push_back requires the buffer to have room for at least one character (so use <).
       std::copy_n(__str.data(), __n, std::addressof(__ptr_[__size_]));
       __size_ += __n;
       return;
@@ -118,12 +252,12 @@ public:
     _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     const _InCharT* __first = __str.data();
     do {
-      size_t __chunk = std::min(__n, __capacity_);
+      size_t __chunk = std::min(__n, __capacity_ - __size_);
       std::copy_n(__first, __chunk, std::addressof(__ptr_[__size_]));
       __size_ = __chunk;
       __first += __chunk;
       __n -= __chunk;
-      __flush();
+      __flush(__n);
     } while (__n);
   }
 
@@ -148,12 +282,12 @@ public:
     // Transform the data in "__capacity_" sized chunks.
     _LIBCPP_ASSERT_INTERNAL(__size_ == 0, "the buffer should be flushed by __flush_on_overflow");
     do {
-      size_t __chunk = std::min(__n, __capacity_);
+      size_t __chunk = std::min(__n, __capacity_ - __size_);
       std::transform(__first, __first + __chunk, std::addressof(__ptr_[__size_]), __operation);
       __size_ = __chunk;
       __first += __chunk;
       __n -= __chunk;
-      __flush();
+      __flush(__n);
     } while (__n);
   }
 
@@ -174,20 +308,36 @@ public:
       std::fill_n(std::addressof(__ptr_[__size_]), __chunk, __value);
       __size_ = __chunk;
       __n -= __chunk;
-      __flush();
+      __flush(__n);
     } while (__n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __flush() {
-    __flush_(__ptr_, __size_, __obj_);
-    __size_ = 0;
+  _LIBCPP_HIDE_FROM_ABI void __flush(size_t __size_hint) {
+    if (__obj_) {
+      // LLVM-19 code path
+      __flush_(__ptr_, __size_, __obj_);
+      __size_ = 0;
+    } else {
+      // LLVM-20 code path
+      __prepare_write_(*this, __size_hint + 1); // + 1 to always have space for the next time
+    }
   }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __capacity() const { return __capacity_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __size() const { return __size_; }
 
 private:
   _CharT* __ptr_;
   size_t __capacity_;
   size_t __size_{0};
-  void (*__flush_)(_CharT*, size_t, void*);
+  union {
+    // LLVM-19 member
+    void (*__flush_)(_CharT*, size_t, void*);
+    // LLVM-20 member
+    void (*__prepare_write_)(__output_buffer<_CharT>&, size_t);
+  };
+  static_assert(sizeof(__flush_) == sizeof(__prepare_write_), "The union is an ABI break.");
+  static_assert(alignof(decltype(__flush_)) == alignof(decltype(__prepare_write_)), "The union is an ABI break.");
   void* __obj_;
 
   /// Flushes the buffer when the output operation would overflow the buffer.
@@ -224,10 +374,13 @@ private:
   /// the buffers. This would make the code more complex and \ref format_to_n is
   /// not the most common use case. Therefore the optimization isn't done.
   _LIBCPP_HIDE_FROM_ABI void __flush_on_overflow(size_t __n) {
-    if (__size_ + __n >= __capacity_)
-      __flush();
+    __n += __size_;
+    if (__n >= __capacity_)
+      __flush(__n - __capacity_ + 1);
   }
 };
+
+// ***** ***** ***** LLVM-19 classes ***** ***** *****
 
 /// A storage using an internal buffer.
 ///
@@ -373,7 +526,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __flush(_CharT* __ptr, size_t __n) { __writer_.__flush(__ptr, __n); }
 
   _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && {
-    __output_.__flush();
+    __output_.__flush(0);
     return std::move(__writer_).__out_it();
   }
 
@@ -395,7 +548,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __flush(const _CharT*, size_t __n) { __size_ += __n; }
 
   _LIBCPP_HIDE_FROM_ABI size_t __result() && {
-    __output_.__flush();
+    __output_.__flush(0);
     return __size_;
   }
 
@@ -499,10 +652,77 @@ public:
   _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return this->__output_.__make_output_iterator(); }
 
   _LIBCPP_HIDE_FROM_ABI format_to_n_result<_OutIt> __result() && {
-    this->__output_.__flush();
+    this->__output_.__flush(0);
     return {std::move(this->__writer_).__out_it(), this->__size_};
   }
 };
+
+// ***** ***** ***** LLVM-20 classes ***** ***** *****
+
+// A dynamically growing buffer.
+template <__fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __allocating_buffer : public __output_buffer<_CharT> {
+public:
+  __allocating_buffer(const __allocating_buffer&)            = delete;
+  __allocating_buffer& operator=(const __allocating_buffer&) = delete;
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __allocating_buffer()
+      : __output_buffer<_CharT>{__buffer_, __buffer_size_, __prepare_write} {}
+
+  _LIBCPP_HIDE_FROM_ABI ~__allocating_buffer() {
+    if (__ptr_ != __buffer_) {
+      ranges::destroy_n(__ptr_, this->__size());
+      allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, this->__capacity());
+    }
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_string_view<_CharT> __view() { return {__ptr_, this->__size()}; }
+
+private:
+  // At the moment the allocator is hard-code. There might be reasons to have
+  // an allocator trait in the future. This ensures forward compatibility.
+  using _Alloc = allocator<_CharT>;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
+
+  // Since allocating is expensive the class has a small internal buffer. When
+  // its capacity is exceeded a dynamic buffer will be allocated.
+  static constexpr size_t __buffer_size_ = 256;
+  _CharT __buffer_[__buffer_size_];
+  _CharT* __ptr_{__buffer_};
+
+  _LIBCPP_HIDE_FROM_ABI void __grow_buffer(size_t __capacity) {
+    if (__capacity < __buffer_size_)
+      return;
+
+    _LIBCPP_ASSERT_INTERNAL(__capacity > this->__capacity(), "the buffer must grow");
+    auto __result = std::__allocate_at_least(__alloc_, __capacity);
+    auto __guard  = std::__make_exception_guard([&] {
+      allocator_traits<_Alloc>::deallocate(__alloc_, __result.ptr, __result.count);
+    });
+    // This shouldn't throw, but just to be safe. Note that at -O1 this
+    // guard is optimized away so there is no runtime overhead.
+    new (__result.ptr) _CharT[__result.count];
+    std::copy_n(__ptr_, this->__size(), __result.ptr);
+    __guard.__complete();
+    if (__ptr_ != __buffer_) {
+      ranges::destroy_n(__ptr_, this->__capacity());
+      allocator_traits<_Alloc>::deallocate(__alloc_, __ptr_, this->__capacity());
+    }
+
+    __ptr_ = __result.ptr;
+    this->__buffer_moved(__ptr_, __result.count);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __prepare_write(size_t __size_hint) {
+    __grow_buffer(std::max<size_t>(this->__capacity() + __size_hint, this->__capacity() * 1.6));
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static void __prepare_write(__output_buffer<_CharT>& __buffer, size_t __size_hint) {
+    static_cast<__allocating_buffer<_CharT>&>(__buffer).__prepare_write(__size_hint);
+  }
+};
+
+// ***** ***** ***** LLVM-19 and LLVM-20 class ***** ***** *****
 
 // A dynamically growing buffer intended to be used for retargeting a context.
 //

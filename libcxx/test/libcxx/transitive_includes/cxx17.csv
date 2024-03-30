@@ -797,15 +797,7 @@ stack version
 stdexcept cstdlib
 stdexcept exception
 stdexcept iosfwd
-stop_token atomic
-stop_token cstddef
-stop_token cstdint
-stop_token cstring
-stop_token ctime
 stop_token iosfwd
-stop_token limits
-stop_token ratio
-stop_token type_traits
 stop_token version
 streambuf cctype
 streambuf climits

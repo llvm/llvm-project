@@ -452,9 +452,9 @@ format_to(_OutIt __out_it, wformat_string<_Args...> __fmt, _Args&&... __args) {
 // fires too eagerly, see http://llvm.org/PR61563.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string vformat(string_view __fmt, format_args __args) {
-  string __res;
-  std::vformat_to(std::back_inserter(__res), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<char> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
+  return string{__buffer.__view()};
 }
 
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -463,9 +463,9 @@ template <class = void>
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(wstring_view __fmt, wformat_args __args) {
-  wstring __res;
-  std::vformat_to(std::back_inserter(__res), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<wchar_t> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
+  return wstring{__buffer.__view()};
 }
 #  endif
 
@@ -585,9 +585,9 @@ format_to(_OutIt __out_it, locale __loc, wformat_string<_Args...> __fmt, _Args&&
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string
 vformat(locale __loc, string_view __fmt, format_args __args) {
-  string __res;
-  std::vformat_to(std::back_inserter(__res), std::move(__loc), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<char> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), std::move(__loc), __fmt, __args);
+  return string{__buffer.__view()};
 }
 
 #    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -596,9 +596,9 @@ vformat(locale __loc, string_view __fmt, format_args __args) {
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(locale __loc, wstring_view __fmt, wformat_args __args) {
-  wstring __res;
-  std::vformat_to(std::back_inserter(__res), std::move(__loc), __fmt, __args);
-  return __res;
+  __format::__allocating_buffer<wchar_t> __buffer;
+  std::vformat_to(__buffer.__make_output_iterator(), std::move(__loc), __fmt, __args);
+  return wstring{__buffer.__view()};
 }
 #    endif
 
