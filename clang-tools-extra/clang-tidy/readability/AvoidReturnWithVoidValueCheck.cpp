@@ -9,11 +9,6 @@
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "../utils/BracesAroundStatement.h"
 #include "../utils/LexerUtils.h"
-#include "clang/AST/Stmt.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -36,7 +31,10 @@ void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       returnStmt(
           hasReturnValue(allOf(hasType(voidType()), unless(initListExpr()))),
-          optionally(hasParent(compoundStmt().bind("compound_parent"))))
+          optionally(hasParent(
+              compoundStmt(
+                  optionally(hasParent(functionDecl().bind("function_parent"))))
+                  .bind("compound_parent"))))
           .bind("void_return"),
       this);
 }
@@ -65,9 +63,11 @@ void AvoidReturnWithVoidValueCheck::check(
       Diag << BraceInsertionHints.openingBraceFixIt()
            << BraceInsertionHints.closingBraceFixIt();
   }
-  Diag << FixItHint::CreateRemoval(VoidReturn->getReturnLoc())
-       << FixItHint::CreateInsertion(SemicolonPos.getLocWithOffset(1),
-                                     " return;", true);
+  Diag << FixItHint::CreateRemoval(VoidReturn->getReturnLoc());
+  if (!Result.Nodes.getNodeAs<FunctionDecl>("function_parent") ||
+      SurroundingBlock->body_back() != VoidReturn)
+    Diag << FixItHint::CreateInsertion(SemicolonPos.getLocWithOffset(1),
+                                       " return;", true);
 }
 
 void AvoidReturnWithVoidValueCheck::storeOptions(
