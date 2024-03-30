@@ -136,7 +136,7 @@ private:
     }
     ++curCol;
     auto nextChar = curLineBuffer.front();
-    curLineBuffer.drop_front();
+    curLineBuffer = curLineBuffer.drop_front();
     if (curLineBuffer.empty()) {
       curLineBuffer = readNextLine();
     }

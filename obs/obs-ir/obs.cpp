@@ -2,15 +2,18 @@
 #include "Lexer.h"
 #include "Parser.h"
 
+#include "Dialect.h"
+#include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iostream>
 #include <memory>
 #include <string>
 #include <system_error>
-#include <iostream>
+
 
 using namespace obs;
 namespace cl = llvm::cl;
@@ -22,7 +25,7 @@ static cl::opt<std::string> inputFilename(cl::Positional,
 
 namespace {
 enum Action { None, DumpAST }; 
-}
+} // namespace
 
 static cl::opt<enum Action> emitAction("emit", cl::desc("Select the kind of output desired"), 
                                        cl::values(clEnumValN(DumpAST, "ast", "output the AST dump")));
@@ -37,6 +40,12 @@ std::unique_ptr<obs::ModuleAST> parseInputFile(llvm::StringRef filename) {
   LexerBuffer lexer(buffer.begin(), buffer.end(), std::string(filename));
   Parser parser(lexer);
   return parser.parseModule();
+}
+
+int dumpMLIR() {
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<mlir::obs::OBSDialect>();
+  return 0;
 }
 
 int main(int argc, char **argv) {
