@@ -39,6 +39,7 @@
 #include <__type_traits/conditional.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
+#include <climits> // LLVM-20 remove
 #include <cstddef>
 #include <stdexcept>
 #include <string_view>
@@ -55,6 +56,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 namespace __format {
+
+// A helper to limit the total size of code units written.
+class _LIBCPP_HIDE_FROM_ABI __max_output_size {
+public:
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __max_output_size(size_t __max_size) : __max_size_{__max_size} {}
+
+  // This function adjusts the size of a (bulk) write operations. It ensures the
+  // number of code units written by a __output_buffer never exceed
+  // __max_size_ code units.
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __write_request(size_t __code_units) {
+    size_t __result =
+        __code_units_written_ < __max_size_ ? std::min(__code_units, __max_size_ - __code_units_written_) : 0;
+    __code_units_written_ += __code_units;
+    return __result;
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __code_units_written() const noexcept { return __code_units_written_; }
+
+private:
+  size_t __max_size_;
+  // The code units that would have been written if there was no limit.
+  // format_to_n returns this value.
+  size_t __code_units_written_{0};
+};
 
 /// A "buffer" that handles writing to the proper iterator.
 ///
@@ -80,9 +105,6 @@ namespace __format {
 ///
 /// This class is ABI-tagged, still the new design does not change the size of
 /// objects of this class.
-///
-/// The new design contains information regarding format_to_n changes, these
-/// will be implemented in follow-up patch.
 ///
 /// The new design is the following.
 /// - There is an external object that connects the buffer to the output.
@@ -189,12 +211,21 @@ public:
       : __ptr_(__ptr),
         __capacity_(__capacity),
         __flush_([](_CharT* __p, size_t __n, void* __o) { static_cast<_Tp*>(__o)->__flush(__p, __n); }),
-        __obj_(__obj) {}
+        __data_{.__version_llvm_20__ = false, .__obj_ = reinterpret_cast<uintptr_t>(__obj) >> 1} {}
 
   // New LLVM-20 function.
   [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI explicit __output_buffer(_CharT* __ptr, size_t __capacity, __prepare_write_type __prepare_write)
-      : __ptr_(__ptr), __capacity_(__capacity), __prepare_write_(__prepare_write), __obj_(nullptr) {}
+      : __output_buffer{__ptr, __capacity, __prepare_write, nullptr} {}
+
+  // New LLVM-20 function.
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __output_buffer(
+      _CharT* __ptr, size_t __capacity, __prepare_write_type __prepare_write, __max_output_size* __max_output_size)
+      : __ptr_(__ptr),
+        __capacity_(__capacity),
+        __prepare_write_(__prepare_write),
+        __data_{.__version_llvm_20_ = true, .__max_output_size_ = reinterpret_cast<uintptr_t>(__max_output_size) >> 1} {
+  }
 
   // Deprecated LLVM-19 function.
   _LIBCPP_HIDE_FROM_ABI void __reset(_CharT* __ptr, size_t __capacity) {
@@ -215,6 +246,10 @@ public:
 
   // Used in std::back_insert_iterator.
   _LIBCPP_HIDE_FROM_ABI void push_back(_CharT __c) {
+    if (__data_.__version_llvm_20_ && __data_.__max_output_size_ &&
+        reinterpret_cast<__max_output_size*>(__data_.__max_output_size_ << 1)->__write_request(1) == 0)
+      return;
+
     __ptr_[__size_++] = __c;
 
     // Profiling showed flushing after adding is more efficient than flushing
@@ -241,6 +276,11 @@ public:
     // upper case. For integral these strings are short.
     // TODO FMT Look at the improvements above.
     size_t __n = __str.size();
+    if (__data_.__version_llvm_20_ && __data_.__max_output_size_) {
+      __n = reinterpret_cast<__max_output_size*>(__data_.__max_output_size_ << 1)->__write_request(__n);
+      if (__n == 0)
+        return;
+    }
 
     __flush_on_overflow(__n);
     if (__n < __capacity_) { // push_back requires the buffer to have room for at least one character (so use <).
@@ -273,6 +313,12 @@ public:
     _LIBCPP_ASSERT_INTERNAL(__first <= __last, "not a valid range");
 
     size_t __n = static_cast<size_t>(__last - __first);
+    if (__data_.__version_llvm_20_ && __data_.__max_output_size_) {
+      __n = reinterpret_cast<__max_output_size*>(__data_.__max_output_size_ << 1)->__write_request(__n);
+      if (__n == 0)
+        return;
+    }
+
     __flush_on_overflow(__n);
     if (__n < __capacity_) { //  push_back requires the buffer to have room for at least one character (so use <).
       std::transform(__first, __last, std::addressof(__ptr_[__size_]), std::move(__operation));
@@ -295,6 +341,12 @@ public:
 
   /// A \c fill_n wrapper.
   _LIBCPP_HIDE_FROM_ABI void __fill(size_t __n, _CharT __value) {
+    if (__data_.__version_llvm_20_ && __data_.__max_output_size_) {
+      __n = reinterpret_cast<__max_output_size*>(__data_.__max_output_size_ << 1)->__write_request(__n);
+      if (__n == 0)
+        return;
+    }
+
     __flush_on_overflow(__n);
     if (__n < __capacity_) { //  push_back requires the buffer to have room for at least one character (so use <).
       std::fill_n(std::addressof(__ptr_[__size_]), __n, __value);
@@ -315,9 +367,9 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __flush(size_t __size_hint) {
-    if (__obj_) {
+    if (!__data_.__version_llvm_20_) {
       // LLVM-19 code path
-      __flush_(__ptr_, __size_, __obj_);
+      __flush_(__ptr_, __size_, reinterpret_cast<void*>(__data_.__obj_ << 1));
       __size_ = 0;
     } else {
       // LLVM-20 code path
@@ -340,7 +392,20 @@ private:
   };
   static_assert(sizeof(__flush_) == sizeof(__prepare_write_), "The union is an ABI break.");
   static_assert(alignof(decltype(__flush_)) == alignof(decltype(__prepare_write_)), "The union is an ABI break.");
-  void* __obj_;
+  // Note this code is quite ugly, but it can cleaned up once the LLVM-19 parts
+  // of the code are removed.
+  union {
+    struct {
+      uintptr_t __version_llvm_20__ : 1;
+      uintptr_t __obj_ : CHAR_BIT * sizeof(void*) - 1;
+    };
+    struct {
+      uintptr_t __version_llvm_20_ : 1;
+      uintptr_t __max_output_size_ : CHAR_BIT * sizeof(__max_output_size*) - 1;
+    };
+  } __data_;
+  static_assert(sizeof(__data_) == sizeof(void*), "The struct is an ABI break.");
+  static_assert(alignof(decltype(__data_)) == alignof(void*), "The struct is an ABI break.");
 
   /// Flushes the buffer when the output operation would overflow the buffer.
   ///
@@ -560,105 +625,6 @@ private:
   size_t __size_{0};
 };
 
-/// The base of a buffer that counts and limits the number of insertions.
-template <class _OutIt, __fmt_char_type _CharT, bool>
-  requires(output_iterator<_OutIt, const _CharT&>)
-struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base {
-  using _Size = iter_difference_t<_OutIt>;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer_base(_OutIt __out_it, _Size __max_size)
-      : __writer_(std::move(__out_it)), __max_size_(std::max(_Size(0), __max_size)) {}
-
-  _LIBCPP_HIDE_FROM_ABI void __flush(_CharT* __ptr, size_t __n) {
-    if (_Size(__size_) <= __max_size_)
-      __writer_.__flush(__ptr, std::min(_Size(__n), __max_size_ - __size_));
-    __size_ += __n;
-  }
-
-protected:
-  __internal_storage<_CharT> __storage_;
-  __output_buffer<_CharT> __output_{__storage_.__begin(), __storage_.__buffer_size, this};
-  typename __writer_selector<_OutIt, _CharT>::type __writer_;
-
-  _Size __max_size_;
-  _Size __size_{0};
-};
-
-/// The base of a buffer that counts and limits the number of insertions.
-///
-/// This version is used when \c __enable_direct_output<_OutIt, _CharT> == true.
-///
-/// This class limits the size available to the direct writer so it will not
-/// exceed the maximum number of code units.
-template <class _OutIt, __fmt_char_type _CharT>
-  requires(output_iterator<_OutIt, const _CharT&>)
-class _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base<_OutIt, _CharT, true> {
-  using _Size = iter_difference_t<_OutIt>;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer_base(_OutIt __out_it, _Size __max_size)
-      : __output_(std::__unwrap_iter(__out_it), __max_size, this),
-        __writer_(std::move(__out_it)),
-        __max_size_(__max_size) {
-    if (__max_size <= 0) [[unlikely]]
-      __output_.__reset(__storage_.__begin(), __storage_.__buffer_size);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI void __flush(_CharT* __ptr, size_t __n) {
-    // A __flush to the direct writer happens in the following occasions:
-    // - The format function has written the maximum number of allowed code
-    //   units. At this point it's no longer valid to write to this writer. So
-    //   switch to the internal storage. This internal storage doesn't need to
-    //   be written anywhere so the __flush for that storage writes no output.
-    // - Like above, but the next "mass write" operation would overflow the
-    //   buffer. In that case the buffer is pre-emptively switched. The still
-    //   valid code units will be written separately.
-    // - The format_to_n function is finished. In this case there's no need to
-    //   switch the buffer, but for simplicity the buffers are still switched.
-    // When the __max_size <= 0 the constructor already switched the buffers.
-    if (__size_ == 0 && __ptr != __storage_.__begin()) {
-      __writer_.__flush(__ptr, __n);
-      __output_.__reset(__storage_.__begin(), __storage_.__buffer_size);
-    } else if (__size_ < __max_size_) {
-      // Copies a part of the internal buffer to the output up to n characters.
-      // See __output_buffer<_CharT>::__flush_on_overflow for more information.
-      _Size __s = std::min(_Size(__n), __max_size_ - __size_);
-      std::copy_n(__ptr, __s, __writer_.__out_it());
-      __writer_.__flush(__ptr, __s);
-    }
-
-    __size_ += __n;
-  }
-
-protected:
-  __internal_storage<_CharT> __storage_;
-  __output_buffer<_CharT> __output_;
-  __writer_direct<_OutIt, _CharT> __writer_;
-
-  _Size __max_size_;
-  _Size __size_{0};
-};
-
-/// The buffer that counts and limits the number of insertions.
-template <class _OutIt, __fmt_char_type _CharT>
-  requires(output_iterator<_OutIt, const _CharT&>)
-struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer final
-    : public __format_to_n_buffer_base< _OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>> {
-  using _Base = __format_to_n_buffer_base<_OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>>;
-  using _Size = iter_difference_t<_OutIt>;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer(_OutIt __out_it, _Size __max_size)
-      : _Base(std::move(__out_it), __max_size) {}
-  _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return this->__output_.__make_output_iterator(); }
-
-  _LIBCPP_HIDE_FROM_ABI format_to_n_result<_OutIt> __result() && {
-    this->__output_.__flush(0);
-    return {std::move(this->__writer_).__out_it(), this->__size_};
-  }
-};
-
 // ***** ***** ***** LLVM-20 classes ***** ***** *****
 
 // A dynamically growing buffer.
@@ -668,8 +634,11 @@ public:
   __allocating_buffer(const __allocating_buffer&)            = delete;
   __allocating_buffer& operator=(const __allocating_buffer&) = delete;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __allocating_buffer()
-      : __output_buffer<_CharT>{__buffer_, __buffer_size_, __prepare_write} {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __allocating_buffer() : __allocating_buffer{nullptr} {}
+
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit __allocating_buffer(__max_output_size* __max_output_size)
+      : __output_buffer<_CharT>{__buffer_, __buffer_size_, __prepare_write, __max_output_size} {}
 
   _LIBCPP_HIDE_FROM_ABI ~__allocating_buffer() {
     if (__ptr_ != __buffer_) {
@@ -690,6 +659,7 @@ private:
   // its capacity is exceeded a dynamic buffer will be allocated.
   static constexpr size_t __buffer_size_ = 256;
   _CharT __buffer_[__buffer_size_];
+
   _CharT* __ptr_{__buffer_};
 
   _LIBCPP_HIDE_FROM_ABI void __grow_buffer(size_t __capacity) {
@@ -729,7 +699,12 @@ template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __direct_iterator_buffer : public __output_buffer<_CharT> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __direct_iterator_buffer(_OutIt __out_it)
-      : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write}, __out_it_(__out_it) {}
+      : __direct_iterator_buffer{__out_it, nullptr} {}
+
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit __direct_iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
+      : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write, __max_output_size},
+        __out_it_(__out_it) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && { return __out_it_ + this->__size(); }
 
@@ -753,7 +728,12 @@ template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __container_inserter_buffer : public __output_buffer<_CharT> {
 public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __container_inserter_buffer(_OutIt __out_it)
-      : __output_buffer<_CharT>{__buffer_, __buffer_size, __prepare_write}, __container_{__out_it.__get_container()} {}
+      : __container_inserter_buffer{__out_it, nullptr} {}
+
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit __container_inserter_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
+      : __output_buffer<_CharT>{__buffer_, __buffer_size, __prepare_write, __max_output_size},
+        __container_{__out_it.__get_container()} {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
     __container_->insert(__container_->end(), __buffer_, __buffer_ + this->__size());
@@ -791,6 +771,9 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it)
       : __allocating_buffer<_CharT>{}, __out_it_{std::move(__out_it)} {}
 
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit __iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
+      : __allocating_buffer<_CharT>{__max_output_size}, __out_it_{std::move(__out_it)} {}
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __out_it() && {
     return std::ranges::copy(this->__view(), std::move(__out_it_)).out;
   }
@@ -811,6 +794,27 @@ public:
                     conditional_t<__enable_direct_output<_OutIt, _CharT>,
                                   __direct_iterator_buffer<_OutIt, _CharT>,
                                   __iterator_buffer<_OutIt, _CharT>>>;
+};
+
+// A buffer that counts and limits the number of insertions.
+template <class _OutIt, __fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __format_to_n_buffer : private __buffer_selector<_OutIt, _CharT>::type {
+public:
+  using _Base = __buffer_selector<_OutIt, _CharT>::type;
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __format_to_n_buffer(_OutIt __out_it, iter_difference_t<_OutIt> __n)
+      : _Base{std::move(__out_it), std::addressof(__max_output_size_)},
+        __max_output_size_{__n < 0 ? size_t{0} : static_cast<size_t>(__n)} {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return _Base::__make_output_iterator(); }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI format_to_n_result<_OutIt> __result() && {
+    return {static_cast<_Base&&>(*this).__out_it(),
+            static_cast<iter_difference_t<_OutIt>>(__max_output_size_.__code_units_written())};
+  }
+
+private:
+  __max_output_size __max_output_size_;
 };
 
 // ***** ***** ***** LLVM-19 and LLVM-20 class ***** ***** *****
