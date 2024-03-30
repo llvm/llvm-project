@@ -7256,7 +7256,6 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
 void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
                                     BuildFnTy &MatchInfo) {
   MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
-  Builder.setInstrAndDebugLoc(*Root);
   MatchInfo(Builder);
   Root->eraseFromParent();
 }
@@ -7269,10 +7268,6 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 
   GTrunc *Trunc = getOpcodeDef<GTrunc>(Sext->getSrcReg(), MRI);
   if (!Trunc)
-    return false;
-
-  // The trunc must have the nsw flag.
-  if (!Trunc->getFlag(MachineInstr::MIFlag::NoSWrap))
     return false;
 
   Register Dst = Sext->getReg(0);
@@ -7298,10 +7293,6 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 
   GTrunc *Trunc = getOpcodeDef<GTrunc>(Zext->getSrcReg(), MRI);
   if (!Trunc)
-    return false;
-
-  // The trunc must have the nuw flag.
-  if (!Trunc->getFlag(MachineInstr::MIFlag::NoUWrap))
     return false;
 
   Register Dst = Zext->getReg(0);
