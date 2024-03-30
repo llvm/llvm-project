@@ -3917,7 +3917,7 @@ static bool hasDuplicates(ValueRange args) {
 
 /// If `before` block args are directly forwarded to `scf.condition`, rearrange
 /// `scf.condition` args into same order as block args. Update `after` block
-// args and op result values accordingly.
+/// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
   using OpRewritePattern::OpRewritePattern;
