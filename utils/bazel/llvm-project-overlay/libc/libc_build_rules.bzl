@@ -78,7 +78,6 @@ def libc_function(
                      its deps.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
-
     # We use the explicit equals pattern here because append and += mutate the
     # original list, where this creates a new list and stores it in deps.
     copts = copts or []
@@ -87,7 +86,15 @@ def libc_function(
         "-fno-builtin",
         "-fno-lax-vector-conversions",
         "-ftrivial-auto-var-init=pattern",
+        "-fno-omit-frame-pointer",
+        "-fstack-protector-strong",
     ]
+    # x86 targets have -mno-omit-leaf-frame-pointer.
+    platform_copts = selects.with_or({
+        PLATFORM_CPU_X86_64: ["-mno-omit-leaf-frame-pointer"],
+        "//conditions:default": []
+    })
+    copts = copts + platform_copts
 
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the
     # C++ functions in the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
