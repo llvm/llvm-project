@@ -197,7 +197,6 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
             ? SecondaryEntryPointsMap[Address].size()
             : 0;
     if (Cold) {
-      // `Maps` is keyed by output addresses.
       auto HotEntryIt = Maps.find(ColdPartSource[Address]);
       assert(HotEntryIt != Maps.end());
       size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
