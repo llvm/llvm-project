@@ -64,6 +64,14 @@ public:
       return std::nullopt;
     }
 
+    /// Returns the type signature of the Type Unit associated with this
+    /// Accelerator Entry or std::nullopt if the Type Unit offset is not
+    /// recorded in this Accelerator Entry.
+    virtual std::optional<uint64_t> getForeignTUTypeSignature() const {
+      // Default return for accelerator tables that don't support type units.
+      return std::nullopt;
+    }
+
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -433,8 +441,11 @@ public:
     Entry(const NameIndex &NameIdx, const Abbrev &Abbr);
 
   public:
+    const NameIndex *getNameIndex() const { return NameIdx; }
     std::optional<uint64_t> getCUOffset() const override;
     std::optional<uint64_t> getLocalTUOffset() const override;
+    std::optional<uint64_t> getForeignTUTypeSignature() const override;
+
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
 
     /// Returns the Index into the Compilation Unit list of the owning Name

@@ -70,7 +70,8 @@ private:
       : DWARFIndex(module), m_debug_info(dwarf.DebugInfo()),
         m_debug_names_data(debug_names_data), m_debug_str_data(debug_str_data),
         m_debug_names_up(std::move(debug_names_up)),
-        m_fallback(module, dwarf, GetUnits(*m_debug_names_up)) {}
+        m_fallback(module, dwarf, GetUnits(*m_debug_names_up),
+                   GetTypeUnitSigs(*m_debug_names_up)) {}
 
   DWARFDebugInfo &m_debug_info;
 
@@ -85,6 +86,8 @@ private:
 
   DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
   DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
+  DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
+  // std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 
@@ -97,6 +100,7 @@ private:
                                   llvm::StringRef name);
 
   static llvm::DenseSet<dw_offset_t> GetUnits(const DebugNames &debug_names);
+  static llvm::DenseSet<uint64_t> GetTypeUnitSigs(const DebugNames &debug_names);
 };
 
 } // namespace dwarf

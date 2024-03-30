@@ -34,6 +34,18 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
       module, std::move(index_up), debug_names, debug_str, dwarf));
 }
 
+
+llvm::DenseSet<uint64_t>
+DebugNamesDWARFIndex::GetTypeUnitSigs(const DebugNames &debug_names) {
+  llvm::DenseSet<uint64_t> result;
+  for (const DebugNames::NameIndex &ni : debug_names) {
+    const uint32_t num_tus = ni.getForeignTUCount();
+    for (uint32_t tu = 0; tu < num_tus; ++tu)
+      result.insert(ni.getForeignTUSignature(tu));
+  }
+  return result;
+}
+
 llvm::DenseSet<dw_offset_t>
 DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   llvm::DenseSet<dw_offset_t> result;
@@ -48,17 +60,22 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   return result;
 }
 
+DWARFTypeUnit *
+DebugNamesDWARFIndex::GetForeignTypeUnit(const DebugNames::Entry &entry) const {
+  std::optional<uint64_t> type_sig = entry.getForeignTUTypeSignature();
+  if (type_sig)
+    if (auto dwp_sp = m_debug_info.GetDwpSymbolFile())
+      return dwp_sp->DebugInfo().GetTypeUnitForHash(*type_sig);
+  return nullptr;
+}
+
 DWARFUnit *
 DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
   // Look for a DWARF unit offset (CU offset or local TU offset) as they are
   // both offsets into the .debug_info section.
   std::optional<uint64_t> unit_offset = entry.getCUOffset();
-  if (!unit_offset) {
+  if (!unit_offset)
     unit_offset = entry.getLocalTUOffset();
-    if (!unit_offset)
-      return nullptr;
-  }
-
   DWARFUnit *cu =
       m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
   return cu ? &cu->GetNonSkeletonUnit() : nullptr;
@@ -274,6 +291,44 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
     if (!isType(entry.tag()))
       continue;
 
+
+    DWARFTypeUnit *foreign_tu = GetForeignTypeUnit(entry);
+    if (foreign_tu) {
+      // If this entry represents a foreign type unit, we need to verify that
+      // the type unit that ended up in the final .dwp file is the right type
+      // unit. Type units have signatures which are the same across multiple
+      // .dwo files, but only one of those type units will end up in the .dwp
+      // file. The contents of type units for the same type can be different
+      // in different .dwo file, which means the DIE offsets might not be the
+      // same between two different type units. So we need to determine if this
+      // accelerator table matches the type unit in the .dwp file. If it doesn't
+      // match, then we need to ignore this accelerator table entry as the type
+      // unit that is in the .dwp file will have its own index.
+      const llvm::DWARFDebugNames::NameIndex *name_index = entry.getNameIndex();
+      if (name_index == nullptr)
+        continue;
+      // In order to determine if the type unit that ended up in a .dwp file
+      // is valid, we need to grab the type unit and check the attribute on the
+      // type unit matches the .dwo file. For this to happen we rely on each
+      // .dwo file having its own .debug_names table with a single compile unit
+      // and multiple type units. This is the only way we can tell if a type
+      // unit came from a specific .dwo file.
+      if (name_index->getCUCount() == 1) {
+        dw_offset_t cu_offset = name_index->getCUOffset(0);
+        DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::DebugInfo,
+                                                     cu_offset);
+        if (cu) {
+          DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
+          DWARFBaseDIE tu_die = foreign_tu->GetUnitDIEOnly();
+          llvm::StringRef cu_dwo_name =
+              cu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+          llvm::StringRef tu_dwo_name =
+              tu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+          if (cu_dwo_name != tu_dwo_name)
+            continue; // Ignore this entry, the CU DWO doesn't match the TU DWO
+        }
+      }
+    }
     // Grab at most one extra parent, subsequent parents are not necessary to
     // test equality.
     std::optional<llvm::SmallVector<Entry, 4>> parent_chain =
