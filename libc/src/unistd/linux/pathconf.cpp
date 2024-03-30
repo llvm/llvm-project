@@ -13,7 +13,7 @@
 #include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
 #include "src/errno/libc_errno.h"
 #include <stdint.h> // For uint64_t.
-#include <sys/statvfs.h>
+#include <sys/fstatvfs.h>
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
@@ -51,7 +51,7 @@ static long pathconfig(const struct statvfs &s, int name) {
 
 LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
   struct statvfs sb;
-  if (statvfs(path, &sb) == -1) {
+  if (fstatvfs(path, &sb) == -1) {
     return -1;
   }
   return pathconfig(sb, name);
