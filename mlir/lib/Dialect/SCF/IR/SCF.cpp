@@ -3885,8 +3885,8 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
   }
 };
 
-/// If both ranges contain same values return mappping indices from args1 to
-/// args2. Otherwise return std::nullopt
+/// If both ranges contain same values return mappping indices from args2 to
+/// args1. Otherwise return std::nullopt.
 static std::optional<SmallVector<unsigned>> getArgsMapping(ValueRange args1,
                                                            ValueRange args2) {
   if (args1.size() != args2.size())
@@ -3898,16 +3898,26 @@ static std::optional<SmallVector<unsigned>> getArgsMapping(ValueRange args1,
     if (it == args2.end())
       return std::nullopt;
 
-    auto j = it - args2.begin();
-    ret[j] = static_cast<unsigned>(i);
+    ret[std::distance(args2.begin(), it)] = static_cast<unsigned>(i);
   }
 
   return ret;
 }
 
+static bool hasDuplicates(ValueRange args) {
+  llvm::SmallDenseSet<Value> set;
+  for (Value arg : args) {
+    if (set.contains(arg))
+      return true;
+
+    set.insert(arg);
+  }
+  return false;
+}
+
 /// If `before` block args are directly forwarded to `scf.condition`, rearrange
 /// `scf.condition` args into same order as block args. Update `after` block
-// args and results values accordingly.
+// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -3919,6 +3929,9 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
     ValueRange beforeArgs = oldBefore->getArguments();
     ValueRange termArgs = oldTerm.getArgs();
     if (beforeArgs == termArgs)
+      return failure();
+
+    if (hasDuplicates(termArgs))
       return failure();
 
     auto mapping = getArgsMapping(beforeArgs, termArgs);
