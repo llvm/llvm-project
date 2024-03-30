@@ -15,11 +15,11 @@
 #include <__functional/ranges_operations.h>
 #include <__functional/reference_wrapper.h>
 #include <__iterator/concepts.h>
-#include <__iterator/distance.h>
 #include <__iterator/indirectly_comparable.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
 
@@ -53,8 +53,7 @@ struct __fn {
       _Pred __pred   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) {
-    auto __n2 = ranges::distance(__first2, __last2);
-    if (__n2 == 0)
+    if (__first2 == __last2)
       return true;
 
     auto __ret = ranges::search(
@@ -70,14 +69,13 @@ struct __fn {
     requires indirectly_comparable<iterator_t<_Range1>, iterator_t<_Range2>, _Pred, _Proj1, _Proj2>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool static
   operator()(_Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) {
-    auto __n2 = 0;
     if constexpr (sized_range<_Range2>) {
-      __n2 = ranges::size(__range2);
+      if (ranges::size(__range2) == 0)
+        return true;
     } else {
-      __n2 = std::distance(cbegin(__range2), cend(__range2));
+      if (ranges::begin(__range2) == ranges::end(__range2))
+        return true;
     }
-    if (__n2 == 0)
-      return true;
 
     auto __ret = ranges::search(__range1, __range2, __pred, std::ref(__proj1), std::ref(__proj2));
     return __ret.empty() == false;
