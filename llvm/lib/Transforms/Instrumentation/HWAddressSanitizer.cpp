@@ -422,6 +422,7 @@ private:
   bool InstrumentLandingPads;
   bool InstrumentWithCalls;
   bool InstrumentStack;
+  bool InstrumentGlobals;
   bool DetectUseAfterScope;
   bool UsePageAliases;
   bool UseMatchAllCallback;
@@ -639,11 +640,13 @@ void HWAddressSanitizer::initializeModule() {
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
+  InstrumentGlobals =
+      !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
+
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
-    if (InstrumentGlobals && !UsePageAliases)
+    if (InstrumentGlobals)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -787,6 +790,13 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
     if (SSI && SSI->stackAccessIsSafe(*Inst))
       return true;
   }
+
+  if (isa<GlobalVariable>(getUnderlyingObject(Ptr))) {
+    if (!InstrumentGlobals)
+      return true;
+    // TODO: Optimize inbound global accesses, like Asan `instrumentMop`.
+  }
+
   return false;
 }
 
@@ -1220,8 +1230,11 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
 }
 
 Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB) {
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/platform/bionic/tls_defines.h.
+  constexpr int SanitizerSlot = 6;
   if (TargetTriple.isAArch64() && TargetTriple.isAndroid())
-    return memtag::getAndroidSanitizerSlotPtr(IRB);
+    return memtag::getAndroidSlotPtr(IRB, SanitizerSlot);
   return ThreadPtrGlobal;
 }
 
@@ -1297,6 +1310,22 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       // The use of AShr instead of LShr is due to
       //   https://bugs.llvm.org/show_bug.cgi?id=39030
       // Runtime library makes sure not to use the highest bit.
+      //
+      // Mechanical proof of this address calculation can be found at:
+      // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
+      //
+      // Example of the wrap case for N = 1
+      // Pointer:   0x01AAAAAAAAAAAFF8
+      //                     +
+      //            0x0000000000000008
+      //                     =
+      //            0x01AAAAAAAAAAB000
+      //                     &
+      // WrapMask:  0xFFFFFFFFFFFFF000
+      //                     =
+      //            0x01AAAAAAAAAAA000
+      //
+      // Then the WrapMask will be a no-op until the next wrap case.
       Value *WrapMask = IRB.CreateXor(
           IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
           ConstantInt::get(IntptrTy, (uint64_t)-1));

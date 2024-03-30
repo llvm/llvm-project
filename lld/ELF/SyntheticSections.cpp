@@ -415,7 +415,7 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   for (EhSectionPiece &cie : sec->cies)
     offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       fatal(toString(sec) + ": invalid CIE reference");
@@ -448,7 +448,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
     if (hasLSDA(cie))
       ciesWithLSDA.insert(cie.inputOff);
   for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
       continue;
 
@@ -628,19 +628,19 @@ GotSection::GotSection()
 }
 
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
-void GotSection::addEntry(Symbol &sym) {
+void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().gotIdx = numEntries++;
 }
 
-bool GotSection::addTlsDescEntry(Symbol &sym) {
+bool GotSection::addTlsDescEntry(const Symbol &sym) {
   assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().tlsDescIdx = numEntries;
   numEntries += 2;
   return true;
 }
 
-bool GotSection::addDynTlsEntry(Symbol &sym) {
+bool GotSection::addDynTlsEntry(const Symbol &sym) {
   assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().tlsGdIdx = numEntries;
   // Global Dynamic TLS entries take two GOT slots.
