@@ -365,6 +365,33 @@ public:
   static StringRef name() { return "TriggerVerifierErrorPass"; }
 };
 
+// A pass requires all MachineFunctionProperties.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class RequireAllMachineFunctionPropertiesPass
+    : public MachinePassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
+    return PreservedAnalyses::none();
+  }
+
+  static MachineFunctionProperties getRequiredProperties() {
+    MachineFunctionProperties MFProps;
+    MFProps.set(MachineFunctionProperties::Property::FailedISel);
+    MFProps.set(MachineFunctionProperties::Property::FailsVerification);
+    MFProps.set(MachineFunctionProperties::Property::IsSSA);
+    MFProps.set(MachineFunctionProperties::Property::Legalized);
+    MFProps.set(MachineFunctionProperties::Property::NoPHIs);
+    MFProps.set(MachineFunctionProperties::Property::NoVRegs);
+    MFProps.set(MachineFunctionProperties::Property::RegBankSelected);
+    MFProps.set(MachineFunctionProperties::Property::Selected);
+    MFProps.set(MachineFunctionProperties::Property::TiedOpsRewritten);
+    MFProps.set(MachineFunctionProperties::Property::TracksDebugUserValues);
+    MFProps.set(MachineFunctionProperties::Property::TracksLiveness);
+    return MFProps;
+  }
+  static StringRef name() { return "RequireAllMachineFunctionPropertiesPass"; }
+};
+
 } // namespace
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
