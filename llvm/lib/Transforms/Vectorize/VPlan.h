@@ -3013,15 +3013,6 @@ public:
     Value2VPValue[V] = VPV;
   }
 
-  /// Returns the VPValue for \p V.
-  VPValue *getVPValue(Value *V) {
-    assert(V && "Trying to get the VPValue of a null Value");
-    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert(Value2VPValue[V]->isLiveIn() &&
-           "Only live-ins should be in mapping");
-    return Value2VPValue[V];
-  }
-
   /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
@@ -3032,7 +3023,10 @@ public:
       addVPValue(V, VPV);
     }
 
-    return getVPValue(V);
+    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
+    assert(Value2VPValue[V]->isLiveIn() &&
+           "Only live-ins should be in mapping");
+    return Value2VPValue[V];
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
