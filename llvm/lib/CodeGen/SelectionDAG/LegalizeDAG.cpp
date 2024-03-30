@@ -118,14 +118,7 @@ private:
   void LegalizeLoadOps(SDNode *Node);
   void LegalizeStoreOps(SDNode *Node);
 
-  /// Some targets cannot handle a variable
-  /// insertion index for the INSERT_VECTOR_ELT instruction.  In this case, it
-  /// is necessary to spill the vector being inserted into to memory, perform
-  /// the insert there, and then read the result back.
-  SDValue PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val, SDValue Idx,
-                                         const SDLoc &dl);
-  SDValue ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val, SDValue Idx,
-                                  const SDLoc &dl);
+  SDValue ExpandINSERT_VECTOR_ELT(SDValue Op);
 
   /// Return a vector shuffle operation which
   /// performs the same shuffe in terms of order or result bytes, but on a type
@@ -267,7 +260,9 @@ static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
   auto &MFI = MF.getFrameInfo();
   int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
+  LocationSize ObjectSize = isObjectScalable
+                                ? LocationSize::beforeOrAfterPointer()
+                                : LocationSize::precise(MFI.getObjectSize(FI));
   return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                  ObjectSize, MFI.getObjectAlign(FI));
 }
@@ -376,49 +371,12 @@ SDValue SelectionDAGLegalize::ExpandConstant(ConstantSDNode *CP) {
   return Result;
 }
 
-/// Some target cannot handle a variable insertion index for the
-/// INSERT_VECTOR_ELT instruction.  In this case, it
-/// is necessary to spill the vector being inserted into to memory, perform
-/// the insert there, and then read the result back.
-SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
-                                                             SDValue Val,
-                                                             SDValue Idx,
-                                                             const SDLoc &dl) {
-  SDValue Tmp1 = Vec;
-  SDValue Tmp2 = Val;
-  SDValue Tmp3 = Idx;
+SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Op) {
+  SDValue Vec = Op.getOperand(0);
+  SDValue Val = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
+  SDLoc dl(Op);
 
-  // If the target doesn't support this, we have to spill the input vector
-  // to a temporary stack slot, update the element, then reload it.  This is
-  // badness.  We could also load the value into a vector register (either
-  // with a "move to register" or "extload into register" instruction, then
-  // permute it into place, if the idx is a constant and if the idx is
-  // supported by the target.
-  EVT VT    = Tmp1.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  SDValue StackPtr = DAG.CreateStackTemporary(VT);
-
-  int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-
-  // Store the vector.
-  SDValue Ch = DAG.getStore(
-      DAG.getEntryNode(), dl, Tmp1, StackPtr,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
-
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Tmp3);
-
-  // Store the scalar value.
-  Ch = DAG.getTruncStore(
-      Ch, dl, Tmp2, StackPtr2,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT);
-  // Load the updated vector.
-  return DAG.getLoad(VT, dl, Ch, StackPtr, MachinePointerInfo::getFixedStack(
-                                               DAG.getMachineFunction(), SPFI));
-}
-
-SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
-                                                      SDValue Idx,
-                                                      const SDLoc &dl) {
   if (ConstantSDNode *InsertPos = dyn_cast<ConstantSDNode>(Idx)) {
     // SCALAR_TO_VECTOR requires that the type of the value being inserted
     // match the element type of the vector being created, except for
@@ -440,7 +398,7 @@ SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
       return DAG.getVectorShuffle(Vec.getValueType(), dl, Vec, ScVec, ShufOps);
     }
   }
-  return PerformInsertVectorEltInMemory(Vec, Val, Idx, dl);
+  return ExpandInsertToVectorThroughStack(Op);
 }
 
 SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
@@ -1488,7 +1446,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
 
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
-  EVT SubVecVT = Part.getValueType();
+  EVT PartVT = Part.getValueType();
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1497,14 +1455,28 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // First store the whole vector.
   SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, Vec, StackPtr, PtrInfo);
 
-  // Then store the inserted part.
-  SDValue SubStackPtr =
-      TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, SubVecVT, Idx);
+  // Freeze the index so we don't poison the clamping code we're about to emit.
+  Idx = DAG.getFreeze(Idx);
 
-  // Store the subvector.
-  Ch = DAG.getStore(
-      Ch, dl, Part, SubStackPtr,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+  // Then store the inserted part.
+  if (PartVT.isVector()) {
+    SDValue SubStackPtr =
+        TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
+
+    // Store the subvector.
+    Ch = DAG.getStore(
+        Ch, dl, Part, SubStackPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+  } else {
+    SDValue SubStackPtr =
+        TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
+
+    // Store the scalar value.
+    Ch = DAG.getTruncStore(
+        Ch, dl, Part, SubStackPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()),
+        VecVT.getVectorElementType());
+  }
 
   // Finally, load the updated vector.
   return DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr, PtrInfo);
@@ -3418,9 +3390,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandSCALAR_TO_VECTOR(Node));
     break;
   case ISD::INSERT_VECTOR_ELT:
-    Results.push_back(ExpandINSERT_VECTOR_ELT(Node->getOperand(0),
-                                              Node->getOperand(1),
-                                              Node->getOperand(2), dl));
+    Results.push_back(ExpandINSERT_VECTOR_ELT(SDValue(Node, 0)));
     break;
   case ISD::VECTOR_SHUFFLE: {
     SmallVector<int, 32> NewMask;

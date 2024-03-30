@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Testing/TestAST.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Support/Error.h"
@@ -36,6 +37,40 @@ using ::testing::IsNull;
 using ::testing::Ne;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
+
+// Declares a minimal coroutine library.
+constexpr llvm::StringRef CoroutineLibrary = R"cc(
+struct promise;
+struct task;
+
+namespace std {
+template <class, class...>
+struct coroutine_traits {};
+template <>
+struct coroutine_traits<task> {
+    using promise_type = promise;
+};
+
+template <class Promise = void>
+struct coroutine_handle {
+    static constexpr coroutine_handle from_address(void *addr) { return {}; }
+};
+}  // namespace std
+
+struct awaitable {
+    bool await_ready() const noexcept;
+    void await_suspend(std::coroutine_handle<promise>) const noexcept;
+    void await_resume() const noexcept;
+};
+struct task {};
+struct promise {
+    task get_return_object();
+    awaitable initial_suspend();
+    awaitable final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+};
+)cc";
 
 void runDataflow(
     llvm::StringRef Code,
@@ -101,12 +136,32 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
 }
 
 TEST(TransferTest, CNotSupported) {
-  std::string Code = R"(
-    void target() {}
-  )";
-  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(
-                        Code, [](const auto &, auto &) {}, {BuiltinOptions{}},
-                        LangStandard::lang_c89),
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_C89;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJC;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCXXNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJCXX;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
                     llvm::FailedWithMessage("Can only analyze C++"));
 }
 
@@ -2313,8 +2368,6 @@ TEST(TransferTest, AssignmentOperator_ArgByValue) {
 }
 
 TEST(TransferTest, AssignmentOperatorFromBase) {
-  // This is a crash repro. We don't model the copy this case, so no
-  // expectations on the copied field of the base class are checked.
   std::string Code = R"(
     struct Base {
       int base;
@@ -2326,14 +2379,33 @@ TEST(TransferTest, AssignmentOperatorFromBase) {
     void target(Base B, Derived D) {
       D.base = 1;
       D.derived = 1;
+      // [[before]]
       D = B;
-      // [[p]]
+      // [[after]]
     }
   )";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {});
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        auto &BLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "B");
+        auto &DLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "D");
+
+        EXPECT_NE(getFieldValue(&BLoc, "base", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvBefore));
+        EXPECT_EQ(getFieldValue(&BLoc, "base", ASTCtx, EnvAfter),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvAfter));
+
+        EXPECT_EQ(getFieldValue(&DLoc, "derived", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "derived", ASTCtx, EnvAfter));
+      });
 }
 
 TEST(TransferTest, AssignmentOperatorFromCallResult) {
@@ -2921,6 +2993,36 @@ TEST(TransferTest, ResultObjectLocation) {
         EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*Comma));
         EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*EWC));
         EXPECT_EQ(&Loc, &Env.getResultObjectLocation(*BTE));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForDefaultArgExpr) {
+  std::string Code = R"(
+    struct S {};
+    void funcWithDefaultArg(S s = S());
+    void target() {
+      funcWithDefaultArg();
+      // [[p]]
+    }
+  )";
+
+  using ast_matchers::cxxDefaultArgExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *DefaultArg = selectFirst<CXXDefaultArgExpr>(
+            "default_arg",
+            match(cxxDefaultArgExpr().bind("default_arg"), ASTCtx));
+        ASSERT_NE(DefaultArg, nullptr);
+
+        // The values for default arguments aren't modeled; we merely verify
+        // that we can get a result object location for a default arg.
+        Env.getResultObjectLocation(*DefaultArg);
       });
 }
 
@@ -4560,7 +4662,7 @@ TEST(TransferTest, LoopCanProveInvariantForBoolean) {
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
-  std::string Code = R"(
+  std::string Code = R"cc(
     union Union {
       int A;
       float B;
@@ -4571,7 +4673,7 @@ TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
       Union B;
       A = B;
     }
-  )";
+  )cc";
   // This is a crash regression test when calling the transfer function on a
   // `CXXThisExpr` that refers to a union.
   runDataflow(
@@ -4579,6 +4681,22 @@ TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
          ASTContext &) {},
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator=");
+}
+
+TEST(TransferTest, DoesNotCrashOnNullChildren) {
+  std::string Code = (CoroutineLibrary + R"cc(
+    task target() noexcept {
+      co_return;
+    }
+  )cc")
+                         .str();
+  // This is a crash regression test when calling `AdornedCFG::build` on a
+  // statement (in this case, the `CoroutineBodyStmt`) with null children.
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+         ASTContext &) {},
+      LangStandard::lang_cxx20, /*ApplyBuiltinTransfer=*/true);
 }
 
 TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {

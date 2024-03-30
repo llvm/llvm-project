@@ -993,6 +993,68 @@ struct is_big_int<BigInt<Bits, Signed, T>> : cpp::true_type {};
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_big_int_v = is_big_int<T>::value;
 
+// extensions of type traits to include BigInt
+
+// is_integral_or_big_int
+template <typename T>
+struct is_integral_or_big_int
+    : cpp::bool_constant<(cpp::is_integral_v<T> || is_big_int_v<T>)> {};
+
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_integral_or_big_int_v =
+    is_integral_or_big_int<T>::value;
+
+// make_big_int_unsigned
+template <typename T> struct make_big_int_unsigned;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_big_int_unsigned<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, false, T>> {};
+
+template <typename T>
+using make_big_int_unsigned_t = typename make_big_int_unsigned<T>::type;
+
+// make_big_int_signed
+template <typename T> struct make_big_int_signed;
+
+template <size_t Bits, bool Signed, typename T>
+struct make_big_int_signed<BigInt<Bits, Signed, T>>
+    : cpp::type_identity<BigInt<Bits, true, T>> {};
+
+template <typename T>
+using make_big_int_signed_t = typename make_big_int_signed<T>::type;
+
+// make_integral_or_big_int_unsigned
+template <typename T, class = void> struct make_integral_or_big_int_unsigned;
+
+template <typename T>
+struct make_integral_or_big_int_unsigned<
+    T, cpp::enable_if_t<cpp::is_integral_v<T>>> : cpp::make_unsigned<T> {};
+
+template <typename T>
+struct make_integral_or_big_int_unsigned<T, cpp::enable_if_t<is_big_int_v<T>>>
+    : make_big_int_unsigned<T> {};
+
+template <typename T>
+using make_integral_or_big_int_unsigned_t =
+    typename make_integral_or_big_int_unsigned<T>::type;
+
+// make_integral_or_big_int_signed
+template <typename T, class = void> struct make_integral_or_big_int_signed;
+
+template <typename T>
+struct make_integral_or_big_int_signed<T,
+                                       cpp::enable_if_t<cpp::is_integral_v<T>>>
+    : cpp::make_signed<T> {};
+
+template <typename T>
+struct make_integral_or_big_int_signed<T, cpp::enable_if_t<is_big_int_v<T>>>
+    : make_big_int_signed<T> {};
+
+template <typename T>
+using make_integral_or_big_int_signed_t =
+    typename make_integral_or_big_int_signed<T>::type;
+
 namespace cpp {
 
 // Specialization of cpp::bit_cast ('bit.h') from T to BigInt.
@@ -1018,6 +1080,17 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     To>
 bit_cast(const UInt<Bits> &from) {
   return cpp::bit_cast<To>(from.val);
+}
+
+// Specialization of cpp::popcount ('bit.h') for BigInt.
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+popcount(T value) {
+  int bits = 0;
+  for (auto word : value.val)
+    if (word)
+      bits += popcount(word);
+  return bits;
 }
 
 // Specialization of cpp::has_single_bit ('bit.h') for BigInt.
@@ -1154,6 +1227,49 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
     ++index;
   }
   return out;
+}
+
+// Specialization of count_zeros ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+count_zeros(T value) {
+  return cpp::popcount(~value);
+}
+
+// Specialization of first_leading_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countl_one(value) + 1;
+}
+
+// Specialization of first_leading_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_leading_one(T value) {
+  return first_leading_zero(~value);
+}
+
+// Specialization of first_trailing_zero ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(~value) + 1;
+}
+
+// Specialization of first_trailing_one ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]]
+LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(value) + 1;
 }
 
 } // namespace LIBC_NAMESPACE

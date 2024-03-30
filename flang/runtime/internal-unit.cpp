@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "internal-unit.h"
+#include "freestanding-tools.h"
 #include "io-error.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <type_traits>
 
 namespace Fortran::runtime::io {
+RT_OFFLOAD_API_GROUP_BEGIN
 
 template <Direction DIR>
-InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
+RT_API_ATTRS InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     Scalar scalar, std::size_t length, int kind) {
   internalIoCharKind = kind;
   recordLength = length;
@@ -26,7 +28,7 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
 }
 
 template <Direction DIR>
-InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
+RT_API_ATTRS InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
     const Descriptor &that, const Terminator &terminator) {
   auto thatType{that.type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator, thatType.has_value());
@@ -41,18 +43,8 @@ InternalDescriptorUnit<DIR>::InternalDescriptorUnit(
   endfileRecordNumber = d.Elements() + 1;
 }
 
-template <Direction DIR> void InternalDescriptorUnit<DIR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {
-    // Clear the remainder of the current record.
-    auto end{endfileRecordNumber.value_or(0)};
-    if (currentRecordNumber < end) {
-      BlankFillOutputRecord();
-    }
-  }
-}
-
 template <Direction DIR>
-bool InternalDescriptorUnit<DIR>::Emit(
+RT_API_ATTRS bool InternalDescriptorUnit<DIR>::Emit(
     const char *data, std::size_t bytes, IoErrorHandler &handler) {
   if constexpr (DIR == Direction::Input) {
     handler.Crash("InternalDescriptorUnit<Direction::Input>::Emit() called");
@@ -86,7 +78,7 @@ bool InternalDescriptorUnit<DIR>::Emit(
 }
 
 template <Direction DIR>
-std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
+RT_API_ATTRS std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
     const char *&p, IoErrorHandler &handler) {
   if constexpr (DIR == Direction::Output) {
     handler.Crash("InternalDescriptorUnit<Direction::Output>::"
@@ -107,9 +99,14 @@ std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
 }
 
 template <Direction DIR>
-bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
+RT_API_ATTRS bool InternalDescriptorUnit<DIR>::AdvanceRecord(
+    IoErrorHandler &handler) {
   if (currentRecordNumber >= endfileRecordNumber.value_or(0)) {
-    handler.SignalEnd();
+    if constexpr (DIR == Direction::Input) {
+      handler.SignalEnd();
+    } else {
+      handler.SignalError(IostatInternalWriteOverrun);
+    }
     return false;
   }
   if constexpr (DIR == Direction::Output) {
@@ -121,24 +118,25 @@ bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
 }
 
 template <Direction DIR>
-void InternalDescriptorUnit<DIR>::BlankFill(char *at, std::size_t bytes) {
+RT_API_ATTRS void InternalDescriptorUnit<DIR>::BlankFill(
+    char *at, std::size_t bytes) {
   switch (internalIoCharKind) {
   case 2:
-    std::fill_n(reinterpret_cast<char16_t *>(at), bytes / 2,
+    Fortran::runtime::fill_n(reinterpret_cast<char16_t *>(at), bytes / 2,
         static_cast<char16_t>(' '));
     break;
   case 4:
-    std::fill_n(reinterpret_cast<char32_t *>(at), bytes / 4,
+    Fortran::runtime::fill_n(reinterpret_cast<char32_t *>(at), bytes / 4,
         static_cast<char32_t>(' '));
     break;
   default:
-    std::fill_n(at, bytes, ' ');
+    Fortran::runtime::fill_n(at, bytes, ' ');
     break;
   }
 }
 
 template <Direction DIR>
-void InternalDescriptorUnit<DIR>::BlankFillOutputRecord() {
+RT_API_ATTRS void InternalDescriptorUnit<DIR>::BlankFillOutputRecord() {
   if constexpr (DIR == Direction::Output) {
     if (furthestPositionInRecord <
         recordLength.value_or(furthestPositionInRecord)) {
@@ -149,18 +147,21 @@ void InternalDescriptorUnit<DIR>::BlankFillOutputRecord() {
 }
 
 template <Direction DIR>
-void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
+RT_API_ATTRS void InternalDescriptorUnit<DIR>::BackspaceRecord(
+    IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, currentRecordNumber > 1);
   --currentRecordNumber;
   BeginRecord();
 }
 
 template <Direction DIR>
-std::int64_t InternalDescriptorUnit<DIR>::InquirePos() {
+RT_API_ATTRS std::int64_t InternalDescriptorUnit<DIR>::InquirePos() {
   return (currentRecordNumber - 1) * recordLength.value_or(0) +
       positionInRecord + 1;
 }
 
 template class InternalDescriptorUnit<Direction::Output>;
 template class InternalDescriptorUnit<Direction::Input>;
+
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io

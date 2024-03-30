@@ -1,4 +1,5 @@
 include(BuiltinTests)
+include(CheckIncludeFiles)
 include(CheckCSourceCompiles)
 
 # Make all the tests only check the compiler
@@ -42,6 +43,8 @@ void foo(void)  __arm_streaming_compatible {
   asm(\"smstart\");
 }
 ")
+
+check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 
 if(ANDROID)
   set(OS_NAME "Android")

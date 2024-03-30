@@ -86,7 +86,7 @@ public:
            "close to each other:\n";
     run_perf_in_range(
         myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
-        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 10'000'001, log);
+        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 1'001'001, log);
   }
 
   static void run_diff(Func myFunc, Func otherFunc, const char *logFile) {

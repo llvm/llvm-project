@@ -74,7 +74,7 @@ public:
   StringRef getLineStrSection() const override { return lineStrSection; }
 
   bool isLittleEndian() const override {
-    return ELFT::TargetEndianness == llvm::endianness::little;
+    return ELFT::Endianness == llvm::endianness::little;
   }
 
   std::optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &sec,

@@ -3350,6 +3350,16 @@ void BinaryFunction::fixBranches() {
 
       // Eliminate unnecessary conditional branch.
       if (TSuccessor == FSuccessor) {
+        // FIXME: at the moment, we cannot safely remove static key branches.
+        if (MIB->isDynamicBranch(*CondBranch)) {
+          if (opts::Verbosity) {
+            BC.outs()
+                << "BOLT-INFO: unable to remove redundant dynamic branch in "
+                << *this << '\n';
+          }
+          continue;
+        }
+
         BB->removeDuplicateConditionalSuccessor(CondBranch);
         if (TSuccessor != NextBB)
           BB->addBranchInstruction(TSuccessor);
@@ -3358,8 +3368,13 @@ void BinaryFunction::fixBranches() {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (MIB->isUnsupportedBranch(*CondBranch))
+        if (MIB->isUnsupportedBranch(*CondBranch)) {
+          if (opts::Verbosity) {
+            BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
+                      << '\n';
+          }
           return false;
+        }
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
@@ -3532,7 +3547,7 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   if (!isMultiEntry())
     return nullptr;
 
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   if (hasCFG()) {
     for (BinaryBasicBlock *BB : BasicBlocks) {
       MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
@@ -3565,7 +3580,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return 0;
 
   // Check all secondary entries available as either basic blocks or lables.
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
     if (!EntrySymbol)
@@ -3574,7 +3589,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-  NumEntries = 0;
+  NumEntries = 1;
   for (const std::pair<const uint32_t, MCSymbol *> &KV : Labels) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(KV.second);
     if (!EntrySymbol)

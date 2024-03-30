@@ -673,6 +673,14 @@ public:
   bool matchSDivByConst(MachineInstr &MI);
   void applySDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  bool matchDivByPow2(MachineInstr &MI, bool IsSigned);
+  void applySDivByPow2(MachineInstr &MI);
+  /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  void applyUDivByPow2(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);
@@ -695,10 +703,6 @@ public:
   /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
   bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Match:
-  /// (G_*ADDO x, 0) -> x + no carry out
-  bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
@@ -810,11 +814,14 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addos.
+  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -919,6 +926,7 @@ private:
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src) const;
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 

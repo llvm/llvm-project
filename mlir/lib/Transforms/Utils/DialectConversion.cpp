@@ -279,11 +279,13 @@ public:
     auto &blockOps = block->getOperations();
     while (!blockOps.empty())
       blockOps.remove(blockOps.begin());
-    block->dropAllUses();
-    if (block->getParent())
+    block->dropAllDefinedValueUses();
+    if (block->getParent()) {
       block->erase();
-    else
+    } else {
+      block->dropAllDefinedValueUses();
       delete block;
+    }
   }
 };
 
@@ -1020,8 +1022,8 @@ void BlockTypeConversionRewrite::commit(RewriterBase &rewriter) {
   // Inform the listener about all IR modifications that have already taken
   // place: References to the original block have been replaced with the new
   // block.
-  if (auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-          rewriter.getListener()))
+  if (auto *listener =
+          dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener()))
     for (Operation *op : block->getUsers())
       listener->notifyOperationModified(op);
 
@@ -1123,8 +1125,8 @@ void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
 void ReplaceBlockArgRewrite::rollback() { rewriterImpl.mapping.erase(arg); }
 
 void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
-  auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-      rewriter.getListener());
+  auto *listener =
+      dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener());
 
   // Compute replacement values.
   SmallVector<Value> replacements =

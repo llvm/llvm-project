@@ -471,6 +471,13 @@ private:
 public:
   InstrProfSymtab() = default;
 
+  // Not copyable or movable.
+  // Consider std::unique_ptr for move.
+  InstrProfSymtab(const InstrProfSymtab &) = delete;
+  InstrProfSymtab &operator=(const InstrProfSymtab &) = delete;
+  InstrProfSymtab(InstrProfSymtab &&) = delete;
+  InstrProfSymtab &operator=(InstrProfSymtab &&) = delete;
+
   /// Create InstrProfSymtab from an object file section which
   /// contains function PGO names. When section may contain raw
   /// string data or string data in compressed form. This method
@@ -1055,9 +1062,15 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic;
+  // The lower 32 bits specify the version of the indexed profile.
+  // The most significant 32 bits are reserved to specify the variant types of
+  // the profile.
   uint64_t Version;
   uint64_t Unused; // Becomes unused since version 4
   uint64_t HashType;
+  // This field records the offset of this hash table's metadata (i.e., the
+  // number of buckets and entries), which follows right after the payload of
+  // the entire hash table.
   uint64_t HashOffset;
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;

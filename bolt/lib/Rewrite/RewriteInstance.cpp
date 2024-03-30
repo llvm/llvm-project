@@ -81,8 +81,10 @@ extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
+extern cl::opt<bool> KeepNops;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
+extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 
 cl::opt<bool> AllowStripped("allow-stripped",
@@ -199,10 +201,7 @@ static cl::opt<cl::boolOrDefault> RelocationMode(
     "relocs", cl::desc("use relocations in the binary (default=autodetect)"),
     cl::cat(BoltCategory));
 
-static cl::opt<std::string>
-SaveProfile("w",
-  cl::desc("save recorded profile to a file"),
-  cl::cat(BoltOutputCategory));
+extern cl::opt<std::string> SaveProfile;
 
 static cl::list<std::string>
 SkipFunctionNames("skip-funcs",
@@ -732,6 +731,13 @@ Error RewriteInstance::run() {
   // Skip disassembling if we have a translation table and we are running an
   // aggregation job.
   if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
+    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
+    if (!opts::SaveProfile.empty() ||
+        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      selectFunctionsToProcess();
+      disassembleFunctions();
+      buildFunctionsCFG();
+    }
     processProfileData();
     return Error::success();
   }
@@ -2028,12 +2034,13 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::Lite)
     BC->outs() << "BOLT-INFO: enabling lite mode\n";
 
-  if (!opts::SaveProfile.empty() && BAT->enabledFor(InputFile)) {
-    BC->errs()
-        << "BOLT-ERROR: unable to save profile in YAML format for input "
-           "file processed by BOLT. Please remove -w option and use branch "
-           "profile.\n";
-    exit(1);
+  if (BC->IsLinuxKernel) {
+    if (!opts::KeepNops.getNumOccurrences())
+      opts::KeepNops = true;
+
+    // Linux kernel may resume execution after a trap instruction in some cases.
+    if (!opts::TerminalTrap.getNumOccurrences())
+      opts::TerminalTrap = false;
   }
 }
 
@@ -3126,12 +3133,13 @@ void RewriteInstance::processProfileData() {
     }
   }
 
-  if (!opts::SaveProfile.empty()) {
+  if (!opts::SaveProfile.empty() && !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::SaveProfile);
     PW.writeProfile(*this);
   }
   if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML &&
+      !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::OutputFilename);
     PW.writeProfile(*this);
   }
