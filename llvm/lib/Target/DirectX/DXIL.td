@@ -285,12 +285,15 @@ def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
                          "Returns the reciprocal of the square root of the specified value."
                          "rsqrt(x) = 1 / sqrt(x).",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Round : DXILOpMapping<26, unary, int_round,
+def Round : DXILOpMapping<26, unary, int_roundeven,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Floor : DXILOpMapping<27, unary, int_floor,
                          "Returns the largest integer that is less than or equal to the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Ceil : DXILOpMapping<28, unary, int_ceil,
+                         "Returns the smallest integer that is greater than or equal to the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Trunc : DXILOpMapping<29, unary, int_trunc,
                          "Returns the specified value truncated to the integer component.",

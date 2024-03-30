@@ -1604,7 +1604,7 @@ Error GenericPluginTy::init() {
   GlobalHandler = createGlobalHandler();
   assert(GlobalHandler && "Invalid global handler");
 
-  RPCServer = new RPCServerTy(NumDevices);
+  RPCServer = new RPCServerTy();
   assert(RPCServer && "Invalid RPC server");
 
   return Plugin::success();
