@@ -274,21 +274,17 @@ define i32 @udiv_div_by_180_exact(i32 %x)
 ; SDAG-LABEL: udiv_div_by_180_exact:
 ; SDAG:       // %bb.0:
 ; SDAG-NEXT:    lsr w8, w0, #2
-; SDAG-NEXT:    mov w9, #27671 // =0x6c17
-; SDAG-NEXT:    movk w9, #5825, lsl #16
-; SDAG-NEXT:    umull x8, w8, w9
-; SDAG-NEXT:    lsr x0, x8, #34
-; SDAG-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; SDAG-NEXT:    mov w9, #20389 // =0x4fa5
+; SDAG-NEXT:    movk w9, #42234, lsl #16
+; SDAG-NEXT:    mul w0, w8, w9
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: udiv_div_by_180_exact:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    lsr w8, w0, #2
-; GISEL-NEXT:    mov w9, #27671 // =0x6c17
-; GISEL-NEXT:    movk w9, #5825, lsl #16
-; GISEL-NEXT:    umull x8, w8, w9
-; GISEL-NEXT:    lsr x8, x8, #32
-; GISEL-NEXT:    lsr w0, w8, #2
+; GISEL-NEXT:    mov w9, #20389 // =0x4fa5
+; GISEL-NEXT:    movk w9, #42234, lsl #16
+; GISEL-NEXT:    mul w0, w8, w9
 ; GISEL-NEXT:    ret
 {
   %udiv = udiv exact i32 %x, 180
@@ -299,26 +295,17 @@ define <4 x i32> @udiv_div_by_104_exact(<4 x i32> %x)
 ; SDAG-LABEL: udiv_div_by_104_exact:
 ; SDAG:       // %bb.0:
 ; SDAG-NEXT:    adrp x8, .LCPI8_0
+; SDAG-NEXT:    ushr v0.4s, v0.4s, #3
 ; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
-; SDAG-NEXT:    adrp x8, .LCPI8_1
-; SDAG-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; SDAG-NEXT:    umull v0.2d, v0.2s, v1.2s
-; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI8_1]
-; SDAG-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
-; SDAG-NEXT:    ushl v0.4s, v0.4s, v1.4s
+; SDAG-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: udiv_div_by_104_exact:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI8_1
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI8_1]
 ; GISEL-NEXT:    adrp x8, .LCPI8_0
-; GISEL-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; GISEL-NEXT:    umull v0.2d, v0.2s, v1.2s
+; GISEL-NEXT:    ushr v0.4s, v0.4s, #3
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
-; GISEL-NEXT:    neg v1.4s, v1.4s
-; GISEL-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
-; GISEL-NEXT:    ushl v0.4s, v0.4s, v1.4s
+; GISEL-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; GISEL-NEXT:    ret
 {
   %udiv = udiv exact <4 x i32> %x, <i32 104, i32 72, i32 104, i32 72>
