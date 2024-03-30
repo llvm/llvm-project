@@ -134,4 +134,3 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
 }
 
 #endif // TEST_STD_ATOMICS_ATOMIC_REF_TEST_HELPER_H
-
