@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -29,6 +30,26 @@ struct TestStore {
     a.store(T(3), std::memory_order_seq_cst);
     assert(x == T(3));
     ASSERT_NOEXCEPT(a.store(T(0), std::memory_order_seq_cst));
+
+    // TODO memory_order::relaxed
+
+    // memory_order::seq_cst
+    {
+      auto store_no_arg     = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
+      auto store_with_order = [](std::atomic_ref<T> const& y, T, T new_val) {
+        y.store(new_val, std::memory_order::seq_cst);
+      };
+      auto load = [](std::atomic_ref<T> const& y) { return y.load(); };
+      test_seq_cst<T>(store_no_arg, load);
+      test_seq_cst<T>(store_with_order, load);
+    }
+
+    // memory_order::release
+    {
+      auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val, std::memory_order::release); };
+      auto load  = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::acquire); };
+      test_acquire_release<T>(store, load);
+    }
   }
 };
 

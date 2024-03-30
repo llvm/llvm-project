@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -29,6 +30,10 @@ struct TestConvert {
 
     ASSERT_NOEXCEPT(T(a));
     static_assert(std::is_nothrow_convertible_v<std::atomic_ref<T>, T>);
+
+    auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
+    auto load  = [](std::atomic_ref<T> const& y) { return static_cast<T>(y); };
+    test_seq_cst<T>(store, load);
   }
 };
 

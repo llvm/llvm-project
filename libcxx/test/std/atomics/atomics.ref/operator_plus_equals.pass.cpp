@@ -17,6 +17,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -50,6 +51,13 @@ struct TestOperatorPlusEquals {
       ASSERT_NOEXCEPT(a += 0);
     } else {
       static_assert(std::is_void_v<T>);
+    }
+
+    // memory_order::seq_cst
+    {
+      auto plus_equals = [](std::atomic_ref<T> const& x, T old_val, T new_val) { x += (new_val - old_val); };
+      auto load        = [](std::atomic_ref<T> const& x) { return x.load(); };
+      test_seq_cst<T>(plus_equals, load);
     }
   }
 };

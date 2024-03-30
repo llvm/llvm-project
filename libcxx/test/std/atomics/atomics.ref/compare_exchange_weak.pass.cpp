@@ -16,6 +16,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -69,6 +70,150 @@ struct TestCompareExchangeWeak {
       assert(t == T(2));
 
       ASSERT_NOEXCEPT(a.compare_exchange_weak(t, T(2), std::memory_order_release, std::memory_order_relaxed));
+    }
+
+    // success memory_order::release
+    {
+      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::release, std::memory_order::relaxed)) {
+        }
+      };
+
+      auto load = [](std::atomic_ref<T> const& x) { return x.load(std::memory_order::acquire); };
+      test_acquire_release<T>(store, load);
+
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::release)) {
+        }
+      };
+      test_acquire_release<T>(store_one_arg, load);
+    }
+
+    // success memory_order::acquire
+    {
+      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
+      auto load  = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::acquire, std::memory_order::relaxed)) {
+        }
+        return val;
+      };
+      test_acquire_release<T>(store, load);
+
+      auto load_one_arg = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::acquire)) {
+        }
+        return val;
+      };
+      test_acquire_release<T>(store, load_one_arg);
+    }
+
+    // success memory_order::acq_rel
+    {
+      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::acq_rel, std::memory_order::relaxed)) {
+        }
+      };
+      auto load = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::acq_rel, std::memory_order::relaxed)) {
+        }
+        return val;
+      };
+      test_acquire_release<T>(store, load);
+
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::acq_rel)) {
+        }
+      };
+      auto load_one_arg = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::acq_rel)) {
+        }
+        return val;
+      };
+      test_acquire_release<T>(store_one_arg, load_one_arg);
+    }
+
+    // success memory_order::seq_cst
+    {
+      auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order::relaxed)) {
+        }
+      };
+      auto load = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order::relaxed)) {
+        }
+        return val;
+      };
+      test_seq_cst<T>(store, load);
+
+      auto store_one_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        // could fail spuriously, so put it in a loop
+        while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst)) {
+        }
+      };
+      auto load_one_arg = [](std::atomic_ref<T> const& x) {
+        auto val = x.load(std::memory_order::relaxed);
+        while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst)) {
+        }
+        return val;
+      };
+      test_seq_cst<T>(store_one_arg, load_one_arg);
+    }
+
+    // failure memory_order::acquire
+    {
+      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
+      auto load  = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        T unexpected(T(255));
+        bool r =
+            x.compare_exchange_weak(unexpected, unexpected, std::memory_order::relaxed, std::memory_order::acquire);
+        assert(!r);
+        return result;
+      };
+      test_acquire_release<T>(store, load);
+
+      auto load_one_arg = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        T unexpected(T(255));
+        bool r = x.compare_exchange_weak(unexpected, unexpected, std::memory_order::acquire);
+        assert(!r);
+        return result;
+      };
+      test_acquire_release<T>(store, load_one_arg);
+
+      // acq_rel replaced by acquire
+      auto load_one_arg_acq_rel = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        T unexpected(T(255));
+        bool r = x.compare_exchange_weak(unexpected, unexpected, std::memory_order::acq_rel);
+        assert(!r);
+        return result;
+      };
+      test_acquire_release<T>(store, load_one_arg_acq_rel);
+    }
+
+    // failure memory_order::seq_cst
+    {
+      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::seq_cst); };
+      auto load  = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        T unexpected(T(255));
+        bool r =
+            x.compare_exchange_weak(unexpected, unexpected, std::memory_order::relaxed, std::memory_order::seq_cst);
+        assert(!r);
+        return result;
+      };
+      test_seq_cst<T>(store, load);
     }
   }
 };

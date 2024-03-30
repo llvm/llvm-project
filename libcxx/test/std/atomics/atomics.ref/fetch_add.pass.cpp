@@ -17,6 +17,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -71,6 +72,26 @@ struct TestFetchAdd {
       }
     } else {
       static_assert(std::is_void_v<T>);
+    }
+
+    // memory_order::release
+    {
+      auto fetch_add = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        x.fetch_add(new_val - old_val, std::memory_order::release);
+      };
+      auto load = [](std::atomic_ref<T> const& x) { return x.load(std::memory_order::acquire); };
+      test_acquire_release<T>(fetch_add, load);
+    }
+
+    // memory_order::seq_cst
+    {
+      auto fetch_add_no_arg = [](std::atomic_ref<T> const& x, T old_val, T new_val) { x.fetch_add(new_val - old_val); };
+      auto fetch_add_with_order = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
+        x.fetch_add(new_val - old_val, std::memory_order::seq_cst);
+      };
+      auto load = [](std::atomic_ref<T> const& x) { return x.load(); };
+      test_seq_cst<T>(fetch_add_no_arg, load);
+      test_seq_cst<T>(fetch_add_with_order, load);
     }
   }
 };

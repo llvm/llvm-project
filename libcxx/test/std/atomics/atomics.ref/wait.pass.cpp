@@ -15,6 +15,7 @@
 
 #include "atomic_helpers.h"
 #include "make_test_thread.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -44,6 +45,34 @@ struct TestWait {
     assert(a.load() == T(5));
     t2.join();
     ASSERT_NOEXCEPT(a.wait(T(0), std::memory_order_seq_cst));
+
+    // memory_order::acquire
+    {
+      auto store = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val, std::memory_order::release); };
+      auto load  = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        x.wait(T(255), std::memory_order::acquire);
+        return result;
+      };
+      test_acquire_release<T>(store, load);
+    }
+
+    // memory_order::seq_cst
+    {
+      auto store       = [](std::atomic_ref<T> const& x, T, T new_val) { x.store(new_val); };
+      auto load_no_arg = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        x.wait(T(255));
+        return result;
+      };
+      auto load_with_order = [](std::atomic_ref<T> const& x) {
+        auto result = x.load(std::memory_order::relaxed);
+        x.wait(T(255), std::memory_order::seq_cst);
+        return result;
+      };
+      test_seq_cst<T>(store, load_no_arg);
+      test_seq_cst<T>(store, load_with_order);
+    }
   }
 };
 

@@ -14,6 +14,7 @@
 #include <type_traits>
 
 #include "atomic_helpers.h"
+#include "test_helper.h"
 #include "test_macros.h"
 
 template <typename T>
@@ -29,6 +30,10 @@ struct TestAssign {
     static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
 
     static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
+
+    auto assign = [](std::atomic_ref<T> const& y, T, T new_val) { y = new_val; };
+    auto load   = [](std::atomic_ref<T> const& y) { return y.load(); };
+    test_seq_cst<T>(assign, load);
   }
 };
 
