@@ -603,28 +603,6 @@ private:
   typename __writer_selector<_OutIt, _CharT>::type __writer_;
 };
 
-/// A buffer that counts the number of insertions.
-///
-/// Since \ref formatted_size only needs to know the size, the output itself is
-/// discarded.
-template <__fmt_char_type _CharT>
-class _LIBCPP_TEMPLATE_VIS __formatted_size_buffer {
-public:
-  _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return __output_.__make_output_iterator(); }
-
-  _LIBCPP_HIDE_FROM_ABI void __flush(const _CharT*, size_t __n) { __size_ += __n; }
-
-  _LIBCPP_HIDE_FROM_ABI size_t __result() && {
-    __output_.__flush(0);
-    return __size_;
-  }
-
-private:
-  __internal_storage<_CharT> __storage_;
-  __output_buffer<_CharT> __output_{__storage_.__begin(), __storage_.__buffer_size, this};
-  size_t __size_{0};
-};
-
 // ***** ***** ***** LLVM-20 classes ***** ***** *****
 
 // A dynamically growing buffer.
@@ -815,6 +793,35 @@ public:
 
 private:
   __max_output_size __max_output_size_;
+};
+
+// A buffer that counts the number of insertions.
+//
+// Since formatted_size only needs to know the size, the output itself is
+// discarded.
+template <__fmt_char_type _CharT>
+class _LIBCPP_TEMPLATE_VIS __formatted_size_buffer : private __output_buffer<_CharT> {
+public:
+  using _Base = __output_buffer<_CharT>;
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __formatted_size_buffer()
+      : _Base{nullptr, 0, __prepare_write, std::addressof(__max_output_size_)} {}
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return _Base::__make_output_iterator(); }
+
+  // This function does not need to be r-value qualified, however this is
+  // consistent with similar objects.
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t __result() && { return __max_output_size_.__code_units_written(); }
+
+private:
+  __max_output_size __max_output_size_{0};
+
+  _LIBCPP_HIDE_FROM_ABI static void
+  __prepare_write([[maybe_unused]] __output_buffer<_CharT>& __buffer, [[maybe_unused]] size_t __size_hint) {
+    // Note this function does not satisfy the requirement of giving a 1 code unit buffer.
+    _LIBCPP_ASSERT_INTERNAL(
+        false, "Since __max_output_size_.__max_size_ == 0 there should never be call to this function.");
+  }
 };
 
 // ***** ***** ***** LLVM-19 and LLVM-20 class ***** ***** *****
