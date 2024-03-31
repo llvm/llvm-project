@@ -20,7 +20,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> VAArgExpr;
+const clang::ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                                 VAArgExpr>
+    VAArgExpr;
 
 static constexpr StringRef AllowedVariadics[] = {
     // clang-format off

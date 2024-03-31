@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseEmplaceCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
@@ -76,10 +78,6 @@ AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
     return Node.getNumArgs() == Primary->getTemplatedDecl()->getNumParams();
 
   return Node.getNumArgs() == Node.getMethodDecl()->getNumParams();
-}
-
-AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
-  return Node.hasExplicitTemplateArgs();
 }
 
 // Helper Matcher which applies the given QualType Matcher either directly or by
@@ -221,7 +219,7 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   auto MakeTuple = ignoringImplicit(
       callExpr(callee(expr(ignoringImplicit(declRefExpr(
-                   unless(hasExplicitTemplateArgs()),
+                   unless(matchers::hasExplicitTemplateArgs()),
                    to(functionDecl(hasAnyName(TupleMakeFunctions))))))))
           .bind("make"));
 

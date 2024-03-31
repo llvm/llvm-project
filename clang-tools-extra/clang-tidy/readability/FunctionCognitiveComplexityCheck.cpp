@@ -202,9 +202,9 @@ void CognitiveComplexity::account(SourceLocation Loc, unsigned short Nesting,
   Total += Increase;
 }
 
-class FunctionASTVisitor final
-    : public RecursiveASTVisitor<FunctionASTVisitor> {
-  using Base = RecursiveASTVisitor<FunctionASTVisitor>;
+class CognitiveComplexityFunctionASTVisitor final
+    : public RecursiveASTVisitor<CognitiveComplexityFunctionASTVisitor> {
+  using Base = RecursiveASTVisitor<CognitiveComplexityFunctionASTVisitor>;
 
   // If set to true, macros are ignored during analysis.
   const bool IgnoreMacros;
@@ -219,7 +219,7 @@ class FunctionASTVisitor final
   std::stack<OBO, SmallVector<OBO, 4>> BinaryOperatorsStack;
 
 public:
-  explicit FunctionASTVisitor(const bool IgnoreMacros)
+  explicit CognitiveComplexityFunctionASTVisitor(const bool IgnoreMacros)
       : IgnoreMacros(IgnoreMacros) {}
 
   bool traverseStmtWithIncreasedNestingLevel(Stmt *Node) {
@@ -453,12 +453,13 @@ public:
   // The parameter MainAnalyzedFunction is needed to differentiate between the
   // cases where TraverseDecl() is the entry point from
   // FunctionCognitiveComplexityCheck::check() and the cases where it was called
-  // from the FunctionASTVisitor itself. Explanation: if we get a function
-  // definition (e.g. constructor, destructor, method), the Cognitive Complexity
-  // specification states that the Nesting level shall be increased. But if this
-  // function is the entry point, then the Nesting level should not be
-  // increased. Thus that parameter is there and is used to fall-through
-  // directly to traversing if this is the main function that is being analyzed.
+  // from the CognitiveComplexityFunctionASTVisitor itself. Explanation: if we
+  // get a function definition (e.g. constructor, destructor, method), the
+  // Cognitive Complexity specification states that the Nesting level shall be
+  // increased. But if this function is the entry point, then the Nesting level
+  // should not be increased. Thus that parameter is there and is used to
+  // fall-through directly to traversing if this is the main function that is
+  // being analyzed.
   bool TraverseDecl(Decl *Node, bool MainAnalyzedFunction = false) {
     if (!Node || MainAnalyzedFunction)
       return Base::TraverseDecl(Node);
@@ -515,7 +516,7 @@ void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionCognitiveComplexityCheck::check(
     const MatchFinder::MatchResult &Result) {
 
-  FunctionASTVisitor Visitor(IgnoreMacros);
+  CognitiveComplexityFunctionASTVisitor Visitor(IgnoreMacros);
   SourceLocation Loc;
 
   const auto *TheDecl = Result.Nodes.getNodeAs<FunctionDecl>("func");

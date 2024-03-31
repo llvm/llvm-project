@@ -139,8 +139,8 @@ void UpgradeDurationConversionsCheck::check(
 
   // We gather source locations from template matches not in template
   // instantiations for future matches.
-  internal::Matcher<Stmt> IsInsideTemplate =
-      hasAncestor(decl(anyOf(classTemplateDecl(), functionTemplateDecl())));
+  auto IsInsideTemplate = stmt(
+      hasAncestor(decl(anyOf(classTemplateDecl(), functionTemplateDecl()))));
   if (!match(IsInsideTemplate, *ArgExpr, *Result.Context).empty())
     MatchedTemplateLocations.insert(Loc);
 
