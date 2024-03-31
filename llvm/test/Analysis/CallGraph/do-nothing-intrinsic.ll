@@ -5,7 +5,7 @@ define void @main() personality i8 0 {
   invoke void @llvm.donothing()
           to label %ret unwind label %unw
 unw:
-  %tmp = landingpad i8 cleanup
+  %tmp = landingpad { ptr, i8 } cleanup
   br label %ret
 ret:
   ret void

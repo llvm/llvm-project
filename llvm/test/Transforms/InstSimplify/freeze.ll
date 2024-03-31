@@ -269,21 +269,23 @@ define ptr @call_noundef_ptr(ptr %ptr) {
 define ptr @invoke_noundef_ptr(ptr %ptr) personality i8 1 {
 ; CHECK-LABEL: @invoke_noundef_ptr(
 ; CHECK-NEXT:    invoke void @f3(ptr noundef [[PTR:%.*]])
-; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ; CHECK:       unwind:
-; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume ptr [[PTR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[SPTR:%.*]] = insertvalue { ptr, i32 } { ptr undef, i32 1 }, ptr [[PTR]], 0
+; CHECK-NEXT:    resume { ptr, i32 } [[SPTR]]
 ;
   %q = freeze ptr %ptr
   invoke void @f3(ptr noundef %ptr) to label %normal unwind label %unwind
 normal:
   ret ptr %q
 unwind:
-  landingpad ptr cleanup
-  resume ptr %q
+  landingpad { ptr, i32 } cleanup
+  %sptr = insertvalue { ptr, i32 } { ptr undef, i32 1 }, ptr %q, 0
+  resume { ptr, i32 } %sptr
 }
 
 define ptr @cmpxchg_ptr(ptr %ptr) {
@@ -443,7 +445,7 @@ EXIT:
 define i32 @brcond_switch(i32 %x) {
 ; CHECK-LABEL: @brcond_switch(
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
+; CHECK-NEXT:      i32 0, label [[A:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 [[X]]

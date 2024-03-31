@@ -68,7 +68,7 @@ define void @g0(i32* %ptr) personality i8 3 {
 ; CHECK: invoke void @callee0() [ "foo"(i32 42, i64 100, i32 %x), "bar"(float  0.000000e+00, i64 100, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -84,7 +84,7 @@ define void @g1(i32* %ptr) personality i8 3 {
 ; CHECK: invoke void @callee0(){{$}}
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 
 normal:
@@ -92,7 +92,7 @@ normal:
 ; CHECK: invoke void @callee0() [ "foo"() ]
 
 exception1:
-  %cleanup1 = landingpad i8 cleanup
+  %cleanup1 = landingpad { ptr, i8 } cleanup
   br label %normal1
 
 normal1:
@@ -100,7 +100,7 @@ normal1:
 ; CHECK: invoke void @callee0() [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception2:
-  %cleanup2 = landingpad i8 cleanup
+  %cleanup2 = landingpad { ptr, i8 } cleanup
   br label %normal2
 
 normal2:
@@ -114,7 +114,7 @@ define void @g2(i32* %ptr) personality i8 3 {
 ; CHECK: invoke void @callee0() [ "foo"() ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -129,7 +129,7 @@ define void @g3(i32* %ptr) personality i8 3 {
 ; CHECK: invoke void @callee0() [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -145,7 +145,7 @@ define void @g4(i32* %ptr) personality i8 3 {
 ; CHECK: invoke void @callee1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
 
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void

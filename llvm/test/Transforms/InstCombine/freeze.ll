@@ -392,7 +392,7 @@ define i32 @freeze_invoke_use_in_phi(i1 %c) personality ptr undef {
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[INVOKE_CONT]]
 ; CHECK:       invoke.unwind:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ;
@@ -408,7 +408,7 @@ invoke.cont:
   br label %invoke.cont
 
 invoke.unwind:
-  landingpad i8 cleanup
+  landingpad { ptr, i8 } cleanup
   unreachable
 }
 
@@ -425,7 +425,7 @@ define i32 @freeze_invoke_use_after_phi(i1 %c) personality ptr undef {
 ; CHECK-NEXT:    call void @use_i32(i32 [[PHI]])
 ; CHECK-NEXT:    br label [[INVOKE_CONT]]
 ; CHECK:       invoke.unwind:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ;
@@ -442,7 +442,7 @@ invoke.cont:
   br label %invoke.cont
 
 invoke.unwind:
-  landingpad i8 cleanup
+  landingpad { ptr, i8 } cleanup
   unreachable
 }
 
@@ -986,7 +986,7 @@ define void @fold_phi_invoke_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
@@ -1004,7 +1004,7 @@ loop:
   br i1 %cond, label %loop, label %exit
 
 unwind:
-  landingpad i8 cleanup
+  landingpad { ptr, i8 } cleanup
   unreachable
 
 exit:
@@ -1022,7 +1022,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad i8
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
@@ -1040,7 +1040,7 @@ loop:
   br i1 %cond, label %loop, label %exit
 
 unwind:
-  landingpad i8 cleanup
+  landingpad { ptr, i8 } cleanup
   unreachable
 
 exit:

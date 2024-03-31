@@ -19,7 +19,7 @@ success:
     ret void
 
 failure:
-    landingpad {}
+    landingpad { ptr, i32 }
         cleanup
     ret void
 }
