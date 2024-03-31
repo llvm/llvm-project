@@ -224,8 +224,7 @@ LogicalResult emitc::CallOpaqueOp::verify() {
     }
   }
 
-  if (llvm::any_of(getResultTypes(),
-                   [](Type type) { return isa<ArrayType>(type); })) {
+  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
     return emitOpError() << "cannot return array type";
   }
 
