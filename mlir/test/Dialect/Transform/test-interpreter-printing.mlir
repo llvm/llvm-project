@@ -4,14 +4,10 @@
 // RUN:   --mlir-print-debuginfo | FileCheck %s --check-prefix=CHECK-LOC
 
 func.func @nested_ops() {
-  "test.foo"() ({
-    "test.foo"() ({
-      "test.qux"() ({
-        // expected-error @below{{fail_to_verify is set}}
-        "test.baz"() ({
-          "test.bar"() : () -> ()
-        }) : () -> ()
-      }) : () -> ()
+  "test.qux"() ({
+    // expected-error @below{{fail_to_verify is set}}
+    "test.baz"() ({
+      "test.bar"() : () -> ()
     }) : () -> ()
   }) : () -> ()
 }
