@@ -74,7 +74,7 @@ class Polynomial {
 public:
   Polynomial() = delete;
 
-  Polynomial(const llvm::SmallVector<Monomial>& terms) : terms(terms) {};
+  Polynomial(const llvm::SmallVector<Monomial> &terms) : terms(terms){};
 
   static Polynomial fromMonomials(ArrayRef<Monomial> monomials);
 
@@ -83,8 +83,12 @@ public:
   static Polynomial fromCoefficients(ArrayRef<int64_t> coeffs);
 
   explicit operator bool() const { return !terms.empty(); }
-  bool operator==(const Polynomial& other) const { return other.terms == terms; }
-  bool operator!=(const Polynomial& other) const { return !(other.terms == terms); }
+  bool operator==(const Polynomial &other) const {
+    return other.terms == terms;
+  }
+  bool operator!=(const Polynomial &other) const {
+    return !(other.terms == terms);
+  }
 
   // Prints polynomial to 'os'.
   void print(raw_ostream &os) const;
@@ -114,7 +118,7 @@ inline ::llvm::hash_code hash_value(const Monomial &arg) {
                             ::llvm::hash_value(arg.exponent));
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, const Polynomial& polynomial) {
+inline raw_ostream &operator<<(raw_ostream &os, const Polynomial &polynomial) {
   polynomial.print(os);
   return os;
 }
