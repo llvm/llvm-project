@@ -561,8 +561,9 @@ public:
       case NestedNameSpecifier::TypeSpecWithTemplate:
         CurrentTypeRAII Guard(
             *this,
-            QualType(NNS->getAsType(),
-                     /*Quals=*/0), // Do we need cv-qualifiers on type specifiers?
+            QualType(
+                NNS->getAsType(),
+                /*Quals=*/0), // Do we need cv-qualifiers on type specifiers?
             ShouldAddLinksToTagTypes);
         Visit(NNS->getAsType());
         addLabel("::");
