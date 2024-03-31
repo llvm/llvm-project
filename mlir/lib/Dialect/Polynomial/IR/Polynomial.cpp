@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 
-#include "PolynomialDetail.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
@@ -19,39 +18,26 @@
 namespace mlir {
 namespace polynomial {
 
-MLIRContext *Polynomial::getContext() const { return terms->context; }
-
-ArrayRef<Monomial> Polynomial::getTerms() const { return terms->terms(); }
-
-Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials,
-                                     MLIRContext *context) {
-  auto assignCtx = [context](detail::PolynomialStorage *storage) {
-    storage->context = context;
-  };
-
+Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials) {
   // A polynomial's terms are canonically stored in order of increasing degree.
-  auto monomialsCopy = llvm::OwningArrayRef<Monomial>(monomials);
+  auto monomialsCopy = llvm::SmallVector<Monomial>(monomials);
   std::sort(monomialsCopy.begin(), monomialsCopy.end());
-
-  StorageUniquer &uniquer = context->getAttributeUniquer();
-  return Polynomial(uniquer.get<detail::PolynomialStorage>(
-      assignCtx, monomials.size(), monomialsCopy));
+  return Polynomial(monomialsCopy);
 }
 
-Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs,
-                                        MLIRContext *context) {
+Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs) {
   llvm::SmallVector<Monomial> monomials;
   monomials.reserve(coeffs.size());
   for (size_t i = 0; i < coeffs.size(); i++) {
     monomials.emplace_back(coeffs[i], i);
   }
-  return Polynomial::fromMonomials(monomials, context);
+  return Polynomial::fromMonomials(monomials);
 }
 
 void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
                        ::llvm::StringRef exponentiation) const {
   bool first = true;
-  for (const auto &term : terms->terms()) {
+  for (const auto &term : terms) {
     if (first) {
       first = false;
     } else {
@@ -88,10 +74,8 @@ std::string Polynomial::toIdentifier() const {
 }
 
 unsigned Polynomial::getDegree() const {
-  return terms->terms().back().exponent.getZExtValue();
+  return terms.back().exponent.getZExtValue();
 }
 
 } // namespace polynomial
 } // namespace mlir
-
-MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::polynomial::detail::PolynomialStorage)

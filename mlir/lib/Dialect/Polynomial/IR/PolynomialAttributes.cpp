@@ -149,8 +149,8 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
             vars);
   }
 
-  Polynomial poly = Polynomial::fromMonomials(monomials, parser.getContext());
-  return PolynomialAttr::get(poly);
+  Polynomial poly = Polynomial::fromMonomials(monomials);
+  return PolynomialAttr::get(parser.getContext(), poly);
 }
 
 void RingAttr::print(AsmPrinter &p) const {
@@ -176,7 +176,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseComma()))
     return {};
 
-  std::optional<IntegerAttr> coefficientModulusAttr = std::nullopt;
+  IntegerAttr coefficientModulusAttr = nullptr;
   if (succeeded(parser.parseKeyword("coefficientModulus"))) {
     if (failed(parser.parseEqual()))
       return {};
@@ -200,7 +200,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
       return {};
   }
 
-  std::optional<PolynomialAttr> polyAttr = std::nullopt;
+  PolynomialAttr polyAttr = nullptr;
   if (succeeded(parser.parseKeyword("polynomialModulus"))) {
     if (failed(parser.parseEqual()))
       return {};

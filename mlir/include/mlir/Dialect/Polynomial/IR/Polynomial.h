@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 
@@ -26,10 +27,6 @@ namespace polynomial {
 /// coefficients. This may be relaxed in the future, but it seems unlikely one
 /// would want to specify 128-bit polynomials statically in the source code.
 constexpr unsigned apintBitWidth = 64;
-
-namespace detail {
-struct PolynomialStorage;
-} // namespace detail
 
 /// A class representing a monomial of a single-variable polynomial with integer
 /// coefficients.
@@ -67,8 +64,7 @@ public:
   APInt exponent;
 };
 
-/// A single-variable polynomial with integer coefficients. Polynomials are
-/// immutable and uniqued.
+/// A single-variable polynomial with integer coefficients.
 ///
 /// Eg: x^1024 + x + 1
 ///
@@ -76,24 +72,19 @@ public:
 /// it is used consistently throughout the polynomial.
 class Polynomial {
 public:
-  using ImplType = detail::PolynomialStorage;
+  Polynomial() = delete;
 
-  constexpr Polynomial() = default;
-  explicit Polynomial(ImplType *terms) : terms(terms) {}
+  Polynomial(const llvm::SmallVector<Monomial>& terms) : terms(terms) {};
 
-  static Polynomial fromMonomials(ArrayRef<Monomial> monomials,
-                                  MLIRContext *context);
+  static Polynomial fromMonomials(ArrayRef<Monomial> monomials);
 
   /// Returns a polynomial with coefficients given by `coeffs`. The value
   /// coeffs[i] is converted to a monomial with exponent i.
-  static Polynomial fromCoefficients(ArrayRef<int64_t> coeffs,
-                                     MLIRContext *context);
+  static Polynomial fromCoefficients(ArrayRef<int64_t> coeffs);
 
-  MLIRContext *getContext() const;
-
-  explicit operator bool() const { return terms != nullptr; }
-  bool operator==(Polynomial other) const { return other.terms == terms; }
-  bool operator!=(Polynomial other) const { return !(other.terms == terms); }
+  explicit operator bool() const { return !terms.empty(); }
+  bool operator==(const Polynomial& other) const { return other.terms == terms; }
+  bool operator!=(const Polynomial& other) const { return !(other.terms == terms); }
 
   // Prints polynomial to 'os'.
   void print(raw_ostream &os) const;
@@ -104,20 +95,18 @@ public:
   // Prints polynomial so that it can be used as a valid identifier
   std::string toIdentifier() const;
 
-  // A polynomial's terms are canonically stored in order of increasing degree.
-  ArrayRef<Monomial> getTerms() const;
-
   unsigned getDegree() const;
 
   friend ::llvm::hash_code hash_value(Polynomial arg);
 
 private:
-  ImplType *terms = nullptr;
+  // The monomial terms for this polynomial.
+  SmallVector<Monomial> terms;
 };
 
 // Make Polynomial hashable.
 inline ::llvm::hash_code hash_value(Polynomial arg) {
-  return ::llvm::hash_value(arg.terms);
+  return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
 }
 
 inline ::llvm::hash_code hash_value(const Monomial &arg) {
@@ -125,38 +114,12 @@ inline ::llvm::hash_code hash_value(const Monomial &arg) {
                             ::llvm::hash_value(arg.exponent));
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, Polynomial polynomial) {
+inline raw_ostream &operator<<(raw_ostream &os, const Polynomial& polynomial) {
   polynomial.print(os);
   return os;
 }
 
 } // namespace polynomial
 } // namespace mlir
-
-namespace llvm {
-
-// Polynomials hash just like pointers
-template <>
-struct DenseMapInfo<mlir::polynomial::Polynomial> {
-  static mlir::polynomial::Polynomial getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::polynomial::Polynomial(
-        static_cast<mlir::polynomial::Polynomial::ImplType *>(pointer));
-  }
-  static mlir::polynomial::Polynomial getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::polynomial::Polynomial(
-        static_cast<mlir::polynomial::Polynomial::ImplType *>(pointer));
-  }
-  static unsigned getHashValue(mlir::polynomial::Polynomial val) {
-    return mlir::polynomial::hash_value(val);
-  }
-  static bool isEqual(mlir::polynomial::Polynomial lhs,
-                      mlir::polynomial::Polynomial rhs) {
-    return lhs == rhs;
-  }
-};
-
-} // namespace llvm
 
 #endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_

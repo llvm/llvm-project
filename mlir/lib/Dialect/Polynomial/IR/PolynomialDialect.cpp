@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 
-#include "PolynomialDetail.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialOps.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialTypes.h"
@@ -39,8 +38,4 @@ void PolynomialDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Polynomial/IR/PolynomialOps.cpp.inc"
       >();
-
-  getContext()
-      ->getAttributeUniquer()
-      .registerParametricStorageType<detail::PolynomialStorage>();
 }

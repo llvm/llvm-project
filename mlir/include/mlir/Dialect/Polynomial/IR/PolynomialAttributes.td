@@ -22,16 +22,7 @@ def Polynomial_PolynomialAttr : Polynomial_Attr<"Polynomial", "polynomial"> {
   let description = [{
      #poly = #polynomial.poly<x**1024 + 1>
   }];
-
   let parameters = (ins "Polynomial":$polynomial);
-
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "Polynomial":$polynomial), [{
-      return $_get(polynomial.getContext(), polynomial);
-    }]>
-  ];
-
-  let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -74,8 +65,8 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
   let parameters = (ins
     Builtin_TypeAttr: $coefficientType,
-    OptionalParameter<"std::optional<IntegerAttr>">: $coefficientModulus,
-    OptionalParameter<"std::optional<PolynomialAttr>">: $polynomialModulus
+    OptionalParameter<"IntegerAttr">: $coefficientModulus,
+    OptionalParameter<"PolynomialAttr">: $polynomialModulus
   );
 
   let hasCustomAssemblyFormat = 1;
