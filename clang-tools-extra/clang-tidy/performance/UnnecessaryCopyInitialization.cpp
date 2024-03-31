@@ -232,7 +232,7 @@ UnnecessaryCopyInitialization::UnnecessaryCopyInitialization(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom = [this](const internal::Matcher<Expr> &CopyCtorArg) {
+  auto LocalVarCopiedFrom = [this](const auto &CopyCtorArg) {
     return compoundStmt(
                forEachDescendant(
                    declStmt(

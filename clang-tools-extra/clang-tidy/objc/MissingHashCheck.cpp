@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MissingHashCheck.h"
+#include "ObjcMatcher.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -15,12 +16,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::objc {
 
 namespace {
-
-AST_MATCHER_P(ObjCImplementationDecl, hasInterface,
-              ast_matchers::internal::Matcher<ObjCInterfaceDecl>, Base) {
-  const ObjCInterfaceDecl *InterfaceDecl = Node.getClassInterface();
-  return Base.matches(*InterfaceDecl, Finder, Builder);
-}
 
 AST_MATCHER_P(ObjCContainerDecl, hasInstanceMethod,
               ast_matchers::internal::Matcher<ObjCMethodDecl>, Base) {

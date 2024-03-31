@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
+#include "LexerUtils.h"
 #include "TypeTraits.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -21,6 +22,10 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 }
 
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
+
+AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
+  return Node.getValue().getZExtValue() > N;
+}
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
   std::optional<bool> IsExpensive =
@@ -35,6 +40,67 @@ AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
 
 AST_MATCHER(QualType, isTriviallyDestructible) {
   return utils::type_traits::isTriviallyDestructible(Node);
+}
+
+AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
+  return Node.hasAnyDependentBases();
+}
+
+AST_MATCHER(CXXMethodDecl, isStaticMethod) { return Node.isStatic(); }
+
+AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
+
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getTemplatedKind() != FunctionDecl::TK_NonTemplate;
+}
+
+AST_MATCHER(CXXMethodDecl, isDependentContext) {
+  return Node.isDependentContext();
+}
+
+AST_MATCHER(CXXMethodDecl, isInsideMacroDefinition) {
+  const ASTContext &Ctxt = Finder->getASTContext();
+  return utils::lexer::insideMacroDefinition(
+      Node.getTypeSourceInfo()->getTypeLoc().getSourceRange(),
+      Ctxt.getSourceManager(), Ctxt.getLangOpts());
+}
+
+AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getCanonicalDecl(), Finder, Builder);
+}
+
+AST_MATCHER(CXXNewExpr, mayThrow) {
+  FunctionDecl *OperatorNew = Node.getOperatorNew();
+  if (!OperatorNew)
+    return false;
+  if (auto *FuncType = OperatorNew->getType()->getAs<FunctionProtoType>())
+    return !FuncType->isNothrow();
+  return false;
+}
+
+AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
+              ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
+  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
+    const CXXCatchStmt *CatchS = Node.getHandler(I);
+    // Check for generic catch handler (match anything).
+    if (CatchS->getCaughtType().isNull())
+      return true;
+    ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+    if (InnerMatcher.matches(CatchS->getCaughtType(), Finder, &Result)) {
+      *Builder = std::move(Result);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Matches declaration reference or member expressions with explicit template
+// arguments.
+AST_POLYMORPHIC_MATCHER(hasExplicitTemplateArgs,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr,
+                                                        MemberExpr)) {
+  return Node.hasExplicitTemplateArgs();
 }
 
 // Returns QualType matcher for references to const.
