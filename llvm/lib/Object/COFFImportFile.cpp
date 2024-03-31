@@ -84,6 +84,27 @@ StringRef COFFImportFile::getExportName() const {
   return name;
 }
 
+Error COFFImportFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
+  switch (Symb.p) {
+  case ImpSymbol:
+    OS << "__imp_";
+    break;
+  case ECAuxSymbol:
+    OS << "__imp_aux_";
+    break;
+  }
+  const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
+  if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
+    if (std::optional<std::string> DemangledName =
+            getArm64ECDemangledFunctionName(Name)) {
+      OS << StringRef(*DemangledName);
+      return Error::success();
+    }
+  }
+  OS << StringRef(Name);
+  return Error::success();
+}
+
 static uint16_t getImgRelRelocation(MachineTypes Machine) {
   switch (Machine) {
   default:
