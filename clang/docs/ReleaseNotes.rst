@@ -310,6 +310,9 @@ Improvements to Clang's diagnostics
 - Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
   Fixes #GH83658.
 
+- New ``-Wformat-signedness`` diagnostic that warn if the format string requires an
+  unsigned argument and the argument is signed and vice versa.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
