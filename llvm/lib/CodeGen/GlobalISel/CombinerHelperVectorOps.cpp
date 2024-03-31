@@ -92,7 +92,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 
   // Fold extractVectorElement(Vector, TOOLARGE) -> undef
   if (IndexC && VectorTy.isFixedVector() &&
-      IndexC->uge(VectorTy.getNumElements()) &&
+      IndexC->getZExtValue() >= VectorTy.getNumElements() &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
     // For fixed-length vectors, it's invalid to extract out-of-range elements.
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
@@ -267,7 +267,7 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
   Register Dst = Extract->getReg(0);
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getLimitedValue()));
+    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getZExtValue()));
   };
 
   return true;
@@ -309,8 +309,9 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
 
   // There is a one-use check. There are more combines on build vectors.
   EVT Ty(getMVTForLLT(VectorTy));
-  if (!MRI.hasOneNonDBGUse(Build->getReg(0)) ||
-      !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
+  if (!MRI.hasOneNonDBGUse(
+          Build->getReg(0) ||
+          !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty)))
     return false;
 
   Register Index = Extract->getIndexReg();
@@ -326,9 +327,15 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   // and the index is const. The combine will succeed.
 
   Register Dst = Extract->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Build->getSourceReg(0));
+
+  // For buildVectorTrunc, the inputs are trunked.
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
+    return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getLimitedValue()));
+    B.buildTrunc(Dst, Build->getSourceReg(MaybeIndex->Value.getZExtValue()));
   };
 
   return true;
