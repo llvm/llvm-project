@@ -279,13 +279,11 @@ public:
     auto &blockOps = block->getOperations();
     while (!blockOps.empty())
       blockOps.remove(blockOps.begin());
-    block->dropAllDefinedValueUses();
-    if (block->getParent()) {
+    block->dropAllUses();
+    if (block->getParent())
       block->erase();
-    } else {
-      block->dropAllDefinedValueUses();
+    else
       delete block;
-    }
   }
 };
 
