@@ -20,6 +20,14 @@ AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
   return Node.getBeginLoc().isValid();
 }
 
+AST_MATCHER_P(clang::TypeLoc, hasType,
+              clang::ast_matchers::internal::Matcher<clang::Type>,
+              InnerMatcher) {
+  const clang::Type *TypeNode = Node.getTypePtr();
+  return TypeNode != nullptr &&
+         InnerMatcher.matches(*TypeNode, Finder, Builder);
+}
+
 AST_MATCHER(clang::RecordDecl, isExternCContext) {
   return Node.isExternCContext();
 }
@@ -51,7 +59,7 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
                                          unless(parmVarDecl())))));
 
   Finder->addMatcher(
-      typeLoc(hasValidBeginLoc(), loc(arrayType()),
+      typeLoc(hasValidBeginLoc(), hasType(arrayType()),
               unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
                            hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(

@@ -94,7 +94,7 @@ static StatementMatcher incrementVarMatcher() {
 }
 
 static StatementMatcher
-arrayConditionMatcher(ast_matchers::internal::Matcher<Expr> LimitExpr) {
+arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
   return binaryOperator(
       anyOf(allOf(hasOperatorName("<"), hasLHS(integerComparisonMatcher()),
                   hasRHS(LimitExpr)),
@@ -209,7 +209,7 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
   // This matcher tests that a declaration is a CXXRecordDecl that has an
   // overloaded operator*(). If the operator*() returns by value instead of by
   // reference then the return type is tagged with DerefByValueResultName.
-  ast_matchers::internal::Matcher<VarDecl> TestDerefReturnsByValue =
+  internal::Matcher<VarDecl> TestDerefReturnsByValue =
       hasType(hasUnqualifiedDesugaredType(
           recordType(hasDeclaration(cxxRecordDecl(hasMethod(cxxMethodDecl(
               hasOverloadedOperatorName("*"),

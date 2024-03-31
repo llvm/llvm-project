@@ -33,11 +33,11 @@ AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
 } // namespace ast_matchers
 namespace tidy::bugprone {
 
-static ast_matchers::internal::Matcher<Stmt>
-loopEndingStmt(ast_matchers::internal::Matcher<Stmt> Internal) {
-  ast_matchers::internal::Matcher<QualType> isNoReturnFunType =
+static internal::Matcher<Stmt>
+loopEndingStmt(internal::Matcher<Stmt> Internal) {
+  internal::Matcher<QualType> isNoReturnFunType =
       ignoringParens(functionType(typeHasNoReturnAttr()));
-  ast_matchers::internal::Matcher<Decl> isNoReturnDecl =
+  internal::Matcher<Decl> isNoReturnDecl =
       anyOf(declHasNoReturnAttr(), functionDecl(hasType(isNoReturnFunType)),
             varDecl(hasType(blockPointerType(pointee(isNoReturnFunType)))));
 

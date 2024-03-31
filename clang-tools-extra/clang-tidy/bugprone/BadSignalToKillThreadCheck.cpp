@@ -25,13 +25,15 @@ void BadSignalToKillThreadCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+static Preprocessor *PP;
+
 void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
   const auto IsSigterm = [](const auto &KeyValue) -> bool {
     return KeyValue.first->getName() == "SIGTERM" &&
            KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
-      [this](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
+      [](Preprocessor::macro_iterator It) -> std::optional<unsigned> {
     if (It == PP->macro_end())
       return std::nullopt;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
@@ -62,8 +64,8 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void BadSignalToKillThreadCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  this->PP = PP;
+    const SourceManager &SM, Preprocessor *Pp, Preprocessor *ModuleExpanderPP) {
+  PP = Pp;
 }
 
 } // namespace clang::tidy::bugprone

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseAutoCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -21,7 +20,6 @@ using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::modernize {
-
 namespace {
 
 const char IteratorDeclStmtId[] = "iterator_decl";
@@ -157,6 +155,14 @@ Matcher<NamedDecl> hasStdContainerName() {
   return hasAnyName(ContainerNames);
 }
 
+/// Matches declaration reference or member expressions with explicit template
+/// arguments.
+AST_POLYMORPHIC_MATCHER(hasExplicitTemplateArgs,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr,
+                                                        MemberExpr)) {
+  return Node.hasExplicitTemplateArgs();
+}
+
 /// Returns a DeclarationMatcher that matches standard iterators nested
 /// inside records with a standard container name.
 DeclarationMatcher standardIterator() {
@@ -232,9 +238,9 @@ StatementMatcher makeDeclWithTemplateCastMatcher() {
   auto ST =
       substTemplateTypeParmType(hasReplacementType(equalsBoundNode("arg")));
 
-  auto ExplicitCall = anyOf(
-      has(memberExpr(matchers::hasExplicitTemplateArgs())),
-      has(ignoringImpCasts(declRefExpr(matchers::hasExplicitTemplateArgs()))));
+  auto ExplicitCall =
+      anyOf(has(memberExpr(hasExplicitTemplateArgs())),
+            has(ignoringImpCasts(declRefExpr(hasExplicitTemplateArgs()))));
 
   auto TemplateArg =
       hasTemplateArgument(0, refersToType(qualType().bind("arg")));
