@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
@@ -415,10 +416,28 @@ class TypeInlayHintLabelPartBuilder
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
                 llvm::function_ref<SourceRange()> SourceRangeGetter) {
-    auto &Name = LabelChunks.emplace_back();
-    llvm::raw_string_ostream OS(Name.value);
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
     NamePrinter(OS);
+    if (!ShouldAddLinksToTagTypes)
+      return addLabel(std::move(Label));
+    auto &Name = LabelChunks.emplace_back();
+    Name.value = std::move(Label);
     Name.location = toLocation(Context.getSourceManager(), SourceRangeGetter());
+  }
+
+  void addLabel(std::string Label) {
+    if (LabelChunks.empty()) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    auto &Back = LabelChunks.back();
+    if (Back.location) {
+      LabelChunks.emplace_back(std::move(Label));
+      return;
+    }
+    // Let's combine the "unclickable" pieces together.
+    Back.value += std::move(Label);
   }
 
   void printTemplateArgumentList(llvm::ArrayRef<TemplateArgument> Args) {
@@ -428,27 +447,41 @@ class TypeInlayHintLabelPartBuilder
       if (PP.SuppressDefaultTemplateArgs && TA.getIsDefaulted())
         continue;
       if (I)
-        LabelChunks.emplace_back(", ");
+        addLabel(", ");
       printTemplateArgument(TA);
     }
   }
 
   void printTemplateArgument(const TemplateArgument &TA) {
-    if (TA.getKind() == TemplateArgument::Pack)
+    switch (TA.getKind()) {
+    case TemplateArgument::Pack:
       return printTemplateArgumentList(TA.pack_elements());
-    if (TA.getKind() == TemplateArgument::Type) {
+    case TemplateArgument::Type: {
       CurrentTypeRAII Guard(*this, TA.getAsType(),
                             /*ShouldAddLinksToTagTypes=*/true);
       return Visit(TA.getAsType().getTypePtr());
     }
-    llvm::raw_string_ostream OS(LabelChunks.emplace_back().value);
+    // TODO: Add support for NTTP arguments.
+    case TemplateArgument::Expression:
+    case TemplateArgument::StructuralValue:
+    case TemplateArgument::Null:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::Integral:
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      break;
+    }
+    std::string Label;
+    llvm::raw_string_ostream OS(Label);
     TA.print(PP, OS, /*IncludeType=*/true);
+    addLabel(std::move(Label));
   }
 
   void
-  processTemplateSpecialization(TemplateName TN,
-                                llvm::ArrayRef<TemplateArgument> Args,
-                                SourceRange TemplateNameRange = SourceRange()) {
+  handleTemplateSpecialization(TemplateName TN,
+                               llvm::ArrayRef<TemplateArgument> Args,
+                               SourceRange TemplateNameRange = SourceRange()) {
     SourceRange Range;
     TemplateDecl *TD = nullptr;
     switch (TN.getKind()) {
@@ -467,39 +500,31 @@ class TypeInlayHintLabelPartBuilder
                return Range;
              });
 
-    LabelChunks.emplace_back("<");
+    addLabel("<");
     printTemplateArgumentList(Args);
-    LabelChunks.emplace_back(">");
+    addLabel(">");
   }
 
 public:
-
-#if 0
-  ~TypeInlayHintLabelPartBuilder() {
-    llvm::errs() << "TypeInlayHintLabelPartBuilder:\n";
-    Current->dump();
-    for (auto &L : LabelChunks)
-      llvm::errs() << L << ", ";
-    llvm::errs() << "\n";
-  }
-#endif
-
   TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
                                 const PrintingPolicy &PP,
                                 bool ShouldAddLinksToTagTypes,
+                                llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
-      : Current(Current), Context(Context), PP(PP), LabelChunks(LabelChunks) {}
-
-  void VisitType(const Type *) {
-    LabelChunks.emplace_back(Current.getAsString(PP));
+      : Current(Current), Context(Context), PP(PP), LabelChunks(LabelChunks) {
+    LabelChunks.reserve(16);
+    if (!Prefix.empty())
+      addLabel(Prefix.str());
   }
+
+  void VisitType(const Type *) { addLabel(Current.getAsString(PP)); }
 
   void VisitTagType(const TagType *TT) {
     if (!ShouldAddLinksToTagTypes)
       return VisitType(TT);
     auto *D = TT->getDecl();
     if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(D))
-      return processTemplateSpecialization(
+      return handleTemplateSpecialization(
           TemplateName(Specialization->getSpecializedTemplate()),
           Specialization->getTemplateArgs().asArray());
     if (auto *RD = dyn_cast<CXXRecordDecl>(D);
@@ -526,9 +551,9 @@ public:
       case NestedNameSpecifier::NamespaceAlias:
       case NestedNameSpecifier::Global:
       case NestedNameSpecifier::Super: {
-        auto &Name = LabelChunks.emplace_back();
-        llvm::raw_string_ostream OS(Name.value);
-        NNS->print(OS, PP);
+        std::string Label;
+        llvm::raw_string_ostream OS(Label);
+        addLabel(std::move(Label));
       } break;
       case NestedNameSpecifier::TypeSpec:
       case NestedNameSpecifier::TypeSpecWithTemplate:
@@ -538,7 +563,7 @@ public:
                      /*Quals=*/0), // Do we need cv-qualifiers on type specifiers?
             ShouldAddLinksToTagTypes);
         Visit(NNS->getAsType());
-        LabelChunks.emplace_back("::");
+        addLabel("::");
         break;
       }
     }
@@ -552,8 +577,8 @@ public:
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
                 TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
       Range = Specialization->getSourceRange();
-    return processTemplateSpecialization(TST->getTemplateName(),
-                                         TST->template_arguments(), Range);
+    return handleTemplateSpecialization(TST->getTemplateName(),
+                                        TST->template_arguments(), Range);
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
@@ -1149,13 +1174,13 @@ private:
 
   void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix,
-                    llvm::ArrayRef<InlayHintLabelPart> Labels,
+                    std::vector<InlayHintLabelPart> Labels,
                     llvm::StringRef Suffix) {
     auto LSPRange = getHintRange(R);
     if (!LSPRange)
       return;
 
-    addInlayHint(*LSPRange, Side, Kind, Prefix, Labels, Suffix);
+    addInlayHint(*LSPRange, Side, Kind, Prefix, std::move(Labels), Suffix);
   }
 
   void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
@@ -1168,8 +1193,9 @@ private:
 
   void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix,
-                    llvm::ArrayRef<InlayHintLabelPart> Labels,
+                    std::vector<InlayHintLabelPart> Labels,
                     llvm::StringRef Suffix) {
+    assert(!Labels.empty() && "Expected non-empty labels");
     // We shouldn't get as far as adding a hint if the category is disabled.
     // We'd like to disable as much of the analysis as possible above instead.
     // Assert in debug mode but add a dynamic check in production.
@@ -1201,16 +1227,21 @@ private:
                                   LSPRange});
       return;
     }
-    std::vector<InlayHintLabelPart> JoinedLabels;
-    JoinedLabels.reserve(Labels.size() + !Prefix.empty() + !Suffix.empty());
-    if (!Prefix.empty())
-      JoinedLabels.push_back(InlayHintLabelPart(Prefix.str()));
-    llvm::copy(Labels, std::back_inserter(JoinedLabels));
-    if (!Suffix.empty())
-      JoinedLabels.push_back(InlayHintLabelPart(Suffix.str()));
+    if (!Prefix.empty()) {
+      if (auto &Label = Labels.front(); !Label.location)
+        Label.value = Prefix.str() + Label.value;
+      else
+        Labels.insert(Labels.begin(), InlayHintLabelPart(Prefix.str()));
+    }
+    if (!Suffix.empty()) {
+      if (auto &Label = Labels.back(); !Label.location)
+        Label.value += Suffix.str();
+      else
+        Labels.push_back(InlayHintLabelPart(Suffix.str()));
+    }
     Results.push_back(InlayHint{LSPPos,
-                                /*label=*/std::move(JoinedLabels),
-                                Kind, PadLeft, PadRight, LSPRange});
+                                /*label=*/std::move(Labels), Kind, PadLeft,
+                                PadRight, LSPRange});
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
@@ -1239,7 +1270,7 @@ private:
     std::vector<InlayHintLabelPart> Chunks;
     TypeInlayHintLabelPartBuilder Builder(
         Desugared, AST, TypeHintPolicy,
-        /*ShouldAddLinksToTagTypes=*/T != Desugared, Chunks);
+        /*ShouldAddLinksToTagTypes=*/T != Desugared, Prefix, Chunks);
     Builder.Visit(Desugared.getTypePtr());
     if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
@@ -1247,11 +1278,13 @@ private:
       Chunks.clear();
       TypeInlayHintLabelPartBuilder Builder(T, AST, TypeHintPolicy,
                                             /*ShouldAddLinksToTagTypes=*/false,
-                                            Chunks);
+                                            Prefix, Chunks);
       Builder.Visit(T.getTypePtr());
     }
     if (shouldPrintTypeHint(Chunks))
-      addInlayHint(R, HintSide::Right, InlayHintKind::Type, Prefix, Chunks,
+      addInlayHint(R, HintSide::Right, InlayHintKind::Type,
+                   /*Prefix=*/"", // We have handled prefixes in the builder.
+                   std::move(Chunks),
                    /*Suffix=*/"");
   }
 

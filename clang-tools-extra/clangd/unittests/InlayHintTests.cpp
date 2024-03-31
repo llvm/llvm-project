@@ -55,6 +55,19 @@ struct ExpectedHint {
   }
 };
 
+struct ExpectedHintLabelPiece {
+  std::string Label;
+  std::optional<std::string> TargetRangeName = std::nullopt;
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                       const ExpectedHintLabelPiece &Hint) {
+    Stream << Hint.Label;
+    if (!Hint.TargetRangeName)
+      Stream << " that points to $" << Hint.TargetRangeName;
+    return Stream;
+  }
+};
+
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
   std::string ResultLabel = arg.joinLabels();
@@ -68,6 +81,34 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
     *result_listener << "range is " << llvm::to_string(arg.range) << " but $"
                      << Expected.RangeName << " is "
                      << llvm::to_string(Code.range(Expected.RangeName));
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P2(HintLabelPieceMatcher, Expected, Code, llvm::to_string(Expected)) {
+  llvm::StringRef ExpectedView(Expected.Label);
+  std::string ResultLabel = arg.value;
+  if (ResultLabel != ExpectedView.trim(" ")) {
+    *result_listener << "label is '" << ResultLabel << "'";
+    return false;
+  }
+  if (!Expected.TargetRangeName && !arg.location)
+    return true;
+  if (Expected.TargetRangeName && !arg.location) {
+    *result_listener << " range " << *Expected.TargetRangeName
+                     << " is expected, but we have nothing.";
+    return false;
+  }
+  if (!Expected.TargetRangeName && arg.location) {
+    *result_listener << " the link points to " << llvm::to_string(arg.location)
+                     << ", but we expect nothing.";
+    return false;
+  }
+  if (arg.location->range != Code.range(*Expected.TargetRangeName)) {
+    *result_listener << "range is " << llvm::to_string(arg.location->range)
+                     << " but $" << *Expected.TargetRangeName << " points to "
+                     << llvm::to_string(Code.range(*Expected.TargetRangeName));
     return false;
   }
   return true;
@@ -1638,25 +1679,108 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
 }
 
 TEST(TypeHints, Links) {
-  TestTU TU = TestTU::withCode(R"cpp(
-struct S {};
-template <class T, unsigned V, class... U>
-struct W {
-};
-enum Kind {
-  K = 1,
-};
-namespace std {
-template <class E> struct vector {};
-template <> struct vector<bool> {};
-} // namespace std
-int main() {
-  auto v = std::vector<bool>();
-})cpp");
+  Annotations Source(R"cpp(
+    $Package[[template <class T, class U>
+    struct Package {]]};
+
+    $SpecializationOfPackage[[template <>
+    struct Package<float, const int> {]]};
+
+    $Container[[template <class... T>
+    struct Container {]]};
+
+    $NttpContainer[[template <auto... T>
+    struct NttpContainer {]]};
+
+    enum struct ScopedEnum {
+      X = 1,
+    };
+
+    enum Enum {
+      E = 2,
+    };
+
+    namespace ns {
+      template <class T>
+      struct Nested {
+        template <class U>
+        struct Class {
+        };
+      };
+    }
+
+    void foo() {
+      auto $1[[C]] = Container<Package<char, int>>();
+      auto $2[[D]] = Container<Package<float, const int>>();
+      auto $3[[E]] = Container<Container<int, int>, long>();
+      auto $4[[F]] = NttpContainer<D, E, ScopedEnum::X, Enum::E>();
+      auto $5[[G]] = ns::Nested<Container<int>>::Class<Package<char, int>>();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
   TU.ExtraArgs.push_back("-std=c++2c");
   auto AST = TU.build();
 
-  hintsOfKind(AST, InlayHintKind::Type);
+  auto HintAt = [&](llvm::ArrayRef<InlayHint> InlayHints,
+                    llvm::StringRef Range) {
+    auto *Hint = llvm::find_if(InlayHints, [&](const InlayHint &InlayHint) {
+      return InlayHint.range == Source.range(Range);
+    });
+    assert(Hint && "No range was found");
+    return llvm::ArrayRef(Hint->label);
+  };
+
+  Config C;
+  C.InlayHints.TypeNameLimit = 0;
+  WithContextValue WithCfg(Config::Key, std::move(C));
+
+  auto Hints = hintsOfKind(AST, InlayHintKind::Type);
+
+  EXPECT_THAT(
+      HintAt(Hints, "1"),
+      ElementsAre(
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{": Container<"}, Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"Package", "Package"},
+                                Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"<char, int>>"},
+                                Source)));
+
+  EXPECT_THAT(
+      HintAt(Hints, "2"),
+      ElementsAre(
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{": Container<"}, Source),
+          HintLabelPieceMatcher(
+              ExpectedHintLabelPiece{"Package", "SpecializationOfPackage"},
+              Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"<float, const int>>"},
+                                Source)));
+
+  EXPECT_THAT(
+      HintAt(Hints, "3"),
+      ElementsAre(
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{": Container<"}, Source),
+          HintLabelPieceMatcher(
+              ExpectedHintLabelPiece{"Container", "Container"}, Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"<int, int>, long>"},
+                                Source)));
+
+  EXPECT_THAT(HintAt(Hints, "4"),
+              ElementsAre(HintLabelPieceMatcher(
+                  ExpectedHintLabelPiece{
+                      ": NttpContainer<D, E, ScopedEnum::X, Enum::E>"},
+                  Source)));
+  EXPECT_THAT(
+      HintAt(Hints, "5"),
+      ElementsAre(
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{": Nested<"}, Source),
+          HintLabelPieceMatcher(
+              ExpectedHintLabelPiece{"Container", "Container"}, Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"<int>>::Class<"},
+                                Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"Package", "Package"},
+                                Source),
+          HintLabelPieceMatcher(ExpectedHintLabelPiece{"<char, int>>"},
+                                Source)));
 }
 
 TEST(DesignatorHints, Basic) {
