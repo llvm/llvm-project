@@ -1286,8 +1286,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   if (!pushedCleanup && needsEHCleanup(DtorKind)) {
     llvm::Instruction *DominatingIP =
         Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
-    pushRegularPartialArrayCleanup(BeginPtr.emitRawPointer(),
-                                   CurPtr.emitRawPointer(), ElementType,
+    pushRegularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
+                                   CurPtr.emitRawPointer(*this), ElementType,
                                    ElementAlign, getDestroyer(DtorKind));
     DeferredDeactivationCleanupStack.push_back(
         {EHStack.stable_begin(), DominatingIP});
