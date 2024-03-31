@@ -3499,8 +3499,8 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     const DWARFDataExtractor &data = die.GetData();
 
-    uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(data, block_offset, block_length), die.GetCU());
   }
@@ -3529,9 +3529,9 @@ GetExprListFromAtConstValue(DWARFFormValue form_value, ModuleSP module,
   const DWARFDataExtractor &debug_info_data = die.GetData();
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     // Retrieve the value as a block expression.
-    uint32_t block_offset =
+    uint64_t block_offset =
         form_value.BlockData() - debug_info_data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(debug_info_data, block_offset, block_length),
         die.GetCU());
@@ -4154,8 +4154,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
       if (!DWARFFormValue::IsBlockForm(form_value.Form()))
         return {};
       auto data = child.GetData();
-      uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-      uint32_t block_length = form_value.Unsigned();
+      uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+      uint64_t block_length = form_value.Unsigned();
       return DWARFExpressionList(
           module, DataExtractor(data, block_offset, block_length),
           child.GetCU());
@@ -4260,8 +4260,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
         }
 
         auto data = child.GetData();
-        uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-        uint32_t block_length = form_value.Unsigned();
+        uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+        uint64_t block_length = form_value.Unsigned();
         call_target = DWARFExpressionList(
             module, DataExtractor(data, block_offset, block_length),
             child.GetCU());
