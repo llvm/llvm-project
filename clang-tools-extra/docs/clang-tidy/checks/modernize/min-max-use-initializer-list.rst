@@ -11,7 +11,7 @@ For instance, consider the following code:
 
    int a = std::max(std::max(i, j), k);
 
-The `modernize-min-max-use-initializer-list` check will transform the above code to:
+The check will transform the above code to:
 
 .. code-block:: cpp
 
