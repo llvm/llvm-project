@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperSelfCheck.h"
-#include "ObjcMatcher.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -31,6 +30,27 @@ namespace {
 /// \endcode
 AST_MATCHER(ObjCMethodDecl, isInitializer) {
   return Node.getMethodFamily() == OMF_init;
+}
+
+/// Matches Objective-C implementations with interfaces that match
+/// \c Base.
+///
+/// Example matches implementation declarations for X.
+///   (matcher = objcImplementationDecl(hasInterface(hasName("X"))))
+/// \code
+///   @interface X
+///   @end
+///   @implementation X
+///   @end
+///   @interface Y
+//    @end
+///   @implementation Y
+///   @end
+/// \endcode
+AST_MATCHER_P(ObjCImplementationDecl, hasInterface,
+              ast_matchers::internal::Matcher<ObjCInterfaceDecl>, Base) {
+  const ObjCInterfaceDecl *InterfaceDecl = Node.getClassInterface();
+  return Base.matches(*InterfaceDecl, Finder, Builder);
 }
 
 /// Matches Objective-C message expressions where the receiver is the
