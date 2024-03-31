@@ -552,4 +552,20 @@ def TopologicalSort : Pass<"topological-sort"> {
   let constructor = "mlir::createTopologicalSortPass()";
 }
 
+def CompositePass : Pass<"composite-pass"> {
+  let summary = "TBD";
+  let description = [{
+    TBD
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"CompositePass\"",
+      "Composite pass display name">,
+    Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
+      "Composite pass inner pipeline">,
+    Option<"maxIter", "max-iterations", "unsigned", /*default=*/"10",
+      "Maximum number of iterations if inner pipeline">,
+  ];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES

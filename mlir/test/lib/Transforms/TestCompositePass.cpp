@@ -18,13 +18,21 @@
 namespace mlir {
 namespace test {
 void registerTestCompositePass() {
-  registerPass([]() -> std::unique_ptr<Pass> {
-    return createCompositePass("TestCompositePass", "test-composite-pass",
-                               [](OpPassManager &p) {
-                                 p.addPass(createCanonicalizerPass());
-                                 p.addPass(createCSEPass());
-                               });
-  });
+  registerPassPipeline(
+      "test-composite-pass", "Test composite pass",
+      [](OpPassManager &pm, StringRef optionsStr,
+         function_ref<LogicalResult(const Twine &)> errorHandler) {
+        if (!optionsStr.empty())
+          return failure();
+
+        pm.addPass(
+            createCompositePass("TestCompositePass", [](OpPassManager &p) {
+              p.addPass(createCanonicalizerPass());
+              p.addPass(createCSEPass());
+            }));
+        return success();
+      },
+      [](function_ref<void(const detail::PassOptions &)>) {});
 }
 } // namespace test
 } // namespace mlir

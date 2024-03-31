@@ -15,19 +15,42 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_COMPOSITEPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
-struct CompositePass final
-    : public PassWrapper<CompositePass, OperationPass<void>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CompositePass)
+struct CompositePass final : public impl::CompositePassBase<CompositePass> {
+  using CompositePassBase::CompositePassBase;
 
-  CompositePass(std::string name_, std::string argument_,
+  CompositePass(std::string name_,
                 llvm::function_ref<void(OpPassManager &)> populateFunc,
                 unsigned maxIterations)
-      : name(std::move(name_)), argument(std::move(argument_)),
-        dynamicPM(std::make_shared<OpPassManager>()), maxIters(maxIterations) {
+      : dynamicPM(std::make_shared<OpPassManager>()) {
+    name = std::move(name_);
+    maxIter = maxIterations;
     populateFunc(*dynamicPM);
+    std::string pipeline;
+    llvm::raw_string_ostream os(pipeline);
+    dynamicPM->printAsTextualPipeline(os);
+    os.flush();
+    pipelineStr = pipeline;
+  }
+
+  LogicalResult initializeOptions(StringRef options) override {
+    if (failed(CompositePassBase::initializeOptions(options)))
+      return failure();
+
+    dynamicPM = std::make_shared<OpPassManager>();
+    if (failed(parsePassPipeline(pipelineStr, *dynamicPM))) {
+      llvm::errs() << "Failed to parse composite pass pipeline\n";
+      return failure();
+    }
+
+    return success();
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -39,13 +62,14 @@ struct CompositePass final
     OperationFingerPrint fp(op);
 
     unsigned currentIter = 0;
+    unsigned maxIterVal = maxIter;
     while (true) {
       if (failed(runPipeline(*dynamicPM, op)))
         return signalPassFailure();
 
-      if (currentIter++ >= maxIters) {
+      if (currentIter++ >= maxIterVal) {
         op->emitWarning("Composite pass \"" + llvm::Twine(name) +
-                        "\"+ didn't converge in " + llvm::Twine(maxIters) +
+                        "\"+ didn't converge in " + llvm::Twine(maxIterVal) +
                         " iterations");
         break;
       }
@@ -61,21 +85,15 @@ struct CompositePass final
 protected:
   llvm::StringRef getName() const override { return name; }
 
-  llvm::StringRef getArgument() const override { return argument; }
-
 private:
-  std::string name;
-  std::string argument;
   std::shared_ptr<OpPassManager> dynamicPM;
-  unsigned maxIters;
 };
 } // namespace
 
 std::unique_ptr<Pass> mlir::createCompositePass(
-    std::string name, std::string argument,
-    llvm::function_ref<void(OpPassManager &)> populateFunc,
+    std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
     unsigned maxIterations) {
 
-  return std::make_unique<CompositePass>(std::move(name), std::move(argument),
-                                         populateFunc, maxIterations);
+  return std::make_unique<CompositePass>(std::move(name), populateFunc,
+                                         maxIterations);
 }
