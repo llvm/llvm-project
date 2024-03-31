@@ -17,6 +17,7 @@
 #define LLVM_OBJECT_COFFIMPORTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
