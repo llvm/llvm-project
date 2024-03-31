@@ -8,16 +8,19 @@
 
 #include "utils/LibcTableGenUtil/APIIndexer.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 
 namespace {
 
-llvm::cl::list<std::string>
-    EntrypointNamesOption("e", llvm::cl::desc("<list of entrypoints>"),
-                          llvm::cl::OneOrMore);
+llvm::cl::opt<std::string> EntrypointsFilename(
+    "entrypoints_file",
+    llvm::cl::desc("file containing the comma separated list of entrypoints"),
+    llvm::cl::Required);
 
 } // anonymous namespace
 
@@ -25,7 +28,13 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   OS << "#include \"src/__support/CPP/type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
-  for (const auto &entrypoint : EntrypointNamesOption) {
+
+  auto Entrypoints = llvm::MemoryBuffer::getFile(EntrypointsFilename);
+
+  std::vector<std::string> entrypoints;
+  for (auto entrypoint : llvm::split((*Entrypoints)->getBuffer(), ','))
+    entrypoints.push_back(entrypoint.str());
+  for (auto entrypoint : entrypoints) {
     if (entrypoint == "errno")
       continue;
     auto match = G.FunctionToHeaderMap.find(entrypoint);
@@ -48,7 +57,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   OS << '\n';
 
   OS << "extern \"C\" int main() {\n";
-  for (const auto &entrypoint : EntrypointNamesOption) {
+  for (const auto &entrypoint : entrypoints) {
     if (entrypoint == "errno")
       continue;
     auto match = G.FunctionSpecMap.find(entrypoint);
@@ -91,9 +100,17 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
        << " prototype in TableGen does not match public header" << '"';
     OS << ");\n";
   }
+  OS << '\n';
+  OS << "  // Check that all entrypoints are present in the binary";
+  OS << "  uintptr_t check = 0;\n";
+  for (const auto &entrypoint : entrypoints) {
+    if (entrypoint == "errno")
+      continue;
+    OS << "  check += reinterpret_cast<uintptr_t>(&" << entrypoint << ");\n";
+  }
 
   OS << '\n';
-  OS << "  return 0;\n";
+  OS << "  return check != 0 ? 0 : 1;\n";
   OS << "}\n\n";
 
   return false;
