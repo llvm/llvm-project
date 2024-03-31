@@ -17,10 +17,6 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
-  return Node.getValue().ugt(N);
-}
-
 AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
                ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   if (Depth < 0)
@@ -48,14 +44,14 @@ AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
   return false;
 }
 
-CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
+} // namespace
+
+static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
   if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
       isa<DependentSizedArrayType>(Ty) || !Ty->isConstantSizeType())
     return CharUnits::Zero();
   return Ctx.getTypeSizeInChars(Ty);
 }
-
-} // namespace
 
 SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
                                              ClangTidyContext *Context)
@@ -183,10 +179,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Detect expression like: sizeof(expr) <= k for a suspicious constant 'k'.
   if (WarnOnSizeOfCompareToConstant) {
     Finder->addMatcher(
-        binaryOperator(matchers::isRelationalOperator(),
-                       hasOperands(ignoringParenImpCasts(SizeOfExpr),
-                                   ignoringParenImpCasts(integerLiteral(anyOf(
-                                       equals(0), isBiggerThan(0x80000))))))
+        binaryOperator(
+            matchers::isRelationalOperator(),
+            hasOperands(ignoringParenImpCasts(SizeOfExpr),
+                        ignoringParenImpCasts(integerLiteral(anyOf(
+                            equals(0), matchers::isBiggerThan(0x80000))))))
             .bind("sizeof-compare-constant"),
         this);
   }
