@@ -8,20 +8,26 @@
 
 #include "ExceptionRethrowCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-AST_MATCHER(VarDecl, isExceptionVariable) { return Node.isExceptionVariable(); }
-} // namespace
-
 void ExceptionRethrowCheck::registerMatchers(MatchFinder *Finder) {
+
+  auto RefToExceptionVariable = declRefExpr(to(varDecl(isExceptionVariable())));
+  auto StdMoveCall = callExpr(argumentCountIs(1), callee(functionDecl(hasName("::std::move"))), hasArgument(0, RefToExceptionVariable));
+  auto CopyOrMoveConstruction = cxxConstructExpr(argumentCountIs(1), hasDeclaration(cxxConstructorDecl(anyOf(isCopyConstructor(), isMoveConstructor()))), 	hasArgument(0, anyOf(RefToExceptionVariable, StdMoveCall)));
+  auto FunctionCast = cxxFunctionalCastExpr(	hasSourceExpression(anyOf(RefToExceptionVariable, StdMoveCall)));
+
   Finder->addMatcher(
       cxxThrowExpr(unless(isExpansionInSystemHeader()),
                    anyOf(unless(has(expr())),
-                         has(declRefExpr(to(varDecl(isExceptionVariable()))))),
+                         has(RefToExceptionVariable),
+                         has(StdMoveCall),
+                         has(CopyOrMoveConstruction),
+                         has(FunctionCast)),
                    optionally(hasAncestor(cxxCatchStmt().bind("catch"))))
           .bind("throw"),
       this);
@@ -38,12 +44,11 @@ void ExceptionRethrowCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  const bool HasCatchAnsestor =
+  const bool HasCatchAncestor =
       Result.Nodes.getNodeAs<Stmt>("catch") != nullptr;
-  if (!HasCatchAnsestor) {
+  if (!HasCatchAncestor) {
     diag(MatchedThrow->getThrowLoc(),
-         "empty 'throw' outside a catch block without an exception can trigger "
-         "'std::terminate'");
+         "empty 'throw' outside a catch block with no operand triggers 'std::terminate()'");
   }
 }
 
