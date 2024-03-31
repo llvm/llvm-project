@@ -4520,7 +4520,7 @@ void CodeGenFunction::EmitCallArgs(
             (isa<ObjCMethodDecl>(AC.getDecl()) &&
              isObjCMethodWithTypeParams(cast<ObjCMethodDecl>(AC.getDecl())))) &&
            "Argument and parameter types don't match");
-    EmitCallArg(Args, *Arg, ArgTypes[Idx]);
+    EmitCallArg(Args, *Arg, ArgTypes[Idx], AC);
     // In particular, we depend on it being the last arg in Args, and the
     // objectsize bits depend on there only being one arg if !LeftToRight.
     assert(InitialArgSize + 1 == Args.size() &&
@@ -4611,7 +4611,7 @@ void CallArg::copyInto(CodeGenFunction &CGF, Address Addr) const {
 }
 
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
-                                  QualType type) {
+                                  QualType type, const AbstractCallee& AC) {
   DisableDebugLocationUpdates Dis(*this, E);
   if (const ObjCIndirectCopyRestoreExpr *CRE
         = dyn_cast<ObjCIndirectCopyRestoreExpr>(E)) {
@@ -4625,6 +4625,26 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);
     return args.add(EmitReferenceBindingToExpr(E), type);
+  }
+
+  auto IsSingleParameterCopyConstructor = [&]() {
+    if(1 != AC.getNumParams()) return false;
+    if (const CXXRecordDecl* SubRecordDecl = type->getAsCXXRecordDecl()) {
+      if (const CXXConstructorDecl* ConstructorDecl = dyn_cast<clang::CXXConstructorDecl>(AC.getDecl())) {
+        if(const CXXRecordDecl* BaseRecordDecl = dyn_cast<CXXRecordDecl>(ConstructorDecl->getParent())) {
+          if(SubRecordDecl->isDerivedFrom(BaseRecordDecl)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+  if(IsSingleParameterCopyConstructor()) {
+    AggValueSlot Slot = args.isUsingInAlloca()
+        ? createPlaceholderSlot(*this, type) : CreateAggTemp(type, "agg.tmp");
+    RValue RV = Slot.asRValue();
+    return args.add(RV, type);
   }
 
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
