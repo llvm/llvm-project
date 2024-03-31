@@ -405,7 +405,7 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
         FunctionSpec<
-          "_Exit",
+          "_exit",
           RetValSpec<NoReturn>,
           [ArgSpec<IntType>]
         >,
