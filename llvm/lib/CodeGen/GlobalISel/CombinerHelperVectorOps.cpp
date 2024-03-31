@@ -309,9 +309,8 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
 
   // There is a one-use check. There are more combines on build vectors.
   EVT Ty(getMVTForLLT(VectorTy));
-  if (!MRI.hasOneNonDBGUse(
-          Build->getReg(0) ||
-          !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty)))
+  if (!MRI.hasOneNonDBGUse(Build->getReg(0)) ||
+      !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
     return false;
 
   Register Index = Extract->getIndexReg();
