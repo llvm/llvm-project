@@ -1233,7 +1233,7 @@ void SymbolFileDWARFDebugMap::FindTypes(const TypeQuery &query,
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->FindTypes(query, results);
-    return !results.Done(query); // Keep iterating if we aren't done.
+    return results.Done(query); // Keep iterating if we aren't done.
   });
 }
 
@@ -1391,7 +1391,7 @@ void SymbolFileDWARFDebugMap::ParseDeclsForContext(
     lldb_private::CompilerDeclContext decl_ctx) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->ParseDeclsForContext(decl_ctx);
-    return true; // Keep iterating
+    return false; // Keep iterating
   });
 }
 
