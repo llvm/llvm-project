@@ -131,7 +131,7 @@ createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
 /// their producers.
 std::unique_ptr<Pass> createTopologicalSortPass();
 
-/// Create composite pass, which runs selected set of passes until fixed point
+/// Create composite pass, which runs provided set of passes until fixed point
 /// or maximum number of iterations reached.
 std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,

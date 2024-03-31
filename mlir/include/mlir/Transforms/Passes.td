@@ -553,13 +553,14 @@ def TopologicalSort : Pass<"topological-sort"> {
 }
 
 def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
-  let summary = "TBD";
+  let summary = "Composite fixed point pass";
   let description = [{
-    TBD
+    Composite pass runs provided set of passes until fixed point or maximum
+    number of iterations reached.
   }];
 
   let options = [
-    Option<"name", "name", "std::string", /*default=*/"\"CompositePass\"",
+    Option<"name", "name", "std::string", /*default=*/"\"CompositeFixedPointPass\"",
       "Composite pass display name">,
     Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
       "Composite pass inner pipeline">,
