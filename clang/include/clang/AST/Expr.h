@@ -246,14 +246,6 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
 
-  /// Determines whether the expression contains primitives which may branch out
-  /// of the expr through a non-exceptional normal control flow. This is
-  /// possible if the expression contains:
-  ///   - a statement expression having a control flow out of the expr (break,
-  ///     goto, return).
-  ///   - a coroutine suspension.
-  bool mayBranchOut() const;
-
   /// getExprLoc - Return the preferred location for the arrow when diagnosing
   /// a problem with a generic expression.
   SourceLocation getExprLoc() const LLVM_READONLY;

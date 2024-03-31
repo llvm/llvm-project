@@ -16,8 +16,10 @@
 #include "EHScopeStack.h"
 
 #include "Address.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Instruction.h"
 
 namespace llvm {
 class BasicBlock;
@@ -266,6 +268,54 @@ class alignas(8) EHCleanupScope : public EHScope {
   };
   mutable struct ExtInfo *ExtInfo;
 
+  /// Erases auxillary allocas and their usages for an unused cleanup.
+  /// Cleanups should mark these allocas as 'used' if the cleanup is
+  /// emitted, otherwise these instructions would be erased.
+  struct AuxillaryAllocas {
+    SmallVector<llvm::Instruction *, 1> AuxAllocas;
+    bool used = false;
+
+    // Records a potentially unused instruction to be erased later.
+    void Add(llvm::AllocaInst *Alloca) { AuxAllocas.push_back(Alloca); }
+
+    // Mark all recorded instructions as used. These will not be erased later.
+    void MarkUsed() {
+      used = true;
+      AuxAllocas.clear();
+    }
+    ~AuxillaryAllocas() {
+      if (used)
+        return;
+      llvm::SetVector<llvm::Instruction *> Uses;
+      for (auto *Inst : llvm::reverse(AuxAllocas))
+        CollectUses(Inst, Uses);
+      for (auto *I : Uses)
+        I->eraseFromParent();
+    }
+
+  private:
+    void CollectUses(llvm::Instruction *I,
+                     llvm::SetVector<llvm::Instruction *> &Uses) {
+      if (!I)
+        return;
+
+      for (auto *User : I->users()) {
+        if (auto *UserI = dyn_cast<llvm::Instruction>(User)) {
+          CollectUses(UserI, Uses);
+        }
+      }
+      Uses.insert(I);
+    }
+  };
+  mutable struct AuxillaryAllocas *AuxAllocas;
+
+  AuxillaryAllocas &getAuxillaryAllocas() {
+    if (!AuxAllocas) {
+      AuxAllocas = new struct AuxillaryAllocas();
+    }
+    return *AuxAllocas;
+  }
+
   /// The number of fixups required by enclosing scopes (not including
   /// this one).  If this is the top cleanup scope, all the fixups
   /// from this index onwards belong to this scope.
@@ -298,7 +348,7 @@ public:
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
         EnclosingNormal(enclosingNormal), NormalBlock(nullptr),
-        ActiveFlag(Address::invalid()), ExtInfo(nullptr),
+        ActiveFlag(Address::invalid()), ExtInfo(nullptr), AuxAllocas(nullptr),
         FixupDepth(fixupDepth) {
     CleanupBits.IsNormalCleanup = isNormal;
     CleanupBits.IsEHCleanup = isEH;
@@ -312,8 +362,15 @@ public:
   }
 
   void Destroy() {
+    if (AuxAllocas)
+      delete AuxAllocas;
     delete ExtInfo;
   }
+  void AddAuxAllocas(llvm::SmallVector<llvm::AllocaInst *> Allocas) {
+    for (auto *Alloca : Allocas)
+      getAuxillaryAllocas().Add(Alloca);
+  }
+  void MarkEmitted() { getAuxillaryAllocas().MarkUsed(); }
   // Objects of EHCleanupScope are not destructed. Use Destroy().
   ~EHCleanupScope() = delete;
 

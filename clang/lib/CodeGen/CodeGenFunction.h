@@ -39,6 +39,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
@@ -2761,6 +2762,33 @@ public:
                             LValueBaseInfo *BaseInfo = nullptr,
                             TBAAAccessInfo *TBAAInfo = nullptr);
   LValue EmitLoadOfPointerLValue(Address Ptr, const PointerType *PtrTy);
+
+private:
+  struct AllocaTracker {
+    void Add(llvm::AllocaInst *I) { Allocas.push_back(I); }
+    llvm::SmallVector<llvm::AllocaInst *> Take() { return std::move(Allocas); }
+
+  private:
+    llvm::SmallVector<llvm::AllocaInst *> Allocas;
+  };
+  AllocaTracker *Allocas = nullptr;
+
+public:
+  // Captures all the allocas created during the scope of its RAII object.
+  struct AllocaTrackerRAII {
+    AllocaTrackerRAII(CodeGenFunction &CGF)
+        : CGF(CGF), OldTracker(CGF.Allocas) {
+      CGF.Allocas = &Tracker;
+    }
+    ~AllocaTrackerRAII() { CGF.Allocas = OldTracker; }
+
+    llvm::SmallVector<llvm::AllocaInst *> Take() { return Tracker.Take(); }
+
+  private:
+    CodeGenFunction &CGF;
+    AllocaTracker *OldTracker;
+    AllocaTracker Tracker;
+  };
 
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
   /// block if \p ArraySize is nullptr, otherwise inserts it at the current

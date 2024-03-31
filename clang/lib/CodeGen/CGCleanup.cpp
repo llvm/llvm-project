@@ -770,6 +770,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         EmitSehCppScopeEnd();
     }
     destroyOptimisticNormalEntry(*this, Scope);
+    Scope.MarkEmitted();
     EHStack.popCleanup();
   } else {
     // If we have a fallthrough and no other need for the cleanup,
@@ -786,6 +787,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       }
 
       destroyOptimisticNormalEntry(*this, Scope);
+      Scope.MarkEmitted();
       EHStack.popCleanup();
 
       EmitCleanup(*this, Fn, cleanupFlags, NormalActiveFlag);
@@ -921,6 +923,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       }
 
       // IV.  Pop the cleanup and emit it.
+      Scope.MarkEmitted();
       EHStack.popCleanup();
       assert(EHStack.hasNormalCleanups() == HasEnclosingCleanups);
 
