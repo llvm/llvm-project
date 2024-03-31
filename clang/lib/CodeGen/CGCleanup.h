@@ -298,7 +298,6 @@ class alignas(8) EHCleanupScope : public EHScope {
                      llvm::SetVector<llvm::Instruction *> &Uses) {
       if (!I)
         return;
-
       for (auto *User : I->users()) {
         if (auto *UserI = dyn_cast<llvm::Instruction>(User)) {
           CollectUses(UserI, Uses);
