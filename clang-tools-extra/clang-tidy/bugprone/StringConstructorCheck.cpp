@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "StringConstructorCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -17,7 +16,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-static const char DefaultStringNames[] =
+namespace {
+AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
+  return Node.getValue().getZExtValue() > N;
+}
+
+const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
@@ -31,6 +35,8 @@ removeNamespaces(const std::vector<StringRef> &Names) {
   }
   return Result;
 }
+
+} // namespace
 
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
@@ -55,7 +61,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       unaryOperator(hasOperatorName("-"),
                     hasUnaryOperand(integerLiteral(unless(equals(0)))))));
   const auto LargeLengthExpr = expr(ignoringParenImpCasts(
-      integerLiteral(matchers::isBiggerThan(LargeLengthThreshold))));
+      integerLiteral(isBiggerThan(LargeLengthThreshold))));
   const auto CharPtrType = type(anyOf(pointerType(), arrayType()));
 
   // Match a string-literal; even through a declaration with initializer.

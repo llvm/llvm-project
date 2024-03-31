@@ -15,8 +15,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 namespace {
-clang::ast_matchers::internal::Matcher<Expr>
-callToGet(const clang::ast_matchers::internal::Matcher<Decl> &OnClass) {
+internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
   return expr(
              anyOf(cxxMemberCallExpr(
                        on(expr(anyOf(hasType(OnClass),
@@ -44,7 +43,7 @@ callToGet(const clang::ast_matchers::internal::Matcher<Decl> &OnClass) {
       .bind("redundant_get");
 }
 
-clang::ast_matchers::internal::Matcher<Decl> knownSmartptr() {
+internal::Matcher<Decl> knownSmartptr() {
   return recordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
 }
 
