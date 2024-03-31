@@ -1285,3 +1285,92 @@ namespace {
   }
 }
 #endif
+
+#if __cplusplus >= 201703L
+namespace InitLists {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
+#pragma clang diagnostic ignored "-Wc99-designator"
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+
+  struct EmptyBase {};
+
+  struct A { char x; };
+  struct B { short y; unsigned z; };
+
+  struct S : A, B, EmptyBase {
+    constexpr bool operator==(const S& rhs) const {
+      return this->x == rhs.x && this->y == rhs.y && this->z == rhs.z;
+    };
+  };
+
+  constexpr S s0 = {};
+  static_assert(s0.x == 0 && s0.y == 0 && s0.z == 0);
+
+  static_assert(S{1} == S{A{1}, B{0, 0}}, "");
+  static_assert(S{1, 2} == S{A{1}, B{2, 0}}, "");
+  static_assert(S{1, 2, 3} == S{A{1}, B{2, 3}}, "");
+
+  static_assert(S{1, {2, 3}} == S{A{1}, B{2, 3}}, "");
+  static_assert(S{{1}, {2, 3}} == S{A{1}, B{2, 3}}, "");
+
+  struct BF : S {
+    unsigned : 12;
+    unsigned f1 : 3;
+    unsigned : 34;
+    unsigned : 34;
+    unsigned f2 : 3;
+    unsigned : 0;
+
+    bool operator==(const BF&) const = default;
+  };
+
+  static_assert(BF{} == BF{{s0}, 0, 0}, "");
+  static_assert(BF{1, 2, 3} == BF{S{A{1}, B{2, 3}, {}}, 0, 0}, "");
+
+  static_assert(BF{{}, 4} == BF{s0, .f1 = 4});
+  static_assert(BF{{}, 4, 5} == BF{s0, .f1 = 4, .f2 = 5});
+  static_assert(BF{{1, 2, 3}, 4} == BF{S{A{1}, B{2, 3}, {}}, .f1 = 4}, "");
+  static_assert(BF{1, 2, 3, {}, 4} == BF{S{A{1}, B{2, 3}, {}}, .f1 = 4}, "");
+  static_assert(BF{1, 2, 3, {}, 4, 5}
+              == BF{S{A{1}, B{2, 3}, {}}, .f1 = 4, .f2 = 5}, "");
+
+
+  struct R : BF {
+    unsigned ff : 3;
+    struct {
+      char cc[2];
+    } rr[2];
+
+    constexpr bool operator==(const R& rhs) const {
+      return static_cast<BF>(*this) == static_cast<BF>(rhs)
+        && this->ff == rhs.ff
+        && this->rr[0].cc[0] == rhs.rr[0].cc[0]
+        && this->rr[0].cc[1] == rhs.rr[0].cc[1]
+        && this->rr[1].cc[0] == rhs.rr[1].cc[0]
+        && this->rr[1].cc[1] == rhs.rr[1].cc[1]
+        ;
+    };
+  };
+
+  static_assert(R{} == R{{s0}, 0}, "");
+  static_assert(R{{}, 6} == R{{s0}, .ff = 6, .rr = {}}, "");
+  static_assert(R{{}, 6, 7} ==
+      R{{s0}, .ff = 6, .rr = {[0]={.cc = {[0]=7, [1]=0}}, [1]={.cc = {[0]=0, [1]=0}}}}, "");
+  static_assert(R{{}, 6, 7, 8} == R{{s0}, 6, {{7, 8}}}, "");
+
+  constexpr R r = {{{1, 2, 3}, 4, 5}, 6, 7, 8, 9, 10};
+  static_assert(r.x == 1, "");
+  static_assert(r.y == 2, "");
+  static_assert(r.z == 3, "");
+  static_assert(r.f1 == 4, "");
+  static_assert(r.f2 == 5, "");
+  static_assert(r.ff == 6, "");
+  static_assert(r.rr[0].cc[0] == 7, "");
+  static_assert(r.rr[0].cc[1] == 8, "");
+  static_assert(r.rr[1].cc[0] == 9, "");
+  static_assert(r.rr[1].cc[1] == 10, "");
+
+#pragma clang diagnostic pop
+} // namespace InitLists
+#endif

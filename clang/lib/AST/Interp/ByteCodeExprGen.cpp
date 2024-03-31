@@ -884,8 +884,36 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (!this->emitDupPtr(E))
       return false;
 
+    // guard relatively expensive base check behind an almost-always-false
+    // branch. this works because all bases must be initialized first before we
+    // initialize any direct fields
+    if (InitIndex == 0) {
+      // Initializer for a direct base class?
+      if (const Record::Base *B = R->getBase(Init->getType())) {
+        if (!this->emitGetPtrBasePop(B->Offset, Init))
+          return false;
+
+        if (!this->visitInitializer(Init))
+          return false;
+
+        if (!this->emitFinishInitPop(E))
+          return false;
+        // Base initializers don't increase InitIndex, since they don't count
+        // into the Record's fields.
+        continue;
+      }
+    } else {
+      assert(!R->getBase(Init->getType()));
+    }
+
+    // skip over padding-only fields
+    while (R->getField(InitIndex)->Decl->isUnnamedBitfield())
+      ++InitIndex;
+
+    const Record::Field *FieldToInit = R->getField(InitIndex++);
     if (std::optional<PrimType> T = classify(Init)) {
-      const Record::Field *FieldToInit = R->getField(InitIndex);
+      assert(classifyPrim(FieldToInit->Decl->getType()) == *T);
+
       if (!this->visit(Init))
         return false;
 
@@ -899,34 +927,17 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
       if (!this->emitPopPtr(E))
         return false;
-      ++InitIndex;
     } else {
-      // Initializer for a direct base class.
-      if (const Record::Base *B = R->getBase(Init->getType())) {
-        if (!this->emitGetPtrBasePop(B->Offset, Init))
-          return false;
+      // Non-primitive case. Get a pointer to the field-to-initialize
+      // on the stack and recurse into visitInitializer().
+      if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+        return false;
 
-        if (!this->visitInitializer(Init))
-          return false;
+      if (!this->visitInitializer(Init))
+        return false;
 
-        if (!this->emitFinishInitPop(E))
-          return false;
-        // Base initializers don't increase InitIndex, since they don't count
-        // into the Record's fields.
-      } else {
-        const Record::Field *FieldToInit = R->getField(InitIndex);
-        // Non-primitive case. Get a pointer to the field-to-initialize
-        // on the stack and recurse into visitInitializer().
-        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
-          return false;
-
-        if (!this->visitInitializer(Init))
-          return false;
-
-        if (!this->emitPopPtr(E))
-          return false;
-        ++InitIndex;
-      }
+      if (!this->emitPopPtr(E))
+        return false;
     }
   }
   return true;
