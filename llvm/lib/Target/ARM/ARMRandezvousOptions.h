@@ -30,6 +30,7 @@ extern bool EnableRandezvousGDLR;
 extern bool EnableRandezvousDecoyPointers;
 extern bool EnableRandezvousGlobalGuard;
 extern bool EnableRandezvousShadowStack;
+extern bool EnableEncodeDecode;//jzx
 extern bool EnableRandezvousRAN;
 extern bool EnableRandezvousLGPromote;
 extern bool EnableRandezvousICallLimiter;
@@ -41,6 +42,7 @@ extern bool EnableRandezvousICallLimiter;
 extern uint64_t RandezvousCLRSeed;
 extern uint64_t RandezvousGDLRSeed;
 extern uint64_t RandezvousShadowStackSeed;
+extern uint64_t EncodeDecodeSeed;//jzx
 
 //===----------------------------------------------------------------------===//
 // Size options used by Randezvous passes
@@ -57,7 +59,9 @@ extern size_t RandezvousShadowStackSize;
 //===----------------------------------------------------------------------===//
 
 extern unsigned RandezvousShadowStackStrideLength;
+extern unsigned EncodeDecodeNumberLength;
 extern unsigned RandezvousNumGlobalGuardCandidates;
+extern uintptr_t EncodeDecodeRNGAddress;//jzx
 extern uintptr_t RandezvousRNGAddress;
 
 #endif

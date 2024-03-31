@@ -19,6 +19,9 @@ tablegen(LLVM ARMGenSystemRegister.inc -gen-searchable-tables)
 
 add_public_tablegen_target(ARMCommonTableGen)
 
+set(ARM_Shadow_Randomization
+  ARMEncodeDecode.cpp
+)
 
 set(ARMRandezvous_SOURCES
   ARMRandezvousInstrumentor.cpp
@@ -77,6 +80,7 @@ add_llvm_target(ARMCodeGen
   Thumb2InstrInfo.cpp
   Thumb2SizeReduction.cpp
   ${ARMRandezvous_SOURCES}
+  ${ARM_Shadow_Randomization}
 
   LINK_COMPONENTS
   ARMDesc

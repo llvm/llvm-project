@@ -11,6 +11,8 @@
 
 #include "ARMRandezvousInstrumentor.h"
 #include "ARMRandezvousShadowStack.h"
+//jzx
+#include "ARMEncodeDecode.h"
 #include "ARMTargetMachine.h"
 #include "ARM.h"
 #include "ARMMachineFunctionInfo.h"
@@ -57,6 +59,9 @@
 #include <memory>
 #include <optional>
 #include <string>
+
+//jzx
+#include "ARMEncodeDecode.h"
 
 using namespace llvm;
 
@@ -617,6 +622,9 @@ void ARMPassConfig::addPreEmitPass2() {
   // Add Randezvous CodeGen passes
 
   addPass(createARMRandezvousShadowStack());
+
+  //jzx
+  addPass(createARMEncodeDecode());
 
 
   if (TM->getTargetTriple().isOSWindows()) {

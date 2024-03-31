@@ -85,6 +85,15 @@ ShadowStack("arm-randezvous-shadow-stack",
             cl::location(EnableRandezvousShadowStack),
             cl::init(false));
 
+//jzx
+bool EnableEncodeDecode;
+static cl::opt<bool, true>
+EncodeDecode("arm-encode-decode",
+            cl::Hidden,
+            cl::desc("Enable ARM Encode and Decode"),
+            cl::location(EnableEncodeDecode),
+            cl::init(true));
+
 bool EnableRandezvousRAN;
 static cl::opt<bool, true>
 RAN("arm-randezvous-ran",
@@ -135,6 +144,15 @@ ShadowStackSeed("arm-randezvous-shadow-stack-seed",
                 cl::Hidden,
                 cl::desc("Seed for the RNG used in ARM Randezvous Shadow Stack"),
                 cl::location(RandezvousShadowStackSeed),
+                cl::init(0));
+
+//jzx
+uint64_t EncodeDecodeSeed;
+static cl::opt<uint64_t, true>
+XorSeed("encode-decode-seed",
+                cl::Hidden,
+                cl::desc("Seed for the RNG used in ARM Encode and Decode"),
+                cl::location(EncodeDecodeSeed),
                 cl::init(0));
 
 //===----------------------------------------------------------------------===//
@@ -193,6 +211,15 @@ ShadowStackStrideLength("arm-randezvous-shadow-stack-stride-length",
                         cl::location(RandezvousShadowStackStrideLength),
                         cl::init(8));
 
+//jzx
+unsigned EncodeDecodeNumberLength;
+static cl::opt<unsigned, true>
+XorNumLength("arm-xor-number-length",
+                        cl::Hidden,
+                        cl::desc("Number of bits for ARM Xor Number"),
+                        cl::location(EncodeDecodeNumberLength),
+                        cl::init(8));
+
 unsigned RandezvousNumGlobalGuardCandidates;
 static cl::opt<unsigned, true>
 NumGlobalGuardCandidates("arm-randezvous-num-global-guard-candidates",
@@ -207,4 +234,13 @@ RNGAddress("arm-randezvous-rng-addr",
            cl::Hidden,
            cl::desc("Address of a dynamic RNG"),
            cl::location(RandezvousRNGAddress),
+           cl::init(0));
+
+//jzx
+uintptr_t EncodeDecodeRNGAddress;
+static cl::opt<uintptr_t, true>
+XorRNGAddress("arm-encode-and-decode-rng-addr",
+           cl::Hidden,
+           cl::desc("Address of a dynamic RNG"),
+           cl::location(EncodeDecodeRNGAddress),
            cl::init(0));
