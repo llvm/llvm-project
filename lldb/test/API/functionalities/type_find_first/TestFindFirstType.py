@@ -32,7 +32,7 @@ class TypeFindFirstTestCase(TestBase):
             self.assertTrue(integer_type.IsValid())
             float_type = api.FindFirstType("Float::Point")
             self.assertTrue(float_type.IsValid())
-            external_type = api.FindFirstType("OtherCompilationUnit::Type");
+            external_type = api.FindFirstType("OtherCompilationUnit::Type")
             self.assertTrue(external_type.IsValid())
-            nonexistent_type = api.FindFirstType("NonexistentType");
+            nonexistent_type = api.FindFirstType("NonexistentType")
             self.assertFalse(nonexistent_type.IsValid())
