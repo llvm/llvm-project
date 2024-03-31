@@ -1,6 +1,17 @@
+cmake_minimum_required(VERSION 3.20.0)
+
 set(LLVM_SUBPROJECT_TITLE "BOLT")
 
-include(ExternalProject)
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(bolt)
+  set(BOLT_BUILT_STANDALONE TRUE)
+endif()
 
 set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BOLT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -8,6 +19,137 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Add path for custom modules.
 list(INSERT CMAKE_MODULE_PATH 0 "${BOLT_SOURCE_DIR}/cmake/modules")
+
+include(GNUInstallDirs)
+
+# standalone build, copied from clang
+if(BOLT_BUILT_STANDALONE)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  set(CMAKE_CXX_EXTENSIONS NO)
+
+  if(NOT MSVC_IDE)
+    set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}
+      CACHE BOOL "Enable assertions")
+    # Assertions should follow llvm-config's.
+    mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
+  endif()
+
+  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
+
+  # Turn into CACHE PATHs for overwritting
+
+  # We can't check LLVM_CONFIG here, because find_package(LLVM ...) also sets
+  # LLVM_CONFIG.
+  if (NOT LLVM_CONFIG_FOUND)
+    # Pull values from LLVMConfig.cmake.  We can drop this once the llvm-config
+    # path is removed.
+    set(INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
+    set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
+    # N.B. this is just a default value, the CACHE PATHs below can be overridden.
+    set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
+  else()
+    set(INCLUDE_DIRS "${LLVM_BINARY_DIR}/include" "${MAIN_INCLUDE_DIR}")
+  endif()
+
+  set(LLVM_INCLUDE_DIRS ${INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
+  set(LLVM_BINARY_DIR "${LLVM_OBJ_ROOT}" CACHE PATH "Path to LLVM build tree")
+  set(LLVM_MAIN_SRC_DIR "${MAIN_SRC_DIR}" CACHE PATH "Path to LLVM source tree")
+
+  set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
+  set(LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
+
+  find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+    NO_DEFAULT_PATH)
+
+  # They are used as destination of target generators.
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  if(WIN32 OR CYGWIN)
+    # DLL platform -- put DLLs into bin.
+    set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  else()
+    set(LLVM_SHLIB_OUTPUT_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
+
+  option(LLVM_INSTALL_TOOLCHAIN_ONLY
+    "Only include toolchain files in the 'install' target." OFF)
+
+  option(LLVM_FORCE_USE_OLD_TOOLCHAIN
+    "Set to ON to force using an old, unsupported host toolchain." OFF)
+  option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
+  option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
+
+  include(AddLLVM)
+  include(TableGen)
+  include_directories(${LLVM_INCLUDE_DIRS})
+  link_directories("${LLVM_LIBRARY_DIR}")
+
+  if (NOT DEFINED LLVM_INCLUDE_TESTS)
+    set(LLVM_INCLUDE_TESTS ON)
+  endif()
+
+  include_directories(${LLVM_INCLUDE_DIRS})
+  link_directories("${LLVM_LIBRARY_DIR}")
+
+  set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+  set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+  set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+
+  find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
+
+  if(LLVM_INCLUDE_TESTS)
+    # Check prebuilt llvm/utils.
+    if(EXISTS ${LLVM_TOOLS_BINARY_DIR}/FileCheck${CMAKE_EXECUTABLE_SUFFIX}
+        AND EXISTS ${LLVM_TOOLS_BINARY_DIR}/count${CMAKE_EXECUTABLE_SUFFIX}
+        AND EXISTS ${LLVM_TOOLS_BINARY_DIR}/not${CMAKE_EXECUTABLE_SUFFIX})
+      set(LLVM_UTILS_PROVIDED ON)
+    endif()
+
+    # Seek installed Lit.
+    find_program(LLVM_LIT
+                 NAMES llvm-lit lit.py lit
+                 PATHS "${LLVM_MAIN_SRC_DIR}/utils/lit"
+                 DOC "Path to lit.py")
+
+    if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
+      # Note: path not really used, except for checking if lit was found
+      if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit utils/llvm-lit)
+      endif()
+      if(NOT LLVM_UTILS_PROVIDED)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/FileCheck utils/FileCheck)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/count utils/count)
+        add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/not utils/not)
+        set(LLVM_UTILS_PROVIDED ON)
+        set(CLANG_TEST_DEPS FileCheck count not)
+      endif()
+    endif()
+
+    if(LLVM_LIT)
+      # Define the default arguments to use with 'lit', and an option for the user
+      # to override.
+      set(LIT_ARGS_DEFAULT "-sv")
+      if (MSVC OR XCODE)
+        set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+      endif()
+      set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+      get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+
+      # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+      if( WIN32 AND NOT CYGWIN )
+        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+      endif()
+    else()
+      set(LLVM_INCLUDE_TESTS OFF)
+    endif()
+
+    umbrella_lit_testsuite_begin(check-all)
+  endif() # LLVM_INCLUDE_TESTS
+endif() # standalone
 
 # Determine default set of targets to build -- the intersection of
 # those BOLT supports and those LLVM is targeting.
@@ -94,6 +236,8 @@ if (BOLT_ENABLE_RUNTIME)
   if(CMAKE_SYSROOT)
     list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
+
+  include(ExternalProject)
   ExternalProject_Add(bolt_rt
     SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/runtime"
     STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-stamps
