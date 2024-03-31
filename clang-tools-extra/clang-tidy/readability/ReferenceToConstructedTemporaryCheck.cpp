@@ -20,7 +20,8 @@ namespace {
 // Predicate structure to check if lifetime of temporary is not extended by
 // ValueDecl pointed out by ID
 struct NotExtendedByDeclBoundToPredicate {
-  bool operator()(const internal::BoundNodesMap &Nodes) const {
+  bool
+  operator()(const clang::ast_matchers::internal::BoundNodesMap &Nodes) const {
     const auto *Other = Nodes.getNodeAs<ValueDecl>(ID);
     if (!Other)
       return true;

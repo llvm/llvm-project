@@ -30,12 +30,15 @@ using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
 using ::clang::transformer::RewriteRuleWith;
 
-AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
+namespace {
 
-static const char DefaultStringLikeClasses[] = "::std::basic_string;"
+AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
+} // namespace
+
+static const char StringLikeClassesDefault[] = "::std::basic_string;"
                                                "::std::basic_string_view;"
                                                "::absl::string_view";
-static const char DefaultAbseilStringsMatchHeader[] = "absl/strings/match.h";
+static const char AbseilStringsMatchHeaderDefault[] = "absl/strings/match.h";
 
 static transformer::RewriteRuleWith<std::string>
 makeRewriteRule(ArrayRef<StringRef> StringLikeClassNames,
@@ -84,9 +87,9 @@ StringFindStrContainsCheck::StringFindStrContainsCheck(
     StringRef Name, ClangTidyContext *Context)
     : TransformerClangTidyCheck(Name, Context),
       StringLikeClassesOption(utils::options::parseStringList(
-          Options.get("StringLikeClasses", DefaultStringLikeClasses))),
+          Options.get("StringLikeClasses", StringLikeClassesDefault))),
       AbseilStringsMatchHeaderOption(Options.get(
-          "AbseilStringsMatchHeader", DefaultAbseilStringsMatchHeader)) {
+          "AbseilStringsMatchHeader", AbseilStringsMatchHeaderDefault)) {
   setRule(
       makeRewriteRule(StringLikeClassesOption, AbseilStringsMatchHeaderOption));
 }
