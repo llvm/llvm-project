@@ -4958,7 +4958,7 @@ public:
                            unsigned ParmNum);
 
   /// EmitCallArg - Emit a single call argument.
-  void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType);
+  void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType, const AbstractCallee& AC);
 
   /// EmitDelegateCallArg - We are performing a delegate call; that
   /// is, the current function is delegating to another one.  Produce
