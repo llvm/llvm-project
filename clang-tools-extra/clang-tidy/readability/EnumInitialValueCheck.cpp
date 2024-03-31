@@ -56,16 +56,17 @@ static void cleanInitialValue(DiagnosticBuilder &Diag,
                               const EnumConstantDecl *ECD,
                               const SourceManager &SM,
                               const LangOptions &LangOpts) {
-  std::optional<Token> EqualToken = utils::lexer::findNextTokenSkippingComments(
-      ECD->getLocation(), SM, LangOpts);
-  if (!EqualToken.has_value())
-    return;
-  SourceLocation EqualLoc{EqualToken->getLocation()};
-  if (EqualLoc.isInvalid() || EqualLoc.isMacroID())
-    return;
-  SourceRange InitExprRange = ECD->getInitExpr()->getSourceRange();
+  const SourceRange InitExprRange = ECD->getInitExpr()->getSourceRange();
   if (InitExprRange.isInvalid() || InitExprRange.getBegin().isMacroID() ||
       InitExprRange.getEnd().isMacroID())
+    return;
+  std::optional<Token> EqualToken = utils::lexer::findNextTokenSkippingComments(
+      ECD->getLocation(), SM, LangOpts);
+  if (!EqualToken.has_value() ||
+      EqualToken.value().getKind() != tok::TokenKind::equal)
+    return;
+  const SourceLocation EqualLoc{EqualToken->getLocation()};
+  if (EqualLoc.isInvalid() || EqualLoc.isMacroID())
     return;
   Diag << FixItHint::CreateRemoval(EqualLoc)
        << FixItHint::CreateRemoval(InitExprRange);
@@ -86,7 +87,7 @@ AST_MATCHER(EnumDecl, hasConsistentInitialValues) {
 }
 
 AST_MATCHER(EnumDecl, hasZeroInitialValueForFirstEnumerator) {
-  EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  const EnumDecl::enumerator_range Enumerators = Node.enumerators();
   if (Enumerators.empty())
     return false;
   const EnumConstantDecl *ECD = *Enumerators.begin();
@@ -102,7 +103,7 @@ AST_MATCHER(EnumDecl, hasZeroInitialValueForFirstEnumerator) {
 /// negative) integer literals, are ignored. This is also the case when all
 /// enumerators are powers of two (e.g., 0, 1, 2).
 AST_MATCHER(EnumDecl, hasSequentialInitialValues) {
-  EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  const EnumDecl::enumerator_range Enumerators = Node.enumerators();
   if (Enumerators.empty())
     return false;
   const EnumConstantDecl *const FirstEnumerator = *Node.enumerator_begin();
@@ -159,24 +160,24 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
     DiagnosticBuilder Diag =
         diag(Enum->getBeginLoc(),
              "inital values in enum %0 are not consistent, consider "
-             "explicit initialization first, all or none of enumerators")
+             "explicit initialization all, none or only the first enumerators")
         << Enum;
     for (const EnumConstantDecl *ECD : Enum->enumerators())
       if (ECD->getInitExpr() == nullptr) {
-        std::optional<Token> Next = utils::lexer::findNextTokenSkippingComments(
-            ECD->getLocation(), *Result.SourceManager, getLangOpts());
-        if (!Next.has_value() || Next->getLocation().isMacroID())
+        const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+            ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
+        if (EndLoc.isMacroID())
           continue;
         llvm::SmallString<8> Str{" = "};
         ECD->getInitVal().toString(Str);
-        Diag << FixItHint::CreateInsertion(Next->getLocation(), Str);
+        Diag << FixItHint::CreateInsertion(EndLoc, Str);
       }
     return;
   }
 
   if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("zero_first")) {
     const EnumConstantDecl *ECD = *Enum->enumerator_begin();
-    SourceLocation Loc = ECD->getLocation();
+    const SourceLocation Loc = ECD->getLocation();
     if (Loc.isInvalid() || Loc.isMacroID())
       return;
     DiagnosticBuilder Diag = diag(Loc, "zero initial value for the first "
