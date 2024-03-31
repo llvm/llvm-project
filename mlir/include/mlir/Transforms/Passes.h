@@ -43,7 +43,7 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_SYMBOLDCE
 #define GEN_PASS_DECL_SYMBOLPRIVATIZE
 #define GEN_PASS_DECL_TOPOLOGICALSORT
-#define GEN_PASS_DECL_COMPOSITEPASS
+#define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
 #include "mlir/Transforms/Passes.h.inc"
 
 /// Creates an instance of the Canonicalizer pass, configured with default
@@ -133,10 +133,9 @@ std::unique_ptr<Pass> createTopologicalSortPass();
 
 /// Create composite pass, which runs selected set of passes until fixed point
 /// or maximum number of iterations reached.
-std::unique_ptr<Pass>
-createCompositePass(std::string name,
-                    llvm::function_ref<void(OpPassManager &)> populateFunc,
-                    unsigned maxIterations = 10);
+std::unique_ptr<Pass> createCompositeFixedPointPass(
+    std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
+    unsigned maxIterations = 10);
 
 //===----------------------------------------------------------------------===//
 // Registration

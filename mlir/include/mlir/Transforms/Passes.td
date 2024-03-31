@@ -552,7 +552,7 @@ def TopologicalSort : Pass<"topological-sort"> {
   let constructor = "mlir::createTopologicalSortPass()";
 }
 
-def CompositePass : Pass<"composite-pass"> {
+def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
   let summary = "TBD";
   let description = [{
     TBD

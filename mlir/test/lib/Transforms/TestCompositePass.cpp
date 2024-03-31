@@ -19,14 +19,14 @@ namespace mlir {
 namespace test {
 void registerTestCompositePass() {
   registerPassPipeline(
-      "test-composite-pass", "Test composite pass",
+      "test-composite-fixed-point-pass", "Test composite pass",
       [](OpPassManager &pm, StringRef optionsStr,
          function_ref<LogicalResult(const Twine &)> errorHandler) {
         if (!optionsStr.empty())
           return failure();
 
-        pm.addPass(
-            createCompositePass("TestCompositePass", [](OpPassManager &p) {
+        pm.addPass(createCompositeFixedPointPass(
+            "TestCompositePass", [](OpPassManager &p) {
               p.addPass(createCanonicalizerPass());
               p.addPass(createCSEPass());
             }));

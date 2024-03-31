@@ -16,19 +16,20 @@
 #include "mlir/Pass/PassManager.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_COMPOSITEPASS
+#define GEN_PASS_DEF_COMPOSITEFIXEDPOINTPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct CompositePass final : public impl::CompositePassBase<CompositePass> {
-  using CompositePassBase::CompositePassBase;
+struct CompositeFixedPointPass final
+    : public impl::CompositeFixedPointPassBase<CompositeFixedPointPass> {
+  using CompositeFixedPointPassBase::CompositeFixedPointPassBase;
 
-  CompositePass(std::string name_,
-                llvm::function_ref<void(OpPassManager &)> populateFunc,
-                unsigned maxIterations)
+  CompositeFixedPointPass(
+      std::string name_, llvm::function_ref<void(OpPassManager &)> populateFunc,
+      unsigned maxIterations)
       : dynamicPM(std::make_shared<OpPassManager>()) {
     name = std::move(name_);
     maxIter = maxIterations;
@@ -41,7 +42,7 @@ struct CompositePass final : public impl::CompositePassBase<CompositePass> {
   }
 
   LogicalResult initializeOptions(StringRef options) override {
-    if (failed(CompositePassBase::initializeOptions(options)))
+    if (failed(CompositeFixedPointPassBase::initializeOptions(options)))
       return failure();
 
     dynamicPM = std::make_shared<OpPassManager>();
@@ -90,10 +91,10 @@ private:
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createCompositePass(
+std::unique_ptr<Pass> mlir::createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
     unsigned maxIterations) {
 
-  return std::make_unique<CompositePass>(std::move(name), populateFunc,
-                                         maxIterations);
+  return std::make_unique<CompositeFixedPointPass>(std::move(name),
+                                                   populateFunc, maxIterations);
 }
