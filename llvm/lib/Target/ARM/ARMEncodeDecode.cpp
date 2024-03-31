@@ -271,6 +271,7 @@ bool ARMEncodeDecode::EncodeLR(MachineInstr &MI, MachineOperand &LR,
   return true;
 }
 
+//
 bool ARMEncodeDecode::EncodeCallSite(MachineInstr &MI, MachineOperand &MO,
                                      uint32_t Stride) {
   MachineFunction &MF = *MI.getMF();
