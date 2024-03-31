@@ -456,3 +456,60 @@ body:             |
 
 ...
 ---
+name:            extract_from_build_vector_trunc_const2
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_trunc_const2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %extract:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_CONSTANT i32 0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %idx(s32)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_trunc2
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_trunc2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %idx:_(s32) = COPY $w0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %idx(s32)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %idx:_(s32) = COPY $w0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %idx(s32)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---

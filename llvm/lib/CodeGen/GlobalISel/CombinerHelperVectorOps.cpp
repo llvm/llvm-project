@@ -272,3 +272,64 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVector(
 
   return true;
 }
+
+bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  GExtractVectorElement *Extract = cast<GExtractVectorElement>(Root);
+
+  //
+  //  %zero:_(s64) = G_CONSTANT i64 0
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %zero(s64)
+  //
+  //  -->
+  //
+  //  %extract:_(32) = COPY %arg1(s32)
+  //
+  //
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //
+  //  -->
+  //
+  //  %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %opaque(s64)
+  //
+
+  Register Vector = Extract->getVectorReg();
+
+  // We expect a buildVectorTrunc on the Vector register.
+  GBuildVectorTrunc *Build = getOpcodeDef<GBuildVectorTrunc>(Vector, MRI);
+  if (!Build)
+    return false;
+
+  LLT VectorTy = MRI.getType(Vector);
+
+  // There is a one-use check. There are more combines on build vectors.
+  EVT Ty(getMVTForLLT(VectorTy));
+  if (!MRI.hasOneNonDBGUse(Build->getReg(0)) ||
+      !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
+    return false;
+
+  Register Index = Extract->getIndexReg();
+
+  // If the Index is constant, then we can extract the element from the given
+  // offset.
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Index, MRI);
+  if (!MaybeIndex)
+    return false;
+
+  // We now know that there is a buildVectorTrunc def'd on the Vector register
+  // and the index is const. The combine will succeed.
+
+  Register Dst = Extract->getReg(0);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildCopy(Dst, Build->getSourceReg(MaybeIndex->Value.getLimitedValue()));
+  };
+
+  return true;
+}

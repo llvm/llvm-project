@@ -830,6 +830,11 @@ public:
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo);
 
+  /// Combine extract vector element with a build vector trunc on the vector
+  /// register.
+  bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,

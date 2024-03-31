@@ -286,6 +286,14 @@ public:
   }
 };
 
+/// Represents a G_BUILD_VECTOR_TRUNC.
+class GBuildVectorTrunc : public GMergeLikeInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC;
+  }
+};
+
 /// Represents a G_PTR_ADD.
 class GPtrAdd : public GenericMachineInstr {
 public:
