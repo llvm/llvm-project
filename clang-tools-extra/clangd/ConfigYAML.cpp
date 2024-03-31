@@ -169,6 +169,10 @@ private:
       if (auto Values = scalarValues(N))
         F.IgnoreHeader = std::move(*Values);
     });
+    Dict.handle("AnalyzeSystemHeaders", [&](Node &N) {
+      if (auto Value = boolValue(N, "AnalyzeSystemHeaders"))
+        F.AnalyzeSystemHeaders = *Value;
+    });
     Dict.parse(N);
   }
 

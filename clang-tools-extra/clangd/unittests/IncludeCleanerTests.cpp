@@ -135,6 +135,21 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
 }
 
+TEST(IncludeCleaner, SystemUnusedHeaders) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.ExtraArgs = {"-isystem", testPath("system")};
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST, true);
+  EXPECT_THAT(Findings.UnusedIncludes,
+              ElementsAre(Pointee(writtenInclusion("<system_unused.h>"))));
+}
+
 TEST(IncludeCleaner, ComputeMissingHeaders) {
   Annotations MainFile(R"cpp(
     #include "a.h"

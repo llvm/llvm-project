@@ -572,32 +572,43 @@ struct FragmentCompiler {
 #else
     static llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
 #endif
-    auto Filters = std::make_shared<std::vector<llvm::Regex>>();
-    for (auto &HeaderPattern : F.IgnoreHeader) {
-      // Anchor on the right.
-      std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
-      llvm::Regex CompiledRegex(AnchoredPattern, Flags);
-      std::string RegexError;
-      if (!CompiledRegex.isValid(RegexError)) {
-        diag(Warning,
-             llvm::formatv("Invalid regular expression '{0}': {1}",
-                           *HeaderPattern, RegexError)
-                 .str(),
-             HeaderPattern.Range);
-        continue;
+    std::shared_ptr<std::vector<llvm::Regex>> Filters;
+    if (!F.IgnoreHeader.empty()) {
+      Filters = std::make_shared<std::vector<llvm::Regex>>();
+      for (auto &HeaderPattern : F.IgnoreHeader) {
+        // Anchor on the right.
+        std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
+        llvm::Regex CompiledRegex(AnchoredPattern, Flags);
+        std::string RegexError;
+        if (!CompiledRegex.isValid(RegexError)) {
+          diag(Warning,
+               llvm::formatv("Invalid regular expression '{0}': {1}",
+                             *HeaderPattern, RegexError)
+                   .str(),
+               HeaderPattern.Range);
+          continue;
+        }
+        Filters->push_back(std::move(CompiledRegex));
       }
-      Filters->push_back(std::move(CompiledRegex));
     }
-    if (Filters->empty())
+    std::optional<bool> AnalyzeSystemHeaders;
+    if (F.AnalyzeSystemHeaders.has_value())
+      AnalyzeSystemHeaders = **F.AnalyzeSystemHeaders;
+    if (!Filters && !AnalyzeSystemHeaders.has_value())
       return;
-    auto Filter = [Filters](llvm::StringRef Path) {
-      for (auto &Regex : *Filters)
-        if (Regex.match(Path))
-          return true;
-      return false;
-    };
-    Out.Apply.push_back([Filter](const Params &, Config &C) {
-      C.Diagnostics.Includes.IgnoreHeader.emplace_back(Filter);
+    Out.Apply.push_back([Filters = std::move(Filters),
+                         AnalyzeSystemHeaders](const Params &, Config &C) {
+      if (Filters) {
+        auto Filter = [Filters](llvm::StringRef Path) {
+          for (auto &Regex : *Filters)
+            if (Regex.match(Path))
+              return true;
+          return false;
+        };
+        C.Diagnostics.Includes.IgnoreHeader.emplace_back(std::move(Filter));
+      }
+      if (AnalyzeSystemHeaders.has_value())
+        C.Diagnostics.Includes.AnalyzeSystemHeaders = *AnalyzeSystemHeaders;
     });
   }
 

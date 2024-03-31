@@ -68,24 +68,32 @@ bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
 }
 
 bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
-                       const include_cleaner::PragmaIncludes *PI) {
+                       const include_cleaner::PragmaIncludes *PI,
+                       bool AnalyzeSystemHeaders) {
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
   if (FE->getDir() == AST.getPreprocessor()
-                  .getHeaderSearchInfo()
-                  .getModuleMap()
-                  .getBuiltinDir()) 
+                          .getHeaderSearchInfo()
+                          .getModuleMap()
+                          .getBuiltinDir())
     return false;
   if (PI && PI->shouldKeep(*FE))
     return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
-  // Until we have good support for umbrella headers, don't warn about them.
-  if (Inc.Written.front() == '<')
-    return tooling::stdlib::Header::named(Inc.Written).has_value();
+  // Until we have good support for umbrella headers, don't warn about them
+  // (unless analysis is explicitly enabled).
+  if (Inc.Written.front() == '<') {
+    if (tooling::stdlib::Header::named(Inc.Written)) {
+      return true;
+    }
+    if (!AnalyzeSystemHeaders) {
+      return false;
+    }
+  }
   if (PI) {
     // Check if main file is the public interface for a private header. If so we
     // shouldn't diagnose it as unused.
@@ -266,7 +274,8 @@ Fix fixAll(const Fix &RemoveAllUnused, const Fix &AddAllMissing) {
 
 std::vector<const Inclusion *>
 getUnused(ParsedAST &AST,
-          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles) {
+          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
+          bool AnalyzeSystemHeaders) {
   trace::Span Tracer("IncludeCleaner::getUnused");
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : AST.getIncludeStructure().MainFileIncludes) {
@@ -275,7 +284,8 @@ getUnused(ParsedAST &AST,
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     if (ReferencedFiles.contains(IncludeID))
       continue;
-    if (!mayConsiderUnused(MFI, AST, &AST.getPragmaIncludes())) {
+    if (!mayConsiderUnused(MFI, AST, &AST.getPragmaIncludes(),
+                           AnalyzeSystemHeaders)) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;
@@ -347,7 +357,8 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
   return ConvertedIncludes;
 }
 
-IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
+IncludeCleanerFindings
+computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeSystemHeaders) {
   // Interaction is only polished for C/CPP.
   if (AST.getLangOpts().ObjC)
     return {};
@@ -432,7 +443,8 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
            MapInfo::getHashValue(RHS.Symbol);
   });
   MissingIncludes.erase(llvm::unique(MissingIncludes), MissingIncludes.end());
-  std::vector<const Inclusion *> UnusedIncludes = getUnused(AST, Used);
+  std::vector<const Inclusion *> UnusedIncludes =
+      getUnused(AST, Used, AnalyzeSystemHeaders);
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};
 }
 

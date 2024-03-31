@@ -114,6 +114,7 @@ struct Config {
     /// these regexes.
     struct {
       std::vector<std::function<bool(llvm::StringRef)>> IgnoreHeader;
+      bool AnalyzeSystemHeaders = false;
     } Includes;
   } Diagnostics;
 
