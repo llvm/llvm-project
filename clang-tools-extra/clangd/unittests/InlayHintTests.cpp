@@ -62,7 +62,7 @@ struct ExpectedHintLabelPiece {
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
                                        const ExpectedHintLabelPiece &Hint) {
     Stream << Hint.Label;
-    if (!Hint.TargetRangeName)
+    if (Hint.TargetRangeName)
       Stream << " that points to $" << Hint.TargetRangeName;
     return Stream;
   }
@@ -1769,12 +1769,15 @@ TEST(TypeHints, Links) {
                   ExpectedHintLabelPiece{
                       ": NttpContainer<D, E, ScopedEnum::X, Enum::E>"},
                   Source)));
+
   EXPECT_THAT(
       HintAt(Hints, "5"),
       ElementsAre(
           HintLabelPieceMatcher(ExpectedHintLabelPiece{": Nested<"}, Source),
           HintLabelPieceMatcher(
               ExpectedHintLabelPiece{"Container", "Container"}, Source),
+          // We don't have links on the inner 'Class' because the location is
+          // where the 'auto' links to.
           HintLabelPieceMatcher(ExpectedHintLabelPiece{"<int>>::Class<"},
                                 Source),
           HintLabelPieceMatcher(ExpectedHintLabelPiece{"Package", "Package"},

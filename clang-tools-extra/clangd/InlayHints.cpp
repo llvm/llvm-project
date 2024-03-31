@@ -391,7 +391,7 @@ std::optional<Location> toLocation(SourceManager &SM, SourceRange Range) {
 
 class TypeInlayHintLabelPartBuilder
     : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
-  QualType Current;
+  QualType CurrentType;
   ASTContext &Context;
   const PrintingPolicy &PP;
   std::vector<InlayHintLabelPart> &LabelChunks;
@@ -404,12 +404,13 @@ class TypeInlayHintLabelPartBuilder
     bool PreviousShouldAddLinksToTagTypes;
     CurrentTypeRAII(TypeInlayHintLabelPartBuilder &Builder, QualType New,
                     bool ShouldAddLinksToTagTypes)
-        : Builder(Builder), PreviousType(Builder.Current) {
-      Builder.Current = New;
+        : Builder(Builder), PreviousType(Builder.CurrentType),
+          PreviousShouldAddLinksToTagTypes(Builder.ShouldAddLinksToTagTypes) {
+      Builder.CurrentType = New;
       Builder.ShouldAddLinksToTagTypes = ShouldAddLinksToTagTypes;
     }
     ~CurrentTypeRAII() {
-      Builder.Current = PreviousType;
+      Builder.CurrentType = PreviousType;
       Builder.ShouldAddLinksToTagTypes = PreviousShouldAddLinksToTagTypes;
     }
   };
@@ -511,13 +512,14 @@ public:
                                 bool ShouldAddLinksToTagTypes,
                                 llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
-      : Current(Current), Context(Context), PP(PP), LabelChunks(LabelChunks) {
+      : CurrentType(Current), Context(Context), PP(PP),
+        LabelChunks(LabelChunks) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
   }
 
-  void VisitType(const Type *) { addLabel(Current.getAsString(PP)); }
+  void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
 
   void VisitTagType(const TagType *TT) {
     if (!ShouldAddLinksToTagTypes)
