@@ -17,4 +17,8 @@ namespace LIBC_NAMESPACE {
   quick_exit(status);
 }
 
+[[noreturn]] LLVM_LIBC_FUNCTION(void, _exit, (int status)) {
+  quick_exit(status);
+}
+
 } // namespace LIBC_NAMESPACE

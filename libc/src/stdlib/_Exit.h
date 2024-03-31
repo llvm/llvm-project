@@ -13,6 +13,8 @@ namespace LIBC_NAMESPACE {
 
 [[noreturn]] void _Exit(int status);
 
+[[noreturn]] void _exit(int status);
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB__EXIT_H
