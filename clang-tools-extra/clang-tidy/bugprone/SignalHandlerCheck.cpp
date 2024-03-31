@@ -322,11 +322,11 @@ SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   return P.getSourceRange();
 }
 
-} // namespace
-
 AST_MATCHER(FunctionDecl, isStandardFunction) {
   return isStandardFunction(&Node);
 }
+
+} // namespace
 
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
