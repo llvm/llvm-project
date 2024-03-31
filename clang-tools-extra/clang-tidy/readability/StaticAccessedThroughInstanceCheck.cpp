@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "StaticAccessedThroughInstanceCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,6 +14,10 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+namespace {
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+} // namespace
 
 static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
   if (const auto *ElType = QType->getAs<ElaboratedType>()) {
@@ -39,7 +42,7 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(matchers::isStaticMethod()),
+      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStatic()),
                                       varDecl(hasStaticStorageDuration()),
                                       enumConstantDecl())))
           .bind("memberExpression"),

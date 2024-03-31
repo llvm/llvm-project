@@ -125,11 +125,6 @@ SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
 SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
                                                const SourceManager &SM);
 
-// Returns true if a part of the range resides inside a macro expansion or the
-// range does not reside on the same FileID.
-bool insideMacroDefinition(SourceRange Range, const SourceManager &SM,
-                           const LangOptions &LangOpts);
-
 } // namespace tidy::utils::lexer
 } // namespace clang
 

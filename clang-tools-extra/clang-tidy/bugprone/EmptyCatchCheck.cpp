@@ -20,7 +20,7 @@ using ::clang::ast_matchers::internal::Matcher;
 namespace clang::tidy::bugprone {
 
 namespace {
-AST_MATCHER(CXXCatchStmt, isCatchInMacro) {
+AST_MATCHER(CXXCatchStmt, isInMacro) {
   return Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID() ||
          Node.getCatchLoc().isMacroID();
 }
@@ -89,8 +89,7 @@ void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
                      hasCanonicalType(AllowedNamedExceptionTypes)));
 
   Finder->addMatcher(
-      cxxCatchStmt(unless(isExpansionInSystemHeader()),
-                   unless(isCatchInMacro()),
+      cxxCatchStmt(unless(isExpansionInSystemHeader()), unless(isInMacro()),
                    unless(hasCaughtType(IgnoredExceptionType)),
                    hasHandler(compoundStmt(
                        statementCountIs(0),

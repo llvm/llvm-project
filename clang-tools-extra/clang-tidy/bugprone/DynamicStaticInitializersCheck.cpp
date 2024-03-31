@@ -15,8 +15,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-
 AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   const Expr *Init = Node.getInit();
   if (Init && !Init->isValueDependent()) {
@@ -26,8 +24,6 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   }
   return false;
 }
-
-} // namespace
 
 DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(
     StringRef Name, ClangTidyContext *Context)

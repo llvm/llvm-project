@@ -7,13 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnhandledExceptionAtNewCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+
+AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
+              ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
+  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
+    const CXXCatchStmt *CatchS = Node.getHandler(I);
+    // Check for generic catch handler (match anything).
+    if (CatchS->getCaughtType().isNull())
+      return true;
+    ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
+    if (InnerMatcher.matches(CatchS->getCaughtType(), Finder, &Result)) {
+      *Builder = std::move(Result);
+      return true;
+    }
+  }
+  return false;
+}
+
+AST_MATCHER(CXXNewExpr, mayThrow) {
+  FunctionDecl *OperatorNew = Node.getOperatorNew();
+  if (!OperatorNew)
+    return false;
+  return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
+}
 
 UnhandledExceptionAtNewCheck::UnhandledExceptionAtNewCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -30,12 +52,11 @@ void UnhandledExceptionAtNewCheck::registerMatchers(MatchFinder *Finder) {
   auto CatchBadAllocType =
       qualType(hasCanonicalType(anyOf(BadAllocType, BadAllocReferenceType,
                                       ExceptionType, ExceptionReferenceType)));
-  auto BadAllocCatchingTryBlock =
-      cxxTryStmt(matchers::hasHandlerFor(CatchBadAllocType));
+  auto BadAllocCatchingTryBlock = cxxTryStmt(hasHandlerFor(CatchBadAllocType));
 
   auto FunctionMayNotThrow = functionDecl(isNoThrow());
 
-  Finder->addMatcher(cxxNewExpr(matchers::mayThrow(),
+  Finder->addMatcher(cxxNewExpr(mayThrow(),
                                 unless(hasAncestor(BadAllocCatchingTryBlock)),
                                 hasAncestor(FunctionMayNotThrow))
                          .bind("new-expr"),

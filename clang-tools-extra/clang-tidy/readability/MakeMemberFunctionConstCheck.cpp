@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MakeMemberFunctionConstCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -17,6 +16,36 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
+
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
+
+AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
+  return Node.hasAnyDependentBases();
+}
+
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getTemplatedKind() != FunctionDecl::TK_NonTemplate;
+}
+
+AST_MATCHER(CXXMethodDecl, isDependentContext) {
+  return Node.isDependentContext();
+}
+
+AST_MATCHER(CXXMethodDecl, isInsideMacroDefinition) {
+  const ASTContext &Ctxt = Finder->getASTContext();
+  return clang::Lexer::makeFileCharRange(
+             clang::CharSourceRange::getCharRange(
+                 Node.getTypeSourceInfo()->getTypeLoc().getSourceRange()),
+             Ctxt.getSourceManager(), Ctxt.getLangOpts())
+      .isInvalid();
+}
+
+AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getCanonicalDecl(), Finder, Builder);
+}
 
 enum UsageKind { Unused, Const, NonConst };
 
@@ -176,7 +205,6 @@ public:
   }
 };
 
-namespace {
 AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
   FindUsageOfThis UsageOfThis(Finder->getASTContext());
 
@@ -186,8 +214,6 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
   return UsageOfThis.Usage == Const;
 }
 
-} // namespace
-
 void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
@@ -196,18 +222,15 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
               isDefinition(), isUserProvided(),
               unless(anyOf(
                   isExpansionInSystemHeader(), isVirtual(), isConst(),
-                  matchers::isStaticMethod(), matchers::hasTrivialBody(),
-                  cxxConstructorDecl(), cxxDestructorDecl(),
-                  matchers::isTemplate(), matchers::isDependentContext(),
-                  ofClass(anyOf(
-                      isLambda(),
-                      matchers::hasAnyDependentBases()) // Method might become
+                  isStatic(), hasTrivialBody(), cxxConstructorDecl(),
+                  cxxDestructorDecl(), isTemplate(), isDependentContext(),
+                  ofClass(anyOf(isLambda(),
+                                hasAnyDependentBases()) // Method might become
                                                         // virtual depending on
                                                         // template base class.
                           ),
-                  matchers::isInsideMacroDefinition(),
-                  matchers::hasCanonicalDecl(
-                      matchers::isInsideMacroDefinition()))),
+                  isInsideMacroDefinition(),
+                  hasCanonicalDecl(isInsideMacroDefinition()))),
               usesThisAsConst())
               .bind("x")),
       this);
