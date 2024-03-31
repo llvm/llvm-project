@@ -21712,6 +21712,19 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_sm3p1;
     break;
 
+  // Zimop
+  case RISCV::BI__builtin_riscv_mopr_32:
+  case RISCV::BI__builtin_riscv_mopr_64:
+    ID = Intrinsic::riscv_mopr;
+    IntrinsicTypes = {ResultType};
+    break;
+
+  case RISCV::BI__builtin_riscv_moprr_32:
+  case RISCV::BI__builtin_riscv_moprr_64:
+    ID = Intrinsic::riscv_moprr;
+    IntrinsicTypes = {ResultType};
+    break;
+
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load: {
     llvm::Type *ResTy = ConvertType(E->getType());
