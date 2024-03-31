@@ -415,7 +415,7 @@ namespace DeriveFailures {
 
     constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
                                               // both-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} \
-                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}} 
+                                              // ref-note {{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
   constexpr Derived D(12); // both-error {{must be initialized by a constant expression}} \
