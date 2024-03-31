@@ -1360,6 +1360,22 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
+#if KMP_OS_LINUX
+// kmp_uint64
+// __kmp_hardware_timestamp(void)
+// we load the current frequency of the system counter
+// then the system counter. frequency * counter gives
+// current time
+   PROC __kmp_hardware_timestamp
+   mrs x0, cntfrq_el0
+   mrs x1, cntvct_el0
+   mul x2, x1, x0
+   mov x30, x2
+   ret
+   DEBUG_INFO __kmp_hardware_timestamp
+// -- End  __kmp_hardware_timestamp
+#endif
+
 #endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
 
 #if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
