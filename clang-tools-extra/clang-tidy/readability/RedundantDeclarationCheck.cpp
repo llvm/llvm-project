@@ -15,9 +15,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
 AST_MATCHER(FunctionDecl, doesDeclarationForceExternallyVisibleDefinition) {
   return Node.doesDeclarationForceExternallyVisibleDefinition();
 }
+
+} // namespace
 
 RedundantDeclarationCheck::RedundantDeclarationCheck(StringRef Name,
                                                      ClangTidyContext *Context)

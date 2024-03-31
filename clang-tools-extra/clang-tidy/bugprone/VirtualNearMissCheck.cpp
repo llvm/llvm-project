@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VirtualNearMissCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -17,8 +18,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
   return Node.isOverloadedOperator();
 }
@@ -216,8 +215,8 @@ void VirtualNearMissCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           unless(anyOf(isOverride(), isImplicit(), cxxConstructorDecl(),
-                       cxxDestructorDecl(), cxxConversionDecl(), isStatic(),
-                       isOverloadedOperator())))
+                       cxxDestructorDecl(), cxxConversionDecl(),
+                       matchers::isStaticMethod(), isOverloadedOperator())))
           .bind("method"),
       this);
 }

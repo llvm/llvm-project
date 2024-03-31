@@ -1881,6 +1881,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 
 } // namespace filter
 
+namespace {
+
 /// Matches functions that have at least the specified amount of parameters.
 AST_MATCHER_P(FunctionDecl, parameterCountGE, unsigned, N) {
   return Node.getNumParams() >= N;
@@ -1902,6 +1904,8 @@ AST_MATCHER(FunctionDecl, isOverloadedUnaryOrBinaryOperator) {
     return Node.getNumParams() <= 2;
   }
 }
+
+} // namespace
 
 /// Returns the DefaultMinimumLength if the Value of requested minimum length
 /// is less than 2. Minimum lengths of 0 or 1 are not accepted.

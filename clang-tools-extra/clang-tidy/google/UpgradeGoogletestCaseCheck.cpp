@@ -234,7 +234,7 @@ static bool isInInstantiation(const NodeType &Node,
 template <typename NodeType>
 static bool isInTemplate(const NodeType &Node,
                          const MatchFinder::MatchResult &Result) {
-  internal::Matcher<NodeType> IsInsideTemplate =
+  ast_matchers::internal::Matcher<NodeType> IsInsideTemplate =
       hasAncestor(decl(anyOf(classTemplateDecl(), functionTemplateDecl())));
   return !match(IsInsideTemplate, Node, *Result.Context).empty();
 }

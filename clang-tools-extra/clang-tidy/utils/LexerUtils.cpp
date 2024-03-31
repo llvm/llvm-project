@@ -285,4 +285,11 @@ SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
   return {};
 }
 
+bool insideMacroDefinition(SourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  return clang::Lexer::makeFileCharRange(
+             clang::CharSourceRange::getCharRange(Range), SM, LangOpts)
+      .isInvalid();
+}
+
 } // namespace clang::tidy::utils::lexer

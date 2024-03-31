@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MultipleNewInOneExpressionCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -51,29 +52,6 @@ bool isExprValueStored(const Expr *E, ASTContext &C) {
 
 } // namespace
 
-AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
-              ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  for (unsigned NH = Node.getNumHandlers(), I = 0; I < NH; ++I) {
-    const CXXCatchStmt *CatchS = Node.getHandler(I);
-    // Check for generic catch handler (match anything).
-    if (CatchS->getCaughtType().isNull())
-      return true;
-    ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
-    if (InnerMatcher.matches(CatchS->getCaughtType(), Finder, &Result)) {
-      *Builder = std::move(Result);
-      return true;
-    }
-  }
-  return false;
-}
-
-AST_MATCHER(CXXNewExpr, mayThrow) {
-  FunctionDecl *OperatorNew = Node.getOperatorNew();
-  if (!OperatorNew)
-    return false;
-  return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
-}
-
 void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto BadAllocType =
       recordType(hasDeclaration(cxxRecordDecl(hasName("::std::bad_alloc"))));
@@ -85,9 +63,10 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
   auto CatchBadAllocType =
       qualType(hasCanonicalType(anyOf(BadAllocType, BadAllocReferenceType,
                                       ExceptionType, ExceptionReferenceType)));
-  auto BadAllocCatchingTryBlock = cxxTryStmt(hasHandlerFor(CatchBadAllocType));
+  auto BadAllocCatchingTryBlock =
+      cxxTryStmt(matchers::hasHandlerFor(CatchBadAllocType));
 
-  auto NewExprMayThrow = cxxNewExpr(mayThrow());
+  auto NewExprMayThrow = cxxNewExpr(matchers::mayThrow());
   auto HasNewExpr1 = expr(anyOf(NewExprMayThrow.bind("new1"),
                                 hasDescendant(NewExprMayThrow.bind("new1"))));
   auto HasNewExpr2 = expr(anyOf(NewExprMayThrow.bind("new2"),
@@ -115,7 +94,7 @@ void MultipleNewInOneExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                     hasAncestor(BadAllocCatchingTryBlock)),
                      this);
   Finder->addMatcher(
-      cxxNewExpr(mayThrow(),
+      cxxNewExpr(matchers::mayThrow(),
                  hasDescendant(NewExprMayThrow.bind("new2_in_new1")),
                  hasAncestor(BadAllocCatchingTryBlock))
           .bind("new1"),
