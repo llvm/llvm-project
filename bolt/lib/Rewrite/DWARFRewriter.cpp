@@ -1685,7 +1685,7 @@ namespace {
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
   return cantFail(BinaryContext::createBinaryContext(
-      &File, false,
+      File.makeTriple(), File.getFileName(), nullptr, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
                            WithColor::defaultWarningHandler),

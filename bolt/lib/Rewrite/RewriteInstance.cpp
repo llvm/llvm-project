@@ -268,6 +268,10 @@ namespace bolt {
 
 extern const char *BoltRevision;
 
+// Weird location for createMCPlusBuilder, but this is here to avoid a
+// cyclic dependency of libCore (its natural place) and libTarget. libRewrite
+// can depend on libTarget, but not libCore. Since libRewrite is the only
+// user of this function, we define it here.
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
@@ -345,8 +349,21 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   Stderr.SetUnbuffered();
   LLVM_DEBUG(dbgs().SetUnbuffered());
 
+  // Read RISCV subtarget features from input file
+  std::unique_ptr<SubtargetFeatures> Features;
+  Triple TheTriple = File->makeTriple();
+  if (TheTriple.getArch() == llvm::Triple::riscv64) {
+    Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
+    if (auto E = FeaturesOrErr.takeError()) {
+      Err = std::move(E);
+      return;
+    } else {
+      Features.reset(new SubtargetFeatures(*FeaturesOrErr));
+    }
+  }
+
   auto BCOrErr = BinaryContext::createBinaryContext(
-      File, IsPIC,
+      TheTriple, File->getFileName(), Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
