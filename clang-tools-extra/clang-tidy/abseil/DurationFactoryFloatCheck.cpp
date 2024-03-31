@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DurationFactoryFloatCheck.h"
-#include "../utils/LexerUtils.h"
 #include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,6 +17,15 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::abseil {
+
+// Returns `true` if `Range` is inside a macro definition.
+static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
+                                  SourceRange Range) {
+  return !clang::Lexer::makeFileCharRange(
+              clang::CharSourceRange::getCharRange(Range),
+              *Result.SourceManager, Result.Context->getLangOpts())
+              .isValid();
+}
 
 void DurationFactoryFloatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -37,9 +45,7 @@ void DurationFactoryFloatCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedCall = Result.Nodes.getNodeAs<CallExpr>("call");
 
   // Don't try and replace things inside of macro definitions.
-  if (tidy::utils::lexer::insideMacroDefinition(MatchedCall->getSourceRange(),
-                                                *Result.SourceManager,
-                                                Result.Context->getLangOpts()))
+  if (insideMacroDefinition(Result, MatchedCall->getSourceRange()))
     return;
 
   const Expr *Arg = MatchedCall->getArg(0)->IgnoreImpCasts();

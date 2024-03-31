@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConvertMemberFunctionsToStatic.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -19,10 +18,38 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
 
 AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
   return Node.isOverloadedOperator();
+}
+
+AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
+  return Node.hasAnyDependentBases();
+}
+
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getTemplatedKind() != FunctionDecl::TK_NonTemplate;
+}
+
+AST_MATCHER(CXXMethodDecl, isDependentContext) {
+  return Node.isDependentContext();
+}
+
+AST_MATCHER(CXXMethodDecl, isInsideMacroDefinition) {
+  const ASTContext &Ctxt = Finder->getASTContext();
+  return clang::Lexer::makeFileCharRange(
+             clang::CharSourceRange::getCharRange(
+                 Node.getTypeSourceInfo()->getTypeLoc().getSourceRange()),
+             Ctxt.getSourceManager(), Ctxt.getLangOpts())
+      .isInvalid();
+}
+
+AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.getCanonicalDecl(), Finder, Builder);
 }
 
 AST_MATCHER(CXXMethodDecl, usesThis) {
@@ -47,27 +74,22 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   return UsageOfThis.Used;
 }
 
-} // namespace
-
 void ConvertMemberFunctionsToStatic::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           isDefinition(), isUserProvided(),
           unless(anyOf(
-              isExpansionInSystemHeader(), isVirtual(),
-              matchers::isStaticMethod(), matchers::hasTrivialBody(),
-              isOverloadedOperator(), cxxConstructorDecl(), cxxDestructorDecl(),
-              cxxConversionDecl(), matchers::isTemplate(),
-              matchers::isDependentContext(),
+              isExpansionInSystemHeader(), isVirtual(), isStatic(),
+              hasTrivialBody(), isOverloadedOperator(), cxxConstructorDecl(),
+              cxxDestructorDecl(), cxxConversionDecl(), isTemplate(),
+              isDependentContext(),
               ofClass(anyOf(
                   isLambda(),
-                  matchers::hasAnyDependentBases()) // Method might become
-                                                    // virtual depending on
-                                                    // template base class.
+                  hasAnyDependentBases()) // Method might become virtual
+                                          // depending on template base class.
                       ),
-              matchers::isInsideMacroDefinition(),
-              matchers::hasCanonicalDecl(matchers::isInsideMacroDefinition()),
-              usesThis())))
+              isInsideMacroDefinition(),
+              hasCanonicalDecl(isInsideMacroDefinition()), usesThis())))
           .bind("x"),
       this);
 }

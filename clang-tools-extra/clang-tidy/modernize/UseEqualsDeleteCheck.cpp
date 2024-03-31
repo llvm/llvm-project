@@ -16,7 +16,6 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
-
 AST_MATCHER(FunctionDecl, hasAnyDefinition) {
   if (Node.hasBody() || Node.isPureVirtual() || Node.isDefaulted() ||
       Node.isDeleted())
@@ -42,6 +41,9 @@ AST_MATCHER(CXXMethodDecl, isSpecialFunction) {
 }
 } // namespace
 
+static const char SpecialFunction[] = "SpecialFunction";
+static const char DeletedNotPublic[] = "DeletedNotPublic";
+
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -61,17 +63,17 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
           // defined.
           unless(ofClass(hasMethod(cxxMethodDecl(unless(PrivateSpecialFn),
                                                  unless(hasAnyDefinition()))))))
-          .bind("SpecialFunction"),
+          .bind(SpecialFunction),
       this);
 
   Finder->addMatcher(
-      cxxMethodDecl(isDeleted(), unless(isPublic())).bind("DeletedNotPublic"),
+      cxxMethodDecl(isDeleted(), unless(isPublic())).bind(DeletedNotPublic),
       this);
 }
 
 void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
-          Result.Nodes.getNodeAs<CXXMethodDecl>("SpecialFunction")) {
+          Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction)) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
@@ -82,7 +84,7 @@ void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
          "use '= delete' to prohibit calling of a special member function")
         << FixItHint::CreateInsertion(EndLoc, " = delete");
   } else if (const auto *Func =
-                 Result.Nodes.getNodeAs<CXXMethodDecl>("DeletedNotPublic")) {
+                 Result.Nodes.getNodeAs<CXXMethodDecl>(DeletedNotPublic)) {
     // Ignore this warning in macros, since it's extremely noisy in code using
     // DISALLOW_COPY_AND_ASSIGN-style macros and there's no easy way to
     // automatically fix the warning when macros are in play.

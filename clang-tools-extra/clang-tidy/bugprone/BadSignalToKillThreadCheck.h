@@ -26,10 +26,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-
-private:
   std::optional<unsigned> SigtermValue;
-  Preprocessor *PP = nullptr;
 };
 
 } // namespace clang::tidy::bugprone
