@@ -95,8 +95,8 @@ generateReplacement(const MatchFinder::MatchResult &Match,
   for (const Expr *Arg : Result.Args) {
     if (const auto *InnerCall =
             dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts())) {
-      const auto InnerResult = findArgs(InnerCall);
-      const auto InnerReplacement =
+      const FindArgsResult InnerResult = findArgs(InnerCall);
+      const std::vector<FixItHint> InnerReplacements =
           generateReplacement(Match, InnerCall, InnerResult);
       if (InnerCall->getDirectCallee()->getQualifiedNameAsString() ==
               TopCall->getDirectCallee()->getQualifiedNameAsString() &&
@@ -119,8 +119,8 @@ generateReplacement(const MatchFinder::MatchResult &Match,
             FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
 
         if (InnerResult.First == InnerResult.Last) {
-          FixItHints.insert(FixItHints.end(), InnerReplacement.begin(),
-                            InnerReplacement.end());
+          FixItHints.insert(FixItHints.end(), InnerReplacements.begin(),
+                            InnerReplacements.end());
 
           FixItHints.push_back(
               FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
@@ -128,11 +128,11 @@ generateReplacement(const MatchFinder::MatchResult &Match,
           FixItHints.push_back(FixItHint::CreateRemoval(
               CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
         } else
-          FixItHints.insert(FixItHints.end(), InnerReplacement.begin() + 1,
-                            InnerReplacement.end() - 1);
+          FixItHints.insert(FixItHints.end(), InnerReplacements.begin() + 1,
+                            InnerReplacements.end() - 1);
 
         if (InnerResult.Compare) {
-          const std::optional<Token> Comma =
+          const auto Comma =
               utils::lexer::findNextTokenSkippingComments(
                   InnerResult.Last->getEndLoc(), *Match.SourceManager,
                   Match.Context->getLangOpts());
@@ -203,7 +203,7 @@ void MinMaxUseInitializerListCheck::storeOptions(
 }
 
 void MinMaxUseInitializerListCheck::registerMatchers(MatchFinder *Finder) {
-  auto CreateMatcher = [](const StringRef &FunctionName) {
+  auto CreateMatcher = [](const StringRef FunctionName) {
     auto FuncDecl = functionDecl(hasName(FunctionName));
     auto Expression = callExpr(callee(FuncDecl));
 
