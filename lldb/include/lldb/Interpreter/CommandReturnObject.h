@@ -133,6 +133,9 @@ public:
 
   void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
 
+  std::string DetailStringForPromptCommand(size_t prompt_size,
+                                           llvm::StringRef input);
+
   void SetError(llvm::Error error);
 
   lldb::ReturnStatus GetStatus() const;
@@ -162,6 +165,7 @@ private:
   StreamTee m_err_stream;
 
   lldb::ReturnStatus m_status = lldb::eReturnStatusStarted;
+  Status m_error_status;
 
   bool m_did_change_process_state = false;
   bool m_suppress_immediate_output = false;

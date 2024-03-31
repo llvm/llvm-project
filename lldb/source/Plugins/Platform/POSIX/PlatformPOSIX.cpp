@@ -851,9 +851,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                                                  func_args_addr,
                                                  arguments,
                                                  diagnostics)) {
-    error.SetErrorStringWithFormat(
-        "dlopen error: could not write function arguments: %s",
-        diagnostics.GetString().c_str());
+    error.SetErrorString("dlopen error: could not write function arguments: ");
+    error.SetErrorDetails(diagnostics);
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   
@@ -893,9 +892,9 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   ExpressionResults results = do_dlopen_function->ExecuteFunction(
       exe_ctx, &func_args_addr, options, diagnostics, return_value);
   if (results != eExpressionCompleted) {
-    error.SetErrorStringWithFormat(
-        "dlopen error: failed executing dlopen wrapper function: %s",
-        diagnostics.GetString().c_str());
+    error.SetErrorString(
+        "dlopen error: failed executing dlopen wrapper function: ");
+    error.SetErrorDetails(diagnostics);
     return LLDB_INVALID_IMAGE_TOKEN;
   }
   

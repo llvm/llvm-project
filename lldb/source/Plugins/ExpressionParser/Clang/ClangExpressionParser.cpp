@@ -1424,7 +1424,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
             std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
             if (install_diags.Diagnostics().size())
-              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
+              err.SetErrorDetails(install_diags);
             err.SetErrorString(ErrMsg);
             return err;
           }
@@ -1505,8 +1505,8 @@ lldb_private::Status ClangExpressionParser::RunStaticInitializers(
             exe_ctx, call_static_initializer, options, execution_errors);
 
     if (results != lldb::eExpressionCompleted) {
-      err.SetErrorStringWithFormat("couldn't run static initializer: %s",
-                                   execution_errors.GetString().c_str());
+      err.SetErrorString("couldn't run static initializer: ");
+      err.SetErrorDetails(execution_errors);
       return err;
     }
   }
