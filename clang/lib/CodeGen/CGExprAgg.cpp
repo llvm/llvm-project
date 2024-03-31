@@ -559,8 +559,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   Address endOfInit = Address::invalid();
   CodeGenFunction::CleanupDeactivationScope deactivation(CGF);
 
-  if (CGF.needsEHCleanup(dtorKind) ||
-      (dtorKind && ExprToVisit->mayBranchOut())) {
+  if (dtorKind) {
+    CodeGenFunction::AllocaTrackerRAII AllocaTracker(CGF);
     // In principle we could tell the cleanup where we are more
     // directly, but the control flow can get so varied here that it
     // would actually be quite complex.  Therefore we go through an
@@ -573,6 +573,9 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     CGF.pushIrregularPartialArrayCleanup(begin, endOfInit, elementType,
                                          elementAlign,
                                          CGF.getDestroyer(dtorKind));
+    cast<EHCleanupScope>(*CGF.EHStack.find(CGF.EHStack.stable_begin()))
+        .AddAuxAllocas(AllocaTracker.Take());
+
     CGF.DeferredDeactivationCleanupStack.push_back(
         {CGF.EHStack.stable_begin(), DominatingIP});
   }

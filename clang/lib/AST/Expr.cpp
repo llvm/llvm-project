@@ -2506,32 +2506,6 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
-bool Expr::mayBranchOut() const {
-  struct BranchDetector : public RecursiveASTVisitor<BranchDetector> {
-    bool HasBranch = false;
-    bool activate() {
-      HasBranch = true;
-      return false;
-    }
-    // Coroutine suspensions.
-    bool VisitCoawaitExpr(CoawaitExpr *) { return activate(); }
-    bool VisitCoyieldExpr(CoyieldExpr *) { return activate(); }
-    // Control flow in stmt-expressions.
-    bool VisitCoreturnStmt(CoreturnStmt *) { return activate(); }
-    bool VisitBreakStmt(BreakStmt *) { return activate(); }
-    bool VisitReturnStmt(ReturnStmt *) { return activate(); }
-    bool VisitGotoStmt(GotoStmt *) { return activate(); }
-    bool VisitIndirectGotoStmt(IndirectGotoStmt *) { return activate(); }
-    bool VisitContinueStmt(ContinueStmt *) { return activate(); }
-    bool VisitGCCAsmStmt(GCCAsmStmt *S) {
-      return S->isAsmGoto() ? activate() : true;
-    }
-  };
-  BranchDetector detector;
-  detector.TraverseStmt(const_cast<Expr *>(this));
-  return detector.HasBranch;
-}
-
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
   // according to [expr]p10:
