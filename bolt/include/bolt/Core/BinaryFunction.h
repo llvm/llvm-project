@@ -655,6 +655,7 @@ private:
   BinaryFunction(const BinaryFunction &) = delete;
 
   friend class MachORewriteInstance;
+  friend class JITRewriteInstance;
   friend class RewriteInstance;
   friend class BinaryContext;
   friend class DataReader;
