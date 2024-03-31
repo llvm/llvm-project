@@ -132,10 +132,9 @@ generateReplacement(const MatchFinder::MatchResult &Match,
                             InnerReplacements.end() - 1);
 
         if (InnerResult.Compare) {
-          const auto Comma =
-              utils::lexer::findNextTokenSkippingComments(
-                  InnerResult.Last->getEndLoc(), *Match.SourceManager,
-                  Match.Context->getLangOpts());
+          const auto Comma = utils::lexer::findNextTokenSkippingComments(
+              InnerResult.Last->getEndLoc(), *Match.SourceManager,
+              Match.Context->getLangOpts());
           if (Comma && Comma->getKind() == tok::comma)
             FixItHints.push_back(
                 FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
@@ -143,11 +142,11 @@ generateReplacement(const MatchFinder::MatchResult &Match,
           if (utils::lexer::getPreviousToken(
                   InnerResult.Compare->getExprLoc(), *Match.SourceManager,
                   Match.Context->getLangOpts(), false)
-                  .getLocation() == Comma->getLocation()) {
+                  .getLocation() == Comma->getLocation())
             FixItHints.push_back(
                 FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
                     Comma->getLocation(), InnerResult.Compare->getEndLoc())));
-          } else {
+          else {
             FixItHints.push_back(
                 FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
                     InnerResult.Compare->getSourceRange())));
