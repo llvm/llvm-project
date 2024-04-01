@@ -281,7 +281,7 @@ public:
     if (clientAPI == "opencl")
       memorySpaceMap = spirv::mapMemorySpaceToOpenCLStorageClass;
     else if (clientAPI != "vulkan")
-      return failure();
+      return errorHandler(llvm::Twine("Invalid clienAPI: ") + clientAPI);
 
     return success();
   }
