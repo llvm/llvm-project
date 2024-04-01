@@ -123,3 +123,16 @@ void rawPointer() {
   T* p;
   T x = std::move(*p);
 }
+
+struct HasASharedPtrField {
+  std::shared_ptr<Nontrivial> x;
+};
+
+HasASharedPtrField returnsStruct() {
+  HasASharedPtrField h;
+  return h;
+}
+  
+void subfield() {
+  int x = std::move(returnsStruct().x->x);
+}

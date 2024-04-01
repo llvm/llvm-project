@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <signal.h>
+#include <unistd.h>
+
 #include "MoveSharedPointerContentsCheck.h"
 #include "../ClangTidyCheck.h"
 #include "../utils/Matchers.h"
@@ -16,6 +19,30 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+namespace {
+
+// Reports whether the QualType matches the inner matcher, which is expected to be
+// matchesAnyListedName. The QualType is expected to either point to a RecordDecl
+// (for concrete types) or an ElaboratedType (for dependent ones).
+AST_MATCHER_P(QualType, isSharedPointer,
+              clang::ast_matchers::internal::Matcher<NamedDecl>, InnerMatcher) {
+  if (const auto *RD = Node.getTypePtr()->getAsCXXRecordDecl(); RD != nullptr) {
+    return InnerMatcher.matches(*RD, Finder, Builder);
+  } else if (const auto *ED = Node.getTypePtr()->getAs<ElaboratedType>();
+             ED != nullptr) {
+    if (const auto *TS = ED->getNamedType()
+                             .getTypePtr()
+                             ->getAs<TemplateSpecializationType>();
+        TS != nullptr) {
+      return InnerMatcher.matches(*TS->getTemplateName().getAsTemplateDecl(),
+                                  Finder, Builder);
+    }
+  }
+
+  return false;
+}
+
+} // namespace
 
 MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -26,116 +53,77 @@ MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
 void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
   auto isStdMove = callee(functionDecl(hasName("::std::move")));
 
-  // Resolved type, direct move.
-  Finder->addMatcher(
-      callExpr(isStdMove, hasArgument(0, cxxOperatorCallExpr(
-                                             hasOverloadedOperatorName("*"),
-                                             callee(cxxMethodDecl(ofClass(
-                                                 matchers::matchesAnyListedName(
-                                                     SharedPointerClasses)))))))
+  auto resolvedType = callExpr(anyOf(
+      // Resolved type, direct move.
+      callExpr(
+          isStdMove,
+          hasArgument(
+              0,
+              cxxOperatorCallExpr(
+                  hasOverloadedOperatorName("*"),
+                  hasDescendant(declRefExpr(hasType(qualType(isSharedPointer(
+                      matchers::matchesAnyListedName(SharedPointerClasses)))))),
+                  callee(cxxMethodDecl()))))
           .bind("call"),
-      this);
-
-  // Resolved type, move out of get().
-  Finder->addMatcher(
+      // Resolved type, move out of get().
       callExpr(
           isStdMove,
           hasArgument(
               0, unaryOperator(
                      hasOperatorName("*"),
-                     hasUnaryOperand(cxxMemberCallExpr(callee(cxxMethodDecl(
-                         hasName("get"), ofClass(matchers::matchesAnyListedName(
-                                             SharedPointerClasses)))))))))
-          .bind("get_call"),
-      this);
+                     hasUnaryOperand(allOf(
+                         hasDescendant(declRefExpr(hasType(qualType(
+                             isSharedPointer(matchers::matchesAnyListedName(
+                                 SharedPointerClasses)))))),
+                         cxxMemberCallExpr(
+                             callee(cxxMethodDecl(hasName("get")))))))))
+          .bind("get_call")));
+
+  Finder->addMatcher(resolvedType, this);
 
   auto isStdMoveUnresolved = callee(unresolvedLookupExpr(
       hasAnyDeclaration(namedDecl(hasUnderlyingDecl(hasName("::std::move"))))));
 
-  // Unresolved type, direct move.
-  Finder->addMatcher(
+  auto unresolvedType = callExpr(anyOf(
+      // Unresolved type, direct move.
       callExpr(
           isStdMoveUnresolved,
-          hasArgument(0, unaryOperator(hasOperatorName("*"),
-                                       hasUnaryOperand(declRefExpr(hasType(
-                                           qualType().bind("unresolved_p")))))))
+          hasArgument(0, unaryOperator(
+                             hasOperatorName("*"),
+                             hasUnaryOperand(declRefExpr(hasType(qualType(
+                                 isSharedPointer(matchers::matchesAnyListedName(
+                                     SharedPointerClasses)))))))))
           .bind("unresolved_call"),
-      this);
-  // Annoyingly, the declRefExpr in the unresolved-move-of-get() case
-  // is of <dependent type> rather than shared_ptr<T>, so we have to
-  // just fetch the variable. This does leave a gap where a temporary
-  // shared_ptr wouldn't be caught, but moving out of a temporary
-  // shared pointer is a truly wild thing to do so it should be okay.
 
-  // Unresolved type, move out of get().
-  Finder->addMatcher(
+      // Annoyingly, the declRefExpr in the unresolved-move-of-get() case
+      // is of <dependent type> rather than shared_ptr<T>, so we have to
+      // just fetch the variable. This does leave a gap where a temporary
+      // shared_ptr wouldn't be caught, but moving out of a temporary
+      // shared pointer is a truly wild thing to do so it should be okay.
       callExpr(isStdMoveUnresolved,
                hasArgument(
-                   0, unaryOperator(hasOperatorName("*"),
-                                    hasDescendant(cxxDependentScopeMemberExpr(
-                                        hasMemberName("get"))),
-                                    hasDescendant(declRefExpr(to(
-                                        varDecl().bind("unresolved_get_p")))))))
-          .bind("unresolved_get_call"),
-      this);
-}
+                   0, unaryOperator(
+                          hasOperatorName("*"),
+                          hasDescendant(cxxDependentScopeMemberExpr(
+                              hasMemberName("get"))),
+                          hasDescendant(declRefExpr(to(varDecl(hasType(qualType(
+                              isSharedPointer(matchers::matchesAnyListedName(
+                                  SharedPointerClasses)))))))))))
+          .bind("unresolved_get_call")));
 
-bool MoveSharedPointerContentsCheck::isSharedPointerClass(
-    const VarDecl *VD) const {
-  if (VD == nullptr)
-    return false;
-
-  const QualType QT = VD->getType();
-  return isSharedPointerClass(&QT);
-}
-
-bool MoveSharedPointerContentsCheck::isSharedPointerClass(
-    const QualType *QT) const {
-  if (QT == nullptr)
-    return false;
-
-  // We want the qualified name without template parameters,
-  // const/volatile, or reference/pointer qualifiers so we can look
-  // it up in SharedPointerClasses. This is a bit messy, but gets us
-  // to the underlying type without template parameters (eg
-  // std::shared_ptr) or const/volatile qualifiers even in the face of
-  // typedefs.
-
-  bool found = false;
-  const auto *Template = llvm::dyn_cast<TemplateSpecializationType>(
-      QT->getSplitDesugaredType().Ty);
-  if (Template != nullptr) {
-    const std::string TypeName = Template->getTemplateName()
-                                     .getAsTemplateDecl()
-                                     ->getQualifiedNameAsString();
-    for (const llvm::StringRef SharedPointer : SharedPointerClasses) {
-      // SharedPointer entries may or may not have leading ::, but TypeName
-      // definitely won't.
-      if (SharedPointer == TypeName || SharedPointer.substr(2) == TypeName) {
-        found = true;
-        break;
-      }
-    }
-  }
-
-  return found;
+  Finder->addMatcher(unresolvedType, this);
 }
 
 void MoveSharedPointerContentsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const bool Unresolved =
-      isSharedPointerClass(Result.Nodes.getNodeAs<QualType>("unresolved_p"));
-  const bool UnresolvedGet =
-      isSharedPointerClass(Result.Nodes.getNodeAs<VarDecl>("unresolved_get_p"));
-
   clang::SourceLocation Loc;
   if (const auto *UnresolvedCall =
           Result.Nodes.getNodeAs<CallExpr>("unresolved_call");
-      UnresolvedCall != nullptr && Unresolved) {
+      UnresolvedCall != nullptr) {
     Loc = UnresolvedCall->getBeginLoc();
   } else if (const auto *UnresolvedGetCall =
                  Result.Nodes.getNodeAs<CallExpr>("unresolved_get_call");
-             UnresolvedGetCall != nullptr && UnresolvedGet) {
+             UnresolvedGetCall != nullptr) {
     Loc = UnresolvedGetCall->getBeginLoc();
   } else if (const auto *GetCall = Result.Nodes.getNodeAs<CallExpr>("get_call");
              GetCall != nullptr) {
