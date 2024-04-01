@@ -52,7 +52,7 @@ public:
   }
 
   bool visitInstruction(Instruction &I) { return false; }
-  bool visitAdd(BinaryOperator &BO);
+  bool visitBinaryOperator(BinaryOperator &BO);
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
 };
@@ -75,13 +75,13 @@ public:
 /// which allows us to fold it into a masked op:
 ///
 ///       vadd.vi v8, v8, 1, v0.t
-bool RISCVCodeGenPrepare::visitAdd(BinaryOperator &BO) {
-  VectorType *Ty = dyn_cast<VectorType>(BO.getType());
-  if (!Ty)
+bool RISCVCodeGenPrepare::visitBinaryOperator(BinaryOperator &BO) {
+  if (!BO.getType()->isVectorTy())
     return false;
 
+  // TODO: We could allow sub if we did a non-commutative match
   Constant *Identity = ConstantExpr::getIdentity(&BO, BO.getType());
-  if (!Identity->isZeroValue())
+  if (!Identity || !Identity->isZeroValue())
     return false;
 
   using namespace PatternMatch;
@@ -90,14 +90,13 @@ bool RISCVCodeGenPrepare::visitAdd(BinaryOperator &BO) {
   if (!match(&BO, m_c_BinOp(m_OneUse(m_ZExt(m_Value(Mask))), m_Value(RHS))))
     return false;
 
-  if (!cast<VectorType>(Mask->getType())->getElementType()->isIntegerTy(1))
+  if (!Mask->getType()->isIntOrIntVectorTy(1))
     return false;
 
   IRBuilder<> Builder(&BO);
-  Value *Splat = Builder.CreateVectorSplat(
-      Ty->getElementCount(), ConstantInt::get(Ty->getElementType(), 1));
-  Value *Add = Builder.CreateAdd(RHS, Splat);
-  Value *Select = Builder.CreateSelect(Mask, Add, RHS);
+  Value *Splat = ConstantInt::get(BO.getType(), 1);
+  Value *BinOp = Builder.CreateBinOp(BO.getOpcode(), RHS, Splat);
+  Value *Select = Builder.CreateSelect(Mask, BinOp, RHS);
 
   BO.replaceAllUsesWith(Select);
   BO.eraseFromParent();

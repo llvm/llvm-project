@@ -57,3 +57,55 @@ define <vscale x 2 x i32> @i1_zext_add(<vscale x 2 x i1> %a, <vscale x 2 x i32> 
   %add = add <vscale x 2 x i32> %b, %zext
   ret <vscale x 2 x i32> %add
 }
+
+define <vscale x 2 x i32> @i1_zext_add_commuted(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_add_commuted(
+; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i32> [[B]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[A]], <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+;
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %zext, %b
+  ret <vscale x 2 x i32> %add
+}
+
+define <vscale x 2 x i32> @i1_zext_add_multi_use(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b, ptr %p) {
+; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_add_multi_use(
+; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <vscale x 2 x i32> [[B]], [[ZEXT]]
+; CHECK-NEXT:    store <vscale x 2 x i32> [[ZEXT]], ptr [[P]], align 8
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+;
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %b, %zext
+  store <vscale x 2 x i32> %zext, ptr %p
+  ret <vscale x 2 x i32> %add
+}
+
+define <vscale x 2 x i32> @i1_zext_sub(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_sub(
+; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <vscale x 2 x i32> [[B]], [[ZEXT]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+;
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %sub = sub <vscale x 2 x i32> %b, %zext
+  ret <vscale x 2 x i32> %sub
+}
+
+define <vscale x 2 x i32> @i1_zext_or(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_or(
+; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <vscale x 2 x i32> [[B]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[A]], <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+;
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %or = or <vscale x 2 x i32> %b, %zext
+  ret <vscale x 2 x i32> %or
+}

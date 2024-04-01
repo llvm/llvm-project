@@ -53,3 +53,53 @@ define <vscale x 2 x i32> @i1_zext_add(<vscale x 2 x i1> %a, <vscale x 2 x i32> 
   %add = add <vscale x 2 x i32> %b, %zext
   ret <vscale x 2 x i32> %add
 }
+
+define <vscale x 2 x i32> @i1_zext_add_commuted(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: i1_zext_add_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    ret
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %zext, %b
+  ret <vscale x 2 x i32> %add
+}
+
+define <vscale x 2 x i32> @i1_zext_add_multi_use(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b, ptr %p) {
+; CHECK-LABEL: i1_zext_add_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vs1r.v v9, (a0)
+; CHECK-NEXT:    ret
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %b, %zext
+  store <vscale x 2 x i32> %zext, ptr %p
+  ret <vscale x 2 x i32> %add
+}
+
+define <vscale x 2 x i32> @i1_zext_sub(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: i1_zext_sub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vsub.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %sub = sub <vscale x 2 x i32> %b, %zext
+  ret <vscale x 2 x i32> %sub
+}
+
+define <vscale x 2 x i32> @i1_zext_or(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: i1_zext_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vor.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    ret
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %or = or <vscale x 2 x i32> %b, %zext
+  ret <vscale x 2 x i32> %or
+}
