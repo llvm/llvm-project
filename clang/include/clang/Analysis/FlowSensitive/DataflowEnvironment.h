@@ -97,6 +97,16 @@ public:
                       const Value &Val2, const Environment &Env2,
                       Value &JoinedVal, Environment &JoinedEnv) {}
 
+    /// The result of the `widen` operation.
+    struct WidenResult {
+      /// Non-null pointer to a potentially widened version of the widening
+      /// input.
+      Value *V;
+      /// Whether `V` represents a "change" (that is, a different value) with
+      /// respect to the previous value in the sequence.
+      LatticeJoinEffect Effect;
+    };
+
     /// This function may widen the current value -- replace it with an
     /// approximation that can reach a fixed point more quickly than iterated
     /// application of the transfer function alone. The previous value is
@@ -104,14 +114,17 @@ public:
     /// serve as a comparison operation, by indicating whether the widened value
     /// is equivalent to the previous value.
     ///
-    /// Returns either:
-    ///
-    ///   `nullptr`, if this value is not of interest to the model, or
-    ///
-    ///   `&Prev`, if the widened value is equivalent to `Prev`, or
-    ///
-    ///   A non-null value that approximates `Current`. `Prev` is available to
-    ///   inform the chosen approximation.
+    /// Returns one of the folowing:
+    /// *  `std::nullopt`, if this value is not of interest to the
+    ///     model.
+    /// *  A `WidenResult` with:
+    ///    *  A non-null `Value *` that points either to `Current` or a widened
+    ///       version of `Current`. This value must be consistent with
+    ///       the flow condition of `CurrentEnv`. We particularly caution
+    ///       against using `Prev`, which is rarely consistent.
+    ///    *  A `LatticeJoinEffect` indicating whether the value should be
+    ///       considered a new value (`Changed`) or one *equivalent* (if not
+    ///       necessarily equal) to `Prev` (`Unchanged`).
     ///
     /// `PrevEnv` and `CurrentEnv` can be used to query child values and path
     /// condition implications of `Prev` and `Current`, respectively.
@@ -122,17 +135,19 @@ public:
     ///
     ///  `Prev` and `Current` must be assigned to the same storage location in
     ///  `PrevEnv` and `CurrentEnv`, respectively.
-    virtual Value *widen(QualType Type, Value &Prev, const Environment &PrevEnv,
-                         Value &Current, Environment &CurrentEnv) {
+    virtual std::optional<WidenResult> widen(QualType Type, Value &Prev,
+                                             const Environment &PrevEnv,
+                                             Value &Current,
+                                             Environment &CurrentEnv) {
       // The default implementation reduces to just comparison, since comparison
       // is required by the API, even if no widening is performed.
       switch (compare(Type, Prev, PrevEnv, Current, CurrentEnv)) {
-        case ComparisonResult::Same:
-          return &Prev;
-        case ComparisonResult::Different:
-          return &Current;
-        case ComparisonResult::Unknown:
-          return nullptr;
+      case ComparisonResult::Unknown:
+        return std::nullopt;
+      case ComparisonResult::Same:
+        return WidenResult{&Current, LatticeJoinEffect::Unchanged};
+      case ComparisonResult::Different:
+        return WidenResult{&Current, LatticeJoinEffect::Changed};
       }
       llvm_unreachable("all cases in switch covered");
     }

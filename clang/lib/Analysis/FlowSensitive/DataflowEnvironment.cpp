@@ -166,17 +166,20 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
   return JoinedVal;
 }
 
-// When widening does not change `Current`, return value will equal `&Prev`.
-static Value &widenDistinctValues(QualType Type, Value &Prev,
-                                  const Environment &PrevEnv, Value &Current,
-                                  Environment &CurrentEnv,
-                                  Environment::ValueModel &Model) {
+namespace {
+using WidenResult = Environment::ValueModel::WidenResult;
+}
+
+static WidenResult widenDistinctValues(QualType Type, Value &Prev,
+                                       const Environment &PrevEnv,
+                                       Value &Current, Environment &CurrentEnv,
+                                       Environment::ValueModel &Model) {
   // Boolean-model widening.
   if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
-    // If previous value was already Top, re-use that to (implicitly) indicate
-    // that no change occurred.
     if (isa<TopBoolValue>(Prev))
-      return Prev;
+      // Safe to return `Prev` here, because Top is never dependent on the
+      // environment.
+      return {&Prev, LatticeJoinEffect::Unchanged};
 
     // We may need to widen to Top, but before we do so, check whether both
     // values are implied to be either true or false in the current environment.
@@ -185,22 +188,26 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
     bool TruePrev = PrevEnv.proves(PrevBool->formula());
     bool TrueCur = CurrentEnv.proves(CurBool.formula());
     if (TruePrev && TrueCur)
-      return CurrentEnv.getBoolLiteralValue(true);
+      return {&CurrentEnv.getBoolLiteralValue(true),
+              LatticeJoinEffect::Unchanged};
     if (!TruePrev && !TrueCur &&
         PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
         CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
-      return CurrentEnv.getBoolLiteralValue(false);
+      return {&CurrentEnv.getBoolLiteralValue(false),
+              LatticeJoinEffect::Unchanged};
 
-    return CurrentEnv.makeTopBoolValue();
+    return {&CurrentEnv.makeTopBoolValue(), LatticeJoinEffect::Changed};
   }
 
   // FIXME: Add other built-in model widening.
 
   // Custom-model widening.
-  if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
-    return *W;
+  if (auto Result = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
+    return *Result;
 
-  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
+  return {&Current, equateUnknownValues(Prev.getKind())
+                        ? LatticeJoinEffect::Unchanged
+                        : LatticeJoinEffect::Changed};
 }
 
 // Returns whether the values in `Map1` and `Map2` compare equal for those
@@ -290,10 +297,10 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
       continue;
     }
 
-    Value &WidenedVal = widenDistinctValues(K->getType(), *PrevIt->second,
-                                            PrevEnv, *Val, CurEnv, Model);
-    WidenedMap.insert({K, &WidenedVal});
-    if (&WidenedVal != PrevIt->second)
+    auto [WidenedVal, ValEffect] = widenDistinctValues(
+        K->getType(), *PrevIt->second, PrevEnv, *Val, CurEnv, Model);
+    WidenedMap.insert({K, WidenedVal});
+    if (ValEffect == LatticeJoinEffect::Changed)
       Effect = LatticeJoinEffect::Changed;
   }
 
