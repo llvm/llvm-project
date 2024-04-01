@@ -21,6 +21,9 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
+RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
+    : Handles(Plugin.getNumDevices()) {}
+
 llvm::Expected<bool>
 RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
@@ -101,7 +104,6 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (auto Err = Device.dataSubmit(ClientPtr, ClientBuffer,
                                    rpc_get_client_size(), nullptr))
     return Err;
-  Handles.resize(Device.getDeviceId() + 1);
   Handles[Device.getDeviceId()] = RPCDevice.handle;
 #endif
   return Error::success();
