@@ -333,8 +333,8 @@ define <vscale x 4 x double> @scvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z0.d, p2/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z1.d, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    scvtf z0.d, p1/m, z0.d
 ; CHECK-NEXT:    scvtf z1.d, p1/m, z1.d
@@ -395,8 +395,8 @@ define <vscale x 4 x double> @ucvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z0.d, p2/z, #1 // =0x1
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov z1.d, p0/z, #1 // =0x1
 ; CHECK-NEXT:    ucvtf z0.d, p1/m, z0.d
 ; CHECK-NEXT:    ucvtf z1.d, p1/m, z1.d

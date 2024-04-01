@@ -170,13 +170,13 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; GISEL-LABEL: combine_vec_udiv_nonuniform4:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    adrp x8, .LCPI4_2
+; GISEL-NEXT:    adrp x9, .LCPI4_0
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI4_2]
 ; GISEL-NEXT:    adrp x8, .LCPI4_1
+; GISEL-NEXT:    ldr q4, [x9, :lo12:.LCPI4_0]
 ; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI4_1]
-; GISEL-NEXT:    adrp x8, .LCPI4_0
 ; GISEL-NEXT:    umull2 v2.8h, v0.16b, v1.16b
 ; GISEL-NEXT:    umull v1.8h, v0.8b, v1.8b
-; GISEL-NEXT:    ldr q4, [x8, :lo12:.LCPI4_0]
 ; GISEL-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    neg v2.16b, v3.16b
 ; GISEL-NEXT:    shl v3.16b, v4.16b, #7

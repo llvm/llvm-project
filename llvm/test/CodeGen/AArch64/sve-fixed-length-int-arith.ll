@@ -1388,20 +1388,20 @@ define void @abs_v128i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov x10, #64 // =0x40
 ; CHECK-NEXT:    mov x11, #80 // =0x50
 ; CHECK-NEXT:    mov x12, #32 // =0x20
-; CHECK-NEXT:    mov x13, #48 // =0x30
-; CHECK-NEXT:    mov x14, #16 // =0x10
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x9, lsl #1]
 ; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, x10, lsl #1]
 ; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0, x11, lsl #1]
 ; CHECK-NEXT:    ld1h { z4.h }, p0/z, [x0, x12, lsl #1]
+; CHECK-NEXT:    mov x13, #48 // =0x30
+; CHECK-NEXT:    mov x14, #16 // =0x10
 ; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x0, x13, lsl #1]
-; CHECK-NEXT:    ld1h { z6.h }, p0/z, [x0, x14, lsl #1]
 ; CHECK-NEXT:    abs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    abs z1.h, p0/m, z1.h
 ; CHECK-NEXT:    abs z2.h, p0/m, z2.h
 ; CHECK-NEXT:    abs z3.h, p0/m, z3.h
 ; CHECK-NEXT:    abs z4.h, p0/m, z4.h
+; CHECK-NEXT:    ld1h { z6.h }, p0/z, [x0, x14, lsl #1]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x0, x9, lsl #1]
