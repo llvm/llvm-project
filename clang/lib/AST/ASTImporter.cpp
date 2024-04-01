@@ -443,8 +443,10 @@ namespace clang {
     Expected<FunctionTemplateAndArgsTy>
     ImportFunctionTemplateWithTemplateArgsFromSpecialization(
         FunctionDecl *FromFD);
-    Error ImportTemplateParameterLists(const DeclaratorDecl *FromD,
-                                       DeclaratorDecl *ToD);
+
+    template <typename DeclTy>
+    Error ImportTemplateParameterLists(const DeclTy *FromD,
+                                       DeclTy *ToD);
 
     Error ImportTemplateInformation(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
@@ -3322,8 +3324,9 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   return ToEnumerator;
 }
 
-Error ASTNodeImporter::ImportTemplateParameterLists(const DeclaratorDecl *FromD,
-                                                    DeclaratorDecl *ToD) {
+template <typename DeclTy>
+Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
+                                                    DeclTy *ToD) {
   unsigned int Num = FromD->getNumTemplateParameterLists();
   if (Num == 0)
     return Error::success();
@@ -6276,6 +6279,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     D2->setBraceRange(*BraceRangeOrErr);
   else
     return BraceRangeOrErr.takeError();
+
+  if (Error Err = ImportTemplateParameterLists(D, D2))
+    return std::move(Err);
 
   // Import the qualifier, if any.
   if (auto LocOrErr = import(D->getQualifierLoc()))

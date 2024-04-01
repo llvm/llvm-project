@@ -5262,7 +5262,6 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     }
   }
 
-  Specialization->setTemplateKeywordLoc(TemplateKWLoc);
   Specialization->setLexicalDeclContext(CurContext);
 
   // Add the specialization into its lexical context, so that it can
@@ -9640,11 +9639,6 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       << (isPartialSpecialization? 1 : 0)
       << FixItHint::CreateRemoval(ModulePrivateLoc);
 
-  if (TUK != TUK_Friend)
-    // FIXME: We really shouldn't be setting this unless this is an explicit
-    // instantiation. We already store the outer template parameter lists.
-    Specialization->setTemplateKeywordLoc(TemplateKWLoc);
-
   // C++ [temp.expl.spec]p9:
   //   A template explicit specialization is in the scope of the
   //   namespace in which the template was defined.
@@ -11290,6 +11284,11 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (!HasNoEffect) {
       // Instantiate static data member or variable template.
       Prev->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
+      if (auto *VTSD = dyn_cast<VarTemplatePartialSpecializationDecl>(Prev)) {
+        VTSD->setExternLoc(ExternLoc);
+        VTSD->setTemplateKeywordLoc(TemplateLoc);
+      }
+
       // Merge attributes.
       ProcessDeclAttributeList(S, Prev, D.getDeclSpec().getAttributes());
       if (PrevTemplate)

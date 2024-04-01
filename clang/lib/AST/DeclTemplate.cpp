@@ -985,47 +985,33 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
 
 SourceRange
 ClassTemplateSpecializationDecl::getSourceRange() const {
-  using CTPSDecl = ClassTemplatePartialSpecializationDecl;
-  if (ExplicitInfo) {
-    SourceLocation Begin = getTemplateKeywordLoc();
-    if (Begin.isInvalid()) {
-      if (getNumTemplateParameterLists())
-        Begin = getTemplateParameterList(0)->getTemplateLoc();
-      else if (const auto *CTPSD = dyn_cast<CTPSDecl>(this))
-        Begin = CTPSD->getTemplateParameters()->getTemplateLoc();
-    }
-    if (Begin.isValid()) {
-      // Here we have an explicit (partial) specialization or instantiation.
-      assert(getSpecializationKind() == TSK_ExplicitSpecialization ||
-             getSpecializationKind() == TSK_ExplicitInstantiationDeclaration ||
-             getSpecializationKind() == TSK_ExplicitInstantiationDefinition);
-      if (getExternLoc().isValid())
-        Begin = getExternLoc();
-      SourceLocation End = getBraceRange().getEnd();
-      if (End.isInvalid())
-        End = getTemplateArgsAsWritten()->getRAngleLoc();
-      return SourceRange(Begin, End);
-    }
-    // An implicit instantiation of a class template partial specialization
-    // uses ExplicitInfo to record the TypeAsWritten, but the source
-    // locations should be retrieved from the instantiation pattern.
-    auto *ctpsd = const_cast<CTPSDecl *>(cast<CTPSDecl>(this));
-    CTPSDecl *inst_from = ctpsd->getInstantiatedFromMember();
-    assert(inst_from != nullptr);
-    return inst_from->getSourceRange();
-  }
-  else {
+  if (getSpecializationKind() == TSK_ExplicitInstantiationDeclaration) {
+    return SourceRange(getExternLoc(), getTemplateArgsAsWritten()->getRAngleLoc());
+  } else if (getSpecializationKind() == TSK_ExplicitInstantiationDefinition) {
+    return SourceRange(getTemplateKeywordLoc(), getTemplateArgsAsWritten()->getRAngleLoc());
+  } else if (!isExplicitSpecialization()) {
     // No explicit info available.
     llvm::PointerUnion<ClassTemplateDecl *,
                        ClassTemplatePartialSpecializationDecl *>
-      inst_from = getInstantiatedFrom();
-    if (inst_from.isNull())
+      InstFrom = getInstantiatedFrom();
+    if (InstFrom.isNull())
       return getSpecializedTemplate()->getSourceRange();
-    if (const auto *ctd = inst_from.dyn_cast<ClassTemplateDecl *>())
-      return ctd->getSourceRange();
-    return inst_from.get<ClassTemplatePartialSpecializationDecl *>()
+    if (const auto *CTD = InstFrom.dyn_cast<ClassTemplateDecl *>())
+      return CTD->getSourceRange();
+    return InstFrom.get<ClassTemplatePartialSpecializationDecl *>()
       ->getSourceRange();
   }
+  SourceLocation Begin = TagDecl::getOuterLocStart();
+  if (const auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(this)) {
+    if (const auto *InstFrom = CTPSD->getInstantiatedFromMember())
+      return InstFrom->getSourceRange();
+    else if (!getNumTemplateParameterLists())
+      Begin = CTPSD->getTemplateParameters()->getTemplateLoc();
+  }
+  SourceLocation End = getBraceRange().getEnd();
+  if (End.isInvalid())
+    End = getTemplateArgsAsWritten()->getRAngleLoc();
+  return SourceRange(Begin, End);
 }
 
 void ClassTemplateSpecializationDecl::setExternLoc(SourceLocation Loc) {
@@ -1394,6 +1380,12 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
   if (isExplicitSpecialization() && !hasInit()) {
     if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
       return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
+  } else if (getTemplateSpecializationKind() == TSK_ExplicitInstantiationDeclaration ) {
+    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
+      return SourceRange(getExternLoc(), Info->getRAngleLoc());
+  } else if (getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition) {
+    if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
+      return SourceRange(getTemplateKeywordLoc(), Info->getRAngleLoc());
   }
   return VarDecl::getSourceRange();
 }
