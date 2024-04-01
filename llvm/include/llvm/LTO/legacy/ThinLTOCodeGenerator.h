@@ -53,26 +53,13 @@ public:
   // Access the path to this entry in the cache.
   virtual std::string getEntryPath() = 0;
 
-  /// Attempt to asynchronously load the cached buffer and invoke the callback.
-  /// Cache miss is represented as std::error_code().
-  virtual void tryLoadingBuffer(
-      std::function<void(ErrorOr<std::unique_ptr<MemoryBuffer>>)> Cb) = 0;
-
-  /// Attempt to asynchronously write the computed buffer and invoke the
-  /// callback.
-  virtual void write(const MemoryBuffer &OutputBuffer,
-                     std::function<void()> Cb) = 0;
-
+  virtual ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() = 0;
+  virtual void write(const MemoryBuffer &OutputBuffer) = 0;
   virtual Error writeObject(const MemoryBuffer &OutputBuffer,
                             StringRef OutputPath);
   virtual std::optional<std::unique_ptr<MemoryBuffer>> getMappedBuffer() {
     return std::nullopt;
   }
-
-  /// Check whether the loaded and written results of this entry are identical.
-  /// This is only called when DeterministicCheck is enabled, and after both
-  /// \c tryLoadingBuffer() and \c write() have finished.
-  virtual bool areLoadedAndWrittenResultsIdentical() const { return true; }
 
   virtual ~ModuleCacheEntry() {}
 
@@ -84,8 +71,6 @@ public:
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder);
 };
-
-struct CancellationToken;
 
 /// This class define an interface similar to the LTOCodeGenerator, but adapted
 /// for ThinLTO processing.
@@ -185,8 +170,6 @@ public:
 
   /// Create a cache entry for the module
   std::unique_ptr<ModuleCacheEntry> createModuleCacheEntry(
-      std::shared_ptr<CancellationToken> GetCancelTok,
-      std::shared_ptr<CancellationToken> PutCancelTok,
       const ModuleSummaryIndex &Index, StringRef ModuleID, StringRef OutputPath,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
