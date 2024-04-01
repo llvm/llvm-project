@@ -16,6 +16,11 @@ constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
   return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
 }
 
+template <typename _Tp>
+constexpr _Tp&& forward(typename std::remove_reference<_Tp>::type &__t) {
+  return static_cast<_Tp>(__t);
+}
+
 template <typename T>
 struct shared_ptr {
   shared_ptr();
@@ -45,6 +50,8 @@ struct Nontrivial {
   Nontrivial& operator=(Nontrivial&& other) { x = std::move(other.x); }
 };
 
+void target(Nontrivial&& n) {}
+
 // Test cases begin here.
 
 void correct() {
@@ -57,6 +64,12 @@ void simpleFinding() {
   Nontrivial y = std::move(*p);
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: don't move the contents out of a shared pointer, as other accessors expect them to remain in a determinate state [bugprone-move-shared-pointer-contents]
+
+void simpleForwardFinding() {
+  std::shared_ptr<Nontrivial> p;
+  target(std::forward<Nontrivial>(*p));
+}
+// CHECK-MESSAGES: :[[@LINE-2]]:10: warning: don't move the contents out of a shared pointer, as other accessors expect them to remain in a determinate state [bugprone-move-shared-pointer-contents]
 
 void aliasedType() {
   using nontrivial_ptr = std::shared_ptr<Nontrivial>;
@@ -122,4 +135,17 @@ template <typename T>
 void rawPointer() {
   T* p;
   T x = std::move(*p);
+}
+
+struct HasASharedPtrField {
+  std::shared_ptr<Nontrivial> x;
+};
+
+HasASharedPtrField returnsStruct() {
+  HasASharedPtrField h;
+  return h;
+}
+  
+void subfield() {
+  int x = std::move(returnsStruct().x->x);
 }

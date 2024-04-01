@@ -34,9 +34,6 @@ public:
   }
 
 private:
-  // Returns whether the type or variable is one of the SharedPointerClasses.
-  bool isSharedPointerClass(const VarDecl *VD) const;
-  bool isSharedPointerClass(const QualType *QT) const;
   const std::vector<StringRef> SharedPointerClasses;
 };
 
