@@ -4959,38 +4959,12 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     Stream.EmitRecord(METADATA_OLD_FORMAT, Record);
   }
 
-  // Create a lexical update block containing all of the declarations in the
-  // translation unit that do not come from other AST files.
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
-  SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
-  for (const auto *D : TU->noload_decls()) {
-    if (!D->isFromASTFile()) {
-      NewGlobalKindDeclPairs.push_back(D->getKind());
-      NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
-    }
-  }
 
-  auto Abv = std::make_shared<BitCodeAbbrev>();
-  Abv->Add(llvm::BitCodeAbbrevOp(TU_UPDATE_LEXICAL));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  unsigned TuUpdateLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
-  {
-    RecordData::value_type Record[] = {TU_UPDATE_LEXICAL};
-    Stream.EmitRecordWithBlob(TuUpdateLexicalAbbrev, Record,
-                              bytes(NewGlobalKindDeclPairs));
-  }
-
-  // And a visible updates block for the translation unit.
-  Abv = std::make_shared<BitCodeAbbrev>();
-  Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_VISIBLE));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  UpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
-  WriteDeclContextVisibleUpdate(TU);
-
-  // If we have any extern "C" names, write out a visible update for them.
-  if (Context.ExternCContext)
-    WriteDeclContextVisibleUpdate(Context.ExternCContext);
+  // Force all top level declarations to be emitted.
+  for (const auto *D : TU->noload_decls())
+    if (!D->isFromASTFile())
+      GetDeclRef(D);
 
   // If the translation unit has an anonymous namespace, and we don't already
   // have an update block for it, write it as an update block.
@@ -5131,6 +5105,14 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     DeclsToCheckForDeferredDiags.push_back(GetDeclRef(D));
 
+  {
+    auto Abv = std::make_shared<BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_VISIBLE));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+    UpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  }
+
   RecordData DeclUpdatesOffsetsRecord;
 
   // Keep writing types, declarations, and declaration update records
@@ -5158,6 +5140,35 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteTypeDeclOffsets();
   if (!DeclUpdatesOffsetsRecord.empty())
     Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
+
+  // Create a lexical update block containing all of the declarations in the
+  // translation unit that do not come from other AST files.
+  {
+    SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
+    for (const auto *D : TU->noload_decls()) {
+      if (!D->isFromASTFile()) {
+        NewGlobalKindDeclPairs.push_back(D->getKind());
+        NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
+      }
+    }
+
+    auto Abv = std::make_shared<BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(TU_UPDATE_LEXICAL));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+    unsigned TuUpdateLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+    RecordData::value_type Record[] = {TU_UPDATE_LEXICAL};
+    Stream.EmitRecordWithBlob(TuUpdateLexicalAbbrev, Record,
+                              bytes(NewGlobalKindDeclPairs));
+  }
+
+  // And a visible updates block for the translation unit.
+  WriteDeclContextVisibleUpdate(TU);
+
+  // If we have any extern "C" names, write out a visible update for them.
+  if (Context.ExternCContext)
+    WriteDeclContextVisibleUpdate(Context.ExternCContext);
+
   WriteFileDeclIDsMap();
   WriteSourceManagerBlock(Context.getSourceManager(), PP);
   WriteComments();
