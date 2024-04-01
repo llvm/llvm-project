@@ -21,6 +21,9 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#define GET_OP_FWD_DEFINES
+#include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"
+
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.h.inc"
 
 namespace mlir::omp {
