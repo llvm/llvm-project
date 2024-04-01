@@ -217,7 +217,7 @@ public:
           // declarations or definitions in the module). If so, synthesize a
           // value id.
           for (auto &RefEdge : FS->refs())
-            if ((!RefEdge.haveGVs() || !RefEdge.getValue()))
+            if (!RefEdge.haveGVs() || !RefEdge.getValue())
               assignValueId(RefEdge.getGUID());
         }
   }
