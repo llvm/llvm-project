@@ -38,11 +38,11 @@
 #include "test_macros.h"
 
 auto test_file = []<class... Args>(std::string_view e, test_format_string<char, Args...> fmt, Args&&... args) {
-  std::string expected = '\n' + std::string{e} + '\n';
+  std::string expected = std::string{e} + "\n\n";
 
   std::stringstream sstr;
-  std::println(sstr);
   std::println(sstr, fmt, std::forward<Args>(args)...);
+  std::println(sstr);
 
   std::string out = sstr.str();
   TEST_REQUIRE(out == expected,

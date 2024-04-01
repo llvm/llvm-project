@@ -57,13 +57,13 @@ static void test_println() {
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
   assert(file);
 
-  std::println(file);
   std::println(file, "hello world{}", '!');
+  std::println(file);
   long pos = std::ftell(file);
   std::fclose(file);
 
   assert(pos > 0);
-  assert(std::string_view(buffer.data(), pos) == "\nhello world!\n");
+  assert(std::string_view(buffer.data(), pos) == "hello world!\n\n");
 }
 
 static void test_vprint_unicode() {
