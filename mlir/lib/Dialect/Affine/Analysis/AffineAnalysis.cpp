@@ -136,8 +136,7 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
 
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
-  if (llvm::any_of(forOp.getResultTypes(),
-                   [](Type type) { return isa<BaseMemRefType>(type); }))
+  if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
     return false;
 
   // Collect all load and store ops in loop nest rooted at 'forOp'.

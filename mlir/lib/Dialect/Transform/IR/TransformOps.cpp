@@ -819,7 +819,7 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   assert(outputs.size() == 1 && "expected one output");
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
-      [](Type ty) { return isa<transform::TransformHandleTypeInterface>(ty); });
+      llvm::IsaPred<transform::TransformHandleTypeInterface>);
 }
 
 //===----------------------------------------------------------------------===//
