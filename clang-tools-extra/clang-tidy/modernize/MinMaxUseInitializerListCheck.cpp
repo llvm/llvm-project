@@ -21,7 +21,7 @@ struct FindArgsResult {
   const Expr *First;
   const Expr *Last;
   const Expr *Compare;
-  std::vector<const clang::Expr *> Args;
+  SmallVector<const clang::Expr *, 2> Args;
 };
 
 } // anonymous namespace
@@ -36,30 +36,35 @@ static FindArgsResult findArgs(const CallExpr *Call) {
   Result.Last = nullptr;
   Result.Compare = nullptr;
 
-  if (Call->getNumArgs() == 3) {
-    auto ArgIterator = Call->arguments().begin();
-    std::advance(ArgIterator, 2);
-    Result.Compare = *ArgIterator;
-  } else {
+  //   check if the function has initializer list argument
+  if (Call->getNumArgs() < 3) {
     auto ArgIterator = Call->arguments().begin();
 
-    if (const auto *InitListExpr =
-            dyn_cast<CXXStdInitializerListExpr>(*ArgIterator)) {
-      if (const auto *InitList = dyn_cast<clang::InitListExpr>(
-              InitListExpr->getSubExpr()->IgnoreImplicit())) {
-        Result.Args.insert(Result.Args.begin(), InitList->inits().begin(),
-                           InitList->inits().end());
+    const auto *InitListExpr =
+        dyn_cast<CXXStdInitializerListExpr>(*ArgIterator);
+    const auto *InitList =
+        InitListExpr != nullptr
+            ? dyn_cast<clang::InitListExpr>(
+                  InitListExpr->getSubExpr()->IgnoreImplicit())
+            : nullptr;
 
-        Result.First = *ArgIterator;
-        Result.Last = *ArgIterator;
+    if (InitListExpr && InitList) {
+      Result.Args.insert(Result.Args.begin(), InitList->inits().begin(),
+                         InitList->inits().end());
+      Result.First = *ArgIterator;
+      Result.Last = *ArgIterator;
 
-        std::advance(ArgIterator, 1);
-        if (ArgIterator != Call->arguments().end()) {
-          Result.Compare = *ArgIterator;
-        }
-        return Result;
+      // check if there is a comparison argument
+      std::advance(ArgIterator, 1);
+      if (ArgIterator != Call->arguments().end()) {
+        Result.Compare = *ArgIterator;
       }
+
+      return Result;
     }
+    // if it has 3 arguments then the last will be the comparison
+  } else {
+    Result.Compare = *(std::next(Call->arguments().begin(), 2));
   }
 
   for (const Expr *Arg : Call->arguments()) {
@@ -76,114 +81,133 @@ static FindArgsResult findArgs(const CallExpr *Call) {
   return Result;
 }
 
-static std::vector<FixItHint>
+static SmallVector<FixItHint>
 generateReplacement(const MatchFinder::MatchResult &Match,
                     const CallExpr *TopCall, const FindArgsResult &Result) {
-  std::vector<FixItHint> FixItHints;
+  SmallVector<FixItHint> FixItHints;
 
   const QualType ResultType = TopCall->getDirectCallee()
                                   ->getReturnType()
                                   .getNonReferenceType()
                                   .getUnqualifiedType()
                                   .getCanonicalType();
+  const auto &SourceMngr = *Match.SourceManager;
+  const auto LanguageOpts = Match.Context->getLangOpts();
   const bool IsInitializerList = Result.First == Result.Last;
 
-  if (!IsInitializerList)
+  // add { and } if the top call doesn't have an initializer list arg
+  if (!IsInitializerList) {
     FixItHints.push_back(
         FixItHint::CreateInsertion(Result.First->getBeginLoc(), "{"));
 
-  for (const Expr *Arg : Result.Args) {
-    if (const auto *InnerCall =
-            dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts())) {
-      const FindArgsResult InnerResult = findArgs(InnerCall);
-      const std::vector<FixItHint> InnerReplacements =
-          generateReplacement(Match, InnerCall, InnerResult);
-      if (InnerCall->getDirectCallee()->getQualifiedNameAsString() ==
-              TopCall->getDirectCallee()->getQualifiedNameAsString() &&
-          ((!Result.Compare && !InnerResult.Compare) ||
-           utils::areStatementsIdentical(Result.Compare, InnerResult.Compare,
-                                         *Match.Context))) {
-
-        FixItHints.push_back(
-            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                InnerCall->getCallee()->getSourceRange())));
-
-        const auto LParen = utils::lexer::findNextTokenSkippingComments(
-            InnerCall->getCallee()->getEndLoc(), *Match.SourceManager,
-            Match.Context->getLangOpts());
-        if (LParen && LParen->getKind() == tok::l_paren)
-          FixItHints.push_back(
-              FixItHint::CreateRemoval(SourceRange(LParen->getLocation())));
-
-        FixItHints.push_back(
-            FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
-
-        if (InnerResult.First == InnerResult.Last) {
-          FixItHints.insert(FixItHints.end(), InnerReplacements.begin(),
-                            InnerReplacements.end());
-
-          FixItHints.push_back(
-              FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                  InnerResult.First->getBeginLoc())));
-          FixItHints.push_back(FixItHint::CreateRemoval(
-              CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
-        } else
-          FixItHints.insert(FixItHints.end(), InnerReplacements.begin() + 1,
-                            InnerReplacements.end() - 1);
-
-        if (InnerResult.Compare) {
-          const auto Comma = utils::lexer::findNextTokenSkippingComments(
-              InnerResult.Last->getEndLoc(), *Match.SourceManager,
-              Match.Context->getLangOpts());
-          if (Comma && Comma->getKind() == tok::comma)
-            FixItHints.push_back(
-                FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
-
-          if (utils::lexer::getPreviousToken(
-                  InnerResult.Compare->getExprLoc(), *Match.SourceManager,
-                  Match.Context->getLangOpts(), false)
-                  .getLocation() == Comma->getLocation())
-            FixItHints.push_back(
-                FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                    Comma->getLocation(), InnerResult.Compare->getEndLoc())));
-          else {
-            FixItHints.push_back(
-                FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                    InnerResult.Compare->getSourceRange())));
-          }
-        }
-      }
-      continue;
-    }
-
-    const QualType ArgType = Arg->IgnoreParenImpCasts()
-                                 ->getType()
-                                 .getUnqualifiedType()
-                                 .getCanonicalType();
-
-    if (ArgType != ResultType) {
-      const std::string ArgText =
-          Lexer::getSourceText(
-              CharSourceRange::getTokenRange(Arg->getSourceRange()),
-              *Match.SourceManager, Match.Context->getLangOpts())
-              .str();
-
-      FixItHints.push_back(FixItHint::CreateReplacement(
-          Arg->getSourceRange(),
-          "static_cast<" + ResultType.getAsString() + ">(" + ArgText + ")"));
-    }
-  }
-
-  if (!IsInitializerList) {
     if (Result.Compare)
       FixItHints.push_back(FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0,
-                                     *Match.SourceManager,
-                                     Match.Context->getLangOpts()),
+          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0, SourceMngr,
+                                     LanguageOpts),
           "}"));
     else
       FixItHints.push_back(
           FixItHint::CreateInsertion(TopCall->getEndLoc(), "}"));
+  }
+
+  for (const Expr *Arg : Result.Args) {
+    const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
+
+    // If the argument is not a nested call
+    if (!InnerCall) {
+      // check if typecast is required
+      const QualType ArgType = Arg->IgnoreParenImpCasts()
+                                   ->getType()
+                                   .getUnqualifiedType()
+                                   .getCanonicalType();
+
+      if (ArgType == ResultType)
+        continue;
+
+      const std::string ArgText =
+          Lexer::getSourceText(
+              CharSourceRange::getTokenRange(Arg->getSourceRange()), SourceMngr,
+              LanguageOpts)
+              .str();
+
+      Twine Replacement = llvm::Twine("static_cast<")
+                              .concat(ResultType.getAsString(LanguageOpts))
+                              .concat(">(")
+                              .concat(ArgText)
+                              .concat(")");
+
+      FixItHints.push_back(FixItHint::CreateReplacement(Arg->getSourceRange(),
+                                                        Replacement.str()));
+
+      continue;
+    }
+
+    const auto InnerResult = findArgs(InnerCall);
+    const auto InnerReplacements =
+        generateReplacement(Match, InnerCall, InnerResult);
+    const bool IsInnerInitializerList = InnerResult.First == InnerResult.Last;
+
+    // if the nested call is not the same as the top call
+    if (InnerCall->getDirectCallee()->getQualifiedNameAsString() !=
+        TopCall->getDirectCallee()->getQualifiedNameAsString())
+      continue;
+
+    // if the nested call doesn't have the same compare function
+    if ((Result.Compare || InnerResult.Compare) &&
+        !utils::areStatementsIdentical(Result.Compare, InnerResult.Compare,
+                                       *Match.Context))
+      continue;
+
+    // remove the function call
+    FixItHints.push_back(
+        FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+            InnerCall->getCallee()->getSourceRange())));
+
+    // remove the parentheses
+    const auto LParen = utils::lexer::findNextTokenSkippingComments(
+        InnerCall->getCallee()->getEndLoc(), SourceMngr, LanguageOpts);
+    FixItHints.push_back(
+        FixItHint::CreateRemoval(SourceRange(LParen->getLocation())));
+    FixItHints.push_back(
+        FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
+
+    // if the inner call has an initializer list arg
+    if (IsInnerInitializerList) {
+      // remove the initializer list braces
+      FixItHints.push_back(FixItHint::CreateRemoval(
+          CharSourceRange::getTokenRange(InnerResult.First->getBeginLoc())));
+      FixItHints.push_back(FixItHint::CreateRemoval(
+          CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
+    }
+
+    FixItHints.insert(FixItHints.end(),
+                      // ignore { and } insertions for the inner call if it does
+                      // not have an initializer list arg
+                      InnerReplacements.begin() + (!IsInnerInitializerList) * 2,
+                      InnerReplacements.end());
+
+    if (InnerResult.Compare) {
+      // find the comma after the value arguments
+      const auto Comma = utils::lexer::findNextTokenSkippingComments(
+          InnerResult.Last->getEndLoc(), SourceMngr, LanguageOpts);
+
+      // if there are comments between the comma and the comparison
+      if (utils::lexer::getPreviousToken(InnerResult.Compare->getExprLoc(),
+                                         SourceMngr, LanguageOpts, false)
+              .getLocation() != Comma->getLocation()) {
+        // remove the comma and the comparison
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
+
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                InnerResult.Compare->getSourceRange())));
+      } else
+        // remove everything after the last argument
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                Comma->getLocation(), InnerResult.Compare->getEndLoc())));
+    }
   }
 
   return FixItHints;
@@ -229,7 +253,7 @@ void MinMaxUseInitializerListCheck::check(
   const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
 
   const FindArgsResult Result = findArgs(TopCall);
-  const std::vector<FixItHint> Replacement =
+  const SmallVector<FixItHint> Replacement =
       generateReplacement(Match, TopCall, Result);
 
   if (Replacement.size() <= 2) {

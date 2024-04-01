@@ -159,6 +159,7 @@ int max2d = std::max(std::max({1, 2, 3}), 4);
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
 // CHECK-FIXES: int max2d = std::max({1, 2, 3, 4});
 
+
 int max2e = std::max(1, max(2, max(3, 4)));
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
 // CHECK-FIXES: int max2e = std::max({1, 2, 3, 4});
