@@ -1186,35 +1186,26 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
 // CHECK-LABEL: @while_dont_crash
 func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
-
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>) -> tensor<i32>
   %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
     %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
-
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
-
     tosa.yield %3 : tensor<*xi1>
-
   } do {
-
   // CHECK:      ^bb0
   // CHECK-SAME: tensor<i32>
   ^bb0(%arg1: tensor<*xi32>):
-
     // CHECK:     tosa.add
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
     %3 = tosa.add %arg1, %arg1 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
-
     // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
     // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
     "use"(%3) : (tensor<*xi32>) -> ()
-
     tosa.yield %3 : tensor<*xi32>
   }
-
   // CHECK: tensor.cast
   return %1 : tensor<*xi32>
 }
@@ -1228,58 +1219,44 @@ func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
 // CHECK-LABEL: @while_dont_crash_nested
 func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
-
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>) -> tensor<i32>
   %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
     %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
-
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
-
     // CHECK:      tosa.yield
     // CHECK-SAME: tensor<i1>
     tosa.yield %3 : tensor<*xi1>
-
   } do {
-
   // CHECK:      ^bb0
   // CHECK-SAME: tensor<i32>
   ^bb0(%arg1: tensor<*xi32>):
-
     // CHECK:      tosa.while_loop
     // CHECK-SAME: (tensor<i32>) -> tensor<i32>
     %1 = tosa.while_loop (%arg2 = %arg1) : (tensor<*xi32>) -> tensor<*xi32> {
       %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
-
       // CHECK:       tosa.greater_equal
       // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
       %4 = tosa.greater_equal %2, %arg2 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
-
       // CHECK:      tosa.yield
       // CHECK-SAME: tensor<i1>
       tosa.yield %4 : tensor<*xi1>
-
     } do {
-
     // CHECK:      ^bb0
     // CHECK-SAME: tensor<i32>
     ^bb0(%arg2: tensor<*xi32>):
-
       // CHECK:     tosa.add
       // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
       %4 = tosa.add %arg2, %arg2 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
-
       // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
       // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
       "use"(%4) : (tensor<*xi32>) -> ()
-
       // CHECK:      tosa.yield
       // CHECK-SAME: tensor<i32>
       tosa.yield %4 : tensor<*xi32>
     }
-
     // CHECK:      tosa.yield
     // CHECK-SAME: tensor<i32>
     tosa.yield %1 : tensor<*xi32>
