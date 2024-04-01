@@ -16,6 +16,7 @@
 #include "EHScopeStack.h"
 
 #include "Address.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -283,27 +284,28 @@ class alignas(8) EHCleanupScope : public EHScope {
       used = true;
       AuxAllocas.clear();
     }
+
     ~AuxillaryAllocas() {
       if (used)
         return;
       llvm::SetVector<llvm::Instruction *> Uses;
       for (auto *Inst : llvm::reverse(AuxAllocas))
         CollectUses(Inst, Uses);
-      for (auto *I : Uses)
+      // Delete uses in the reverse order of insertion.
+      for (auto *I : llvm::reverse(Uses))
         I->eraseFromParent();
     }
 
   private:
     void CollectUses(llvm::Instruction *I,
                      llvm::SetVector<llvm::Instruction *> &Uses) {
-      if (!I)
+      if (!I || !Uses.insert(I))
         return;
-      for (auto *User : I->users()) {
+      for (auto *User : I->materialized_users()) {
         if (auto *UserI = dyn_cast<llvm::Instruction>(User)) {
           CollectUses(UserI, Uses);
         }
       }
-      Uses.insert(I);
     }
   };
   mutable struct AuxillaryAllocas *AuxAllocas;
