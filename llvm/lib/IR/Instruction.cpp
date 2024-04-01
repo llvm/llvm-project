@@ -370,11 +370,17 @@ bool Instruction::isOnlyUserOfAnyOperand() {
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoUnsignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(b);
 }
 
 void Instruction::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoSignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoSignedWrap(b);
 }
 
 void Instruction::setIsExact(bool b) {
@@ -388,11 +394,17 @@ void Instruction::setNonNeg(bool b) {
 }
 
 bool Instruction::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoUnsignedWrap();
+
+  return cast<TruncInst>(this)->hasNoUnsignedWrap();
 }
 
 bool Instruction::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoSignedWrap();
+
+  return cast<TruncInst>(this)->hasNoSignedWrap();
 }
 
 bool Instruction::hasNonNeg() const {
@@ -431,6 +443,11 @@ void Instruction::dropPoisonGeneratingFlags() {
 
   case Instruction::ZExt:
     setNonNeg(false);
+    break;
+
+  case Instruction::Trunc:
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
+    cast<TruncInst>(this)->setHasNoSignedWrap(false);
     break;
   }
 
@@ -623,6 +640,13 @@ void Instruction::andIRFlags(const Value *V) {
     if (isa<OverflowingBinaryOperator>(this)) {
       setHasNoSignedWrap(hasNoSignedWrap() && OB->hasNoSignedWrap());
       setHasNoUnsignedWrap(hasNoUnsignedWrap() && OB->hasNoUnsignedWrap());
+    }
+  }
+
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(hasNoSignedWrap() && TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() && TI->hasNoUnsignedWrap());
     }
   }
 

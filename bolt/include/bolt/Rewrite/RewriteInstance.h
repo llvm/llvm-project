@@ -17,7 +17,6 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"

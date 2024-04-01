@@ -44,6 +44,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::PtrAdd:
+    // Return the type based on the pointer argument (i.e. first operand).
+    return inferScalarType(R->getOperand(0));
   default:
     break;
   }

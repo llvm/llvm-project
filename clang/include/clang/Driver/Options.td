@@ -3635,6 +3635,9 @@ defm preserve_as_comments : BoolFOption<"preserve-as-comments",
           "Do not preserve comments in inline assembly">,
   PosFlag<SetTrue>>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
+def reexport_framework : Separate<["-"], "reexport_framework">, Flags<[LinkerInput]>;
+def reexport_l : Joined<["-"], "reexport-l">, Flags<[LinkerInput]>;
+def reexport_library : JoinedOrSeparate<["-"], "reexport_library">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -4105,12 +4108,8 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
-let Group = f_Group in {
-  let Visibility = [ClangOption,CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
-  }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -4511,6 +4510,9 @@ def mwindows : Joined<["-"], "mwindows">, Group<m_Group>;
 def mdll : Joined<["-"], "mdll">, Group<m_Group>;
 def municode : Joined<["-"], "municode">, Group<m_Group>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
+def marm64x : Joined<["-"], "marm64x">, Group<m_Group>,
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Link as a hybrid ARM64X image">;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
@@ -6688,6 +6690,9 @@ def analyzer_opt_analyze_headers : Flag<["-"], "analyzer-opt-analyze-headers">,
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerDisplayProgress">>;
+def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
+  HelpText<"Add a note for each bug report to denote their analysis entry points">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">,
   MarshallingInfoString<AnalyzerOpts<"AnalyzeSpecificFunction">>;

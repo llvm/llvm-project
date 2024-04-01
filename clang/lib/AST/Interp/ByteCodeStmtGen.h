@@ -82,6 +82,7 @@ private:
   OptLabelTy DefaultLabel;
 };
 
+extern template class ByteCodeStmtGen<ByteCodeEmitter>;
 extern template class ByteCodeExprGen<EvalEmitter>;
 
 } // namespace interp

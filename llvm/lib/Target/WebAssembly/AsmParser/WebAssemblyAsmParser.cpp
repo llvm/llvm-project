@@ -100,7 +100,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   bool isReg() const override { return false; }
   bool isBrList() const { return Kind == BrList; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     llvm_unreachable("Assembly inspects a register operand");
     return 0;
   }

@@ -197,18 +197,24 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
+  // Shared function to print an array of symbols.
+  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
+    for (const ConcatInputSection *isec : arr) {
+      for (Defined *sym : isec->symbols) {
+        if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
+          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                       sym->size, readerToFileOrdinal[sym->getFile()],
+                       sym->getName().str().data());
+      }
+    }
+  };
+
   os << "# Symbols:\n";
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
-        for (const InputSection *isec : concatOsec->inputs) {
-          for (Defined *sym : isec->symbols)
-            if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
-              os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                           sym->size, readerToFileOrdinal[sym->getFile()],
-                           sym->getName().str().data());
-        }
+        printIsecArrSyms(concatOsec->inputs);
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
@@ -237,6 +243,8 @@ void macho::writeMapFile() {
         printNonLazyPointerSection(os, in.got);
       } else if (osec == in.tlvPointers) {
         printNonLazyPointerSection(os, in.tlvPointers);
+      } else if (osec == in.objcMethList) {
+        printIsecArrSyms(in.objcMethList->getInputs());
       }
       // TODO print other synthetic sections
     }

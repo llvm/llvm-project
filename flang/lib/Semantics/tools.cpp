@@ -403,6 +403,18 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  for (const auto &[pointee, pointer] :
+      crayPointee.GetUltimate().owner().crayPointers()) {
+    if (pointee == crayPointee.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
+}
+
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};
@@ -516,7 +528,9 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
       symbol.details());
 }
 
-const Symbol *FindOverriddenBinding(const Symbol &symbol) {
+const Symbol *FindOverriddenBinding(
+    const Symbol &symbol, bool &isInaccessibleDeferred) {
+  isInaccessibleDeferred = false;
   if (symbol.has<ProcBindingDetails>()) {
     if (const DeclTypeSpec * parentType{FindParentTypeSpec(symbol.owner())}) {
       if (const DerivedTypeSpec * parentDerived{parentType->AsDerived()}) {
@@ -525,8 +539,11 @@ const Symbol *FindOverriddenBinding(const Symbol &symbol) {
               overridden{parentScope->FindComponent(symbol.name())}) {
             // 7.5.7.3 p1: only accessible bindings are overridden
             if (!overridden->attrs().test(Attr::PRIVATE) ||
-                (FindModuleContaining(overridden->owner()) ==
-                    FindModuleContaining(symbol.owner()))) {
+                FindModuleContaining(overridden->owner()) ==
+                    FindModuleContaining(symbol.owner())) {
+              return overridden;
+            } else if (overridden->attrs().test(Attr::DEFERRED)) {
+              isInaccessibleDeferred = true;
               return overridden;
             }
           }
@@ -1275,6 +1292,8 @@ static bool StopAtComponentPre(const Symbol &component) {
     return !IsPointer(component);
   } else if constexpr (componentKind == ComponentKind::PotentialAndPointer) {
     return true;
+  } else {
+    DIE("unexpected ComponentKind");
   }
 }
 

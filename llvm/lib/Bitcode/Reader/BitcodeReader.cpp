@@ -104,7 +104,7 @@ static cl::opt<bool> ExpandConstantExprs(
 /// of debug intrinsics). UNSET is treated as FALSE, so the default action
 /// is to do nothing. Individual tools can override this to incrementally add
 /// support for the RemoveDIs format.
-cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInforFormat(
+cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
@@ -4300,11 +4300,11 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInforFormat
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
   // has been set to true (default action: load into the old debug format).
   TheModule->IsNewDbgInfoFormat =
       UseNewDbgInfoFormat &&
-      LoadBitcodeIntoNewDbgInforFormat == cl::boolOrDefault::BOU_TRUE;
+      LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -5022,9 +5022,19 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid cast");
         I = CastInst::Create(CastOp, Op, ResTy);
       }
-      if (OpNum < Record.size() && isa<PossiblyNonNegInst>(I) &&
-          (Record[OpNum] & (1 << bitc::PNNI_NON_NEG)))
-        I->setNonNeg(true);
+
+      if (OpNum < Record.size()) {
+        if (Opc == Instruction::ZExt) {
+          if (Record[OpNum] & (1 << bitc::PNNI_NON_NEG))
+            cast<PossiblyNonNegInst>(I)->setNonNeg(true);
+        } else if (Opc == Instruction::Trunc) {
+          if (Record[OpNum] & (1 << bitc::TIO_NO_UNSIGNED_WRAP))
+            cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
+          if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
+            cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        }
+      }
+
       InstructionList.push_back(I);
       break;
     }

@@ -6,7 +6,6 @@ add_header_library(
     libc.include.fenv
     libc.include.math
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -82,8 +81,11 @@ add_header_library(
     BasicOperations.h
   DEPENDS
     .fp_bits
+    .fenv_impl
     libc.src.__support.CPP.type_traits
+    libc.src.__support.uint128
     libc.src.__support.common
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

@@ -1,7 +1,16 @@
+//===- DylibVerifier.cpp ----------------------------------------*- C++--*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/FrontendRecords.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/TextAPI/DylibReader.h"
 
 using namespace llvm::MachO;
 
@@ -25,6 +34,14 @@ struct DylibVerifier::SymbolContext {
 
   // Whether Decl is inlined.
   bool Inlined = false;
+};
+
+struct DylibVerifier::DWARFContext {
+  // Track whether DSYM parsing has already been attempted to avoid re-parsing.
+  bool ParsedDSYM{false};
+
+  // Lookup table for source locations by symbol name.
+  DylibReader::SymbolToSourceLocMap SourceLocs{};
 };
 
 static bool isCppMangled(StringRef Name) {
@@ -66,17 +83,15 @@ std::string DylibVerifier::getAnnotatedName(const Record *R,
     Annotation += "(tlv) ";
 
   // Check if symbol represents only part of a @interface declaration.
-  const bool IsAnnotatedObjCClass =
-      ((SymCtx.ObjCIFKind != ObjCIFSymbolKind::None) &&
-       (SymCtx.ObjCIFKind <= ObjCIFSymbolKind::EHType));
-
-  if (IsAnnotatedObjCClass) {
-    if (SymCtx.ObjCIFKind == ObjCIFSymbolKind::EHType)
-      Annotation += "Exception Type of ";
-    if (SymCtx.ObjCIFKind == ObjCIFSymbolKind::MetaClass)
-      Annotation += "Metaclass of ";
-    if (SymCtx.ObjCIFKind == ObjCIFSymbolKind::Class)
-      Annotation += "Class of ";
+  switch (SymCtx.ObjCIFKind) {
+  default:
+    break;
+  case ObjCIFSymbolKind::EHType:
+    return Annotation + "Exception Type of " + PrettyName;
+  case ObjCIFSymbolKind::MetaClass:
+    return Annotation + "Metaclass of " + PrettyName;
+  case ObjCIFSymbolKind::Class:
+    return Annotation + "Class of " + PrettyName;
   }
 
   // Only print symbol type prefix or leading "_" if there is no source location
@@ -89,9 +104,6 @@ std::string DylibVerifier::getAnnotatedName(const Record *R,
       return Annotation + PrettyNameRef.drop_front(1).str();
     return Annotation + PrettyName;
   }
-
-  if (IsAnnotatedObjCClass)
-    return Annotation + PrettyName;
 
   switch (SymCtx.Kind) {
   case EncodeKind::GlobalSymbol:
@@ -332,9 +344,9 @@ bool DylibVerifier::compareSymbolFlags(const Record *R, SymbolContext &SymCtx,
   }
   if (!DR->isThreadLocalValue() && R->isThreadLocalValue()) {
     Ctx.emitDiag([&]() {
-      SymCtx.FA->D->getLocation(),
-          Ctx.Diag->Report(diag::err_header_symbol_flags_mismatch)
-              << getAnnotatedName(DR, SymCtx) << R->isThreadLocalValue();
+      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
+                       diag::err_header_symbol_flags_mismatch)
+          << getAnnotatedName(R, SymCtx) << R->isThreadLocalValue();
     });
     return false;
   }
@@ -508,16 +520,186 @@ DylibVerifier::Result DylibVerifier::verify(GlobalRecord *R,
   return verifyImpl(R, SymCtx);
 }
 
-void DylibVerifier::VerifierContext::emitDiag(
-    llvm::function_ref<void()> Report) {
+void DylibVerifier::VerifierContext::emitDiag(llvm::function_ref<void()> Report,
+                                              RecordLoc *Loc) {
   if (!DiscoveredFirstError) {
     Diag->Report(diag::warn_target)
         << (PrintArch ? getArchitectureName(Target.Arch)
                       : getTargetTripleName(Target));
     DiscoveredFirstError = true;
   }
+  if (Loc && Loc->isValid())
+    llvm::errs() << Loc->File << ":" << Loc->Line << ":" << 0 << ": ";
 
   Report();
+}
+
+// The existence of weak-defined RTTI can not always be inferred from the
+// header files because they can be generated as part of an implementation
+// file.
+// InstallAPI doesn't warn about weak-defined RTTI, because this doesn't affect
+// static linking and so can be ignored for text-api files.
+static bool shouldIgnoreCpp(StringRef Name, bool IsWeakDef) {
+  return (IsWeakDef &&
+          (Name.starts_with("__ZTI") || Name.starts_with("__ZTS")));
+}
+void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
+  // Undefined symbols should not be in InstallAPI generated text-api files.
+  if (R.isUndefined()) {
+    updateState(Result::Valid);
+    return;
+  }
+
+  // Internal symbols should not be in InstallAPI generated text-api files.
+  if (R.isInternal()) {
+    updateState(Result::Valid);
+    return;
+  }
+
+  // Allow zippered symbols with potentially mismatching availability
+  // between macOS and macCatalyst in the final text-api file.
+  const StringRef SymbolName(SymCtx.SymbolName);
+  if (const Symbol *Sym = Exports->findSymbol(SymCtx.Kind, SymCtx.SymbolName,
+                                              SymCtx.ObjCIFKind)) {
+    if (Sym->hasArchitecture(Ctx.Target.Arch)) {
+      updateState(Result::Ignore);
+      return;
+    }
+  }
+
+  if (shouldIgnoreCpp(SymbolName, R.isWeakDefined())) {
+    updateState(Result::Valid);
+    return;
+  }
+
+  const bool IsLinkerSymbol = SymbolName.starts_with("$ld$");
+
+  // All checks at this point classify as some kind of violation.
+  // The different verification modes dictate whether they are reported to the
+  // user.
+  if (IsLinkerSymbol || (Mode > VerificationMode::ErrorsOnly))
+    accumulateSrcLocForDylibSymbols();
+  RecordLoc Loc = DWARFCtx->SourceLocs.lookup(SymCtx.SymbolName);
+
+  // Regardless of verification mode, error out on mismatched special linker
+  // symbols.
+  if (IsLinkerSymbol) {
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::err_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
+    updateState(Result::Invalid);
+    return;
+  }
+
+  // Missing declarations for exported symbols are hard errors on Pedantic mode.
+  if (Mode == VerificationMode::Pedantic) {
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::err_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
+    updateState(Result::Invalid);
+    return;
+  }
+
+  // Missing declarations for exported symbols are warnings on ErrorsAndWarnings
+  // mode.
+  if (Mode == VerificationMode::ErrorsAndWarnings) {
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::warn_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
+    updateState(Result::Ignore);
+    return;
+  }
+
+  // Missing declarations are dropped for ErrorsOnly mode. It is the last
+  // remaining mode.
+  updateState(Result::Ignore);
+  return;
+}
+
+void DylibVerifier::visitGlobal(const GlobalRecord &R) {
+  if (R.isVerified())
+    return;
+  SymbolContext SymCtx;
+  SimpleSymbol Sym = parseSymbol(R.getName());
+  SymCtx.SymbolName = Sym.Name;
+  SymCtx.Kind = Sym.Kind;
+  visitSymbolInDylib(R, SymCtx);
+}
+
+void DylibVerifier::visitObjCIVar(const ObjCIVarRecord &R,
+                                  const StringRef Super) {
+  if (R.isVerified())
+    return;
+  SymbolContext SymCtx;
+  SymCtx.SymbolName = ObjCIVarRecord::createScopedName(Super, R.getName());
+  SymCtx.Kind = EncodeKind::ObjectiveCInstanceVariable;
+  visitSymbolInDylib(R, SymCtx);
+}
+
+void DylibVerifier::accumulateSrcLocForDylibSymbols() {
+  if (DSYMPath.empty())
+    return;
+
+  assert(DWARFCtx != nullptr && "Expected an initialized DWARFContext");
+  if (DWARFCtx->ParsedDSYM)
+    return;
+  DWARFCtx->ParsedDSYM = true;
+  DWARFCtx->SourceLocs =
+      DylibReader::accumulateSourceLocFromDSYM(DSYMPath, Ctx.Target);
+}
+
+void DylibVerifier::visitObjCInterface(const ObjCInterfaceRecord &R) {
+  if (R.isVerified())
+    return;
+  SymbolContext SymCtx;
+  SymCtx.SymbolName = R.getName();
+  SymCtx.ObjCIFKind = assignObjCIFSymbolKind(&R);
+  if (SymCtx.ObjCIFKind > ObjCIFSymbolKind::EHType) {
+    if (R.hasExceptionAttribute()) {
+      SymCtx.Kind = EncodeKind::ObjectiveCClassEHType;
+      visitSymbolInDylib(R, SymCtx);
+    }
+    SymCtx.Kind = EncodeKind::ObjectiveCClass;
+    visitSymbolInDylib(R, SymCtx);
+  } else {
+    SymCtx.Kind = R.hasExceptionAttribute() ? EncodeKind::ObjectiveCClassEHType
+                                            : EncodeKind::ObjectiveCClass;
+    visitSymbolInDylib(R, SymCtx);
+  }
+
+  for (const ObjCIVarRecord *IV : R.getObjCIVars())
+    visitObjCIVar(*IV, R.getName());
+}
+
+void DylibVerifier::visitObjCCategory(const ObjCCategoryRecord &R) {
+  for (const ObjCIVarRecord *IV : R.getObjCIVars())
+    visitObjCIVar(*IV, R.getSuperClassName());
+}
+
+DylibVerifier::Result DylibVerifier::verifyRemainingSymbols() {
+  if (getState() == Result::NoVerify)
+    return Result::NoVerify;
+  assert(!Dylib.empty() && "No binary to verify against");
+
+  DWARFContext DWARFInfo;
+  DWARFCtx = &DWARFInfo;
+  Ctx.DiscoveredFirstError = false;
+  Ctx.PrintArch = true;
+  for (std::shared_ptr<RecordsSlice> Slice : Dylib) {
+    Ctx.Target = Slice->getTarget();
+    Ctx.DylibSlice = Slice.get();
+    Slice->visit(*this);
+  }
+  return getState();
 }
 
 } // namespace installapi
