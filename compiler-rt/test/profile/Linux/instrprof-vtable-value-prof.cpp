@@ -1,5 +1,10 @@
 // REQUIRES: lld-available
 
+// Building the instrumented binary will fail because lld doesn't support
+// big-endian ELF for PPC (aka ABI 1).
+// ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
+// UNSUPPORTED: ppc && host-byteorder-big-endian
+
 // RUN: %clangxx_pgogen -fuse-ld=lld -O2 -g -fprofile-generate=. -mllvm -enable-vtable-value-profiling %s -o %t-test
 // RUN: env LLVM_PROFILE_FILE=%t-test.profraw %t-test
 
