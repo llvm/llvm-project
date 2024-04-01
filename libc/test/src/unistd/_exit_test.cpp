@@ -9,7 +9,7 @@
 #include "src/unistd/_exit.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcUnistdExitTest, _exit) {
+TEST(LlvmLibcUniStdExitTest, _exit) {
   EXPECT_EXITS([] { LIBC_NAMESPACE::_exit(1); }, 1);
   EXPECT_EXITS([] { LIBC_NAMESPACE::_exit(65); }, 65);
 }

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/_exit.h"
+#include "src/__support/OSUtil/quick_exit.h"
 #include "src/__support/common.h"
-#include "src/stdlib/_Exit.h"
 
 namespace LIBC_NAMESPACE {
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, _exit, (int status)) {
-  LIBC_NAMESPACE::_Exit(status);
+  quick_exit(status);
 }
 
 } // namespace LIBC_NAMESPACE

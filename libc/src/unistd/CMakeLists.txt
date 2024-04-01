@@ -9,10 +9,8 @@ add_entrypoint_object(
   HDRS
     _exit.h
   DEPENDS
-    libc.include.stdlib
     libc.include.unistd
     libc.src.__support.OSUtil.osutil
-    libc.src.stdlib._Exit
 )
 
 add_entrypoint_object(
