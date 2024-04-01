@@ -2278,8 +2278,8 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}, DL),
         Ingredient(Load), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     new VPValue(this, &Load);
@@ -2288,8 +2288,9 @@ public:
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue},
+                     DL),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -2299,10 +2300,11 @@ public:
     if (isStore())
       return new VPWidenMemoryInstructionRecipe(
           cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-          Consecutive, Reverse);
+          Consecutive, Reverse, getDebugLoc());
 
-    return new VPWidenMemoryInstructionRecipe(
-        cast<LoadInst>(Ingredient), getAddr(), getMask(), Consecutive, Reverse);
+    return new VPWidenMemoryInstructionRecipe(cast<LoadInst>(Ingredient),
+                                              getAddr(), getMask(), Consecutive,
+                                              Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenMemoryInstructionSC)
@@ -3006,13 +3008,6 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  void addVPValue(Value *V, VPValue *VPV) {
-    assert(VPV->isLiveIn() && "VPV must be a live-in.");
-    assert(V && "Trying to add a null Value to VPlan");
-    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    Value2VPValue[V] = VPV;
-  }
-
   /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
@@ -3020,7 +3015,9 @@ public:
     if (!Value2VPValue.count(V)) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
-      addVPValue(V, VPV);
+      assert(VPV->isLiveIn() && "VPV must be a live-in.");
+      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
+      Value2VPValue[V] = VPV;
     }
 
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
