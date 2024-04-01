@@ -135,9 +135,9 @@ ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
 }
 
 const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
-  {{"bp"}, "a5"},
-  {{"fp"}, "a6"},
-  {{"usp", "ssp", "isp", "a7"}, "sp"},
+    {{"bp"}, "a5"},
+    {{"fp"}, "a6"},
+    {{"usp", "ssp", "isp", "a7"}, "sp"},
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
