@@ -1719,6 +1719,19 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  atan2f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2f_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.atan2f
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 
