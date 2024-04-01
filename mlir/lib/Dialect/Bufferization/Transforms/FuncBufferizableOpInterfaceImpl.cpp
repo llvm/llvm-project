@@ -326,7 +326,7 @@ struct FuncOpInterface
   static bool supportsUnstructuredControlFlow() { return true; }
 
   bool hasTensorSemantics(Operation *op) const {
-    auto isaTensor = [](Type type) { return isa<TensorType>(type); };
+    auto isaTensor = llvm::IsaPred<TensorType>;
 
     // A function has tensor semantics if it has tensor arguments/results.
     auto funcOp = cast<FuncOp>(op);

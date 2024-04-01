@@ -2133,19 +2133,6 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
-multiclass VPseudoBinaryNoMask<VReg RetClass,
-                               VReg Op1Class,
-                               DAGOperand Op2Class,
-                               LMULInfo MInfo,
-                               string Constraint = "",
-                               int sew = 0> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint>;
-  }
-}
-
 multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      VReg Op1Class,
                                      DAGOperand Op2Class,
@@ -2212,7 +2199,8 @@ multiclass VPseudoTiedBinary<VReg RetClass,
     def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
                                                           Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" : VPseudoTiedBinaryMask<RetClass, Op2Class,
-                                                         Constraint, TargetConstraintType>;
+                                                         Constraint, TargetConstraintType>,
+                                        RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -2225,7 +2213,8 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
     def "_" # MInfo.MX # "_TIED":
       VPseudoTiedBinaryNoMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" :
-      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
+      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>,
+      RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -3369,22 +3358,6 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
     defm "" : VPseudoTernaryV_VX_AAXA<m, Constraint>,
               SchedTernary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX",
                            "ReadVIMulAddV", mx>;
-  }
-}
-
-multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxListF in {
-    defm "" : VPseudoTernaryV_VV_AAXA<m, Constraint>,
-              SchedTernary<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
-                           "ReadVFMulAddV", m.MX>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoTernaryV_VF_AAXA<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
-                             "ReadVFMulAddV", m.MX>;
-    }
   }
 }
 

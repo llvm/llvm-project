@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple aarch64-windows-gnu -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-GNU
 ; RUN: llc -mtriple aarch64-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-MSVC
+; RUN: llc -mtriple arm64ec-windows-gnu -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-GNU-EC
+; RUN: llc -mtriple arm64ec-windows-msvc -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-MSVC-EC
 
 define void @f() {
   ret void
@@ -71,3 +73,40 @@ define weak_odr dllexport void @l() {
 ; CHECK-MSVC: .ascii "  /EXPORT:s"
 ; CHECK-MSVC: .ascii "  /EXPORT:t"
 ; CHECK-MSVC: .ascii "  /EXPORT:u"
+
+; CHECK-GNU-EC-NOT: -export:f
+; CHECK-GNU-EC-NOT: -export:#f,EXPORTAS,f
+; CHECK-GNU-EC: .ascii " -export:#g,EXPORTAS,g
+; CHECK-GNU-EC: .ascii " -export:#h,EXPORTAS,h
+; CHECK-GNU-EC-NOT: -export:i
+; CHECK-GNU-EC-NOT: -export:#i,EXPORTAS,i
+; CHECK-GNU-EC: .ascii " -export:#j,EXPORTAS,j"
+; CHECK-GNU-EC: .ascii " -export:#k,EXPORTAS,k"
+; CHECK-GNU-EC: .ascii " -export:#l,EXPORTAS,l"
+; CHECK-GNU-EC: .ascii " -export:m,data"
+; CHECK-GNU-EC: .ascii " -export:n,data"
+; CHECK-GNU-EC: .ascii " -export:o,data"
+; CHECK-GNU-EC: .ascii " -export:p,data"
+; CHECK-GNU-EC: .ascii " -export:q,data"
+; CHECK-GNU-EC: .ascii " -export:r"
+; CHECK-GNU-EC: .ascii " -export:s"
+; CHECK-GNU-EC: .ascii " -export:t"
+; CHECK-GNU-EC: .ascii " -export:u"
+; CHECK-MSVC-EC-NOT: /EXPORT:f
+; CHECK-MSVC-EC-NOT: /EXPORT:#f,EXPORTAS,f
+; CHECK-MSVC-EC: .ascii "  /EXPORT:#g,EXPORTAS,g"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:#h,EXPORTAS,h"
+; CHECK-MSVC-EC-NOT: /EXPORT:i
+; CHECK-MSVC-EC-NOT: /EXPORT:#i,EXPORTAS,i
+; CHECK-MSVC-EC: .ascii "  /EXPORT:#j,EXPORTAS,j"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:#k,EXPORTAS,k"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:#l,EXPORTAS,l"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:m,DATA"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:n,DATA"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:o,DATA"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:p,DATA"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:q,DATA"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:r"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:s"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:t"
+; CHECK-MSVC-EC: .ascii "  /EXPORT:u"

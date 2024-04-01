@@ -3331,7 +3331,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
           EHPadMBB->setMachineBlockAddressTaken();
       break;
     case Intrinsic::experimental_patchpoint_void:
-    case Intrinsic::experimental_patchpoint_i64:
+    case Intrinsic::experimental_patchpoint:
       visitPatchpoint(I, EHPadBB);
       break;
     case Intrinsic::experimental_gc_statepoint:
@@ -6007,12 +6007,15 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     // incorrect hoisting of the DBG_VALUE to the function entry).
     // Notice that we allow one dbg.value per IR level argument, to accommodate
     // for the situation with fragments above.
+    // If there is no node for the value being handled, we return true to skip
+    // the normal generation of debug info, as it would kill existing debug
+    // info for the parameter in case of duplicates.
     if (VariableIsFunctionInputArg) {
       unsigned ArgNo = Arg->getArgNo();
       if (ArgNo >= FuncInfo.DescribedArgs.size())
         FuncInfo.DescribedArgs.resize(ArgNo + 1, false);
       else if (!IsInPrologue && FuncInfo.DescribedArgs.test(ArgNo))
-        return false;
+        return !NodeMap[V].getNode();
       FuncInfo.DescribedArgs.set(ArgNo);
     }
   }
@@ -7323,6 +7326,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    return;
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::usub_with_overflow:
@@ -7445,7 +7453,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitStackmap(I);
     return;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     visitPatchpoint(I);
     return;
   case Intrinsic::experimental_gc_statepoint:
@@ -8604,8 +8612,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     ConvControlToken = getValue(Token);
-  } else {
-    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
   }
 
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -10257,12 +10263,12 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
 /// Lower llvm.experimental.patchpoint directly to its target opcode.
 void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
                                           const BasicBlock *EHPadBB) {
-  // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,
-  //                                                 i32 <numBytes>,
-  //                                                 i8* <target>,
-  //                                                 i32 <numArgs>,
-  //                                                 [Args...],
-  //                                                 [live variables...])
+  // <ty> @llvm.experimental.patchpoint.<ty>(i64 <id>,
+  //                                         i32 <numBytes>,
+  //                                         i8* <target>,
+  //                                         i32 <numArgs>,
+  //                                         [Args...],
+  //                                         [live variables...])
 
   CallingConv::ID CC = CB.getCallingConv();
   bool IsAnyRegCC = CC == CallingConv::AnyReg;

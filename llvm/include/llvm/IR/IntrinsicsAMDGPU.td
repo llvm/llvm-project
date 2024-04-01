@@ -2066,6 +2066,24 @@ def int_amdgcn_interp_inreg_p2_f16 :
             [IntrNoMem, IntrSpeculatable,
              ImmArg<ArgIndex<3>>]>;
 
+// llvm.amdgcn.interp.p10.rtz.f16 <p>, <i>, <p0>, <high>
+// gfx11+ fp16 interpolation intrinsic, with round-toward-zero rounding mode.
+// high selects whether high or low 16-bits are used for p and p0 operands
+def int_amdgcn_interp_p10_rtz_f16:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.interp.p2.rtz.f16 <p>, <j>, <tmp>, <high>
+// gfx11+ fp16 interpolation intrinsic, with round-toward-zero rounding mode.
+// high selects whether high or low 16-bits are used for p operand
+def int_amdgcn_interp_p2_rtz_f16 :
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
 // Deprecated: use llvm.amdgcn.live.mask instead.
 def int_amdgcn_ps_live : DefaultAttrsIntrinsic <
   [llvm_i1_ty],
@@ -2769,17 +2787,14 @@ class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
   >;
 
 // Wave32
-// <2 x i32>    @llvm.amdgcn.global.load.tr.v2i32(ptr addrspace(1))  -> global_load_tr_b64
-// <8 x i16>    @llvm.amdgcn.global.load.tr.v8i16(ptr addrspace(1))  -> global_load_tr_b128
-// <8 x half>   @llvm.amdgcn.global.load.tr.v8f16(ptr addrspace(1))  -> global_load_tr_b128
-// <8 x bfloat> @llvm.amdgcn.global.load.tr.v8bf16(ptr addrspace(1)) -> global_load_tr_b128
+// <2 x i32>    @llvm.amdgcn.global.load.tr.b64.v2i32(ptr addrspace(1))  -> global_load_tr_b64
+// <8 x i16>    @llvm.amdgcn.global.load.tr.b128.v8i16(ptr addrspace(1))  -> global_load_tr_b128
 // Wave64
-// i32          @llvm.amdgcn.global.load.tr.i32(ptr addrspace(1))    -> global_load_tr_b64
-// <4 x i16>    @llvm.amdgcn.global.load.tr.v4i16(ptr addrspace(1))  -> global_load_tr_b128
-// <4 x half>   @llvm.amdgcn.global.load.tr.v4f16(ptr addrspace(1))  -> global_load_tr_b128
-// <4 x bfloat> @llvm.amdgcn.global.load.tr.v4bf16(ptr addrspace(1)) -> global_load_tr_b128
+// i32          @llvm.amdgcn.global.load.tr.b64.i32(ptr addrspace(1))    -> global_load_tr_b64
+// <4 x i16>    @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1))  -> global_load_tr_b128
 
-def int_amdgcn_global_load_tr : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr_b64  : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
 
 // i32 @llvm.amdgcn.wave.id()
 def int_amdgcn_wave_id :

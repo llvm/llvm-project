@@ -130,7 +130,8 @@ public:
     // shape is deferred and should not be loaded now to preserve
     // pointer/allocatable aspects.
     if (componentSym.Rank() == 0 ||
-        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym))
+        Fortran::semantics::IsAllocatableOrObjectPointer(&componentSym) ||
+        Fortran::semantics::IsProcedurePointer(&componentSym))
       return mlir::Value{};
 
     fir::FirOpBuilder &builder = getBuilder();
@@ -1767,8 +1768,22 @@ private:
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
-        if (Fortran::semantics::IsProcedure(sym))
-          TODO(loc, "procedure pointer component in structure constructor");
+        if (Fortran::semantics::IsProcedure(sym)) {
+          // Procedure pointer components.
+          if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                  expr)) {
+            auto boxTy{
+                Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+            hlfir::Entity rhs(
+                fir::factory::createNullBoxProc(builder, loc, boxTy));
+            builder.createStoreWithConvert(loc, rhs, lhs);
+            continue;
+          }
+          hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+              loc, converter, expr, symMap, stmtCtx)));
+          builder.createStoreWithConvert(loc, rhs, lhs);
+          continue;
+        }
         // Pointer component construction is just a copy of the box contents.
         fir::ExtendedValue lhsExv =
             hlfir::translateToExtendedValue(loc, builder, lhs);

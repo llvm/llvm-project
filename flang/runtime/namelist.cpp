@@ -31,9 +31,12 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
   ConnectionState &connection{io.GetConnectionState()};
+  // The following lambda definition violates the conding style,
+  // but cuda-11.8 nvcc hits an internal error with the brace initialization.
+
   // Internal function to advance records and convert case
-  const auto EmitUpperCase{[&](const char *prefix, std::size_t prefixLen,
-                               const char *str, char suffix) -> bool {
+  const auto EmitUpperCase = [&](const char *prefix, std::size_t prefixLen,
+                                 const char *str, char suffix) -> bool {
     if ((connection.NeedAdvance(prefixLen) &&
             !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
         !EmitAscii(io, prefix, prefixLen) ||
@@ -49,7 +52,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
       }
     }
     return suffix == ' ' || EmitAscii(io, &suffix, 1);
-  }};
+  };
   // &GROUP
   if (!EmitUpperCase(" &", 2, group.groupName, ' ')) {
     return false;
@@ -294,7 +297,7 @@ static bool HandleSubstring(
       ch = io.GetNextNonBlank(byteCount);
     }
   }
-  if (ch && ch == ':') {
+  if (ch && *ch == ':') {
     io.HandleRelativePosition(byteCount);
     ch = io.GetNextNonBlank(byteCount);
     if (ch) {
@@ -587,6 +590,8 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 bool IsNamelistNameOrSlash(IoStatementState &io) {
   if (auto *listInput{
           io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
@@ -610,5 +615,7 @@ bool IsNamelistNameOrSlash(IoStatementState &io) {
   }
   return false;
 }
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io

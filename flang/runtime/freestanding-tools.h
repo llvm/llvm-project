@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
 #define FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include <algorithm>
 #include <cstring>
@@ -47,14 +47,19 @@
 #define STD_MEMCHR_UNSUPPORTED 1
 #endif
 
+#if !defined(STD_STRCPY_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_STRCPY_UNSUPPORTED 1
+#endif
+
 namespace Fortran::runtime {
 
 #if STD_FILL_N_UNSUPPORTED
 // Provides alternative implementation for std::fill_n(), if
 // it is not supported.
-template <typename A>
-static inline RT_API_ATTRS void fill_n(
-    A *start, std::size_t count, const A &value) {
+template <typename A, typename B>
+static inline RT_API_ATTRS std::enable_if_t<std::is_convertible_v<B, A>, void>
+fill_n(A *start, std::size_t count, const B &value) {
   for (std::size_t j{0}; j < count; ++j) {
     start[j] = value;
   }
@@ -156,6 +161,20 @@ static inline RT_API_ATTRS const void *memchr(
 #else // !STD_MEMCMP_UNSUPPORTED
 using std::memchr;
 #endif // !STD_MEMCMP_UNSUPPORTED
+
+#if STD_STRCPY_UNSUPPORTED
+// Provides alternative implementation for std::strcpy(), if
+// it is not supported.
+static inline RT_API_ATTRS char *strcpy(char *dest, const char *src) {
+  char *result{dest};
+  do {
+    *dest++ = *src;
+  } while (*src++ != '\0');
+  return result;
+}
+#else // !STD_STRCPY_UNSUPPORTED
+using std::strcpy;
+#endif // !STD_STRCPY_UNSUPPORTED
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_

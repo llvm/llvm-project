@@ -476,12 +476,6 @@ public:
                                       Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
                                       BasicBlock *InsertAtEnd);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock *InsertAtEnd);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name = "",
@@ -1038,7 +1032,7 @@ public:
   /// the two operands. Insert the instruction into a BasicBlock right before
   /// the specified instruction.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
                          const Twine &Name, BasicBlock::iterator InsertBefore);
 
   /// Construct a compare instruction, given the opcode, the predicate and
@@ -1046,17 +1040,28 @@ public:
   /// instruction into a BasicBlock right before the specified instruction.
   /// The specified Instruction is allowed to be a dereferenced end iterator.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op,
-                         Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name = "",
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
+                         const Twine &Name = "",
                          Instruction *InsertBefore = nullptr);
 
   /// Construct a compare instruction, given the opcode, the predicate and the
   /// two operands.  Also automatically insert this instruction to the end of
   /// the BasicBlock specified.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
+                         const Twine &Name, BasicBlock *InsertAtEnd);
+
+  /// Construct a compare instruction, given the opcode, the predicate,
+  /// the two operands and the instruction to copy the flags from. Optionally
+  /// (if InstBefore is specified) insert the instruction into a BasicBlock
+  /// right before the specified instruction. The specified Instruction is
+  /// allowed to be a dereferenced end iterator.
+  /// Create a CmpInst
+  static CmpInst *CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name = "",
+                                        Instruction *InsertBefore = nullptr);
 
   /// Get the opcode casted to the right type
   OtherOps getOpcode() const {
