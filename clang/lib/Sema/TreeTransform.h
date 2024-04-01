@@ -5243,6 +5243,23 @@ QualType TreeTransform<Derived>::TransformDecayedType(TypeLocBuilder &TLB,
   return Result;
 }
 
+template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformArrayParameterType(TypeLocBuilder &TLB,
+                                                    ArrayParameterTypeLoc TL) {
+  QualType OriginalType = getDerived().TransformType(TLB, TL.getElementLoc());
+  if (OriginalType.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() ||
+      OriginalType != TL.getElementLoc().getType())
+    Result = SemaRef.Context.getArrayParameterType(OriginalType);
+  TLB.push<ArrayParameterTypeLoc>(Result);
+  // Nothing to set for ArrayParameterTypeLoc.
+  return Result;
+}
+
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformPointerType(TypeLocBuilder &TLB,
                                                       PointerTypeLoc TL) {
