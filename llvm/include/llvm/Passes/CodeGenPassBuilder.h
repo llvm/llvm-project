@@ -55,6 +55,7 @@
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -112,9 +113,8 @@ namespace llvm {
 template <typename DerivedT> class CodeGenPassBuilder {
 public:
   explicit CodeGenPassBuilder(LLVMTargetMachine &TM,
-                              const CGPassBuilderOption &Opts,
-                              PassInstrumentationCallbacks *PIC)
-      : TM(TM), Opt(Opts), PIC(PIC) {
+                              const CGPassBuilderOption &Opts, PassBuilder &PB)
+      : TM(TM), Opt(Opts), PB(PB), PIC(PB.getPassInstrumentationCallbacks()) {
     // Target could set CGPassBuilderOption::MISchedPostRA to true to achieve
     //     substitutePass(&PostRASchedulerID, &PostMachineSchedulerID)
 
@@ -205,8 +205,15 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty())
-        MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+      if (!MFPM.isEmpty()) {
+        if (PB.PB.hasMachineModuleInfoOwnership()) {
+          MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+              std::move(MFPM), std::move(PB.PB.takeMachineModuleInfo())));
+        } else {
+          MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+              std::move(MFPM), PB.PB.getMachineModuleInfo()));
+        }
+      }
     }
 
     template <typename PassT>
@@ -228,8 +235,13 @@ protected:
       } else {
         // Add Module Pass
         if (!MFPM.isEmpty()) {
-          MPM.addPass(
-              createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+          if (PB.PB.hasMachineModuleInfoOwnership()) {
+            MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+                std::move(MFPM), PB.PB.takeMachineModuleInfo()));
+          } else {
+            MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+                std::move(MFPM), PB.PB.getMachineModuleInfo()));
+          }
           MFPM = MachineFunctionPassManager();
         }
 
@@ -248,6 +260,7 @@ protected:
 
   LLVMTargetMachine &TM;
   CGPassBuilderOption Opt;
+  PassBuilder &PB;
   PassInstrumentationCallbacks *PIC;
 
   template <typename TMC> TMC &getTM() const { return static_cast<TMC &>(TM); }
@@ -491,7 +504,8 @@ template <typename Derived>
 Error CodeGenPassBuilder<Derived>::buildPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType) const {
-  auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
+  auto StartStopInfo =
+      TargetPassConfig::getStartStopInfo(*PB.getPassInstrumentationCallbacks());
   if (!StartStopInfo)
     return StartStopInfo.takeError();
   setStartStopPasses(*StartStopInfo);

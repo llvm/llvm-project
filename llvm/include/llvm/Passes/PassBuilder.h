@@ -33,6 +33,7 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
+class MachineModuleInfo;
 template <typename T> class IntrusiveRefCntPtr;
 namespace vfs {
 class FileSystem;
@@ -106,6 +107,8 @@ class PassBuilder {
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
+  std::unique_ptr<MachineModuleInfo> MMI;
+  MachineModuleInfo *MMIRefPtr; // As reference to MMI
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -625,6 +628,14 @@ public:
                                       OptimizationLevel Level);
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
                                                     OptimizationLevel Level);
+
+  MachineModuleInfo &getMachineModuleInfo() { return *MMIRefPtr; }
+
+  std::unique_ptr<MachineModuleInfo> takeMachineModuleInfo() {
+    return std::move(MMI);
+  }
+
+  bool hasMachineModuleInfoOwnership() const { return MMI != nullptr; }
 
   static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
     if (!Name.consume_front(PassName))

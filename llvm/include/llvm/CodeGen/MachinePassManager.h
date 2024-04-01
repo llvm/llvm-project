@@ -24,6 +24,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Error.h"
@@ -217,30 +218,57 @@ public:
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
 
   explicit ModuleToMachineFunctionPassAdaptor(
-      std::unique_ptr<PassConceptT> Pass)
-      : Pass(std::move(Pass)) {}
+      std::unique_ptr<PassConceptT> Pass,
+      std::unique_ptr<MachineModuleInfo> MMI)
+      : Pass(std::move(Pass)), OwnedMMI(std::move(MMI)) {}
+
+  explicit ModuleToMachineFunctionPassAdaptor(
+      std::unique_ptr<PassConceptT> Pass, MachineModuleInfo &MMI)
+      : Pass(std::move(Pass)), MMIPtr(&MMI) {}
 
   /// Runs the function pass across every function in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
+  MachineModuleInfo &getMachineModuleInfo() {
+    assert((OwnedMMI || MMIPtr) && "Need MachineModuleInfo!");
+    return OwnedMMI ? *OwnedMMI : *MMIPtr;
+  }
+
   static bool isRequired() { return true; }
 
 private:
   std::unique_ptr<PassConceptT> Pass;
+  std::unique_ptr<MachineModuleInfo> OwnedMMI;
+  MachineModuleInfo *MMIPtr = nullptr;
 };
 
 template <typename MachineFunctionPassT>
-ModuleToMachineFunctionPassAdaptor
-createModuleToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
+ModuleToMachineFunctionPassAdaptor createModuleToMachineFunctionPassAdaptor(
+    MachineFunctionPassT &&Pass, std::unique_ptr<MachineModuleInfo> MMI) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return ModuleToMachineFunctionPassAdaptor(
       std::unique_ptr<ModuleToMachineFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
+          new PassModelT(std::forward<MachineFunctionPassT>(Pass))),
+      std::move(MMI));
+}
+
+template <typename MachineFunctionPassT>
+ModuleToMachineFunctionPassAdaptor
+createModuleToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass,
+                                         MachineModuleInfo &MMI) {
+  using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
+                                       MachineFunctionAnalysisManager>;
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
+  return ModuleToMachineFunctionPassAdaptor(
+      std::unique_ptr<ModuleToMachineFunctionPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<MachineFunctionPassT>(Pass))),
+      MMI);
 }
 
 template <>

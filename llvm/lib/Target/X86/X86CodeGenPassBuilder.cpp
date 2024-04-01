@@ -23,8 +23,8 @@ class X86CodeGenPassBuilder : public CodeGenPassBuilder<X86CodeGenPassBuilder> {
 public:
   explicit X86CodeGenPassBuilder(LLVMTargetMachine &TM,
                                  const CGPassBuilderOption &Opts,
-                                 PassInstrumentationCallbacks *PIC)
-      : CodeGenPassBuilder(TM, Opts, PIC) {}
+                                 PassBuilder &PB)
+      : CodeGenPassBuilder(TM, Opts, PB) {}
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
@@ -48,8 +48,7 @@ Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
 
 Error X86TargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
-    PassInstrumentationCallbacks *PIC) {
-  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
+    CodeGenFileType FileType, const CGPassBuilderOption &Opt, PassBuilder &PB) {
+  auto CGPB = X86CodeGenPassBuilder(*this, Opt, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }

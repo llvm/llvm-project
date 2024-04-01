@@ -113,8 +113,6 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
-
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM);
   SI.registerCallbacks(PIC);
@@ -134,9 +132,9 @@ int llvm::compileModuleWithNewPM(
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
+  auto &MMI = PB.getMachineModuleInfo();
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
@@ -153,13 +151,13 @@ int llvm::compileModuleWithNewPM(
     MachineFunctionPassManager MFPM;
     MFPM.addPass(PrintMIRPass(*OS));
     MFPM.addPass(FreeMachineFunctionPass());
-    MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+    MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM), MMI));
 
     if (MIR->parseMachineFunctions(*M, MMI))
       return 1;
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, PB));
   }
 
   if (PrintPipelinePasses) {

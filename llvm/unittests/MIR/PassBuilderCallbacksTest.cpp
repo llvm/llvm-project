@@ -528,8 +528,8 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedFreeMFPass) {
               runAfterPass(HasNameRegex("FreeMachineFunctionPass"), _, _))
       .Times(0);
 
-  MPM.addPass(
-      createModuleToMachineFunctionPassAdaptor(FreeMachineFunctionPass()));
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+      FreeMachineFunctionPass(), *MMI));
   MPM.run(*M, MAM);
 }
 
@@ -568,7 +568,7 @@ TEST_F(MachineFunctionCallbacksTest, InstrumentedFreeMFPass2) {
 
   MachineFunctionPassManager MFPM;
   MFPM.addPass(FreeMachineFunctionPass());
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM), *MMI));
   MPM.run(*M, MAM);
 }
 
