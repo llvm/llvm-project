@@ -52,7 +52,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         if (!II)
           continue;
 
-        VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
+        VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
         NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
@@ -64,11 +64,13 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/);
+              false /*Consecutive*/, false /*Reverse*/,
+              Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -568,8 +570,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         continue;
 
       const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-      VPValue *StartV = Plan.getVPValueOrAddLiveIn(
-          ConstantInt::get(ID.getStep()->getType(), 0));
+      VPValue *StartV =
+          Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
       VPRecipeBase *Steps =
           createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
@@ -663,9 +665,9 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
     return;
 
   LLVMContext &Ctx = SE.getContext();
-  auto *BOC = new VPInstruction(
-      VPInstruction::BranchOnCond,
-      {Plan.getVPValueOrAddLiveIn(ConstantInt::getTrue(Ctx))});
+  auto *BOC =
+      new VPInstruction(VPInstruction::BranchOnCond,
+                        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))});
   Term->eraseFromParent();
   ExitingVPBB->appendRecipe(BOC);
   Plan.setVF(BestVF);

@@ -2495,6 +2495,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
   case Intrinsic::ubsantrap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
+    return true;
   case Intrinsic::amdgcn_cs_chain:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
