@@ -2523,6 +2523,54 @@ implemented directly in terms of :ref:`extended vector support
 <langext-vectors>` instead of builtins, in order to reduce the number of
 builtins that we need to implement.
 
+``__builtin_start_object_lifetime``
+-----------------------------------
+
+The builtin is used to instruct compiler to explicitly create an object in-place
+and start the object lifetime without running any initialisation code.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  T* __builtin_start_object_lifetime(T* p)
+
+
+**Example of Use***:
+
+.. code-block:: c++
+
+  struct Foo {};
+
+  // [buffer, buffer+sizeof(Foo)) is a memory region whose bytes represent a
+  // valid object representation of type Foo.
+  Foo* make_foo(char* buffer) {
+    return __builtin_start_object_lifetime(reinterpret_cast<Foo*>(buffer));
+  }
+
+**Description**:
+
+This builtin creates an object at the given memory location and start
+the lifetime of the object without running any constructor code. It returns a
+pointer to the same memory that the parameter `p` points to, and the returned
+result can be legitimately used to access the object `T`.
+
+It can be used to implement C++23's `std::start_lifetime_as` API.
+Unlike the `std::start_lifetime_as` which only works for implicit-lifetime
+types. This builtin doens't have this restriction, it can apply to
+non-implicit-lifetime types.
+
+This builtin is a no-op barrier operation taken by the compiler to address object
+value propagation analysis in an opaque manner appropriately, e.g. suppressing
+certain optimizations.
+
+This builtin cannot be called in a ``constexpr`` context.
+
+NOTE: this builtin is considered experimental at this time. It is known that it
+can cause TBAA miscompile issues when using with `-fstrict-aliasing` flag (which
+is on by default). Until we fix all TBAA issues (which requires more LLVM IR
+support), we suggest to use it with `-fno-strict-aliasing`.
+
 ``__builtin_alloca``
 --------------------
 

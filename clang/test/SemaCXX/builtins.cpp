@@ -167,14 +167,17 @@ constexpr int test_non_constexpr(int i) { // expected-error {{constexpr function
 }
 
 struct Incomplete; // expected-note {{forward declaration}}
-void test_incomplete(Incomplete *i) {
+void test_diag(Incomplete *i) {
    // Requires a complete type
    __builtin_start_object_lifetime(i); // expected-error {{incomplete type 'Incomplete' where a complete type is required}}
+
+  int x;
+   __builtin_start_object_lifetime(x); // expected-error {{non-pointer argument to '__builtin_start_object_lifetime' is not allowed}}
 }
 
 // The builtin is type-generic.
 #define TEST_TYPE(Ptr, Type) \
-  static_assert(__is_same(decltype(__builtin_launder(Ptr)), Type), "expected same type")
+  static_assert(__is_same(decltype(__builtin_start_object_lifetime(Ptr)), Type), "expected same type")
 void test_type_generic() {
   char * p;
   int * i;

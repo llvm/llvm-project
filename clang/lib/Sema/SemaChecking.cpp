@@ -2157,7 +2157,13 @@ static ExprResult SemaPointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   return Call;
 }
 
-static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
+// Semantic check for function arguments of __builtin_launder or
+// __builtin_start_object_lifetime.
+static ExprResult SemaBuiltinLaunderOrStartObjectLifetime(Sema &S,
+                                                          CallExpr *TheCall,
+                                                          unsigned BuiltinID) {
+  assert(BuiltinID == Builtin::BI__builtin_launder ||
+         BuiltinID == Builtin::BI__builtin_start_object_lifetime);
   if (checkArgCount(S, TheCall, 1))
     return ExprError();
 
@@ -2188,8 +2194,10 @@ static ExprResult SemaBuiltinLaunder(Sema &S, CallExpr *TheCall) {
     return std::optional<unsigned>{};
   }();
   if (DiagSelect) {
-    S.Diag(TheCall->getBeginLoc(), diag::err_builtin_launder_invalid_arg)
-        << *DiagSelect << TheCall->getSourceRange();
+    S.Diag(TheCall->getBeginLoc(),
+           diag::err_builtin_launder_or_start_object_lifetime_invalid_arg)
+        << *DiagSelect << (BuiltinID == Builtin::BI__builtin_launder ? 0 : 1)
+        << TheCall->getSourceRange();
     return ExprError();
   }
 
@@ -2645,7 +2653,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_start_object_lifetime:
   case Builtin::BI__builtin_launder:
-    return SemaBuiltinLaunder(*this, TheCall);
+    return SemaBuiltinLaunderOrStartObjectLifetime(*this, TheCall, BuiltinID);
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:

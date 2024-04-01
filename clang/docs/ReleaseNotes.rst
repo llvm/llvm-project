@@ -193,6 +193,9 @@ Non-comprehensive list of changes in this release
   with support for any unsigned integer type. Like the previous builtins, these
   new builtins are constexpr and may be used in constant expressions.
 
+- Added ``__builtin_start_object_lifetime`` for creating object in-place and
+  starting object lifetime without running any initialisation code.
+
 New Compiler Flags
 ------------------
 
