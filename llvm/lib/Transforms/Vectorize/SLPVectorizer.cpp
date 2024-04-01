@@ -14263,11 +14263,9 @@ void BoUpSLP::computeMinimumValueSizes() {
   SmallVector<unsigned> RootDemotes;
   if (NodeIdx != 0 &&
       VectorizableTree[NodeIdx]->State == TreeEntry::Vectorize &&
-      (VectorizableTree[NodeIdx]->getOpcode() == Instruction::ZExt ||
-       VectorizableTree[NodeIdx]->getOpcode() == Instruction::SExt ||
-       VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc)) {
+      VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc) {
     assert(IsStoreOrInsertElt && "Expected store/insertelement seeded graph.");
-    IsTruncRoot = VectorizableTree[NodeIdx]->getOpcode() == Instruction::Trunc;
+    IsTruncRoot = true;
     RootDemotes.push_back(NodeIdx);
     IsProfitableToDemoteRoot = true;
     ++NodeIdx;
