@@ -1,6 +1,6 @@
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | \
 // RUN:     FileCheck %s --check-prefix=DECODER
-// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates -I \
+// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O2 -I \
 // RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS
 
 // Test duplicate table suppression for per-HwMode decoders.
@@ -105,11 +105,10 @@ let OutOperandList = (outs) in {
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
 
-
-// DECODER-SUPPRESS-LABEL: DecoderTableAlt_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-LABEL: DecoderTable_AllModes32[] =
+// DECODER-SUPPRESS-LABEL: DecoderTable32[] =
 // DECODER-SUPPRESS-DAG: Opcode: bar
+// DECODER-SUPPRESS-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-DAG: Opcode: unrelated
 // DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[] =
 // DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
 // DECODER-SUPPRESS-NOT: Opcode: bar
