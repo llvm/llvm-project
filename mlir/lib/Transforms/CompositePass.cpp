@@ -36,7 +36,6 @@ struct CompositeFixedPointPass final
 
     llvm::raw_string_ostream os(pipelineStr);
     dynamicPM.printAsTextualPipeline(os);
-    os.flush();
   }
 
   LogicalResult initializeOptions(StringRef options) override {
