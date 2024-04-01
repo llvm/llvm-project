@@ -8074,11 +8074,11 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenMemoryInstructionRecipe(*Load, Ptr, Mask, Consecutive,
-                                              Reverse);
+                                              Reverse, I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenMemoryInstructionRecipe(*Store, Ptr, Operands[0], Mask,
-                                            Consecutive, Reverse);
+  return new VPWidenMemoryInstructionRecipe(
+      *Store, Ptr, Operands[0], Mask, Consecutive, Reverse, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -9340,7 +9340,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
 
   // Handle Stores:
   if (SI) {
-    State.setDebugLocFrom(SI->getDebugLoc());
+    State.setDebugLocFrom(getDebugLoc());
 
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Instruction *NewSI = nullptr;
@@ -9372,7 +9372,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
 
   // Handle loads.
   assert(LI && "Must have a load instruction");
-  State.setDebugLocFrom(LI->getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewLI;
     if (CreateGatherScatter) {
