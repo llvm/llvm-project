@@ -60,9 +60,9 @@ def tma_load(
     """
     TMA loads two input matrices from global memory to shared memory. It performs the following operations:
 
-       - tma.load a_shared_memory[offset] at coordinate [x, y] (Loads 128x64)
-       - tma.load b_shared_memory[offset] at coordinate [x, y] (Loads 64x64)
-       - tma.load b_shared_memory[offset] at coordinate [x, y] (Loads 64x64)
+       - tma.load a_shared_memory[off_x]  at coordinate [x, z]      (Loads 128x64)
+       - tma.load b_shared_memory[off_y1] at coordinate [y, x]      (Loads 64x64)
+       - tma.load b_shared_memory[off_y2] at coordinate [y + 64, x] (Loads 64x64)
 
        mbarrier.arrive ta_count = 128x64x2x4
     """
@@ -80,22 +80,18 @@ def tma_load(
     off_a = slot * size_tma_a
     off_b = (slot * size_tma_a) + begin_b
     off_b2 = off_b + size_tma_b
-    x = get_dynamic_shared_memory(
-        a_tma.tma_memref.shape, a_tma.tma_memref.element_type, off_a
-    )
-    y1 = get_dynamic_shared_memory(
-        b_tma.tma_memref.shape, b_tma.tma_memref.element_type, off_b
-    )
-    y2 = get_dynamic_shared_memory(
-        b_tma.tma_memref.shape, b_tma.tma_memref.element_type, off_b2
-    )
+    a_elem_ty = a_tma.tma_memref.element_type
+    b_elem_ty = b_tma.tma_memref.element_type
+    a = get_dynamic_shared_memory(a_tma.tma_memref.shape, a_elem_ty, off_a)
+    b1 = get_dynamic_shared_memory(b_tma.tma_memref.shape, b_elem_ty, off_b)
+    b2 = get_dynamic_shared_memory(b_tma.tma_memref.shape, b_elem_ty, off_b2)
 
     mbar_group[slot].arrive(ta_count, predicate=p)
 
     c1 = stage * 64
-    a_tma.load(x, mbar_group[slot], coords=[c1, dimX], predicate=p)
-    b_tma.load(y1, mbar_group[slot], coords=[dimY, c1], predicate=p)
-    b_tma.load(y2, mbar_group[slot], coords=[dimY + 64, c1], predicate=p)
+    a_tma.load(a, mbar_group[slot], coords=[c1, dimX], predicate=p)
+    b_tma.load(b1, mbar_group[slot], coords=[dimY, c1], predicate=p)
+    b_tma.load(b2, mbar_group[slot], coords=[dimY + 64, c1], predicate=p)
 
 
 def bootstrap(a_tma: TMA, b_tma: TMA):
@@ -229,27 +225,27 @@ def epilogue(D, d_dev):
 
 
 @NVDSL.mlir_func
-def gemm_multistage(x, y, d):
+def gemm_multistage(a, b, d):
     token_ty = ir.Type.parse("!gpu.async.token")
     t1 = gpu.wait(token_ty, [])
-    a_dev, t2 = gpu.alloc(x.type, token_ty, [t1], [], [])
-    b_dev, t3 = gpu.alloc(y.type, token_ty, [t2], [], [])
+    a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
+    b_dev, t3 = gpu.alloc(b.type, token_ty, [t2], [], [])
     d_dev, t4 = gpu.alloc(d.type, token_ty, [t3], [], [])
-    t5 = gpu.memcpy(token_ty, [t4], a_dev, x)
-    t6 = gpu.memcpy(token_ty, [t5], b_dev, y)
+    t5 = gpu.memcpy(token_ty, [t4], a_dev, a)
+    t6 = gpu.memcpy(token_ty, [t5], b_dev, b)
     t7 = gpu.wait(token_ty, [t6])
 
     sw = nvgpu.TensorMapSwizzleKind.SWIZZLE_128B
-    a_tma = TMA([128, 64], x.type, swizzle=sw)
-    b_tma = TMA([64, 64], y.type, swizzle=sw)
+    a_tma = TMA([128, 64], a.type, swizzle=sw)
+    b_tma = TMA([64, 64], b.type, swizzle=sw)
     a_tma.create_descriptor(a_dev)
     b_tma.create_descriptor(b_dev)
 
     grid = [(M // TILE_M), (N // TILE_N), 1]
     block = [128, 1, 1]
 
-    size_a = get_type_size(x.type.element_type) * TILE_M * TILE_K
-    size_b = get_type_size(x.type.element_type) * TILE_N * TILE_K
+    size_a = get_type_size(a.type.element_type) * TILE_M * TILE_K
+    size_b = get_type_size(b.type.element_type) * TILE_N * TILE_K
     smem_size_in_bytes = (size_a + size_b) * NUM_STAGES
 
     @NVDSL.mlir_gpu_launch(grid=grid, block=block, smem=smem_size_in_bytes)

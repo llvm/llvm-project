@@ -26,48 +26,35 @@ def tma_load(
     mbar_group: Mbarriers,
     a_tma: TMA,
     b_tma: TMA,
-    slot,
-    stage,
-    p=None,
+    p,
 ):
     """
     TMA loads two input matrices from global memory to shared memory. It performs the following operations:
 
-       - tma.load a_shared_memory[offset] at coordinate [x, y] (Loads 128x64)
-       - tma.load b_shared_memory[offset] at coordinate [x, y] (Loads 64x64)
-       - tma.load b_shared_memory[offset] at coordinate [x, y] (Loads 64x64)
+       - tma.load a_shared_memory[0] at coordinate [0, 0]  (Loads 128x64)
+       - tma.load b_shared_memory[0] at coordinate [0, 0]  (Loads 64x64)
+       - tma.load b_shared_memory[0] at coordinate [64, 0] (Loads 64x64)
 
-       mbarrier.arrive ta_count = 128x64x2x4
+       mbarrier.arrive ta_count = 128x64xf16 + 64x128xf16
     """
 
-    tidx = gpu.thread_id(gpu.Dimension.x)
-    begin_b = get_type_size(a_tma.tma_memref)
     size_tma_a = get_type_size(a_tma.tma_memref)
     size_tma_b = get_type_size(b_tma.tma_memref)
     ta_count = size_tma_a + (size_tma_b * 2)
-    tidx = gpu.thread_id(gpu.Dimension.x)
 
-    p = tidx == 0 if p is None else p
-
-    off_a = slot * size_tma_a
-    off_b = (slot * size_tma_a) + begin_b
+    off_b = size_tma_a
     off_b2 = off_b + size_tma_b
-    x = get_dynamic_shared_memory(
-        a_tma.tma_memref.shape, a_tma.tma_memref.element_type, off_a
-    )
-    y1 = get_dynamic_shared_memory(
-        b_tma.tma_memref.shape, b_tma.tma_memref.element_type, off_b
-    )
-    y2 = get_dynamic_shared_memory(
-        b_tma.tma_memref.shape, b_tma.tma_memref.element_type, off_b2
-    )
+    a_elem_ty = a_tma.tma_memref.element_type
+    b_elem_ty = b_tma.tma_memref.element_type
+    a = get_dynamic_shared_memory(a_tma.tma_memref.shape, a_elem_ty)
+    b1 = get_dynamic_shared_memory(b_tma.tma_memref.shape, b_elem_ty, off_b)
+    b2 = get_dynamic_shared_memory(b_tma.tma_memref.shape, b_elem_ty, off_b2)
 
-    mbar_group[slot].arrive(ta_count, predicate=p)
+    mbar_group[0].arrive(ta_count, predicate=p)
 
-    c1 = stage * 64
-    a_tma.load(x, mbar_group[slot], coords=[c1, 0], predicate=p)
-    b_tma.load(y1, mbar_group[slot], coords=[0, c1], predicate=p)
-    b_tma.load(y2, mbar_group[slot], coords=[64, c1], predicate=p)
+    a_tma.load(a, mbar_group[0], coords=[0, 0], predicate=p)
+    b_tma.load(b1, mbar_group[0], coords=[0, 0], predicate=p)
+    b_tma.load(b2, mbar_group[0], coords=[64, 0], predicate=p)
 
 
 @NVDSL.mlir_func
@@ -106,7 +93,7 @@ def gemm_128_128_64(a, b, d):
         )
 
         # 1. Execute TMA Load for two input matrices
-        tma_load(mbar_group, a_tma, b_tma, 0, 0, p=isThread0)
+        tma_load(mbar_group, a_tma, b_tma, isThread0)
 
         # 2. All threads wait TMA load completion
         mbar_group[0].try_wait()
