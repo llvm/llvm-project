@@ -1,6 +1,9 @@
 ; Avoid `!DL->isLittleEndian() && !CLI->enableBigEndian()` missmatch on PPC64BE.
 ; REQUIRES: host-byteorder-little-endian
 
+; Does not support -global-isel=1.
+; UNSUPPORTED: target=nvptx{{.*}}
+
 ; RUN: llc < %s -O3 -global-isel=0 -fast-isel=0
 ; RUN: llc < %s -O3 -global-isel=1 -fast-isel=0
 ; RUN: llc < %s -O3 -global-isel=0 -fast-isel=1
