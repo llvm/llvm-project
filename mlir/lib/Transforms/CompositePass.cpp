@@ -33,11 +33,10 @@ struct CompositeFixedPointPass final
     name = std::move(name_);
     maxIter = maxIterations;
     populateFunc(dynamicPM);
-    std::string pipeline;
-    llvm::raw_string_ostream os(pipeline);
+
+    llvm::raw_string_ostream os(pipelineStr);
     dynamicPM.printAsTextualPipeline(os);
     os.flush();
-    pipelineStr = pipeline;
   }
 
   LogicalResult initializeOptions(StringRef options) override {
