@@ -950,7 +950,7 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 def : SiFive7AnyToGPRBypass<ReadJmp>;
 def : SiFive7AnyToGPRBypass<ReadJalr>;
 def : ReadAdvance<ReadCSR, 0>;
-def : ReadAdvance<ReadStoreData, 0>;
+def : SiFive7AnyToGPRBypass<ReadStoreData>;
 def : ReadAdvance<ReadMemBase, 0>;
 def : SiFive7AnyToGPRBypass<ReadIALU>;
 def : SiFive7AnyToGPRBypass<ReadIALU32>;
