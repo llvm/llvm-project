@@ -20,7 +20,6 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/Timer.h"
 #include <deque>
-#include <unordered_map>
 
 #define DEBUG_TYPE "fop"
 

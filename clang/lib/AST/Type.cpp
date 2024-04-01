@@ -1197,6 +1197,14 @@ public:
     return Ctx.getDecayedType(originalType);
   }
 
+  QualType VisitArrayParameterType(const ArrayParameterType *T) {
+    QualType ArrTy = VisitConstantArrayType(T);
+    if (ArrTy.isNull())
+      return {};
+
+    return Ctx.getArrayParameterType(ArrTy);
+  }
+
   SUGARED_TYPE_CLASS(TypeOfExpr)
   SUGARED_TYPE_CLASS(TypeOf)
   SUGARED_TYPE_CLASS(Decltype)
@@ -3484,6 +3492,9 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_PreserveAll: return "preserve_all";
   case CC_M68kRTD: return "m68k_rtd";
   case CC_PreserveNone: return "preserve_none";
+    // clang-format off
+  case CC_RISCVVectorCall: return "riscv_vector_cc";
+    // clang-format on
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -4074,6 +4085,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveAll:
   case attr::M68kRTD:
   case attr::PreserveNone:
+  case attr::RISCVVectorCC:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4450,6 +4462,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return Cache::get(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4538,6 +4551,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return computeTypeLinkageInfo(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4732,6 +4746,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Pipe:
   case Type::BitInt:
   case Type::DependentBitInt:
+  case Type::ArrayParameter:
     return false;
   }
   llvm_unreachable("bad type kind!");

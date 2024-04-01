@@ -247,3 +247,15 @@ using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>'
 
 Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 } // namespace test18
+
+// GH85406, verify no crash on invalid alias templates.
+namespace test19 {
+template <typename T>
+class Foo {};
+
+template <typename T>
+template <typename K>
+using Bar2 = Foo<K>; // expected-error {{extraneous template parameter list in alias template declaration}}
+
+Bar2 b = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test19
