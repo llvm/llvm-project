@@ -2278,8 +2278,8 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}, DL),
         Ingredient(Load), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     new VPValue(this, &Load);
@@ -2288,8 +2288,9 @@ public:
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue},
+                     DL),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -2299,10 +2300,11 @@ public:
     if (isStore())
       return new VPWidenMemoryInstructionRecipe(
           cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-          Consecutive, Reverse);
+          Consecutive, Reverse, getDebugLoc());
 
-    return new VPWidenMemoryInstructionRecipe(
-        cast<LoadInst>(Ingredient), getAddr(), getMask(), Consecutive, Reverse);
+    return new VPWidenMemoryInstructionRecipe(cast<LoadInst>(Ingredient),
+                                              getAddr(), getMask(), Consecutive,
+                                              Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenMemoryInstructionSC)
