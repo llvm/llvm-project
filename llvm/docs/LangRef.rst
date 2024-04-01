@@ -27875,7 +27875,9 @@ For each evaluation of a call to this intrinsic, the program must be valid and
 correct both if it returns ``true`` and if it returns ``false``.
 
 When used in a branch condition, it selects one of the two paths:
+
 * `true``: Executes the UBSan check and reports any failures.
+
 * `false`: Bypasses the check, assuming it always succeeds.
 
 Example:
