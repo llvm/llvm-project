@@ -1187,3 +1187,30 @@ define <vscale x 2 x i32> @vmerge_larger_vl_false_becomes_tail(<vscale x 2 x i32
   %b = call <vscale x 2 x i32> @llvm.riscv.vmerge.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %false, <vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i64 3)
   ret <vscale x 2 x i32> %b
 }
+
+; Test widening pseudos with their TIED variant (passthru same as first op).
+define <vscale x 2 x i64> @vpmerge_vwsub.w_tied(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %mask, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_vwsub.w_tied:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vwsub.wv v8, v8, v12, v0.t
+; CHECK-NEXT:    ret
+  %vl.zext = zext i32 %vl to i64
+  %a = call <vscale x 2 x i64> @llvm.riscv.vwsub.w.nxv2i64.nxv2i32(<vscale x 2 x i64> %passthru, <vscale x 2 x i64> %passthru, <vscale x 2 x i32> %y, i64 %vl.zext)
+  %b = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> %mask, <vscale x 2 x i64> %a, <vscale x 2 x i64> %passthru, i32 %vl)
+  ret <vscale x 2 x i64> %b
+}
+
+define <vscale x 2 x double> @vpmerge_vfwsub.w_tied(<vscale x 2 x double> %passthru, <vscale x 2 x double> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %mask, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_vfwsub.w_tied:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    fsrmi a0, 1
+; CHECK-NEXT:    vfwsub.wv v8, v8, v12, v0.t
+; CHECK-NEXT:    fsrm a0
+; CHECK-NEXT:    ret
+  %vl.zext = zext i32 %vl to i64
+  %a = call <vscale x 2 x double> @llvm.riscv.vfwsub.w.nxv2f64.nxv2f32(<vscale x 2 x double> %passthru, <vscale x 2 x double> %passthru, <vscale x 2 x float> %y, i64 1, i64 %vl.zext)
+  %b = call <vscale x 2 x double> @llvm.vp.merge.nxv2f64(<vscale x 2 x i1> %mask, <vscale x 2 x double> %a, <vscale x 2 x double> %passthru, i32 %vl)
+  ret <vscale x 2 x double> %b
+}

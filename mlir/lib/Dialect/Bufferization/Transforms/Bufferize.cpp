@@ -182,6 +182,11 @@ parseHeuristicOption(const std::string &s) {
     return OneShotBufferizationOptions::AnalysisHeuristic::BottomUp;
   if (s == "top-down")
     return OneShotBufferizationOptions::AnalysisHeuristic::TopDown;
+  if (s == "bottom-up-from-terminators")
+    return OneShotBufferizationOptions::AnalysisHeuristic::
+        BottomUpFromTerminators;
+  if (s == "fuzzer")
+    return OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer;
   llvm_unreachable("invalid analysisheuristic option");
 }
 

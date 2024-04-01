@@ -94,8 +94,8 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
     // and cast value to correct type
     Address Temporary = CreateMemTemp(SubExpr->getType());
     EmitAnyExprToMem(SubExpr, Temporary, Qualifiers(), /*isInit*/ true);
-    llvm::Value *BitCast =
-        Builder.CreateBitCast(Temporary.getPointer(), ConvertType(ArgQT));
+    llvm::Value *BitCast = Builder.CreateBitCast(
+        Temporary.emitRawPointer(*this), ConvertType(ArgQT));
     Args.add(RValue::get(BitCast), ArgQT);
 
     // Create char array to store type encoding
@@ -204,11 +204,11 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   ObjCMethodDecl::param_const_iterator PI = MethodWithObjects->param_begin();
   const ParmVarDecl *argDecl = *PI++;
   QualType ArgQT = argDecl->getType().getUnqualifiedType();
-  Args.add(RValue::get(Objects.getPointer()), ArgQT);
+  Args.add(RValue::get(Objects, *this), ArgQT);
   if (DLE) {
     argDecl = *PI++;
     ArgQT = argDecl->getType().getUnqualifiedType();
-    Args.add(RValue::get(Keys.getPointer()), ArgQT);
+    Args.add(RValue::get(Keys, *this), ArgQT);
   }
   argDecl = *PI;
   ArgQT = argDecl->getType().getUnqualifiedType();
@@ -827,7 +827,7 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
   //                  sizeof (Type of Ivar), isAtomic, false);
   CallArgList args;
 
-  llvm::Value *dest = CGF.ReturnValue.getPointer();
+  llvm::Value *dest = CGF.ReturnValue.emitRawPointer(CGF);
   args.add(RValue::get(dest), Context.VoidPtrTy);
   args.add(RValue::get(src), Context.VoidPtrTy);
 
@@ -1147,8 +1147,8 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
       callCStructCopyConstructor(Dst, Src);
     } else {
       ObjCIvarDecl *ivar = propImpl->getPropertyIvarDecl();
-      emitCPPObjectAtomicGetterCall(*this, ReturnValue.getPointer(), ivar,
-                                    AtomicHelperFn);
+      emitCPPObjectAtomicGetterCall(*this, ReturnValue.emitRawPointer(*this),
+                                    ivar, AtomicHelperFn);
     }
     return;
   }
@@ -1163,7 +1163,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     }
     else {
       ObjCIvarDecl *ivar = propImpl->getPropertyIvarDecl();
-      emitCPPObjectAtomicGetterCall(*this, ReturnValue.getPointer(),
+      emitCPPObjectAtomicGetterCall(*this, ReturnValue.emitRawPointer(*this),
                                     ivar, AtomicHelperFn);
     }
     return;
@@ -1287,7 +1287,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     case TEK_Scalar: {
       llvm::Value *value;
       if (propType->isReferenceType()) {
-        value = LV.getAddress(*this).getPointer();
+        value = LV.getAddress(*this).emitRawPointer(*this);
       } else {
         // We want to load and autoreleaseReturnValue ARC __weak ivars.
         if (LV.getQuals().getObjCLifetime() == Qualifiers::OCL_Weak) {
@@ -1821,16 +1821,14 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   CallArgList Args;
 
   // The first argument is a temporary of the enumeration-state type.
-  Args.add(RValue::get(StatePtr.getPointer()),
-           getContext().getPointerType(StateTy));
+  Args.add(RValue::get(StatePtr, *this), getContext().getPointerType(StateTy));
 
   // The second argument is a temporary array with space for NumItems
   // pointers.  We'll actually be loading elements from the array
   // pointer written into the control state; this buffer is so that
   // collections that *aren't* backed by arrays can still queue up
   // batches of elements.
-  Args.add(RValue::get(ItemsPtr.getPointer()),
-           getContext().getPointerType(ItemsTy));
+  Args.add(RValue::get(ItemsPtr, *this), getContext().getPointerType(ItemsTy));
 
   // The third argument is the capacity of that temporary array.
   llvm::Type *NSUIntegerTy = ConvertType(getContext().getNSUIntegerType());
@@ -2198,7 +2196,7 @@ static llvm::Value *emitARCLoadOperation(CodeGenFunction &CGF, Address addr,
   if (!fn)
     fn = getARCIntrinsic(IntID, CGF.CGM);
 
-  return CGF.EmitNounwindRuntimeCall(fn, addr.getPointer());
+  return CGF.EmitNounwindRuntimeCall(fn, addr.emitRawPointer(CGF));
 }
 
 /// Perform an operation having the following signature:
@@ -2216,9 +2214,8 @@ static llvm::Value *emitARCStoreOperation(CodeGenFunction &CGF, Address addr,
   llvm::Type *origType = value->getType();
 
   llvm::Value *args[] = {
-    CGF.Builder.CreateBitCast(addr.getPointer(), CGF.Int8PtrPtrTy),
-    CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy)
-  };
+      CGF.Builder.CreateBitCast(addr.emitRawPointer(CGF), CGF.Int8PtrPtrTy),
+      CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy)};
   llvm::CallInst *result = CGF.EmitNounwindRuntimeCall(fn, args);
 
   if (ignored) return nullptr;
@@ -2237,9 +2234,8 @@ static void emitARCCopyOperation(CodeGenFunction &CGF, Address dst, Address src,
     fn = getARCIntrinsic(IntID, CGF.CGM);
 
   llvm::Value *args[] = {
-    CGF.Builder.CreateBitCast(dst.getPointer(), CGF.Int8PtrPtrTy),
-    CGF.Builder.CreateBitCast(src.getPointer(), CGF.Int8PtrPtrTy)
-  };
+      CGF.Builder.CreateBitCast(dst.emitRawPointer(CGF), CGF.Int8PtrPtrTy),
+      CGF.Builder.CreateBitCast(src.emitRawPointer(CGF), CGF.Int8PtrPtrTy)};
   CGF.EmitNounwindRuntimeCall(fn, args);
 }
 
@@ -2490,9 +2486,8 @@ llvm::Value *CodeGenFunction::EmitARCStoreStrongCall(Address addr,
     fn = getARCIntrinsic(llvm::Intrinsic::objc_storeStrong, CGM);
 
   llvm::Value *args[] = {
-    Builder.CreateBitCast(addr.getPointer(), Int8PtrPtrTy),
-    Builder.CreateBitCast(value, Int8PtrTy)
-  };
+      Builder.CreateBitCast(addr.emitRawPointer(*this), Int8PtrPtrTy),
+      Builder.CreateBitCast(value, Int8PtrTy)};
   EmitNounwindRuntimeCall(fn, args);
 
   if (ignored) return nullptr;
@@ -2643,7 +2638,7 @@ void CodeGenFunction::EmitARCDestroyWeak(Address addr) {
   if (!fn)
     fn = getARCIntrinsic(llvm::Intrinsic::objc_destroyWeak, CGM);
 
-  EmitNounwindRuntimeCall(fn, addr.getPointer());
+  EmitNounwindRuntimeCall(fn, addr.emitRawPointer(*this));
 }
 
 /// void \@objc_moveWeak(i8** %dest, i8** %src)
