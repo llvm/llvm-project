@@ -43,10 +43,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 #include <type_traits>
 
 #include <optional>
@@ -136,6 +138,15 @@ OpAsmDialectInterface::parseResource(AsmParsedResourceEntry &entry) const {
 // OpPrintingFlags
 //===----------------------------------------------------------------------===//
 
+static bool environmentRequiresSerialComma() {
+  StringRef currentLanguage = std::getenv("LANG");
+  if (currentLanguage.starts_with("en_US") ||
+      currentLanguage.starts_with("en_CA"))
+    return true;
+  llvm_unreachable(
+      "Unhandle corner case. This is very unlikely to happen in practice.");
+}
+
 namespace {
 /// This struct contains command line options that can be used to initialize
 /// various bits of the AsmPrinter. This uses a struct wrapper to avoid the need
@@ -189,6 +200,12 @@ struct AsmPrinterOptions {
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
           "Print users of operation results and block arguments as a comment")};
+
+  llvm::cl::opt<bool> printSerialComma{
+      "mlir-print-serial-comma",
+      llvm::cl::init(false && environmentRequiresSerialComma()),
+      llvm::cl::desc(
+          "Use serial comma when printing sequences of length 3 or more.")};
 };
 } // namespace
 
@@ -206,7 +223,7 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false) {
+      printValueUsersFlag(false), printSerialComma(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -221,6 +238,7 @@ OpPrintingFlags::OpPrintingFlags()
   printLocalScope = clOptions->printLocalScopeOpt;
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
+  printSerialComma = clOptions->printSerialComma;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -280,6 +298,12 @@ OpPrintingFlags &OpPrintingFlags::printValueUsers() {
   return *this;
 }
 
+/// Use serial comma when printing sequences with 3 or more elements.
+OpPrintingFlags &OpPrintingFlags::useSerialComma() {
+  printSerialComma = true;
+  return *this;
+}
+
 /// Return if the given ElementsAttr should be elided.
 bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
   return elementsAttrElementLimit &&
@@ -327,6 +351,9 @@ bool OpPrintingFlags::shouldUseLocalScope() const { return printLocalScope; }
 bool OpPrintingFlags::shouldPrintValueUsers() const {
   return printValueUsersFlag;
 }
+
+/// Return if the printer should use serial comma.
+bool OpPrintingFlags::shouldUseSerialComma() const { return printSerialComma; }
 
 /// Returns true if an ElementsAttr with the given number of elements should be
 /// printed with hex.
@@ -377,8 +404,15 @@ public:
   raw_ostream &getStream() { return os; }
 
   template <typename Container, typename UnaryFunctor>
-  inline void interleaveComma(const Container &c, UnaryFunctor eachFn) const {
-    llvm::interleaveComma(c, os, eachFn);
+  inline void interleaveComma(const Container &c, UnaryFunctor eachFn,
+                              bool useSerialComma = false) const {
+    size_t numElements = llvm::range_size(c);
+    if (!useSerialComma || numElements < 3)
+      return llvm::interleaveComma(c, os, eachFn);
+
+    llvm::interleaveComma(llvm::drop_end(c), os, eachFn);
+    os << ", and ";
+    llvm::interleaveComma(llvm::drop_begin(c, numElements - 1), os, eachFn);
   }
 
   /// This enum describes the different kinds of elision for the type of an
@@ -2228,8 +2262,10 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     return;
   } else if (auto dictAttr = llvm::dyn_cast<DictionaryAttr>(attr)) {
     os << '{';
-    interleaveComma(dictAttr.getValue(),
-                    [&](NamedAttribute attr) { printNamedAttribute(attr); });
+    interleaveComma(
+        dictAttr.getValue(),
+        [&](NamedAttribute attr) { printNamedAttribute(attr); },
+        printerFlags.shouldUseSerialComma());
     os << '}';
 
   } else if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr)) {
@@ -2264,9 +2300,10 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
 
   } else if (auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr)) {
     os << '[';
-    interleaveComma(arrayAttr.getValue(), [&](Attribute attr) {
-      printAttribute(attr, AttrTypeElision::May);
-    });
+    interleaveComma(
+        arrayAttr.getValue(),
+        [&](Attribute attr) { printAttribute(attr, AttrTypeElision::May); },
+        printerFlags.shouldUseSerialComma());
     os << ']';
 
   } else if (auto affineMapAttr = llvm::dyn_cast<AffineMapAttr>(attr)) {
@@ -2370,9 +2407,10 @@ static void printDenseIntElement(const APInt &value, raw_ostream &os,
     value.print(os, !type.isUnsignedInteger());
 }
 
-static void
-printDenseElementsAttrImpl(bool isSplat, ShapedType type, raw_ostream &os,
-                           function_ref<void(unsigned)> printEltFn) {
+static void printDenseElementsAttrImpl(bool isSplat, ShapedType type,
+                                       raw_ostream &os,
+                                       function_ref<void(unsigned)> printEltFn,
+                                       bool useSerialComma) {
   // Special case for 0-d and splat tensors.
   if (isSplat)
     return printEltFn(0);
@@ -2407,9 +2445,11 @@ printDenseElementsAttrImpl(bool isSplat, ShapedType type, raw_ostream &os,
       }
   };
 
+  useSerialComma &= numElements >= 3;
   for (unsigned idx = 0, e = numElements; idx != e; ++idx) {
-    if (idx != 0)
-      os << ", ";
+    if (idx != 0) {
+      os << (useSerialComma && (idx + 1 == e) ? ", and " : ", ");
+    }
     while (openBrackets++ < rank)
       os << '[';
     openBrackets = rank;
@@ -2461,36 +2501,46 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
     // and hence was replaced.
     if (llvm::isa<IntegerType>(complexElementType)) {
       auto valueIt = attr.value_begin<std::complex<APInt>>();
-      printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-        auto complexValue = *(valueIt + index);
-        os << "(";
-        printDenseIntElement(complexValue.real(), os, complexElementType);
-        os << ",";
-        printDenseIntElement(complexValue.imag(), os, complexElementType);
-        os << ")";
-      });
+      printDenseElementsAttrImpl(
+          attr.isSplat(), type, os,
+          [&](unsigned index) {
+            auto complexValue = *(valueIt + index);
+            os << "(";
+            printDenseIntElement(complexValue.real(), os, complexElementType);
+            os << ",";
+            printDenseIntElement(complexValue.imag(), os, complexElementType);
+            os << ")";
+          },
+          printerFlags.shouldUseSerialComma());
     } else {
       auto valueIt = attr.value_begin<std::complex<APFloat>>();
-      printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-        auto complexValue = *(valueIt + index);
-        os << "(";
-        printFloatValue(complexValue.real(), os);
-        os << ",";
-        printFloatValue(complexValue.imag(), os);
-        os << ")";
-      });
+      printDenseElementsAttrImpl(
+          attr.isSplat(), type, os,
+          [&](unsigned index) {
+            auto complexValue = *(valueIt + index);
+            os << "(";
+            printFloatValue(complexValue.real(), os);
+            os << ",";
+            printFloatValue(complexValue.imag(), os);
+            os << ")";
+          },
+          printerFlags.shouldUseSerialComma());
     }
   } else if (elementType.isIntOrIndex()) {
     auto valueIt = attr.value_begin<APInt>();
-    printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printDenseIntElement(*(valueIt + index), os, elementType);
-    });
+    printDenseElementsAttrImpl(
+        attr.isSplat(), type, os,
+        [&](unsigned index) {
+          printDenseIntElement(*(valueIt + index), os, elementType);
+        },
+        printerFlags.shouldUseSerialComma());
   } else {
     assert(llvm::isa<FloatType>(elementType) && "unexpected element type");
     auto valueIt = attr.value_begin<APFloat>();
-    printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printFloatValue(*(valueIt + index), os);
-    });
+    printDenseElementsAttrImpl(
+        attr.isSplat(), type, os,
+        [&](unsigned index) { printFloatValue(*(valueIt + index), os); },
+        printerFlags.shouldUseSerialComma());
   }
 }
 
@@ -2498,7 +2548,8 @@ void AsmPrinter::Impl::printDenseStringElementsAttr(
     DenseStringElementsAttr attr) {
   ArrayRef<StringRef> data = attr.getRawStringData();
   auto printFn = [&](unsigned index) { printEscapedString(data[index]); };
-  printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn);
+  printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn,
+                             printerFlags.shouldUseSerialComma());
 }
 
 void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
@@ -2522,8 +2573,8 @@ void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
       printFloatValue(fltVal, getStream());
     }
   };
-  llvm::interleaveComma(llvm::seq<unsigned>(0, attr.size()), getStream(),
-                        printElementAt);
+  interleaveComma(llvm::seq<unsigned>(0, attr.size()), printElementAt,
+                  printerFlags.shouldUseSerialComma());
 }
 
 void AsmPrinter::Impl::printType(Type type) {

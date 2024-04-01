@@ -1166,6 +1166,10 @@ public:
   /// Print users of values as comments.
   OpPrintingFlags &printValueUsers();
 
+  /// Use serial comma (a.k.a. Oxford comma) when priting sequences of 3 or more
+  /// elements.
+  OpPrintingFlags &useSerialComma();
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
@@ -1196,6 +1200,10 @@ public:
   /// Return if the printer should print users of values.
   bool shouldPrintValueUsers() const;
 
+  /// Return if the printer should use serial comma when printing sequences of 3
+  /// or more elements.
+  bool shouldUseSerialComma() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1222,6 +1230,9 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
+
+  /// Print sequences of 3 or more elements using serial comma.
+  bool printSerialComma : 1;
 };
 
 //===----------------------------------------------------------------------===//
