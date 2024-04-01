@@ -161,7 +161,7 @@ class TMA:
         )
 
 
-class MatrixAccumulator:
+class WarpgroupAccumulatorMatrix:
     def __init__(self, M, N, ty):
         self.M = M
         self.N = N
@@ -169,21 +169,14 @@ class MatrixAccumulator:
 
     @property
     def acc_ty(self):
-        return ir.Type.parse(
-            "!nvgpu.warpgroup.accumulator<fragmented=vector<"
-            + str(self.M)
-            + "x"
-            + str(self.N)
-            + "x"
-            + str(self.ty)
-            + ">>"
-        )
+        parse_str = f"!nvgpu.warpgroup.accumulator<fragmented=vector<{self.M}x{self.N}x{self.ty}>>"
+        return ir.Type.parse(parse_str)
 
     def op(self):
         return nvgpu.warpgroup_mma_init_accumulator(self.acc_ty)
 
 
-class Matrix:
+class WarpgroupMatrix:
     def __init__(self, smem, tma_descriptor: TMA, M, N):
         self.tma_descriptor = tma_descriptor
         self.smem = smem
@@ -192,15 +185,8 @@ class Matrix:
 
     @property
     def wgmma_ty(self):
-        return ir.Type.parse(
-            "!nvgpu.warpgroup.descriptor<tensor=memref<"
-            + str(self.M)
-            + "x"
-            + str(self.N)
-            + "x"
-            + str(self.tma_descriptor.memref_ty.element_type)
-            + ", #gpu.address_space<workgroup>>>"
-        )
+        parse_str = f"!nvgpu.warpgroup.descriptor<tensor=memref<{self.M}x{self.N}x{self.tma_descriptor.memref_ty.element_type}, #gpu.address_space<workgroup>>>"
+        return ir.Type.parse(parse_str)
 
     def matmul(lhs, rhs, acc):
         wgmma_desc_lhs = nvgpu.warpgroup_generate_descriptor(
