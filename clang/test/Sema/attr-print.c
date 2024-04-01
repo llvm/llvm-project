@@ -3,7 +3,8 @@
 // CHECK: int x __attribute__((aligned(4)));
 int x __attribute__((aligned(4)));
 
-// CHECK: __declspec(align(4)) int y;
+// FIXME: Print this at a valid location for a __declspec attr.
+// CHECK: int y __declspec(align(4));
 __declspec(align(4)) int y;
 
 // CHECK: short arr[3] __attribute__((aligned));
