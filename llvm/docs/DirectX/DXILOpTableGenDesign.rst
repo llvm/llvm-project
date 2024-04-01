@@ -262,14 +262,6 @@ this option.
 This specification option allows for readable, compact yet expressive
 representation of DXIL Ops without any duplication of information.
 
-Specify accepted overload types as attribute records
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Various other properties of a DXIL Op (such as the ``bool is_*`` and
-``shader_model`` viz., minimum shader model required) can
-be uniformly represented as ``DXILAttribute`` records. These attributes
-provide the filters to apply for generation of C++ code guarded by
-``#ifdef .. #endif`` in ``DXILOperation.inc`` by ``DXILEmitter`` backend code.
-
 Option 4 : Specify a function to validate accepted overload types
 -----------------------------------------------------------------
 
@@ -298,6 +290,76 @@ valid overload types lacks the clear expressiveness and declarative readability
 of an explicit specification. In addition, validation functions add to the
 maintenance overhead while not necessarily making the specification more readable.
 
+Specification of Valid Overload Types for Shader Models
+-------------------------------------------------------
+Depending on the Shader Model, valid overload types for some DXIL Ops
+differ. For example, ``float`` is valid overload type in ``Sin`` for SM 6.0
+and later, while ``half`` and ``float`` are valid overload types for ``Sin`` in
+SM 6.2 and later. Expressing such constraints in DXIL Ops records is needed
+to ensure valid code generation by DXIL Lowering pass.
+
+This information may be specified by associating the Shader Model with
+corresponding valid overload type as pairs (e.g., (``<ShaderModel, OverloadTypeList>``).
+As a result, the field ``OpTypes`` in ``class DXILOpMappingBase`` specified in
+`DesignSection`_ may be changed to
+
+.. code-block::
+
+    list<DXILOpOverload> OpOverloadTypes = ?; // Valid list of <SM, OLType>
+
+where,
+
+.. code-block::
+
+  // Abstract class to specify minimum Shader model version required
+  // to support DXIL Op
+  class DXILShaderModel<int major, int minor> {
+    int Major = major;
+    int Minor = minor;
+  }
+
+  // Valid minimum Shader model version records
+
+  // Shader Model 6.x
+  def SM6_0 : DXILShaderModel<6, 0>;
+  ...
+  def SM6_2 : DXILShaderModel<6, 2>;
+  ...
+
+  // Abstract class mapping valid DXIL Op overloads the minimum
+  // version of Shader Model they are supported
+  class DXILOpOverload<DXILShaderModel minsm, list<LLVMType> overloads> {
+    DXILShaderModel ShaderModel = minsm;
+    list<LLVMType> OpOverloads = overloads;
+  }
+
+Using the above notation, following is the specification of ``Sin``
+using Option 3.
+
+.. code-block::
+
+    let OpClass = unary,
+      OpOverloadTypes = [DXILOpOverload<SM6_0, [llvm_float_ty]>,
+                         DXILOpOverload<SM6_2, [llvm_half_ty, llvm_float_ty]>] in {
+    def Sin  : DXILOpMapping<13, int_sin,
+                              "Returns sine(theta) for theta in radians.">;
+
+With Option 1, a slightly different representation of the may be employed
+
+.. code-block::
+
+    let Optypes = [[DXILOpOverload<SM6_0, [llvm_float_ty]>,
+                   [DXILOpOverload<SM6_0, [llvm_half_ty]>,
+                   [DXILOpOverload<SM6_2, [llvm_float_ty]>]
+      def Sin : ...
+
+which will be more verbose while, not availing the classification
+of DXIL Op classes' prototype information which is possible with Option 3.
+
+Option 2 that inherits overload types from LLVM Intrinsic specification with
+no representation for constraints, does not lend itself to be a readable, and
+expressive qspecification of Shader Model based valid overload types.
+
 Summary
 =======
 
@@ -310,3 +372,7 @@ implementation employs Option 2a. It is in place, primarily, to facilitate conti
 lowering of new LLVM intrinsics for HLSL functions being added in the front end. It
 serves to uncover any additional considerations necessary for an improved design of
 ``DXIL.td``.
+
+Option 3, however, is emerging to be better alternative for a specification that
+allows for readable, compact yet expressive representation of DXIL Ops that is
+capable of validation rule specification without duplication of information.
