@@ -1,4 +1,4 @@
-//===-- Implementation of fseek -------------------------------------------===//
+//===-- Implementation of fseeko ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/fseek.h"
+#include "src/stdio/fseeko.h"
 #include "src/__support/File/file.h"
 
 #include "src/errno/libc_errno.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
+LLVM_LIBC_FUNCTION(int, fseeko, (::FILE * stream, off_t offset, int whence)) {
   auto result =
       reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->seek(offset, whence);
   if (!result.has_value()) {
