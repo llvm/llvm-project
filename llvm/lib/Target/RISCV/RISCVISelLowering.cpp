@@ -4624,7 +4624,13 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   SDValue Passthru = DAG.getUNDEF(WideContainerVT);
 
   SDValue Interleaved;
-  if (Subtarget.hasStdExtZvbb()) {
+  if (OddV.isUndef()) {
+    // If OddV is undef, this is a zero extend.
+    // FIXME: Not only does this optimize the code, it fixes some correctness
+    // issues because MIR does not have freeze.
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV, Mask, VL);
+  } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
         DAG.getSplatVector(VecContainerVT, DL,
@@ -4635,6 +4641,9 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
     Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
                               Interleaved, EvenV, Passthru, Mask, VL);
   } else {
+    // FIXME: We should freeze the odd vector here. We already handled the case
+    // of provably undef/poison above.
+
     // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
     // vwaddu.vv
     Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT, EvenV,
