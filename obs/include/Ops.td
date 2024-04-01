@@ -9,7 +9,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def OBS_Dialect: Dialect {
     //The namespace of the Dialect.
-    let name = "toy";
+    let name = "obs";
 
     let summary = "A high-level dialect for analyzing and optimzing the Language";
 
@@ -66,12 +66,12 @@ def AddOp : OBS_op<"add"> {
 def FuncOp : OBS_op<"func", [FunctionOpInterface, IsolatedFromAbove]> {
     let summary = "user defined function operation";
     let description = [{
-        The "toy.func" operation represents a user defined function. These are callable SSA-region operations
-        that contain toy computations.
+        The "obs.func" operation represents a user defined function. These are callable SSA-region operations
+        that contain obs computations.
     }];
 
     let arguments = (ins
-        SymbolNameAttr:$sysm_name,
+        SymbolNameAttr:$sym_name,
         TypeAttrOf<FunctionType>:$function_type,
         OptionalAttr<DictArrayAttr>:$arg_attrs,
         OptionalAttr<DictArrayAttr>:$res_attrs

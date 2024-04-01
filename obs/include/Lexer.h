@@ -65,6 +65,9 @@ public:
       lastChar = Token(getNextChar());
     }
 
+    lastLocation.line = curLineNum;
+    lastLocation.col = curCol;
+
     if (isalpha(lastChar)) {
       identifierStr = (char)lastChar;
       while(isalnum(lastChar = Token(getNextChar())) || lastChar == '_') {

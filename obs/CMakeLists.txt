@@ -29,6 +29,7 @@ include_directories(include/)
 add_obs_executable(obstest 
     obs-ir/obs.cpp 
     obs-ir/Dialect.cpp
+    obs-ir/MLIRGen.cpp
     parser/AST.cpp
   DEPENDS
     OBSOpGen

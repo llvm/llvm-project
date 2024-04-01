@@ -156,6 +156,66 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
 		    getResAttrsAttrName());
 }
 
+void MulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+		  mlir::Value lhs, mlir::Value rhs) {
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+  state.addOperands({lhs, rhs});
+}
+
+mlir::ParseResult MulOp::parse(mlir::OpAsmParser &parser,
+			       mlir::OperationState &result) {
+  return parseBinaryOp(parser, result);
+}
+
+void MulOp::print(mlir::OpAsmPrinter &p) {
+  printBinary(p, * this);
+}
+
+mlir::LogicalResult ReturnOp::verify() {
+    auto function = cast<FuncOp>((*this).getParentOp());
+    if (getNumOperands() > 1) {
+        return emitOpError() << "expects at most 1 return operand" ;
+    }
+    const auto &results = function.getFunctionType().getResults();
+    if (getNumOperands() != results.size()) {
+        return emitOpError() << "does not return the same number of values("
+                             << getNumOperands() << ") as the enclosing function ("
+                             << results.size() << ")"; 
+    }
+
+    if (!hasOperand()) {
+        return mlir::success();
+    }
+    
+    auto inputType = *operand_type_begin();
+    auto resultType = results.front();
+
+    if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+        llvm::isa<mlir::UnrankedTensorType>(resultType) ) {
+        return mlir::success();
+    }
+    return emitError() << "type of return operand (" << inputType
+                       << ") doesn't match function result type (" << resultType
+                       << ")";
+}
+
+void TransposeOp::build(mlir::OpBuilder &builder, mlir::OperationState &state, mlir::Value value) {
+    state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+    state.addOperands(value);
+}
+
+mlir::LogicalResult TransposeOp::verify() {
+    auto inputType = llvm::dyn_cast<RankedTensorType>(getOperand().getType());
+    auto resultType = llvm::dyn_cast<RankedTensorType>(getType());
+    if (!inputType || !resultType)
+        return mlir::success();
+
+    auto inputShape = inputType.getShape();
+    if(!std::equal(inputShape.begin(), inputShape.end(), resultType.getShape().rbegin())) {
+        return emitError() << "expected result shape to be a transpose of the input";
+    }
+    return mlir::success();
+}
 
 #define GET_OP_CLASSES
 #include "Ops.cpp.inc"
