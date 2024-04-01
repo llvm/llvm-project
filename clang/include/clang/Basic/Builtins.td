@@ -926,7 +926,7 @@ def Launder : Builtin {
   let Prototype = "void*(void*)";
 }
 
-def StartObjectLifeTime : Builtin {
+def StartObjectLifetime : Builtin {
   let Spellings = ["__builtin_start_object_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void*(void*)";
