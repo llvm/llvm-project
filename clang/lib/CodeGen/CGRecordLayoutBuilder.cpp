@@ -185,9 +185,10 @@ struct CGRecordLowering {
   /// Lowers an ASTRecordLayout to a llvm type.
   void lower(bool NonVirtualBaseType);
   void lowerUnion(bool isNoUniqueAddress);
-  void accumulateFields();
+  void accumulateFields(bool isNonVirtualBaseType);
   RecordDecl::field_iterator
-  accumulateBitFields(RecordDecl::field_iterator Field,
+  accumulateBitFields(bool isNonVirtualBaseType,
+                      RecordDecl::field_iterator Field,
                       RecordDecl::field_iterator FieldEnd);
   void computeVolatileBitfields();
   void accumulateBases();
@@ -195,8 +196,10 @@ struct CGRecordLowering {
   void accumulateVBases();
   /// Recursively searches all of the bases to find out if a vbase is
   /// not the primary vbase of some base class.
-  bool hasOwnStorage(const CXXRecordDecl *Decl, const CXXRecordDecl *Query);
+  bool hasOwnStorage(const CXXRecordDecl *Decl,
+                     const CXXRecordDecl *Query) const;
   void calculateZeroInit();
+  CharUnits calculateTailClippingOffset(bool isNonVirtualBaseType) const;
   /// Lowers bitfield storage types to I8 arrays for bitfields with tail
   /// padding that is or can potentially be used.
   void clipTailPadding();
@@ -287,7 +290,7 @@ void CGRecordLowering::lower(bool NVBaseType) {
     computeVolatileBitfields();
     return;
   }
-  accumulateFields();
+  accumulateFields(NVBaseType);
   // RD implies C++.
   if (RD) {
     accumulateVPtrs();
@@ -378,12 +381,12 @@ void CGRecordLowering::lowerUnion(bool isNoUniqueAddress) {
     Packed = true;
 }
 
-void CGRecordLowering::accumulateFields() {
+void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
   for (RecordDecl::field_iterator Field = D->field_begin(),
                                   FieldEnd = D->field_end();
        Field != FieldEnd;) {
     if (Field->isBitField()) {
-      Field = accumulateBitFields(Field, FieldEnd);
+      Field = accumulateBitFields(isNonVirtualBaseType, Field, FieldEnd);
       assert((Field == FieldEnd || !Field->isBitField()) &&
              "Failed to accumulate all the bitfields");
     } else if (Field->isZeroSize(Context)) {
@@ -404,9 +407,12 @@ void CGRecordLowering::accumulateFields() {
 }
 
 // Create members for bitfields. Field is a bitfield, and FieldEnd is the end
-// iterator of the record. Return the first non-bitfield encountered.
+// iterator of the record. Return the first non-bitfield encountered.  We need
+// to know whether this is the base or complete layout, as virtual bases could
+// affect the upper bound of bitfield access unit allocation.
 RecordDecl::field_iterator
-CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
+CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
+                                      RecordDecl::field_iterator Field,
                                       RecordDecl::field_iterator FieldEnd) {
   if (isDiscreteBitFieldABI()) {
     // Run stores the first element of the current run of bitfields. FieldEnd is
@@ -504,6 +510,10 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
   CharUnits RegSize =
       bitsToCharUnits(Context.getTargetInfo().getRegisterWidth());
   unsigned CharBits = Context.getCharWidth();
+
+  // Limit of useable tail padding at end of the record. Computed lazily and
+  // cached here.
+  CharUnits ScissorOffset = CharUnits::Zero();
 
   // Data about the start of the span we're accumulating to create an access
   // unit from. Begin is the first bitfield of the span. If Begin is FieldEnd,
@@ -630,10 +640,14 @@ CGRecordLowering::accumulateBitFields(RecordDecl::field_iterator Field,
               LimitOffset = bitsToCharUnits(getFieldBitOffset(*Probe));
               goto FoundLimit;
             }
-          // We reached the end of the fields.  We can't necessarily use tail
-          // padding in C++ structs, so the NonVirtual size is what we must
-          // use there.
-          LimitOffset = RD ? Layout.getNonVirtualSize() : Layout.getDataSize();
+          // We reached the end of the fields, determine the bounds of useable
+          // tail padding. As this can be complex for C++, we cache the result.
+          if (ScissorOffset.isZero()) {
+            ScissorOffset = calculateTailClippingOffset(isNonVirtualBaseType);
+            assert(!ScissorOffset.isZero() && "Tail clipping at zero");
+          }
+
+          LimitOffset = ScissorOffset;
         FoundLimit:;
 
           CharUnits TypeSize = getSize(Type);
@@ -838,13 +852,17 @@ void CGRecordLowering::accumulateVPtrs() {
                    llvm::PointerType::getUnqual(Types.getLLVMContext())));
 }
 
-void CGRecordLowering::accumulateVBases() {
+CharUnits
+CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
+  if (!RD)
+    return Layout.getDataSize();
+
   CharUnits ScissorOffset = Layout.getNonVirtualSize();
   // In the itanium ABI, it's possible to place a vbase at a dsize that is
   // smaller than the nvsize.  Here we check to see if such a base is placed
   // before the nvsize and set the scissor offset to that, instead of the
   // nvsize.
-  if (isOverlappingVBaseABI())
+  if (!isNonVirtualBaseType && isOverlappingVBaseABI())
     for (const auto &Base : RD->vbases()) {
       const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
       if (BaseDecl->isEmpty())
@@ -856,8 +874,13 @@ void CGRecordLowering::accumulateVBases() {
       ScissorOffset = std::min(ScissorOffset,
                                Layout.getVBaseClassOffset(BaseDecl));
     }
-  Members.push_back(MemberInfo(ScissorOffset, MemberInfo::Scissor, nullptr,
-                               RD));
+
+  return ScissorOffset;
+}
+
+void CGRecordLowering::accumulateVBases() {
+  Members.push_back(MemberInfo(calculateTailClippingOffset(false),
+                               MemberInfo::Scissor, nullptr, RD));
   for (const auto &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     if (BaseDecl->isEmpty())
@@ -882,7 +905,7 @@ void CGRecordLowering::accumulateVBases() {
 }
 
 bool CGRecordLowering::hasOwnStorage(const CXXRecordDecl *Decl,
-                                     const CXXRecordDecl *Query) {
+                                     const CXXRecordDecl *Query) const {
   const ASTRecordLayout &DeclLayout = Context.getASTRecordLayout(Decl);
   if (DeclLayout.isPrimaryBaseVirtual() && DeclLayout.getPrimaryBase() == Query)
     return false;
