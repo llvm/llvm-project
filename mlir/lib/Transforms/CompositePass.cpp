@@ -50,11 +50,10 @@ struct CompositeFixedPointPass final
     return success();
   }
 
-  LogicalResult initialize(MLIRContext * /*context*/) override {
-    if (maxIter <= 0) {
-      llvm::errs() << "Invalid maxIterations value: " << maxIter << "\n";
-      return failure();
-    }
+  LogicalResult initialize(MLIRContext *context) override {
+    if (maxIter <= 0)
+      return emitError(UnknownLoc::get(context))
+             << "Invalid maxIterations value: " << maxIter << "\n";
 
     return success();
   }
