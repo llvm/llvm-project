@@ -134,9 +134,14 @@ ArrayRef<const char *> M68kTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
 
+const TargetInfo::GCCRegAlias M68kTargetInfo::GCCRegAliases[] = {
+  {{"bp"}, "a5"},
+  {{"fp"}, "a6"},
+  {{"usp", "ssp", "isp", "a7"}, "sp"},
+};
+
 ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
-  // No aliases.
-  return std::nullopt;
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool M68kTargetInfo::validateAsmConstraint(
