@@ -18,7 +18,6 @@
 #include "bolt/Core/DynoStats.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
-#include <map>
 #include <set>
 #include <string>
 #include <unordered_set>
