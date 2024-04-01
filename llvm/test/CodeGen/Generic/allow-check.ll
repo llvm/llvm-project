@@ -1,10 +1,10 @@
-; RUN: llc < %s -O3
-; RUN: llc < %s -O3 -global-isel
-; RUN: llc < %s -O3 -fast-isel
+; RUN: llc < %s -O3 -global-isel=0 -fast-isel=0
+; RUN: llc < %s -O3 -global-isel=1 -fast-isel=0
+; RUN: llc < %s -O3 -global-isel=0 -fast-isel=1
 
-; RUN: llc < %s -O0
-; RUN: llc < %s -O0 -global-isel
-; RUN: llc < %s -O0 -fast-isel
+; RUN: llc < %s -O0 -global-isel=0 -fast-isel=0
+; RUN: llc < %s -O0 -global-isel=1 -fast-isel=0
+; RUN: llc < %s -O0 -global-isel=0 -fast-isel=1
 
 define i1 @test_runtime() local_unnamed_addr {
 entry:

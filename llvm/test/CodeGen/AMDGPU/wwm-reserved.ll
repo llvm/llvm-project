@@ -413,7 +413,6 @@ define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr15
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v31, v3
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v6
-; GFX9-O0-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; GFX9-O0-NEXT:    buffer_load_dword v1, off, s[24:27], 0 ; 4-byte Folded Reload
@@ -657,7 +656,6 @@ define amdgpu_kernel void @call_i64(ptr addrspace(8) inreg %tmp14, i64 inreg %ar
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v31, v3
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v7
-; GFX9-O0-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX9-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
@@ -1285,7 +1283,6 @@ define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 in
 ; GFX9-O0-NEXT:    ; implicit-def: $sgpr15
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v31, v3
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v6
-; GFX9-O0-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; GFX9-O0-NEXT:    buffer_load_dword v1, off, s[24:27], 0 ; 4-byte Folded Reload
@@ -1529,7 +1526,6 @@ define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i6
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v31, v3
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v1, v7
-; GFX9-O0-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX9-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[20:21], -1
