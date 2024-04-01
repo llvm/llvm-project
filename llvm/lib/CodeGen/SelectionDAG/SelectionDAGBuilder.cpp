@@ -8612,8 +8612,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     ConvControlToken = getValue(Token);
-  } else {
-    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
   }
 
   TargetLowering::CallLoweringInfo CLI(DAG);
