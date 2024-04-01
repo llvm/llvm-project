@@ -30,6 +30,11 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i32 [[TMP1]], 1024
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SCALAR_TAIL_FOLDING:       vector.scevcheck:
+; SCALAR_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP29:%.*]] = icmp ult ptr [[TMP28]], [[SCEVGEP]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP29]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.ph:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 4
@@ -46,8 +51,8 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.body:
-; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = shl i32 [[INDEX]], 1
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
@@ -74,7 +79,7 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
-; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       for.body:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[IX_024:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
@@ -108,9 +113,14 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided1
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.scevcheck:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = icmp ult ptr [[TMP22]], [[SCEVGEP]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP23]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = shl i32 [[TMP19]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -126,9 +136,9 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH1]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = shl i32 [[INDEX]], 1
@@ -158,11 +168,31 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[FOR_INC:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[IX_024:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_024]], [[CONV]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       if.then:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_024]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP24:%.*]] = zext nneg i32 [[MUL]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP24]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP25:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP26:%.*]] = zext nneg i32 [[ADD]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP26]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP27:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[SPEC_SELECT_I:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP25]], i8 [[TMP27]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP28:%.*]] = zext nneg i32 [[MUL]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP28]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 [[SPEC_SELECT_I]], ptr [[ARRAYIDX6]], align 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[SUB:%.*]] = sub i8 0, [[SPEC_SELECT_I]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP29:%.*]] = zext nneg i32 [[ADD]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP29]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 [[SUB]], ptr [[ARRAYIDX11]], align 1
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       for.inc:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INC]] = add nuw nsw i32 [[IX_024]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
 ; PREDICATED_TAIL_FOLDING-NEXT:    ret void
 ;
@@ -222,6 +252,11 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i32 [[TMP1]], 1024
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SCALAR_TAIL_FOLDING:       vector.scevcheck:
+; SCALAR_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = icmp ult ptr [[TMP19]], [[SCEVGEP]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP20]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.ph:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 4
@@ -238,8 +273,8 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.body:
-; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = zext nneg <vscale x 16 x i32> [[TMP7]] to <vscale x 16 x i64>
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP8]]
@@ -257,7 +292,7 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
-; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       for.body:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[IX_012:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
@@ -283,9 +318,14 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided2
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.scevcheck:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = icmp ult ptr [[TMP17]], [[SCEVGEP]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP14]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -301,9 +341,9 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH1]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = zext nneg <vscale x 16 x i32> [[TMP6]] to <vscale x 16 x i64>
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP7]]
@@ -324,11 +364,23 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[FOR_INC:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[IX_012:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_012]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = zext nneg i32 [[MUL]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP19]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_012]], [[CONV]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       if.then:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = zext nneg i32 [[ADD]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP20]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX3]], align 1
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       for.inc:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INC]] = add nuw nsw i32 [[IX_012]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
 ; PREDICATED_TAIL_FOLDING-NEXT:    ret void
 ;
@@ -384,6 +436,11 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 4
 ; SCALAR_TAIL_FOLDING-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i32 [[TMP1]], 1024
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SCALAR_TAIL_FOLDING:       vector.scevcheck:
+; SCALAR_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; SCALAR_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = icmp ult ptr [[TMP20]], [[SCEVGEP]]
+; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[TMP21]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.ph:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 4
@@ -402,8 +459,8 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       vector.body:
-; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SCALAR_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = zext nneg <vscale x 16 x i32> [[TMP7]] to <vscale x 16 x i64>
@@ -422,7 +479,7 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; SCALAR_TAIL_FOLDING-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_TAIL_FOLDING-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; SCALAR_TAIL_FOLDING:       scalar.ph:
-; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; SCALAR_TAIL_FOLDING-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_PH]] ]
 ; SCALAR_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; SCALAR_TAIL_FOLDING:       for.body:
 ; SCALAR_TAIL_FOLDING-NEXT:    [[IX_018:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
@@ -453,10 +510,15 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-LABEL: define dso_local void @masked_strided3
 ; PREDICATED_TAIL_FOLDING-SAME: (ptr noalias nocapture readnone [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i8 zeroext [[GUARD1:%.*]], i8 zeroext [[GUARD2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; PREDICATED_TAIL_FOLDING-NEXT:  entry:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; PREDICATED_TAIL_FOLDING:       vector.ph:
-; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV3:%.*]] = zext i8 [[GUARD2]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD1]] to i32
+; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV3:%.*]] = zext i8 [[GUARD2]] to i32
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.scevcheck:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[Q]], i64 2047
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = icmp ult ptr [[TMP19]], [[SCEVGEP]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP20]], label [[SCALAR_PH]], label [[VECTOR_PH1:%.*]]
+; PREDICATED_TAIL_FOLDING:       vector.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = shl i32 [[TMP16]], 4
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
@@ -474,9 +536,9 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH1]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH1]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], shufflevector (<vscale x 16 x i32> insertelement (<vscale x 16 x i32> poison, i32 1, i64 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> zeroinitializer
@@ -499,15 +561,28 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING:       scalar.ph:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.body:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[IX_018:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IX_018]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[IX_018]], [[CONV]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       if.then:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = zext nneg i32 [[MUL]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP21]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 1, ptr [[ARRAYIDX]], align 1
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[IF_END]]
 ; PREDICATED_TAIL_FOLDING:       if.end:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[IF_THEN6:%.*]], label [[FOR_INC:%.*]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[IX_018]], [[CONV3]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[CMP4]], label [[IF_THEN6:%.*]], label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       if.then6:
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ADD:%.*]] = or disjoint i32 [[MUL]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = zext nneg i32 [[ADD]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, ptr [[Q]], i64 [[TMP22]]
+; PREDICATED_TAIL_FOLDING-NEXT:    store i8 2, ptr [[ARRAYIDX7]], align 1
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_INC]]
 ; PREDICATED_TAIL_FOLDING:       for.inc:
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INC]] = add nuw nsw i32 [[IX_018]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
 ; PREDICATED_TAIL_FOLDING-NEXT:    ret void
 ;

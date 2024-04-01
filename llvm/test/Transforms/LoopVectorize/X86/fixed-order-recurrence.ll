@@ -232,6 +232,104 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15, i64 17, i64 19, i64 21, i64 23, i64 25, i64 27, i64 29, i64 31>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i64> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+; CHECK-NEXT:    [[TMP97:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[TMP97]]
+; CHECK-NEXT:    [[TMP98:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP99:%.*]] = add i64 [[OFFSET_IDX]], 2
+; CHECK-NEXT:    [[TMP100:%.*]] = add i64 [[OFFSET_IDX]], 4
+; CHECK-NEXT:    [[TMP101:%.*]] = add i64 [[OFFSET_IDX]], 6
+; CHECK-NEXT:    [[TMP102:%.*]] = add i64 [[OFFSET_IDX]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 10
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 12
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 14
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 18
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 20
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 22
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], 24
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 26
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 28
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 30
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], 32
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], 34
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[OFFSET_IDX]], 36
+; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], 38
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], 40
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[OFFSET_IDX]], 42
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[OFFSET_IDX]], 44
+; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 46
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], 48
+; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[OFFSET_IDX]], 50
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], 52
+; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX]], 54
+; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX]], 56
+; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[OFFSET_IDX]], 58
+; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[OFFSET_IDX]], 60
+; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[OFFSET_IDX]], 62
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP98]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP99]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP100]]
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP101]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP102]]
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP24]]
+; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP58:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP26]]
+; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP28]]
+; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP29]]
+; CHECK-NEXT:    [[TMP62:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP30]]
+; CHECK-NEXT:    [[TMP63:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr double, ptr [[B]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP65:%.*]] = load double, ptr [[TMP33]], align 8
+; CHECK-NEXT:    [[TMP66:%.*]] = load double, ptr [[TMP34]], align 8
+; CHECK-NEXT:    [[TMP67:%.*]] = load double, ptr [[TMP35]], align 8
+; CHECK-NEXT:    [[TMP68:%.*]] = load double, ptr [[TMP36]], align 8
+; CHECK-NEXT:    [[TMP69:%.*]] = load double, ptr [[TMP37]], align 8
+; CHECK-NEXT:    [[TMP70:%.*]] = load double, ptr [[TMP38]], align 8
+; CHECK-NEXT:    [[TMP71:%.*]] = load double, ptr [[TMP39]], align 8
+; CHECK-NEXT:    [[TMP72:%.*]] = load double, ptr [[TMP40]], align 8
+; CHECK-NEXT:    [[TMP73:%.*]] = load double, ptr [[TMP41]], align 8
+; CHECK-NEXT:    [[TMP74:%.*]] = load double, ptr [[TMP42]], align 8
+; CHECK-NEXT:    [[TMP75:%.*]] = load double, ptr [[TMP43]], align 8
+; CHECK-NEXT:    [[TMP76:%.*]] = load double, ptr [[TMP44]], align 8
+; CHECK-NEXT:    [[TMP77:%.*]] = load double, ptr [[TMP45]], align 8
+; CHECK-NEXT:    [[TMP78:%.*]] = load double, ptr [[TMP46]], align 8
+; CHECK-NEXT:    [[TMP79:%.*]] = load double, ptr [[TMP47]], align 8
+; CHECK-NEXT:    [[TMP80:%.*]] = load double, ptr [[TMP48]], align 8
+; CHECK-NEXT:    [[TMP81:%.*]] = load double, ptr [[TMP49]], align 8
+; CHECK-NEXT:    [[TMP82:%.*]] = load double, ptr [[TMP50]], align 8
+; CHECK-NEXT:    [[TMP83:%.*]] = load double, ptr [[TMP51]], align 8
+; CHECK-NEXT:    [[TMP84:%.*]] = load double, ptr [[TMP52]], align 8
+; CHECK-NEXT:    [[TMP85:%.*]] = load double, ptr [[TMP53]], align 8
+; CHECK-NEXT:    [[TMP86:%.*]] = load double, ptr [[TMP54]], align 8
+; CHECK-NEXT:    [[TMP87:%.*]] = load double, ptr [[TMP55]], align 8
+; CHECK-NEXT:    [[TMP88:%.*]] = load double, ptr [[TMP56]], align 8
+; CHECK-NEXT:    [[TMP89:%.*]] = load double, ptr [[TMP57]], align 8
+; CHECK-NEXT:    [[TMP90:%.*]] = load double, ptr [[TMP58]], align 8
+; CHECK-NEXT:    [[TMP91:%.*]] = load double, ptr [[TMP59]], align 8
+; CHECK-NEXT:    [[TMP92:%.*]] = load double, ptr [[TMP60]], align 8
+; CHECK-NEXT:    [[TMP93:%.*]] = load double, ptr [[TMP61]], align 8
+; CHECK-NEXT:    [[TMP94:%.*]] = load double, ptr [[TMP62]], align 8
+; CHECK-NEXT:    [[TMP95:%.*]] = load double, ptr [[TMP63]], align 8
+; CHECK-NEXT:    [[TMP96:%.*]] = load double, ptr [[TMP64]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw <16 x i64> zeroinitializer, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1]] = sub nsw <16 x i64> zeroinitializer, [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i64> [[VECTOR_RECUR]], <16 x i64> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
@@ -244,7 +342,8 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i64> [[TMP1]], i32 15
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <16 x i64> [[TMP1]], i32 14
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[REC_START]], [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 65, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY]] ]
@@ -252,16 +351,16 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[NEG_IV:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_B:%.*]] = load double, ptr [[GEP_B]], align 8
 ; CHECK-NEXT:    [[NEG_IV]] = sub nsw i64 0, [[IV]]
 ; CHECK-NEXT:    store i64 [[NEG_IV]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i64 [[IV]], 74
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTIN_LCSSA:%.*]] = phi i64 [ [[SCALAR_RECUR]], [[LOOP]] ]
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi double [ [[L_B]], [[LOOP]] ]
+; CHECK-NEXT:    [[DOTIN_LCSSA:%.*]] = phi i64 [ [[SCALAR_RECUR]], [[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi double [ [[L_B]], [[LOOP]] ], [ [[TMP96]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store double [[DOTLCSSA]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[DOTIN_LCSSA]]
 ;

@@ -79,6 +79,8 @@ define void @forward_different_access_sizes(ptr readnone %end, ptr %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {(1 + %start),+,8}<nw><%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {(4 + %start),+,8}<nw><%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

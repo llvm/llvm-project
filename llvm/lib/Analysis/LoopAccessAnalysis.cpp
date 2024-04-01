@@ -1397,8 +1397,7 @@ void AccessAnalysis::processMemAccesses() {
 static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
                            PredicatedScalarEvolution &PSE, const Loop *L) {
 
-  // FIXME: This should probably only return true for NUW.
-  if (AR->getNoWrapFlags(SCEV::NoWrapMask))
+  if (AR->getNoWrapFlags(SCEV::FlagNUW))
     return true;
 
   if (PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
