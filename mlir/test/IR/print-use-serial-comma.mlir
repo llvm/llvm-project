@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s --mlir-print-serial-comma | FileCheck %s
 
+// Check that the alias flag is also recognized.
+// RUN: mlir-opt %s --mlir-print-oxford-comma | FileCheck %s
+
 // CHECK: foo.dense_attr = dense<[1, 2, and 3]> : tensor<3xi32>
 "test.dense_attr"() {foo.dense_attr = dense<[1, 2, 3]> : tensor<3xi32>} : () -> ()
 

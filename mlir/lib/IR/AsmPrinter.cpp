@@ -144,7 +144,7 @@ static bool environmentRequiresSerialComma() {
       currentLanguage.starts_with("en_CA"))
     return true;
   llvm_unreachable(
-      "Unhandle corner case. This is very unlikely to happen in practice.");
+      "Unhandled corner case. This is very unlikely to happen in practice.");
 }
 
 namespace {
@@ -216,6 +216,11 @@ static llvm::ManagedStatic<AsmPrinterOptions> clOptions;
 void mlir::registerAsmPrinterCLOptions() {
   // Make sure that the options struct has been initialized.
   *clOptions;
+
+  static llvm::cl::alias printOxfordComma(
+      "mlir-print-oxford-comma",
+      llvm::cl::desc("Alias for --mlir-print-serial-comma"),
+      llvm::cl::aliasopt(clOptions->printSerialComma));
 }
 
 /// Initialize the printing flags with default supplied by the cl::opts above.
