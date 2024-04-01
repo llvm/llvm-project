@@ -29,7 +29,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
+; CHECK-NEXT:     WIDEN store ir<%add>, vp<[[VPTR2]]>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
@@ -61,7 +61,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
-; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
+; CHECK-NEXT:     WIDEN store ir<%add>, vp<[[VPTR2]]>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:   No successors

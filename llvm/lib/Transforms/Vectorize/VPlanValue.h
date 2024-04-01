@@ -35,7 +35,6 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPWidenMemoryInstructionRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -50,7 +49,6 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
-  friend class VPWidenMemoryInstructionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -357,7 +355,8 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
-    VPWidenMemoryInstructionSC,
+    VPWidenLoadSC,
+    VPWidenStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
     // START: Phi-like recipes. Need to be kept together.

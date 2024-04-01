@@ -8028,7 +8028,7 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB) {
   BlockMaskCache[BB] = BlockMask;
 }
 
-VPWidenMemoryInstructionRecipe *
+VPWidenMemoryRecipe *
 VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                   VFRange &Range) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
@@ -8073,12 +8073,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Ptr = VectorPtr;
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
-    return new VPWidenMemoryInstructionRecipe(*Load, Ptr, Mask, Consecutive,
-                                              Reverse, I->getDebugLoc());
+    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                 I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenMemoryInstructionRecipe(
-      *Store, Ptr, Operands[0], Mask, Consecutive, Reverse, I->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Operands[0], Ptr, Mask, Consecutive,
+                                Reverse, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8710,13 +8710,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   for (const auto *IG : InterleaveGroups) {
-    auto *Recipe = cast<VPWidenMemoryInstructionRecipe>(
-        RecipeBuilder.getRecipe(IG->getInsertPos()));
+    auto *Recipe =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR =
-            cast<VPWidenMemoryInstructionRecipe>(RecipeBuilder.getRecipe(SI));
+        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
         StoredValues.push_back(StoreR->getStoredValue());
       }
 
@@ -9307,16 +9306,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
-void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
-  VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
-
+void VPWidenLoadRecipe::execute(VPTransformState &State) {
   // Attempt to issue a wide load.
-  LoadInst *LI = dyn_cast<LoadInst>(&Ingredient);
-  StoreInst *SI = dyn_cast<StoreInst>(&Ingredient);
-
-  assert((LI || SI) && "Invalid Load/Store instruction");
-  assert((!SI || StoredValue) && "No stored value provided for widened store");
-  assert((!LI || !StoredValue) && "Stored value provided for widened load");
+  LoadInst *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
 
@@ -9336,38 +9328,6 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
       BlockInMaskParts[Part] = Mask;
     }
-  }
-
-  // Handle Stores:
-  if (SI) {
-    State.setDebugLocFrom(getDebugLoc());
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Instruction *NewSI = nullptr;
-      Value *StoredVal = State.get(StoredValue, Part);
-      if (CreateGatherScatter) {
-        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-        Value *VectorGep = State.get(getAddr(), Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
-                                            MaskPart);
-      } else {
-        if (isReverse()) {
-          // If we store to reverse consecutive memory locations, then we need
-          // to reverse the order of elements in the stored value.
-          StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-          // We don't want to update the value in the map as it might be used in
-          // another expression. So don't call resetVectorValue(StoredVal).
-        }
-        auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-        if (isMaskRequired)
-          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
-                                            BlockInMaskParts[Part]);
-        else
-          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
-      }
-      State.addMetadata(NewSI, SI);
-    }
-    return;
   }
 
   // Handle loads.
@@ -9397,7 +9357,59 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     }
 
-    State.set(getVPSingleValue(), NewLI, Part);
+    State.set(this, NewLI, Part);
+  }
+}
+
+void VPWidenStoreRecipe::execute(VPTransformState &State) {
+  VPValue *StoredValue = getStoredValue();
+
+  // Attempt to issue a wide load.
+  StoreInst *SI = cast<StoreInst>(&Ingredient);
+
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGatherScatter = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
+  bool isMaskRequired = getMask();
+  if (isMaskRequired) {
+    // Mask reversal is only needed for non-all-one (null) masks, as reverse of
+    // a null all-one mask is a null mask.
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Value *Mask = State.get(getMask(), Part);
+      if (isReverse())
+        Mask = Builder.CreateVectorReverse(Mask, "reverse");
+      BlockInMaskParts[Part] = Mask;
+    }
+  }
+
+  State.setDebugLocFrom(getDebugLoc());
+
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Instruction *NewSI = nullptr;
+    Value *StoredVal = State.get(StoredValue, Part);
+    if (CreateGatherScatter) {
+      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *VectorGep = State.get(getAddr(), Part);
+      NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
+                                          MaskPart);
+    } else {
+      if (isReverse()) {
+        // If we store to reverse consecutive memory locations, then we need
+        // to reverse the order of elements in the stored value.
+        StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
+        // We don't want to update the value in the map as it might be used in
+        // another expression. So don't call resetVectorValue(StoredVal).
+      }
+      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
+      if (isMaskRequired)
+        NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
+                                          BlockInMaskParts[Part]);
+      else
+        NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
+    }
+    State.addMetadata(NewSI, SI);
   }
 }
 

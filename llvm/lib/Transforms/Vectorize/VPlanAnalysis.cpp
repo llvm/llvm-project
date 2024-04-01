@@ -108,9 +108,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
   return CI.getType();
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(
-    const VPWidenMemoryInstructionRecipe *R) {
-  assert(!R->isStore() && "Store recipes should not define any values");
+Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
+  assert(isa<VPWidenLoadRecipe>(R) &&
+         "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
 
@@ -231,8 +231,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryInstructionRecipe,
-                VPWidenSelectRecipe>(
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
             // TODO: Use info from interleave group.

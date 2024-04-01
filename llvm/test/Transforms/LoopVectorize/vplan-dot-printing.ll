@@ -34,7 +34,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>) (using vector intrinsic)\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR2:%.+]]\> = vector-pointer ir\<%arrayidx2\>\l" +
-; CHECK-NEXT:    "  WIDEN store vp\<[[VEC_PTR2]]\>, ir\<%call\>\l" +
+; CHECK-NEXT:    "  WIDEN store ir\<%call\>, vp\<[[VEC_PTR2]]\>\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT]]\> = add nuw vp\<[[CAN_IV]]\>, vp\<[[VFxUF]]\>\l" +
 ; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\>, vp\<[[VEC_TC]]\>\l" +
 ; CHECK-NEXT:    "No successors\l"

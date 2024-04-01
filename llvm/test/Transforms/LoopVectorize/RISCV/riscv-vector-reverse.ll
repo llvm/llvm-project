@@ -72,7 +72,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
+; CHECK-NEXT:    WIDEN store ir<%add9>, vp<[[VEC_PTR2]]>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
@@ -213,7 +213,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
-; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%conv1>
+; CHECK-NEXT:    WIDEN store ir<%conv1>, vp<[[VEC_PTR2]]>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
