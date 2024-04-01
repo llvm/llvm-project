@@ -14,11 +14,10 @@
 
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
+#include "CGHLSLUtils.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/IR/IntrinsicsDirectX.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -343,18 +342,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(DxGroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
-    llvm::Function *ThreadIDIntrinsic;
-    switch (CGM.getTarget().getTriple().getArch()) {
-    case llvm::Triple::dxil:
-      ThreadIDIntrinsic = CGM.getIntrinsic(Intrinsic::dx_thread_id);
-      break;
-    case llvm::Triple::spirv:
-      ThreadIDIntrinsic = CGM.getIntrinsic(Intrinsic::spv_thread_id);
-      break;
-    default:
-      llvm_unreachable("Input semantic not supported by target");
-      break;
-    }
+    llvm::Function *ThreadIDIntrinsic =
+        CGM.getIntrinsic(CGHLSLUtils::get_hlsl_thread_id_intrinsic(
+            CGM.getTarget().getTriple().getArch()));
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   assert(false && "Unhandled parameter attribute");

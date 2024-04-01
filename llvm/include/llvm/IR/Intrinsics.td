@@ -684,18 +684,6 @@ class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
                             intr_properties, name,
                             sd_properties, /*disable_default_attributes*/ 0> {}
 
-// HLSL Intrinsic Classes
-class HLSLThreadId
-                : Intrinsic</*ret_types*/ [llvm_i32_ty], 
-                            /*param_types*/[llvm_i32_ty],
-                            /*intr_properties*/ [IntrNoMem, IntrWillReturn], 
-                            /*name*/ ""> {}
-class HLSLAll : Intrinsic</*ret_types*/ [llvm_i1_ty], 
-                            /*param_types*/[llvm_any_ty],
-                            /*intr_properties*/ [IntrNoMem, IntrWillReturn], 
-                            /*name*/ ""> {}
-
-
 /// ClangBuiltin - If this intrinsic exactly corresponds to a Clang builtin, this
 /// specifies the name of the builtin.  This provides automatic CBE and CFE
 /// support.

@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGHLSLUtils.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -51,7 +52,6 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsVE.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -18167,17 +18167,6 @@ Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
   return Intrinsic::dx_udot;
 }
 
-Intrinsic::ID getAllIntrinsic(const llvm::Triple::ArchType Arch) {
-  switch (Arch) {
-  case llvm::Triple::dxil:
-    return Intrinsic::dx_all;
-  case llvm::Triple::spirv:
-    return Intrinsic::spv_all;
-  default:
-    llvm_unreachable("Input semantic not supported by target");
-  }
-}
-
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E) {
   if (!getLangOpts().HLSL)
@@ -18188,7 +18177,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        getAllIntrinsic(CGM.getTarget().getTriple().getArch()),
+        CGHLSLUtils::get_hlsl_all_intrinsic(
+            CGM.getTarget().getTriple().getArch()),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.all");
   }
   case Builtin::BI__builtin_hlsl_elementwise_any: {
