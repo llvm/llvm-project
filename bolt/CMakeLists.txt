@@ -39,24 +39,9 @@ if(BOLT_BUILT_STANDALONE)
   list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
   # Turn into CACHE PATHs for overwritting
-
-  # We can't check LLVM_CONFIG here, because find_package(LLVM ...) also sets
-  # LLVM_CONFIG.
-  if (NOT LLVM_CONFIG_FOUND)
-    # Pull values from LLVMConfig.cmake.  We can drop this once the llvm-config
-    # path is removed.
-    set(INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
-    set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
-    # N.B. this is just a default value, the CACHE PATHs below can be overridden.
-    set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
-  else()
-    set(INCLUDE_DIRS "${LLVM_BINARY_DIR}/include" "${MAIN_INCLUDE_DIR}")
-  endif()
-
-  set(LLVM_INCLUDE_DIRS ${INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
-  set(LLVM_BINARY_DIR "${LLVM_OBJ_ROOT}" CACHE PATH "Path to LLVM build tree")
-  set(LLVM_MAIN_SRC_DIR "${MAIN_SRC_DIR}" CACHE PATH "Path to LLVM source tree")
-
+  set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
+  set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}" CACHE PATH "Path to LLVM build tree")
+  set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm" CACHE PATH "Path to LLVM source tree")
   set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
   set(LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
 
