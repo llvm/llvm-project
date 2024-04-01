@@ -124,10 +124,9 @@ generateReplacement(const MatchFinder::MatchResult &Match,
       if (ArgType == ResultType)
         continue;
 
-      const StringRef ArgText =
-          Lexer::getSourceText(
-              CharSourceRange::getTokenRange(Arg->getSourceRange()), SourceMngr,
-              LanguageOpts);
+      const StringRef ArgText = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Arg->getSourceRange()), SourceMngr,
+          LanguageOpts);
 
       Twine Replacement = llvm::Twine("static_cast<")
                               .concat(ResultType.getAsString(LanguageOpts))
@@ -145,6 +144,10 @@ generateReplacement(const MatchFinder::MatchResult &Match,
     const auto InnerReplacements =
         generateReplacement(Match, InnerCall, InnerResult);
     const bool IsInnerInitializerList = InnerResult.First == InnerResult.Last;
+
+    // if the nested call doesn't have arguments skip it
+    if (!InnerResult.First || !InnerResult.Last)
+      continue;
 
     // if the nested call is not the same as the top call
     if (InnerCall->getDirectCallee()->getQualifiedNameAsString() !=
