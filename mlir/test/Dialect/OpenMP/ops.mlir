@@ -559,30 +559,54 @@ func.func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : ind
 }
 
 // CHECK-LABEL: omp_distribute
-func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>) -> () {
+func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i32) -> () {
   // CHECK: omp.distribute
   "omp.distribute" () ({
-    omp.terminator
+    "omp.loop_nest" (%arg0, %arg0, %arg0) ({
+    ^bb0(%iv: i32):
+      "omp.yield"() : () -> ()
+    }) : (i32, i32, i32) -> ()
+    "omp.terminator"() : () -> ()
   }) {} : () -> ()
   // CHECK: omp.distribute
   omp.distribute {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute dist_schedule_static
   omp.distribute dist_schedule_static {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
   omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute order(concurrent)
   omp.distribute order(concurrent) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
   omp.distribute allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  // CHECK: omp.distribute
+  omp.distribute {
+    // TODO Remove induction variables from omp.simdloop.
+    omp.simdloop for (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.loop_nest (%iv2) : i32 = (%arg0) to (%arg0) step (%arg0) {
+        omp.yield
+      }
+      omp.yield
+    }
   }
 return
 }
