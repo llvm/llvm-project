@@ -4,6 +4,7 @@
 ; -global-isel=1 is unsupported.
 ; XFAIL: target=nvptx{{.*}}
 ; XFAIL: target=sparc{{.*}}
+; XFAIL: target=hexagon-{{.*}}
 
 ; RUN: llc < %s -O3 -global-isel=0 -fast-isel=0
 ; RUN: llc < %s -O3 -global-isel=1 -fast-isel=0
