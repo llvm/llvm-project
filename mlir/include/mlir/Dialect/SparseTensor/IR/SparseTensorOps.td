@@ -1278,8 +1278,10 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
   let hasVerifier = 1;
 }
 
-def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
-    Arguments<(ins Optional<AnyType>:$result)> {
+def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
+    ParentOneOf<["BinaryOp", "UnaryOp", "ReduceOp", "SelectOp",
+                 "ForeachOp"]>]>,
+    Arguments<(ins Variadic<AnyType>:$results)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
@@ -1302,14 +1304,27 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
   let builders = [
     OpBuilder<(ins),
     [{
-      build($_builder, $_state, Value());
+      build($_builder, $_state, ValueRange());
+    }]>,
+    OpBuilder<(ins "Value":$yieldVal),
+    [{
+      build($_builder, $_state, ValueRange(yieldVal));
     }]>
   ];
 
-  let assemblyFormat = [{
-        $result attr-dict `:` type($result)
+  let extraClassDeclaration = [{
+     Value getSingleResult() {
+        assert(hasSingleResult());
+        return getResults().front();
+     }
+     bool hasSingleResult() {
+        return getResults().size() == 1;
+     }
   }];
-  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+        $results attr-dict `:` type($results)
+  }];
 }
 
 def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
