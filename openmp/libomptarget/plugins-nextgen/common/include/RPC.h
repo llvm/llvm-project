@@ -23,6 +23,7 @@
 
 namespace llvm::omp::target {
 namespace plugin {
+struct GenericPluginTy;
 struct GenericDeviceTy;
 class GenericGlobalHandlerTy;
 class DeviceImageTy;
@@ -33,6 +34,9 @@ class DeviceImageTy;
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
+  /// Initializes the handles to the number of devices we may need to service.
+  RPCServerTy(plugin::GenericPluginTy &Plugin);
+
   /// Check if this device image is using an RPC server. This checks for the
   /// precense of an externally visible symbol in the device image that will
   /// be present whenever RPC code is called.
