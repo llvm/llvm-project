@@ -46,6 +46,9 @@ static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
 static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
                                          cl::desc("Disable strip W suffix"),
                                          cl::init(false), cl::Hidden);
+static cl::opt<bool> EnableAppendWSuffix("riscv-enable-append-w-suffix",
+                                         cl::desc("Enable append W suffix"),
+                                         cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -59,6 +62,8 @@ public:
   bool removeSExtWInstrs(MachineFunction &MF, const RISCVInstrInfo &TII,
                          const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool stripWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
+                      const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+  bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -672,9 +677,6 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
                                      const RISCVInstrInfo &TII,
                                      const RISCVSubtarget &ST,
                                      MachineRegisterInfo &MRI) {
-  if (DisableStripWSuffix || !ST.enableStripWSuffix())
-    return false;
-
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -686,6 +688,42 @@ bool RISCVOptWInstrs::stripWSuffixes(MachineFunction &MF,
       case RISCV::ADDIW: Opc = RISCV::ADDI; break;
       case RISCV::MULW:  Opc = RISCV::MUL;  break;
       case RISCV::SLLIW: Opc = RISCV::SLLI; break;
+      }
+
+      if (hasAllWUsers(MI, ST, MRI)) {
+        MI.setDesc(TII.get(Opc));
+        MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
+bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
+                                      const RISCVInstrInfo &TII,
+                                      const RISCVSubtarget &ST,
+                                      MachineRegisterInfo &MRI) {
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      unsigned Opc;
+      // TODO: Add more.
+      switch (MI.getOpcode()) {
+      default:
+        continue;
+      case RISCV::ADD:
+        Opc = RISCV::ADDW;
+        break;
+      case RISCV::ADDI:
+        Opc = RISCV::ADDIW;
+        break;
+      case RISCV::MUL:
+        Opc = RISCV::MULW;
+        break;
+      case RISCV::SLLI:
+        Opc = RISCV::SLLIW;
+        break;
       }
 
       if (hasAllWUsers(MI, ST, MRI)) {
@@ -711,7 +749,12 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
 
   bool MadeChange = false;
   MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
-  MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
+
+  if (!(DisableStripWSuffix || ST.preferWInst()))
+    MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
+
+  if (EnableAppendWSuffix || ST.preferWInst())
+    MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
 
   return MadeChange;
 }
