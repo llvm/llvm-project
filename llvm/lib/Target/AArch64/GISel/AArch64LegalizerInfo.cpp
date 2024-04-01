@@ -1195,7 +1195,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s32, v4s32)
       .clampMaxNumElements(0, s64, 2)
       .moreElementsToNextPow2(0)
-      .lowerIf(isScalar(0));
+      .lower();
 
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.
