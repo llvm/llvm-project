@@ -2288,7 +2288,7 @@ Block::BlockArgListType IterateOp::getRegionIterArgs() {
 std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
   return cast<sparse_tensor::YieldOp>(
              getRegion().getBlocks().front().getTerminator())
-      .getResultMutable();
+      .getResultsMutable();
 }
 
 std::optional<ResultRange> IterateOp::getLoopResults() { return getResults(); }

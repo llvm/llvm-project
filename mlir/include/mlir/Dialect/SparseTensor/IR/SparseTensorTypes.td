@@ -113,6 +113,10 @@ def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
      unsigned getSpaceDim() {
        return getLvlTypes().size();
      }
+     bool isUnique() {
+       // As long as the last level is unique, the entire iterator is unqiue.
+       return !getLvlTypes().back().isa<LevelPropNonDefault::Nonunique>();
+     }
   }];
 
 

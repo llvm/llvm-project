@@ -293,8 +293,9 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
 
 /// Helper function to create a simple SparseIterator object that iterate over
 /// the SparseTensorLevel.
-std::unique_ptr<SparseIterator> makeSimpleIterator(const SparseTensorLevel &stl,
-                                                   SparseEmitStrategy strategy);
+std::unique_ptr<SparseIterator> makeSimpleIterator(
+    const SparseTensorLevel &stl,
+    SparseEmitStrategy strategy = SparseEmitStrategy::kFunctional);
 
 /// Helper function to create a synthetic SparseIterator object that iterate
 /// over a dense space specified by [0,`sz`).
