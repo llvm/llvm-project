@@ -1591,10 +1591,10 @@ writePrettyPrintFunction(const Record &R,
     std::string Variety = Spellings[I].variety();
 
     if (Variety == "GNU") {
-      Prefix = " __attribute__((";
+      Prefix = "__attribute__((";
       Suffix = "))";
     } else if (Variety == "CXX11" || Variety == "C23") {
-      Prefix = " [[";
+      Prefix = "[[";
       Suffix = "]]";
       std::string Namespace = Spellings[I].nameSpace();
       if (!Namespace.empty()) {
@@ -1602,7 +1602,7 @@ writePrettyPrintFunction(const Record &R,
         Spelling += "::";
       }
     } else if (Variety == "Declspec") {
-      Prefix = " __declspec(";
+      Prefix = "__declspec(";
       Suffix = ")";
     } else if (Variety == "Microsoft") {
       Prefix = "[";
