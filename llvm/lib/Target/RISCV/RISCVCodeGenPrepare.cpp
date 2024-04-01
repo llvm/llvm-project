@@ -81,7 +81,7 @@ bool RISCVCodeGenPrepare::visitBinaryOperator(BinaryOperator &BO) {
 
   // TODO: We could allow sub if we did a non-commutative match
   Constant *Identity = ConstantExpr::getIdentity(&BO, BO.getType());
-  if (!Identity || !Identity->isZeroValue())
+  if (!Identity || !Identity->isNullValue())
     return false;
 
   using namespace PatternMatch;
@@ -95,8 +95,10 @@ bool RISCVCodeGenPrepare::visitBinaryOperator(BinaryOperator &BO) {
 
   IRBuilder<> Builder(&BO);
   Value *Splat = ConstantInt::get(BO.getType(), 1);
-  Value *BinOp = Builder.CreateBinOp(BO.getOpcode(), RHS, Splat);
-  Value *Select = Builder.CreateSelect(Mask, BinOp, RHS);
+  Value *NewBO = Builder.CreateBinOp(BO.getOpcode(), RHS, Splat);
+  if (Instruction *I = dyn_cast<Instruction>(NewBO))
+    I->copyIRFlags(&BO);
+  Value *Select = Builder.CreateSelect(Mask, NewBO, RHS);
 
   BO.replaceAllUsesWith(Select);
   BO.eraseFromParent();
