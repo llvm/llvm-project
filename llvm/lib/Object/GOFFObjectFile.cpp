@@ -104,16 +104,13 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       PrevContinuationBits = I[1] & 0x03;
       continue;
     }
-
-#ifndef NDEBUG
-    for (size_t J = 0; J < GOFF::RecordLength; ++J) {
+    LLVM_DEBUG(for (size_t J = 0; J < GOFF::RecordLength; ++J) {
       const uint8_t *P = I + J;
       if (J % 8 == 0)
         dbgs() << "  ";
-
       dbgs() << format("%02hhX", *P);
-    }
-#endif
+    });
+
     switch (RecordType) {
     case GOFF::RT_ESD: {
       // Save ESD record.
