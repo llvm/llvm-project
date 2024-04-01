@@ -1288,9 +1288,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 }
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
-  auto isMappableType = [](Type type) {
-    return llvm::isa<VectorType, TensorType>(type);
-  };
+  auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
   auto resultMappableTypes = llvm::to_vector<1>(
       llvm::make_filter_range(op->getResultTypes(), isMappableType));
   auto operandMappableTypes = llvm::to_vector<2>(
