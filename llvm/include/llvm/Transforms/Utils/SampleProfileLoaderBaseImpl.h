@@ -129,16 +129,25 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink || !Desc ||
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even their desc is available. This is
+    // because the desc is computed based on the original internal function
+    // which is substituted by the `available_externally` function, their
+    // mismatch state could be different and we should use state from the new
+    // one.
+    assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink ||
+            IsAvailableExternallyLinkage || !Desc ||
             profileIsHashMismatched(*Desc, Samples) ==
                 F.hasFnAttribute("profile-checksum-mismatch")) &&
-           "In post-link, profile checksum matching state doesn't match "
-           "function 'profile-checksum-mismatch' attribute.");
+           "In post-link, profile checksum matching state doesn't match the "
+           "internal function's 'profile-checksum-mismatch' attribute.");
     (void)LTOPhase;
-    // The desc for import function is unavailable. Check the function attribute
-    // for mismatch.
-    return (!Desc && !F.hasFnAttribute("profile-checksum-mismatch")) ||
-           (Desc && !profileIsHashMismatched(*Desc, Samples));
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
   }
 };
 
