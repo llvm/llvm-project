@@ -653,6 +653,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     case CK_FunctionToPointerDecay:
     case CK_ToVoid:
     case CK_NonAtomicToAtomic:
+    case CK_HLSLArrayRValue:
       break;
     }
   }

@@ -6810,6 +6810,10 @@ void TypeLocReader::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
 }
 
+void TypeLocReader::VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
+  // nothing to do
+}
+
 void TypeLocReader::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
   TL.setExpansionLoc(readSourceLocation());
 }
