@@ -187,8 +187,8 @@ int main(int, char**) {
   { // check the tail of the vectorized loop
     for (size_t vec_size = 1; vec_size != 256; ++vec_size) {
       {
-        std::vector<char> lhs(256);
-        std::vector<char> rhs(256);
+        std::vector<char> lhs(vec_size);
+        std::vector<char> rhs(vec_size);
 
         check<char*>(lhs, rhs, lhs.size());
         lhs.back() = 1;
@@ -199,8 +199,8 @@ int main(int, char**) {
         rhs.back() = 0;
       }
       {
-        std::vector<int> lhs(256);
-        std::vector<int> rhs(256);
+        std::vector<int> lhs(vec_size);
+        std::vector<int> rhs(vec_size);
 
         check<int*>(lhs, rhs, lhs.size());
         lhs.back() = 1;

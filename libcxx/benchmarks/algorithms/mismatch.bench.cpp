@@ -37,4 +37,20 @@ BENCHMARK(bm_mismatch<char>)->Apply(BenchmarkSizes);
 BENCHMARK(bm_mismatch<short>)->Apply(BenchmarkSizes);
 BENCHMARK(bm_mismatch<int>)->Apply(BenchmarkSizes);
 
+template <class T>
+static void bm_mismatch_two_range_overload(benchmark::State& state) {
+  std::vector<T> vec1(state.range(), '1');
+  std::vector<T> vec2(state.range(), '1');
+  std::mt19937_64 rng(std::random_device{}());
+
+  vec1.back() = '2';
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(vec1);
+    benchmark::DoNotOptimize(std::mismatch(vec1.begin(), vec1.end(), vec2.begin(), vec2.end()));
+  }
+}
+BENCHMARK(bm_mismatch_two_range_overload<char>)->DenseRange(1, 8)->Range(16, 1 << 20);
+BENCHMARK(bm_mismatch_two_range_overload<short>)->DenseRange(1, 8)->Range(16, 1 << 20);
+BENCHMARK(bm_mismatch_two_range_overload<int>)->DenseRange(1, 8)->Range(16, 1 << 20);
+
 BENCHMARK_MAIN();
