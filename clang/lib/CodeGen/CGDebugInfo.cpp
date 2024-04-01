@@ -1440,8 +1440,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
-    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
-    return llvm::dwarf::DW_CC_LLVM_Swift;
+    return llvm::dwarf::DW_CC_LLVM_SwiftTail;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -1452,6 +1451,8 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   case CC_PreserveNone:
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
+  case CC_RISCVVectorCall:
+    return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
   }
   return 0;
 }

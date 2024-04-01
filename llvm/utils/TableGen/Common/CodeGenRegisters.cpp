@@ -47,19 +47,24 @@ using namespace llvm;
 //                             CodeGenSubRegIndex
 //===----------------------------------------------------------------------===//
 
-CodeGenSubRegIndex::CodeGenSubRegIndex(Record *R, unsigned Enum)
+CodeGenSubRegIndex::CodeGenSubRegIndex(Record *R, unsigned Enum,
+                                       const CodeGenHwModes &CGH)
     : TheDef(R), EnumValue(Enum), AllSuperRegsCovered(true), Artificial(true) {
   Name = std::string(R->getName());
   if (R->getValue("Namespace"))
     Namespace = std::string(R->getValueAsString("Namespace"));
-  Size = R->getValueAsInt("Size");
-  Offset = R->getValueAsInt("Offset");
+
+  if (const RecordVal *RV = R->getValue("SubRegRanges"))
+    if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
+      Range = SubRegRangeByHwMode(DI->getDef(), CGH);
+  if (!Range.hasDefault())
+    Range.insertSubRegRangeForMode(DefaultMode, SubRegRange(R));
 }
 
 CodeGenSubRegIndex::CodeGenSubRegIndex(StringRef N, StringRef Nspace,
                                        unsigned Enum)
     : TheDef(nullptr), Name(std::string(N)), Namespace(std::string(Nspace)),
-      Size(-1), Offset(-1), EnumValue(Enum), AllSuperRegsCovered(true),
+      Range(SubRegRange(-1, -1)), EnumValue(Enum), AllSuperRegsCovered(true),
       Artificial(true) {}
 
 std::string CodeGenSubRegIndex::getQualifiedName() const {
@@ -81,7 +86,7 @@ void CodeGenSubRegIndex::updateComponents(CodeGenRegBank &RegBank) {
                       "ComposedOf must have exactly two entries");
     CodeGenSubRegIndex *A = RegBank.getSubRegIdx(Comps[0]);
     CodeGenSubRegIndex *B = RegBank.getSubRegIdx(Comps[1]);
-    CodeGenSubRegIndex *X = A->addComposite(B, this);
+    CodeGenSubRegIndex *X = A->addComposite(B, this, RegBank.getHwModes());
     if (X)
       PrintFatalError(TheDef->getLoc(), "Ambiguous ComposedOf entries");
   }
@@ -518,7 +523,8 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
 
       // Each part of Cand is a sub-register of this. Make the full Cand also
       // a sub-register with a concatenated sub-register index.
-      CodeGenSubRegIndex *Concat = RegBank.getConcatSubRegIndex(Parts);
+      CodeGenSubRegIndex *Concat =
+          RegBank.getConcatSubRegIndex(Parts, RegBank.getHwModes());
       std::pair<CodeGenSubRegIndex *, CodeGenRegister *> NewSubReg =
           std::pair(Concat, Cand);
 
@@ -542,7 +548,7 @@ void CodeGenRegister::computeSecondarySubRegs(CodeGenRegBank &RegBank) {
         PrintFatalError(TheDef->getLoc(), "No SubRegIndex for " +
                                               SubReg.second->getName() +
                                               " in " + getName());
-      NewIdx->addComposite(SubReg.first, SubIdx);
+      NewIdx->addComposite(SubReg.first, SubIdx, RegBank.getHwModes());
     }
   }
 }
@@ -1315,7 +1321,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getSubRegIdx(Record *Def) {
   CodeGenSubRegIndex *&Idx = Def2SubRegIdx[Def];
   if (Idx)
     return Idx;
-  SubRegIndices.emplace_back(Def, SubRegIndices.size() + 1);
+  SubRegIndices.emplace_back(Def, SubRegIndices.size() + 1, getHwModes());
   Idx = &SubRegIndices.back();
   return Idx;
 }
@@ -1379,12 +1385,13 @@ CodeGenRegBank::getCompositeSubRegIndex(CodeGenSubRegIndex *A,
   // None exists, synthesize one.
   std::string Name = A->getName() + "_then_" + B->getName();
   Comp = createSubRegIndex(Name, A->getNamespace());
-  A->addComposite(B, Comp);
+  A->addComposite(B, Comp, getHwModes());
   return Comp;
 }
 
 CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
-    const SmallVector<CodeGenSubRegIndex *, 8> &Parts) {
+    const SmallVector<CodeGenSubRegIndex *, 8> &Parts,
+    const CodeGenHwModes &CGH) {
   assert(Parts.size() > 1 && "Need two parts to concatenate");
 #ifndef NDEBUG
   for (CodeGenSubRegIndex *Idx : Parts) {
@@ -1399,28 +1406,47 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
 
   // None exists, synthesize one.
   std::string Name = Parts.front()->getName();
-  // Determine whether all parts are contiguous.
-  bool IsContinuous = true;
-  unsigned Size = Parts.front()->Size;
-  unsigned LastOffset = Parts.front()->Offset;
-  unsigned LastSize = Parts.front()->Size;
   const unsigned UnknownSize = (uint16_t)-1;
+
   for (unsigned i = 1, e = Parts.size(); i != e; ++i) {
     Name += '_';
     Name += Parts[i]->getName();
-    if (Size == UnknownSize || Parts[i]->Size == UnknownSize)
-      Size = UnknownSize;
-    else
-      Size += Parts[i]->Size;
-    if (LastSize == UnknownSize || Parts[i]->Offset != (LastOffset + LastSize))
-      IsContinuous = false;
-    LastOffset = Parts[i]->Offset;
-    LastSize = Parts[i]->Size;
   }
+
   Idx = createSubRegIndex(Name, Parts.front()->getNamespace());
-  Idx->Size = Size;
-  Idx->Offset = IsContinuous ? Parts.front()->Offset : -1;
   Idx->ConcatenationOf.assign(Parts.begin(), Parts.end());
+
+  unsigned NumModes = CGH.getNumModeIds();
+  for (unsigned M = 0; M < NumModes; ++M) {
+    const CodeGenSubRegIndex *Part = Parts.front();
+
+    // Determine whether all parts are contiguous.
+    bool IsContinuous = true;
+    const SubRegRange &FirstPartRange = Part->Range.get(M);
+    unsigned Size = FirstPartRange.Size;
+    unsigned LastOffset = FirstPartRange.Offset;
+    unsigned LastSize = FirstPartRange.Size;
+
+    for (unsigned i = 1, e = Parts.size(); i != e; ++i) {
+      Part = Parts[i];
+      Name += '_';
+      Name += Part->getName();
+
+      const SubRegRange &PartRange = Part->Range.get(M);
+      if (Size == UnknownSize || PartRange.Size == UnknownSize)
+        Size = UnknownSize;
+      else
+        Size += PartRange.Size;
+      if (LastSize == UnknownSize ||
+          PartRange.Offset != (LastOffset + LastSize))
+        IsContinuous = false;
+      LastOffset = PartRange.Offset;
+      LastSize = PartRange.Size;
+    }
+    unsigned Offset = IsContinuous ? FirstPartRange.Offset : -1;
+    Idx->Range.get(M) = SubRegRange(Size, Offset);
+  }
+
   return Idx;
 }
 
@@ -1504,7 +1530,8 @@ void CodeGenRegBank::computeComposites() {
         assert(Idx3 && "Sub-register doesn't have an index");
 
         // Conflicting composition? Emit a warning but allow it.
-        if (CodeGenSubRegIndex *Prev = Idx1->addComposite(Idx2, Idx3)) {
+        if (CodeGenSubRegIndex *Prev =
+                Idx1->addComposite(Idx2, Idx3, getHwModes())) {
           // If the composition was not user-defined, always emit a warning.
           if (!UserDefined.count({Idx1, Idx2}) ||
               agree(compose(Idx1, Idx2), SubRegAction.at(Idx3)))

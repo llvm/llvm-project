@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -533,9 +535,7 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual bool isTerminator(const MCInst &Inst) const {
-    return Analysis->isTerminator(Inst);
-  }
+  virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
     llvm_unreachable("not implemented");

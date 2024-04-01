@@ -2555,7 +2555,8 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
 
 /// Try to fold a 'not' shifted sign-bit with add/sub with constant operand into
 /// a shift and add with a different constant.
-static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldAddSubOfSignBit(SDNode *N, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
   assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Expecting add or sub");
 
@@ -2583,7 +2584,6 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
   // Eliminate the 'not' by adjusting the shift and add/sub constant:
   // add (srl (not X), 31), C --> add (sra X, 31), (C + 1)
   // sub C, (srl (not X), 31) --> add (srl X, 31), (C - 1)
-  SDLoc DL(N);
   if (SDValue NewC = DAG.FoldConstantArithmetic(
           IsAdd ? ISD::ADD : ISD::SUB, DL, VT,
           {ConstantOp, DAG.getConstant(1, DL, VT)})) {
@@ -2878,7 +2878,7 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
-  if (SDValue V = foldAddSubOfSignBit(N, DAG))
+  if (SDValue V = foldAddSubOfSignBit(N, DL, DAG))
     return V;
 
   // Try to match AVGFLOOR fixedwidth pattern
@@ -2887,8 +2887,11 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
 
   // fold (a+b) -> (a|b) iff a and b share no bits.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::OR, VT)) &&
-      DAG.haveNoCommonBitsSet(N0, N1))
-    return DAG.getNode(ISD::OR, DL, VT, N0, N1);
+      DAG.haveNoCommonBitsSet(N0, N1)) {
+    SDNodeFlags Flags;
+    Flags.setDisjoint(true);
+    return DAG.getNode(ISD::OR, DL, VT, N0, N1, Flags);
+  }
 
   // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
   if (N0.getOpcode() == ISD::VSCALE && N1.getOpcode() == ISD::VSCALE) {
@@ -3877,14 +3880,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DL, DAG))
     return V;
 
-  if (SDValue V = foldAddSubOfSignBit(N, DAG))
+  if (SDValue V = foldAddSubOfSignBit(N, DL, DAG))
     return V;
 
   // Try to match AVGCEIL fixedwidth pattern
   if (SDValue V = foldSubToAvg(N, DL))
     return V;
 
-  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
+  if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, DL))
     return V;
 
   if (SDValue V = foldSubToUSubSat(VT, N, DL))
@@ -3949,7 +3952,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if ((X0 == S0 && X1 == N1) || (X0 == N1 && X1 == S0))
         if (ConstantSDNode *C = isConstOrConstSplat(N1.getOperand(1)))
           if (C->getAPIntValue() == (BitWidth - 1))
-            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+            return DAG.getNode(ISD::ABS, DL, VT, S0);
     }
   }
 
@@ -9289,8 +9292,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
   // fold (a^b) -> (a|b) iff a and b share no bits.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::OR, VT)) &&
-      DAG.haveNoCommonBitsSet(N0, N1))
-    return DAG.getNode(ISD::OR, DL, VT, N0, N1);
+      DAG.haveNoCommonBitsSet(N0, N1)) {
+    SDNodeFlags Flags;
+    Flags.setDisjoint(true);
+    return DAG.getNode(ISD::OR, DL, VT, N0, N1, Flags);
+  }
 
   // look for 'add-like' folds:
   // XOR(N0,MIN_SIGNED_VALUE) == ADD(N0,MIN_SIGNED_VALUE)
@@ -13143,6 +13149,37 @@ tryToFoldExtOfMaskedLoad(SelectionDAG &DAG, const TargetLowering &TLI, EVT VT,
   return NewLoad;
 }
 
+// fold ([s|z]ext (atomic_load)) -> ([s|z]ext (truncate ([s|z]ext atomic_load)))
+static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
+                                        const TargetLowering &TLI, EVT VT,
+                                        SDValue N0,
+                                        ISD::LoadExtType ExtLoadType) {
+  auto *ALoad = dyn_cast<AtomicSDNode>(N0);
+  if (!ALoad || ALoad->getOpcode() != ISD::ATOMIC_LOAD)
+    return {};
+  EVT MemoryVT = ALoad->getMemoryVT();
+  if (!TLI.isAtomicLoadExtLegal(ExtLoadType, VT, MemoryVT))
+    return {};
+  // Can't fold into ALoad if it is already extending differently.
+  ISD::LoadExtType ALoadExtTy = ALoad->getExtensionType();
+  if ((ALoadExtTy == ISD::ZEXTLOAD && ExtLoadType == ISD::SEXTLOAD) ||
+      (ALoadExtTy == ISD::SEXTLOAD && ExtLoadType == ISD::ZEXTLOAD))
+    return {};
+
+  EVT OrigVT = ALoad->getValueType(0);
+  assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
+      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+      ALoad->getBasePtr(), ALoad->getMemOperand()));
+  NewALoad->setExtensionType(ExtLoadType);
+  DAG.ReplaceAllUsesOfValueWith(
+      SDValue(ALoad, 0),
+      DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
+  // Update the chain uses.
+  DAG.ReplaceAllUsesOfValueWith(SDValue(ALoad, 1), SDValue(NewALoad, 1));
+  return SDValue(NewALoad, 0);
+}
+
 static SDValue foldExtendedSignBitTest(SDNode *N, SelectionDAG &DAG,
                                        bool LegalOperations) {
   assert((N->getOpcode() == ISD::SIGN_EXTEND ||
@@ -13412,6 +13449,11 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   // Try to simplify (sext (sextload x)).
   if (SDValue foldedExt = tryToFoldExtOfExtload(
           DAG, *this, TLI, VT, LegalOperations, N, N0, ISD::SEXTLOAD))
+    return foldedExt;
+
+  // Try to simplify (sext (atomic_load x)).
+  if (SDValue foldedExt =
+          tryToFoldExtOfAtomicLoad(DAG, TLI, VT, N0, ISD::SEXTLOAD))
     return foldedExt;
 
   // fold (sext (and/or/xor (load x), cst)) ->
@@ -13724,6 +13766,11 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // Only on illegal but splittable vectors.
   if (SDValue ExtLoad = CombineExtLoad(N))
     return ExtLoad;
+
+  // Try to simplify (zext (atomic_load x)).
+  if (SDValue foldedExt =
+          tryToFoldExtOfAtomicLoad(DAG, TLI, VT, N0, ISD::ZEXTLOAD))
+    return foldedExt;
 
   // fold (zext (and/or/xor (load x), cst)) ->
   //      (and/or/xor (zextload x), (zext cst))

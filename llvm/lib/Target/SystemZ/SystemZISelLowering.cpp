@@ -293,6 +293,15 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
 
+  // Mark sign/zero extending atomic loads as legal, which will make
+  // DAGCombiner fold extensions into atomic loads if possible.
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
+                         {MVT::i8, MVT::i16, MVT::i32}, Legal);
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Legal);
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16,
+                         MVT::i8, Legal);
+
   // We can use the CC result of compare-and-swap to implement
   // the "success" result of ATOMIC_CMP_SWAP_WITH_SUCCESS.
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Custom);
@@ -6614,27 +6623,6 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
   return SDValue();
 }
 
-// Replace ALoad with a new ATOMIC_LOAD with a result that is extended to VT
-// per ETy.
-static SDValue extendAtomicLoad(AtomicSDNode *ALoad, EVT VT, SelectionDAG &DAG,
-                                ISD::LoadExtType ETy) {
-  if (VT.getSizeInBits() > 64)
-    return SDValue();
-  EVT OrigVT = ALoad->getValueType(0);
-  assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  EVT MemoryVT = ALoad->getMemoryVT();
-  auto *NewALoad = dyn_cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
-      ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ETy);
-  DAG.ReplaceAllUsesOfValueWith(
-      SDValue(ALoad, 0),
-      DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
-  // Update the chain uses.
-  DAG.ReplaceAllUsesOfValueWith(SDValue(ALoad, 1), SDValue(NewALoad, 1));
-  return SDValue(NewALoad, 0);
-}
-
 SDValue SystemZTargetLowering::combineZERO_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
   // Convert (zext (select_ccmask C1, C2)) into (select_ccmask C1', C2')
@@ -6680,12 +6668,6 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       }
     }
   }
-
-  // Fold into ATOMIC_LOAD unless it is already sign extending.
-  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
-    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
-        ALoad->getExtensionType() != ISD::SEXTLOAD)
-      return extendAtomicLoad(ALoad, VT, DAG, ISD::ZEXTLOAD);
 
   return SDValue();
 }
@@ -6738,12 +6720,6 @@ SDValue SystemZTargetLowering::combineSIGN_EXTEND(
       }
     }
   }
-
-  // Fold into ATOMIC_LOAD unless it is already zero extending.
-  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
-    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
-        ALoad->getExtensionType() != ISD::ZEXTLOAD)
-      return extendAtomicLoad(ALoad, VT, DAG, ISD::SEXTLOAD);
 
   return SDValue();
 }
@@ -8197,6 +8173,27 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
   MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 }
 
+MachineBasicBlock *
+SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const {
+  MachineFunction &MF = *BB->getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+  assert(TFL->hasReservedCallFrame(MF) &&
+         "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
+  (void)TFL;
+  // Get the MaxCallFrameSize value and erase MI since it serves no further
+  // purpose as the call frame is statically reserved in the prolog. Set
+  // AdjustsStack as MI is *not* mapped as a frame instruction.
+  uint32_t NumBytes = MI.getOperand(0).getImm();
+  if (NumBytes > MFI.getMaxCallFrameSize())
+    MFI.setMaxCallFrameSize(NumBytes);
+  MFI.setAdjustsStack(true);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
 MachineBasicBlock *
 SystemZTargetLowering::emitSelect(MachineInstr &MI,
@@ -9400,6 +9397,10 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
+  case SystemZ::ADJCALLSTACKDOWN:
+  case SystemZ::ADJCALLSTACKUP:
+    return emitAdjCallStack(MI, MBB);
+
   case SystemZ::Select32:
   case SystemZ::Select64:
   case SystemZ::Select128:

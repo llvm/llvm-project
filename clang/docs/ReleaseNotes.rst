@@ -188,6 +188,11 @@ Non-comprehensive list of changes in this release
 
 - Lambda expressions are now accepted in C++03 mode as an extension.
 
+- Added ``__builtin_clzg`` and ``__builtin_ctzg`` as type-generic alternatives
+  to ``__builtin_clz{,s,l,ll}`` and ``__builtin_ctz{,s,l,ll}`` respectively,
+  with support for any unsigned integer type. Like the previous builtins, these
+  new builtins are constexpr and may be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -299,6 +304,15 @@ Improvements to Clang's diagnostics
   annotated with the ``clang::always_destroy`` attribute.
   Fixes #GH68686, #GH86486
 
+- ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
+  flexible array members in a union or alone in a struct. Fixes GH#84565.
+
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
+- New ``-Wformat-signedness`` diagnostic that warn if the format string requires an
+  unsigned argument and the argument is signed and vice versa.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -348,6 +362,9 @@ Bug Fixes in This Version
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
+
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution. (#GH86769).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -449,6 +466,8 @@ Bug Fixes to C++ Support
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
+- Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -620,6 +639,10 @@ Sanitizers
   ``-fsanitize=undefined`` or ``-fsanitize=integer`` enabled may want to
   manually disable potentially noisy signed integer overflow checks with
   ``-fno-sanitize=signed-integer-overflow``
+
+- ``-fsanitize=cfi -fsanitize-cfi-cross-dso`` (cross-DSO CFI instrumentation)
+  now generates the ``__cfi_check`` function with proper target-specific
+  attributes, for example allowing unwind table generation.
 
 Python Binding Changes
 ----------------------

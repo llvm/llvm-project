@@ -17,7 +17,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <numeric>
 
 #define DEBUG_TYPE "cmov"
 

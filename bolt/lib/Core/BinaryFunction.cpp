@@ -12,7 +12,6 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
-#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -35,6 +34,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Regex.h"
@@ -3547,7 +3548,7 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   if (!isMultiEntry())
     return nullptr;
 
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   if (hasCFG()) {
     for (BinaryBasicBlock *BB : BasicBlocks) {
       MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
@@ -3580,7 +3581,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return 0;
 
   // Check all secondary entries available as either basic blocks or lables.
-  uint64_t NumEntries = 0;
+  uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);
     if (!EntrySymbol)
@@ -3589,7 +3590,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-  NumEntries = 0;
+  NumEntries = 1;
   for (const std::pair<const uint32_t, MCSymbol *> &KV : Labels) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(KV.second);
     if (!EntrySymbol)
@@ -4076,12 +4077,17 @@ BinaryFunction::~BinaryFunction() {
     delete BB;
 }
 
+void BinaryFunction::constructDomTree() {
+  BDT.reset(new BinaryDominatorTree);
+  BDT->recalculate(*this);
+}
+
 void BinaryFunction::calculateLoopInfo() {
+  if (!hasDomTree())
+    constructDomTree();
   // Discover loops.
-  BinaryDominatorTree DomTree;
-  DomTree.recalculate(*this);
   BLI.reset(new BinaryLoopInfo());
-  BLI->analyze(DomTree);
+  BLI->analyze(getDomTree());
 
   // Traverse discovered loops and add depth and profile information.
   std::stack<BinaryLoop *> St;
