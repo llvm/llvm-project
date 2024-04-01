@@ -1508,13 +1508,10 @@ public:
 
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
-    if (!ChosenTailFoldingStyle.first) {
-      assert(!ChosenTailFoldingStyle.second &&
-             "Chosen tail folding style must not be set.");
+    if (!ChosenTailFoldingStyle)
       return TailFoldingStyle::None;
-    }
-    return *(IVUpdateMayOverflow ? ChosenTailFoldingStyle.first
-                                 : ChosenTailFoldingStyle.second);
+    return IVUpdateMayOverflow ? ChosenTailFoldingStyle->first
+                               : ChosenTailFoldingStyle->second;
   }
 
   /// Selects and saves TailFoldingStyle for 2 options - if IV update may
@@ -1522,25 +1519,23 @@ public:
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
   void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
-    assert(!ChosenTailFoldingStyle.first && !ChosenTailFoldingStyle.second &&
-           "Tail folding must not be selected yet.");
+    assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
     if (!Legal->prepareToFoldTailByMasking()) {
-      ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-          TailFoldingStyle::None;
+      ChosenTailFoldingStyle =
+          std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
       return;
     }
 
     if (!ForceTailFoldingStyle.getNumOccurrences()) {
-      ChosenTailFoldingStyle.first =
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true);
-      ChosenTailFoldingStyle.second =
-          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false);
+      ChosenTailFoldingStyle = std::make_pair(
+          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
+          TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false));
       return;
     }
 
     // Set styles when forced.
-    ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-        ForceTailFoldingStyle;
+    ChosenTailFoldingStyle = std::make_pair(ForceTailFoldingStyle.getValue(),
+                                            ForceTailFoldingStyle.getValue());
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override forced styles if needed.
@@ -1558,8 +1553,9 @@ public:
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
       // in a generic way.
-      ChosenTailFoldingStyle.first = ChosenTailFoldingStyle.second =
-          TailFoldingStyle::DataWithoutLaneMask;
+      ChosenTailFoldingStyle =
+          std::make_pair(TailFoldingStyle::DataWithoutLaneMask,
+                         TailFoldingStyle::DataWithoutLaneMask);
       LLVM_DEBUG(
           dbgs()
           << "LV: Preference for VP intrinsics indicated. Will "
@@ -1740,7 +1736,7 @@ private:
 
   /// Control finally chosen tail folding style. The first element is used if
   /// the IV update may overflow, the second element - if it does not.
-  std::pair<std::optional<TailFoldingStyle>, std::optional<TailFoldingStyle>>
+  std::optional<std::pair<TailFoldingStyle, TailFoldingStyle>>
       ChosenTailFoldingStyle;
 
   /// A map holding scalar costs for different vectorization factors. The
@@ -9743,7 +9739,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   }
 
   // The scalar cost should only be 0 when vectorizing with a user specified VF/IC. In those cases, runtime checks should always be generated.
-  uint64_t ScalarC = *VF.ScalarCost.getValue();
+  double ScalarC = *VF.ScalarCost.getValue();
   if (ScalarC == 0)
     return true;
 
@@ -9770,7 +9766,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   //   RtC + VecC * (TC / VF) + EpiC <  ScalarC * TC
   //
   // Now we can compute the minimum required trip count TC as
-  //   VF * (RtC + EpiC) / (ScalarC * VF - VecC) < TC
+  //   (RtC + EpiC) / (ScalarC - (VecC / VF)) < TC
   //
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
@@ -9782,9 +9778,9 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
       AssumedMinimumVscale = *VScale;
     IntVF *= AssumedMinimumVscale;
   }
-  uint64_t RtC = *CheckCost.getValue();
-  uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
-  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
+  double VecCOverVF = double(*VF.Cost.getValue()) / IntVF;
+  double RtC = *CheckCost.getValue();
+  double MinTC1 = RtC / (ScalarC - VecCOverVF);
 
   // Second, compute a minimum iteration count so that the cost of the
   // runtime checks is only a fraction of the total scalar loop cost. This
@@ -9793,12 +9789,12 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // * TC. To bound the runtime check to be a fraction 1/X of the scalar
   // cost, compute
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
-  uint64_t MinTC2 = divideCeil(RtC * 10, ScalarC);
+  double MinTC2 = RtC * 10 / ScalarC;
 
   // Now pick the larger minimum. If it is not a multiple of VF and a scalar
   // epilogue is allowed, choose the next closest multiple of VF. This should
   // partly compensate for ignoring the epilogue cost.
-  uint64_t MinTC = std::max(MinTC1, MinTC2);
+  uint64_t MinTC = std::ceil(std::max(MinTC1, MinTC2));
   if (SEL == CM_ScalarEpilogueAllowed)
     MinTC = alignTo(MinTC, IntVF);
   VF.MinProfitableTripCount = ElementCount::getFixed(MinTC);

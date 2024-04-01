@@ -1216,7 +1216,7 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "= DERIVED-IV ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
-  getCanonicalIV()->printAsOperand(O, SlotTracker);
+  getOperand(1)->printAsOperand(O, SlotTracker);
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 }

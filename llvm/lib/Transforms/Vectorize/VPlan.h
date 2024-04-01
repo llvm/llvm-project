@@ -2572,18 +2572,13 @@ public:
 };
 
 /// A recipe for converting the canonical IV value to the corresponding value of
-/// an IV with different start and step values, using Start + CanonicalIV *
-/// Step.
+/// an IV with different start and step values, using Start + IV * Step.
 class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
   /// If not nullptr, the floating point induction binary operator. Must be set
   /// for floating point inductions.
   const FPMathOperator *FPBinOp;
-
-  VPCanonicalIVPHIRecipe *getCanonicalIV() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(1));
-  }
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
@@ -2594,16 +2589,16 @@ public:
             Start, CanonicalIV, Step) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
-      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp) {}
+                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
+                    VPValue *Step)
+      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, IV, Step}), Kind(Kind),
+        FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(),
-                                 getCanonicalIV(), getStepValue());
+    return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
+                                 getStepValue());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPDerivedIVSC)
