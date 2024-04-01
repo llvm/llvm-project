@@ -52,11 +52,58 @@ public:
   }
 
   bool visitInstruction(Instruction &I) { return false; }
+  bool visitAdd(BinaryOperator &BO);
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
 };
 
 } // end anonymous namespace
+
+/// InstCombine will canonicalize selects of binary ops where the identity is
+/// zero to zexts:
+///
+/// select c, (add x, 1), x -> add x, (zext c)
+///
+/// On RISC-V though, a zext of an i1 vector will be lowered as a vmv.v.i and a
+/// vmerge.vim:
+///
+///       vmv.v.i v12, 0
+///       vmerge.vim      v9, v12, 1, v0
+///       vadd.vv v8, v8, v9
+///
+/// Reverse this transform so that we pull the select outside of the binary op,
+/// which allows us to fold it into a masked op:
+///
+///       vadd.vi v8, v8, 1, v0.t
+bool RISCVCodeGenPrepare::visitAdd(BinaryOperator &BO) {
+  VectorType *Ty = dyn_cast<VectorType>(BO.getType());
+  if (!Ty)
+    return false;
+
+  Constant *Identity = ConstantExpr::getIdentity(&BO, BO.getType());
+  if (!Identity->isZeroValue())
+    return false;
+
+  using namespace PatternMatch;
+
+  Value *Mask, *RHS;
+  if (!match(&BO, m_c_BinOp(m_OneUse(m_ZExt(m_Value(Mask))), m_Value(RHS))))
+    return false;
+
+  if (!cast<VectorType>(Mask->getType())->getElementType()->isIntegerTy(1))
+    return false;
+
+  IRBuilder<> Builder(&BO);
+  Value *Splat = Builder.CreateVectorSplat(
+      Ty->getElementCount(), ConstantInt::get(Ty->getElementType(), 1));
+  Value *Add = Builder.CreateAdd(RHS, Splat);
+  Value *Select = Builder.CreateSelect(Mask, Add, RHS);
+
+  BO.replaceAllUsesWith(Select);
+  BO.eraseFromParent();
+
+  return true;
+}
 
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
 // but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill

@@ -49,8 +49,9 @@ define <vscale x 2 x i32> @i1_zext_add(<vscale x 2 x i1> %a, <vscale x 2 x i32> 
 ; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_add(
 ; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 2 x i32> [[B]], [[ZEXT]]
-; CHECK-NEXT:    ret <vscale x 2 x i32> [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i32> [[B]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[A]], <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
 ;
   %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
   %add = add <vscale x 2 x i32> %b, %zext

@@ -46,10 +46,8 @@ exit:
 define <vscale x 2 x i32> @i1_zext_add(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: i1_zext_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    ret
   %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
   %add = add <vscale x 2 x i32> %b, %zext

@@ -168,13 +168,14 @@ define <8 x i64> @vaaddu_vv_v8i64_floor(<8 x i64> %x, <8 x i64> %y) {
 define <8 x i1> @vaaddu_vv_v8i1_floor(<8 x i1> %x, <8 x i1> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i1_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v10, v9, 1, v0
+; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v9, 1, v0
-; CHECK-NEXT:    csrwi vxrm, 2
-; CHECK-NEXT:    vaaddu.vv v8, v10, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsrl.vi v8, v8, 1
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -421,13 +422,16 @@ define <8 x i64> @vaaddu_vv_v8i64_ceil(<8 x i64> %x, <8 x i64> %y) {
 define <8 x i1> @vaaddu_vv_v8i1_ceil(<8 x i1> %x, <8 x i1> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i1_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vmerge.vim v10, v9, 1, v0
+; CHECK-NEXT:    vmv1r.v v9, v0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v9, 1, v0
-; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vaaddu.vv v8, v10, v8
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
