@@ -1810,20 +1810,22 @@ module std_private_thread_thread               [system] {
 }
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
-module std_private_tuple_find_index       [system] { header "__tuple/find_index.h" }
-module std_private_tuple_make_tuple_types [system] { header "__tuple/make_tuple_types.h" }
-module std_private_tuple_pair_like        [system] {
-  header "__tuple/pair_like.h"
-  export std_private_tuple_tuple_like
+module std_private_tuple_find_index             [system] { header "__tuple/find_index.h" }
+module std_private_tuple_make_tuple_types       [system] { header "__tuple/make_tuple_types.h" }
+module std_private_tuple_tuple_like_no_subrange [system] {
+  header "__tuple/tuple_like_no_subrange.h"
 }
-module std_private_tuple_sfinae_helpers   [system] { header "__tuple/sfinae_helpers.h" }
-module std_private_tuple_tuple_element    [system] { header "__tuple/tuple_element.h" }
-module std_private_tuple_tuple_fwd        [system] { header "__fwd/tuple.h" }
-module std_private_tuple_tuple_indices    [system] { header "__tuple/tuple_indices.h" }
-module std_private_tuple_tuple_like       [system] { header "__tuple/tuple_like.h" }
-module std_private_tuple_tuple_like_ext   [system] { header "__tuple/tuple_like_ext.h" }
-module std_private_tuple_tuple_size       [system] { header "__tuple/tuple_size.h" }
-module std_private_tuple_tuple_types      [system] { header "__tuple/tuple_types.h" }
+module std_private_tuple_sfinae_helpers         [system] { header "__tuple/sfinae_helpers.h" }
+module std_private_tuple_tuple_element          [system] { header "__tuple/tuple_element.h" }
+module std_private_tuple_tuple_fwd              [system] { header "__fwd/tuple.h" }
+module std_private_tuple_tuple_indices          [system] { header "__tuple/tuple_indices.h" }
+module std_private_tuple_tuple_like             [system] {
+  header "__tuple/tuple_like.h"
+  export *
+}
+module std_private_tuple_tuple_like_ext         [system] { header "__tuple/tuple_like_ext.h" }
+module std_private_tuple_tuple_size             [system] { header "__tuple/tuple_size.h" }
+module std_private_tuple_tuple_types            [system] { header "__tuple/tuple_types.h" }
 
 module std_private_type_traits_add_const                                 [system] { header "__type_traits/add_const.h" }
 module std_private_type_traits_add_cv                                    [system] { header "__type_traits/add_cv.h" }

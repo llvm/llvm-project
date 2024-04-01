@@ -18,10 +18,12 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/operation_traits.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/unreachable.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
