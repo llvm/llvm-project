@@ -12,6 +12,7 @@
 #include <__assert>
 #include <__availability>
 #include <__config>
+#include <__fwd/pair.h>
 #include <__memory_resource/memory_resource.h>
 #include <__utility/exception_guard.h>
 #include <cstddef>
