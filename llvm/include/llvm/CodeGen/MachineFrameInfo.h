@@ -251,7 +251,7 @@ private:
   /// targets, this value is only used when generating debug info (via
   /// TargetRegisterInfo::getFrameIndexReference); when generating code, the
   /// corresponding adjustments are performed directly.
-  int64_t OffsetAdjustment = 0;
+  int OffsetAdjustment = 0;
 
   /// The prolog/epilog code inserter may process objects that require greater
   /// alignment than the default alignment the target provides.
@@ -280,7 +280,7 @@ private:
   /// setup/destroy pseudo instructions (as defined in the TargetFrameInfo
   /// class).  This information is important for frame pointer elimination.
   /// It is only valid during and after prolog/epilog code insertion.
-  uint64_t MaxCallFrameSize = ~UINT64_C(0);
+  unsigned MaxCallFrameSize = ~0u;
 
   /// The number of bytes of callee saved registers that the target wants to
   /// report for the current function in the CodeView S_FRAMEPROC record.
@@ -591,10 +591,10 @@ public:
   uint64_t estimateStackSize(const MachineFunction &MF) const;
 
   /// Return the correction for frame offsets.
-  int64_t getOffsetAdjustment() const { return OffsetAdjustment; }
+  int getOffsetAdjustment() const { return OffsetAdjustment; }
 
   /// Set the correction for frame offsets.
-  void setOffsetAdjustment(int64_t Adj) { OffsetAdjustment = Adj; }
+  void setOffsetAdjustment(int Adj) { OffsetAdjustment = Adj; }
 
   /// Return the alignment in bytes that this function must be aligned to,
   /// which is greater than the default stack alignment provided by the target.
@@ -655,7 +655,7 @@ public:
   /// CallFrameSetup/Destroy pseudo instructions are used by the target, and
   /// then only during or after prolog/epilog code insertion.
   ///
-  uint64_t getMaxCallFrameSize() const {
+  unsigned getMaxCallFrameSize() const {
     // TODO: Enable this assert when targets are fixed.
     //assert(isMaxCallFrameSizeComputed() && "MaxCallFrameSize not computed yet");
     if (!isMaxCallFrameSizeComputed())
@@ -663,9 +663,9 @@ public:
     return MaxCallFrameSize;
   }
   bool isMaxCallFrameSizeComputed() const {
-    return MaxCallFrameSize != ~UINT64_C(0);
+    return MaxCallFrameSize != ~0u;
   }
-  void setMaxCallFrameSize(uint64_t S) { MaxCallFrameSize = S; }
+  void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
 
   /// Returns how many bytes of callee-saved registers the target pushed in the
   /// prologue. Only used for debug info.

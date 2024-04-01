@@ -5541,6 +5541,14 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
                                   checkDoubleVector);
 }
 
+bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasUnsignedIntegerRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                  checkAllUnsignedTypes);
+}
+
 void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                 QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
@@ -5628,12 +5636,22 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builitns will occur elsewhere.
+  case Builtin::BI__builtin_elementwise_bitreverse: {
+    if (CheckUnsignedIntRepresentation(this, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
-  case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_exp:
+  case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:
   case Builtin::BI__builtin_elementwise_log10:
   case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_roundeven:
+  case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_trunc: {
     if (CheckFloatOrHalfRepresentations(this, TheCall))
@@ -12428,6 +12446,19 @@ isArithmeticArgumentPromotion(Sema &S, const ImplicitCastExpr *ICE) {
          S.Context.getFloatingTypeOrder(From, To) < 0;
 }
 
+static analyze_format_string::ArgType::MatchKind
+handleFormatSignedness(analyze_format_string::ArgType::MatchKind Match,
+                       DiagnosticsEngine &Diags, SourceLocation Loc) {
+  if (Match == analyze_format_string::ArgType::NoMatchSignedness) {
+    Match =
+        Diags.isIgnored(
+            diag::warn_format_conversion_argument_type_mismatch_signedness, Loc)
+            ? analyze_format_string::ArgType::Match
+            : analyze_format_string::ArgType::NoMatch;
+  }
+  return Match;
+}
+
 bool
 CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
                                     const char *StartSpecifier,
@@ -12471,6 +12502,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
   ArgType::MatchKind ImplicitMatch = ArgType::NoMatch;
   ArgType::MatchKind Match = AT.matchesType(S.Context, ExprTy);
+  ArgType::MatchKind OrigMatch = Match;
+
+  Match = handleFormatSignedness(Match, S.getDiagnostics(), E->getExprLoc());
   if (Match == ArgType::Match)
     return true;
 
@@ -12494,6 +12528,14 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           ICE->getType() == S.Context.UnsignedIntTy) {
         // All further checking is done on the subexpression
         ImplicitMatch = AT.matchesType(S.Context, ExprTy);
+        if (OrigMatch == ArgType::NoMatchSignedness &&
+            ImplicitMatch != ArgType::NoMatchSignedness)
+          // If the original match was a signedness match this match on the
+          // implicit cast type also need to be signedness match otherwise we
+          // might introduce new unexpected warnings from -Wformat-signedness.
+          return true;
+        ImplicitMatch = handleFormatSignedness(
+            ImplicitMatch, S.getDiagnostics(), E->getExprLoc());
         if (ImplicitMatch == ArgType::Match)
           return true;
       }
@@ -12615,6 +12657,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
+      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
@@ -12650,8 +12693,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
       SmallVector<FixItHint,4> Hints;
-      if (AT.matchesType(S.Context, IntendedTy) != ArgType::Match ||
-          ShouldNotPrintDirectly)
+      ArgType::MatchKind IntendedMatch = AT.matchesType(S.Context, IntendedTy);
+      IntendedMatch = handleFormatSignedness(IntendedMatch, S.getDiagnostics(),
+                                             E->getExprLoc());
+      if ((IntendedMatch != ArgType::Match) || ShouldNotPrintDirectly)
         Hints.push_back(FixItHint::CreateReplacement(SpecRange, os.str()));
 
       if (const CStyleCastExpr *CCast = dyn_cast<CStyleCastExpr>(E)) {
@@ -12720,6 +12765,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
+      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
@@ -12931,6 +12977,7 @@ bool CheckScanfHandler::HandleScanfSpecifier(
 
   analyze_format_string::ArgType::MatchKind Match =
       AT.matchesType(S.Context, Ex->getType());
+  Match = handleFormatSignedness(Match, S.getDiagnostics(), Ex->getExprLoc());
   bool Pedantic = Match == analyze_format_string::ArgType::NoMatchPedantic;
   if (Match == analyze_format_string::ArgType::Match)
     return true;

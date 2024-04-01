@@ -1219,6 +1219,15 @@ ASTNodeImporter::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 ExpectedType
+ASTNodeImporter::VisitArrayParameterType(const ArrayParameterType *T) {
+  ExpectedType ToArrayTypeOrErr = VisitConstantArrayType(T);
+  if (!ToArrayTypeOrErr)
+    return ToArrayTypeOrErr.takeError();
+
+  return Importer.getToContext().getArrayParameterType(*ToArrayTypeOrErr);
+}
+
+ExpectedType
 ASTNodeImporter::VisitIncompleteArrayType(const IncompleteArrayType *T) {
   ExpectedType ToElementTypeOrErr = import(T->getElementType());
   if (!ToElementTypeOrErr)

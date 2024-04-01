@@ -88,8 +88,8 @@ List<ResultTy> makeList(ContainerTy &&container, FunctionTy &&func) {
   return v;
 }
 
-inline ObjectList makeList(const parser::OmpObjectList &objects,
-                           semantics::SemanticsContext &semaCtx) {
+inline ObjectList makeObjects(const parser::OmpObjectList &objects,
+                              semantics::SemanticsContext &semaCtx) {
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
@@ -256,8 +256,8 @@ Clause makeClause(llvm::omp::Clause id, Specific &&specific,
 Clause makeClause(const Fortran::parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx);
 
-List<Clause> makeList(const parser::OmpClauseList &clauses,
-                      semantics::SemanticsContext &semaCtx);
+List<Clause> makeClauses(const parser::OmpClauseList &clauses,
+                         semantics::SemanticsContext &semaCtx);
 } // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_CLAUSES_H

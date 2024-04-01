@@ -1169,6 +1169,42 @@ getFieldsForInitListExpr(const InitListExpr *InitList) {
   return Fields;
 }
 
+RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
+  auto *RD = InitList->getType()->getAsCXXRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
+  ArrayRef<Expr *> Inits = InitList->inits();
+
+  // Unions initialized with an empty initializer list need special treatment.
+  // For structs/classes initialized with an empty initializer list, Clang
+  // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
+  // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
+  SmallVector<Expr *> InitsForUnion;
+  if (InitList->getType()->isUnionType() && Inits.empty()) {
+    assert(Fields.size() == 1);
+    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
+    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+    Inits = InitsForUnion;
+  }
+
+  size_t InitIdx = 0;
+
+  assert(Fields.size() + RD->getNumBases() == Inits.size());
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    BaseInits.emplace_back(&Base, Init);
+  }
+
+  assert(Fields.size() == Inits.size() - InitIdx);
+  for (const FieldDecl *Field : Fields) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    FieldInits.emplace_back(Field, Init);
+  }
+}
+
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {
   auto &NewVal = Env.create<RecordValue>(Loc);
   Env.setValue(Loc, NewVal);

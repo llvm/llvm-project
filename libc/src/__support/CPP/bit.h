@@ -14,14 +14,13 @@
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
 #include "src/__support/macros/sanitizer.h"
 
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE::cpp {
 
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
@@ -36,20 +35,20 @@ LIBC_INLINE constexpr cpp::enable_if_t<
     To>
 bit_cast(const From &from) {
   MSAN_UNPOISON(&from, sizeof(From));
-#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#if __has_builtin(__builtin_bit_cast)
   return __builtin_bit_cast(To, from);
 #else
   To to;
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
-#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if __has_builtin(__builtin_memcpy_inline)
   __builtin_memcpy_inline(dst, src, sizeof(To));
 #else
   for (unsigned i = 0; i < sizeof(To); ++i)
     dst[i] = src[i];
-#endif // LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#endif // __has_builtin(__builtin_memcpy_inline)
   return to;
-#endif // LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#endif // __has_builtin(__builtin_bit_cast)
 }
 
 template <typename T>
@@ -94,7 +93,7 @@ countr_zero(T value) {
   }
   return zero_bits;
 }
-#if LIBC_HAS_BUILTIN(__builtin_ctzs)
+#if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
 #endif
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
@@ -124,7 +123,7 @@ countl_zero(T value) {
   }
   return zero_bits;
 }
-#if LIBC_HAS_BUILTIN(__builtin_clzs)
+#if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
 #endif
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
