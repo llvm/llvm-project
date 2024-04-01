@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestingSupport/SubsystemRAII.h"
 #include "gtest/gtest.h"
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
@@ -31,15 +32,14 @@ using namespace lldb_private;
   } else {                                                                     \
   }
 
-struct TestSwiftASTContext : public testing::Test {
-  static void SetUpTestCase() {
-    FileSystem::Initialize();
-    HostInfo::Initialize();  }
+class TestSwiftASTContext : public testing::Test {
+public:
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+};
 
-  static void TearDownTestCase() {
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
+class ClangArgs : public testing::Test {
+public:
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
 };
 
 struct SwiftASTContextTester : public SwiftASTContext {
@@ -231,7 +231,7 @@ const std::vector<std::string> uniqued_flags = {
 };
 } // namespace
 
-TEST(ClangArgs, UniquingCollisionWithExistingFlags) {
+TEST_F(ClangArgs, UniquingCollisionWithExistingFlags) {
   const std::vector<std::string> source = duplicated_flags;
   std::vector<std::string> dest = uniqued_flags;
   SwiftASTContext::AddExtraClangArgs(source, dest);
@@ -239,7 +239,7 @@ TEST(ClangArgs, UniquingCollisionWithExistingFlags) {
   EXPECT_EQ(dest, uniqued_flags);
 }
 
-TEST(ClangArgs, UniquingCollisionWithAddedFlags) {
+TEST_F(ClangArgs, UniquingCollisionWithAddedFlags) {
   const std::vector<std::string> source = duplicated_flags;
   std::vector<std::string> dest;
   SwiftASTContext::AddExtraClangArgs(source, dest);
@@ -247,7 +247,7 @@ TEST(ClangArgs, UniquingCollisionWithAddedFlags) {
   EXPECT_EQ(dest, uniqued_flags);
 }
 
-TEST(ClangArgs, DoubleDash) {
+TEST_F(ClangArgs, DoubleDash) {
   // -v with all currently ignored arguments following.
   const std::vector<std::string> source{"-v", "--", "-Werror", ""};
   std::vector<std::string> dest;
