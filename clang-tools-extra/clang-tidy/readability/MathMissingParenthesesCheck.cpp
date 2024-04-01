@@ -17,8 +17,9 @@ namespace clang::tidy::readability {
 
 void MathMissingParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(binaryOperator(unless(hasParent(binaryOperator())),
-                                    unless(allOf(hasOperatorName("&&"),
-                                                 hasOperatorName("||"))),
+                                    unless(isAssignmentOperator()),
+                                    unless(isComparisonOperator()),
+                                    unless(hasAnyOperatorName("&&", "||")),
                                     hasDescendant(binaryOperator()))
                          .bind("binOp"),
                      this);
@@ -45,34 +46,40 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static bool addParantheses(
-    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
-    std::vector<
-        std::pair<clang::SourceRange, std::pair<const clang::BinaryOperator *,
-                                                const clang::BinaryOperator *>>>
-        &Insertions,
-    const clang::SourceManager &SM, const clang::LangOptions &LangOpts) {
-  bool NeedToDiagnose = false;
+static void addParantheses(const BinaryOperator *BinOp,
+                           const BinaryOperator *ParentBinOp,
+                           ClangTidyCheck *Check,
+                           const clang::SourceManager &SM,
+                           const clang::LangOptions &LangOpts) {
   if (!BinOp)
-    return NeedToDiagnose;
+    return;
 
-  if (ParentBinOp != nullptr &&
-      getPrecedence(BinOp) != getPrecedence(ParentBinOp)) {
-    NeedToDiagnose = true;
+  int Precedence1 = getPrecedence(BinOp);
+  int Precedence2 = getPrecedence(ParentBinOp);
+
+  if (ParentBinOp != nullptr && Precedence1 != Precedence2) {
     const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
-    clang::SourceLocation EndLoc =
+    const clang::SourceLocation EndLoc =
         clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
-    Insertions.push_back(
-        {clang::SourceRange(StartLoc, EndLoc), {BinOp, ParentBinOp}});
+
+    auto Diag =
+        Check->diag(StartLoc,
+                    "'%0' has higher precedence than '%1'; add parentheses to "
+                    "explicitly specify the order of operations")
+        << (Precedence1 > Precedence2 ? BinOp->getOpcodeStr()
+                                      : ParentBinOp->getOpcodeStr())
+        << (Precedence1 > Precedence2 ? ParentBinOp->getOpcodeStr()
+                                      : BinOp->getOpcodeStr());
+
+    Diag << FixItHint::CreateInsertion(StartLoc, "(");
+    Diag << FixItHint::CreateInsertion(EndLoc, ")");
+    Diag << SourceRange(StartLoc, EndLoc);
   }
 
-  NeedToDiagnose |= addParantheses(
-      dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()), BinOp,
-      Insertions, SM, LangOpts);
-  NeedToDiagnose |= addParantheses(
-      dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()), BinOp,
-      Insertions, SM, LangOpts);
-  return NeedToDiagnose;
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
+                 BinOp, Check, SM, LangOpts);
+  addParantheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
+                 BinOp, Check, SM, LangOpts);
 }
 
 void MathMissingParenthesesCheck::check(
@@ -82,31 +89,9 @@ void MathMissingParenthesesCheck::check(
       std::pair<clang::SourceRange, std::pair<const clang::BinaryOperator *,
                                               const clang::BinaryOperator *>>>
       Insertions;
-  const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
   const SourceManager &SM = *Result.SourceManager;
   const clang::LangOptions &LO = Result.Context->getLangOpts();
-
-  if (addParantheses(BinOp, nullptr, Insertions, SM, LO)) {
-    for (const auto &Insertion : Insertions) {
-      const clang::BinaryOperator *BinOp1 = Insertion.second.first;
-      const clang::BinaryOperator *BinOp2 = Insertion.second.second;
-
-      int Precedence1 = getPrecedence(BinOp1);
-      int Precedence2 = getPrecedence(BinOp2);
-
-      auto Diag = diag(Insertion.first.getBegin(),
-                       "'%0' has higher precedence than '%1'; add parentheses "
-                       "to make the precedence of operations explicit")
-                  << (Precedence1 > Precedence2 ? BinOp1->getOpcodeStr()
-                                                : BinOp2->getOpcodeStr())
-                  << (Precedence1 > Precedence2 ? BinOp2->getOpcodeStr()
-                                                : BinOp1->getOpcodeStr());
-
-      Diag << FixItHint::CreateInsertion(Insertion.first.getBegin(), "(");
-      Diag << FixItHint::CreateInsertion(Insertion.first.getEnd(), ")");
-      Diag << Insertion.first;
-    }
-  }
+  addParantheses(BinOp, nullptr, this, SM, LO);
 }
 
 } // namespace clang::tidy::readability

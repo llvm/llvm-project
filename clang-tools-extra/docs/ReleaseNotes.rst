@@ -123,17 +123,17 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
-- New :doc:`readability-use-std-min-max
-  <clang-tidy/checks/readability/use-std-min-max>` check.
-
-  Replaces certain conditional statements with equivalent calls to
-  ``std::min`` or ``std::max``.
-
 - New :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check.
 
   Check for missing parentheses in mathematical expressions that involve
   operators of different priorities.
+
+- New :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check.
+
+  Replaces certain conditional statements with equivalent calls to
+  ``std::min`` or ``std::max``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
