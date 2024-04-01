@@ -134,6 +134,12 @@ public:
     mpfr_set(value, other.value, mpfr_rounding);
   }
 
+  MPFRNumber(const MPFRNumber &other, unsigned int precision)
+      : mpfr_precision(precision), mpfr_rounding(other.mpfr_rounding) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set(value, other.value, mpfr_rounding);
+  }
+
   ~MPFRNumber() { mpfr_clear(value); }
 
   MPFRNumber &operator=(const MPFRNumber &rhs) {
@@ -229,10 +235,28 @@ public:
     return result;
   }
 
-  MPFRNumber exp2m1() const {
+  MPFRNumber
+  exp2m1([[maybe_unused]] const MPFRNumber &underflow_rndz_fallback) const {
+    // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
     MPFRNumber result(*this);
     mpfr_exp2m1(result.value, value, mpfr_rounding);
     return result;
+#else
+    MPFRNumber result(*this, mpfr_precision * 8);
+    mpfr_exp2(result.value, value, mpfr_rounding);
+
+    if (mpfr_underflow_p()) {
+      mpfr_clear_underflow();
+
+      if (mpfr_rounding == MPFR_RNDZ)
+        return underflow_rndz_fallback;
+    }
+
+    mpfr_sub_ui(result.value, result.value, 1, mpfr_rounding);
+    return result;
+#endif
   }
 
   MPFRNumber exp10() const {
@@ -576,8 +600,15 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp();
   case Operation::Exp2:
     return mpfrInput.exp2();
-  case Operation::Exp2m1:
-    return mpfrInput.exp2m1();
+  case Operation::Exp2m1: {
+    constexpr InputType UNDERFLOW_RNDZ_FALLBACK =
+        FPBits<InputType>::create_value(Sign::NEG,
+                                        -1 + FPBits<InputType>::EXP_BIAS,
+                                        FPBits<InputType>::SIG_MASK)
+            .get_val();
+    MPFRNumber underflow_rndz_fallback(UNDERFLOW_RNDZ_FALLBACK);
+    return mpfrInput.exp2m1(underflow_rndz_fallback);
+  }
   case Operation::Exp10:
     return mpfrInput.exp10();
   case Operation::Expm1:
