@@ -1317,6 +1317,9 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
         assert(getResults().size() == 1);
         return getResults().front();
      }
+     bool hasSingleResult() {
+        return getResults().size() == 1;
+     }
   }];
 
   let assemblyFormat = [{
