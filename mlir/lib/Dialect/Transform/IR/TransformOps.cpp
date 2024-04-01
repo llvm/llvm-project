@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -2627,14 +2628,26 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
   if (getName().has_value())
     llvm::outs() << *getName() << " ";
 
+  OpPrintingFlags printFlags;
+  if (getAssumeVerified().value_or(false))
+    printFlags.assumeVerified();
+  if (getUseLocalScope().value_or(false))
+    printFlags.useLocalScope();
+  if (getSkipRegions().value_or(false))
+    printFlags.skipRegions();
+
   if (!getTarget()) {
-    llvm::outs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    llvm::outs() << "top-level ]]]\n";
+    state.getTopLevel()->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
     return DiagnosedSilenceableFailure::success();
   }
 
   llvm::outs() << "]]]\n";
-  for (Operation *target : state.getPayloadOps(getTarget()))
-    llvm::outs() << *target << "\n";
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    target->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
+  }
 
   return DiagnosedSilenceableFailure::success();
 }
