@@ -487,20 +487,3 @@ define void @dse_strncpy_test6(ptr noalias %out1, ptr noalias %out2, ptr noalias
   %call = tail call ptr @strncpy(ptr %out2, ptr %in, i64 100)
   ret void
 }
-
-define i32 @test_strcat_with_allow_check(ptr %src) {
-; CHECK-LABEL: @test_strcat_with_allow_check(
-; CHECK-NEXT:    [[ALLOW1:%.*]] = call i1 @llvm.allow.runtime.check(metadata !"test_check")
-; CHECK-NEXT:    [[ALLOW2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 7)
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr [[B:%.*]], i8 44, i64 16, i1 false)
-; CHECK-NEXT:    [[RET:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    ret i32 [[RET]]
-;
-  tail call void @llvm.memset.p0.i64(ptr %src, i8 42, i64 16, i1 false)
-  %allow1 = call i1 @llvm.allow.runtime.check(metadata !"test_check")
-  tail call void @llvm.memset.p0.i64(ptr %src, i8 43, i64 16, i1 false)
-  %allow2 = call i1 @llvm.allow.ubsan.check(i8 7)
-  tail call void @llvm.memset.p0.i64(ptr %src, i8 44, i64 16, i1 false)
-  %ret = load i32, ptr %src, align 4
-  ret i32 %ret
-}

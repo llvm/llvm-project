@@ -64,9 +64,14 @@ def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 // GPR sizes change with HwMode.
-// FIXME: Support HwMode in SubRegIndex?
-def sub_gpr_even : SubRegIndex<-1>;
-def sub_gpr_odd  : SubRegIndex<-1, -1>;
+def sub_gpr_even : SubRegIndex<32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32>, SubRegRange<64>]>;
+}
+def sub_gpr_odd  : SubRegIndex<32, 32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+}
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -573,7 +578,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
 def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
