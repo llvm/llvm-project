@@ -1258,10 +1258,10 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
       msg = "CIE/FDE too small";
       break;
     }
-    uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
+    uint64_t size = endian::read32<ELFT::Endianness>(d.data());
     if (size == 0) // ZERO terminator
       break;
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(d.data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(d.data() + 4);
     size += 4;
     if (LLVM_UNLIKELY(size > d.size())) {
       // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,

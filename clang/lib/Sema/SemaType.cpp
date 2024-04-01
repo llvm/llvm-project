@@ -138,7 +138,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
-  case ParsedAttr::AT_PreserveNone
+  case ParsedAttr::AT_PreserveNone:                                            \
+  case ParsedAttr::AT_RISCVVectorCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -6504,6 +6505,9 @@ namespace {
     void VisitDecayedTypeLoc(DecayedTypeLoc TL) {
       llvm_unreachable("decayed type locs not expected here!");
     }
+    void VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
+      llvm_unreachable("array parameter type locs not expected here!");
+    }
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
       fillAttributedTypeLoc(TL, State);
@@ -7939,6 +7943,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveNone:
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVectorCC:
+    return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }

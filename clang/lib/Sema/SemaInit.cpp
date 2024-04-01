@@ -2329,11 +2329,11 @@ void InitListChecker::CheckStructUnionTypes(
       break;
     }
 
-    // We've already initialized a member of a union. We're done.
+    // We've already initialized a member of a union. We can stop entirely.
     if (InitializedSomething && RD->isUnion())
-      break;
+      return;
 
-    // If we've hit the flexible array member at the end, we're done.
+    // Stop if we've hit a flexible array member.
     if (Field->getType()->isIncompleteArrayType())
       break;
 
@@ -2456,6 +2456,11 @@ void InitListChecker::CheckStructUnionTypes(
   else
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
+
+  if (RD->isUnion() && StructuredList) {
+    // Initialize the first field within the union.
+    StructuredList->setInitializedFieldInUnion(*Field);
+  }
 }
 
 /// Expand a field designator that refers to a member of an
@@ -6264,7 +6269,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //       initializer is a string literal, see 8.5.2.
   //     - Otherwise, if the destination type is an array, the program is
   //       ill-formed.
-  if (const ArrayType *DestAT = Context.getAsArrayType(DestType)) {
+  //     - Except in HLSL, where non-decaying array parameters behave like
+  //       non-array types for initialization.
+  if (DestType->isArrayType() && !DestType->isArrayParameterType()) {
+    const ArrayType *DestAT = Context.getAsArrayType(DestType);
     if (Initializer && isa<VariableArrayType>(DestAT)) {
       SetFailed(FK_VariableLengthArrayHasInitializer);
       return;

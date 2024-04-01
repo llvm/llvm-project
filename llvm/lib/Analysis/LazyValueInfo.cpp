@@ -1069,14 +1069,14 @@ static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
   // Handle range checking idiom produced by InstCombine. We will subtract the
   // offset from the allowed range for RHS in this case.
   const APInt *C;
-  if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
+  if (match(LHS, m_AddLike(m_Specific(Val), m_APInt(C)))) {
     Offset = *C;
     return true;
   }
 
   // Handle the symmetric case. This appears in saturation patterns like
   // (x == 16) ? 16 : (x + 1).
-  if (match(Val, m_Add(m_Specific(LHS), m_APInt(C)))) {
+  if (match(Val, m_AddLike(m_Specific(LHS), m_APInt(C)))) {
     Offset = -*C;
     return true;
   }
