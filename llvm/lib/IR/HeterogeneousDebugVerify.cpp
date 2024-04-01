@@ -144,10 +144,15 @@ namespace llvm {
 
 HeterogeneousDebugVerify::HeterogeneousDebugVerify(CodeGenOptLevel OptLevel)
     : OptLevel(OptLevel) {}
+
 PreservedAnalyses HeterogeneousDebugVerify::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
-  (void)maybeStrip(M, OptLevel, /*IsNPM=*/true);
-  return PreservedAnalyses::all();
+  if (!maybeStrip(M, OptLevel, /*IsNPM=*/true))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 } // namespace llvm
