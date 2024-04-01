@@ -3263,14 +3263,10 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   // are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
   if (!Top.HazardRec) {
-    Top.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   if (!Bot.HazardRec) {
-    Bot.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
@@ -3877,14 +3873,10 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   // or are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
   if (!Top.HazardRec) {
-    Top.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
   if (!Bot.HazardRec) {
-    Bot.HazardRec =
-        DAG->MF.getSubtarget().getInstrInfo()->CreateTargetMIHazardRecognizer(
-            Itin, DAG);
+    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
   }
 }
 
