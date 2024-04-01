@@ -516,6 +516,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     TargetTriple = A->getValue();
 
   llvm::Triple Target(llvm::Triple::normalize(TargetTriple));
+  Target.setOrigin(TargetTriple);
 
   // GNU/Hurd's triples should have been -hurd-gnu*, but were historically made
   // -gnu* only, and we can not change this, so we have to detect that case as

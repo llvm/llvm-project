@@ -755,6 +755,12 @@ std::optional<std::string>
 ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   auto getPathForTriple =
       [&](const llvm::Triple &Triple) -> std::optional<std::string> {
+    if (!Triple.getOrigin().empty()) {
+      SmallString<128> Po(BaseDir);
+      llvm::sys::path::append(Po, Triple.getOrigin());
+      if (getVFS().exists(Po))
+        return std::string(Po);
+    }
     SmallString<128> P(BaseDir);
     llvm::sys::path::append(P, Triple.str());
     if (getVFS().exists(P))

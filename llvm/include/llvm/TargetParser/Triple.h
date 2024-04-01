@@ -298,6 +298,8 @@ public:
 private:
   std::string Data;
 
+  StringRef Origin = StringRef();
+
   /// The parsed arch type.
   ArchType Arch{};
 
@@ -424,6 +426,8 @@ public:
   const std::string &str() const { return Data; }
 
   const std::string &getTriple() const { return Data; }
+
+  const StringRef getOrigin() const { return Origin; }
 
   /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
@@ -1057,6 +1061,8 @@ public:
   /// @}
   /// @name Mutators
   /// @{
+
+  void setOrigin(StringRef Orig) { Origin = Orig; };
 
   /// Set the architecture (first) component of the triple to a known type.
   void setArch(ArchType Kind, SubArchType SubArch = NoSubArch);
