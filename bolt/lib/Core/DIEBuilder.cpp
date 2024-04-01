@@ -22,7 +22,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
 
 #include <algorithm>
