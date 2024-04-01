@@ -607,3 +607,44 @@ declare !dbg !1 void @declaration()
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+; // -----
+
+; Ensure that repeated occurence of recursive subtree does not result in duplicate MLIR entries.
+
+; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_SELF]]>
+; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
+
+; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
+
+; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]
+; CHECK-DAG: #[[B_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]
+
+; CHECK: #llvm.di_subprogram<{{.*}}scope = #[[A_OUTER]]
+
+
+define void @class_field(ptr %arg1) !dbg !18 {
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!7, !8}
+
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: !3, file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "B:B1", file: !2, baseType: !5)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "B:B2", file: !2, baseType: !5)
+!9 = !{!7, !8}
+
+!18 = distinct !DISubprogram(name: "A", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
