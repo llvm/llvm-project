@@ -506,6 +506,14 @@ class TypeInlayHintLabelPartBuilder
     addLabel(">");
   }
 
+  void maybeAddQualifiers() {
+    auto Quals = CurrentType.split().Quals;
+    if (!Quals.empty()) {
+      addLabel(Quals.getAsString());
+      addLabel(" ");
+    }
+  }
+
 public:
   TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
                                 const PrintingPolicy &PP,
@@ -540,12 +548,14 @@ public:
   void VisitAutoType(const AutoType *AT) {
     if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
       return;
+    maybeAddQualifiers();
     CurrentTypeRAII Guard(*this, AT->getDeducedType(),
                           ShouldAddLinksToTagTypes);
     return Visit(AT->getDeducedType().getTypePtr());
   }
 
   void VisitElaboratedType(const ElaboratedType *ET) {
+    maybeAddQualifiers();
     if (auto *NNS = ET->getQualifier()) {
       switch (NNS->getKind()) {
       case NestedNameSpecifier::Identifier:
@@ -574,7 +584,26 @@ public:
     return Visit(ET->getNamedType().getTypePtr());
   }
 
+  void VisitReferenceType(const ReferenceType *RT) {
+    maybeAddQualifiers();
+    CurrentTypeRAII Guard(*this, RT->getPointeeTypeAsWritten(), ShouldAddLinksToTagTypes);
+    Visit(RT->getPointeeTypeAsWritten().getTypePtr());
+    if (RT->isLValueReferenceType())
+      addLabel(" &");
+    if (RT->isRValueReferenceType())
+      addLabel(" &&");
+  }
+
+  void VisitPointerType(const PointerType *PT) {
+    maybeAddQualifiers();
+    CurrentTypeRAII Guard(*this, PT->getPointeeType(),
+                          ShouldAddLinksToTagTypes);
+    Visit(PT->getPointeeType().getTypePtr());
+    addLabel(" *");
+  }
+
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
+    maybeAddQualifiers();
     SourceRange Range;
     if (auto *Specialization =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
@@ -585,6 +614,7 @@ public:
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
+    maybeAddQualifiers();
     CurrentTypeRAII Guard(*this, ST->getReplacementType(),
                           /*ShouldAddLinksToTagTypes=*/true);
     return Visit(ST->getReplacementType().getTypePtr());
