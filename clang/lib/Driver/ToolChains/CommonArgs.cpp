@@ -1140,8 +1140,16 @@ void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
     SmallString<256> DefaultLibPath =
         llvm::sys::path::parent_path(TC.getDriver().Dir);
     llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
+    if (TC.getSanitizerArgs(Args).needsAsanRt()) {
+      CmdArgs.push_back("-rpath");
+      CmdArgs.push_back(Args.MakeArgString(TC.getCompilerRTPath()));
+    }
     CmdArgs.push_back("-rpath");
     CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+    if (llvm::find_if(CmdArgs, [](StringRef str) {
+          return !str.compare("--enable-new-dtags");
+        }) == CmdArgs.end())
+      CmdArgs.push_back("--disable-new-dtags");
   }
 }
 
