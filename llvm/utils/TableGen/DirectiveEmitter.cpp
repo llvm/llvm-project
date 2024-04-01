@@ -20,6 +20,9 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <numeric>
+#include <vector>
+
 using namespace llvm;
 
 namespace {
@@ -39,7 +42,8 @@ private:
 };
 } // namespace
 
-// Generate enum class
+// Generate enum class. Entries are emitted in the order in which they appear
+// in the `Records` vector.
 static void GenerateEnumClass(const std::vector<Record *> &Records,
                               raw_ostream &OS, StringRef Enum, StringRef Prefix,
                               const DirectiveLanguage &DirLang,
@@ -175,6 +179,16 @@ bool DirectiveLanguage::HasValidityErrors() const {
   return HasDuplicateClausesInDirectives(getDirectives());
 }
 
+// Count the maximum number of leaf constituents per construct.
+static size_t GetMaxLeafCount(const DirectiveLanguage &DirLang) {
+  size_t MaxCount = 0;
+  for (Record *R : DirLang.getDirectives()) {
+    size_t Count = Directive{R}.getLeafConstructs().size();
+    MaxCount = std::max(MaxCount, Count);
+  }
+  return MaxCount;
+}
+
 // Generate the declaration section for the enumeration in the directive
 // language
 static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
@@ -189,6 +203,7 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
 
+  OS << "#include <cstddef>\n"; // for size_t
   OS << "\n";
   OS << "namespace llvm {\n";
   OS << "class StringRef;\n";
@@ -244,7 +259,8 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
   OS << "\n";
-  OS << "llvm::ArrayRef<Directive> getLeafConstructs(Directive D);\n";
+  OS << "constexpr std::size_t getMaxLeafCount() { return "
+     << GetMaxLeafCount(DirLang) << "; }\n";
   OS << "Association getDirectiveAssociation(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
@@ -396,6 +412,19 @@ GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
   }
 }
 
+static std::string GetDirectiveName(const DirectiveLanguage &DirLang,
+                                    const Record *Rec) {
+  Directive Dir{Rec};
+  return (llvm::Twine("llvm::") + DirLang.getCppNamespace() + "::" +
+          DirLang.getDirectivePrefix() + Dir.getFormattedName())
+      .str();
+}
+
+static std::string GetDirectiveType(const DirectiveLanguage &DirLang) {
+  return (llvm::Twine("llvm::") + DirLang.getCppNamespace() + "::Directive")
+      .str();
+}
+
 // Generate the isAllowedClauseForDirective function implementation.
 static void GenerateIsAllowedClause(const DirectiveLanguage &DirLang,
                                     raw_ostream &OS) {
@@ -450,77 +479,102 @@ static void GenerateIsAllowedClause(const DirectiveLanguage &DirLang,
   OS << "}\n"; // End of function isAllowedClauseForDirective
 }
 
-// Generate the getLeafConstructs function implementation.
-static void GenerateGetLeafConstructs(const DirectiveLanguage &DirLang,
-                                      raw_ostream &OS) {
-  auto getQualifiedName = [&](StringRef Formatted) -> std::string {
-    return (llvm::Twine("llvm::") + DirLang.getCppNamespace() +
-            "::Directive::" + DirLang.getDirectivePrefix() + Formatted)
-        .str();
-  };
-
-  // For each list of leaves, generate a static local object, then
-  // return a reference to that object for a given directive, e.g.
+static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
+                          StringRef TableName) {
+  // The leaf constructs are emitted in a form of a 2D table, where each
+  // row corresponds to a directive (and there is a row for each directive).
   //
-  //   static ListTy leafConstructs_A_B = { A, B };
-  //   static ListTy leafConstructs_C_D_E = { C, D, E };
-  //   switch (Dir) {
-  //     case A_B:
-  //       return leafConstructs_A_B;
-  //     case C_D_E:
-  //       return leafConstructs_C_D_E;
-  //   }
+  // Each row consists of
+  // - the id of the directive itself,
+  // - number of leaf constructs that will follow (0 for leafs),
+  // - ids of the leaf constructs (none if the directive is itself a leaf).
+  // The total number of these entries is at most MaxLeafCount+2. If this
+  // number is less than that, it is padded to occupy exactly MaxLeafCount+2
+  // entries in memory.
+  //
+  // The rows are stored in the table in the lexicographical order. This
+  // is intended to enable binary search when mapping a sequence of leafs
+  // back to the compound directive.
+  // The consequence of that is that in order to find a row corresponding
+  // to the given directive, we'd need to scan the first element of each
+  // row. To avoid this, an auxiliary ordering table is created, such that
+  //   row for Dir_A = table[auxiliary[Dir_A]].
 
-  // Map from a record that defines a directive to the name of the
-  // local object with the list of its leaves.
-  DenseMap<Record *, std::string> ListNames;
+  std::vector<Record *> Directives = DirLang.getDirectives();
+  DenseMap<Record *, size_t> DirId; // Record * -> llvm::omp::Directive
 
-  std::string DirectiveTypeName =
-      std::string("llvm::") + DirLang.getCppNamespace().str() + "::Directive";
+  for (auto [Idx, Rec] : llvm::enumerate(Directives))
+    DirId.insert(std::make_pair(Rec, Idx));
 
-  OS << '\n';
+  using LeafList = std::vector<int>;
+  int MaxLeafCount = GetMaxLeafCount(DirLang);
 
-  // ArrayRef<...> llvm::<ns>::GetLeafConstructs(llvm::<ns>::Directive Dir)
-  OS << "llvm::ArrayRef<" << DirectiveTypeName
-     << "> llvm::" << DirLang.getCppNamespace() << "::getLeafConstructs("
-     << DirectiveTypeName << " Dir) ";
-  OS << "{\n";
+  // The initial leaf table, rows order is same as directive order.
+  std::vector<LeafList> LeafTable(Directives.size());
+  for (auto [Idx, Rec] : llvm::enumerate(Directives)) {
+    Directive Dir{Rec};
+    std::vector<Record *> Leaves = Dir.getLeafConstructs();
 
-  // Generate the locals.
-  for (Record *R : DirLang.getDirectives()) {
-    Directive Dir{R};
+    auto &List = LeafTable[Idx];
+    List.resize(MaxLeafCount + 2);
+    List[0] = Idx;           // The id of the directive itself.
+    List[1] = Leaves.size(); // The number of leaves to follow.
 
-    std::vector<Record *> LeafConstructs = Dir.getLeafConstructs();
-    if (LeafConstructs.empty())
-      continue;
+    for (int I = 0; I != MaxLeafCount; ++I)
+      List[I + 2] =
+          static_cast<size_t>(I) < Leaves.size() ? DirId.at(Leaves[I]) : -1;
+  }
 
-    std::string ListName = "leafConstructs_" + Dir.getFormattedName();
-    OS << "  static const " << DirectiveTypeName << ' ' << ListName
-       << "[] = {\n";
-    for (Record *L : LeafConstructs) {
-      Directive LeafDir{L};
-      OS << "    " << getQualifiedName(LeafDir.getFormattedName()) << ",\n";
+  // Avoid sorting the vector<vector> array, instead sort an index array.
+  // It will also be useful later to create the auxiliary indexing array.
+  std::vector<int> Ordering(Directives.size());
+  std::iota(Ordering.begin(), Ordering.end(), 0);
+
+  llvm::sort(Ordering, [&](int A, int B) {
+    auto &LeavesA = LeafTable[A];
+    auto &LeavesB = LeafTable[B];
+    if (LeavesA[1] == 0 && LeavesB[1] == 0)
+      return LeavesA[0] < LeavesB[0];
+    return std::lexicographical_compare(&LeavesA[2], &LeavesA[2] + LeavesA[1],
+                                        &LeavesB[2], &LeavesB[2] + LeavesB[1]);
+  });
+
+  // Emit the table
+
+  // The directives are emitted into a scoped enum, for which the underlying
+  // type is `int` (by default). The code above uses `int` to store directive
+  // ids, so make sure that we catch it when something changes in the
+  // underlying type.
+  std::string DirectiveType = GetDirectiveType(DirLang);
+  OS << "\nstatic_assert(sizeof(" << DirectiveType << ") == sizeof(int));\n";
+
+  OS << "[[maybe_unused]] static const " << DirectiveType << ' ' << TableName
+     << "[][" << MaxLeafCount + 2 << "] = {\n";
+  for (size_t I = 0, E = Directives.size(); I != E; ++I) {
+    auto &Leaves = LeafTable[Ordering[I]];
+    OS << "    " << GetDirectiveName(DirLang, Directives[Leaves[0]]);
+    OS << ", static_cast<" << DirectiveType << ">(" << Leaves[1] << "),";
+    for (size_t I = 2, E = Leaves.size(); I != E; ++I) {
+      int Idx = Leaves[I];
+      if (Idx >= 0)
+        OS << ' ' << GetDirectiveName(DirLang, Directives[Leaves[I]]) << ',';
+      else
+        OS << " static_cast<" << DirectiveType << ">(-1),";
     }
-    OS << "  };\n";
-    ListNames.insert(std::make_pair(R, std::move(ListName)));
-  }
-
-  if (!ListNames.empty())
     OS << '\n';
-  OS << "  switch (Dir) {\n";
-  for (Record *R : DirLang.getDirectives()) {
-    auto F = ListNames.find(R);
-    if (F == ListNames.end())
-      continue;
-
-    Directive Dir{R};
-    OS << "  case " << getQualifiedName(Dir.getFormattedName()) << ":\n";
-    OS << "    return " << F->second << ";\n";
   }
-  OS << "  default:\n";
-  OS << "    return ArrayRef<" << DirectiveTypeName << ">{};\n";
-  OS << "  } // switch (Dir)\n";
-  OS << "}\n";
+  OS << "};\n\n";
+
+  // Emit the auxiliary index table: it's the inverse of the `Ordering`
+  // table above.
+  OS << "[[maybe_unused]] static const int " << TableName << "Ordering[] = {\n";
+  OS << "   ";
+  std::vector<int> Reverse(Ordering.size());
+  for (int I = 0, E = Ordering.size(); I != E; ++I)
+    Reverse[Ordering[I]] = I;
+  for (int Idx : Reverse)
+    OS << ' ' << Idx << ',';
+  OS << "\n};\n";
 }
 
 static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
@@ -1105,11 +1159,11 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
 
-  // getLeafConstructs(Directive D)
-  GenerateGetLeafConstructs(DirLang, OS);
-
   // getDirectiveAssociation(Directive D)
   GenerateGetDirectiveAssociation(DirLang, OS);
+
+  // Leaf table for getLeafConstructs, etc.
+  EmitLeafTable(DirLang, OS, "LeafConstructTable");
 }
 
 // Generate the implemenation section for the enumeration in the directive
