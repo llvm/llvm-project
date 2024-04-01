@@ -29,7 +29,7 @@ struct CompositeFixedPointPass final
 
   CompositeFixedPointPass(
       std::string name_, llvm::function_ref<void(OpPassManager &)> populateFunc,
-      unsigned maxIterations) {
+      int maxIterations) {
     name = std::move(name_);
     maxIter = maxIterations;
     populateFunc(dynamicPM);
@@ -66,8 +66,8 @@ struct CompositeFixedPointPass final
     auto op = getOperation();
     OperationFingerPrint fp(op);
 
-    unsigned currentIter = 0;
-    unsigned maxIterVal = maxIter;
+    int currentIter = 0;
+    int maxIterVal = maxIter;
     while (true) {
       if (failed(runPipeline(dynamicPM, op)))
         return signalPassFailure();
