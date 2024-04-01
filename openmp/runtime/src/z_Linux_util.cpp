@@ -65,7 +65,13 @@
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#if KMP_OS_NETBSD
+#include <sched.h>
+#endif
 #elif KMP_OS_SOLARIS
+#include <libproc.h>
+#include <procfs.h>
+#include <thread.h>
 #include <sys/loadavg.h>
 #endif
 
@@ -119,7 +125,9 @@ static void __kmp_print_cond(char *buffer, kmp_cond_align_t *cond) {
 }
 #endif
 
-#if ((KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED)
+#if ((KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||   \
+      KMP_OS_AIX) &&                                                           \
+     KMP_AFFINITY_SUPPORTED)
 
 /* Affinity support */
 
@@ -135,6 +143,29 @@ void __kmp_affinity_bind_thread(int which) {
   KMP_CPU_FREE_FROM_STACK(mask);
 }
 
+#if KMP_OS_AIX
+void __kmp_affinity_determine_capable(const char *env_var) {
+  // All versions of AIX support bindprocessor().
+
+  size_t mask_size = __kmp_xproc / CHAR_BIT;
+  // Round up to byte boundary.
+  if (__kmp_xproc % CHAR_BIT)
+    ++mask_size;
+
+  // Round up to the mask_size_type boundary.
+  if (mask_size % sizeof(__kmp_affin_mask_size))
+    mask_size += sizeof(__kmp_affin_mask_size) -
+                 mask_size % sizeof(__kmp_affin_mask_size);
+  KMP_AFFINITY_ENABLE(mask_size);
+  KA_TRACE(10,
+           ("__kmp_affinity_determine_capable: "
+            "AIX OS affinity interface bindprocessor functional (mask size = "
+            "%" KMP_SIZE_T_SPEC ").\n",
+            __kmp_affin_mask_size));
+}
+
+#else // !KMP_OS_AIX
+
 /* Determine if we can access affinity functionality on this version of
  * Linux* OS by checking __NR_sched_{get,set}affinity system calls, and set
  * __kmp_affin_mask_size to the appropriate value (0 means not capable). */
@@ -144,8 +175,10 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
 #define KMP_CPU_SET_TRY_SIZE CACHE_LINE
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_DRAGONFLY
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
+#elif KMP_OS_NETBSD
+#define KMP_CPU_SET_SIZE_LIMIT (256)
 #endif
 
   int verbose = __kmp_affinity.flags.verbose;
@@ -233,7 +266,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_INTERNAL_FREE(buf);
     return;
   }
-#elif KMP_OS_FREEBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
   long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
@@ -262,8 +295,9 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_WARNING(AffCantGetMaskSize, env_var);
   }
 }
-
-#endif // KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#endif // KMP_OS_AIX
+#endif // (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD ||                  \
+           KMP_OS_DRAGONFLY || KMP_OS_AIX) && KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_FUTEX
 
@@ -418,7 +452,7 @@ void __kmp_terminate_thread(int gtid) {
   KMP_YIELD(TRUE);
 } //
 
-/* Set thread stack info according to values returned by pthread_getattr_np().
+/* Set thread stack info.
    If values are unreasonable, assume call failed and use incremental stack
    refinement method instead. Returns TRUE if the stack parameters could be
    determined exactly, FALSE if incremental refinement is necessary. */
@@ -426,7 +460,6 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
-  pthread_attr_t attr;
   int status;
   size_t size = 0;
   void *addr = 0;
@@ -436,6 +469,19 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
      pthread_attr_getstack may cause thread gtid aliasing */
   if (!KMP_UBER_GTID(gtid)) {
 
+#if KMP_OS_SOLARIS
+    stack_t s;
+    if ((status = thr_stksegment(&s)) < 0) {
+      KMP_CHECK_SYSFAIL("thr_stksegment", status);
+    }
+
+    addr = s.ss_sp;
+    size = s.ss_size;
+    KA_TRACE(60, ("__kmp_set_stack_info: T#%d thr_stksegment returned size:"
+                  " %lu, low addr: %p\n",
+                  gtid, size, addr));
+#else
+    pthread_attr_t attr;
     /* Fetch the real thread attributes */
     status = pthread_attr_init(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_init", status);
@@ -454,6 +500,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
               gtid, size, addr));
     status = pthread_attr_destroy(&attr);
     KMP_CHECK_SYSFAIL("pthread_attr_destroy", status);
+#endif
   }
 
   if (size != 0 && addr != 0) { // was stack parameter determination successful?
@@ -479,7 +526,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -528,7 +575,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -1246,7 +1293,8 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -2175,6 +2223,54 @@ int __kmp_is_address_mapped(void *addr) {
   }
 
   kvm_close(fd);
+#elif KMP_OS_SOLARIS
+  prmap_t *cur, *map;
+  void *buf;
+  uintptr_t uaddr;
+  ssize_t rd;
+  int err;
+  int file;
+
+  pid_t pid = getpid();
+  struct ps_prochandle *fd = Pgrab(pid, PGRAB_RDONLY, &err);
+  ;
+
+  if (!fd) {
+    return 0;
+  }
+
+  char *name = __kmp_str_format("/proc/%d/map", pid);
+  size_t sz = (1 << 20);
+  file = open(name, O_RDONLY);
+  if (file == -1) {
+    KMP_INTERNAL_FREE(name);
+    return 0;
+  }
+
+  buf = kmpc_malloc(sz);
+
+  while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
+    void *newbuf;
+    sz <<= 1;
+    newbuf = kmpc_realloc(buf, sz);
+    buf = newbuf;
+  }
+
+  map = reinterpret_cast<prmap_t *>(buf);
+  uaddr = reinterpret_cast<uintptr_t>(addr);
+
+  for (cur = map; rd > 0; cur++, rd = -sizeof(*map)) {
+    if ((uaddr >= cur->pr_vaddr) && (uaddr < cur->pr_vaddr)) {
+      if ((cur->pr_mflags & MA_READ) != 0 && (cur->pr_mflags & MA_WRITE) != 0) {
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  kmpc_free(map);
+  close(file);
+  KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
 
   /* On OS X*, /proc pseudo filesystem is not available. Try to read memory
@@ -2253,9 +2349,10 @@ int __kmp_is_address_mapped(void *addr) {
   }
 #elif KMP_OS_WASI
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
-#elif KMP_OS_SOLARIS || KMP_OS_AIX
+#elif KMP_OS_AIX
 
-  // FIXME(Solaris, AIX): Implement this
+  (void)rc;
+  // FIXME(AIX): Implement this
   found = 1;
 
 #else
@@ -2540,6 +2637,43 @@ finish: // Clean up and exit.
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
       KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC_XCOFF)
 
+// Because WebAssembly will use `call_indirect` to invoke the microtask and
+// WebAssembly indirect calls check that the called signature is a precise
+// match, we need to cast each microtask function pointer back from `void *` to
+// its original type.
+typedef void (*microtask_t0)(int *, int *);
+typedef void (*microtask_t1)(int *, int *, void *);
+typedef void (*microtask_t2)(int *, int *, void *, void *);
+typedef void (*microtask_t3)(int *, int *, void *, void *, void *);
+typedef void (*microtask_t4)(int *, int *, void *, void *, void *, void *);
+typedef void (*microtask_t5)(int *, int *, void *, void *, void *, void *,
+                             void *);
+typedef void (*microtask_t6)(int *, int *, void *, void *, void *, void *,
+                             void *, void *);
+typedef void (*microtask_t7)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *);
+typedef void (*microtask_t8)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *);
+typedef void (*microtask_t9)(int *, int *, void *, void *, void *, void *,
+                             void *, void *, void *, void *, void *);
+typedef void (*microtask_t10)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *);
+typedef void (*microtask_t11)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *);
+typedef void (*microtask_t12)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *);
+typedef void (*microtask_t13)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *);
+typedef void (*microtask_t14)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *);
+typedef void (*microtask_t15)(int *, int *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *, void *,
+                              void *, void *, void *, void *, void *);
+
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
 int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
@@ -2559,66 +2693,76 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
     fflush(stderr);
     exit(-1);
   case 0:
-    (*pkfn)(&gtid, &tid);
+    (*(microtask_t0)pkfn)(&gtid, &tid);
     break;
   case 1:
-    (*pkfn)(&gtid, &tid, p_argv[0]);
+    (*(microtask_t1)pkfn)(&gtid, &tid, p_argv[0]);
     break;
   case 2:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
+    (*(microtask_t2)pkfn)(&gtid, &tid, p_argv[0], p_argv[1]);
     break;
   case 3:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
+    (*(microtask_t3)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2]);
     break;
   case 4:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3]);
+    (*(microtask_t4)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3]);
     break;
   case 5:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4]);
+    (*(microtask_t5)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4]);
     break;
   case 6:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5]);
+    (*(microtask_t6)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5]);
     break;
   case 7:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6]);
+    (*(microtask_t7)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6]);
     break;
   case 8:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7]);
+    (*(microtask_t8)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                          p_argv[7]);
     break;
   case 9:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8]);
+    (*(microtask_t9)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                          p_argv[3], p_argv[4], p_argv[5], p_argv[6], p_argv[7],
+                          p_argv[8]);
     break;
   case 10:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9]);
+    (*(microtask_t10)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9]);
     break;
   case 11:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
+    (*(microtask_t11)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10]);
     break;
   case 12:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11]);
+    (*(microtask_t12)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11]);
     break;
   case 13:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12]);
+    (*(microtask_t13)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12]);
     break;
   case 14:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13]);
+    (*(microtask_t14)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13]);
     break;
   case 15:
-    (*pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2], p_argv[3], p_argv[4],
-            p_argv[5], p_argv[6], p_argv[7], p_argv[8], p_argv[9], p_argv[10],
-            p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
+    (*(microtask_t15)pkfn)(&gtid, &tid, p_argv[0], p_argv[1], p_argv[2],
+                           p_argv[3], p_argv[4], p_argv[5], p_argv[6],
+                           p_argv[7], p_argv[8], p_argv[9], p_argv[10],
+                           p_argv[11], p_argv[12], p_argv[13], p_argv[14]);
     break;
   }
 

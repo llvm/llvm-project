@@ -3496,7 +3496,7 @@ void Sema::ActOnOpenMPAssumesDirective(SourceLocation Loc,
         << llvm::omp::getAllAssumeClauseOptions()
         << llvm::omp::getOpenMPDirectiveName(DKind);
 
-  auto *AA = AssumptionAttr::Create(Context, llvm::join(Assumptions, ","), Loc);
+  auto *AA = OMPAssumeAttr::Create(Context, llvm::join(Assumptions, ","), Loc);
   if (DKind == llvm::omp::Directive::OMPD_begin_assumes) {
     OMPAssumeScoped.push_back(AA);
     return;
@@ -7275,10 +7275,10 @@ void Sema::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
   // only global ones. We apply scoped assumption to the template definition
   // though.
   if (!inTemplateInstantiation()) {
-    for (AssumptionAttr *AA : OMPAssumeScoped)
+    for (OMPAssumeAttr *AA : OMPAssumeScoped)
       FD->addAttr(AA);
   }
-  for (AssumptionAttr *AA : OMPAssumeGlobal)
+  for (OMPAssumeAttr *AA : OMPAssumeGlobal)
     FD->addAttr(AA);
 }
 
@@ -14366,7 +14366,8 @@ StmtResult Sema::ActOnOpenMPTargetParallelForSimdDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
-  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_parallel_for);
+  for (int ThisCaptureLevel =
+           getOpenMPCaptureLevels(OMPD_target_parallel_for_simd);
        ThisCaptureLevel > 1; --ThisCaptureLevel) {
     CS = cast<CapturedStmt>(CS->getCapturedStmt());
     // 1.2.2 OpenMP Language Terminology
@@ -21283,7 +21284,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   if (isa<ArraySubscriptExpr>(E) ||
       (OASE && OASE->getColonLocFirst().isInvalid())) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // Size can't be evaluated statically.
     return false;
   }
@@ -21324,7 +21325,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
     return false; // Can't get the integer value as a constant.
 
   llvm::APSInt ConstLength = Result.Val.getInt();
-  return CATy->getSize().getSExtValue() != ConstLength.getSExtValue();
+  return CATy->getSExtSize() != ConstLength.getSExtValue();
 }
 
 // Return true if it can be proven that the provided array expression (array
@@ -21349,7 +21350,7 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   // is pointer.
   if (!Length) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // We cannot assume anything.
     return false;
   }
@@ -23353,6 +23354,15 @@ void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
           isa<FunctionTemplateDecl>(ND)) &&
          "Expected variable, function or function template.");
 
+  if (auto *VD = dyn_cast<VarDecl>(ND)) {
+    // Only global variables can be marked as declare target.
+    if (!VD->isFileVarDecl() && !VD->isStaticLocal() &&
+        !VD->isStaticDataMember()) {
+      Diag(Loc, diag::err_omp_declare_target_has_local_vars)
+          << VD->getNameAsString();
+      return;
+    }
+  }
   // Diagnose marking after use as it may lead to incorrect diagnosis and
   // codegen.
   if (LangOpts.OpenMP >= 50 &&

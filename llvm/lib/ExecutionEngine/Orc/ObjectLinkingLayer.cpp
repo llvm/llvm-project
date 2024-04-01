@@ -455,9 +455,10 @@ private:
       ProcessSymbol(Sym);
 
     // Attempt to claim all weak defs that we're not already responsible for.
-    // This cannot fail -- any clashes will just result in rejection of our
-    // claim, at which point we'll externalize that symbol.
-    cantFail(MR->defineMaterializing(std::move(NewSymbolsToClaim)));
+    // This may fail if the resource tracker has become defunct, but should
+    // always succeed otherwise.
+    if (auto Err = MR->defineMaterializing(std::move(NewSymbolsToClaim)))
+      return Err;
 
     // Walk the list of symbols that we just tried to claim. Symbols that we're
     // responsible for are marked live. Symbols that we're not responsible for
@@ -719,14 +720,22 @@ Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
   for (auto &P : Plugins)
     Err = joinErrors(std::move(Err), P->notifyEmitted(MR));
 
-  if (Err)
+  if (Err) {
+    if (FA)
+      Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
     return Err;
+  }
 
   if (!FA)
     return Error::success();
 
-  return MR.withResourceKeyDo(
+  Err = MR.withResourceKeyDo(
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
+
+  if (Err)
+    Err = joinErrors(std::move(Err), MemMgr.deallocate(std::move(FA)));
+
+  return Err;
 }
 
 Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {

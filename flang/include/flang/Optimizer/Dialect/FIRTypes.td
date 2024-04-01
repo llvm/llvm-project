@@ -22,7 +22,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
-    : TypeDef<fir_Dialect, name, traits, baseCppClass> {
+    : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 

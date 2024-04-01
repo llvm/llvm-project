@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -207,6 +208,8 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
               .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
     return ompOutlineableIface.getAllocaBlock();
   }
+  if (mlir::isa<mlir::omp::DeclareReductionOp>(getRegion().getParentOp()))
+    return &getRegion().front();
   if (auto accRecipeIface =
           getRegion().getParentOfType<mlir::acc::RecipeInterface>()) {
     return accRecipeIface.getAllocaBlock(getRegion());
@@ -402,6 +405,12 @@ void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
   mlir::Value cast =
       createConvert(loc, fir::unwrapRefType(addr.getType()), val);
   create<fir::StoreOp>(loc, cast, addr);
+}
+
+mlir::Value fir::FirOpBuilder::loadIfRef(mlir::Location loc, mlir::Value val) {
+  if (fir::isa_ref_type(val.getType()))
+    return create<fir::LoadOp>(loc, val);
+  return val;
 }
 
 fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,

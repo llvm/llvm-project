@@ -17,6 +17,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -220,6 +221,8 @@ void AffineDialect::initialize() {
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
   addInterfaces<AffineInlinerInterface>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
+                            AffineMinOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -3269,8 +3272,8 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
 
   // Otherwise, completely fold the op into a constant.
   auto resultIt = std::is_same<T, AffineMinOp>::value
-                      ? std::min_element(results.begin(), results.end())
-                      : std::max_element(results.begin(), results.end());
+                      ? llvm::min_element(results)
+                      : llvm::max_element(results);
   if (resultIt == results.end())
     return {};
   return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);

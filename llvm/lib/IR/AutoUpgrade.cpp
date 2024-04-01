@@ -647,11 +647,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     // v16i8 respectively.
     if (Name.consume_front("bfdot.")) {
       // (arm|aarch64).neon.bfdot.*'.
-      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
-                             .Cases("v2f32.v8i8", "v4f32.v16i8",
-                                    IsArm ? Intrinsic::arm_neon_bfdot
-                                          : Intrinsic::aarch64_neon_bfdot)
-                             .Default(Intrinsic::not_intrinsic);
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Cases("v2f32.v8i8", "v4f32.v16i8",
+                     IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfdot
+                           : (Intrinsic::ID)Intrinsic::aarch64_neon_bfdot)
+              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
         assert((OperandWidth == 64 || OperandWidth == 128) &&
@@ -674,12 +675,15 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         // (arm|aarch64).neon.bfm*.v4f32.v16i8'.
         Intrinsic::ID ID =
             StringSwitch<Intrinsic::ID>(Name)
-                .Case("mla", IsArm ? Intrinsic::arm_neon_bfmmla
-                                   : Intrinsic::aarch64_neon_bfmmla)
-                .Case("lalb", IsArm ? Intrinsic::arm_neon_bfmlalb
-                                    : Intrinsic::aarch64_neon_bfmlalb)
-                .Case("lalt", IsArm ? Intrinsic::arm_neon_bfmlalt
-                                    : Intrinsic::aarch64_neon_bfmlalt)
+                .Case("mla",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmmla
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmmla)
+                .Case("lalb",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmlalb
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmlalb)
+                .Case("lalt",
+                      IsArm ? (Intrinsic::ID)Intrinsic::arm_neon_bfmlalt
+                            : (Intrinsic::ID)Intrinsic::aarch64_neon_bfmlalt)
                 .Default(Intrinsic::not_intrinsic);
         if (ID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
@@ -1052,6 +1056,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
   case 'd':
     if (Name.consume_front("dbg.")) {
+      // Mark debug intrinsics for upgrade to new debug format.
+      if (F->getParent()->IsNewDbgInfoFormat) {
+        if (Name == "addr" || Name == "value" || Name == "assign" ||
+            Name == "declare" || Name == "label") {
+          // There's no function to replace these with.
+          NewFn = nullptr;
+          // But we do want these to get upgraded.
+          return true;
+        }
+      }
+      // Update llvm.dbg.addr intrinsics even in "new debug mode"; they'll get
+      // converted to DbgVariableRecords later.
       if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
@@ -2328,6 +2344,59 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
 }
 
+/// Helper to unwrap intrinsic call MetadataAsValue operands.
+template <typename MDType>
+static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
+  if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
+    return dyn_cast<MDType>(MAV->getMetadata());
+  return nullptr;
+}
+
+/// Convert debug intrinsic calls to non-instruction debug records.
+/// \p Name - Final part of the intrinsic name, e.g. 'value' in llvm.dbg.value.
+/// \p CI - The debug intrinsic call.
+static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
+  DbgRecord *DR = nullptr;
+  if (Name == "label") {
+    DR = new DbgLabelRecord(unwrapMAVOp<DILabel>(CI, 0), CI->getDebugLoc());
+  } else if (Name == "assign") {
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
+        unwrapMAVOp<DIExpression>(CI, 2), unwrapMAVOp<DIAssignID>(CI, 3),
+        unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
+        CI->getDebugLoc());
+  } else if (Name == "declare") {
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
+        unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
+        DbgVariableRecord::LocationType::Declare);
+  } else if (Name == "addr") {
+    // Upgrade dbg.addr to dbg.value with DW_OP_deref.
+    DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
+    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
+    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
+                               unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
+                               CI->getDebugLoc());
+  } else if (Name == "value") {
+    // An old version of dbg.value had an extra offset argument.
+    unsigned VarOp = 1;
+    unsigned ExprOp = 2;
+    if (CI->arg_size() == 4) {
+      auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1));
+      // Nonzero offset dbg.values get dropped without a replacement.
+      if (!Offset || !Offset->isZeroValue())
+        return;
+      VarOp = 2;
+      ExprOp = 3;
+    }
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, VarOp),
+        unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
+  }
+  assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
+  CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -2353,6 +2422,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsNVVM = Name.consume_front("nvvm.");
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
+    bool IsDbg = Name.consume_front("dbg.");
 
     if (IsX86 && Name.starts_with("sse4a.movnt.")) {
       SmallVector<Metadata *, 1> Elts;
@@ -2457,7 +2527,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
 
-    Value *Rep;
+    Value *Rep = nullptr;
     // Upgrade packed integer vector compare intrinsics to compare instructions.
     if (IsX86 && (Name.starts_with("sse2.pcmp") ||
                   Name.starts_with("avx2.pcmp"))) {
@@ -4192,6 +4262,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
+    } else if (IsDbg && CI->getModule()->IsNewDbgInfoFormat) {
+      upgradeDbgIntrinsicToDbgRecord(Name, CI);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5072,6 +5144,15 @@ bool llvm::UpgradeModuleFlags(Module &M) {
         Changed = true;
       }
     }
+
+    if (ID->getString() == "amdgpu_code_object_version") {
+      Metadata *Ops[3] = {
+          Op->getOperand(0),
+          MDString::get(M.getContext(), "amdhsa_code_object_version"),
+          Op->getOperand(2)};
+      ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+      Changed = true;
+    }
   }
 
   // "Objective-C Class Properties" is recently added for Objective-C. We
@@ -5167,72 +5248,6 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
-}
-
-// Check if the module attribute is present and not zero.
-static bool isModuleAttributeSet(Module &M, const StringRef &ModAttr) {
-  const auto *Attr =
-      mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(ModAttr));
-  return Attr && Attr->getZExtValue();
-}
-
-// Copy an attribute from module to the function if exists.
-// First value of the pair is used when the module attribute is not zero
-// the second otherwise.
-static void
-CopyModuleAttributeToFunction(Function &F, StringRef FnAttrName,
-                              StringRef ModAttrName,
-                              std::pair<StringRef, StringRef> Values) {
-  if (F.hasFnAttribute(FnAttrName))
-    return;
-  F.addFnAttr(FnAttrName, isModuleAttributeSet(*F.getParent(), ModAttrName)
-                              ? Values.first
-                              : Values.second);
-}
-
-// Copy a boolean attribute from module to the function if exists.
-// Module attribute treated false if zero otherwise true.
-static void CopyModuleAttributeToFunction(Function &F, StringRef AttrName) {
-  CopyModuleAttributeToFunction(
-      F, AttrName, AttrName,
-      std::make_pair<StringRef, StringRef>("true", "false"));
-}
-
-// Copy an attribute from module to the function if exists.
-// First value of the pair is used when the module attribute is not zero
-// the second otherwise.
-static void
-CopyModuleAttributeToFunction(Function &F, StringRef AttrName,
-                              std::pair<StringRef, StringRef> Values) {
-  CopyModuleAttributeToFunction(F, AttrName, AttrName, Values);
-}
-
-void llvm::CopyModuleAttrToFunctions(Module &M) {
-  Triple T(M.getTargetTriple());
-  if (!T.isThumb() && !T.isARM() && !T.isAArch64())
-    return;
-
-  for (Function &F : M.getFunctionList()) {
-    if (F.isDeclaration())
-      continue;
-
-    if (!F.hasFnAttribute("sign-return-address")) {
-      StringRef SignType = "none";
-      if (isModuleAttributeSet(M, "sign-return-address"))
-        SignType = "non-leaf";
-
-      if (isModuleAttributeSet(M, "sign-return-address-all"))
-        SignType = "all";
-
-      F.addFnAttr("sign-return-address", SignType);
-    }
-    CopyModuleAttributeToFunction(F, "branch-target-enforcement");
-    CopyModuleAttributeToFunction(F, "branch-protection-pauth-lr");
-    CopyModuleAttributeToFunction(F, "guarded-control-stack");
-    CopyModuleAttributeToFunction(
-        F, "sign-return-address-key",
-        std::make_pair<StringRef, StringRef>("b_key", "a_key"));
-  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {

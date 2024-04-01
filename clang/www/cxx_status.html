@@ -115,7 +115,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Unevaluated strings</td>
   <td><a href="https://wg21.link/P2361R6">P2361R6</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Add @, $, and ` to the basic character set</td>
@@ -145,13 +145,13 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Placeholder variables with no name</td>
   <td><a href="https://wg21.link/P2169R4">P2169R4</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <!-- Fall 2023 papers (Kona) -->
  <tr>
   <td>Template parameter initialization</td>
   <td><a href="https://wg21.link/P2308R1">P2308R1</a> (<a href="#dr">DR</a>)</td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Pack Indexing</td>
@@ -161,9 +161,49 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Remove Deprecated Arithmetic Conversion on Enumerations</td>
   <td><a href="https://wg21.link/P2864R2">P2864R2</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
-
+ <!-- Winter 2024 papers (Tokyo) -->
+ <tr>
+  <td>Disallow Binding a Returned Glvalue to a Temporary</td>
+  <td><a href="https://wg21.link/P2748R5">P2748R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Clarifying rules for brace elision in aggregate initialization</td>
+  <td><a href="https://wg21.link/P3106R1">P3106R1</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Attributes for Structured Bindings</td>
+  <td><a href="https://wg21.link/P0609R3">P0609R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Module Declarations Shouldn’t be Macros</td>
+  <td><a href="https://wg21.link/P3034R1">P3034R1</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Trivial infinite loops are not Undefined Behavior</td>
+  <td><a href="https://wg21.link/P2809R3">P2809R3</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Erroneous behaviour for uninitialized reads</td>
+  <td><a href="https://wg21.link/P2795R5">P2795R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><tt>= delete("should have a reason");</tt></td>
+  <td><a href="https://wg21.link/P2573R2">P2573R2</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Variadic friends</td>
+  <td><a href="https://wg21.link/P2893R3">P2893R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
 </table>
 </details>
 
@@ -197,7 +237,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Simpler implicit move</td>
-      <td><a href="https://wg21.link/p2266r1">P2266R1</a></td>
+      <td><a href="https://wg21.link/p2266R3">P2266R3</a></td>
       <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
@@ -239,7 +279,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Deducing this</td>
       <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td><a href="https://wg21.link/P2797R0">P2797R0</a></td>
@@ -356,14 +396,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Relaxing some constexpr restrictions</td>
       <td><a href="https://wg21.link/P2448R2">P2448R2</a></td>
-      <td class="partial" align="center">
-        <details><summary>Clang 17 (Partial)</summary>
-	  We do not support outside of defaulted special memeber functions the change that constexpr functions no
-          longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
-          functions. Which include allowing non-literal types as return values and parameters, allow calling of
-          non-constexpr functions and constructors.
-        </details></td>
-      </td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
@@ -388,7 +421,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Portable assumptions</td>
       <td><a href="https://wg21.link/P1774R8">P1774R8</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Support for UTF-8 as a portable source file encoding</td>
@@ -843,7 +876,13 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Class template argument deduction for alias templates</td>
       <td><a href="https://wg21.link/p1814r0">P1814R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+          The associated constraints (over.match.class.deduct#3.3) for the
+          synthesized deduction guides are not yet implemented.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>

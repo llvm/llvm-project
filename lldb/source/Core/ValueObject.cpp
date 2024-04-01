@@ -372,12 +372,12 @@ bool ValueObject::IsLogicalTrue(Status &error) {
   return ret;
 }
 
-ValueObjectSP ValueObject::GetChildAtIndex(size_t idx, bool can_create) {
+ValueObjectSP ValueObject::GetChildAtIndex(uint32_t idx, bool can_create) {
   ValueObjectSP child_sp;
   // We may need to update our value if we are dynamic
   if (IsPossibleDynamicType())
     UpdateValueIfNeeded(false);
-  if (idx < GetNumChildren()) {
+  if (idx < GetNumChildrenIgnoringErrors()) {
     // Check if we have already made the child value object?
     if (can_create && !m_children.HasChildAtIndex(idx)) {
       // No we haven't created the child at this index, so lets have our
@@ -440,7 +440,7 @@ ValueObjectSP ValueObject::GetChildMemberWithName(llvm::StringRef name,
   return child_sp;
 }
 
-size_t ValueObject::GetNumChildren(uint32_t max) {
+llvm::Expected<uint32_t> ValueObject::GetNumChildren(uint32_t max) {
   UpdateValueIfNeeded();
 
   if (max < UINT32_MAX) {
@@ -452,9 +452,22 @@ size_t ValueObject::GetNumChildren(uint32_t max) {
   }
 
   if (!m_flags.m_children_count_valid) {
-    SetNumChildren(CalculateNumChildren());
+    auto num_children_or_err = CalculateNumChildren();
+    if (num_children_or_err)
+      SetNumChildren(*num_children_or_err);
+    else
+      return num_children_or_err;
   }
   return m_children.GetChildrenCount();
+}
+
+uint32_t ValueObject::GetNumChildrenIgnoringErrors(uint32_t max) {
+  auto value_or_err = GetNumChildren(max);
+  if (value_or_err)
+    return *value_or_err;
+  LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), value_or_err.takeError(),
+                  "{0}");
+  return 0;
 }
 
 bool ValueObject::MightHaveChildren() {
@@ -464,13 +477,13 @@ bool ValueObject::MightHaveChildren() {
     if (type_info & (eTypeHasChildren | eTypeIsPointer | eTypeIsReference))
       has_children = true;
   } else {
-    has_children = GetNumChildren() > 0;
+    has_children = GetNumChildrenIgnoringErrors() > 0;
   }
   return has_children;
 }
 
 // Should only be called by ValueObject::GetNumChildren()
-void ValueObject::SetNumChildren(size_t num_children) {
+void ValueObject::SetNumChildren(uint32_t num_children) {
   m_flags.m_children_count_valid = true;
   m_children.SetChildrenCount(num_children);
 }
@@ -1176,7 +1189,7 @@ bool ValueObject::DumpPrintableRepresentation(
       if (flags.Test(eTypeIsArray)) {
         if ((custom_format == eFormatBytes) ||
             (custom_format == eFormatBytesWithASCII)) {
-          const size_t count = GetNumChildren();
+          const size_t count = GetNumChildrenIgnoringErrors();
 
           s << '[';
           for (size_t low = 0; low < count; low++) {
@@ -1215,7 +1228,7 @@ bool ValueObject::DumpPrintableRepresentation(
                                                      // format should be printed
                                                      // directly
         {
-          const size_t count = GetNumChildren();
+          const size_t count = GetNumChildrenIgnoringErrors();
 
           Format format = FormatManager::GetSingleItemFormat(custom_format);
 
@@ -1294,7 +1307,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
 
     case eValueObjectRepresentationStyleChildrenCount:
-      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildren());
+      strm.Printf("%" PRIu64 "", (uint64_t)GetNumChildrenIgnoringErrors());
       str = strm.GetString();
       break;
 
@@ -2320,7 +2333,9 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                root->GetSyntheticValue()->GetNumChildren() > index)
+                llvm::expectedToStdOptional(
+                    root->GetSyntheticValue()->GetNumChildren())
+                        .value_or(0) > index)
               child_valobj_sp =
                   root->GetSyntheticValue()->GetChildAtIndex(index);
           if (child_valobj_sp) {
@@ -2729,8 +2744,19 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
-  // type.  We don't know how to fetch more data for all the ConstResult types,
-  // so we can't guarantee this will work:
+  // type, unless we know this is a load address.  Getting the size wrong for
+  // a host side storage could leak lldb memory, so we absolutely want to 
+  // prevent that.  We may not always get the right value, for instance if we
+  // have an expression result value that's copied into a storage location in
+  // the target may not have copied enough memory.  I'm not trying to fix that
+  // here, I'm just making Cast from a smaller to a larger possible in all the
+  // cases where that doesn't risk making a Value out of random lldb memory.
+  // You have to check the ValueObject's Value for the address types, since
+  // ValueObjects that use live addresses will tell you they fetch data from the
+  // live address, but once they are made, they actually don't.
+  // FIXME: Can we make ValueObject's with a live address fetch "more data" from
+  // the live address if it is still valid?
+
   Status error;
   CompilerType my_type = GetCompilerType();
 
@@ -2738,9 +2764,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
   if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope)) {
+      <= GetCompilerType().GetByteSize(exe_scope) 
+      || m_value.GetValueType() == Value::ValueType::LoadAddress)
         return DoCast(compiler_type);
-  }
+
   error.SetErrorString("Can only cast to a type that is equal to or smaller "
                        "than the orignal type.");
 

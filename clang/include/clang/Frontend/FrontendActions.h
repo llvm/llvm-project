@@ -34,12 +34,18 @@ public:
 
 /// Preprocessor-based frontend action that also loads PCH files.
 class ReadPCHAndPreprocessAction : public FrontendAction {
+  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
+
   void ExecuteAction() override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
 public:
+  ReadPCHAndPreprocessAction(
+      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
+      : AdjustCI(std::move(AdjustCI)) {}
+
   bool usesPreprocessorOnly() const override { return false; }
 };
 
@@ -118,11 +124,14 @@ class GenerateModuleAction : public ASTFrontendAction {
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
 protected:
+  std::vector<std::unique_ptr<ASTConsumer>>
+  CreateMultiplexConsumer(CompilerInstance &CI, StringRef InFile);
+
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
   TranslationUnitKind getTranslationUnitKind() override {
-    return TU_Module;
+    return TU_ClangModule;
   }
 
   bool hasASTFileSupport() const override { return false; }
@@ -135,7 +144,9 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
-  TranslationUnitKind getTranslationUnitKind() override { return TU_Module; }
+  TranslationUnitKind getTranslationUnitKind() override {
+    return TU_ClangModule;
+  }
   bool hasASTFileSupport() const override { return false; }
 };
 
@@ -147,15 +158,27 @@ private:
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
+/// Generates full BMI (which contains full information to generate the object
+/// files) for C++20 Named Modules.
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
-private:
+protected:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
+  TranslationUnitKind getTranslationUnitKind() override { return TU_Complete; }
+
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+};
+
+/// Only generates the reduced BMI. This action is mainly used by tests.
+class GenerateReducedModuleInterfaceAction
+    : public GenerateModuleInterfaceAction {
+private:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
 };
 
 class GenerateHeaderUnitAction : public GenerateModuleAction {
@@ -304,11 +327,15 @@ protected:
 
 class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
   StringRef ModuleName;
+  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
+
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
+  GetDependenciesByModuleNameAction(
+      StringRef ModuleName,
+      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
+      : ModuleName(ModuleName), AdjustCI(std::move(AdjustCI)) {}
 };
 
 }  // end namespace clang

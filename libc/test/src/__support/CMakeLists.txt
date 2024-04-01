@@ -27,7 +27,9 @@ add_libc_test(
   SRCS
     math_extras_test.cpp
   DEPENDS
+    libc.src.__support.integer_literals
     libc.src.__support.math_extras
+    libc.src.__support.uint128
 )
 
 add_libc_test(
@@ -56,6 +58,19 @@ add_libc_test(
     libc.src.errno.errno
 )
 
+
+add_libc_test(
+  str_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    str_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+)
+
 add_libc_test(
   integer_to_string_test
   SUITE
@@ -63,6 +78,7 @@ add_libc_test(
   SRCS
     integer_to_string_test.cpp
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
@@ -91,8 +107,9 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     SRCS
       uint_test.cpp
     DEPENDS
-      libc.src.__support.uint
       libc.src.__support.CPP.optional
+      libc.src.__support.macros.properties.types
+      libc.src.__support.uint
   )
 endif()
 
@@ -103,8 +120,9 @@ add_libc_test(
   SRCS
     integer_literals_test.cpp
   DEPENDS
-    libc.src.__support.integer_literals
     libc.src.__support.CPP.optional
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.properties.types
 )
 
 add_libc_test(

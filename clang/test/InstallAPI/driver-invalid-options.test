@@ -1,4 +1,9 @@
 /// Check non-darwin triple is rejected.
-// RUN: not clang-installapi -target x86_64-unknown-unknown %s 2> %t 
+// RUN: not clang-installapi -target x86_64-unknown-unknown %s -o tmp.tbd 2> %t 
 // RUN: FileCheck --check-prefix INVALID_INSTALLAPI -input-file %t %s
 // INVALID_INSTALLAPI: error: unsupported option 'installapi' for target 'x86_64-unknown-unknown'
+
+/// Check that missing install_name is reported.
+// RUN: not clang-installapi -target x86_64-apple-ios-simulator  %s -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_INSTALL_NAME -input-file %t %s
+// INVALID_INSTALL_NAME: error: no install name specified: add -install_name <path>

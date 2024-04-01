@@ -308,7 +308,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)
@@ -323,7 +323,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)
@@ -493,7 +493,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   if (Indices.empty())
     return Error::success();
 
-  auto Max = std::max_element(Indices.begin(), Indices.end());
+  auto Max = llvm::max_element(Indices);
   uint32_t W = NumDigits(Max->getIndex()) + 2;
 
   for (auto I : Indices)

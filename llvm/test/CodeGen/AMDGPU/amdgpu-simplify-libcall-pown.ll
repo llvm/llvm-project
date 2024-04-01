@@ -808,7 +808,7 @@ define float @test_pown_fast_f32_nobuiltin(float %x, i32 %y) {
 ; CHECK-LABEL: define float @test_pown_fast_f32_nobuiltin
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call fast float @_Z4pownfi(float [[X]], i32 [[Y]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fast float @_Z4pownfi(float [[X]], i32 [[Y]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -820,11 +820,11 @@ define float @test_pown_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; CHECK-LABEL: define float @test_pown_fast_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[__LOG2:%.*]] = call fast float @llvm.log2.f32(float [[__FABS]])
-; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[Y]] to float
-; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul fast float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    [[__LOG2:%.*]] = call fast float @llvm.log2.f32(float [[__FABS]]) #[[ATTR0]]
+; CHECK-NEXT:    [[POWNI2F:%.*]] = call fast float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[__YLOGX:%.*]] = call fast float @llvm.experimental.constrained.fmul.f32(float [[POWNI2F]], float [[__LOG2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[__EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[__YLOGX]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[Y]], 31
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP0]]

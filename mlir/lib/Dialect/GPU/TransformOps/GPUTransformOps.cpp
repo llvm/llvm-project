@@ -22,7 +22,7 @@
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -442,9 +442,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 1.b. In the linear case, compute the max mapping to avoid needlessly
   // mapping all dimensions. In the 3-D mapping case we need to map all
   // dimensions.
-  DeviceMappingAttrInterface maxMapping =
-      cast<DeviceMappingAttrInterface>(*std::max_element(
-          forallMappingAttrs.begin(), forallMappingAttrs.end(), comparator));
+  DeviceMappingAttrInterface maxMapping = cast<DeviceMappingAttrInterface>(
+      *llvm::max_element(forallMappingAttrs, comparator));
   DeviceMappingAttrInterface maxLinearMapping;
   if (maxMapping.isLinearMapping())
     maxLinearMapping = maxMapping;

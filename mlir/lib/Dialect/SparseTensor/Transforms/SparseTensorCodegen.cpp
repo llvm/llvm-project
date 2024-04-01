@@ -1014,24 +1014,29 @@ public:
 };
 
 /// Sparse codegen rule for the insert operator.
-class SparseInsertConverter : public OpConversionPattern<InsertOp> {
+class SparseInsertConverter : public OpConversionPattern<tensor::InsertOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(InsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(tensor::InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto stt = getSparseTensorType(adaptor.getDest());
+    if (!stt.hasEncoding())
+      return failure();
+    assert(stt.isIdentity() && "Run reinterpret-map before conversion.");
+
     Location loc = op.getLoc();
-    auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
+    auto desc = getDescriptorFromTensorTuple(adaptor.getDest());
     TypeRange flatSpTensorTps = desc.getFields().getTypes();
     SmallVector<Value> params = llvm::to_vector(desc.getFields());
-    params.append(adaptor.getLvlCoords().begin(), adaptor.getLvlCoords().end());
-    params.push_back(adaptor.getValue());
-    SparseInsertGenerator insertGen(op.getTensor().getType(), flatSpTensorTps,
+    params.append(adaptor.getIndices().begin(), adaptor.getIndices().end());
+    params.push_back(adaptor.getScalar());
+    SparseInsertGenerator insertGen(op.getDest().getType(), flatSpTensorTps,
                                     params, /*genCall=*/true);
     SmallVector<Value> ret = insertGen.genCallOrInline(rewriter, loc);
     // Replace operation with resulting memrefs.
     rewriter.replaceOp(op,
-                       genTuple(rewriter, loc, op.getTensor().getType(), ret));
+                       genTuple(rewriter, loc, op.getDest().getType(), ret));
     return success();
   }
 };
@@ -1409,14 +1414,10 @@ struct SparseDisassembleOpConverter
         sz = desc.getValMemSize(rewriter, loc);
         src = desc.getValMemRef();
         dst = genToMemref(rewriter, loc, op.getOutValues());
-        // Values is the last field in descriptor, but it is the first
-        // operand in unpack operation.
-        // TODO: maybe change unpack/pack operation instead to be
-        // consistent.
-        retMem.insert(retMem.begin(), dst);
+
+        retMem.push_back(dst);
         Type valLenTp = op.getValLen().getType();
-        retLen.insert(retLen.begin(),
-                      genScalarToTensor(rewriter, loc, sz, valLenTp));
+        retLen.push_back(genScalarToTensor(rewriter, loc, sz, valLenTp));
       } else {
         assert(fKind == SparseTensorFieldKind::PosMemRef ||
                fKind == SparseTensorFieldKind::CrdMemRef);
@@ -1560,6 +1561,19 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
   }
 };
 
+struct SparseHasRuntimeLibraryConverter
+    : public OpConversionPattern<HasRuntimeLibraryOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(HasRuntimeLibraryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 0));
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1571,21 +1585,21 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool createSparseDeallocs, bool enableBufferInitialization) {
-  patterns.add<SparseAssembleOpConverter, SparseDisassembleOpConverter,
-               SparseReturnConverter, SparseCallConverter, SparseLvlOpConverter,
-               SparseCastConverter, SparseExtractSliceConverter,
-               SparseTensorLoadConverter, SparseExpandConverter,
-               SparseCompressConverter, SparseInsertConverter,
-               SparseReorderCOOConverter, SparseReMapConverter,
-               SparseSliceGetterOpConverter<ToSliceOffsetOp,
-                                            StorageSpecifierKind::DimOffset>,
-               SparseSliceGetterOpConverter<ToSliceStrideOp,
-                                            StorageSpecifierKind::DimStride>,
-               SparseToPositionsConverter, SparseToCoordinatesConverter,
-               SparseToCoordinatesBufferConverter, SparseToValuesConverter,
-               SparseConvertConverter, SparseNewConverter,
-               SparseNumberOfEntriesConverter>(typeConverter,
-                                               patterns.getContext());
+  patterns.add<
+      SparseAssembleOpConverter, SparseDisassembleOpConverter,
+      SparseReturnConverter, SparseCallConverter, SparseLvlOpConverter,
+      SparseCastConverter, SparseExtractSliceConverter,
+      SparseTensorLoadConverter, SparseExpandConverter, SparseCompressConverter,
+      SparseInsertConverter, SparseReorderCOOConverter, SparseReMapConverter,
+      SparseSliceGetterOpConverter<ToSliceOffsetOp,
+                                   StorageSpecifierKind::DimOffset>,
+      SparseSliceGetterOpConverter<ToSliceStrideOp,
+                                   StorageSpecifierKind::DimStride>,
+      SparseToPositionsConverter, SparseToCoordinatesConverter,
+      SparseToCoordinatesBufferConverter, SparseToValuesConverter,
+      SparseConvertConverter, SparseNewConverter,
+      SparseNumberOfEntriesConverter, SparseHasRuntimeLibraryConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorDeallocConverter>(
       typeConverter, patterns.getContext(), createSparseDeallocs);
   patterns.add<SparseTensorAllocConverter, SparseTensorEmptyConverter>(

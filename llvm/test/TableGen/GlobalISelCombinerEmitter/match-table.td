@@ -114,14 +114,17 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT: void GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, NewMIVector &OutMIs) const {
 // CHECK-NEXT:   switch(ApplyID) {
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner0:{
+// CHECK-NEXT:     Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);
 // CHECK-NEXT:     APPLY
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner1:{
+// CHECK-NEXT:     Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);
 // CHECK-NEXT:     APPLY MatchInfos.MDInfo0, MatchInfos.MDInfo1
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner2:{
+// CHECK-NEXT:     Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);
 // CHECK-NEXT:     APPLY State.MIs[1]->getOperand(1) State.MIs[0]->getOperand(1) OutMIs[0]
 // CHECK-NEXT:     return;
 // CHECK-NEXT:   }

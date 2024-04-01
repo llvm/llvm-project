@@ -345,6 +345,8 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
@@ -373,6 +375,8 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 64u);
 
   EXPECT_EQ(layout.getAllocaMemorySpace(), Attribute());
   EXPECT_EQ(layout.getProgramMemorySpace(), Attribute());
@@ -385,6 +389,7 @@ TEST(DataLayout, SpecWithEntries) {
 "dltest.op_with_layout"() { dltest.layout = #dltest.spec<
   #dlti.dl_entry<i42, 5>,
   #dlti.dl_entry<i16, 6>,
+  #dlti.dl_entry<index, 42>,
   #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
@@ -408,6 +413,8 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
+  EXPECT_EQ(layout.getTypeIndexBitwidth(IndexType::get(&ctx)), 42u);
 
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 32)), 32u);
   EXPECT_EQ(layout.getTypeSize(Float32Type::get(&ctx)), 32u);

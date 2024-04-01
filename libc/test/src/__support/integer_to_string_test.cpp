@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt.h"
@@ -14,8 +15,6 @@
 #include "src/__support/integer_to_string.h"
 
 #include "test/UnitTest/Test.h"
-
-#include "limits.h"
 
 using LIBC_NAMESPACE::IntegerToString;
 using LIBC_NAMESPACE::cpp::span;
@@ -228,7 +227,7 @@ TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
 }
 
 TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16) {
-  using UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+  using UInt256 = LIBC_NAMESPACE::UInt<256>;
   using type = IntegerToString<UInt256, Hex::WithWidth<64>>;
   EXPECT(
       type,

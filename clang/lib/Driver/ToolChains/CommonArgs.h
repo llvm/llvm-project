@@ -221,6 +221,8 @@ void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs,
                            const llvm::Triple &Triple);
+void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
+                            llvm::opt::ArgStringList &CmdArgs);
 
 } // end namespace tools
 } // end namespace driver

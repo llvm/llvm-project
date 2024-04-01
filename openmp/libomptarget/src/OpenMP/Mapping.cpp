@@ -16,28 +16,33 @@
 #include "device.h"
 
 /// Dump a table of all the host-target pointer pairs on failure
-void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device) {
+void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
+                               bool toStdOut) {
   MappingInfoTy::HDTTMapAccessorTy HDTTMap =
       Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
-  if (HDTTMap->empty())
+  if (HDTTMap->empty()) {
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+              "OpenMP Host-Device pointer mappings table empty\n");
     return;
+  }
 
   SourceInfo Kernel(Loc);
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-       "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
-       Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
-       "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
-       "Declaration");
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+            "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
+            Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+            "%-18s %-18s %s %s %s %s\n", "Host Ptr", "Target Ptr", "Size (B)",
+            "DynRefCount", "HoldRefCount", "Declaration");
   for (const auto &It : *HDTTMap) {
     HostDataToTargetTy &HDTT = *It.HDTT;
     SourceInfo Info(HDTT.HstPtrName);
-    INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-         DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
-         HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
-         HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
-         Info.getLine(), Info.getColumn());
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+              DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
+              DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
+              HDTT.HstPtrEnd - HDTT.HstPtrBegin,
+              HDTT.dynRefCountToStr().c_str(), HDTT.holdRefCountToStr().c_str(),
+              Info.getName(), Info.getFilename(), Info.getLine(),
+              Info.getColumn());
   }
 }
 
@@ -511,7 +516,8 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
        "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
        ", Size=%" PRId64 ", Name=%s\n",
        H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
-       DPxPTR(SrcPtrBegin), H2D ? "Tgt" : "Hst", DPxPTR(DstPtrBegin), Size,
+       DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin), H2D ? "Tgt" : "Hst",
+       DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin), Size,
        (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
                               : "unknown");
 }

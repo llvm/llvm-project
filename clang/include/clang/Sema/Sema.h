@@ -2157,14 +2157,15 @@ public:
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
 
+  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
+                         const FunctionProtoType *Proto);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
 
-  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                         const FunctionProtoType *Proto);
   bool CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation loc,
                            ArrayRef<const Expr *> Args);
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
@@ -2238,7 +2239,8 @@ private:
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D);
+  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
+                           const llvm::StringMap<bool> &FeatureMap);
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
@@ -3064,6 +3066,8 @@ public:
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
 
+  bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
   NamedDecl *getShadowedDeclaration(const TypedefNameDecl *D,
                                     const LookupResult &R);
@@ -3268,7 +3272,8 @@ public:
   Decl *ActOnFileScopeAsmDecl(Expr *expr, SourceLocation AsmLoc,
                               SourceLocation RParenLoc);
 
-  Decl *ActOnTopLevelStmtDecl(Stmt *Statement);
+  TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
+  void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
   void ActOnPopScope(SourceLocation Loc, Scope *S);
 
@@ -3915,14 +3920,22 @@ public:
   void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *Min, Expr *Max);
 
+  /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
+  AMDGPUMaxNumWorkGroupsAttr *
+  CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
+                                   Expr *YExpr, Expr *ZExpr);
+
+  /// addAMDGPUMaxNumWorkGroupsAttr - Adds an amdgpu_max_num_work_groups
+  /// attribute to a particular declaration.
+  void addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
+                                     Expr *XExpr, Expr *YExpr, Expr *ZExpr);
+
   DLLImportAttr *mergeDLLImportAttr(Decl *D, const AttributeCommonInfo &CI);
   DLLExportAttr *mergeDLLExportAttr(Decl *D, const AttributeCommonInfo &CI);
   MSInheritanceAttr *mergeMSInheritanceAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
                                             bool BestCase,
                                             MSInheritanceModel Model);
-
-  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
 
   EnforceTCBAttr *mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL);
   EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
@@ -5236,6 +5249,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
+      EK_BoundsAttrArgument,
       EK_Other
     } ExprContext;
 
@@ -5352,6 +5366,12 @@ public:
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
   };
+
+  bool isBoundsAttrContext() const {
+    return ExprEvalContexts.back().ExprContext ==
+           ExpressionEvaluationContextRecord::ExpressionKind::
+               EK_BoundsAttrArgument;
+  }
 
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
@@ -8058,13 +8078,13 @@ public:
 
   /// The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.
-  void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
   void BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// The parsed has entered a submodule.
-  void ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
   /// The parser has left a submodule.
-  void ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
 
   /// Create an implicit import of the given module at the given
   /// source location, for error recovery, if possible.
@@ -9007,6 +9027,12 @@ public:
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
 
+  ExprResult ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                SourceRange Range);
+  ExprResult BuildCXXAssumeExpr(Expr *Assumption,
+                                const IdentifierInfo *AttrName,
+                                SourceRange Range);
+
   ///@}
 
   //
@@ -9202,7 +9228,7 @@ public:
 
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept,
+                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
@@ -9831,6 +9857,12 @@ public:
                           ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
 
+  TemplateDeductionResult DeduceTemplateArguments(
+      TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
+      ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      bool NumberOfArgumentsMustMatch);
+
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
       FunctionTemplateDecl *FunctionTemplate,
       TemplateArgumentListInfo &ExplicitTemplateArgs,
@@ -9957,7 +9989,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      unsigned NumCallArguments2, bool Reversed = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
+
   UnresolvedSetIterator
   getMostSpecialized(UnresolvedSetIterator SBegin, UnresolvedSetIterator SEnd,
                      TemplateSpecCandidateSet &FailedCandidates,
@@ -10381,6 +10414,9 @@ public:
     InstantiatingTemplate &operator=(const InstantiatingTemplate &) = delete;
   };
 
+  bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             TemplateArgumentLoc &Output);
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -10865,9 +10901,11 @@ public:
                                   ParmVarDecl *Param);
   void InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function);
-  FunctionDecl *InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                               const TemplateArgumentList *Args,
-                                               SourceLocation Loc);
+  FunctionDecl *InstantiateFunctionDeclaration(
+      FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+      SourceLocation Loc,
+      CodeSynthesisContext::SynthesisKind CSC =
+          CodeSynthesisContext::ExplicitTemplateArgumentSubstitution);
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function,
                                      bool Recursive = false,
@@ -11610,12 +11648,14 @@ private:
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
-  /// used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
   /// the case of lambdas) set up the LocalInstantiationScope of the current
   /// function.
-  bool SetupConstraintScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope);
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
 
   /// Used during constraint checking, sets up the constraint template argument
   /// lists, and calls SetupConstraintScope to set up the
@@ -11717,6 +11757,8 @@ public:
                               SourceLocation AttrLoc);
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
+
+  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
@@ -14648,10 +14690,10 @@ private:
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The current `omp begin/end assumes` scopes.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeScoped;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeScoped;
 
   /// All `omp assumes` we encountered so far.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeGlobal;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
 
   /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
   /// on the parameter of the bind clause. In the methods for the

@@ -621,13 +621,17 @@ void ValueObjectPrinter::PrintChild(
   }
 }
 
-uint32_t ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
+llvm::Expected<uint32_t>
+ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   if (m_options.m_pointer_as_array)
     return m_options.m_pointer_as_array.m_element_count;
 
-  size_t num_children = synth_valobj.GetNumChildren();
+  auto num_children_or_err = synth_valobj.GetNumChildren();
+  if (!num_children_or_err)
+    return num_children_or_err;
+  uint32_t num_children = *num_children_or_err;
   print_dotdotdot = false;
   if (num_children) {
     const size_t max_num_children = GetMostSpecializedValue()
@@ -704,7 +708,12 @@ void ValueObjectPrinter::PrintChildren(
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   bool print_dotdotdot = false;
-  size_t num_children = GetMaxNumChildrenToPrint(print_dotdotdot);
+  auto num_children_or_err = GetMaxNumChildrenToPrint(print_dotdotdot);
+  if (!num_children_or_err) {
+    *m_stream << " <" << llvm::toString(num_children_or_err.takeError()) << '>';
+    return;
+  }
+  uint32_t num_children = *num_children_or_err;
   if (num_children) {
     bool any_children_printed = false;
 
@@ -753,7 +762,12 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   bool print_dotdotdot = false;
-  size_t num_children = GetMaxNumChildrenToPrint(print_dotdotdot);
+  auto num_children_or_err = GetMaxNumChildrenToPrint(print_dotdotdot);
+  if (!num_children_or_err) {
+    *m_stream << '<' << llvm::toString(num_children_or_err.takeError()) << '>';
+    return true;
+  }
+  uint32_t num_children = *num_children_or_err;
 
   if (num_children) {
     m_stream->PutChar('(');

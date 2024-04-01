@@ -26,6 +26,8 @@
 ; CHECK-NEXT: {{^}}  store i32 %[[VAL_ADD]]{{.+}}, !DIAssignID ![[ASSIGNID:[0-9]+]]
 ; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata i32 %[[VAL_ADD]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ptr %[[VAL_B]], metadata !DIExpression()), !dbg ![[LOC_4:[0-9]+]]
 ; NEWDBG-NEXT: {{^}}    #dbg_assign(i32 %[[VAL_ADD]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ptr %[[VAL_B]], !DIExpression(), ![[LOC_4:[0-9]+]])
+; OLDDBG-NEXT: call void @llvm.dbg.assign(metadata ![[EMPTY:[0-9]+]], metadata ![[VAR_B]], metadata !DIExpression(), metadata ![[ASSIGNID]], metadata ![[EMPTY]], metadata !DIExpression()), !dbg ![[LOC_4]]
+; NEWDBG-NEXT: {{^}}    #dbg_assign(![[EMPTY:[0-9]+]], ![[VAR_B]], !DIExpression(), ![[ASSIGNID]], ![[EMPTY]], !DIExpression(), ![[LOC_4]])
 ; CHECK-NEXT: {{^}}  ret i32
 
 ; OLDDBG-DAG: declare void @llvm.dbg.value
@@ -40,6 +42,7 @@
 ; CHECK-DAG: ![[LOC_3]] = !DILocation(line: 3, column: 25
 ; CHECK-DAG: ![[LOC_4]] = !DILocation(line: 3, column: 30
 ; CHECK-DAG: ![[LABEL_ID]] = !DILabel(
+; CHECK-DAG: ![[EMPTY]] = !{}
 
 define dso_local i32 @f(i32 %a) !dbg !7 {
 entry:
@@ -51,6 +54,7 @@ entry:
   call void @llvm.dbg.label(metadata !50), !dbg !32
   store i32 %add, ptr %b, !dbg !32, !DIAssignID !40
   call void @llvm.dbg.assign(metadata i32 %add, metadata !21, metadata !DIExpression(), metadata !40, metadata ptr %b, metadata !DIExpression()), !dbg !33
+  call void @llvm.dbg.assign(metadata !2, metadata !21, metadata !DIExpression(), metadata !40, metadata !2, metadata !DIExpression()), !dbg !33
   ret i32 %add, !dbg !33
 
 }

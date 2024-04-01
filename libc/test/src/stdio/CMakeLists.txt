@@ -14,6 +14,7 @@ add_libc_test(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopen
     libc.src.stdio.fputs
     libc.src.stdio.fread
@@ -352,6 +353,21 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.sys.stat.mkdirat
       libc.src.unistd.access
       libc.src.unistd.close
+  )
+
+  add_libc_test(
+    rename_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      rename_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.rename
+      libc.src.unistd.access
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
 

@@ -64,9 +64,8 @@ define void @Doit_bb7_2E_i(ptr %x1, ptr %c, ptr %b, ptr %a, ptr %q, ptr %x1.sub,
 ; CHECK-LABEL: 'Doit_bb7_2E_i'
 ; CHECK-NEXT:  Determining loop execution counts for: @Doit_bb7_2E_i
 ; CHECK-NEXT:  Loop %bb7.i: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %bb7.i: constant max backedge-taken count is 8
-; CHECK-NEXT:  Loop %bb7.i: symbolic max backedge-taken count is 8
-; CHECK-NEXT:  Loop %bb7.i: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:  Loop %bb7.i: constant max backedge-taken count is i32 8
+; CHECK-NEXT:  Loop %bb7.i: symbolic max backedge-taken count is i32 8
 ;
 newFuncRoot:
   br label %bb7.i

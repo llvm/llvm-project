@@ -171,8 +171,8 @@ ObjCIVarRecord *RecordsSlice::findObjCIVar(bool IsScopedName,
 }
 
 GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
-                                      GlobalRecord::Kind GV,
-                                      SymbolFlags Flags) {
+                                      GlobalRecord::Kind GV, SymbolFlags Flags,
+                                      bool Inlined) {
   if (GV == GlobalRecord::Kind::Function)
     Flags |= SymbolFlags::Text;
   else if (GV == GlobalRecord::Kind::Variable)
@@ -182,7 +182,7 @@ GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second)
     Result.first->second =
-        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV);
+        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV, Inlined);
   else {
     updateLinkage(Result.first->second.get(), Linkage);
     updateFlags(Result.first->second.get(), Flags);

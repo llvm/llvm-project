@@ -616,6 +616,15 @@
 # DEBUG-NEXT: G_BRJT (opcode {{[0-9]+}}): 2 type indices
 # DEBUG-NEXT: .. the first uncovered type index: 2, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
+# DEBUG-NEXT: G_VSCALE (opcode {{[0-9]+}}): 1 type index, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_INSERT_SUBVECTOR (opcode {{[0-9]+}}): 2 type indices, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_EXTRACT_SUBVECTOR (opcode {{[0-9]+}}): 1 type index, 1 imm index
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_INSERT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
@@ -625,6 +634,9 @@
 # DEBUG-NEXT: G_SHUFFLE_VECTOR (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_SPLAT_VECTOR (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_CTTZ (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
@@ -740,6 +752,15 @@
 # DEBUG-NEXT: G_BZERO (opcode {{[0-9]+}}): 2 type indices, 1 imm index
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
+# DEBUG-NEXT: G_TRAP (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_DEBUGTRAP (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: G_UBSANTRAP (opcode {{[0-9]+}}): 0 type indices, 0 imm indices
+# DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
+# DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_VECREDUCE_SEQ_FADD (opcode {{[0-9]+}}): 3 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected

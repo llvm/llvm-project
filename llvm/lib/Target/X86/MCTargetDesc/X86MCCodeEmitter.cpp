@@ -200,8 +200,12 @@ public:
   void setB(const MCInst &MI, unsigned OpNum) {
     B = getRegEncoding(MI, OpNum) >> 3 & 1;
   }
-  void set4V(const MCInst &MI, unsigned OpNum) {
-    set4V(getRegEncoding(MI, OpNum));
+  void set4V(const MCInst &MI, unsigned OpNum, bool IsImm = false) {
+    // OF, SF, ZF and CF reuse VEX_4V bits but are not reversed
+    if (IsImm)
+      set4V(~(MI.getOperand(OpNum).getImm()));
+    else
+      set4V(getRegEncoding(MI, OpNum));
   }
   void setL(bool V) { VEX_L = V; }
   void setPP(unsigned V) { VEX_PP = V; }
@@ -252,6 +256,11 @@ public:
     EVEX_aaa = getRegEncoding(MI, OpNum);
   }
   void setNF(bool V) { EVEX_aaa |= V << 2; }
+  void setSC(const MCInst &MI, unsigned OpNum) {
+    unsigned Encoding = MI.getOperand(OpNum).getImm();
+    EVEX_V2 = ~(Encoding >> 3) & 0x1;
+    EVEX_aaa = Encoding & 0x7;
+  }
 
   X86OpcodePrefixHelper(const MCRegisterInfo &MRI)
       : W(0), R(0), X(0), B(0), M(0), R2(0), X2(0), B2(0), VEX_4V(0), VEX_L(0),
@@ -1045,6 +1054,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   uint8_t EVEX_rc = 0;
 
   unsigned CurOp = X86II::getOperandBias(Desc);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   switch (TSFlags & X86II::FormMask) {
   default:
@@ -1061,6 +1071,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::MRM_C0:
   case X86II::RawFrm:
     break;
+  case X86II::MRMDestMemCC:
   case X86II::MRMDestMemFSIB:
   case X86II::MRMDestMem: {
     // MRMDestMem instructions forms:
@@ -1086,8 +1097,13 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
+  case X86II::MRMSrcMemCC:
   case X86II::MRMSrcMemFSIB:
   case X86II::MRMSrcMem: {
     // MRMSrcMem instructions forms:
@@ -1115,7 +1131,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
   case X86II::MRMSrcMem4VOp3: {
@@ -1155,9 +1175,14 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, MemOperand + X86::AddrBaseReg);
     Prefix.setXX2(MI, MemOperand + X86::AddrIndexReg);
     Prefix.setV2(MI, MemOperand + X86::AddrIndexReg, HasVEX_4V);
-
+    CurOp += X86::AddrNumOperands + 1; // Skip first imm.
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     break;
   }
+  case X86II::MRMSrcRegCC:
   case X86II::MRMSrcReg: {
     // MRMSrcReg instructions forms:
     //  dst(ModR/M), src1(VEX_4V), src2(ModR/M), src3(Imm[7:4])
@@ -1182,6 +1207,11 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
 
     if (TSFlags & X86II::EVEX_B) {
       if (HasEVEX_RC) {
@@ -1215,6 +1245,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     ++CurOp;
     break;
   }
+  case X86II::MRMDestRegCC:
   case X86II::MRMDestReg: {
     // MRMDestReg instructions forms:
     //  dst(ModR/M), src(ModR/M)
@@ -1236,6 +1267,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
       Prefix.set4VV2(MI, CurOp++);
 
     Prefix.setRR2(MI, CurOp++);
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, CurOp++, /*IsImm=*/true);
+      Prefix.setSC(MI, CurOp++);
+    }
     if (TSFlags & X86II::EVEX_B)
       EncodeRC = true;
     break;
@@ -1266,6 +1301,10 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     Prefix.setBB2(MI, CurOp);
     Prefix.setX(MI, CurOp, 4);
     ++CurOp;
+    if (HasTwoConditionalOps) {
+      Prefix.set4V(MI, ++CurOp, /*IsImm=*/true);
+      Prefix.setSC(MI, ++CurOp);
+    }
     break;
   }
   }
@@ -1525,6 +1564,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   unsigned OpcodeOffset = 0;
 
   bool IsND = X86II::hasNewDataDest(TSFlags);
+  bool HasTwoConditionalOps = TSFlags & X86II::TwoConditionalOps;
 
   uint64_t Form = TSFlags & X86II::FormMask;
   switch (Form) {
@@ -1602,6 +1642,15 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     CurOp = SrcRegNum + 1;
     break;
   }
+  case X86II::MRMDestRegCC: {
+    unsigned FirstOp = CurOp++;
+    unsigned SecondOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitRegModRMByte(MI.getOperand(FirstOp),
+                     getX86RegNum(MI.getOperand(SecondOp)), CB);
+    break;
+  }
   case X86II::MRMDestMem4VOp3CC: {
     unsigned CC = MI.getOperand(8).getImm();
     emitByte(BaseOpcode + CC, CB);
@@ -1629,6 +1678,16 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     emitMemModRMByte(MI, CurOp, getX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
                      Kind, StartByte, CB, Fixups, STI, ForceSIB);
     CurOp = SrcRegNum + 1;
+    break;
+  }
+  case X86II::MRMDestMemCC: {
+    unsigned MemOp = CurOp;
+    CurOp = MemOp + X86::AddrNumOperands;
+    unsigned RegOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitMemModRMByte(MI, MemOp, getX86RegNum(MI.getOperand(RegOp)), TSFlags,
+                     Kind, StartByte, CB, Fixups, STI);
     break;
   }
   case X86II::MRMSrcReg: {
@@ -1681,6 +1740,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcRegCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned FirstOp = CurOp++;
     unsigned SecondOp = CurOp++;
 
@@ -1742,6 +1803,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcMemCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned RegOp = CurOp++;
     unsigned FirstMemOp = CurOp;
     CurOp = FirstMemOp + X86::AddrNumOperands;
@@ -1914,11 +1977,16 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // If there is a remaining operand, it must be a trailing immediate. Emit it
     // according to the right size for the instruction. Some instructions
     // (SSE4a extrq and insertq) have two trailing immediates.
-    while (CurOp != NumOps && NumOps - CurOp <= 2) {
+
+    // Skip two trainling conditional operands encoded in EVEX prefix
+    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemaningOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     X86II::getSizeOfImm(TSFlags), getImmFixupKind(TSFlags),
                     StartByte, CB, Fixups);
+      --RemaningOps;
     }
+    CurOp += 2 * HasTwoConditionalOps;
   }
 
   if ((TSFlags & X86II::OpMapMask) == X86II::ThreeDNow)
