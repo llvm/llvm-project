@@ -31,7 +31,7 @@ jobs:
           script: |
             var fs = require('fs');
             const comments = JSON.parse(fs.readFileSync('./comments'));
-            if (!comments) {
+            if (!comments || comments.length == 0) {
               return;
             }
 
