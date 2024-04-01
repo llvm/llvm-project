@@ -1771,7 +1771,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
       D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
   Record.push_back(ExplicitInstantiation);
   if (ExplicitInstantiation) {
-    Record.AddSourceLocation(D->getExternLoc());
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
 
@@ -1826,7 +1826,7 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
       D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
   Record.push_back(ExplicitInstantiation);
   if (ExplicitInstantiation) {
-    Record.AddSourceLocation(D->getExternLoc());
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
 

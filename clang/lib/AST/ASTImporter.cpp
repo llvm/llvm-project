@@ -6296,8 +6296,8 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   else
     return LocOrErr.takeError();
 
-  if (auto LocOrErr = import(D->getExternLoc()))
-    D2->setExternLoc(*LocOrErr);
+  if (auto LocOrErr = import(D->getExternKeywordLoc()))
+    D2->setExternKeywordLoc(*LocOrErr);
   else
     return LocOrErr.takeError();
 

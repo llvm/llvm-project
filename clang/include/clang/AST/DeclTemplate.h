@@ -1783,7 +1783,7 @@ struct ExplicitInstantiationInfo {
   const ASTTemplateArgumentListInfo *TemplateArgsAsWritten = nullptr;
 
   /// The location of the extern keyword.
-  SourceLocation ExternLoc;
+  SourceLocation ExternKeywordLoc;
 
   /// The location of the template keyword.
   SourceLocation TemplateKeywordLoc;
@@ -2028,14 +2028,14 @@ public:
   }
 
   /// Gets the location of the extern keyword, if present.
-  SourceLocation getExternLoc() const {
+  SourceLocation getExternKeywordLoc() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
-      return Info->ExternLoc;
+      return Info->ExternKeywordLoc;
     return SourceLocation();
   }
 
   /// Sets the location of the extern keyword.
-  void setExternLoc(SourceLocation Loc);
+  void setExternKeywordLoc(SourceLocation Loc);
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
@@ -2793,14 +2793,14 @@ public:
   }
 
   /// Gets the location of the extern keyword, if present.
-  SourceLocation getExternLoc() const {
+  SourceLocation getExternKeywordLoc() const {
     if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
-      return Info->ExternLoc;
+      return Info->ExternKeywordLoc;
     return SourceLocation();
   }
 
   /// Sets the location of the extern keyword.
-  void setExternLoc(SourceLocation Loc);
+  void setExternKeywordLoc(SourceLocation Loc);
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {

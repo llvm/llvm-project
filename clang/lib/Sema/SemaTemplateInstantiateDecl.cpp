@@ -3941,7 +3941,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
   InstD->setAccess(D->getAccess());
   InstD->setInstantiationOfMemberClass(D, TSK_ImplicitInstantiation);
   InstD->setSpecializationKind(D->getSpecializationKind());
-  InstD->setExternLoc(D->getExternLoc());
+  InstD->setExternKeywordLoc(D->getExternKeywordLoc());
   InstD->setTemplateKeywordLoc(D->getTemplateKeywordLoc());
 
   Owner->addDecl(InstD);
