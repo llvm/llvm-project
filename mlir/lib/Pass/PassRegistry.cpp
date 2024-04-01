@@ -40,7 +40,7 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
   return [=](OpPassManager &pm, StringRef options,
              function_ref<LogicalResult(const Twine &)> errorHandler) {
     std::unique_ptr<Pass> pass = allocator();
-    LogicalResult result = pass->initializeOptions(options);
+    LogicalResult result = pass->initializeOptions(options, errorHandler);
 
     std::optional<StringRef> pmOpName = pm.getOpName();
     std::optional<StringRef> passOpName = pass->getOpName();

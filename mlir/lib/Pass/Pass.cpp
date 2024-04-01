@@ -60,7 +60,9 @@ Operation *PassExecutionAction::getOp() const {
 void Pass::anchor() {}
 
 /// Attempt to initialize the options of this pass from the given string.
-LogicalResult Pass::initializeOptions(StringRef options) {
+LogicalResult Pass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
   return passOptions.parseFromString(options);
 }
 
