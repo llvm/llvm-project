@@ -388,6 +388,21 @@ getUnmanagedCSI(const MachineFunction &MF,
   return NonLibcallCSI;
 }
 
+static SmallVector<CalleeSavedInfo, 8>
+getRVVCalleeSavedInfo(const MachineFunction &MF,
+                      const std::vector<CalleeSavedInfo> &CSI) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  SmallVector<CalleeSavedInfo, 8> RVVCSI;
+
+  for (auto &CS : CSI) {
+    int FI = CS.getFrameIdx();
+    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      RVVCSI.push_back(CS);
+  }
+
+  return RVVCSI;
+}
+
 void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
@@ -554,8 +569,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
       FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
-    // stack space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // stack space. Align the stack size down to a multiple of 16. This is
+    // needed for RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     FirstFrameSetup->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
@@ -588,6 +605,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // directives.
   for (const auto &Entry : CSI) {
     int FrameIdx = Entry.getFrameIdx();
+    if (FrameIdx >= 0 &&
+        MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
+      continue;
+
     int64_t Offset = MFI.getObjectOffset(FrameIdx);
     Register Reg = Entry.getReg();
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
@@ -724,7 +745,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo());
 
-  // Skip to before the restores of callee-saved registers
+  // Skip to before the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
   auto LastFrameDestroy = MBBI;
@@ -776,8 +797,10 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
       MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
-    // space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // space. Align the stack size down to a multiple of 16. This is needed for
+    // RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     MBBI->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
@@ -1025,15 +1048,24 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   // Create a buffer of RVV objects to allocate.
   SmallVector<int, 8> ObjectsToAllocate;
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    unsigned StackID = MFI.getStackID(I);
-    if (StackID != TargetStackID::ScalableVector)
-      continue;
-    if (MFI.isDeadObjectIndex(I))
-      continue;
+  auto pushRVVObjects = [&](int FIBegin, int FIEnd) {
+    for (int I = FIBegin, E = FIEnd; I != E; ++I) {
+      unsigned StackID = MFI.getStackID(I);
+      if (StackID != TargetStackID::ScalableVector)
+        continue;
+      if (MFI.isDeadObjectIndex(I))
+        continue;
 
-    ObjectsToAllocate.push_back(I);
-  }
+      ObjectsToAllocate.push_back(I);
+    }
+  };
+  // First push RVV Callee Saved object, then push RVV stack object
+  std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
+  const auto &RVVCSI = getRVVCalleeSavedInfo(MF, CSI);
+  if (!RVVCSI.empty())
+    pushRVVObjects(RVVCSI[0].getFrameIdx(),
+                   RVVCSI[RVVCSI.size() - 1].getFrameIdx() + 1);
+  pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
 
   // The minimum alignment is 16 bytes.
   Align RVVStackAlign(16);
@@ -1483,13 +1515,19 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  for (auto &CS : UnmanagedCSI) {
-    // Insert the spill to the stack frame.
-    Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg), CS.getFrameIdx(),
-                            RC, TRI, Register());
-  }
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+
+  auto storeRegToStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+    for (auto &CS : CSInfo) {
+      // Insert the spill to the stack frame.
+      Register Reg = CS.getReg();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg),
+                              CS.getFrameIdx(), RC, TRI, Register());
+    }
+  };
+  storeRegToStackSlot(UnmanagedCSI);
+  storeRegToStackSlot(RVVCSI);
 
   return true;
 }
@@ -1507,19 +1545,26 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   // Manually restore values not restored by libcall & Push/Pop.
-  // Keep the same order as in the prologue. There is no need to reverse the
-  // order in the epilogue. In addition, the return address will be restored
-  // first in the epilogue. It increases the opportunity to avoid the
-  // load-to-use data hazard between loading RA and return by RA.
-  // loadRegFromStackSlot can insert multiple instructions.
+  // Reverse the restore order in epilog.  In addition, the return
+  // address will be restored first in the epilogue. It increases
+  // the opportunity to avoid the load-to-use data hazard between
+  // loading RA and return by RA.  loadRegFromStackSlot can insert
+  // multiple instructions.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  for (auto &CS : UnmanagedCSI) {
-    Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                             Register());
-    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
-  }
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+
+  auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+    for (auto &CS : CSInfo) {
+      Register Reg = CS.getReg();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
+                               Register());
+      assert(MI != MBB.begin() &&
+             "loadRegFromStackSlot didn't insert any code!");
+    }
+  };
+  loadRegFromStackSlot(RVVCSI);
+  loadRegFromStackSlot(UnmanagedCSI);
 
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {

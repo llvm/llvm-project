@@ -280,7 +280,8 @@ TEST(MemProf, RecordSerializationRoundTrip) {
   IndexedMemProfRecord Record;
   for (const auto &ACS : AllocCallStacks) {
     // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(ACS, Info);
+    Record.AllocSites.emplace_back(ACS, llvm::memprof::hashCallStack(ACS),
+                                   Info);
   }
   Record.CallSites.assign(CallSites);
 
@@ -376,7 +377,9 @@ TEST(MemProf, BaseMemProfReader) {
   Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
   Block.TotalLifetime = 200001;
   std::array<FrameId, 2> CallStack{F1.hash(), F2.hash()};
-  FakeRecord.AllocSites.emplace_back(/*CS=*/CallStack, /*MB=*/Block);
+  FakeRecord.AllocSites.emplace_back(
+      /*CS=*/CallStack, /*CSId=*/llvm::memprof::hashCallStack(CallStack),
+      /*MB=*/Block);
   ProfData.insert({F1.hash(), FakeRecord});
 
   MemProfReader Reader(FrameIdMap, ProfData);
