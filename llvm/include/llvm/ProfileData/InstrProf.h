@@ -283,13 +283,23 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
-/// otherwise  return true.
+/// otherwise return true.
 bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
                               InstrProfValueData ValueData[],
                               uint32_t &ActualNumValueData, uint64_t &TotalC,
                               bool GetNoICPValue = false);
+
+/// Extract the value profile data from \p Inst and returns them if \p Inst is
+/// annotated with value profile data. Returns nullptr otherwise. It's similar
+/// to `getValueProfDataFromInst` above except that an array is allocated only
+/// after a preliminary checking that the value profiles of kind `ValueKind`
+/// exist.
+std::unique_ptr<InstrProfValueData[]>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
+                         uint64_t &TotalC, bool GetNoICPValue = false);
 
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
