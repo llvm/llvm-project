@@ -4117,7 +4117,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
   } else if (Literal.isFloatingLiteral()) {
     QualType Ty;
     if (Literal.isHalf){
-      if (getOpenCLOptions().isAvailableOption("cl_khr_fp16", getLangOpts()))
+      if (getLangOpts().HLSL ||
+          getOpenCLOptions().isAvailableOption("cl_khr_fp16", getLangOpts()))
         Ty = Context.HalfTy;
       else {
         Diag(Tok.getLocation(), diag::err_half_const_requires_fp16);
@@ -4125,6 +4126,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       }
     } else if (Literal.isFloat)
       Ty = Context.FloatTy;
+    else if (getLangOpts().HLSL && Literal.isLong)
+      Ty = Context.DoubleTy;
     else if (Literal.isLong)
       Ty = Context.LongDoubleTy;
     else if (Literal.isFloat16)
