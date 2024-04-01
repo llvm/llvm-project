@@ -44,3 +44,15 @@ vector.body:
 exit:
   ret float %acc
 }
+
+define <vscale x 2 x i32> @i1_zext_add(<vscale x 2 x i1> %a, <vscale x 2 x i32> %b) {
+; CHECK-LABEL: define <vscale x 2 x i32> @i1_zext_add(
+; CHECK-SAME: <vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i32> [[B:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 2 x i1> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 2 x i32> [[B]], [[ZEXT]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[ADD]]
+;
+  %zext = zext <vscale x 2 x i1> %a to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %b, %zext
+  ret <vscale x 2 x i32> %add
+}
