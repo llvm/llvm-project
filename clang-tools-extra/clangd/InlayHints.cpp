@@ -396,7 +396,7 @@ class TypeInlayHintLabelPartBuilder
   const PrintingPolicy &PP;
   std::vector<InlayHintLabelPart> &LabelChunks;
 
-  bool ShouldAddLinksToTagTypes = false;
+  bool ShouldAddLinksToTagTypes;
 
   struct CurrentTypeRAII {
     TypeInlayHintLabelPartBuilder &Builder;
@@ -529,7 +529,8 @@ public:
                                 llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
       : CurrentType(Current), Context(Context), PP(PP),
-        LabelChunks(LabelChunks) {
+        LabelChunks(LabelChunks),
+        ShouldAddLinksToTagTypes(ShouldAddLinksToTagTypes) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
