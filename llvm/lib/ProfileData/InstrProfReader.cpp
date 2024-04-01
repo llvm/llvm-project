@@ -370,8 +370,11 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         } else if (ValueKind == IPVK_VTableTarget) {
           if (InstrProfSymtab::isExternalSymbol(VD.first))
             Value = 0;
-          else
+          else {
+            if (Error E = Symtab->addVTableName(VD.first))
+              return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
+          }
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -539,13 +542,29 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
-  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart)))
+  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
+                              StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
     Symtab.mapAddress(FPtr, swap(I->NameRef));
+  }
+
+  if (VTableBegin != nullptr && VTableEnd != nullptr) {
+    for (const RawInstrProf::VTableProfileData<IntPtrT> *I = VTableBegin;
+         I != VTableEnd; ++I) {
+      const IntPtrT VPtr = swap(I->VTablePointer);
+      if (!VPtr)
+        continue;
+      // Map both begin and end address to the name hash, since the instrumented
+      // address could be somewhere in the middle.
+      // VPtr is of type uint32_t or uint64_t so 'VPtr + I->VTableSize' marks
+      // the end of vtable address.
+      Symtab.mapVTableAddress(VPtr, VPtr + swap(I->VTableSize),
+                              swap(I->VTableNameHash));
+    }
   }
   return success();
 }
@@ -1397,7 +1416,15 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   if (Symtab)
     return *Symtab;
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
+  auto NewSymtab = std::make_unique<InstrProfSymtab>();
+
+  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
+          StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    consumeError(error(ErrCode, Msg));
+  }
+
+  // finalizeSymtab is called inside populateSymtab.
   if (Error E = Index->populateSymtab(*NewSymtab)) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));
