@@ -656,9 +656,6 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
   ret <vscale x 16 x double> %res
 }
 
-; FIXME: The last operand to the vwaddu.vv and vwmaccu.vx are both undef. They
-; need to be the same register with the same contents. Otherwise, the even
-; elements will not contain just the values from %a.
 define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32_poison(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: vector_interleave_nxv8i32_nxv4i32_poison:
 ; CHECK:       # %bb.0:

@@ -4628,8 +4628,8 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
     // If OddV is undef, this is a zero extend.
     // FIXME: Not only does this optimize the code, it fixes some correctness
     // issues because MIR does not have freeze.
-    Interleaved = DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV,
-                              Mask, VL);
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV, Mask, VL);
   } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
