@@ -124,11 +124,10 @@ generateReplacement(const MatchFinder::MatchResult &Match,
       if (ArgType == ResultType)
         continue;
 
-      const std::string ArgText =
+      const StringRef ArgText =
           Lexer::getSourceText(
               CharSourceRange::getTokenRange(Arg->getSourceRange()), SourceMngr,
-              LanguageOpts)
-              .str();
+              LanguageOpts);
 
       Twine Replacement = llvm::Twine("static_cast<")
                               .concat(ResultType.getAsString(LanguageOpts))
