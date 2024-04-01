@@ -172,7 +172,7 @@ decay to a pointer during overload resolution or template type deduction.
 
 An argument of ``ConstantArrayType`` can be implicitly converted to an
 equivalent non-decayed ``ArrayParameterType`` if the underlying canonical
-``ConstantArrayType``s are the same. This occurs during overload resolution
+``ConstantArrayType`` is the same. This occurs during overload resolution
 instead of array to pointer decay.
 
 .. code-block:: c++
