@@ -277,6 +277,7 @@ static bool canPrintOnLeftSide(const Attr *A) {
 }
 
 static bool mustPrintOnLeftSide(attr::Kind kind) {
+  switch (kind) {
 #ifdef CLANG_ATTR_LIST_PrintOnLeft
   switch (kind) {
   CLANG_ATTR_LIST_PrintOnLeft
