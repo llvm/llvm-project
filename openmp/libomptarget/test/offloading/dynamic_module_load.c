@@ -12,6 +12,9 @@ int foo() {
 #include <dlfcn.h>
 #include <stdio.h>
 int main(int argc, char **argv) {
+#pragma omp target
+  ;
+
   void *Handle = dlopen(argv[1], RTLD_NOW);
   int (*Foo)(void);
 

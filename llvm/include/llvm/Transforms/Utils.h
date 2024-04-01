@@ -70,7 +70,7 @@ extern char &LCSSAID;
 //   %Y = load i32* %X
 //   ret i32 %Y
 //
-FunctionPass *createPromoteMemoryToRegisterPass(bool IsForced = false);
+FunctionPass *createPromoteMemoryToRegisterPass();
 
 //===----------------------------------------------------------------------===//
 //

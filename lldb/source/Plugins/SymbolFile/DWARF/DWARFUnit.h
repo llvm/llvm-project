@@ -98,8 +98,14 @@ public:
   virtual ~DWARFUnit();
 
   bool IsDWOUnit() { return m_is_dwo; }
+  /// Get the DWO ID from the DWARFUnitHeader for DWARF5, or from the unit DIE's
+  /// DW_AT_dwo_id or DW_AT_GNU_dwo_id for DWARF4 and earlier.
   std::optional<uint64_t> GetDWOId();
-
+  /// Get the DWO ID from the DWARFUnitHeader only. DWARF5 skeleton units have
+  /// the DWO ID in the compile unit header and we sometimes only want to access
+  /// this cheap value without causing the more expensive attribute fetches that
+  /// GetDWOId() uses.
+  std::optional<uint64_t> GetHeaderDWOId() { return m_header.GetDWOId(); }
   void ExtractUnitDIEIfNeeded();
   void ExtractUnitDIENoDwoIfNeeded();
   void ExtractDIEsIfNeeded();
@@ -198,9 +204,21 @@ public:
 
   static uint8_t GetDefaultAddressSize();
 
-  void *GetUserData() const;
+  lldb_private::CompileUnit *GetLLDBCompUnit() const { return m_lldb_cu; }
 
-  void SetUserData(void *d);
+  void SetLLDBCompUnit(lldb_private::CompileUnit *cu) { m_lldb_cu = cu; }
+
+  /// Get the skeleton compile unit for a DWO file.
+  ///
+  /// We need to keep track of the skeleton compile unit for a DWO file so
+  /// we can access it. Sometimes this value is cached when the skeleton
+  /// compile unit is first parsed, but if a .dwp file parses all of the
+  /// DWARFUnits in the file, the skeleton compile unit might not have been
+  /// parsed yet, to there might not be a backlink. This accessor handles
+  /// both cases correctly and avoids crashes.
+  DWARFCompileUnit *GetSkeletonUnit();
+
+  void SetSkeletonUnit(DWARFUnit *skeleton_unit);
 
   bool Supports_DW_AT_APPLE_objc_complete_type();
 
@@ -223,7 +241,7 @@ public:
   FileSpec GetFile(size_t file_idx);
   FileSpec::Style GetPathStyle();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile();
+  SymbolFileDWARFDwo *GetDwoSymbolFile(bool load_all_debug_info = true);
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
@@ -336,7 +354,9 @@ protected:
   std::shared_ptr<DWARFUnit> m_dwo;
   DWARFUnitHeader m_header;
   const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
-  void *m_user_data = nullptr;
+  lldb_private::CompileUnit *m_lldb_cu = nullptr;
+  // If this is a DWO file, we have a backlink to our skeleton compile unit.
+  DWARFUnit *m_skeleton_unit = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;

@@ -334,6 +334,44 @@ let Predicates = [In64BitMode] in {
   def IMUL32rmi_EVEX  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, PL;
   def IMUL64rmi32_EVEX : IMulOpMI_RF<Xi64, WriteIMul64Imm>, PL;
 }
+
+// IMULZU instructions
+class IMulZUOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI8<0x6B, "imulzu", binop_ndd_args, t, MRMSrcReg,
+             (outs t.RegClass:$dst)> {
+  let SchedRW = [sched];
+}
+class IMulZUOpRI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI<0x69, "imulzu", binop_ndd_args, t, MRMSrcReg,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched];
+}
+class IMulZUOpMI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI8<"imulzu", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)> {
+  let Opcode = 0x6B;
+  let SchedRW = [sched.Folded];
+}
+class IMulZUOpMI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI<0x69, "imulzu", binop_ndd_args, t, MRMSrcMem,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched.Folded];
+}
+
+let Defs = [EFLAGS], Predicates = [HasEGPR, In64BitMode] in {
+  def IMULZU16rri8 : IMulZUOpRI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi8 : IMulZUOpMI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rri : IMulZUOpRI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi : IMulZUOpMI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU32rri8 : IMulZUOpRI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi8 : IMulZUOpMI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rri : IMulZUOpRI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi : IMulZUOpMI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU64rri8 : IMulZUOpRI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi8 : IMulZUOpMI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rri32 : IMulZUOpRI_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi32 : IMulZUOpMI_R<Xi64, WriteIMul64Imm>, ZU;
+}
+
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //
@@ -1312,30 +1350,30 @@ def : Pat<(X86testpat (loadi64 addr:$src1), i64relocImmSExt32_su:$src2),
 //===----------------------------------------------------------------------===//
 // ANDN Instruction
 //
-multiclass AndN<X86TypeInfo t, string suffix> {
+multiclass AndN<X86TypeInfo t, SDPatternOperator node, string suffix = ""> {
   defvar andn_rr_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      t.RegClass:$src2))];
   defvar andn_rm_p =
-    [(set t.RegClass:$dst, EFLAGS, (X86and_flag (not t.RegClass:$src1),
+    [(set t.RegClass:$dst, EFLAGS, (node (not t.RegClass:$src1),
      (t.LoadNode addr:$src2)))];
   def rr#suffix : ITy<0xF2, MRMSrcReg, t, (outs t.RegClass:$dst),
                       (ins t.RegClass:$src1, t.RegClass:$src2), "andn",
-                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>,
-                     T8, DefEFLAGS;
+                      binop_ndd_args, andn_rr_p>, VVVV, Sched<[WriteALU]>, T8;
   def rm#suffix : ITy<0xF2, MRMSrcMem, t, (outs t.RegClass:$dst),
                        (ins t.RegClass:$src1, t.MemOperand:$src2), "andn",
                        binop_ndd_args, andn_rm_p>, VVVV,
-                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>,
-                       T8, DefEFLAGS;
+                       Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, T8;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let AddedComplexity = -6 in {
-defm ANDN32 : AndN<Xi32, "">, VEX, Requires<[HasBMI, NoEGPR]>;
-defm ANDN64 : AndN<Xi64, "">, VEX, REX_W, Requires<[HasBMI, NoEGPR]>;
-defm ANDN32 : AndN<Xi32, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>;
-defm ANDN64 : AndN<Xi64, "_EVEX">, EVEX, REX_W, Requires<[HasBMI, HasEGPR, In64BitMode]>;
+defm ANDN32 : AndN<Xi32, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag>, VEX, Requires<[HasBMI, NoEGPR]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN64 : AndN<Xi64, X86and_flag, "_EVEX">, EVEX, Requires<[HasBMI, HasEGPR, In64BitMode]>, DefEFLAGS;
+defm ANDN32 : AndN<Xi32, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
+defm ANDN64 : AndN<Xi64, null_frag, "_NF">, EVEX, EVEX_NF, Requires<[In64BitMode]>;
 }
 
 multiclass Andn_Pats<string suffix> {

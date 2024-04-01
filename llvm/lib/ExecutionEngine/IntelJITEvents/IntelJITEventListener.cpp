@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IntelJITEventsWrapper.h"
+#include "IntelJITProfiling/IntelJITEventsWrapper.h"
 #include "ittnotify.h"
 #include "llvm-c/ExecutionEngine.h"
 #include "llvm/ADT/DenseMap.h"

@@ -347,7 +347,7 @@ define <vscale x 4 x i16> @lshr_scalable_overshift(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: @lshr_scalable_overshift(
 ; CHECK-NEXT:    ret <vscale x 4 x i16> poison
 ;
-  %vc = lshr <vscale x 4 x i16> %va, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 16, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
+  %vc = lshr <vscale x 4 x i16> %va, splat (i16 16)
   ret <vscale x 4 x i16> %vc
 }
 

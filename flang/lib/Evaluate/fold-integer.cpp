@@ -704,6 +704,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         return common::visit(
             [&funcRef, &context, &FromInt64](const auto &str) -> Expr<T> {
               using Char = typename std::decay_t<decltype(str)>::Result;
+              (void)FromInt64;
               return FoldElementalIntrinsic<T, Char>(context,
                   std::move(funcRef),
                   ScalarFunc<T, Char>(

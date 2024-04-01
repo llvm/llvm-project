@@ -1929,21 +1929,27 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   Register DstReg = MI.getOperand(0).getReg();
 
   SmallVector<Register, 4> OrigRegs;
+  VNInfo *DefVN = nullptr;
   if (LIS) {
     OrigRegs.push_back(MI.getOperand(0).getReg());
     for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2)
       OrigRegs.push_back(MI.getOperand(i).getReg());
+    if (LIS->hasInterval(DstReg)) {
+      DefVN = LIS->getInterval(DstReg)
+                  .Query(LIS->getInstructionIndex(MI))
+                  .valueOut();
+    }
   }
 
+  LaneBitmask UndefLanes = LaneBitmask::getNone();
   bool DefEmitted = false;
-  bool DefIsPartial = false;
   for (unsigned i = 1, e = MI.getNumOperands(); i < e; i += 2) {
     MachineOperand &UseMO = MI.getOperand(i);
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
     if (UseMO.isUndef()) {
-      DefIsPartial = true;
+      UndefLanes |= TRI->getSubRegIndexLaneMask(SubIdx);
       continue;
     }
 
@@ -1991,11 +1997,25 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
       MI.removeOperand(j);
   } else {
     if (LIS) {
-      // Force interval recomputation if we moved from full definition
-      // of register to partial.
-      if (DefIsPartial && LIS->hasInterval(DstReg) &&
-          MRI->shouldTrackSubRegLiveness(DstReg))
+      // Force live interval recomputation if we moved to a partial definition
+      // of the register.  Undef flags must be propagate to uses of undefined
+      // subregister for accurate interval computation.
+      if (UndefLanes.any() && DefVN && MRI->shouldTrackSubRegLiveness(DstReg)) {
+        auto &LI = LIS->getInterval(DstReg);
+        for (MachineOperand &UseOp : MRI->use_operands(DstReg)) {
+          unsigned SubReg = UseOp.getSubReg();
+          if (UseOp.isUndef() || !SubReg)
+            continue;
+          auto *VN =
+              LI.getVNInfoAt(LIS->getInstructionIndex(*UseOp.getParent()));
+          if (DefVN != VN)
+            continue;
+          LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubReg);
+          if ((UndefLanes & LaneMask).any())
+            UseOp.setIsUndef(true);
+        }
         LIS->removeInterval(DstReg);
+      }
       LIS->RemoveMachineInstrFromMaps(MI);
     }
 

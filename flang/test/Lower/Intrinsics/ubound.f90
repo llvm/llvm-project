@@ -48,7 +48,7 @@ end subroutine
 subroutine ubound_test_3(a, dim, res)
   real, dimension(10, 20, *) :: a
   integer(8):: dim, res
-! CHECK:         %[[VAL_0:.*]] = fir.undefined index
+! CHECK:         %[[VAL_0:.*]] = arith.constant -1 : index
 ! CHECK:         %[[VAL_1:.*]] = fir.shape %{{.*}}, %{{.*}}, %[[VAL_0]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:         %[[VAL_2:.*]] = fir.embox %{{.*}}(%[[VAL_1]]) : (!fir.ref<!fir.array<10x20x?xf32>>, !fir.shape<3>) -> !fir.box<!fir.array<10x20x?xf32>>
 ! CHECK:         %[[VAL_3:.*]] = fir.load %{{.*}} : !fir.ref<i64>

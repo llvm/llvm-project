@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX12 %s
 
 # GFX12: ds_add_f32 v0, v1                       ; encoding: [0x00,0x00,0x54,0xd8,0x00,0x01,0x00,0x00]
 0x00,0x00,0x54,0xd8,0x00,0x01,0x00,0x00

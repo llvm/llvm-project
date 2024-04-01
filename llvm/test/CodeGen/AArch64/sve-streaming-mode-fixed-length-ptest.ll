@@ -35,8 +35,8 @@ define i1 @ptest_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
-  %v0 = bitcast ptr %a to <16 x float>*
-  %v1 = load <16 x float>, <16 x float>* %v0, align 4
+  %v0 = bitcast ptr %a to ptr
+  %v1 = load <16 x float>, ptr %v0, align 4
   %v2 = fcmp une <16 x float> %v1, zeroinitializer
   %v3 = call i1 @llvm.vector.reduce.or.i1.v16i1 (<16 x i1> %v2)
   ret i1 %v3
@@ -92,11 +92,11 @@ define i1 @ptest_or_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
-  %v0 = bitcast ptr %a to <16 x float>*
-  %v1 = load <16 x float>, <16 x float>* %v0, align 4
+  %v0 = bitcast ptr %a to ptr
+  %v1 = load <16 x float>, ptr %v0, align 4
   %v2 = fcmp une <16 x float> %v1, zeroinitializer
-  %v3 = bitcast float* %b to <16 x float>*
-  %v4 = load <16 x float>, <16 x float>* %v3, align 4
+  %v3 = bitcast ptr %b to ptr
+  %v4 = load <16 x float>, ptr %v3, align 4
   %v5 = fcmp une <16 x float> %v4, zeroinitializer
   %v6 = or <16 x i1> %v2, %v5
   %v7 = call i1 @llvm.vector.reduce.or.i1.v16i1 (<16 x i1> %v6)
@@ -159,11 +159,11 @@ define i1 @ptest_and_v16i1(ptr %a, ptr %b) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
-  %v0 = bitcast ptr %a to <16 x float>*
-  %v1 = load <16 x float>, <16 x float>* %v0, align 4
+  %v0 = bitcast ptr %a to ptr
+  %v1 = load <16 x float>, ptr %v0, align 4
   %v2 = fcmp une <16 x float> %v1, zeroinitializer
-  %v3 = bitcast float* %b to <16 x float>*
-  %v4 = load <16 x float>, <16 x float>* %v3, align 4
+  %v3 = bitcast ptr %b to ptr
+  %v4 = load <16 x float>, ptr %v3, align 4
   %v5 = fcmp une <16 x float> %v4, zeroinitializer
   %v6 = and <16 x i1> %v2, %v5
   %v7 = call i1 @llvm.vector.reduce.and.i1.v16i1 (<16 x i1> %v6)

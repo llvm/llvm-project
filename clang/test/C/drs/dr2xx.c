@@ -277,7 +277,7 @@ void dr258(void) {
 void dr261(void) {
   /* This is still an integer constant expression despite the overflow. */
   enum e1 {
-    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+    ex1 = __INT_MAX__ + 1  /* expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}} */
   };
 
   /* This is not an integer constant expression, because of the comma operator,

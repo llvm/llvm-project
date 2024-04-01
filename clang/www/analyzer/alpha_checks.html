@@ -87,29 +87,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.CallAndMessageUnInitRefArg"><div class="namedescr expandable"><span class="name">
-alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
-(C, C++)</span><div class="descr">
-Check for uninitialized arguments in function calls and Objective-C
-message expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test(void) {
-  int t;
-  int &p = t;
-  int &s = p;
-  int &q = s;
-  foo(q); // warn
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test(void) {
-  int x;
-  foo(&x); // warn
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.CastSize"><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
 (C)</span><div class="descr">
@@ -328,26 +305,6 @@ void test(int x) {
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 <tbody>
-
-
-<tr><td><a id="alpha.cplusplus.ArrayDelete"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.ArrayDelete</span><span class="lang">
-(C++)</span><div class="descr">
-Reports destructions of arrays of polymorphic objects that are destructed as
-their base class
-</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-Base *create() {
-  Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-  return x;
-}
-
-void sink(Base *x) {
-  delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' undefined
-}
-
-</pre></div></div></td></tr>
 
 
 <tr><td><a id="alpha.cplusplus.DeleteWithNonVirtualDtor"><div class="namedescr expandable"><span class="name">

@@ -23,7 +23,7 @@ define i32 @tailcall_direct() "sign-return-address"="non-leaf" {
 ;
 ; COMMON-NEXT:    b callee
 ; BRK-NEXT:     .[[FAIL]]:
-; BRK-NEXT:       brk #0xc471
+; BRK-NEXT:       brk #0xc470
   tail call void asm sideeffect "", "~{lr}"()
   %call = tail call i32 @callee()
   ret i32 %call
@@ -48,7 +48,7 @@ define i32 @tailcall_indirect(ptr %fptr) "sign-return-address"="non-leaf" {
 ;
 ; COMMON-NEXT:    br x0
 ; BRK-NEXT:     .[[FAIL]]:
-; BRK-NEXT:       brk #0xc471
+; BRK-NEXT:       brk #0xc470
   tail call void asm sideeffect "", "~{lr}"()
   %call = tail call i32 %fptr()
   ret i32 %call
@@ -89,7 +89,7 @@ define i32 @tailcall_direct_noframe_sign_all() "sign-return-address"="all" {
 ;
 ; COMMON-NEXT:    b callee
 ; BRK-NEXT:     .[[FAIL]]:
-; BRK-NEXT:       brk #0xc471
+; BRK-NEXT:       brk #0xc470
   %call = tail call i32 @callee()
   ret i32 %call
 }
@@ -113,8 +113,19 @@ define i32 @tailcall_indirect_noframe_sign_all(ptr %fptr) "sign-return-address"=
 ;
 ; COMMON-NEXT:    br x0
 ; BRK-NEXT:     .[[FAIL]]:
-; BRK-NEXT:       brk #0xc471
+; BRK-NEXT:       brk #0xc470
   %call = tail call i32 %fptr()
+  ret i32 %call
+}
+
+define i32 @tailcall_ib_key() "sign-return-address"="all" "sign-return-address-key"="b_key" {
+; COMMON-LABEL: tailcall_ib_key:
+;
+; COMMON:         b callee
+; BRK-NEXT:     .{{LBB.*}}:
+; BRK-NEXT:       brk #0xc471
+  tail call void asm sideeffect "", "~{lr}"()
+  %call = tail call i32 @callee()
   ret i32 %call
 }
 

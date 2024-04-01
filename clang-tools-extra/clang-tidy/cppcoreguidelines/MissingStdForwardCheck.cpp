@@ -112,10 +112,12 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
 
   auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(
-          0, declRefExpr(to(
-                 varDecl(optionally(equalsBoundNode("param"))).bind("var")))),
-      forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
+      hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
+      forCallable(
+          anyOf(allOf(equalsBoundNode("func"),
+                      functionDecl(hasAnyParameter(parmVarDecl(allOf(
+                          equalsBoundNode("param"), equalsBoundNode("var")))))),
+                CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
           namedDecl(hasUnderlyingDecl(hasName("::std::forward")))))),
 
@@ -127,7 +129,8 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                   hasAncestor(functionDecl().bind("func")),
                   hasAncestor(functionDecl(
                       isDefinition(), equalsBoundNode("func"), ToParam,
-                      unless(hasDescendant(std::move(ForwardCallMatcher)))))),
+                      unless(anyOf(isDeleted(), hasDescendant(std::move(
+                                                    ForwardCallMatcher))))))),
       this);
 }
 

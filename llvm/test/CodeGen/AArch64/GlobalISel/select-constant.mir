@@ -10,7 +10,7 @@
   define i64 @const_s64() { ret i64 1234567890123 }
   define i32 @const_s32_zero() { ret i32 0 }
   define i64 @const_s64_zero() { ret i64 0 }
-  define i8* @const_p0_0() { ret i8* null }
+  define ptr @const_p0_0() { ret ptr null }
 
   define i32 @fconst_s32() { ret i32 42 }
   define i64 @fconst_s64() { ret i64 1234567890123 }

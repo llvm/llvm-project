@@ -1,4 +1,5 @@
 ; RUN: opt -passes=hwasan -S -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=hwasan -S -o - %s | FileCheck %s
 
 source_filename = "test.ll"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -20,7 +21,7 @@ entry:
   ; CHECK: %b = alloca{{.*}} !DIAssignID ![[ID2:[0-9]+]]
   %b = alloca ptr, align 8, !DIAssignID !16
   ; CHECK: @llvm.dbg.assign{{.*}} metadata ![[ID2]]{{.*}} !DIExpression(DW_OP_LLVM_tag_offset, 96)
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 1), metadata !16, metadata ptr %b, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.assign(metadata i1 undef, metadata !17, metadata !DIExpression(), metadata !16, metadata ptr %b, metadata !DIExpression()), !dbg !15
   call void @g(ptr %nodebug0, ptr %nodebug1, ptr %nodebug2, ptr %nodebug3, ptr %a, ptr %b)
   ret void, !dbg !18
 }

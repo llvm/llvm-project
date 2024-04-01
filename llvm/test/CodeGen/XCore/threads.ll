@@ -1,20 +1,20 @@
 ; RUN: llc -mtriple=xcore-unknown-unknown < %s | FileCheck %s
 ; RUN: llc -mtriple=xcore-unknown-unknown -O=0 < %s | FileCheck %s -check-prefix=PHINODE
 
-declare ptr addrspace(1) @llvm.xcore.getst.p1i8.p1i8(ptr addrspace(1) %r)
-declare void @llvm.xcore.msync.p1i8(ptr addrspace(1) %r)
+declare ptr addrspace(1) @llvm.xcore.getst.p1.p1(ptr addrspace(1) %r)
+declare void @llvm.xcore.msync.p1(ptr addrspace(1) %r)
 declare void @llvm.xcore.ssync()
-declare void @llvm.xcore.mjoin.p1i8(ptr addrspace(1) %r)
-declare void @llvm.xcore.initsp.p1i8(ptr addrspace(1) %r, ptr %value)
-declare void @llvm.xcore.initpc.p1i8(ptr addrspace(1) %r, ptr %value)
-declare void @llvm.xcore.initlr.p1i8(ptr addrspace(1) %r, ptr %value)
-declare void @llvm.xcore.initcp.p1i8(ptr addrspace(1) %r, ptr %value)
-declare void @llvm.xcore.initdp.p1i8(ptr addrspace(1) %r, ptr %value)
+declare void @llvm.xcore.mjoin.p1(ptr addrspace(1) %r)
+declare void @llvm.xcore.initsp.p1(ptr addrspace(1) %r, ptr %value)
+declare void @llvm.xcore.initpc.p1(ptr addrspace(1) %r, ptr %value)
+declare void @llvm.xcore.initlr.p1(ptr addrspace(1) %r, ptr %value)
+declare void @llvm.xcore.initcp.p1(ptr addrspace(1) %r, ptr %value)
+declare void @llvm.xcore.initdp.p1(ptr addrspace(1) %r, ptr %value)
 
 define ptr addrspace(1) @test_getst(ptr addrspace(1) %r) {
 ; CHECK-LABEL: test_getst:
 ; CHECK: getst r0, res[r0]
-  %result = call ptr addrspace(1) @llvm.xcore.getst.p1i8.p1i8(ptr addrspace(1) %r)
+  %result = call ptr addrspace(1) @llvm.xcore.getst.p1.p1(ptr addrspace(1) %r)
   ret ptr addrspace(1) %result
 }
 
@@ -28,42 +28,42 @@ define void @test_ssync() {
 define void @test_mjoin(ptr addrspace(1) %r) {
 ; CHECK-LABEL: test_mjoin:
 ; CHECK: mjoin res[r0]
-  call void @llvm.xcore.mjoin.p1i8(ptr addrspace(1) %r)
+  call void @llvm.xcore.mjoin.p1(ptr addrspace(1) %r)
   ret void
 }
 
 define void @test_initsp(ptr addrspace(1) %t, ptr %src) {
 ; CHECK-LABEL: test_initsp:
 ; CHECK: init t[r0]:sp, r1
-  call void @llvm.xcore.initsp.p1i8(ptr addrspace(1) %t, ptr %src)
+  call void @llvm.xcore.initsp.p1(ptr addrspace(1) %t, ptr %src)
   ret void
 }
 
 define void @test_initpc(ptr addrspace(1) %t, ptr %src) {
 ; CHECK-LABEL: test_initpc:
 ; CHECK: init t[r0]:pc, r1
-  call void @llvm.xcore.initpc.p1i8(ptr addrspace(1) %t, ptr %src)
+  call void @llvm.xcore.initpc.p1(ptr addrspace(1) %t, ptr %src)
   ret void
 }
 
 define void @test_initlr(ptr addrspace(1) %t, ptr %src) {
 ; CHECK-LABEL: test_initlr:
 ; CHECK: init t[r0]:lr, r1
-  call void @llvm.xcore.initlr.p1i8(ptr addrspace(1) %t, ptr %src)
+  call void @llvm.xcore.initlr.p1(ptr addrspace(1) %t, ptr %src)
   ret void
 }
 
 define void @test_initcp(ptr addrspace(1) %t, ptr %src) {
 ; CHECK-LABEL: test_initcp:
 ; CHECK: init t[r0]:cp, r1
-  call void @llvm.xcore.initcp.p1i8(ptr addrspace(1) %t, ptr %src)
+  call void @llvm.xcore.initcp.p1(ptr addrspace(1) %t, ptr %src)
   ret void
 }
 
 define void @test_initdp(ptr addrspace(1) %t, ptr %src) {
 ; CHECK-LABEL: test_initdp:
 ; CHECK: init t[r0]:dp, r1
-  call void @llvm.xcore.initdp.p1i8(ptr addrspace(1) %t, ptr %src)
+  call void @llvm.xcore.initdp.p1(ptr addrspace(1) %t, ptr %src)
   ret void
 }
 
@@ -88,7 +88,7 @@ define ptr @f_tle() {
 ; CHECK: ldaw [[R1:r[0-9]]], dp[tle]
 ; r0 = &tl + id*8
 ; CHECK: add r0, [[R1]], [[R0]]
-  ret ptr getelementptr inbounds ([2 x i32], ptr @tle, i32 0, i32 0)
+  ret ptr @tle
 }
 
 define i32 @f_tlExpr () {
@@ -99,8 +99,8 @@ define i32 @f_tlExpr () {
 ; CHECK: add [[R2:r[0-9]]], [[R1]], [[R0]]
 ; CHECK: add r0, [[R2]], [[R2]]
   ret i32 add(
-      i32 ptrtoint( ptr getelementptr inbounds ([2 x i32], ptr @tle, i32 0, i32 0) to i32),
-      i32 ptrtoint( ptr getelementptr inbounds ([2 x i32], ptr @tle, i32 0, i32 0) to i32))
+      i32 ptrtoint( ptr @tle to i32),
+      i32 ptrtoint( ptr @tle to i32))
 }
 
 define void @phiNode1() {

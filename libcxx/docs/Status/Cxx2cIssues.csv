@@ -2,7 +2,7 @@
 "`2994 <https://wg21.link/LWG2994>`__","Needless UB for ``basic_string`` and ``basic_string_view``","Varna June 2023","|Complete|","5.0",""
 "`3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","Varna June 2023","","","|flat_containers|"
 "`3885 <https://wg21.link/LWG3885>`__","``op`` should be in [zombie.names]","Varna June 2023","|Nothing To Do|","",""
-"`3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","Varna June 2023","","",""
+"`3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","Varna June 2023","|Complete|","19.0",""
 "`3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","Varna June 2023","","",""
 "`3894 <https://wg21.link/LWG3894>`__","``generator::promise_type::yield_value(ranges::elements_of<Rng, Alloc>)`` should not be ``noexcept``","Varna June 2023","","",""
 "`3903 <https://wg21.link/LWG3903>`__","span destructor is redundantly noexcept","Varna June 2023","|Complete|","7.0",""

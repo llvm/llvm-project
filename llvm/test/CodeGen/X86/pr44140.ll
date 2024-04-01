@@ -64,34 +64,34 @@ start:
   br label %fake-loop
 
 fake-loop:                                        ; preds = %fake-loop, %start
-  %dummy0.cast = bitcast [22 x i64]* %dummy0 to i8*
-  %dummy1.cast = bitcast [22 x i64]* %dummy1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 %dummy1.cast, i8* nonnull align 8 %dummy0.cast, i64 176, i1 false)
+  %dummy0.cast = bitcast ptr %dummy0 to ptr
+  %dummy1.cast = bitcast ptr %dummy1 to ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 %dummy1.cast, ptr nonnull align 8 %dummy0.cast, i64 176, i1 false)
 
-  %dummy1.cast.copy = bitcast [22 x i64]* %dummy1 to i8*
-  %dummy2.cast = bitcast [22 x i64]* %dummy2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 176, i8* nonnull %dummy2.cast)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 %dummy2.cast, i8* nonnull align 8 %dummy1.cast.copy, i64 176, i1 false)
+  %dummy1.cast.copy = bitcast ptr %dummy1 to ptr
+  %dummy2.cast = bitcast ptr %dummy2 to ptr
+  call void @llvm.lifetime.start.p0(i64 176, ptr nonnull %dummy2.cast)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 %dummy2.cast, ptr nonnull align 8 %dummy1.cast.copy, i64 176, i1 false)
 
   call win64cc void @opaque()
 
-  store <2 x i64> <i64 1010101010101010101, i64 2020202020202020202>, <2 x i64>* %data, align 8
+  store <2 x i64> <i64 1010101010101010101, i64 2020202020202020202>, ptr %data, align 8
 
   %opaque-false = icmp eq i8 0, 1
   br i1 %opaque-false, label %fake-loop, label %exit
 
 exit:                                             ; preds = %fake-loop
-  %data.cast = bitcast <2 x i64>* %data to i64*
-  %0 = load i64, i64* %data.cast, align 8
+  %data.cast = bitcast ptr %data to ptr
+  %0 = load i64, ptr %data.cast, align 8
   %1 = icmp eq i64 %0, 1010101010101010101
   %2 = select i1 %1, i32 0, i32 -1
   ret i32 %2
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1 immarg) #0
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }

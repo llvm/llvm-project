@@ -7,7 +7,7 @@ entry:
   ; CHECK-NEXT:   - { id: 0, name: '',
   ; CHECK:      %0:_(p0) = G_FRAME_INDEX %stack.0
   %0 = alloca i16
-  %1 = load i16, i16* %0
+  %1 = load i16, ptr %0
   ret i16 %1
 }
 
@@ -18,6 +18,6 @@ entry:
   ; CHECK-NEXT:   - { id: 0, name: ptr,
   ; CHECK:      %0:_(p0) = G_FRAME_INDEX %stack.0.ptr
   %ptr = alloca i16
-  %0 = load i16, i16* %ptr
+  %0 = load i16, ptr %ptr
   ret i16 %0
 }

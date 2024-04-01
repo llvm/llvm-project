@@ -748,7 +748,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
   if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs))
-    asyncExecutors.assign(context->getThreadPool().getThreadCount(), mgrs);
+    asyncExecutors.assign(context->getThreadPool().getMaxConcurrency(), mgrs);
 
   // This struct represents the information for a single operation to be
   // scheduled on a pass manager.

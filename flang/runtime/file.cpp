@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
+#include "tools.h"
 #include "flang/Runtime/magic-numbers.h"
 #include "flang/Runtime/memory.h"
 #include <algorithm>
@@ -60,7 +61,7 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   return fd;
 }
 
-void OpenFile::Open(OpenStatus status, std::optional<Action> action,
+void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
     Position position, IoErrorHandler &handler) {
   if (fd_ >= 0 &&
       (status == OpenStatus::Old || status == OpenStatus::Unknown)) {
@@ -322,7 +323,7 @@ int OpenFile::WriteAsynchronously(FileOffset at, const char *buffer,
 }
 
 void OpenFile::Wait(int id, IoErrorHandler &handler) {
-  std::optional<int> ioStat;
+  Fortran::common::optional<int> ioStat;
   Pending *prev{nullptr};
   for (Pending *p{pending_.get()}; p; p = (prev = p)->next.get()) {
     if (p->id == id) {
@@ -424,6 +425,7 @@ void OpenFile::CloseFd(IoErrorHandler &handler) {
   }
 }
 
+#if !defined(RT_DEVICE_COMPILATION)
 bool IsATerminal(int fd) { return ::isatty(fd); }
 
 #if defined(_WIN32) && !defined(F_OK)
@@ -455,5 +457,25 @@ std::int64_t SizeInBytes(const char *path) {
   // No Fortran compiler signals an error
   return -1;
 }
+#else // defined(RT_DEVICE_COMPILATION)
+bool IsATerminal(int fd) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+bool IsExtant(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+bool MayRead(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+bool MayWrite(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+bool MayReadAndWrite(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+std::int64_t SizeInBytes(const char *path) {
+  Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
+}
+#endif // defined(RT_DEVICE_COMPILATION)
 
 } // namespace Fortran::runtime::io

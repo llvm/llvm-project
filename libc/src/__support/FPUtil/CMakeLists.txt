@@ -6,7 +6,6 @@ add_header_library(
     libc.include.fenv
     libc.include.math
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -31,9 +30,11 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.properties.float
+    libc.src.__support.macros.properties.types
     libc.src.__support.math_extras
+    libc.src.__support.sign
     libc.src.__support.uint128
 )
 
@@ -75,30 +76,16 @@ add_header_library(
 )
 
 add_header_library(
-  manipulation_functions
-  HDRS
-    ManipulationFunctions.h
-  DEPENDS
-    .fenv_impl
-    .fp_bits
-    .nearest_integer_operations
-    .normal_float
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-    libc.src.__support.macros.optimization
-    libc.include.math
-    libc.src.errno.errno
-)
-
-add_header_library(
   basic_operations
   HDRS
     BasicOperations.h
   DEPENDS
     .fp_bits
+    .fenv_impl
     libc.src.__support.CPP.type_traits
+    libc.src.__support.uint128
     libc.src.__support.common
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -139,16 +126,6 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.uint128
-)
-
-add_header_library(
-  xfloat
-  HDRS
-    XFloat.h
-  DEPENDS
-    .fp_bits
-    .normal_float
-    libc.src.__support.uint
 )
 
 add_header_library(
@@ -227,6 +204,25 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.uint
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  manipulation_functions
+  HDRS
+    ManipulationFunctions.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    .dyadic_float
+    .nearest_integer_operations
+    .normal_float
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+    libc.src.__support.macros.optimization
+    libc.include.math
+    libc.src.errno.errno
 )
 
 add_subdirectory(generic)

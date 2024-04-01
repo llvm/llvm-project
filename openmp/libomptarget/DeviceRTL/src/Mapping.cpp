@@ -154,23 +154,11 @@ uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
 
 const llvm::omp::GV &getGridValue() { return llvm::omp::NVPTXGridValues; }
 
-LaneMaskTy activemask() {
-  unsigned int Mask;
-  asm("activemask.b32 %0;" : "=r"(Mask));
-  return Mask;
-}
+LaneMaskTy activemask() { return __nvvm_activemask(); }
 
-LaneMaskTy lanemaskLT() {
-  __kmpc_impl_lanemask_t Res;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(Res));
-  return Res;
-}
+LaneMaskTy lanemaskLT() { return __nvvm_read_ptx_sreg_lanemask_lt(); }
 
-LaneMaskTy lanemaskGT() {
-  __kmpc_impl_lanemask_t Res;
-  asm("mov.u32 %0, %%lanemask_gt;" : "=r"(Res));
-  return Res;
-}
+LaneMaskTy lanemaskGT() { return __nvvm_read_ptx_sreg_lanemask_gt(); }
 
 uint32_t getThreadIdInBlock(int32_t Dim) {
   switch (Dim) {
@@ -184,10 +172,7 @@ uint32_t getThreadIdInBlock(int32_t Dim) {
   UNREACHABLE("Dim outside range!");
 }
 
-uint32_t getThreadIdInWarp() {
-  return impl::getThreadIdInBlock(mapping::DIM_X) &
-         (mapping::getWarpSize() - 1);
-}
+uint32_t getThreadIdInWarp() { return __nvvm_read_ptx_sreg_laneid(); }
 
 uint32_t getBlockIdInKernel(int32_t Dim) {
   switch (Dim) {

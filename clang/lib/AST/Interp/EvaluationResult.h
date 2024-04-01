@@ -56,8 +56,8 @@ private:
   void setSource(DeclTy D) { Source = D; }
 
   void setValue(const APValue &V) {
+    // V could still be an LValue.
     assert(empty());
-    assert(!V.isLValue());
     Value = std::move(V);
     Kind = RValue;
   }
@@ -72,7 +72,8 @@ private:
     Kind = LValue;
   }
   void setInvalid() {
-    assert(empty());
+    // We are NOT asserting empty() here, since setting it to invalid
+    // is allowed even if there is already a result.
     Kind = Invalid;
   }
   void setValid() {
@@ -97,7 +98,7 @@ public:
   /// LValue and we can't read from it.
   std::optional<APValue> toRValue() const;
 
-  bool checkFullyInitialized(InterpState &S) const;
+  bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
 
   /// Dump to stderr.
   void dump() const;

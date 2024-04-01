@@ -67,6 +67,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 
 using namespace mlir;
@@ -277,9 +278,10 @@ static void equivalenceAnalysis(func::FuncOp funcOp,
 
 /// Return "true" if the given function signature has tensor semantics.
 static bool hasTensorSignature(func::FuncOp funcOp) {
-  auto isaTensor = [](Type t) { return isa<TensorType>(t); };
-  return llvm::any_of(funcOp.getFunctionType().getInputs(), isaTensor) ||
-         llvm::any_of(funcOp.getFunctionType().getResults(), isaTensor);
+  return llvm::any_of(funcOp.getFunctionType().getInputs(),
+                      llvm::IsaPred<TensorType>) ||
+         llvm::any_of(funcOp.getFunctionType().getResults(),
+                      llvm::IsaPred<TensorType>);
 }
 
 /// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
@@ -459,7 +461,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   }
 
   // Bufferize all other ops.
-  for (Operation &op : moduleOp.getOps()) {
+  for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
     // Functions were already bufferized.
     if (isa<func::FuncOp>(&op))
       continue;

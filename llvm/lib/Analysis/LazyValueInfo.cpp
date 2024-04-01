@@ -997,12 +997,7 @@ LazyValueInfoImpl::solveBlockValueBinaryOp(BinaryOperator *BO, BasicBlock *BB) {
   assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
-    unsigned NoWrapKind = 0;
-    if (OBO->hasNoUnsignedWrap())
-      NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
-    if (OBO->hasNoSignedWrap())
-      NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
-
+    unsigned NoWrapKind = OBO->getNoWrapKind();
     return solveBlockValueBinaryOpImpl(
         BO, BB,
         [BO, NoWrapKind](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -1074,14 +1069,14 @@ static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
   // Handle range checking idiom produced by InstCombine. We will subtract the
   // offset from the allowed range for RHS in this case.
   const APInt *C;
-  if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
+  if (match(LHS, m_AddLike(m_Specific(Val), m_APInt(C)))) {
     Offset = *C;
     return true;
   }
 
   // Handle the symmetric case. This appears in saturation patterns like
   // (x == 16) ? 16 : (x + 1).
-  if (match(Val, m_Add(m_Specific(LHS), m_APInt(C)))) {
+  if (match(Val, m_AddLike(m_Specific(LHS), m_APInt(C)))) {
     Offset = -*C;
     return true;
   }

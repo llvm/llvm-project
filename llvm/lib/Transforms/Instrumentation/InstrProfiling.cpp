@@ -171,13 +171,33 @@ cl::opt<bool> SkipRetExitBlock(
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
+static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
+  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
+  if (!MD)
+    return 0;
+
+  // If the flag is a ConstantAsMetadata, it should be an integer representable
+  // in 64-bits.
+  return cast<ConstantInt>(MD->getValue())->getZExtValue();
+}
+
+static bool enablesValueProfiling(const Module &M) {
+  return isIRPGOFlagSet(&M) ||
+         getIntModuleFlagOrZero(M, "EnableValueProfiling") != 0;
+}
+
+// Conservatively returns true if value profiling is enabled.
+static bool profDataReferencedByCode(const Module &M) {
+  return enablesValueProfiling(M);
+}
+
 class InstrLowerer final {
 public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
       : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
-        GetTLI(GetTLI) {}
+        GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
 
@@ -189,6 +209,9 @@ private:
   const bool IsCS;
 
   std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
+
+  const bool DataReferencedByCode;
+
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
@@ -294,7 +317,7 @@ private:
                                       GlobalValue::LinkageTypes Linkage);
 
   /// Set Comdat property of GV, if required.
-  void maybeSetComdat(GlobalVariable *GV, Function *Fn, StringRef VarName);
+  void maybeSetComdat(GlobalVariable *GV, GlobalObject *GO, StringRef VarName);
 
   /// Setup the sections into which counters and bitmaps are allocated.
   GlobalVariable *setupProfileSection(InstrProfInstBase *Inc,
@@ -755,14 +778,11 @@ bool InstrLowerer::lower() {
     }
   }
 
-  if (EnableVTableValueProfiling) {
-    for (GlobalVariable &GV : M.globals()) {
+  if (EnableVTableValueProfiling)
+    for (GlobalVariable &GV : M.globals())
       // Global variables with type metadata are virtual table variables.
-      if (GV.hasMetadata(LLVMContext::MD_type)) {
+      if (GV.hasMetadata(LLVMContext::MD_type))
         getOrCreateVTableProfData(&GV);
-      }
-    }
-  }
 
   for (Function &F : M)
     MadeChange |= lowerIntrinsics(&F);
@@ -994,9 +1014,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
-  auto *Int8PtrTy = PointerType::getUnqual(M.getContext());
   auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *Int64Ty = Type::getInt64Ty(M.getContext());
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
@@ -1009,15 +1027,9 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   auto *BitmapByteOffset = Builder.CreateLShr(Temp, 0x3);
 
   // Add byte offset to section base byte address.
-  //  %2 = zext i32 %1 to i64
-  //  %3 = add i64 ptrtoint (ptr @__profbm_test to i64), %2
+  // %4 = getelementptr inbounds i8, ptr @__profbm_test, i32 %1
   auto *BitmapByteAddr =
-      Builder.CreateAdd(Builder.CreatePtrToInt(BitmapAddr, Int64Ty),
-                        Builder.CreateZExtOrBitCast(BitmapByteOffset, Int64Ty));
-
-  // Convert to a pointer.
-  //  %4 = inttoptr i32 %3 to ptr
-  BitmapByteAddr = Builder.CreateIntToPtr(BitmapByteAddr, Int8PtrTy);
+      Builder.CreateInBoundsPtrAdd(BitmapAddr, BitmapByteOffset);
 
   // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
   //  %5 = and i32 %mcdc.temp, 7
@@ -1088,26 +1100,6 @@ static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
   if (Name.ends_with((Twine(".") + Twine(FuncHash)).toStringRef(HashPostfix)))
     return (Prefix + Name).str();
   return (Prefix + Name + "." + Twine(FuncHash)).str();
-}
-
-static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
-  auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
-  if (!MD)
-    return 0;
-
-  // If the flag is a ConstantAsMetadata, it should be an integer representable
-  // in 64-bits.
-  return cast<ConstantInt>(MD->getValue())->getZExtValue();
-}
-
-static bool enablesValueProfiling(const Module &M) {
-  return isIRPGOFlagSet(&M) ||
-         getIntModuleFlagOrZero(M, "EnableValueProfiling") != 0;
-}
-
-// Conservatively returns true if data variables may be referenced by code.
-static bool profDataReferencedByCode(const Module &M) {
-  return enablesValueProfiling(M);
 }
 
 static inline bool shouldRecordFunctionAddr(Function *F) {
@@ -1223,20 +1215,42 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   return true;
 }
 
-void InstrLowerer::maybeSetComdat(GlobalVariable *GV, Function *Fn,
-                                  StringRef VarName) {
-  bool DataReferencedByCode = profDataReferencedByCode(M);
-  bool NeedComdat = needsComdatForCounter(*Fn, M);
+void InstrLowerer::maybeSetComdat(GlobalVariable *GV, GlobalObject *GO,
+                                  StringRef CounterGroupName) {
+  // Place lowered global variables in a comdat group if the associated function
+  // or global variable is a COMDAT. This will make sure that only one copy of
+  // global variable (e.g. function counters) of the COMDAT function will be
+  // emitted after linking.
+  bool NeedComdat = needsComdatForCounter(*GO, M);
   bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
 
   if (!UseComdat)
     return;
 
-  StringRef GroupName =
-      TT.isOSBinFormatCOFF() && DataReferencedByCode ? GV->getName() : VarName;
+  // Keep in mind that this pass may run before the inliner, so we need to
+  // create a new comdat group (for counters, profiling data, etc). If we use
+  // the comdat of the parent function, that will result in relocations against
+  // discarded sections.
+  //
+  // If the data variable is referenced by code, non-counter variables (notably
+  // profiling data) and counters have to be in different comdats for COFF
+  // because the Visual C++ linker will report duplicate symbol errors if there
+  // are multiple external symbols with the same name marked
+  // IMAGE_COMDAT_SELECT_ASSOCIATIVE.
+  StringRef GroupName = TT.isOSBinFormatCOFF() && DataReferencedByCode
+                            ? GV->getName()
+                            : CounterGroupName;
   Comdat *C = M.getOrInsertComdat(GroupName);
-  if (!NeedComdat)
+
+  if (!NeedComdat) {
+    // Object file format must be ELF since `UseComdat && !NeedComdat` is true.
+    //
+    // For ELF, when not using COMDAT, put counters, data and values into a
+    // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
+    // allows -z start-stop-gc to discard the entire group when the function is
+    // discarded.
     C->setSelectionKind(Comdat::NoDeduplicate);
+  }
   GV->setComdat(C);
   // COFF doesn't allow the comdat group leader to have private linkage, so
   // upgrade private linkage to internal linkage to produce a symbol table
@@ -1261,7 +1275,8 @@ static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
   return true;
 }
 
-// FIXME: Does symbolic relocation from 'getFuncAddrForProfData' matter here?
+// FIXME: Introduce an internal alias like what's done for functions to reduce
+// the number of relocation entries.
 static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
   auto *Int8PtrTy = PointerType::getUnqual(GV->getContext());
 
@@ -1278,6 +1293,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
     return;
 
+  // Skip llvm internal global variable or __prof variables.
   if (GV->getName().starts_with("llvm.") ||
       GV->getName().starts_with("__llvm") ||
       GV->getName().starts_with("__prof"))
@@ -1302,6 +1318,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   Type *DataTypes[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) LLVMType,
 #include "llvm/ProfileData/InstrProfData.inc"
+#undef INSTR_PROF_VTABLE_DATA
   };
 
   auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
@@ -1317,47 +1334,19 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
   Constant *DataVals[] = {
 #define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
+#undef INSTR_PROF_VTABLE_DATA
   };
 
-  std::string VarName = getInstrProfVTableVarPrefix().str() + PGOVTableName;
   auto *Data =
-      new GlobalVariable(M, DataTy, false /* constant */, Linkage,
-                         ConstantStruct::get(DataTy, DataVals), VarName);
+      new GlobalVariable(M, DataTy, /*constant=*/false, Linkage,
+                         ConstantStruct::get(DataTy, DataVals),
+                         getInstrProfVTableVarPrefix() + PGOVTableName);
 
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_vtab, TT.getObjectFormat()));
   Data->setAlignment(Align(8));
 
-  const bool NeedComdat = needsComdatForCounter(*GV, M);
-
-  // GV is the data structure to record vtable information.
-  // Place the global variable for per-vtable profile data in a comdat group
-  // if the associated vtable definition is a COMDAT. This makes sure only one
-  // copy of the variable for the vtable will be emitted after linking.
-  auto MaybeSetComdat = [&](GlobalVariable *GV, StringRef GroupName) {
-    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
-    if (UseComdat) {
-      // Create a new comdat group using the name of the global variable as
-      // opposed to using the comdat group of the vtable.
-      Comdat *C = M.getOrInsertComdat(GroupName);
-      // For ELF, when not using COMDAT, put the vtable profile data into a
-      // nodeduplicate COMDAT which is lowered to a zero-flag zero group.
-      // This allows -z -start-stop-gc to discard the entire group when the
-      // vtable def is discarded.
-      if (!NeedComdat)
-        C->setSelectionKind(Comdat::NoDeduplicate);
-      GV->setComdat(C);
-      // COFF doesn't allow the comdat group leader to have private linkage, so
-      // upgrade private linkage to internal linkage to produce a symbol table
-      // entry.
-      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage()) {
-        GV->setLinkage(GlobalValue::InternalLinkage);
-      }
-      return;
-    }
-  };
-
-  MaybeSetComdat(Data, Data->getName());
+  maybeSetComdat(Data, GV, Data->getName());
 
   VTableDataMap[GV] = Data;
 
@@ -1393,23 +1382,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
-  // Move the name variable to the right section. Place them in a COMDAT group
-  // if the associated function is a COMDAT. This will make sure that only one
-  // copy of counters of the COMDAT function will be emitted after linking. Keep
-  // in mind that this pass may run before the inliner, so we need to create a
-  // new comdat group for the counters and profiling data. If we use the comdat
-  // of the parent function, that will result in relocations against discarded
-  // sections.
-  //
-  // If the data variable is referenced by code,  counters and data have to be
-  // in different comdats for COFF because the Visual C++ linker will report
-  // duplicate symbol errors if there are multiple external symbols with the
-  // same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
-  //
-  // For ELF, when not using COMDAT, put counters, data and values into a
-  // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
-  // allows -z start-stop-gc to discard the entire group when the function is
-  // discarded.
+  // Move the name variable to the right section.
   bool Renamed;
   GlobalVariable *Ptr;
   StringRef VarPrefix;
@@ -1574,7 +1547,6 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     Visibility = GlobalValue::DefaultVisibility;
   }
 
-  bool DataReferencedByCode = profDataReferencedByCode(M);
   bool NeedComdat = needsComdatForCounter(*Fn, M);
   bool Renamed;
 
@@ -1900,7 +1872,7 @@ void InstrLowerer::emitUses() {
   // and ensure this GC property as well. Otherwise, we have to conservatively
   // make all of the sections retained by the linker.
   if (TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
-      (TT.isOSBinFormatCOFF() && !profDataReferencedByCode(M)))
+      (TT.isOSBinFormatCOFF() && !DataReferencedByCode))
     appendToCompilerUsed(M, CompilerUsedVars);
   else
     appendToUsed(M, CompilerUsedVars);

@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// MSVC warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // template<input_iterator I, sentinel_for<I> S, class T,
 //          indirectly-binary-left-foldable<T, I> F>
 //   constexpr see below ranges::fold_left_with_iter(I first, S last, T init, F f);

@@ -81,8 +81,8 @@ SBFileSpec SBLineEntry::GetFileSpec() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec sb_file_spec;
-  if (m_opaque_up.get() && m_opaque_up->file)
-    sb_file_spec.SetFileSpec(m_opaque_up->file);
+  if (m_opaque_up.get() && m_opaque_up->GetFile())
+    sb_file_spec.SetFileSpec(m_opaque_up->GetFile());
 
   return sb_file_spec;
 }
@@ -109,9 +109,9 @@ void SBLineEntry::SetFileSpec(lldb::SBFileSpec filespec) {
   LLDB_INSTRUMENT_VA(this, filespec);
 
   if (filespec.IsValid())
-    ref().file = filespec.ref();
+    ref().file_sp = std::make_shared<SupportFile>(filespec.ref());
   else
-    ref().file.Clear();
+    ref().file_sp = std::make_shared<SupportFile>();
 }
 void SBLineEntry::SetLine(uint32_t line) {
   LLDB_INSTRUMENT_VA(this, line);
@@ -168,7 +168,7 @@ bool SBLineEntry::GetDescription(SBStream &description) {
 
   if (m_opaque_up) {
     char file_path[PATH_MAX * 2];
-    m_opaque_up->file.GetPath(file_path, sizeof(file_path));
+    m_opaque_up->GetFile().GetPath(file_path, sizeof(file_path));
     strm.Printf("%s:%u", file_path, GetLine());
     if (GetColumn() > 0)
       strm.Printf(":%u", GetColumn());

@@ -621,6 +621,12 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     SelectLike LastSI = ASI.back();
     BasicBlock *StartBlock = SI.getI()->getParent();
     BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI.getI()));
+    // With RemoveDIs turned off, SplitPt can be a dbg.* intrinsic. With
+    // RemoveDIs turned on, SplitPt would instead point to the next
+    // instruction. To match existing dbg.* intrinsic behaviour with RemoveDIs,
+    // tell splitBasicBlock that we want to include any DbgVariableRecords
+    // attached to SplitPt in the splice.
+    SplitPt.setHeadBit(true);
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
     BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
     // Delete the unconditional branch that was just created by the split.
@@ -639,13 +645,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
     }
 
-    // Duplicate implementation for DPValues, the non-instruction debug-info
-    // record. Helper lambda for moving DPValues to the end block.
-    auto TransferDPValues = [&](Instruction &I) {
-      for (auto &DPValue : llvm::make_early_inc_range(I.getDbgValueRange())) {
-        DPValue.removeFromParent();
-        EndBlock->insertDPValueBefore(&DPValue,
-                                      EndBlock->getFirstInsertionPt());
+    // Duplicate implementation for DbgRecords, the non-instruction debug-info
+    // format. Helper lambda for moving DbgRecords to the end block.
+    auto TransferDbgRecords = [&](Instruction &I) {
+      for (auto &DbgRecord :
+           llvm::make_early_inc_range(I.getDbgRecordRange())) {
+        DbgRecord.removeFromParent();
+        EndBlock->insertDbgRecordBefore(&DbgRecord,
+                                        EndBlock->getFirstInsertionPt());
       }
     };
 
@@ -654,7 +661,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // middle" of the select group.
     auto R = make_range(std::next(SI.getI()->getIterator()),
                         std::next(LastSI.getI()->getIterator()));
-    llvm::for_each(R, TransferDPValues);
+    llvm::for_each(R, TransferDbgRecords);
 
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.
@@ -847,7 +854,7 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
 bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
     const SelectGroup &ASI) {
   SelectLike SI = ASI.front();
-  LLVM_DEBUG(dbgs() << "Analyzing select group containing " << SI.getI()
+  LLVM_DEBUG(dbgs() << "Analyzing select group containing " << *SI.getI()
                     << "\n");
   OptimizationRemark OR(DEBUG_TYPE, "SelectOpti", SI.getI());
   OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti", SI.getI());

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -23,10 +24,15 @@
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include <iterator>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <optional>
 #include <tuple>
+
+static llvm::cl::opt<bool> useStrictIntrinsicVerifier(
+    "strict-intrinsic-verifier", llvm::cl::init(false),
+    llvm::cl::desc("use stricter verifier for HLFIR intrinsic operations"));
 
 /// generic implementation of the memory side effects interface for hlfir
 /// transformational intrinsic operations
@@ -118,14 +124,15 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
                              mlir::ValueRange typeparams,
-                             fir::FortranVariableFlagsAttr fortran_attrs) {
+                             fir::FortranVariableFlagsAttr fortran_attrs,
+                             fir::CUDADataAttributeAttr cuda_attr) {
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, nameAttr, fortran_attrs);
+        typeparams, nameAttr, fortran_attrs, cuda_attr);
 }
 
 mlir::LogicalResult hlfir::DeclareOp::verify() {
@@ -498,7 +505,7 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
   mlir::Type resultType = results[0];
   if (mlir::isa<fir::LogicalType>(resultType)) {
     // Result is of the same type as MASK
-    if (resultType != logicalTy)
+    if ((resultType != logicalTy) && useStrictIntrinsicVerifier)
       return reductionOp->emitOpError(
           "result must have the same element type as MASK argument");
 
@@ -509,7 +516,7 @@ verifyLogicalReductionOp(LogicalReductionOp reductionOp) {
       if (!resultExpr.isArray())
         return reductionOp->emitOpError("result must be an array");
 
-      if (resultExpr.getEleTy() != logicalTy)
+      if ((resultExpr.getEleTy() != logicalTy) && useStrictIntrinsicVerifier)
         return reductionOp->emitOpError(
             "result must have the same element type as MASK argument");
 
@@ -585,7 +592,7 @@ mlir::LogicalResult hlfir::CountOp::verify() {
       if (resultShape.size() != (maskShape.size() - 1))
         return emitOpError("result rank must be one less than MASK");
     } else {
-      return emitOpError("result must be of numerical scalar type");
+      return emitOpError("result must be of numerical array type");
     }
   } else if (!hlfir::isFortranScalarNumericalType(resultType)) {
     return emitOpError("result must be of numerical scalar type");
@@ -682,15 +689,18 @@ verifyArrayAndMaskForReductionOp(NumericalReductionOp reductionOp) {
     if (!maskShape.empty()) {
       if (maskShape.size() != arrayShape.size())
         return reductionOp->emitWarning("MASK must be conformable to ARRAY");
-      static_assert(fir::SequenceType::getUnknownExtent() ==
-                    hlfir::ExprType::getUnknownExtent());
-      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
-      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
-        int64_t arrayExtent = arrayShape[i];
-        int64_t maskExtent = maskShape[i];
-        if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
-            (maskExtent != unknownExtent))
-          return reductionOp->emitWarning("MASK must be conformable to ARRAY");
+      if (useStrictIntrinsicVerifier) {
+        static_assert(fir::SequenceType::getUnknownExtent() ==
+                      hlfir::ExprType::getUnknownExtent());
+        constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+        for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+          int64_t arrayExtent = arrayShape[i];
+          int64_t maskExtent = maskShape[i];
+          if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
+              (maskExtent != unknownExtent))
+            return reductionOp->emitWarning(
+                "MASK must be conformable to ARRAY");
+        }
       }
     }
   }
@@ -719,7 +729,7 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
   mlir::Type resultType = results[0];
   if (hlfir::isFortranScalarNumericalType(resultType)) {
     // Result is of the same type as ARRAY
-    if (resultType != numTy)
+    if ((resultType != numTy) && useStrictIntrinsicVerifier)
       return reductionOp->emitOpError(
           "result must have the same element type as ARRAY argument");
 
@@ -729,7 +739,7 @@ verifyNumericalReductionOp(NumericalReductionOp reductionOp) {
       if (!resultExpr.isArray())
         return reductionOp->emitOpError("result must be an array");
 
-      if (resultExpr.getEleTy() != numTy)
+      if ((resultExpr.getEleTy() != numTy) && useStrictIntrinsicVerifier)
         return reductionOp->emitOpError(
             "result must have the same element type as ARRAY argument");
 
@@ -792,7 +802,7 @@ verifyCharacterReductionOp(CharacterReductionOp reductionOp) {
          "result must be character");
 
   // Result is of the same type as ARRAY
-  if (resultType != numTy)
+  if ((resultType != numTy) && useStrictIntrinsicVerifier)
     return reductionOp->emitOpError(
         "result must have the same element type as ARRAY argument");
 
@@ -823,9 +833,8 @@ mlir::LogicalResult hlfir::MaxvalOp::verify() {
   auto resultExpr = mlir::dyn_cast<hlfir::ExprType>(results[0]);
   if (resultExpr && mlir::isa<fir::CharacterType>(resultExpr.getEleTy())) {
     return verifyCharacterReductionOp<hlfir::MaxvalOp *>(this);
-  } else {
-    return verifyNumericalReductionOp<hlfir::MaxvalOp *>(this);
   }
+  return verifyNumericalReductionOp<hlfir::MaxvalOp *>(this);
 }
 
 void hlfir::MaxvalOp::getEffects(
@@ -848,9 +857,8 @@ mlir::LogicalResult hlfir::MinvalOp::verify() {
   auto resultExpr = mlir::dyn_cast<hlfir::ExprType>(results[0]);
   if (resultExpr && mlir::isa<fir::CharacterType>(resultExpr.getEleTy())) {
     return verifyCharacterReductionOp<hlfir::MinvalOp *>(this);
-  } else {
-    return verifyNumericalReductionOp<hlfir::MinvalOp *>(this);
   }
+  return verifyNumericalReductionOp<hlfir::MinvalOp *>(this);
 }
 
 void hlfir::MinvalOp::getEffects(
@@ -1007,17 +1015,19 @@ mlir::LogicalResult hlfir::DotProductOp::verify() {
 
   constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
   if ((lhsSize != unknownExtent) && (rhsSize != unknownExtent) &&
-      (lhsSize != rhsSize))
+      (lhsSize != rhsSize) && useStrictIntrinsicVerifier)
     return emitOpError("both arrays must have the same size");
 
-  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
-      mlir::isa<fir::LogicalType>(rhsEleTy))
-    return emitOpError("if one array is logical, so should the other be");
+  if (useStrictIntrinsicVerifier) {
+    if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+        mlir::isa<fir::LogicalType>(rhsEleTy))
+      return emitOpError("if one array is logical, so should the other be");
 
-  if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
-      mlir::isa<fir::LogicalType>(resultTy))
-    return emitOpError("the result type should be a logical only if the "
-                       "argument types are logical");
+    if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
+        mlir::isa<fir::LogicalType>(resultTy))
+      return emitOpError("the result type should be a logical only if the "
+                         "argument types are logical");
+  }
 
   if (!hlfir::isFortranScalarNumericalType(resultTy) &&
       !mlir::isa<fir::LogicalType>(resultTy))
@@ -1066,6 +1076,9 @@ mlir::LogicalResult hlfir::MatmulOp::verify() {
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
       mlir::isa<fir::LogicalType>(rhsEleTy))
     return emitOpError("if one array is logical, so should the other be");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   int64_t lastLhsDim = lhsShape[lhsRank - 1];
   int64_t firstRhsDim = rhsShape[0];
@@ -1140,7 +1153,9 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
 
       // but we do need to get rid of the hlfir.destroy for the hlfir.transpose
       // result (which is entirely removed)
-      for (mlir::Operation *user : transposeOp->getResult(0).getUsers())
+      llvm::SmallVector<mlir::Operation *> users(
+          transposeOp->getResult(0).getUsers());
+      for (mlir::Operation *user : users)
         if (auto destroyOp = mlir::dyn_cast_or_null<hlfir::DestroyOp>(user))
           rewriter.eraseOp(destroyOp);
       rewriter.eraseOp(transposeOp);
@@ -1178,6 +1193,9 @@ mlir::LogicalResult hlfir::TransposeOp::verify() {
 
   if (rank != 2 || resultRank != 2)
     return emitOpError("input and output arrays should have rank 2");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
   if ((inShape[0] != resultShape[1]) && (inShape[0] != unknownExtent))
@@ -1225,6 +1243,9 @@ mlir::LogicalResult hlfir::MatmulTransposeOp::verify() {
   // lhs must have rank 2 for the transpose to be valid
   if ((lhsRank != 2) || ((rhsRank != 1) && (rhsRank != 2)))
     return emitOpError("array must have either rank 1 or rank 2");
+
+  if (!useStrictIntrinsicVerifier)
+    return mlir::success();
 
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
       mlir::isa<fir::LogicalType>(rhsEleTy))
@@ -1385,31 +1406,43 @@ void hlfir::AsExprOp::getEffects(
 // ElementalOp
 //===----------------------------------------------------------------------===//
 
+/// Common builder for ElementalOp and ElementalAddrOp to add the arguments and
+/// create the elemental body. Result and clean-up body must be handled in
+/// specific builders.
+template <typename Op>
+static void buildElemental(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value shape,
+                           mlir::Value mold, mlir::ValueRange typeparams,
+                           bool isUnordered) {
+  odsState.addOperands(shape);
+  if (mold)
+    odsState.addOperands(mold);
+  odsState.addOperands(typeparams);
+  odsState.addAttribute(
+      Op::getOperandSegmentSizesAttrName(odsState.name),
+      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
+                                    static_cast<int32_t>(typeparams.size())}));
+  if (isUnordered)
+    odsState.addAttribute(Op::getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
+    unsigned dim = shapeType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+}
+
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
                                mlir::Value mold, mlir::ValueRange typeparams,
                                bool isUnordered) {
-  odsState.addOperands(shape);
-  if (mold)
-    odsState.addOperands(mold);
-  odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
-  odsState.addAttribute(
-      getOperandSegmentSizesAttrName(odsState.name),
-      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
-                                    static_cast<int32_t>(typeparams.size())}));
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
-    unsigned dim = exprType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+  buildElemental<hlfir::ElementalOp>(builder, odsState, shape, mold, typeparams,
+                                     isUnordered);
 }
 
 mlir::Value hlfir::ElementalOp::getElementEntity() {
@@ -1660,19 +1693,11 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape, bool isUnordered) {
-  odsState.addOperands(shape);
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
-    unsigned dim = shapeType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+                                   mlir::Value shape, mlir::Value mold,
+                                   mlir::ValueRange typeparams,
+                                   bool isUnordered) {
+  buildElemental<hlfir::ElementalAddrOp>(builder, odsState, shape, mold,
+                                         typeparams, isUnordered);
   // Push cleanUp region.
   odsState.addRegion();
 }
@@ -1846,7 +1871,8 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
       return mlir::failure();
 
   auto insertPt = rewriter.saveInsertionPoint();
-  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+  llvm::SmallVector<mlir::Operation *> users(indexOp->getResult(0).getUsers());
+  for (mlir::Operation *user : users)
     if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(user)) {
       rewriter.setInsertionPoint(loadOp);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(

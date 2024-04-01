@@ -14,7 +14,7 @@ target datalayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:16:32-n8:16"
 ; CHECK: ret
 define void @f() {
 entry:
-  %0 = load i16, i16* @y, align 2
-  store i16 %0, i16* @x, align 2
+  %0 = load i16, ptr @y, align 2
+  store i16 %0, ptr @x, align 2
   ret void
 }

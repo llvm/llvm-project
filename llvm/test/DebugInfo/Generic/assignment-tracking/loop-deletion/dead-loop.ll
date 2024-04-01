@@ -40,9 +40,9 @@ for.end:                                          ; preds = %for.cond
   ret void, !dbg !28
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare !dbg !29 dso_local void @_Z3escPi(ptr noundef) local_unnamed_addr
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

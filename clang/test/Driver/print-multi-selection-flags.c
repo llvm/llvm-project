@@ -51,9 +51,10 @@
 // CHECK-M85_NO_FP_DP: -mfpu=fp-armv8-fullfp16-sp-d16
 
 // RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -march=armv8-a+lse | FileCheck --check-prefix=CHECK-LSE %s
-// CHECK-LSE: -march=aarch64{{.*}}+lse{{.*}}
+// CHECK-LSE: --target=aarch64-none-unknown-elf
+// CHECK-LSE: -march=armv8-a{{.*}}+lse{{.*}}
 
 // RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -march=armv8.5-a+sve+sve2 | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -march=armv9-a            | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: --target=aarch64-none-unknown-elf
-// CHECK-SVE2: -march=aarch64{{.*}}+simd{{.*}}+sve{{.*}}+sve2{{.*}}
+// CHECK-SVE2: -march=armv{{.*}}-a{{.*}}+simd{{.*}}+sve{{.*}}+sve2{{.*}}

@@ -4,7 +4,7 @@
 # A decent sized test to handle a matrix, with scalar and vector low-overhead loops.
 
 --- |
-  define dso_local arm_aapcs_vfpcc signext i16 @matrix_test(i32 %d, i32* nocapture %e, i16* nocapture readonly %k, i16* nocapture readonly %l) {
+  define dso_local arm_aapcs_vfpcc signext i16 @matrix_test(i32 %d, ptr nocapture %e, ptr nocapture readonly %k, ptr nocapture readonly %l) {
   entry:
     %cmp19.i = icmp sgt i32 %d, 0
     br i1 %cmp19.i, label %for.body.i.preheader, label %c.exit.thread
@@ -14,16 +14,16 @@
     br label %for.body.i
 
   c.exit.thread:                                    ; preds = %entry
-    %call169 = tail call arm_aapcs_vfpcc signext i16 bitcast (i16 (...)* @crc16 to i16 (i32)*)(i32 0)
+    %call169 = tail call arm_aapcs_vfpcc signext i16 @crc16(i32 0)
     %conv270 = sext i16 %call169 to i32
     br label %c.exit59
 
   for.body.i:                                       ; preds = %for.body.i, %for.body.i.preheader
-    %lsr.iv15 = phi i32* [ %e, %for.body.i.preheader ], [ %scevgep16, %for.body.i ]
+    %lsr.iv15 = phi ptr [ %e, %for.body.i.preheader ], [ %scevgep16, %for.body.i ]
     %h.022.i = phi i16 [ %h.1.i, %for.body.i ], [ 0, %for.body.i.preheader ]
     %f.020.i = phi i32 [ %f.1.i, %for.body.i ], [ undef, %for.body.i.preheader ]
     %0 = phi i32 [ %start1, %for.body.i.preheader ], [ %2, %for.body.i ]
-    %1 = load i32, i32* %lsr.iv15, align 4
+    %1 = load i32, ptr %lsr.iv15, align 4
     %add.i = add nsw i32 %1, %f.020.i
     %cmp1.i = icmp sgt i32 %add.i, 0
     %cmp3.i = icmp sgt i32 %1, 0
@@ -31,7 +31,7 @@
     %narrow.i = and i1 %cmp3.i, %cmp1.i
     %add6.i = zext i1 %narrow.i to i16
     %h.1.i = add i16 %h.022.i, %add6.i
-    %scevgep16 = getelementptr i32, i32* %lsr.iv15, i32 1
+    %scevgep16 = getelementptr i32, ptr %lsr.iv15, i32 1
     %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
     %3 = icmp ne i32 %2, 0
     br i1 %3, label %for.body.i, label %c.exit
@@ -39,7 +39,7 @@
   c.exit:                                           ; preds = %for.body.i
     %4 = icmp sgt i32 %d, 0
     %phitmp = sext i16 %h.1.i to i32
-    %call1 = tail call arm_aapcs_vfpcc signext i16 bitcast (i16 (...)* @crc16 to i16 (i32)*)(i32 %phitmp)
+    %call1 = tail call arm_aapcs_vfpcc signext i16 @crc16(i32 %phitmp)
     %conv2 = sext i16 %call1 to i32
     br i1 %4, label %for.cond4.preheader.us.preheader, label %c.exit59
 
@@ -55,32 +55,32 @@
     br label %for.cond4.preheader.us
 
   for.cond4.preheader.us:                           ; preds = %middle.block, %for.cond4.preheader.us.preheader
-    %lsr.iv7 = phi i16* [ %28, %middle.block ], [ %k, %for.cond4.preheader.us.preheader ]
+    %lsr.iv7 = phi ptr [ %28, %middle.block ], [ %k, %for.cond4.preheader.us.preheader ]
     %i.064.us = phi i32 [ %inc15.us, %middle.block ], [ 0, %for.cond4.preheader.us.preheader ]
-    %arrayidx12.us = getelementptr inbounds i32, i32* %e, i32 %i.064.us
-    %arrayidx12.promoted.us = load i32, i32* %arrayidx12.us, align 4
+    %arrayidx12.us = getelementptr inbounds i32, ptr %e, i32 %i.064.us
+    %arrayidx12.promoted.us = load i32, ptr %arrayidx12.us, align 4
     %11 = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 %arrayidx12.promoted.us, i32 0
     %start2 = call i32 @llvm.start.loop.iterations.i32(i32 %8)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %for.cond4.preheader.us
-    %lsr.iv10 = phi i16* [ %scevgep11, %vector.body ], [ %lsr.iv7, %for.cond4.preheader.us ]
-    %lsr.iv4 = phi i16* [ %scevgep5, %vector.body ], [ %l, %for.cond4.preheader.us ]
+    %lsr.iv10 = phi ptr [ %scevgep11, %vector.body ], [ %lsr.iv7, %for.cond4.preheader.us ]
+    %lsr.iv4 = phi ptr [ %scevgep5, %vector.body ], [ %l, %for.cond4.preheader.us ]
     %vec.phi = phi <4 x i32> [ %11, %for.cond4.preheader.us ], [ %19, %vector.body ]
     %12 = phi i32 [ %start2, %for.cond4.preheader.us ], [ %20, %vector.body ]
     %13 = phi i32 [ %d, %for.cond4.preheader.us ], [ %15, %vector.body ]
-    %lsr.iv1012 = bitcast i16* %lsr.iv10 to <4 x i16>*
-    %lsr.iv46 = bitcast i16* %lsr.iv4 to <4 x i16>*
+    %lsr.iv1012 = bitcast ptr %lsr.iv10 to ptr
+    %lsr.iv46 = bitcast ptr %lsr.iv4 to ptr
     %14 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %13)
     %15 = sub i32 %13, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv1012, i32 2, <4 x i1> %14, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv1012, i32 2, <4 x i1> %14, <4 x i16> undef)
     %16 = sext <4 x i16> %wide.masked.load to <4 x i32>
-    %wide.masked.load76 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv46, i32 2, <4 x i1> %14, <4 x i16> undef)
+    %wide.masked.load76 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv46, i32 2, <4 x i1> %14, <4 x i16> undef)
     %17 = sext <4 x i16> %wide.masked.load76 to <4 x i32>
     %18 = mul nsw <4 x i32> %17, %16
     %19 = add <4 x i32> %18, %vec.phi
-    %scevgep5 = getelementptr i16, i16* %lsr.iv4, i32 4
-    %scevgep11 = getelementptr i16, i16* %lsr.iv10, i32 4
+    %scevgep5 = getelementptr i16, ptr %lsr.iv4, i32 4
+    %scevgep11 = getelementptr i16, ptr %lsr.iv10, i32 4
     %20 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %12, i32 1)
     %21 = icmp ne i32 %20, 0
     br i1 %21, label %vector.body, label %middle.block
@@ -89,17 +89,17 @@
     %vec.phi.lcssa = phi <4 x i32> [ %vec.phi, %vector.body ]
     %.lcssa = phi <4 x i32> [ %19, %vector.body ]
     %22 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %10)
-    %23 = bitcast i16* %lsr.iv7 to i1*
+    %23 = bitcast ptr %lsr.iv7 to ptr
     %24 = select <4 x i1> %22, <4 x i32> %.lcssa, <4 x i32> %vec.phi.lcssa
     %25 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %24)
     %sunkaddr = mul i32 %i.064.us, 4
-    %26 = bitcast i32* %e to i8*
-    %sunkaddr17 = getelementptr inbounds i8, i8* %26, i32 %sunkaddr
-    %27 = bitcast i8* %sunkaddr17 to i32*
-    store i32 %25, i32* %27, align 4
+    %26 = bitcast ptr %e to ptr
+    %sunkaddr17 = getelementptr inbounds i8, ptr %26, i32 %sunkaddr
+    %27 = bitcast ptr %sunkaddr17 to ptr
+    store i32 %25, ptr %27, align 4
     %inc15.us = add nuw nsw i32 %i.064.us, 1
-    %scevgep9 = getelementptr i1, i1* %23, i32 %5
-    %28 = bitcast i1* %scevgep9 to i16*
+    %scevgep9 = getelementptr i1, ptr %23, i32 %5
+    %28 = bitcast ptr %scevgep9 to ptr
     %exitcond66 = icmp eq i32 %inc15.us, %d
     br i1 %exitcond66, label %for.end16, label %for.cond4.preheader.us
 
@@ -112,11 +112,11 @@
     br label %for.body.i57
 
   for.body.i57:                                     ; preds = %for.body.i57, %for.body.i57.preheader
-    %lsr.iv1 = phi i32* [ %e, %for.body.i57.preheader ], [ %scevgep, %for.body.i57 ]
+    %lsr.iv1 = phi ptr [ %e, %for.body.i57.preheader ], [ %scevgep, %for.body.i57 ]
     %h.022.i44 = phi i16 [ %h.1.i54, %for.body.i57 ], [ 0, %for.body.i57.preheader ]
     %f.020.i46 = phi i32 [ %f.1.i51, %for.body.i57 ], [ undef, %for.body.i57.preheader ]
     %30 = phi i32 [ %start3, %for.body.i57.preheader ], [ %32, %for.body.i57 ]
-    %31 = load i32, i32* %lsr.iv1, align 4
+    %31 = load i32, ptr %lsr.iv1, align 4
     %add.i48 = add nsw i32 %31, %f.020.i46
     %cmp1.i49 = icmp sgt i32 %add.i48, 0
     %cmp3.i50 = icmp sgt i32 %31, 0
@@ -124,7 +124,7 @@
     %narrow.i52 = and i1 %cmp3.i50, %cmp1.i49
     %add6.i53 = zext i1 %narrow.i52 to i16
     %h.1.i54 = add i16 %h.022.i44, %add6.i53
-    %scevgep = getelementptr i32, i32* %lsr.iv1, i32 1
+    %scevgep = getelementptr i32, ptr %lsr.iv1, i32 1
     %32 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %30, i32 1)
     %33 = icmp ne i32 %32, 0
     br i1 %33, label %for.body.i57, label %c.exit59.loopexit
@@ -136,11 +136,11 @@
   c.exit59:                                         ; preds = %c.exit59.loopexit, %for.end16, %c.exit, %c.exit.thread
     %conv27173 = phi i32 [ %conv2, %for.end16 ], [ %conv2, %c.exit59.loopexit ], [ %conv2, %c.exit ], [ %conv270, %c.exit.thread ]
     %h.0.lcssa.i58 = phi i32 [ 0, %for.end16 ], [ %phitmp67, %c.exit59.loopexit ], [ 0, %c.exit ], [ 0, %c.exit.thread ]
-    %call19 = tail call arm_aapcs_vfpcc signext i16 bitcast (i16 (...)* @crc16 to i16 (i32, i32)*)(i32 %h.0.lcssa.i58, i32 %conv27173)
+    %call19 = tail call arm_aapcs_vfpcc signext i16 @crc16(i32 %h.0.lcssa.i58, i32 %conv27173)
     ret i16 %call19
   }
   declare dso_local arm_aapcs_vfpcc signext i16 @crc16(...) local_unnamed_addr #0
-  declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>) #1
+  declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32 immarg, <4 x i1>, <4 x i16>) #1
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) #2
   declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3

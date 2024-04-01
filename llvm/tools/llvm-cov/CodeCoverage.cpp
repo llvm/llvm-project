@@ -343,17 +343,14 @@ void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
 
   // Group branches that have the same line number into the same subview.
   while (NextBranch != EndBranch) {
-    std::vector<CountedRegion> ViewBranches;
+    SmallVector<CountedRegion, 0> ViewBranches;
     unsigned CurrentLine = NextBranch->LineStart;
-
     while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart)
       ViewBranches.push_back(*NextBranch++);
 
-    if (!ViewBranches.empty()) {
-      auto SubView = SourceCoverageView::create(SourceName, File, ViewOpts,
-                                                std::move(CoverageInfo));
-      View.addBranch(CurrentLine, ViewBranches, std::move(SubView));
-    }
+    View.addBranch(CurrentLine, std::move(ViewBranches),
+                   SourceCoverageView::create(SourceName, File, ViewOpts,
+                                              std::move(CoverageInfo)));
   }
 }
 
@@ -371,20 +368,15 @@ void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
   // Group and process MCDC records that have the same line number into the
   // same subview.
   while (NextRecord != EndRecord) {
-    std::vector<MCDCRecord> ViewMCDCRecords;
+    SmallVector<MCDCRecord, 0> ViewMCDCRecords;
     unsigned CurrentLine = NextRecord->getDecisionRegion().LineEnd;
-
     while (NextRecord != EndRecord &&
-           CurrentLine == NextRecord->getDecisionRegion().LineEnd) {
+           CurrentLine == NextRecord->getDecisionRegion().LineEnd)
       ViewMCDCRecords.push_back(*NextRecord++);
-    }
 
-    if (ViewMCDCRecords.empty())
-      continue;
-
-    auto SubView = SourceCoverageView::create(SourceName, File, ViewOpts,
-                                              std::move(CoverageInfo));
-    View.addMCDCRecord(CurrentLine, ViewMCDCRecords, std::move(SubView));
+    View.addMCDCRecord(CurrentLine, std::move(ViewMCDCRecords),
+                       SourceCoverageView::create(SourceName, File, ViewOpts,
+                                                  std::move(CoverageInfo)));
   }
 }
 
@@ -1225,7 +1217,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool(S);
+    DefaultThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);

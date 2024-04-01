@@ -192,7 +192,7 @@ public:
 
 private:
   void SayNotDistinguishable(const Scope &, const SourceName &, GenericKind,
-      const Symbol &, const Symbol &);
+      const Symbol &, const Symbol &, bool isHardConflict);
   void AttachDeclaration(parser::Message &, const Scope &, const Symbol &);
 
   SemanticsContext &context_;
@@ -455,6 +455,13 @@ void CheckHelper::CheckCommonBlock(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::BIND_C)) {
     CheckBindC(symbol);
   }
+  for (MutableSymbolRef ref : symbol.get<CommonBlockDetails>().objects()) {
+    if (ref->test(Symbol::Flag::CrayPointee)) {
+      messages_.Say(ref->name(),
+          "Cray pointee '%s' may not be a member of a COMMON block"_err_en_US,
+          ref->name());
+    }
+  }
 }
 
 // C859, C860
@@ -625,6 +632,11 @@ void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
   CheckSymbolType(symbol);
   CheckArraySpec(symbol, details.shape());
+  CheckConflicting(symbol, Attr::ALLOCATABLE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::ASYNCHRONOUS, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::SAVE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::TARGET, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
   if (details.shape().Rank() > common::maxRank) {
@@ -913,7 +925,12 @@ void CheckHelper::CheckObjectEntity(
     auto attr{*details.cudaDataAttr()};
     switch (attr) {
     case common::CUDADataAttr::Constant:
-      if (IsAllocatableOrPointer(symbol) || symbol.attrs().test(Attr::TARGET)) {
+      if (subpDetails && !inDeviceSubprogram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
+            symbol.name());
+      } else if (IsAllocatableOrPointer(symbol) ||
+          symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
@@ -1183,9 +1200,7 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
-  const Symbol *interface {
-    details.procInterface() ? &details.procInterface()->GetUltimate() : nullptr
-  };
+  const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
         (symbol.attrs().test(Attr::INTENT_IN) ||
@@ -1458,17 +1473,19 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (interfaceName == definitionName) {
         parser::Message *msg{nullptr};
         if (!IsProcedure(*global)) {
-          if (symbol.flags().test(Symbol::Flag::Function) ||
-              symbol.flags().test(Symbol::Flag::Subroutine)) {
-            msg = messages_.Say(
-                "The global entity '%s' corresponding to the local procedure '%s' is not a callable subprogram"_err_en_US,
+          if ((symbol.flags().test(Symbol::Flag::Function) ||
+                  symbol.flags().test(Symbol::Flag::Subroutine)) &&
+              context_.ShouldWarn(common::UsageWarning::ExternalNameConflict)) {
+            msg = WarnIfNotInModuleFile(
+                "The global entity '%s' corresponding to the local procedure '%s' is not a callable subprogram"_warn_en_US,
                 global->name(), symbol.name());
           }
         } else if (auto chars{Characterize(symbol)}) {
           if (auto globalChars{Characterize(*global)}) {
             if (chars->HasExplicitInterface()) {
               std::string whyNot;
-              if (!chars->IsCompatibleWith(*globalChars, &whyNot)) {
+              if (!chars->IsCompatibleWith(*globalChars,
+                      /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
                 msg = WarnIfNotInModuleFile(
                     "The global subprogram '%s' is not compatible with its local procedure declaration (%s)"_warn_en_US,
                     global->name(), whyNot);
@@ -1494,7 +1511,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (auto chars{Characterize(symbol)}) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
-          if (!chars->IsCompatibleWith(*previousChars, &whyNot)) {
+          if (!chars->IsCompatibleWith(*previousChars,
+                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
             if (auto *msg{WarnIfNotInModuleFile(
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
@@ -1697,8 +1715,9 @@ bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
   const Procedure *p1{Characterize(f1)};
   const Procedure *p2{Characterize(f2)};
   if (p1 && p2) {
-    if (characteristics::Distinguishable(
-            context_.languageFeatures(), *p1, *p2)) {
+    std::optional<bool> areDistinct{characteristics::Distinguishable(
+        context_.languageFeatures(), *p1, *p2)};
+    if (areDistinct.value_or(false)) {
       return true;
     }
     if (auto *msg{messages_.Say(f1Name,
@@ -2327,7 +2346,14 @@ void CheckHelper::CheckProcBinding(
         "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
         binding.symbol().name(), symbol.name());
   }
-  if (const Symbol *overridden{FindOverriddenBinding(symbol)}) {
+  bool isInaccessibleDeferred{false};
+  if (const Symbol *
+      overridden{FindOverriddenBinding(symbol, isInaccessibleDeferred)}) {
+    if (isInaccessibleDeferred) {
+      SayWithDeclaration(*overridden,
+          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
+          symbol.name());
+    }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,
           "Override of NON_OVERRIDABLE '%s' is not permitted"_err_en_US,
@@ -2509,6 +2535,13 @@ void CheckHelper::CheckEquivalenceSet(const EquivalenceSet &set) {
     }
   }
   // TODO: Move C8106 (&al.) checks here from resolve-names-utils.cpp
+  for (const EquivalenceObject &object : set) {
+    if (object.symbol.test(Symbol::Flag::CrayPointee)) {
+      messages_.Say(object.symbol.name(),
+          "Cray pointee '%s' may not be a member of an EQUIVALENCE group"_err_en_US,
+          object.symbol.name());
+    }
+  }
 }
 
 void CheckHelper::CheckBlockData(const Scope &scope) {
@@ -3213,6 +3246,8 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   const Symbol *result{FindFunctionResult(symbol)};
   const Symbol &relevant{result ? *result : symbol};
   if (IsAllocatable(relevant)) { // always ok
+  } else if (IsProcedurePointer(symbol) && result && IsPointer(*result)) {
+    // procedure pointer returning allocatable or pointer: ok
   } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
     // object pointers are always ok
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
@@ -3497,6 +3532,11 @@ void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
 }
 
 void DistinguishabilityHelper::Check(const Scope &scope) {
+  if (FindModuleFileContaining(scope)) {
+    // Distinguishability was checked when the module was created;
+    // don't let optional warnings then become errors now.
+    return;
+  }
   for (const auto &[name, info] : nameToSpecifics_) {
     for (auto iter1{info.begin()}; iter1 != info.end(); ++iter1) {
       const auto &[ultimate, procInfo]{*iter1};
@@ -3505,10 +3545,11 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
-        if (!distinguishable(
-                context_.languageFeatures(), proc, iter2->second.procedure)) {
+        std::optional<bool> distinct{distinguishable(
+            context_.languageFeatures(), proc, iter2->second.procedure)};
+        if (!distinct.value_or(false)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
-              *ultimate, *iter2->first);
+              *ultimate, *iter2->first, distinct.has_value());
         }
       }
     }
@@ -3517,7 +3558,23 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
 
 void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
     const SourceName &name, GenericKind kind, const Symbol &proc1,
-    const Symbol &proc2) {
+    const Symbol &proc2, bool isHardConflict) {
+  bool isUseAssociated{!scope.sourceRange().Contains(name)};
+  // The rules for distinguishing specific procedures (F'2023 15.4.3.4.5)
+  // are inadequate for some real-world cases like pFUnit.
+  // When there are optional dummy arguments or unlimited polymorphic
+  // dummy data object arguments, the best that we can do is emit an optional
+  // portability warning.  Also, named generics created by USE association
+  // merging shouldn't receive hard errors for ambiguity.
+  // (Non-named generics might be defined I/O procedures or defined
+  // assignments that need to be used by the runtime.)
+  bool isWarning{!isHardConflict || (isUseAssociated && kind.IsName())};
+  if (isWarning &&
+      (!context_.ShouldWarn(
+           common::LanguageFeature::IndistinguishableSpecifics) ||
+          FindModuleFileContaining(scope))) {
+    return;
+  }
   std::string name1{proc1.name().ToString()};
   std::string name2{proc2.name().ToString()};
   if (kind.IsOperator() || kind.IsAssignment()) {
@@ -3530,13 +3587,20 @@ void DistinguishabilityHelper::SayNotDistinguishable(const Scope &scope,
     }
   }
   parser::Message *msg;
-  if (scope.sourceRange().Contains(name)) {
+  if (!isUseAssociated) {
+    CHECK(isWarning == !isHardConflict);
     msg = &context_.Say(name,
-        "Generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
+        isHardConflict
+            ? "Generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US
+            : "Generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   } else {
     msg = &context_.Say(*GetTopLevelUnitContaining(proc1).GetName(),
-        "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US,
+        isHardConflict
+            ? (isWarning
+                      ? "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_warn_en_US
+                      : "USE-associated generic '%s' may not have specific procedures '%s' and '%s' as their interfaces are not distinguishable"_err_en_US)
+            : "USE-associated generic '%s' should not have specific procedures '%s' and '%s' as their interfaces are not distinguishable by the rules in the standard"_port_en_US,
         MakeOpName(name), name1, name2);
   }
   AttachDeclaration(*msg, scope, proc1);

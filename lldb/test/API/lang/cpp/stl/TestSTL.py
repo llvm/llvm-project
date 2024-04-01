@@ -50,7 +50,7 @@ class STLTestCase(TestBase):
         self.DebugSBType(map_type)
         self.assertTrue(map_type, VALID_TYPE)
         num_template_args = map_type.GetNumberOfTemplateArguments()
-        self.assertTrue(num_template_args > 0)
+        self.assertGreater(num_template_args, 0)
 
         # We expect the template arguments to contain at least 'string' and
         # 'int'.

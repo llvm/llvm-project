@@ -7,6 +7,7 @@
 define signext i32 @foo(ptr nocapture noundef %dummy) #0 {
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1, %bb.2
   ; CHECK-NEXT:   liveins: $x3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
@@ -14,14 +15,20 @@ define signext i32 @foo(ptr nocapture noundef %dummy) #0 {
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gprc_and_gprc_nor0 = nsw ADDI [[LWZ]], 1
   ; CHECK-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[LWZ]], 750
   ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
-  ; CHECK-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[ADDI]], [[LI]], [[CMPWI]].sub_lt
-  ; CHECK-NEXT:   STW killed [[ISEL]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
+  ; CHECK-NEXT:   BCC 12, [[CMPWI]], %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.entry:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.entry:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, [[ADDI]], %bb.0
+  ; CHECK-NEXT:   STW killed [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
   ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc = LI8 0
   ; CHECK-NEXT:   $x3 = COPY [[LI8_]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
   ;
   ; CHECK-32-LABEL: name: foo
   ; CHECK-32: bb.0.entry:
+  ; CHECK-32-NEXT:   successors: %bb.1, %bb.2
   ; CHECK-32-NEXT:   liveins: $r3
   ; CHECK-32-NEXT: {{  $}}
   ; CHECK-32-NEXT:   [[COPY:%[0-9]+]]:gprc_and_gprc_nor0 = COPY $r3
@@ -29,8 +36,13 @@ define signext i32 @foo(ptr nocapture noundef %dummy) #0 {
   ; CHECK-32-NEXT:   [[ADDI:%[0-9]+]]:gprc_and_gprc_nor0 = nsw ADDI [[LWZ]], 1
   ; CHECK-32-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[LWZ]], 750
   ; CHECK-32-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
-  ; CHECK-32-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[ADDI]], [[LI]], [[CMPWI]].sub_lt
-  ; CHECK-32-NEXT:   STW killed [[ISEL]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
+  ; CHECK-32-NEXT:   BCC 12, [[CMPWI]], %bb.2
+  ; CHECK-32-NEXT: {{  $}}
+  ; CHECK-32-NEXT: bb.1.entry:
+  ; CHECK-32-NEXT: {{  $}}
+  ; CHECK-32-NEXT: bb.2.entry:
+  ; CHECK-32-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, [[ADDI]], %bb.0
+  ; CHECK-32-NEXT:   STW killed [[PHI]], 0, [[COPY]] :: (store (s32) into %ir.dummy)
   ; CHECK-32-NEXT:   [[LI1:%[0-9]+]]:gprc = LI 0
   ; CHECK-32-NEXT:   $r3 = COPY [[LI1]]
   ; CHECK-32-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3

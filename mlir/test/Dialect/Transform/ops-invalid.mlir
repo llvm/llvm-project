@@ -433,10 +433,9 @@ module {
 // -----
 
 module attributes { transform.with_named_sequence} {
-  // expected-note @below {{ancestor transform op}}
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
-    // expected-error @below {{cannot be defined inside another transform op}}
+    // expected-error @below {{op symbol's parent must have the SymbolTable trai}}
     transform.named_sequence @nested() {
       transform.yield
     }
@@ -770,5 +769,16 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     transform.yield %arg0 : !transform.any_op
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_matmul(%entry: !transform.any_op) -> () {
+    %c3 = transform.param.constant 1 : i64 -> !transform.param<i64>
+    // expected-error @below {{op operand #0 must be TransformHandleTypeInterface instance}}
+    transform.print %c3 : !transform.param<i64>
+    transform.yield
   }
 }

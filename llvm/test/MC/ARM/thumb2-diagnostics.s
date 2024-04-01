@@ -156,7 +156,9 @@ foo2:
         adds
         adds r0
 @ CHECK-ERRORS: error: too few operands for instruction
-@ CHECK-ERRORS: error: too few operands for instruction
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS: note: too few operands for instruction
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r15]
 
         tst sp, #3
         tst sp, r5

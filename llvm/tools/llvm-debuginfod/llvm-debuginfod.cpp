@@ -127,7 +127,7 @@ int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   for (const std::string &Path : ScanPaths)
     Paths.push_back(Path);
 
-  ThreadPool Pool(hardware_concurrency(MaxConcurrency));
+  DefaultThreadPool Pool(hardware_concurrency(MaxConcurrency));
   DebuginfodLog Log;
   DebuginfodCollection Collection(Paths, Log, Pool, MinInterval);
   DebuginfodServer Server(Log, Collection);

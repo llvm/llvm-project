@@ -152,7 +152,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible for
     // the FP calling convention in C++.
@@ -321,20 +321,28 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
-  assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
-         "Unexpected vector kind");
-
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
   auto VScale =
       getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+
+  unsigned NumElts = VT->getNumElements();
+  llvm::Type *EltType;
+  if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+    NumElts *= 8;
+    EltType = llvm::Type::getInt1Ty(getVMContext());
+  } else {
+    assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
+           "Unexpected vector kind");
+    EltType = CGT.ConvertType(VT->getElementType());
+  }
+
   // The MinNumElts is simplified from equation:
   // NumElts / VScale =
   //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
   //    * (RVVBitsPerBlock / EltSize)
   llvm::ScalableVectorType *ResType =
-      llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
-                                    VT->getNumElements() / VScale->first);
+      llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
   return ABIArgInfo::getDirect(ResType);
 }
 
@@ -433,11 +441,18 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
         return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
     }
 
-    return ABIArgInfo::getDirect();
+    ABIArgInfo Info = ABIArgInfo::getDirect();
+
+    // If it is tuple type, it can't be flattened.
+    if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty)))
+      Info.setCanBeFlattened(!STy->containsHomogeneousScalableVectorTypes());
+
+    return Info;
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>())
-    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData)
+    if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask)
       return coerceVLSVector(Ty);
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,
@@ -514,7 +529,10 @@ public:
   RISCVTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen,
                          unsigned FLen, bool EABI)
       : TargetCodeGenInfo(
-            std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {}
+            std::make_unique<RISCVABIInfo>(CGT, XLen, FLen, EABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {

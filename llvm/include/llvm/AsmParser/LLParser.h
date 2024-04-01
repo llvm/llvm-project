@@ -15,6 +15,7 @@
 
 #include "LLLexer.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/FMF.h"
@@ -133,7 +134,7 @@ namespace llvm {
     // Global Value reference information.
     std::map<std::string, std::pair<GlobalValue*, LocTy> > ForwardRefVals;
     std::map<unsigned, std::pair<GlobalValue*, LocTy> > ForwardRefValIDs;
-    std::vector<GlobalValue*> NumberedVals;
+    NumberedValues<GlobalValue *> NumberedVals;
 
     // Comdat forward reference information.
     std::map<std::string, LocTy> ForwardRefComdats;
@@ -176,6 +177,9 @@ namespace llvm {
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
+
+    bool SeenNewDbgInfoFormat = false;
+    bool SeenOldDbgInfoFormat = false;
 
     std::string SourceFileName;
 
@@ -346,14 +350,15 @@ namespace llvm {
     bool parseGlobalType(bool &IsConstant);
     bool parseUnnamedGlobal();
     bool parseNamedGlobal();
-    bool parseGlobal(const std::string &Name, LocTy NameLoc, unsigned Linkage,
-                     bool HasLinkage, unsigned Visibility,
+    bool parseGlobal(const std::string &Name, unsigned NameID, LocTy NameLoc,
+                     unsigned Linkage, bool HasLinkage, unsigned Visibility,
                      unsigned DLLStorageClass, bool DSOLocal,
                      GlobalVariable::ThreadLocalMode TLM,
                      GlobalVariable::UnnamedAddr UnnamedAddr);
-    bool parseAliasOrIFunc(const std::string &Name, LocTy NameLoc, unsigned L,
-                           unsigned Visibility, unsigned DLLStorageClass,
-                           bool DSOLocal, GlobalVariable::ThreadLocalMode TLM,
+    bool parseAliasOrIFunc(const std::string &Name, unsigned NameID,
+                           LocTy NameLoc, unsigned L, unsigned Visibility,
+                           unsigned DLLStorageClass, bool DSOLocal,
+                           GlobalVariable::ThreadLocalMode TLM,
                            GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool parseStandaloneMetadata();
@@ -364,6 +369,7 @@ namespace llvm {
     bool parseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
+    bool parseRangeAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -452,27 +458,13 @@ namespace llvm {
     bool parseFunctionType(Type *&Result);
     bool parseTargetExtType(Type *&Result);
 
-    class NumberedValues {
-      DenseMap<unsigned, Value *> Vals;
-      unsigned NextUnusedID = 0;
-
-    public:
-      unsigned getNext() const { return NextUnusedID; }
-      Value *get(unsigned ID) const { return Vals.lookup(ID); }
-      void add(unsigned ID, Value *V) {
-        assert(ID >= NextUnusedID && "Invalid value ID");
-        Vals.insert({ID, V});
-        NextUnusedID = ID + 1;
-      }
-    };
-
     // Function Semantic Analysis.
     class PerFunctionState {
       LLParser &P;
       Function &F;
       std::map<std::string, std::pair<Value*, LocTy> > ForwardRefVals;
       std::map<unsigned, std::pair<Value*, LocTy> > ForwardRefValIDs;
-      NumberedValues NumberedVals;
+      NumberedValues<Value *> NumberedVals;
 
       /// FunctionNumber - If this is an unnamed function, this is the slot
       /// number of it, otherwise it is -1.
@@ -571,8 +563,7 @@ namespace llvm {
                     Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
-    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                std::optional<unsigned> *InRangeOp = nullptr);
+    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
@@ -585,6 +576,7 @@ namespace llvm {
     bool parseMDNodeTail(MDNode *&N);
     bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
     bool parseMetadataAttachment(unsigned &Kind, MDNode *&MD);
+    bool parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS);
     bool parseInstructionMetadata(Instruction &Inst);
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);
@@ -614,8 +606,10 @@ namespace llvm {
                            SmallVectorImpl<unsigned> &UnnamedArgNums,
                            bool &IsVarArg);
     bool parseFunctionHeader(Function *&Fn, bool IsDefine,
+                             unsigned &FunctionNumber,
                              SmallVectorImpl<unsigned> &UnnamedArgNums);
-    bool parseFunctionBody(Function &Fn, ArrayRef<unsigned> UnnamedArgNums);
+    bool parseFunctionBody(Function &Fn, unsigned FunctionNumber,
+                           ArrayRef<unsigned> UnnamedArgNums);
     bool parseBasicBlock(PerFunctionState &PFS);
 
     enum TailCallType { TCT_None, TCT_Tail, TCT_MustTail };

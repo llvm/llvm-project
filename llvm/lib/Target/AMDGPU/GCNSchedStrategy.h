@@ -372,7 +372,7 @@ private:
   MapVector<unsigned, MapVector<MachineInstr *, MachineInstr *>>
       RematerializableInsts;
 
-  // Map a trivially remateriazable def to a list of regions at MinOccupancy
+  // Map a trivially rematerializable def to a list of regions at MinOccupancy
   // that has the defined reg as a live-in.
   DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
 

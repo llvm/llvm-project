@@ -17,6 +17,7 @@ add_clang_library(clangTidyReadabilityModule
   DeleteNullPointerCheck.cpp
   DuplicateIncludeCheck.cpp
   ElseAfterReturnCheck.cpp
+  EnumInitialValueCheck.cpp
   FunctionCognitiveComplexityCheck.cpp
   FunctionSizeCheck.cpp
   IdentifierLengthCheck.cpp
@@ -55,6 +56,7 @@ add_clang_library(clangTidyReadabilityModule
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp
+  UseStdMinMaxCheck.cpp
 
   LINK_LIBS
   clangTidy

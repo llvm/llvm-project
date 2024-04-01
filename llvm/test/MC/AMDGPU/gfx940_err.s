@@ -97,22 +97,22 @@ v_cvt_pk_fp8_f32 v1, v2, v3 mul:2
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 
 s_getreg_b32 s1, hwreg(HW_REG_FLAT_SCR_LO)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s1, hwreg(HW_REG_FLAT_SCR_HI)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s1, hwreg(HW_REG_XNACK_MASK)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s1, hwreg(HW_REG_HW_ID1)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s1, hwreg(HW_REG_HW_ID2)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 s_getreg_b32 s1, hwreg(HW_REG_POPS_PACKER)
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: specified hardware register is not supported on this GPU
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
 
 ds_ordered_count v5, v1 offset:65535 gds
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

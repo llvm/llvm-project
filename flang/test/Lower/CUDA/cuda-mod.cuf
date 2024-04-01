@@ -1,0 +1,15 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Simple module to test module use in 
+
+module cuf_mod
+  real, device :: md
+
+contains
+  attributes(device) subroutine devsub()
+  end
+end module
+
+! CHECK: fir.global @_QMcuf_modEmd {cuda_attr = #fir.cuda<device>} : f32
+
+! CHECK: func.func @_QMcuf_modPdevsub() attributes {fir.cuda_attr = #fir.cuda_proc<device>}

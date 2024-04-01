@@ -86,8 +86,8 @@ public:
 protected:
   int64_t m_current_value = 0;
   int64_t m_default_value = 0;
-  int64_t m_min_value = INT64_MIN;
-  int64_t m_max_value = INT64_MAX;
+  int64_t m_min_value = std::numeric_limits<int64_t>::min();
+  int64_t m_max_value = std::numeric_limits<int64_t>::max();
 };
 
 } // namespace lldb_private

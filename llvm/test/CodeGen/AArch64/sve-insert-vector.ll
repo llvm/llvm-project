@@ -139,7 +139,7 @@ define <vscale x 16 x i8> @insert_v16i8_nxv16i8_idx16(<vscale x 16 x i8> %vec, <
 
 ; Insert subvectors into illegal vectors
 
-define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -154,11 +154,11 @@ define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64>
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %v0, <vscale x 8 x i64> %sv1, i64 8)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_lo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -168,11 +168,11 @@ define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, <vscale x 16 x 
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, ptr %out) {
 ; CHECK-LABEL: insert_nxv8i64_nxv16i64_hi:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
@@ -182,11 +182,11 @@ define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x 
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #4, mul vl]
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 8)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, <vscale x 16 x i64>* %out) uwtable {
+define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, ptr %out) uwtable {
 ; CHECK-LABEL: insert_v2i64_nxv16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -214,24 +214,24 @@ define void @insert_v2i64_nxv16i64(<2 x i64> %sv0, <2 x i64> %sv1, <vscale x 16 
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_v2i64_nxv16i64_lo0(<2 x i64>* %psv, <vscale x 16 x i64>* %out) {
+define void @insert_v2i64_nxv16i64_lo0(ptr %psv, ptr %out) {
 ; CHECK-LABEL: insert_v2i64_nxv16i64_lo0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %sv = load <2 x i64>, <2 x i64>* %psv
+  %sv = load <2 x i64>, ptr %psv
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
-define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %out) uwtable {
+define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) uwtable {
 ; CHECK-LABEL: insert_v2i64_nxv16i64_lo2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -252,9 +252,9 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    ret
-  %sv = load <2 x i64>, <2 x i64>* %psv
+  %sv = load <2 x i64>, ptr %psv
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
-  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
 
@@ -385,7 +385,7 @@ define <vscale x 2 x i64> @insert_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec, <
   ret <vscale x 2 x i64> %retval
 }
 
-define <vscale x 2 x i64> @insert_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, <4 x i64>* %ptr) nounwind #0 {
+define <vscale x 2 x i64> @insert_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %ptr) nounwind #0 {
 ; CHECK-LABEL: insert_fixed_v4i64_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -398,7 +398,7 @@ define <vscale x 2 x i64> @insert_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, <
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %subvec = load <4 x i64>, <4 x i64>* %ptr
+  %subvec = load <4 x i64>, ptr %ptr
   %retval = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v4i64(<vscale x 2 x i64> %vec, <4 x i64> %subvec, i64 4)
   ret <vscale x 2 x i64> %retval
 }

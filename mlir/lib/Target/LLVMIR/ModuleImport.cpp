@@ -1290,6 +1290,27 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
+      llvm::convertStrToExceptionBehavior(mdstr->getString());
+  assert(optLLVM && "Expecting FP exception behavior");
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
+}
+
+RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::RoundingMode> optLLVM =
+      llvm::convertStrToRoundingMode(mdstr->getString());
+  assert(optLLVM && "Expecting rounding mode");
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(*optLLVM));
+}
+
 FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
@@ -1640,12 +1661,19 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_pstate_za_new"),
-    StringLiteral("aarch64_pstate_za_preserved"),
-    StringLiteral("aarch64_pstate_za_shared"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_preserves_za"),
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_inout_za"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
     StringLiteral("target-features"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("no-infs-fp-math"),
+    StringLiteral("no-nans-fp-math"),
+    StringLiteral("approx-func-fp-math"),
+    StringLiteral("no-signed-zeros-fp-math"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1717,12 +1745,15 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
     funcOp.setArmStreamingCompatible(true);
 
-  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+  if (func->hasFnAttribute("aarch64_new_za"))
     funcOp.setArmNewZa(true);
-  else if (func->hasFnAttribute("aarch64_pstate_za_shared"))
-    funcOp.setArmSharedZa(true);
-  // PreservedZA can be used with either NewZA or SharedZA.
-  if (func->hasFnAttribute("aarch64_pstate_za_preserved"))
+  else if (func->hasFnAttribute("aarch64_in_za"))
+    funcOp.setArmInZa(true);
+  else if (func->hasFnAttribute("aarch64_out_za"))
+    funcOp.setArmOutZa(true);
+  else if (func->hasFnAttribute("aarch64_inout_za"))
+    funcOp.setArmInoutZa(true);
+  else if (func->hasFnAttribute("aarch64_preserves_za"))
     funcOp.setArmPreservesZa(true);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
@@ -1752,6 +1783,26 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
+      attr.isStringAttribute())
+    funcOp.setUnsafeFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoInfsFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoNansFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
+      attr.isStringAttribute())
+    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
 }
 
 DictionaryAttr
@@ -1936,6 +1987,13 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   // TODO: find a way to support this case.
   if (isMetadataKillLocation(dbgIntr))
     return emitUnsupportedWarning();
+  // Drop debug intrinsics if the associated variable information cannot be
+  // translated due to cyclic debug metadata.
+  // TODO: Support cyclic debug metadata.
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  if (!localVariableAttr)
+    return emitUnsupportedWarning();
   FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
   if (failed(argOperand))
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
@@ -1961,8 +2019,6 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   } else {
     builder.setInsertionPointAfterValue(*argOperand);
   }
-  DILocalVariableAttr localVariableAttr =
-      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());
   Operation *op =

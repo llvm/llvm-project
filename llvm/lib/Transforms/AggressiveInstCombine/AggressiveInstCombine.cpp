@@ -425,8 +425,8 @@ static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
   Value *Arg = Call->getArgOperand(0);
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
-       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, &I,
-                                   &DT))) {
+       cannotBeOrderedLessThanZero(
+           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, &I)))) {
     IRBuilder<> Builder(&I);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());

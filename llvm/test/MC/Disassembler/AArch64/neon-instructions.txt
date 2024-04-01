@@ -1829,7 +1829,7 @@
 0x53,0x26,0x79,0x5f
 
 #----------------------------------------------------------------------
-# Scalar Unigned Rounding Shift Right (Immediate)
+# Scalar Unsigned Rounding Shift Right (Immediate)
 #----------------------------------------------------------------------
 # CHECK: urshr d20, d23, #31
 0xf4,0x26,0x61,0x7f

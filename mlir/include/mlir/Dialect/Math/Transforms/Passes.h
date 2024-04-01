@@ -36,6 +36,7 @@ void populateExpandFloorFPattern(RewritePatternSet &patterns);
 void populateExpandCeilFPattern(RewritePatternSet &patterns);
 void populateExpandExp2FPattern(RewritePatternSet &patterns);
 void populateExpandPowFPattern(RewritePatternSet &patterns);
+void populateExpandFPowIPattern(RewritePatternSet &patterns);
 void populateExpandRoundFPattern(RewritePatternSet &patterns);
 void populateExpandRoundEvenPattern(RewritePatternSet &patterns);
 void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
@@ -44,6 +45,9 @@ struct MathPolynomialApproximationOptions {
   // Enables the use of AVX2 intrinsics in some of the approximations.
   bool enableAvx2 = false;
 };
+
+void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
+void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
 
 void populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,

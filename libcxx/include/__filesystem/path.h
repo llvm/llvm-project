@@ -14,9 +14,8 @@
 #include <__algorithm/replace_copy.h>
 #include <__availability>
 #include <__config>
-#include <__functional/hash.h>
 #include <__functional/unary_function.h>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/decay.h>
@@ -35,6 +34,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17
 
@@ -924,5 +926,7 @@ struct _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY hash<filesystem::path> : __unary_
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FILESYSTEM_PATH_H

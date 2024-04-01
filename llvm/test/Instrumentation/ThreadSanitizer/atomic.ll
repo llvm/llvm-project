@@ -78,6 +78,26 @@ entry:
 ; CHECK-LABEL: atomic8_xchg_monotonic
 ; CHECK: call i8 @__tsan_atomic8_exchange(ptr %a, i8 0, i32 0), !dbg
 
+define void @atomic8_xchg_monotonic_ptr(ptr %a, ptr %b) nounwind uwtable {
+entry:
+  atomicrmw xchg ptr %a, ptr %b monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic8_xchg_monotonic_ptr
+; CHECK: [[ARG:%.*]] = ptrtoint ptr %b to i64, !dbg
+; CHECK: [[RES:%.*]] = call i64 @__tsan_atomic64_exchange(ptr %a, i64 [[ARG]], i32 0), !dbg
+; CHECK: [[CAST:%.*]] = inttoptr i64 [[RES]] to ptr, !dbg
+
+define void @atomic8_xchg_monotonic_float(ptr %a, float %b) nounwind uwtable {
+entry:
+  atomicrmw xchg ptr %a, float %b monotonic, !dbg !7
+  ret void, !dbg !7
+}
+; CHECK-LABEL: atomic8_xchg_monotonic_float
+; CHECK: [[ARG:%.*]] = bitcast float %b to i32, !dbg
+; CHECK: [[RES:%.*]] = call i32 @__tsan_atomic32_exchange(ptr %a, i32 [[ARG]], i32 0), !dbg
+; CHECK: [[CAST:%.*]] = bitcast i32 [[RES]] to float, !dbg
+
 define void @atomic8_add_monotonic(ptr %a) nounwind uwtable {
 entry:
   atomicrmw add ptr %a, i8 0 monotonic, !dbg !7

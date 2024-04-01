@@ -180,7 +180,7 @@
 "`P1973R1 <https://wg21.link/P1973R1>`__","LWG","Rename ""_default_init"" Functions, Rev1","Prague","|Complete|","16.0"
 "`P1976R2 <https://wg21.link/P1976R2>`__","LWG","Fixed-size span construction from dynamic range","Prague","|Complete|","11.0","|ranges|"
 "`P1981R0 <https://wg21.link/P1981R0>`__","LWG","Rename leap to leap_second","Prague","* *",""
-"`P1982R0 <https://wg21.link/P1982R0>`__","LWG","Rename link to time_zone_link","Prague","* *",""
+"`P1982R0 <https://wg21.link/P1982R0>`__","LWG","Rename link to time_zone_link","Prague","|Complete|","19.0","|chrono|"
 "`P1983R0 <https://wg21.link/P1983R0>`__","LWG","Wording for GB301, US296, US292, US291, and US283","Prague","|Complete|","15.0","|ranges|"
 "`P1994R1 <https://wg21.link/P1994R1>`__","LWG","elements_view needs its own sentinel","Prague","|Complete|","16.0","|ranges|"
 "`P2002R1 <https://wg21.link/P2002R1>`__","CWG","Defaulted comparison specification cleanups","Prague","* *",""

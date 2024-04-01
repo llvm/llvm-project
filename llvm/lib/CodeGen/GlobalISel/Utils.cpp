@@ -355,18 +355,17 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
   if (!MaybeVal)
     return std::nullopt;
   APInt &Val = *MaybeVal;
-  while (!SeenOpcodes.empty()) {
-    std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
-    switch (OpcodeAndSize.first) {
+  for (auto [Opcode, Size] : reverse(SeenOpcodes)) {
+    switch (Opcode) {
     case TargetOpcode::G_TRUNC:
-      Val = Val.trunc(OpcodeAndSize.second);
+      Val = Val.trunc(Size);
       break;
     case TargetOpcode::G_ANYEXT:
     case TargetOpcode::G_SEXT:
-      Val = Val.sext(OpcodeAndSize.second);
+      Val = Val.sext(Size);
       break;
     case TargetOpcode::G_ZEXT:
-      Val = Val.zext(OpcodeAndSize.second);
+      Val = Val.zext(Size);
       break;
     }
   }
@@ -660,8 +659,11 @@ std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
   default:
     break;
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_PTR_ADD:
     return C1 + C2;
+  case TargetOpcode::G_PTR_ADD:
+    // Types can be of different width here.
+    // Result needs to be the same width as C1, so trunc or sext C2.
+    return C1 + C2.sextOrTrunc(C1.getBitWidth());
   case TargetOpcode::G_AND:
     return C1 & C2;
   case TargetOpcode::G_ASHR:
@@ -964,14 +966,15 @@ llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
 }
 
 std::optional<SmallVector<unsigned>>
-llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
+llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
+                             std::function<unsigned(APInt)> CB) {
   LLT Ty = MRI.getType(Src);
   SmallVector<unsigned> FoldedCTLZs;
   auto tryFoldScalar = [&](Register R) -> std::optional<unsigned> {
     auto MaybeCst = getIConstantVRegVal(R, MRI);
     if (!MaybeCst)
       return std::nullopt;
-    return MaybeCst->countl_zero();
+    return CB(*MaybeCst);
   };
   if (Ty.isVector()) {
     // Try to constant fold each element.
@@ -991,6 +994,74 @@ llvm::ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI) {
     FoldedCTLZs.emplace_back(*MaybeCst);
     return FoldedCTLZs;
   }
+  return std::nullopt;
+}
+
+std::optional<SmallVector<APInt>>
+llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Op1);
+  if (Ty != MRI.getType(Op2))
+    return std::nullopt;
+
+  auto TryFoldScalar = [&MRI, Pred](Register LHS,
+                                    Register RHS) -> std::optional<APInt> {
+    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+    auto RHSCst = getIConstantVRegVal(RHS, MRI);
+    if (!LHSCst || !RHSCst)
+      return std::nullopt;
+
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_EQ:
+      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+    case CmpInst::Predicate::ICMP_NE:
+      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGT:
+      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGE:
+      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULT:
+      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULE:
+      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGT:
+      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGE:
+      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLT:
+      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLE:
+      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+    default:
+      return std::nullopt;
+    }
+  };
+
+  SmallVector<APInt> FoldedICmps;
+
+  if (Ty.isVector()) {
+    // Try to constant fold each element.
+    auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+    auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+    if (!BV1 || !BV2)
+      return std::nullopt;
+    assert(BV1->getNumSources() == BV2->getNumSources() && "Invalid vectors");
+    for (unsigned I = 0; I < BV1->getNumSources(); ++I) {
+      if (auto MaybeFold =
+              TryFoldScalar(BV1->getSourceReg(I), BV2->getSourceReg(I))) {
+        FoldedICmps.emplace_back(*MaybeFold);
+        continue;
+      }
+      return std::nullopt;
+    }
+    return FoldedICmps;
+  }
+
+  if (auto MaybeCst = TryFoldScalar(Op1, Op2)) {
+    FoldedICmps.emplace_back(*MaybeCst);
+    return FoldedICmps;
+  }
+
   return std::nullopt;
 }
 
@@ -1071,58 +1142,85 @@ void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
 }
 
 LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
-  const unsigned OrigSize = OrigTy.getSizeInBits();
-  const unsigned TargetSize = TargetTy.getSizeInBits();
-
-  if (OrigSize == TargetSize)
+  if (OrigTy.getSizeInBits() == TargetTy.getSizeInBits())
     return OrigTy;
 
-  if (OrigTy.isVector()) {
-    const LLT OrigElt = OrigTy.getElementType();
+  if (OrigTy.isVector() && TargetTy.isVector()) {
+    LLT OrigElt = OrigTy.getElementType();
+    LLT TargetElt = TargetTy.getElementType();
 
-    if (TargetTy.isVector()) {
-      const LLT TargetElt = TargetTy.getElementType();
+    // TODO: The docstring for this function says the intention is to use this
+    // function to build MERGE/UNMERGE instructions. It won't be the case that
+    // we generate a MERGE/UNMERGE between fixed and scalable vector types. We
+    // could implement getLCMType between the two in the future if there was a
+    // need, but it is not worth it now as this function should not be used in
+    // that way.
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getLCMType not implemented between fixed and scalable vectors.");
 
-      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCDElts =
-            std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
-        // Prefer the original element type.
-        ElementCount Mul = OrigTy.getElementCount() * TargetTy.getNumElements();
-        return LLT::vector(Mul.divideCoefficientBy(GCDElts),
-                           OrigTy.getElementType());
-      }
-    } else {
-      if (OrigElt.getSizeInBits() == TargetSize)
-        return OrigTy;
+    if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
+      int GCDMinElts = std::gcd(OrigTy.getElementCount().getKnownMinValue(),
+                                TargetTy.getElementCount().getKnownMinValue());
+      // Prefer the original element type.
+      ElementCount Mul = OrigTy.getElementCount().multiplyCoefficientBy(
+          TargetTy.getElementCount().getKnownMinValue());
+      return LLT::vector(Mul.divideCoefficientBy(GCDMinElts),
+                         OrigTy.getElementType());
     }
-
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
+    unsigned LCM = std::lcm(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
+    return LLT::vector(
+        ElementCount::get(LCM / OrigElt.getSizeInBits(), OrigTy.isScalable()),
+        OrigElt);
   }
 
-  if (TargetTy.isVector()) {
-    unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-    return LLT::fixed_vector(LCMSize / OrigSize, OrigTy);
+  // One type is scalar, one type is vector
+  if (OrigTy.isVector() || TargetTy.isVector()) {
+    LLT VecTy = OrigTy.isVector() ? OrigTy : TargetTy;
+    LLT ScalarTy = OrigTy.isVector() ? TargetTy : OrigTy;
+    LLT EltTy = VecTy.getElementType();
+    LLT OrigEltTy = OrigTy.isVector() ? OrigTy.getElementType() : OrigTy;
+
+    // Prefer scalar type from OrigTy.
+    if (EltTy.getSizeInBits() == ScalarTy.getSizeInBits())
+      return LLT::vector(VecTy.getElementCount(), OrigEltTy);
+
+    // Different size scalars. Create vector with the same total size.
+    // LCM will take fixed/scalable from VecTy.
+    unsigned LCM = std::lcm(EltTy.getSizeInBits().getFixedValue() *
+                                VecTy.getElementCount().getKnownMinValue(),
+                            ScalarTy.getSizeInBits().getFixedValue());
+    // Prefer type from OrigTy
+    return LLT::vector(ElementCount::get(LCM / OrigEltTy.getSizeInBits(),
+                                         VecTy.getElementCount().isScalable()),
+                       OrigEltTy);
   }
 
-  unsigned LCMSize = std::lcm(OrigSize, TargetSize);
-
+  // At this point, both types are scalars of different size
+  unsigned LCM = std::lcm(OrigTy.getSizeInBits().getFixedValue(),
+                          TargetTy.getSizeInBits().getFixedValue());
   // Preserve pointer types.
-  if (LCMSize == OrigSize)
+  if (LCM == OrigTy.getSizeInBits())
     return OrigTy;
-  if (LCMSize == TargetSize)
+  if (LCM == TargetTy.getSizeInBits())
     return TargetTy;
-
-  return LLT::scalar(LCMSize);
+  return LLT::scalar(LCM);
 }
 
 LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
+
+  if ((OrigTy.isScalableVector() && TargetTy.isFixedVector()) ||
+      (OrigTy.isFixedVector() && TargetTy.isScalableVector()))
+    llvm_unreachable(
+        "getCoverTy not implemented between fixed and scalable vectors.");
+
   if (!OrigTy.isVector() || !TargetTy.isVector() || OrigTy == TargetTy ||
       (OrigTy.getScalarSizeInBits() != TargetTy.getScalarSizeInBits()))
     return getLCMType(OrigTy, TargetTy);
 
-  unsigned OrigTyNumElts = OrigTy.getNumElements();
-  unsigned TargetTyNumElts = TargetTy.getNumElements();
+  unsigned OrigTyNumElts = OrigTy.getElementCount().getKnownMinValue();
+  unsigned TargetTyNumElts = TargetTy.getElementCount().getKnownMinValue();
   if (OrigTyNumElts % TargetTyNumElts == 0)
     return OrigTy;
 
@@ -1132,45 +1230,56 @@ LLT llvm::getCoverTy(LLT OrigTy, LLT TargetTy) {
 }
 
 LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
-  const unsigned OrigSize = OrigTy.getSizeInBits();
-  const unsigned TargetSize = TargetTy.getSizeInBits();
-
-  if (OrigSize == TargetSize)
+  if (OrigTy.getSizeInBits() == TargetTy.getSizeInBits())
     return OrigTy;
 
-  if (OrigTy.isVector()) {
+  if (OrigTy.isVector() && TargetTy.isVector()) {
     LLT OrigElt = OrigTy.getElementType();
-    if (TargetTy.isVector()) {
-      LLT TargetElt = TargetTy.getElementType();
-      if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCD = std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
-        return LLT::scalarOrVector(ElementCount::getFixed(GCD), OrigElt);
-      }
-    } else {
-      // If the source is a vector of pointers, return a pointer element.
-      if (OrigElt.getSizeInBits() == TargetSize)
-        return OrigElt;
-    }
 
-    unsigned GCD = std::gcd(OrigSize, TargetSize);
+    // TODO: The docstring for this function says the intention is to use this
+    // function to build MERGE/UNMERGE instructions. It won't be the case that
+    // we generate a MERGE/UNMERGE between fixed and scalable vector types. We
+    // could implement getGCDType between the two in the future if there was a
+    // need, but it is not worth it now as this function should not be used in
+    // that way.
+    assert(((OrigTy.isScalableVector() && !TargetTy.isFixedVector()) ||
+            (OrigTy.isFixedVector() && !TargetTy.isScalableVector())) &&
+           "getGCDType not implemented between fixed and scalable vectors.");
+
+    unsigned GCD = std::gcd(OrigTy.getSizeInBits().getKnownMinValue(),
+                            TargetTy.getSizeInBits().getKnownMinValue());
     if (GCD == OrigElt.getSizeInBits())
-      return OrigElt;
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 OrigElt);
 
-    // If we can't produce the original element type, we have to use a smaller
-    // scalar.
+    // Cannot produce original element type, but both have vscale in common.
     if (GCD < OrigElt.getSizeInBits())
-      return LLT::scalar(GCD);
-    return LLT::fixed_vector(GCD / OrigElt.getSizeInBits(), OrigElt);
+      return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
+                                 GCD);
+
+    return LLT::vector(
+        ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),
+                          OrigTy.isScalable()),
+        OrigElt);
   }
 
-  if (TargetTy.isVector()) {
-    // Try to preserve the original element type.
-    LLT TargetElt = TargetTy.getElementType();
-    if (TargetElt.getSizeInBits() == OrigSize)
-      return OrigTy;
-  }
+  // If one type is vector and the element size matches the scalar size, then
+  // the gcd is the scalar type.
+  if (OrigTy.isVector() &&
+      OrigTy.getElementType().getSizeInBits() == TargetTy.getSizeInBits())
+    return OrigTy.getElementType();
+  if (TargetTy.isVector() &&
+      TargetTy.getElementType().getSizeInBits() == OrigTy.getSizeInBits())
+    return OrigTy;
 
-  unsigned GCD = std::gcd(OrigSize, TargetSize);
+  // At this point, both types are either scalars of different type or one is a
+  // vector and one is a scalar. If both types are scalars, the GCD type is the
+  // GCD between the two scalar sizes. If one is vector and one is scalar, then
+  // the GCD type is the GCD between the scalar and the vector element size.
+  LLT OrigScalar = OrigTy.getScalarType();
+  LLT TargetScalar = TargetTy.getScalarType();
+  unsigned GCD = std::gcd(OrigScalar.getSizeInBits().getFixedValue(),
+                          TargetScalar.getSizeInBits().getFixedValue());
   return LLT::scalar(GCD);
 }
 

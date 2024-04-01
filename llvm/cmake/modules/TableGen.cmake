@@ -125,6 +125,12 @@ function(tablegen project ofn)
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
 
+  if(LLVM_PARALLEL_TABLEGEN_JOBS)
+    set(LLVM_TABLEGEN_JOB_POOL JOB_POOL tablegen_job_pool)
+  else()
+    set(LLVM_TABLEGEN_JOB_POOL "")
+  endif()
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${tblgen_includes}
@@ -139,6 +145,7 @@ function(tablegen project ofn)
       ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${LLVM_TARGET_DEPENDS}
+    ${LLVM_TABLEGEN_JOB_POOL}
     COMMENT "Building ${ofn}..."
     )
 

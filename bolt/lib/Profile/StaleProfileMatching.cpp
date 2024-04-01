@@ -418,6 +418,7 @@ void matchWeightsByHashes(BinaryContext &BC,
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
+      const BinaryBasicBlock *BB = BlockOrder[MatchedBlock->Index - 1];
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
       LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
@@ -433,6 +434,8 @@ void matchWeightsByHashes(BinaryContext &BC,
       } else {
         LLVM_DEBUG(dbgs() << "  loose match\n");
       }
+      if (YamlBB.NumInstructions == BB->size())
+        ++BC.Stats.NumStaleBlocksWithEqualIcount;
     } else {
       LLVM_DEBUG(
           dbgs() << "Couldn't match yaml block (bid = " << YamlBB.Index << ")"
@@ -702,6 +705,9 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+  if (!BF.hasCFG())
+    return false;
+
   LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
                     << "\"" << BF.getPrintName() << "\"\n");
 

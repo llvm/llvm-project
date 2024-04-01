@@ -1015,7 +1015,7 @@ define i1 @length24_eq_const(ptr %X) nounwind {
 ; X64-MIC-AVX:       # %bb.0:
 ; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [959985462,858927408,0,0]
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm2 = [959985462,858927408,0,0]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
 ; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
 ; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1

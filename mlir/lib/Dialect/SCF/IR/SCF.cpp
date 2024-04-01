@@ -9,6 +9,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
@@ -18,6 +20,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
@@ -71,6 +74,12 @@ void SCFDialect::initialize() {
 #include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
+  declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
+                            InParallelOp, ReduceReturnOp>();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConditionOp,
+                            ExecuteRegionOp, ForOp, IfOp, IndexSwitchOp,
+                            ForallOp, InParallelOp, WhileOp, YieldOp>();
+  declarePromisedInterface<ValueBoundsOpInterface, ForOp>();
 }
 
 /// Default callback for IfOp builders. Inserts a yield without arguments.
@@ -306,17 +315,18 @@ void ConditionOp::getSuccessorRegions(
 void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
                   Value ub, Value step, ValueRange iterArgs,
                   BodyBuilderFn bodyBuilder) {
+  OpBuilder::InsertionGuard guard(builder);
+
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
   for (Value v : iterArgs)
     result.addTypes(v.getType());
   Type t = lb.getType();
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(t, result.location);
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+  bodyBlock->addArgument(t, result.location);
   for (Value v : iterArgs)
-    bodyBlock.addArgument(v.getType(), v.getLoc());
+    bodyBlock->addArgument(v.getType(), v.getLoc());
 
   // Create the default terminator if the builder is not provided and if the
   // iteration arguments are not provided. Otherwise, leave this to the caller
@@ -325,9 +335,9 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
     ForOp::ensureTerminator(*bodyRegion, builder, result.location);
   } else if (bodyBuilder) {
     OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArgument(0),
-                bodyBlock.getArguments().drop_front());
+    builder.setInsertionPointToStart(bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock->getArgument(0),
+                bodyBlock->getArguments().drop_front());
   }
 }
 
@@ -523,6 +533,10 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
 SmallVector<Region *> ForOp::getLoopRegions() { return {&getRegion()}; }
 
+Block::BlockArgListType ForOp::getRegionIterArgs() {
+  return getBody()->getArguments().drop_front(getNumInductionVars());
+}
+
 MutableArrayRef<OpOperand> ForOp::getInitsMutable() {
   return getInitArgsMutable();
 }
@@ -616,6 +630,14 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
 
   promote(rewriter, *this);
   return success();
+}
+
+Block::BlockArgListType ForallOp::getRegionIterArgs() {
+  return getBody()->getArguments().drop_front(getRank());
+}
+
+MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
+  return getOutputsMutable();
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
@@ -1092,7 +1114,7 @@ std::optional<APInt> ForOp::getConstantStep() {
   return {};
 }
 
-MutableArrayRef<OpOperand> ForOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>> ForOp::getYieldedValuesMutable() {
   return cast<scf::YieldOp>(getBody()->getTerminator()).getResultsMutable();
 }
 
@@ -1178,7 +1200,7 @@ void ForallOp::print(OpAsmPrinter &p) {
                           OpAsmParser::Delimiter::Paren);
     p << " step ";
     printDynamicIndexList(p, op, getDynamicStep(), getStaticStep(),
-                          /*valueTypes=*/{}, /*scalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
   }
   printInitializationList(p, getRegionOutArgs(), getOutputs(), " shared_outs");
@@ -1351,11 +1373,6 @@ void ForallOp::build(
     return;
   }
   bodyBuilderFn(b, result.location, bodyBlock.getArguments());
-#ifndef NDEBUG
-  auto terminator = llvm::dyn_cast<InParallelOp>(bodyBlock.getTerminator());
-  assert(terminator &&
-         "expected bodyBuilderFn to create InParallelOp terminator");
-#endif // NDEBUG
 }
 
 // Builder that takes loop bounds.
@@ -1626,9 +1643,8 @@ struct FoldTensorCastOfOutputIntoForallOp
     // mapped to the tensor.cast old-typed results of the output bbArgs. The
     // destination have to be updated to point to the output bbArgs directly.
     auto terminator = newForallOp.getTerminator();
-    for (auto [yieldingOp, outputBlockArg] :
-         llvm::zip(terminator.getYieldingOps(),
-                   newForallOp.getOutputBlockArguments())) {
+    for (auto [yieldingOp, outputBlockArg] : llvm::zip(
+             terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
       auto insertSliceOp = cast<tensor::ParallelInsertSliceOp>(yieldingOp);
       insertSliceOp.getDestMutable().assign(outputBlockArg);
     }
@@ -3108,7 +3124,7 @@ YieldOp WhileOp::getYieldOp() {
   return cast<YieldOp>(getAfterBody()->getTerminator());
 }
 
-MutableArrayRef<OpOperand> WhileOp::getYieldedValuesMutable() {
+std::optional<MutableArrayRef<OpOperand>> WhileOp::getYieldedValuesMutable() {
   return getYieldOp().getResultsMutable();
 }
 

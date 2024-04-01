@@ -61,15 +61,15 @@
 // CHECK-LD-RT: "--eh-frame-hdr"
 // CHECK-LD-RT: "-m" "elf_x86_64"
 // CHECK-LD-RT: "-dynamic-linker"
-// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-x86_64.o"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtbegin.o"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
+// CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "-lc"
-// CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
-// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-x86_64.o"
+// CHECK-LD-RT: libclang_rt.builtins.a"
+// CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
@@ -84,15 +84,15 @@
 // CHECK-LD-RT-I686: "--eh-frame-hdr"
 // CHECK-LD-RT-I686: "-m" "elf_i386"
 // CHECK-LD-RT-I686: "-dynamic-linker"
-// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-i386.o"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtbegin.o"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0/../../../../i686-unknown-linux/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib"
-// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
+// CHECK-LD-RT-I686: libclang_rt.builtins.a"
 // CHECK-LD-RT-I686: "-lc"
-// CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
-// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtend-i386.o"
+// CHECK-LD-RT-I686: libclang_rt.builtins.a"
+// CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
@@ -1750,10 +1750,10 @@
 // RUN:     --target=armv7eb-pc-linux-musleabi -mhard-float \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64-pc-linux-musleabi \
+// RUN:     --target=aarch64-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=aarch64_be-pc-linux-musleabi \
+// RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"

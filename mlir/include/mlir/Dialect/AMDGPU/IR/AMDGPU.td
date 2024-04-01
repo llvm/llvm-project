@@ -29,6 +29,23 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+
+  let extraClassDeclaration = [{
+    /// Return true if the given MemRefType has an integer address
+    /// space that matches the ROCDL shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool hasSharedMemoryAddressSpace(MemRefType type);
+
+    /// Return true if the given Attribute has an integer address
+    /// space that matches the ROCDL shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool isSharedMemoryAddressSpace(Attribute type);
+
+    /// Defines the MemRef memory space attribute numeric value that indicates
+    /// a memref is located in shared memory. This should correspond to the
+    /// value used in ROCDL.
+    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -424,6 +441,11 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
 }

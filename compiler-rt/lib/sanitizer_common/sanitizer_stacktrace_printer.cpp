@@ -152,12 +152,12 @@ static void MaybeBuildIdToBuffer(const AddressInfo &info, bool PrefixSpace,
                                  InternalScopedString *buffer) {
   if (info.uuid_size) {
     if (PrefixSpace)
-      buffer->AppendF(" ");
-    buffer->AppendF("(BuildId: ");
+      buffer->Append(" ");
+    buffer->Append("(BuildId: ");
     for (uptr i = 0; i < info.uuid_size; ++i) {
       buffer->AppendF("%02x", info.uuid[i]);
     }
-    buffer->AppendF(")");
+    buffer->Append(")");
   }
 }
 
@@ -249,7 +249,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
         MaybeBuildIdToBuffer(*info, /*PrefixSpace=*/true, buffer);
 #endif
       } else {
-        buffer->AppendF("(<unknown module>)");
+        buffer->Append("(<unknown module>)");
       }
       break;
     case 'M':
@@ -339,7 +339,7 @@ void StackTracePrinter::RenderSourceLocation(InternalScopedString *buffer,
     buffer->AppendF("%s(%d", StripPathPrefix(file, strip_path_prefix), line);
     if (column > 0)
       buffer->AppendF(",%d", column);
-    buffer->AppendF(")");
+    buffer->Append(")");
     return;
   }
 

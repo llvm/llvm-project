@@ -47,7 +47,7 @@ public:
 
 };
 
-} //namespace
+} // namespace
 
 void InvalidatedIteratorChecker::checkPreCall(const CallEvent &Call,
                                               CheckerContext &C) const {

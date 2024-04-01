@@ -56,8 +56,7 @@ By default, an operation pass is `op-agnostic`, meaning that it operates on the
 operation type of the pass manager that it is added to. This means a pass may operate
 on many different types of operations. Agnostic passes should be written such that
 they do not make assumptions on the operation they run on. Examples of this type of pass are
-[Canonicalization](Pass.md/-canonicalize-canonicalize-operations)
-[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions).
+[Canonicalization](Passes.md/#-canonicalize) and [Common Sub-Expression Elimination](Passes.md/#-cse).
 
 To create an agnostic operation pass, a derived class must adhere to the following:
 
@@ -362,7 +361,7 @@ specific operation, and executed on any viable operation type). Operation types 
 anchor pass managers must adhere to the following requirement:
 
 *   Must be registered and marked
-    [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
+    [`IsolatedFromAbove`](Traits/#isolatedfromabove).
 
     *   Passes are expected not to modify operations at or above the current
         operation being processed. If the operation is not isolated, it may

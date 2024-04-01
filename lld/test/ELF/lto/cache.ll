@@ -53,10 +53,10 @@
 
 ; RUN: rm -fr cache && mkdir cache
 ; RUN: ld.lld --thinlto-cache-dir=cache --save-temps -o out b.bc a.bc -M | FileCheck %s --check-prefix=MAP
-; RUN: ls out1.lto.o a.bc.0.preopt.bc b.bc.0.preopt.bc
+; RUN: ls out.lto.a.o a.bc.0.preopt.bc b.bc.0.preopt.bc
 
-; MAP: llvmcache-{{.*}}:(.text)
-; MAP: llvmcache-{{.*}}:(.text)
+; MAP: out.lto.b.o:(.text)
+; MAP: out.lto.a.o:(.text)
 
 ;; Check that mllvm options participate in the cache key
 ; RUN: rm -rf cache && mkdir cache

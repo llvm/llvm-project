@@ -67,14 +67,19 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
 Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
                 const unsigned indexBitwidth) {
   auto int32Type = IntegerType::get(rewriter.getContext(), 32);
-  Value zero = rewriter.createOrFold<arith::ConstantIntOp>(loc, 0, 32);
-  Value minus1 = rewriter.createOrFold<arith::ConstantIntOp>(loc, -1, 32);
+  Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
+  Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
   Value mbcntLo = rewriter.create<ROCDL::MbcntLoOp>(loc, int32Type,
                                                     ValueRange{minus1, zero});
   Value laneId = rewriter.create<ROCDL::MbcntHiOp>(loc, int32Type,
                                                    ValueRange{minus1, mbcntLo});
   return laneId;
 }
+static constexpr StringLiteral amdgcnDataLayout =
+    "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
+    "-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:"
+    "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
+    "G1-ni:7:8";
 
 namespace {
 struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
@@ -89,8 +94,8 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     // followed by: %lid = call @llvm.amdgcn.mbcnt.hi(-1, %mlo)
 
     Type intTy = IntegerType::get(context, 32);
-    Value zero = rewriter.createOrFold<arith::ConstantIntOp>(loc, 0, 32);
-    Value minus1 = rewriter.createOrFold<arith::ConstantIntOp>(loc, -1, 32);
+    Value zero = rewriter.create<arith::ConstantIntOp>(loc, 0, 32);
+    Value minus1 = rewriter.create<arith::ConstantIntOp>(loc, -1, 32);
     Value mbcntLo =
         rewriter.create<ROCDL::MbcntLoOp>(loc, intTy, ValueRange{minus1, zero});
     Value laneId = rewriter.create<ROCDL::MbcntHiOp>(
@@ -212,6 +217,12 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
+    auto llvmDataLayout = m->getAttrOfType<StringAttr>(
+        LLVM::LLVMDialect::getDataLayoutAttrName());
+    if (!llvmDataLayout) {
+      llvmDataLayout = StringAttr::get(ctx, amdgcnDataLayout);
+      m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(), llvmDataLayout);
+    }
     // Request C wrapper emission.
     for (auto func : m.getOps<func::FuncOp>()) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
@@ -227,6 +238,7 @@ struct LowerGpuOpsToROCDLOpsPass
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
         ctx, DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
+    options.dataLayout = llvm::DataLayout(llvmDataLayout.getValue());
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
@@ -285,14 +297,17 @@ struct LowerGpuOpsToROCDLOpsPass
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
-
+    auto *rocdlDialect = getContext().getLoadedDialect<ROCDL::ROCDLDialect>();
+    auto reqdWorkGroupSizeAttrHelper =
+        rocdlDialect->getReqdWorkGroupSizeAttrHelper();
+    auto flatWorkGroupSizeAttrHelper =
+        rocdlDialect->getFlatWorkGroupSizeAttrHelper();
     // Manually rewrite known block size attributes so the LLVMIR translation
     // infrastructure can pick them up.
-    m.walk([ctx](LLVM::LLVMFuncOp op) {
+    m.walk([&](LLVM::LLVMFuncOp op) {
       if (auto blockSizes = dyn_cast_or_null<DenseI32ArrayAttr>(
               op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName()))) {
-        op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
-                    blockSizes);
+        reqdWorkGroupSizeAttrHelper.setAttr(op, blockSizes);
         // Also set up the rocdl.flat_work_group_size attribute to prevent
         // conflicting metadata.
         uint32_t flatSize = 1;
@@ -301,8 +316,7 @@ struct LowerGpuOpsToROCDLOpsPass
         }
         StringAttr flatSizeAttr =
             StringAttr::get(ctx, Twine(flatSize) + "," + Twine(flatSize));
-        op->setAttr(ROCDL::ROCDLDialect::getFlatWorkGroupSizeAttrName(),
-                    flatSizeAttr);
+        flatWorkGroupSizeAttrHelper.setAttr(op, flatSizeAttr);
       }
     });
   }
@@ -355,8 +369,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
       converter,
       /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
       /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      StringAttr::get(&converter.getContext(),
-                      ROCDL::ROCDLDialect::getKernelFuncAttrName()));
+      ROCDL::ROCDLDialect::KernelAttrHelper(&converter.getContext()).getName());
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {

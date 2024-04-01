@@ -366,11 +366,11 @@ foreach Ext = ZfhExts in {
 let Predicates = [HasStdExtZfh] in {
 // Match signaling FEQ_H
 def : Pat<(XLenVT (strict_fsetccs (f16 FPR16:$rs1), FPR16:$rs2, SETEQ)),
-          (AND (FLE_H $rs1, $rs2),
-               (FLE_H $rs2, $rs1))>;
+          (AND (XLenVT (FLE_H $rs1, $rs2)),
+               (XLenVT (FLE_H $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs (f16 FPR16:$rs1), FPR16:$rs2, SETOEQ)),
-          (AND (FLE_H $rs1, $rs2),
-               (FLE_H $rs2, $rs1))>;
+          (AND (XLenVT (FLE_H $rs1, $rs2)),
+               (XLenVT (FLE_H $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs (f16 FPR16:$rs1), (f16 FPR16:$rs1), SETEQ)),
           (FLE_H $rs1, $rs1)>;
@@ -381,11 +381,11 @@ def : Pat<(XLenVT (strict_fsetccs (f16 FPR16:$rs1), (f16 FPR16:$rs1), SETOEQ)),
 let Predicates = [HasStdExtZhinx] in {
 // Match signaling FEQ_H
 def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETEQ)),
-          (AND (FLE_H_INX $rs1, $rs2),
-               (FLE_H_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_H_INX $rs1, $rs2)),
+               (XLenVT (FLE_H_INX $rs2, $rs1)))>;
 def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs2, SETOEQ)),
-          (AND (FLE_H_INX $rs1, $rs2),
-               (FLE_H_INX $rs2, $rs1))>;
+          (AND (XLenVT (FLE_H_INX $rs1, $rs2)),
+               (XLenVT (FLE_H_INX $rs2, $rs1)))>;
 // If both operands are the same, use a single FLE.
 def : Pat<(XLenVT (strict_fsetccs FPR16INX:$rs1, FPR16INX:$rs1, SETEQ)),
           (FLE_H_INX $rs1, $rs1)>;

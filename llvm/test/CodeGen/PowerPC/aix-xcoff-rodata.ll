@@ -82,7 +82,7 @@
 ; OBJ-NEXT:   TimeStamp: None (0x0)
 ; OBJ32-NEXT: SymbolTableOffset: 0x8C
 ; OBJ64-NEXT: SymbolTableOffset: 0xB0
-; OBJ-NEXT:   SymbolTableEntries: 21
+; OBJ-NEXT:   SymbolTableEntries: 23
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }

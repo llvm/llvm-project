@@ -1,0 +1,37 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         5F5A33666F6F7600666F6F006D61696E00696E7400636C616E672076657273696F6E2031372E302E36202843656E744F532031372E302E362D342E656C3929006D61696E2E637070006D61696E2D6D61696E2E64776F00
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         00000000080000000C00000011000000150000004000000049000000
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         3500000004000000000008010421000506939F5FCB7816797B02000600000001560001010103011C0000000156020105340000000403050400
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         01110125823E130503823EB042823EB142070000022E0011813E120640186E823E03823E3A0B3B0B3F190000032E0011813E1206401803823E3A0B3B0B49133F19000004240003823E3E0B0B0B000000
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_str.dwo
+      - Name:            .debug_str_offsets.dwo
+      - Name:            .debug_info.dwo
+      - Name:            .debug_abbrev.dwo
+...

@@ -84,7 +84,7 @@ struct CondBranchOpInterface
             DenseMap<Value, Value> &mapping) -> DeallocOp {
       SmallVector<Value> toRetain;
       state.getMemrefsToRetain(condBr->getBlock(), target,
-                               OperandRange(destOperands), toRetain);
+                               destOperands.getAsOperandRange(), toRetain);
       SmallVector<Value> adaptedConditions(
           llvm::map_range(conditions, conditionModifier));
       auto deallocOp = builder.create<bufferization::DeallocOp>(

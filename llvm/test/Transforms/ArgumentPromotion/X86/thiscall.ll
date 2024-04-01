@@ -12,7 +12,7 @@ target triple = "i386-pc-windows-msvc19.11.0"
 
 %struct.a = type { i8 }
 
-define internal x86_thiscallcc void @internalfun(ptr %this, <{ %struct.a }>* inalloca(<{ %struct.a }>)) {
+define internal x86_thiscallcc void @internalfun(ptr %this, ptr inalloca(<{ %struct.a }>)) {
 ; ARGPROMOTION-LABEL: define {{[^@]+}}@internalfun
 ; ARGPROMOTION-SAME: (ptr [[THIS:%.*]], ptr inalloca(<{ [[STRUCT_A:%.*]] }>) [[TMP0:%.*]]) {
 ; ARGPROMOTION-NEXT:  entry:
@@ -34,11 +34,11 @@ define internal x86_thiscallcc void @internalfun(ptr %this, <{ %struct.a }>* ina
 ; GLOBALOPT_ARGPROMOTION-NEXT:    ret void
 ;
 entry:
-  %a = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %0, i32 0, i32 0
+  %a = getelementptr inbounds <{ %struct.a }>, ptr %0, i32 0, i32 0
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  %1 = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %argmem, i32 0, i32 0
+  %1 = getelementptr inbounds <{ %struct.a }>, ptr %argmem, i32 0, i32 0
   %call = call x86_thiscallcc ptr @copy_ctor(ptr %1, ptr dereferenceable(1) %a)
-  call void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
+  call void @ext(ptr inalloca(<{ %struct.a }>) %argmem)
   ret void
 }
 
@@ -62,12 +62,12 @@ define void @exportedfun(ptr %a) {
 ;
   %inalloca.save = tail call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  call x86_thiscallcc void @internalfun(ptr %a, <{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
+  call x86_thiscallcc void @internalfun(ptr %a, ptr inalloca(<{ %struct.a }>) %argmem)
   call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
 declare x86_thiscallcc ptr @copy_ctor(ptr returned, ptr dereferenceable(1))
-declare void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>))
+declare void @ext(ptr inalloca(<{ %struct.a }>))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)

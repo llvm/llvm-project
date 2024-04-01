@@ -136,11 +136,13 @@ enum class CPUType : uint16_t {
   HybridX86ARM64 = 0xf7,
   ARM64EC = 0xf8,
   ARM64X = 0xf9,
+  Unknown = 0xff,
   D3D11_Shader = 0x100,
 };
 
 /// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
-/// Debug Interface Access SDK
+/// Debug Interface Access SDK, and are documented here:
+/// https://learn.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/cv-cfl-lang
 enum SourceLanguage : uint8_t {
   C = 0x00,
   Cpp = 0x01,
@@ -161,13 +163,17 @@ enum SourceLanguage : uint8_t {
   HLSL = 0x10,
   ObjC = 0x11,
   ObjCpp = 0x12,
-
+  Swift = 0x13,
+  AliasObj = 0x14,
   Rust = 0x15,
+  Go = 0x16,
 
-  /// The DMD & Swift compilers emit 'D' and 'S', respectively, for the CV
-  /// source language. Microsoft does not have enumerators for them yet.
+  /// The DMD compiler emits 'D' for the CV source language. Microsoft does not
+  /// have an enumerator for it yet.
   D = 'D',
-  Swift = 'S',
+  /// The Swift compiler used to emit 'S' for the CV source language, but
+  /// current versions emit the enumerator defined above.
+  OldSwift = 'S',
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented
@@ -200,7 +206,8 @@ enum class CallingConvention : uint8_t {
   ClrCall = 0x16,     // clr call
   Inline =
       0x17, // Marker for routines always inlined and thus lacking a convention
-  NearVector = 0x18 // near left to right push with regs, callee pops stack
+  NearVector = 0x18, // near left to right push with regs, callee pops stack
+  Swift = 0x19,      // Swift call
 };
 
 enum class ClassOptions : uint16_t {

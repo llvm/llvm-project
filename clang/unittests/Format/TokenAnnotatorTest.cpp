@@ -611,10 +611,33 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[13], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[14], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("#define foo(i) ((i) - bar)");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[10], tok::minus, TT_BinaryOperator);
+
   Tokens = annotate("return (Foo) & 10;");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
+
+  Tokens = annotate("#define FOO(bar) foo((uint64_t)&bar)");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
+
+  Tokens = annotate("#define FOO(bar) foo((Foo) & bar)");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_BinaryOperator);
+
+  auto Style = getLLVMStyle();
+  Style.TypeNames.push_back("Foo");
+  Tokens = annotate("#define FOO(bar) foo((Foo)&bar)", Style);
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::identifier, TT_TypeName);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {
@@ -1071,6 +1094,28 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
                     "concept C = (!Foo<T>) && Bar;");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[15], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("void f() & requires(C<decltype(x)>) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("auto f() -> int& requires(C<decltype(x)>) {}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[7], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("bool x = t && requires(decltype(t) x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  Tokens = annotate("bool x = t && requires(Foo<decltype(t)> x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
+
+  Tokens = annotate("bool x = t && requires(Foo<C1 || C2> x) { x.foo(); };");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresExpression);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
@@ -1724,9 +1769,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionTypeLParen);
 
+  Tokens = annotate("int iso_time(time_t);");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+
   auto Style = getLLVMStyle();
-  Style.TypeNames.push_back("time_t");
-  Tokens = annotate("int iso_time(time_t);", Style);
+  Style.TypeNames.push_back("MyType");
+  Tokens = annotate("int iso_time(MyType);", Style);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_TypeName);
@@ -2210,16 +2259,24 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TRUE(Tokens[0]->IsMultiline);
   EXPECT_EQ(Tokens[0]->LastLineColumnWidth, sizeof("   the string. }]") - 1);
 
+  // Numeric literals.
+  Tokens = Annotate("1234");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("-1");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("+1234");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("0b0110");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+  Tokens = Annotate("0x1abC");
+  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
+
   // Identifier tokens. In TableGen, identifiers can begin with a number.
   // In ambiguous cases, the lexer tries to lex it as a number.
   // Even if the try fails, it does not fall back to identifier lexing and
   // regard as an error.
   // The ambiguity is not documented. The result of those tests are based on the
   // implementation of llvm::TGLexer::LexToken.
-  Tokens = Annotate("1234");
-  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
-  Tokens = Annotate("0x1abC");
-  EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
   // This is invalid syntax of number, but not an identifier.
   Tokens = Annotate("0x1234x");
   EXPECT_TOKEN(Tokens[0], tok::numeric_constant, TT_Unknown);
@@ -2244,6 +2301,145 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_ElseLBrace);
   Tokens = Annotate("defset Foo Def2 = {}");
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+
+  // Bang Operators.
+  Tokens = Annotate("!foreach");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenBangOperator);
+  Tokens = Annotate("!if");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenBangOperator);
+  Tokens = Annotate("!cond");
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
+
+  auto AnnotateValue = [this, &Style](llvm::StringRef Code) {
+    // Values are annotated only in specific context.
+    auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);
+    return decltype(Result){Result.begin() + 6, Result.end() - 3};
+  };
+  // Both of bang/cond operators.
+  Tokens = AnnotateValue("!cond(!eq(x, 0): 1, true: x)");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TableGenBangOperator);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_TableGenCondOperatorColon);
+  EXPECT_TOKEN(Tokens[10], tok::comma, TT_TableGenCondOperatorComma);
+  EXPECT_TOKEN(Tokens[12], tok::colon, TT_TableGenCondOperatorColon);
+  // DAGArg values with operator identifier
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown); // $src1
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListComma);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+  // List literal
+  Tokens = AnnotateValue("[1, 2, 3]");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_TableGenListOpener);
+  EXPECT_TOKEN(Tokens[6], tok::r_square, TT_TableGenListCloser);
+  // Suffixes of values
+  Tokens = AnnotateValue("valid.field");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::period, TT_TableGenValueSuffix);
+  // Code
+  Tokens = AnnotateValue("[{ code is multiline string }]");
+  ASSERT_EQ(Tokens.size(), 1u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::string_literal, TT_TableGenMultiLineString);
+
+  // The definition
+  Tokens = annotate("def Def : Parent<Child> {}", Style);
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens; // This contains eof.
+  // We use inheritance colon and function brace. They are enough.
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_InheritanceColon);
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
+
+  // DAGArg breaking options. They use different token types depending on what
+  // is specified.
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakElements;
+
+  // When TableGenBreakInsideDAGArg is DAS_BreakElements and
+  // TableGenBreakingDAGArgOperators is not specified, it makes all the DAGArg
+  // elements to have line break.
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorID); // ins
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorID); // other
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  // For non-identifier operators, breaks after the operator.
+  Tokens = AnnotateValue("(!cast<Type>(\"Name\") type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_TableGenDAGArgOperatorToBreak);
+  EXPECT_TOKEN(Tokens[11], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[15], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
+
+  // When TableGenBreakInsideDAGArg is DAS_BreakAll and
+  // TableGenBreakingDAGArgOperators is not specified, it makes all the DAGArg
+  // to have line break inside it.
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // ins
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // other
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  // If TableGenBreakingDAGArgOperators is specified, it is limited to the
+  // specified operators.
+  Style.TableGenBreakingDAGArgOperators = {"ins", "outs"};
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpenerToBreak);
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // ins
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListCommaToBreak);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_paren, TT_TableGenDAGArgOpener);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown); // other
+  EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListComma);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  // If TableGenBreakingDAGArgOperators is enabled, it uses
+  // TT_TableGenDAGArgListColonToAlign to annotate the colon to align.
+  Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled = true;
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // ins
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColonToAlign);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColonToAlign);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown); // other
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColon);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
@@ -2522,6 +2718,11 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("@interface NSCoder (TestCoder)");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::at, TT_ObjCDecl);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, BraceKind) {
@@ -2590,6 +2791,20 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("struct Foo {\n"
+                    "  Foo() {};\n"
+                    "  ~Foo() {};\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_CtorDtorDeclName);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[13], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[14], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, StreamOperator) {
@@ -2599,6 +2814,12 @@ TEST_F(TokenAnnotatorTest, StreamOperator) {
   EXPECT_FALSE(Tokens[3]->MustBreakBefore);
   // Only break between string literals if the former ends with \n.
   EXPECT_TRUE(Tokens[5]->MustBreakBefore);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
+  auto Tokens = annotate("auto foo() -> enum En {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace

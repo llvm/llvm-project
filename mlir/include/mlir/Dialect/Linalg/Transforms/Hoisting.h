@@ -10,10 +10,8 @@
 #define MLIR_DIALECT_LINALG_TRANSFORMS_HOISTING_H_
 
 namespace mlir {
+class Operation;
 class RewriterBase;
-namespace func {
-class FuncOp;
-} // namespace func
 namespace scf {
 class ForOp;
 } // namespace scf
@@ -43,7 +41,7 @@ namespace linalg {
 ///
 /// WARNING: This hoisting does not model parallelism and is generally incorrect
 /// when used on distributed loops with memref semantics!
-void hoistRedundantVectorTransfers(func::FuncOp func);
+void hoistRedundantVectorTransfers(Operation *root);
 
 } // namespace linalg
 } // namespace mlir

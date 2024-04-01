@@ -601,7 +601,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       EltTy = llvm::Type::getInt8Ty(getLLVMContext());
     }
 
-    ResultType = llvm::ArrayType::get(EltTy, A->getSize().getZExtValue());
+    ResultType = llvm::ArrayType::get(EltTy, A->getZExtSize());
     break;
   }
   case Type::ExtVector:

@@ -136,7 +136,7 @@ define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %p
 
 define ptr @test_accumulate_constant_offset_vscale_zero(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-LABEL: @test_accumulate_constant_offset_vscale_zero(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 0, i64 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 0, i64 4

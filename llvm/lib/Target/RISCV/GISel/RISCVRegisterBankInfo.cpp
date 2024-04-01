@@ -13,6 +13,7 @@
 #include "RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -25,10 +26,16 @@ namespace llvm {
 namespace RISCV {
 
 const RegisterBankInfo::PartialMapping PartMappings[] = {
+    // clang-format off
     {0, 32, GPRBRegBank},
     {0, 64, GPRBRegBank},
     {0, 32, FPRBRegBank},
     {0, 64, FPRBRegBank},
+    {0, 64, VRBRegBank},
+    {0, 128, VRBRegBank},
+    {0, 256, VRBRegBank},
+    {0, 512, VRBRegBank},
+    // clang-format on
 };
 
 enum PartialMappingIdx {
@@ -36,6 +43,10 @@ enum PartialMappingIdx {
   PMI_GPRB64 = 1,
   PMI_FPRB32 = 2,
   PMI_FPRB64 = 3,
+  PMI_VRB64 = 4,
+  PMI_VRB128 = 5,
+  PMI_VRB256 = 6,
+  PMI_VRB512 = 7,
 };
 
 const RegisterBankInfo::ValueMapping ValueMappings[] = {
@@ -57,6 +68,22 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
     {&PartMappings[PMI_FPRB64], 1},
     {&PartMappings[PMI_FPRB64], 1},
     {&PartMappings[PMI_FPRB64], 1},
+    // Maximum 3 VR LMUL={1, MF2, MF4, MF8} operands.
+    {&PartMappings[PMI_VRB64], 1},
+    {&PartMappings[PMI_VRB64], 1},
+    {&PartMappings[PMI_VRB64], 1},
+    // Maximum 3 VR LMUL=2 operands.
+    {&PartMappings[PMI_VRB128], 1},
+    {&PartMappings[PMI_VRB128], 1},
+    {&PartMappings[PMI_VRB128], 1},
+    // Maximum 3 VR LMUL=4 operands.
+    {&PartMappings[PMI_VRB256], 1},
+    {&PartMappings[PMI_VRB256], 1},
+    {&PartMappings[PMI_VRB256], 1},
+    // Maximum 3 VR LMUL=8 operands.
+    {&PartMappings[PMI_VRB512], 1},
+    {&PartMappings[PMI_VRB512], 1},
+    {&PartMappings[PMI_VRB512], 1},
 };
 
 enum ValueMappingIdx {
@@ -65,6 +92,10 @@ enum ValueMappingIdx {
   GPRB64Idx = 4,
   FPRB32Idx = 7,
   FPRB64Idx = 10,
+  VRB64Idx = 13,
+  VRB128Idx = 16,
+  VRB256Idx = 19,
+  VRB512Idx = 22,
 };
 } // namespace RISCV
 } // namespace llvm
@@ -215,6 +246,23 @@ bool RISCVRegisterBankInfo::anyUseOnlyUseFP(
       [&](const MachineInstr &UseMI) { return onlyUsesFP(UseMI, MRI, TRI); });
 }
 
+static const RegisterBankInfo::ValueMapping *getVRBValueMapping(unsigned Size) {
+  unsigned Idx;
+
+  if (Size <= 64)
+    Idx = RISCV::VRB64Idx;
+  else if (Size == 128)
+    Idx = RISCV::VRB128Idx;
+  else if (Size == 256)
+    Idx = RISCV::VRB256Idx;
+  else if (Size == 512)
+    Idx = RISCV::VRB512Idx;
+  else
+    llvm::report_fatal_error("Invalid Size");
+
+  return &RISCV::ValueMappings[Idx];
+}
+
 const RegisterBankInfo::InstructionMapping &
 RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const unsigned Opc = MI.getOpcode();
@@ -242,7 +290,16 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_SUB:
+  case TargetOpcode::G_SUB: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      return getInstructionMapping(
+          DefaultMappingID, /*Cost=*/1,
+          getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue()),
+          NumOperands);
+    }
+  }
+    LLVM_FALLTHROUGH;
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -287,6 +344,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_IMPLICIT_DEF: {
     Register Dst = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    uint64_t DstMinSize = DstTy.getSizeInBits().getKnownMinValue();
     auto Mapping = GPRValueMapping;
     // FIXME: May need to do a better job determining when to use FPRB.
     // For example, the look through COPY case:
@@ -294,7 +353,11 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // %1:_(s32) = COPY %0
     // $f10_d = COPY %1(s32)
     if (anyUseOnlyUseFP(Dst, MRI, TRI))
-      Mapping = getFPValueMapping(MRI.getType(Dst).getSizeInBits());
+      Mapping = getFPValueMapping(DstMinSize);
+
+    if (DstTy.isVector())
+      Mapping = getVRBValueMapping(DstMinSize);
+
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, Mapping,
                                  NumOperands);
   }
@@ -344,6 +407,17 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_SELECT: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    if (Ty.isVector()) {
+      auto &Sel = cast<GSelect>(MI);
+      LLT TestTy = MRI.getType(Sel.getCondReg());
+      assert(TestTy.isVector() && "Unexpected condition argument type");
+      OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] =
+          getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+      OpdsMapping[1] =
+          getVRBValueMapping(TestTy.getSizeInBits().getKnownMinValue());
+      break;
+    }
 
     // Try to minimize the number of copies. If we have more floating point
     // constrained values than not, then we'll put everything on FPR. Otherwise,
