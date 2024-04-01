@@ -586,7 +586,8 @@ public:
 
   void VisitReferenceType(const ReferenceType *RT) {
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, RT->getPointeeTypeAsWritten(), ShouldAddLinksToTagTypes);
+    CurrentTypeRAII Guard(*this, RT->getPointeeTypeAsWritten(),
+                          ShouldAddLinksToTagTypes);
     Visit(RT->getPointeeTypeAsWritten().getTypePtr());
     if (RT->isLValueReferenceType())
       addLabel(" &");

@@ -1678,8 +1678,9 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
                         ExpectedHint{": static_vector<int>", "vector_name"});
 }
 
-template <typename ...Labels>
-void assertTypeLinkHints(StringRef Code, StringRef HintRange, Labels ...ExpectedLabels) {
+template <typename... Labels>
+void assertTypeLinkHints(StringRef Code, StringRef HintRange,
+                         Labels... ExpectedLabels) {
   Annotations Source(Code);
   auto HintAt = [&](llvm::ArrayRef<InlayHint> InlayHints,
                     llvm::StringRef Range) {
