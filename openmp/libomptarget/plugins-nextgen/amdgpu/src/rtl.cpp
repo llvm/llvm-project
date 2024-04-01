@@ -3188,7 +3188,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
 
     // For large transfers use synchronous behavior.
-    if (Size >= OMPX_MaxAsyncCopyBytes) {
+    // If OMPT is enabled or synchronous behavior is explicitly requested:
+    if (ompt::CallbacksInitialized || OMPX_ForceSyncRegions ||
+        Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -3204,6 +3206,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
       if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
+
+      OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
 
       return Signal.deinit();
     }
