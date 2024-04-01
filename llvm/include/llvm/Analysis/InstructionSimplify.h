@@ -264,6 +264,17 @@ simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                        const SimplifyQuery &Q, bool AllowRefinement,
                        SmallVectorImpl<Instruction *> *DropFlags = nullptr);
 
+/// In the case of a binary operation with a select instruction as an operand,
+/// try to simplify the binop by seeing whether evaluating it on both branches
+/// of the select results in the same value. Returns the common value if so,
+/// otherwise returns null.
+///
+/// If DropFlags is passed, then the result is only valid if
+/// poison-generating flags/metadata on the instruction are dropped.
+Value *threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
+                             Value *RHS, const SimplifyQuery &Q,
+                             Instruction **DropFlags);
+
 /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.
 ///
 /// This first performs a normal RAUW of I with SimpleV. It then recursively

@@ -1964,6 +1964,15 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
   if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(0))) {
     if (Instruction *NewSel = FoldOpIntoSelect(I, Sel))
       return NewSel;
+
+    const SimplifyQuery SQ = getSimplifyQuery().getWithInstruction(&I);
+    Instruction *DropFlags = nullptr;
+    if (Value *V = threadBinOpOverSelect(I.getOpcode(), I.getOperand(0),
+                                         I.getOperand(1), SQ, &DropFlags)) {
+      if (DropFlags)
+        DropFlags->dropPoisonGeneratingFlags();
+      return replaceInstUsesWith(I, V);
+    }
   } else if (auto *PN = dyn_cast<PHINode>(I.getOperand(0))) {
     if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
       return NewPhi;

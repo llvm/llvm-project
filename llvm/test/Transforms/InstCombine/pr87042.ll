@@ -4,7 +4,7 @@
 define i64 @test_disjoint_or(i1 %cond, i64 %x) {
 ; CHECK-LABEL: define i64 @test_disjoint_or(
 ; CHECK-SAME: i1 [[COND:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i64 [[X]], 7
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[X]], 7
 ; CHECK-NEXT:    ret i64 [[OR2]]
 ;
   %or1 = or disjoint i64 %x, 7
@@ -30,7 +30,7 @@ define i64 @pr87042(i64 %x) {
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[X]], 65535
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[AND1]], 0
-; CHECK-NEXT:    [[OR1:%.*]] = or disjoint i64 [[X]], 7
+; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[X]], 7
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i64 [[OR1]], i64 [[X]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[SEL1]], 16776960
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[AND2]], 0

@@ -393,7 +393,8 @@ static Value *simplifyAssociativeBinOp(Instruction::BinaryOps Opcode,
 /// otherwise returns null.
 static Value *threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
                                     Value *RHS, const SimplifyQuery &Q,
-                                    unsigned MaxRecurse) {
+                                    unsigned MaxRecurse,
+                                    Instruction **DropFlags = nullptr) {
   // Recursion is always used, so bail out at once if we already hit the limit.
   if (!MaxRecurse--)
     return nullptr;
@@ -447,6 +448,13 @@ static Value *threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
       Value *UnsimplifiedBranch = FV ? SI->getTrueValue() : SI->getFalseValue();
       Value *UnsimplifiedLHS = SI == LHS ? UnsimplifiedBranch : LHS;
       Value *UnsimplifiedRHS = SI == LHS ? RHS : UnsimplifiedBranch;
+
+      if (Simplified->hasPoisonGeneratingFlags()) {
+        if (!DropFlags)
+          return nullptr;
+        *DropFlags = Simplified;
+      }
+
       if (Simplified->getOperand(0) == UnsimplifiedLHS &&
           Simplified->getOperand(1) == UnsimplifiedRHS)
         return Simplified;
@@ -458,6 +466,13 @@ static Value *threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
   }
 
   return nullptr;
+}
+
+Value *llvm::threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
+                                   Value *RHS, const SimplifyQuery &Q,
+                                   Instruction **DropFlags) {
+  return ::threadBinOpOverSelect(Opcode, LHS, RHS, Q, RecursionLimit,
+                                 DropFlags);
 }
 
 /// In the case of a comparison with a select instruction, try to simplify the
