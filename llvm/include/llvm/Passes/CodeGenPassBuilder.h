@@ -87,14 +87,14 @@ namespace llvm {
     }                                                                          \
   };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
-  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
+  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
-  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
+  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \
