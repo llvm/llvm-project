@@ -280,7 +280,8 @@ parseNextArg(StringRef options) {
   llvm_unreachable("unexpected control flow in pass option parsing");
 }
 
-LogicalResult detail::PassOptions::parseFromString(StringRef options) {
+LogicalResult detail::PassOptions::parseFromString(StringRef options,
+                                                   raw_ostream &errorStream) {
   // NOTE: `options` is modified in place to always refer to the unprocessed
   // part of the string.
   while (!options.empty()) {
@@ -291,7 +292,7 @@ LogicalResult detail::PassOptions::parseFromString(StringRef options) {
 
     auto it = OptionsMap.find(key);
     if (it == OptionsMap.end()) {
-      llvm::errs() << "<Pass-Options-Parser>: no such option " << key << "\n";
+      errorStream << "<Pass-Options-Parser>: no such option " << key << "\n";
       return failure();
     }
     if (llvm::cl::ProvidePositionalOption(it->second, value, 0))
