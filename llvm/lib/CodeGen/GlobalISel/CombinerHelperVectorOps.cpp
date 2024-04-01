@@ -67,21 +67,6 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // * bitcast
   // * undef
 
-  // The MIs def'd on the Index and Vector registers;
-  MachineInstr *IndexMI = getDefIgnoringCopies(Index, MRI);
-  MachineInstr *VectorMI = getDefIgnoringCopies(Vector, MRI);
-
-  // Fold extractVectorElement(undef, undef) -> undef
-  if ((isa<GImplicitDef>(VectorMI) || isa<GImplicitDef>(IndexMI)) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
-    // If the Vector register is undef, then we cannot extract an element from
-    // it. An undef extract Index can be arbitrarily chosen to be an
-    // out-of-range index value, which would result in the instruction being
-    // poison.
-    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
-    return true;
-  }
-
   // We try to get the value of the Index register.
   std::optional<ValueAndVReg> MaybeIndex =
       getIConstantVRegValWithLookThrough(Index, MRI);
