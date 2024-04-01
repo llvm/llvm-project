@@ -203,7 +203,7 @@ function(add_asan_tests arch test_runtime)
         CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL
         SOURCES ${ASAN_INST_TEST_SOURCES}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
-          -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
+          -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
         )
     else()
 
