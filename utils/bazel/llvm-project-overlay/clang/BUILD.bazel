@@ -2056,6 +2056,7 @@ cc_library(
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TextAPI",
+        "//llvm:TextAPIBinaryReader",
     ],
 )
 
