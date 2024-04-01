@@ -514,6 +514,14 @@ class TypeInlayHintLabelPartBuilder
     }
   }
 
+  // When printing a reference, the referenced type might also be a reference.
+  // If so, we want to skip that before printing the inner type.
+  static QualType skipTopLevelReferences(QualType T) {
+    if (auto *Ref = T->getAs<ReferenceType>())
+      return skipTopLevelReferences(Ref->getPointeeTypeAsWritten());
+    return T;
+  }
+
 public:
   TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
                                 const PrintingPolicy &PP,
@@ -586,21 +594,27 @@ public:
 
   void VisitReferenceType(const ReferenceType *RT) {
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, RT->getPointeeTypeAsWritten(),
-                          ShouldAddLinksToTagTypes);
-    Visit(RT->getPointeeTypeAsWritten().getTypePtr());
+    QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
+    CurrentTypeRAII Guard(*this, Next, ShouldAddLinksToTagTypes);
+    Visit(Next.getTypePtr());
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
     if (RT->isLValueReferenceType())
-      addLabel(" &");
+      addLabel("&");
     if (RT->isRValueReferenceType())
-      addLabel(" &&");
+      addLabel("&&");
   }
 
   void VisitPointerType(const PointerType *PT) {
+    QualType Next = PT->getPointeeType();
+    std::optional<CurrentTypeRAII> Guard(std::in_place, *this, Next,
+                                         ShouldAddLinksToTagTypes);
+    Visit(Next.getTypePtr());
+    if (Next->getPointeeType().isNull())
+      addLabel(" ");
+    addLabel("*");
+    Guard.reset();
     maybeAddQualifiers();
-    CurrentTypeRAII Guard(*this, PT->getPointeeType(),
-                          ShouldAddLinksToTagTypes);
-    Visit(PT->getPointeeType().getTypePtr());
-    addLabel(" *");
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
