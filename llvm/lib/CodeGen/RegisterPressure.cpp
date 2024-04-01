@@ -64,7 +64,7 @@ static void increaseSetPressure(std::vector<unsigned> &CurrSetPressure,
 static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
                                 const MachineRegisterInfo &MRI, Register Reg,
                                 LaneBitmask PrevMask, LaneBitmask NewMask) {
-  //assert((NewMask & !PrevMask) == 0 && "Must not add bits");
+  assert((NewMask & ~PrevMask).none() && "Must not add bits");
   if (NewMask.any() || PrevMask.none())
     return;
 
