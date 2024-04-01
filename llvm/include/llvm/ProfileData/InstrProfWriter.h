@@ -63,6 +63,9 @@ private:
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
 
+  // Read the vtable names from raw instr profile reader.
+  StringSet<> VTableNames;
+
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   // Use raw pointer here for the incomplete type object.
@@ -95,6 +98,7 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+  void addVTableName(StringRef VTableName) { VTableNames.insert(VTableName); }
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
