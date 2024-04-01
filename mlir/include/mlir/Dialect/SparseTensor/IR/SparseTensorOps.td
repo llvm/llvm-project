@@ -1314,7 +1314,7 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
 
   let extraClassDeclaration = [{
      Value getSingleResult() {
-        assert(getResults().size() == 1);
+        assert(hasSingleResult());
         return getResults().front();
      }
      bool hasSingleResult() {
