@@ -123,7 +123,7 @@ public:
   std::unordered_map<uint32_t, std::vector<uint32_t>>
   getBFBranches(uint64_t FuncOutputAddress) const;
 
-  /// Returns a secondary entry point id for a given function and offset.
+  /// Returns a secondary entry point id for a given \p Address and \p Offset.
   unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
 
 private:

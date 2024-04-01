@@ -602,12 +602,14 @@ BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
                                                  uint32_t Offset) const {
   auto FunctionIt = SecondaryEntryPointsMap.find(Address);
   if (FunctionIt == SecondaryEntryPointsMap.end())
-    return UINT_MAX;
+    return 0;
   const std::vector<uint32_t> &Offsets = FunctionIt->second;
   auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
   if (OffsetIt == Offsets.end())
-    return UINT_MAX;
-  return OffsetIt - Offsets.begin();
+    return 0;
+  // Adding one here because main entry point is not stored in BAT, and
+  // enumeration for secondary entry points starts with 1.
+  return OffsetIt - Offsets.begin() + 1;
 }
 } // namespace bolt
 } // namespace llvm

@@ -13,6 +13,7 @@
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,15 +34,14 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
                   const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
-  auto setBATSecondaryEntry = [&](const BinaryFunction *const Callee) {
+  auto setBATSecondaryEntry = [&](const BinaryFunction &Callee) {
     // The symbol could be a secondary entry in a cold fragment.
-    ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Symbol);
-    if (SymbolValue.getError())
-      return;
+    uint64_t SymbolValue =
+        cantFail(errorOrToExpected(BC.getSymbolValue(*Symbol)));
 
     // Containing function, not necessarily the same as symbol value.
-    const uint64_t CalleeAddress = Callee->getAddress();
-    const uint32_t OutputOffset = SymbolValue.get() - CalleeAddress;
+    const uint64_t CalleeAddress = Callee.getAddress();
+    const uint32_t OutputOffset = SymbolValue - CalleeAddress;
 
     const uint64_t ParentAddress = BAT->fetchParentAddress(CalleeAddress);
     const uint64_t HotAddress = ParentAddress ? ParentAddress : CalleeAddress;
@@ -57,7 +57,7 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
       return;
 
     CSI.EntryDiscriminator =
-        BAT->getSecondaryEntryPointId(HotAddress, InputOffset) + 1;
+        BAT->getSecondaryEntryPointId(HotAddress, InputOffset);
   };
 
   if (Symbol) {
@@ -67,7 +67,7 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
       if (BAT && BAT->isBATFunction(Callee->getAddress()))
-        setBATSecondaryEntry(Callee);
+        setBATSecondaryEntry(*Callee);
       return Callee;
     }
   }

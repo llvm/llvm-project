@@ -29,6 +29,8 @@ def verify_mode_EQ : Joined<["--"], "verify-mode=">,
   HelpText<"Specify the severity and extend of the validation. Valid modes are ErrorsOnly, ErrorsAndWarnings, and Pedantic.">;
 def demangle : Flag<["--", "-"], "demangle">,
   HelpText<"Demangle symbols when printing warnings and errors">;
+def dsym: Joined<["--"], "dsym=">,
+  MetaVarName<"<path>">, HelpText<"Specify dSYM path for enriched diagnostics.">;
 
 // Additional input options.
 def extra_project_header : Separate<["-"], "extra-project-header">,
