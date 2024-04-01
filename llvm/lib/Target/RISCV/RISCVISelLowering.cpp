@@ -9723,21 +9723,6 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
                            Vec, Mask, VL, DL, DAG, Subtarget);
 }
 
-/// Returns true if \p LHS is known to be equal to \p RHS, taking into account
-/// if VLEN is exactly known by \p Subtarget and thus vscale when handling
-/// scalable quantities.
-static bool isKnownEQ(ElementCount LHS, ElementCount RHS,
-                      const RISCVSubtarget &Subtarget) {
-  if (auto VLen = Subtarget.getRealVLen()) {
-    const unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
-    if (LHS.isScalable())
-      LHS = ElementCount::getFixed(LHS.getKnownMinValue() * Vscale);
-    if (RHS.isScalable())
-      RHS = ElementCount::getFixed(RHS.getKnownMinValue() * Vscale);
-  }
-  return LHS == RHS;
-}
-
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDValue Vec = Op.getOperand(0);
@@ -9875,29 +9860,25 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     RemIdx = ElementCount::getScalable(Decompose.second);
   }
 
-  RISCVII::VLMUL SubVecLMUL = RISCVTargetLowering::getLMUL(ContainerSubVecVT);
-  bool IsSubVecPartReg = SubVecLMUL == RISCVII::VLMUL::LMUL_F2 ||
-                         SubVecLMUL == RISCVII::VLMUL::LMUL_F4 ||
-                         SubVecLMUL == RISCVII::VLMUL::LMUL_F8;
-  bool AlignedToVecReg = !IsSubVecPartReg;
-  if (SubVecVT.isFixedLengthVector())
-    AlignedToVecReg &= SubVecVT.getSizeInBits() ==
-                       ContainerSubVecVT.getSizeInBits().getKnownMinValue() *
-                           (*VLen / RISCV::RVVBitsPerBlock);
+  TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+  bool ExactlyVecRegSized =
+      Subtarget.expandVScale(SubVecVT.getSizeInBits())
+          .isKnownMultipleOf(Subtarget.expandVScale(VecRegSize));
 
   // 1. If the Idx has been completely eliminated and this subvector's size is
   // a vector register or a multiple thereof, or the surrounding elements are
   // undef, then this is a subvector insert which naturally aligns to a vector
   // register. These can easily be handled using subregister manipulation.
-  // 2. If the subvector isn't exactly aligned to a vector register group, then
-  // the insertion must preserve the undisturbed elements of the register. We do
-  // this by lowering to an EXTRACT_SUBVECTOR grabbing the nearest LMUL=1 vector
-  // type (which resolves to a subregister copy), performing a VSLIDEUP to place
-  // the subvector within the vector register, and an INSERT_SUBVECTOR of that
-  // LMUL=1 type back into the larger vector (resolving to another subregister
-  // operation). See below for how our VSLIDEUP works. We go via a LMUL=1 type
-  // to avoid allocating a large register group to hold our subvector.
-  if (RemIdx.isZero() && (AlignedToVecReg || Vec.isUndef())) {
+  // 2. If the subvector isn't an exact multiple of a valid register group size,
+  // then the insertion must preserve the undisturbed elements of the register.
+  // We do this by lowering to an EXTRACT_SUBVECTOR grabbing the nearest LMUL=1
+  // vector type (which resolves to a subregister copy), performing a VSLIDEUP
+  // to place the subvector within the vector register, and an INSERT_SUBVECTOR
+  // of that LMUL=1 type back into the larger vector (resolving to another
+  // subregister operation). See below for how our VSLIDEUP works. We go via a
+  // LMUL=1 type to avoid allocating a large register group to hold our
+  // subvector.
+  if (RemIdx.isZero() && (ExactlyVecRegSized || Vec.isUndef())) {
     if (SubVecVT.isFixedLengthVector()) {
       // We may get NoSubRegister if inserting at index 0 and the subvec
       // container is the same as the vector, e.g. vec=v4i32,subvec=v4i32,idx=0
@@ -9944,7 +9925,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   // Use tail agnostic policy if we're inserting over InterSubVT's tail.
   unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-  if (isKnownEQ(EndIndex, InterSubVT.getVectorElementCount(), Subtarget))
+  if (Subtarget.expandVScale(EndIndex) ==
+      Subtarget.expandVScale(InterSubVT.getVectorElementCount()))
     Policy = RISCVII::TAIL_AGNOSTIC;
 
   // If we're inserting into the lowest elements, use a tail undisturbed
