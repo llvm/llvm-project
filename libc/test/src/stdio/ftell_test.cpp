@@ -39,7 +39,7 @@ protected:
     // still return the correct effective offset.
     ASSERT_EQ(size_t(LIBC_NAMESPACE::ftell(file)), WRITE_SIZE);
 
-    off_t offseto = 42;
+    off_t offseto = 5;
     ASSERT_EQ(0, LIBC_NAMESPACE::fseeko(file, offseto, SEEK_SET));
     ASSERT_EQ(LIBC_NAMESPACE::ftello(file), offseto);
     ASSERT_EQ(0, LIBC_NAMESPACE::fseeko(file, -offseto, SEEK_END));
