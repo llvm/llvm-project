@@ -52,19 +52,29 @@ public:
 
   using const_iterator = forward_list<tzdb>::const_iterator;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const tzdb& front() const noexcept;
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const tzdb& front() const noexcept { return __front(); }
 
-  _LIBCPP_EXPORTED_FROM_ABI const_iterator erase_after(const_iterator __p);
+  _LIBCPP_HIDE_FROM_ABI const_iterator erase_after(const_iterator __p) { return __erase_after(__p); }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator begin() const noexcept;
-  _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator end() const noexcept;
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __begin(); }
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __end(); }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cbegin() const noexcept;
-  _LIBCPP_NODISCARD_EXT _LIBCPP_EXPORTED_FROM_ABI const_iterator cend() const noexcept;
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __cbegin(); }
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __cend(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __impl& __implementation() { return *__impl_; }
 
 private:
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const tzdb& __front() const noexcept;
+
+  _LIBCPP_EXPORTED_FROM_ABI const_iterator __erase_after(const_iterator __p);
+
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator __begin() const noexcept;
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator __end() const noexcept;
+
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator __cbegin() const noexcept;
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI const_iterator __cend() const noexcept;
+
   __impl* __impl_;
 };
 
