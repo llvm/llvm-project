@@ -64,7 +64,7 @@ public:
   bool stripWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
-                      const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
