@@ -7326,6 +7326,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    return;
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::usub_with_overflow:
