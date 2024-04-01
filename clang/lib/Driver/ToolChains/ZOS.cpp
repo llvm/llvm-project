@@ -325,8 +325,7 @@ void ZOS::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // <install>/bin/../include/c++/v1
-    llvm::SmallString<128> InstallBin =
-        llvm::StringRef(getDriver().getInstalledDir());
+    llvm::SmallString<128> InstallBin(getDriver().Dir);
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
     TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
     break;

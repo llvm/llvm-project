@@ -168,6 +168,11 @@ public:
   unsigned GetDefaultDwarfVersion() const override { return 2; }
   unsigned getMaxDwarfVersion() const override { return 2; }
 
+  /// Uses nvptx-arch tool to get arch of the system GPU. Will return error
+  /// if unable to find one.
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
+
   CudaInstallationDetector CudaInstallation;
 
 protected:
@@ -222,11 +227,6 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   const ToolChain &HostTC;
-
-  /// Uses nvptx-arch tool to get arch of the system GPU. Will return error
-  /// if unable to find one.
-  virtual Expected<SmallVector<std::string>>
-  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
   Tool *buildAssembler() const override; // ptxas

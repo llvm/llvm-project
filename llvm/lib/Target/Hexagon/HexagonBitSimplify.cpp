@@ -1002,7 +1002,7 @@ namespace {
 bool DeadCodeElimination::isDead(unsigned R) const {
   for (const MachineOperand &MO : MRI.use_operands(R)) {
     const MachineInstr *UseI = MO.getParent();
-    if (UseI->isDebugValue())
+    if (UseI->isDebugInstr())
       continue;
     if (UseI->isPHI()) {
       assert(!UseI->getOperand(0).getSubReg());
@@ -1957,7 +1957,8 @@ bool BitSimplification::genStoreUpperHalf(MachineInstr *MI) {
     return false;
   const BitTracker::RegisterCell &RC = BT.lookup(RS.Reg);
   RegHalf H;
-  if (!matchHalf(0, RC, 0, H))
+  unsigned B = (RS.Sub == Hexagon::isub_hi) ? 32 : 0;
+  if (!matchHalf(0, RC, B, H))
     return false;
   if (H.Low)
     return false;

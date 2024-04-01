@@ -252,9 +252,6 @@ namespace DuplicateFriend {
   struct A {
     friend void friend f(); // expected-warning {{duplicate 'friend' declaration specifier}}
     friend struct B friend; // expected-warning {{duplicate 'friend' declaration specifier}}
-#if __cplusplus >= 201103L
-    // expected-error@-2 {{'friend' must appear first in a non-function declaration}}
-#endif
   };
 }
 

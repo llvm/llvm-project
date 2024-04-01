@@ -670,9 +670,7 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
 }
 
 ArrayRef<MCPhysReg> X86TargetLowering::getRoundingControlRegisters() const {
-  // FIXME: We should def X86::FPCW for x87 as well. But it affects a lot of lit
-  // tests at the moment, which is not what we expected.
-  static const MCPhysReg RCRegs[] = {X86::MXCSR};
+  static const MCPhysReg RCRegs[] = {X86::FPCW, X86::MXCSR};
   return RCRegs;
 }
 
@@ -1257,6 +1255,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
+  case CallingConv::PreserveNone:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_StdCall:
@@ -1813,14 +1812,17 @@ SDValue X86TargetLowering::LowerFormalArguments(
   for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
     if (Ins[I].Flags.isSwiftAsync()) {
       auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
-      if (Subtarget.is64Bit())
+      if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF))
         X86FI->setHasSwiftAsyncContext(true);
       else {
-        int FI = MF.getFrameInfo().CreateStackObject(4, Align(4), false);
+        int PtrSize = Subtarget.is64Bit() ? 8 : 4;
+        int FI =
+            MF.getFrameInfo().CreateStackObject(PtrSize, Align(PtrSize), false);
         X86FI->setSwiftAsyncContextFrameIdx(FI);
-        SDValue St = DAG.getStore(DAG.getEntryNode(), dl, InVals[I],
-                                  DAG.getFrameIndex(FI, MVT::i32),
-                                  MachinePointerInfo::getFixedStack(MF, FI));
+        SDValue St = DAG.getStore(
+            DAG.getEntryNode(), dl, InVals[I],
+            DAG.getFrameIndex(FI, PtrSize == 8 ? MVT::i64 : MVT::i32),
+            MachinePointerInfo::getFixedStack(MF, FI));
         Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, St, Chain);
       }
     }
@@ -1902,6 +1904,16 @@ SDValue X86TargetLowering::LowerFormalArguments(
     for (std::pair<Register, Register> Pair : MRI.liveins())
       MRI.disableCalleeSavedRegister(Pair.first);
   }
+
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
+      if (Ins[I].Flags.isSwiftSelf() || Ins[I].Flags.isSwiftAsync() ||
+          Ins[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
 
   return Chain;
 }
@@ -2553,6 +2565,16 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                InGlue, dl);
     InGlue = Chain.getValue(1);
   }
+
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Outs.size(); I != E; ++I) {
+      if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftAsync() ||
+          Outs[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

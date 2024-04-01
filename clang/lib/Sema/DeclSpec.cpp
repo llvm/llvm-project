@@ -374,6 +374,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_void:
     case TST_wchar:
     case TST_BFloat16:
+    case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
       return false;
@@ -585,6 +586,8 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_struct:      return "struct";
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
+  case DeclSpec::TST_typename_pack_indexing:
+    return "type-name-pack-indexing";
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_typeof_unqualType:
@@ -775,6 +778,15 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
+
+  if (T == TST_typename_pack_indexing) {
+    // we got there from a an annotation. Reconstruct the type
+    // Ugly...
+    QualType QT = Rep.get();
+    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
+    TypeRep = ParsedType::make(LIT->getPattern());
+    PackIndexingExpr = LIT->getIndexExpr();
+  }
   return false;
 }
 
@@ -973,6 +985,15 @@ bool DeclSpec::SetBitIntType(SourceLocation KWLoc, Expr *BitsExpr,
   return false;
 }
 
+void DeclSpec::SetPackIndexingExpr(SourceLocation EllipsisLoc,
+                                   Expr *IndexingExpr) {
+  assert(TypeSpecType == TST_typename &&
+         "pack indexing can only be applied to typename");
+  TypeSpecType = TST_typename_pack_indexing;
+  PackIndexingExpr = IndexingExpr;
+  this->EllipsisLoc = EllipsisLoc;
+}
+
 bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
                            unsigned &DiagID, const LangOptions &Lang) {
   // Duplicates are permitted in C99 onwards, but are not permitted in C89 or
@@ -1081,18 +1102,13 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {
-  if (Friend_specified) {
+  if (isFriendSpecified()) {
     PrevSpec = "friend";
-    // Keep the later location, so that we can later diagnose ill-formed
-    // declarations like 'friend class X friend;'. Per [class.friend]p3,
-    // 'friend' must be the first token in a friend declaration that is
-    // not a function declaration.
-    FriendLoc = Loc;
     DiagID = diag::warn_duplicate_declspec;
     return true;
   }
 
-  Friend_specified = true;
+  FriendSpecifiedFirst = isEmpty();
   FriendLoc = Loc;
   return false;
 }
@@ -1361,6 +1377,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
     }
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+  }
+
+  if (S.getLangOpts().C23 &&
+      getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
+      StorageClassSpec == SCS_extern) {
+    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getStorageClassSpec())
+        << SourceRange(getStorageClassSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where

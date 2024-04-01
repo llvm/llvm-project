@@ -142,9 +142,19 @@ public:
   /// This function adds an ALLOW entry.
   void allowDialect(StringRef dialectNamespace) {
     Entry::FilterFn filterFn = [=](Operation *op) {
-      return op->getDialect()->getNamespace() == dialectNamespace;
+      return op->getName().getDialectNamespace() == dialectNamespace;
     };
     entries.push_back(Entry{filterFn, Entry::FilterType::ALLOW});
+  }
+
+  /// Deny the given dialect.
+  ///
+  /// This function adds a DENY entry.
+  void denyDialect(StringRef dialectNamespace) {
+    Entry::FilterFn filterFn = [=](Operation *op) {
+      return op->getDialect()->getNamespace() == dialectNamespace;
+    };
+    entries.push_back(Entry{filterFn, Entry::FilterType::DENY});
   }
 
   /// Allow the given ops.
@@ -257,6 +267,9 @@ struct BufferizationOptions {
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, Attribute memorySpace, const BufferizationOptions &)>;
+  // Produce a MemorySpace attribute from a tensor type
+  using DefaultMemorySpaceFn =
+      std::function<std::optional<Attribute>(TensorType t)>;
 
   BufferizationOptions();
 
@@ -295,11 +308,6 @@ struct BufferizationOptions {
   /// Specifies whether function boundaries (ops in the func dialect) should be
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
-
-  /// The default memory space that should be used when it cannot be inferred
-  /// from the context. If case of std::nullopt, bufferization fails when the
-  /// memory space cannot be inferred at any point.
-  std::optional<Attribute> defaultMemorySpace = Attribute();
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
@@ -351,9 +359,12 @@ struct BufferizationOptions {
   /// used.
   UnknownTypeConverterFn unknownTypeConverterFn = nullptr;
 
-  /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
-  /// Should be used only with `testAnalysisOnly = true`.
-  unsigned analysisFuzzerSeed = 0;
+  // Use during type conversion to determine the memory space for memref based
+  // on the original tensor type if the memory space cannot be inferred.
+  // Returning std::nullopt will cause bufferization to fail (useful to indicate
+  // failure to determine memory space for a tensor type).
+  DefaultMemorySpaceFn defaultMemorySpaceFn =
+      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.

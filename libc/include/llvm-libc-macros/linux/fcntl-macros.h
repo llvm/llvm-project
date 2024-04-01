@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
 
 // File creation flags
 #define O_CLOEXEC 02000000
@@ -68,4 +68,4 @@
 #define F_GETFL 3
 #define F_SETFL 4
 
-#endif // __LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H

@@ -23,15 +23,15 @@ namespace llvm {
 static_assert((uint64_t)dxbc::FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-DXContainerYAML::ShaderFlags::ShaderFlags(uint64_t FlagData) {
-#define SHADER_FLAG(Num, Val, Str)                                             \
+DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   Val = (FlagData & (uint64_t)dxbc::FeatureFlags::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-uint64_t DXContainerYAML::ShaderFlags::getEncodedFlags() {
+uint64_t DXContainerYAML::ShaderFeatureFlags::getEncodedFlags() {
   uint64_t Flag = 0;
-#define SHADER_FLAG(Num, Val, Str)                                             \
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
   if (Val)                                                                     \
     Flag |= (uint64_t)dxbc::FeatureFlags::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -74,6 +74,16 @@ DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P)
   memcpy(&Info, P, sizeof(dxbc::PSV::v2::RuntimeInfo));
 }
 
+DXContainerYAML::PSVInfo::PSVInfo(const dxbc::PSV::v3::RuntimeInfo *P,
+                                  StringRef StringTable)
+    : Version(3),
+      EntryName(StringTable.substr(P->EntryNameOffset,
+                                   StringTable.find('\0', P->EntryNameOffset) -
+                                       P->EntryNameOffset)) {
+  memset(&Info, 0, sizeof(Info));
+  memcpy(&Info, P, sizeof(dxbc::PSV::v3::RuntimeInfo));
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -103,9 +113,10 @@ void MappingTraits<DXContainerYAML::DXILProgram>::mapping(
   IO.mapOptional("DXIL", Program.DXIL);
 }
 
-void MappingTraits<DXContainerYAML::ShaderFlags>::mapping(
-    IO &IO, DXContainerYAML::ShaderFlags &Flags) {
-#define SHADER_FLAG(Num, Val, Str) IO.mapRequired(#Val, Flags.Val);
+void MappingTraits<DXContainerYAML::ShaderFeatureFlags>::mapping(
+    IO &IO, DXContainerYAML::ShaderFeatureFlags &Flags) {
+#define SHADER_FEATURE_FLAG(Num, DxilModuleNum, Val, Str)                      \
+  IO.mapRequired(#Val, Flags.Val);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
@@ -347,6 +358,11 @@ void DXContainerYAML::PSVInfo::mapInfoForVersion(yaml::IO &IO) {
   IO.mapRequired("NumThreadsX", Info.NumThreadsX);
   IO.mapRequired("NumThreadsY", Info.NumThreadsY);
   IO.mapRequired("NumThreadsZ", Info.NumThreadsZ);
+
+  if (Version == 2)
+    return;
+
+  IO.mapRequired("EntryName", EntryName);
 }
 
 } // namespace llvm

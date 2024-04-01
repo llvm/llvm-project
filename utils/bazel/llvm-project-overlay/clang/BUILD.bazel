@@ -3,10 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//:workspace_root.bzl", "workspace_root")
-load("//llvm:tblgen.bzl", "gentbl")
-load("//llvm:binary_alias.bzl", "binary_alias")
-load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -14,6 +10,10 @@ load(
     "LLVM_VERSION_MINOR",
     "LLVM_VERSION_PATCH",
 )
+load("//:workspace_root.bzl", "workspace_root")
+load("//llvm:binary_alias.bzl", "binary_alias")
+load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -62,6 +62,7 @@ gentbl(
         "CrossTU",
         "Driver",
         "Frontend",
+        "InstallAPI",
         "Lex",
         "Parse",
         "Refactoring",
@@ -303,6 +304,48 @@ gentbl(
     td_srcs = [
         "include/clang/Basic/arm_mve.td",
         "include/clang/Basic/arm_mve_defs.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_bpf_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsBPF.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsBPF.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsBPF.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_riscv_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsRISCV.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsRISCV.td",
+    td_srcs = [
+        "include/clang/Basic/BuiltinsRISCV.td",
+        "include/clang/Basic/BuiltinsBase.td",
+    ],
+)
+
+gentbl(
+    name = "basic_builtins_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/Builtins.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/Builtins.td",
+    td_srcs = [
+        "include/clang/Basic/Builtins.td",
+        "include/clang/Basic/BuiltinsBase.td",
     ],
 )
 
@@ -571,7 +614,6 @@ cc_library(
         "include/clang/Basic/Version.inc",
     ] + glob([
         "lib/Basic/*.cpp",
-        "lib/Basic/*.c",
         "lib/Basic/*.h",
         "lib/Basic/Targets/*.cpp",
         "lib/Basic/Targets/*.h",
@@ -626,6 +668,9 @@ cc_library(
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
+        ":basic_builtins_bpf_gen",
+        ":basic_builtins_gen",
+        ":basic_builtins_riscv_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -942,6 +987,7 @@ cc_library(
         ":ast_stmt_nodes_gen",
         ":ast_type_properties_gen",
         ":basic",
+        ":basic_builtins_gen",
         ":lex",
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
@@ -995,7 +1041,6 @@ cc_library(
         "lib/Analysis/FlowSensitive/Models/*.cpp",
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
-        "lib/Analysis/*.h",
     ]) + [
         ":analysis_htmllogger_gen",
     ],
@@ -1087,6 +1132,7 @@ cc_library(
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
         ":basic_arm_sve_streaming_attrs_gen",
+        ":basic_builtins_gen",
         ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
@@ -1132,10 +1178,8 @@ gentbl(
 
 cc_library(
     name = "parse",
-    srcs = [
-    ] + glob([
+    srcs = glob([
         "lib/Parse/*.cpp",
-        "lib/Parse/*.h",
     ]),
     hdrs = [
         "include/clang/Parse/AttrParserStringSwitches.inc",
@@ -1159,7 +1203,6 @@ cc_library(
     name = "ast_matchers",
     srcs = glob([
         "lib/ASTMatchers/*.cpp",
-        "lib/ASTMatchers/*.h",
     ]),
     hdrs = glob(["include/clang/ASTMatchers/*.h"]),
     includes = ["include"],
@@ -1193,7 +1236,6 @@ cc_library(
     name = "rewrite",
     srcs = glob([
         "lib/Rewrite/*.cpp",
-        "lib/Rewrite/*.h",
     ]),
     hdrs = glob(["include/clang/Rewrite/Core/*.h"]),
     includes = ["include"],
@@ -1227,7 +1269,6 @@ cc_library(
     name = "tooling_core",
     srcs = glob([
         "lib/Tooling/Core/*.cpp",
-        "lib/Tooling/Core/*.h",
     ]),
     hdrs = glob(["include/clang/Tooling/Core/*.h"]),
     includes = ["include"],
@@ -1292,11 +1333,9 @@ cc_library(
     name = "tooling_refactoring",
     srcs = glob([
         "lib/Tooling/Refactoring/**/*.cpp",
-        "lib/Tooling/Refactoring/**/*.h",
     ]),
     hdrs = glob([
         "include/clang/Tooling/Refactoring/**/*.h",
-        "include/clang/Tooling/Refactoring/**/*.def",
     ]),
     deps = [
         ":ast",
@@ -1545,9 +1584,6 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
-            "lib/Driver/*.h",
-            "lib/Driver/Arch/*.cpp",
-            "lib/Driver/Arch/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -1785,9 +1821,6 @@ cc_library(
     copts = ["$(STACK_FRAME_UNLIMITED)"],
     data = [":builtin_headers_gen"],
     includes = ["include"],
-    textual_hdrs = glob([
-        "include/clang/Frontend/*.def",
-    ]),
     deps = [
         ":apinotes",
         ":ast",
@@ -1815,6 +1848,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TextAPI",
         "//llvm:config",
     ],
 )
@@ -1823,7 +1857,6 @@ cc_library(
     name = "frontend_rewrite",
     srcs = glob([
         "lib/Frontend/Rewrite/*.cpp",
-        "lib/Frontend/Rewrite/*.h",
     ]),
     hdrs = glob(["include/clang/Rewrite/Frontend/*.h"]),
     includes = ["include"],
@@ -2006,11 +2039,34 @@ cc_library(
 )
 
 cc_library(
+    name = "install_api",
+    srcs = glob([
+        "lib/InstallAPI/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/InstallAPI/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":support",
+        "//llvm:Core",
+        "//llvm:Demangle",
+        "//llvm:Support",
+        "//llvm:TextAPI",
+        "//llvm:TextAPIBinaryReader",
+    ],
+)
+
+cc_library(
     name = "serialization",
     srcs = [
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",
     ] + glob([
+        "include/clang/Frontend/*.h",
         "lib/Serialization/*.cpp",
         "lib/Serialization/*.h",
     ]),
@@ -2022,11 +2078,14 @@ cc_library(
         "include/clang/Serialization/*.def",
     ]),
     deps = [
+        ":apinotes",
         ":ast",
         ":basic",
+        ":driver",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
+        ":static_analyzer_core_options",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",
@@ -2042,7 +2101,6 @@ cc_library(
     name = "frontend_tool",
     srcs = glob([
         "lib/FrontendTool/*.cpp",
-        "lib/FrontendTool/*.h",
     ]),
     hdrs = glob(["include/clang/FrontendTool/*.h"]),
     includes = ["include"],
@@ -2246,7 +2304,6 @@ cc_binary(
     testonly = 1,
     srcs = glob([
         "tools/clang-import-test/*.cpp",
-        "tools/clang-import-test/*.h",
     ]),
     stamp = 0,
     deps = [
@@ -2276,7 +2333,6 @@ cc_library(
     name = "clang-driver",
     srcs = glob([
         "tools/driver/*.cpp",
-        "tools/driver/*.h",
     ]) + ["clang-driver.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
@@ -2333,6 +2389,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":diagnostic_defs_gen",
         ":frontend",
         ":lex",
         ":sema",
@@ -2385,8 +2442,8 @@ cc_binary(
 cc_binary(
     name = "clang-format",
     srcs = [
-        "tools/clang-format/ClangFormat.cpp",
         "lib/Format/MatchFilePath.h",
+        "tools/clang-format/ClangFormat.cpp",
     ],
     stamp = 0,
     deps = [
@@ -2593,7 +2650,6 @@ cc_library(
     name = "extract_api",
     srcs = glob([
         "lib/ExtractAPI/**/*.cpp",
-        "lib/ExtractAPI/**/*.h",
     ]),
     hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
     includes = ["include"],
@@ -2602,6 +2658,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":index",
+        ":install_api",
         ":lex",
         "//llvm:Option",
         "//llvm:Support",

@@ -2171,19 +2171,13 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-LABEL: test_concat_v2i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; KNL-NEXT:    vpextrw $0, %xmm0, %eax
-; KNL-NEXT:    movzwl %ax, %eax
-; KNL-NEXT:    vmovd %eax, %xmm1
-; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm1
 ; KNL-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; KNL-NEXT:    vucomiss %xmm2, %xmm1
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    vpsrld $16, %xmm0, %xmm0
-; KNL-NEXT:    vpextrw $0, %xmm0, %eax
-; KNL-NEXT:    movzwl %ax, %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
+; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
 ; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; KNL-NEXT:    vucomiss %xmm2, %xmm0
 ; KNL-NEXT:    setb %al
@@ -2212,19 +2206,13 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; SKX-LABEL: test_concat_v2i1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; SKX-NEXT:    vpsrld $16, %xmm0, %xmm1
-; SKX-NEXT:    vpextrw $0, %xmm1, %eax
-; SKX-NEXT:    movzwl %ax, %eax
-; SKX-NEXT:    vmovd %eax, %xmm1
+; SKX-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[1,1,1,1,4,5,6,7]
 ; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; SKX-NEXT:    vmovss {{.*#+}} xmm2 = [6.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SKX-NEXT:    vucomiss %xmm2, %xmm1
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    kmovd %eax, %k0
 ; SKX-NEXT:    kshiftlb $1, %k0, %k0
-; SKX-NEXT:    vpextrw $0, %xmm0, %eax
-; SKX-NEXT:    movzwl %ax, %eax
-; SKX-NEXT:    vmovd %eax, %xmm0
 ; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; SKX-NEXT:    vucomiss %xmm2, %xmm0
 ; SKX-NEXT:    setb %al

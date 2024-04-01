@@ -24,6 +24,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -367,9 +368,9 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
         } else if (ValueKind == IPVK_VTableTarget) {
-          if (InstrProfSymtab::isExternalSymbol(VD.first)) {
+          if (InstrProfSymtab::isExternalSymbol(VD.first))
             Value = 0;
-          } else {
+          else {
             if (Error E = Symtab->addVTableName(VD.first))
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
@@ -1249,10 +1250,39 @@ Error IndexedInstrProfReader::readHeader() {
             Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
-    // The value returned from RecordTableGenerator.Emit.
-    const uint64_t RecordTableOffset =
+
+    // Read the first 64-bit word, which may be RecordTableOffset in
+    // memprof::MemProfVersion0 or the MemProf version number in
+    // memprof::MemProfVersion1.
+    const uint64_t FirstWord =
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
+
+    memprof::IndexedVersion Version = memprof::Version0;
+    if (FirstWord == memprof::Version1) {
+      // Everything is good.  We can proceed to deserialize the rest.
+      Version = memprof::Version1;
+    } else if (FirstWord >= 24) {
+      // This is a heuristic/hack to detect memprof::MemProfVersion0,
+      // which does not have a version field in the header.
+      // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
+      // which should be at least 24 because of the MemProf header size.
+      Version = memprof::Version0;
+    } else {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          formatv("MemProf version {} not supported; "
+                  "requires version between {} and {}, inclusive",
+                  FirstWord, memprof::MinimumSupportedVersion,
+                  memprof::MaximumSupportedVersion));
+    }
+
+    // The value returned from RecordTableGenerator.Emit.
+    const uint64_t RecordTableOffset =
+        Version == memprof::Version0
+            ? FirstWord
+            : support::endian::readNext<uint64_t, llvm::endianness::little,
+                                        unaligned>(Ptr);
     // The offset in the stream right before invoking
     // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
@@ -1280,6 +1310,14 @@ Error IndexedInstrProfReader::readHeader() {
         /*Buckets=*/Start + FrameTableOffset,
         /*Payload=*/Start + FramePayloadOffset,
         /*Base=*/Start, memprof::FrameLookupTrait()));
+
+#ifdef EXPENSIVE_CHECKS
+    // Go through all the records and verify that CSId has been correctly
+    // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
+    // would defeat the purpose of OnDiskIterableChainedHashTable.
+    for (const auto &Record : MemProfRecordTable->data())
+      verifyIndexedMemProfRecord(Record);
+#endif
   }
 
   // BinaryIdOffset field in the header is only valid when the format version
@@ -1312,7 +1350,11 @@ Error IndexedInstrProfReader::readHeader() {
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
 
+    // Writer first writes the length of compressed string, and then the actual
+    // content.
     VTableNamePtr = (const char *)Ptr;
+    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
@@ -1374,8 +1416,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   if (Symtab)
     return *Symtab;
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab =
-      std::make_unique<InstrProfSymtab>();
+  auto NewSymtab = std::make_unique<InstrProfSymtab>();
 
   if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
           StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
@@ -1499,13 +1540,30 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
   return success();
 }
 
-Error IndexedInstrProfReader::getFunctionBitmapBytes(
-    StringRef FuncName, uint64_t FuncHash, std::vector<uint8_t> &BitmapBytes) {
+Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
+                                                uint64_t FuncHash,
+                                                BitVector &Bitmap) {
   Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
-  BitmapBytes = Record.get().BitmapBytes;
+  const auto &BitmapBytes = Record.get().BitmapBytes;
+  size_t I = 0, E = BitmapBytes.size();
+  Bitmap.resize(E * CHAR_BIT);
+  BitVector::apply(
+      [&](auto X) {
+        using XTy = decltype(X);
+        alignas(XTy) uint8_t W[sizeof(X)];
+        size_t N = std::min(E - I, sizeof(W));
+        std::memset(W, 0, sizeof(W));
+        std::memcpy(W, &BitmapBytes[I], N);
+        I += N;
+        return support::endian::read<XTy, llvm::endianness::little,
+                                     support::aligned>(W);
+      },
+      Bitmap, Bitmap);
+  assert(I == E);
+
   return success();
 }
 

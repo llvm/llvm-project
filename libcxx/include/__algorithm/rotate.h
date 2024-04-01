@@ -15,13 +15,16 @@
 #include <__algorithm/swap_ranges.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
-#include <__type_traits/is_trivially_move_assignable.h>
+#include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -189,5 +192,7 @@ rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __l
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_ROTATE_H

@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve %s -run-pass=arm-low-overhead-loops -o - | FileCheck %s
 
 --- |
-  define dso_local void @variant_max_use(i16* nocapture readonly %a, i16* %c, i32 %N) #0 {
+  define dso_local void @variant_max_use(ptr nocapture readonly %a, ptr %c, i32 %N) #0 {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %tmp = add i32 %N, 3
@@ -19,17 +19,17 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
-    %lsr.iv.2 = phi i16* [ %scevgep.2, %vector.body ], [ %c, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv.2 = phi ptr [ %scevgep.2, %vector.body ], [ %c, %vector.ph ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <8 x i16>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
     %tmp8 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 8
-    %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %lsr.iv17, i32 2, <8 x i1> %tmp8, <8 x i16> undef)
+    %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %lsr.iv17, i32 2, <8 x i1> %tmp8, <8 x i16> undef)
     %min = tail call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %wide.masked.load)
-    store i16 %min, i16* %lsr.iv.2
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 8
-    %scevgep.2 = getelementptr i16, i16* %lsr.iv.2, i32 1
+    store i16 %min, ptr %lsr.iv.2
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 8
+    %scevgep.2 = getelementptr i16, ptr %lsr.iv.2, i32 1
     %tmp10 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %tmp11 = icmp ne i32 %tmp10, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -39,7 +39,7 @@
     ret void
   }
 
-  declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>)
+  declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32 immarg, <8 x i1>, <8 x i16>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <8 x i1> @llvm.arm.mve.vctp16(i32)

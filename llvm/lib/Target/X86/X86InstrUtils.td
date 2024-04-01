@@ -119,6 +119,8 @@ class NDD<bit ndd> {
 class NF: T_MAP4, EVEX, EVEX_NF;
 // PL - Helper for promoted legacy instructions
 class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
+// ZU - Helper for Zero Upper instructions
+class ZU: T_MAP4, EVEX, EVEX_B;
 
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions
@@ -967,6 +969,7 @@ class ITy<bits<8> o, Format f, X86TypeInfo t, dag outs, dag ins, string m,
       !strconcat(m, "{", t.InstrSuffix, "}\t", args), p>, NoCD8 {
   let hasSideEffects = 0;
   let hasREX_W  = t.HasREX_W;
+  let IgnoresW = !if(!eq(t.VT, i8), 1, 0);
 }
 
 // BinOpRR - Instructions that read "reg, reg".

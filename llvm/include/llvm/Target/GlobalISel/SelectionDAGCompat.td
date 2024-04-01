@@ -90,6 +90,7 @@ def : GINodeEquiv<G_UDIVFIX, udivfix>;
 def : GINodeEquiv<G_SDIVFIXSAT, sdivfixsat>;
 def : GINodeEquiv<G_UDIVFIXSAT, udivfixsat>;
 def : GINodeEquiv<G_SELECT, select>;
+def : GINodeEquiv<G_SELECT, vselect>;
 def : GINodeEquiv<G_FNEG, fneg>;
 def : GINodeEquiv<G_FPEXT, fpextend>;
 def : GINodeEquiv<G_FPTRUNC, fpround>;
@@ -130,6 +131,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 }
 
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BRCOND, brcond>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
@@ -167,6 +169,7 @@ def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_FMAXIMUM, fmaximum>;
 def : GINodeEquiv<G_FMINIMUM, fminimum>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
+def : GINodeEquiv<G_READSTEADYCOUNTER, readsteadycounter>;
 def : GINodeEquiv<G_ROTR, rotr>;
 def : GINodeEquiv<G_ROTL, rotl>;
 def : GINodeEquiv<G_LROUND, lround>;
@@ -248,6 +251,9 @@ def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap>;
 def : GINodeEquiv<G_FENCE, atomic_fence>;
 def : GINodeEquiv<G_PREFETCH, prefetch>;
+def : GINodeEquiv<G_TRAP, trap>;
+def : GINodeEquiv<G_DEBUGTRAP, debugtrap>;
+def : GINodeEquiv<G_UBSANTRAP, ubsantrap>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.

@@ -8,11 +8,11 @@
 
 #include "FDimTest.h"
 
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/fdimf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 using LlvmLibcFDimTest = FDimTestTemplate<float>;
 

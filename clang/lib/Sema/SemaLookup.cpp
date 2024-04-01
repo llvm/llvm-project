@@ -1200,8 +1200,8 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     // Perform template argument deduction against the type that we would
     // expect the function to have.
     if (R.getSema().DeduceTemplateArguments(ConvTemplate, nullptr, ExpectedType,
-                                            Specialization, Info)
-          == Sema::TDK_Success) {
+                                            Specialization, Info) ==
+        TemplateDeductionResult::Success) {
       R.addDecl(Specialization);
       Found = true;
     }
@@ -3243,6 +3243,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::Pipe:
       T = cast<PipeType>(T)->getElementType().getTypePtr();
       continue;
+
+    // Array parameter types are treated as fundamental types.
+    case Type::ArrayParameter:
+      break;
     }
 
     if (Queue.empty())

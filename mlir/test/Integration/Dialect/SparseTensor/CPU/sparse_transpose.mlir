@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -92,7 +92,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c4 = arith.constant 4 : index
@@ -115,26 +115,29 @@ module {
     //
     // Verify result.
     //
-    // CHECK:      ( 1.1, 0, 3.1 )
-    // CHECK-NEXT: ( 1.2, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 3.3 )
-    // CHECK-NEXT: ( 1.4, 0, 3.4 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 4, 3 )
+    // CHECK-NEXT: lvl = ( 4, 3 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
+    // CHECK-NEXT: values : ( 1.1, 3.1, 1.2, 3.3, 1.4, 3.4
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 4, 3 )
+    // CHECK-NEXT: lvl = ( 4, 3 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4, 6
+    // CHECK-NEXT: crd[1] : ( 0, 2, 0, 2, 0, 2
+    // CHECK-NEXT: values : ( 1.1, 3.1, 1.2, 3.3, 1.4, 3.4
+    // CHECK-NEXT: ----
     //
-    // CHECK-NEXT: ( 1.1, 0, 3.1 )
-    // CHECK-NEXT: ( 1.2, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 3.3 )
-    // CHECK-NEXT: ( 1.4, 0, 3.4 )
-    //
-    %x = sparse_tensor.convert %0 : tensor<4x3xf64, #DCSR> to tensor<4x3xf64>
-    scf.for %i = %c0 to %c4 step %c1 {
-      %v1 = vector.transfer_read %x[%i, %c0], %du: tensor<4x3xf64>, vector<3xf64>
-      vector.print %v1 : vector<3xf64>
-    }
-    %y = sparse_tensor.convert %1 : tensor<4x3xf64, #DCSR> to tensor<4x3xf64>
-    scf.for %i = %c0 to %c4 step %c1 {
-      %v2 = vector.transfer_read %y[%i, %c0], %du: tensor<4x3xf64>, vector<3xf64>
-      vector.print %v2 : vector<3xf64>
-    }
+    sparse_tensor.print %0 : tensor<4x3xf64, #DCSR>
+    sparse_tensor.print %1 : tensor<4x3xf64, #DCSR>
 
     // Release resources.
     bufferization.dealloc_tensor %a : tensor<3x4xf64, #DCSR>

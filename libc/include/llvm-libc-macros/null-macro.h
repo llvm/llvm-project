@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_NULL_MACRO_H
-#define __LLVM_LIBC_MACROS_NULL_MACRO_H
+#ifndef LLVM_LIBC_MACROS_NULL_MACRO_H
+#define LLVM_LIBC_MACROS_NULL_MACRO_H
 
 #define __need_NULL
 #include <stddef.h>
 
-#endif // __LLVM_LIBC_MACROS_NULL_MACRO_H
+#endif // LLVM_LIBC_MACROS_NULL_MACRO_H

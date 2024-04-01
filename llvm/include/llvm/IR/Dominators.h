@@ -189,9 +189,13 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   ///    like unreachable code or trivial phi cycles).
   ///  * Invoke Defs only dominate uses in their default destination.
   bool dominates(const Value *Def, const Use &U) const;
+
   /// Return true if value Def dominates all possible uses inside instruction
   /// User. Same comments as for the Use-based API apply.
   bool dominates(const Value *Def, const Instruction *User) const;
+  bool dominates(const Value *Def, BasicBlock::iterator User) const {
+    return dominates(Def, &*User);
+  }
 
   /// Returns true if Def would dominate a use in any instruction in BB.
   /// If Def is an instruction in BB, then Def does not dominate BB.

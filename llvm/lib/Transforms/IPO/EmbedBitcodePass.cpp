@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -16,6 +18,7 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+#include <memory>
 #include <string>
 
 using namespace llvm;
@@ -30,9 +33,16 @@ PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
     report_fatal_error(
         "EmbedBitcode pass currently only supports ELF object format",
         /*gen_crash_diag=*/false);
+
   std::string Data;
   raw_string_ostream OS(Data);
-  ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(M, AM);
+  if (IsThinLTO)
+    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(M, AM);
+  else
+    BitcodeWriterPass(OS, /*ShouldPreserveUseListOrder=*/false, EmitLTOSummary)
+        .run(M, AM);
+
   embedBufferInModule(M, MemoryBufferRef(Data, "ModuleData"), ".llvm.lto");
+
   return PreservedAnalyses::all();
 }

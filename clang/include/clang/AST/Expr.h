@@ -82,7 +82,7 @@ struct SubobjectAdjustment {
 
   union {
     struct DTB DerivedToBase;
-    FieldDecl *Field;
+    const FieldDecl *Field;
     struct P Ptr;
   };
 
@@ -93,8 +93,7 @@ struct SubobjectAdjustment {
     DerivedToBase.DerivedClass = DerivedClass;
   }
 
-  SubobjectAdjustment(FieldDecl *Field)
-    : Kind(FieldAdjustment) {
+  SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
     this->Field = Field;
   }
 
@@ -153,6 +152,12 @@ public:
 
     TR = t;
   }
+
+  /// If this expression is an enumeration constant, return the
+  /// enumeration type under which said constant was declared.
+  /// Otherwise return the expression's type.
+  /// Note this effectively circumvents the weak typing of C's enum constants
+  QualType getEnumCoercedType(const ASTContext &Ctx) const;
 
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
@@ -471,6 +476,13 @@ public:
   /// return a non-null pointer even for r-values loaded from
   /// bit-fields, but it will return null for a conditional bit-field.
   FieldDecl *getSourceBitField();
+
+  /// If this expression refers to an enum constant, retrieve its declaration
+  EnumConstantDecl *getEnumConstantDecl();
+
+  const EnumConstantDecl *getEnumConstantDecl() const {
+    return const_cast<Expr *>(this)->getEnumConstantDecl();
+  }
 
   const FieldDecl *getSourceBitField() const {
     return const_cast<Expr*>(this)->getSourceBitField();
@@ -1863,6 +1875,17 @@ public:
     llvm_unreachable("Unsupported character width!");
   }
 
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
+  }
+
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
@@ -2022,7 +2045,8 @@ public:
   }
 
   static std::string ComputeName(PredefinedIdentKind IK,
-                                 const Decl *CurrentDecl);
+                                 const Decl *CurrentDecl,
+                                 bool ForceElaboratedPrinting = false);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -3538,6 +3562,18 @@ public:
   path_const_iterator path_begin() const { return path_buffer(); }
   path_const_iterator path_end() const { return path_buffer() + path_size(); }
 
+  /// Path through the class hierarchy taken by casts between base and derived
+  /// classes (see implementation of `CastConsistency()` for a full list of
+  /// cast kinds that have a path).
+  ///
+  /// For each derived-to-base edge in the path, the path contains a
+  /// `CXXBaseSpecifier` for the base class of that edge; the entries are
+  /// ordered from derived class to base class.
+  ///
+  /// For example, given classes `Base`, `Intermediate : public Base` and
+  /// `Derived : public Intermediate`, the path for a cast from `Derived *` to
+  /// `Base *` contains two entries: One for `Intermediate`, and one for `Base`,
+  /// in that order.
   llvm::iterator_range<path_iterator> path() {
     return llvm::make_range(path_begin(), path_end());
   }
@@ -5820,7 +5856,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,
@@ -6410,7 +6446,7 @@ public:
   enum AtomicOp {
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
   };
@@ -6476,7 +6512,7 @@ public:
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     }
     llvm_unreachable("not an atomic operator?");
   }
@@ -6505,8 +6541,8 @@ public:
   }
 
   bool isOpenCL() const {
-    return getOp() >= AO__opencl_atomic_init &&
-           getOp() <= AO__opencl_atomic_fetch_max;
+    return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
+           getOp() <= AO__opencl_atomic_store;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
@@ -6531,11 +6567,14 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    if (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
+    // FIXME: Allow grouping of builtins to be able to only check >= and <=
+    if (Op >= AO__opencl_atomic_compare_exchange_strong &&
+        Op <= AO__opencl_atomic_store && Op != AO__opencl_atomic_init)
       return AtomicScopeModel::create(AtomicScopeModelKind::OpenCL);
-    else if (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
+    if (Op >= AO__hip_atomic_compare_exchange_strong &&
+        Op <= AO__hip_atomic_store)
       return AtomicScopeModel::create(AtomicScopeModelKind::HIP);
-    else if (Op >= AO__scoped_atomic_load && Op <= AO__scoped_atomic_fetch_max)
+    if (Op >= AO__scoped_atomic_add_fetch && Op <= AO__scoped_atomic_xor_fetch)
       return AtomicScopeModel::create(AtomicScopeModelKind::Generic);
     return AtomicScopeModel::create(AtomicScopeModelKind::None);
   }

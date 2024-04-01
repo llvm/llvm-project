@@ -62,8 +62,8 @@ target triple = "x86_64-pc-windows-msvc19.16.27030"
 define dso_local void @"?some_function@@YAXH@Z"(i32) #0 !dbg !8 {
 entry:
   %.addr = alloca i32, align 4
-  store i32 %0, i32* %.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %.addr, metadata !12, metadata !DIExpression()), !dbg !13
+  store i32 %0, ptr %.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %.addr, metadata !12, metadata !DIExpression()), !dbg !13
   ret void, !dbg !13
 }
 
@@ -71,16 +71,16 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* noalias sret(%struct.Foo) %agg.result) #0 !dbg !14 {
+define dso_local void @"?GetFoo@@YA?AUFoo@@XZ"(ptr noalias sret(%struct.Foo) %agg.result) #0 !dbg !14 {
 entry:
-  %result.ptr = alloca i8*, align 8
-  %0 = bitcast %struct.Foo* %agg.result to i8*
-  store i8* %0, i8** %result.ptr, align 8
-  call void @llvm.dbg.declare(metadata i8** %result.ptr, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !29
-  %x = getelementptr inbounds %struct.Foo, %struct.Foo* %agg.result, i32 0, i32 0, !dbg !30
-  store i32 41, i32* %x, align 4, !dbg !30
-  %x1 = getelementptr inbounds %struct.Foo, %struct.Foo* %agg.result, i32 0, i32 0, !dbg !31
-  %1 = load i32, i32* %x1, align 4, !dbg !31
+  %result.ptr = alloca ptr, align 8
+  %0 = bitcast ptr %agg.result to ptr
+  store ptr %0, ptr %result.ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %result.ptr, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !29
+  %x = getelementptr inbounds %struct.Foo, ptr %agg.result, i32 0, i32 0, !dbg !30
+  store i32 41, ptr %x, align 4, !dbg !30
+  %x1 = getelementptr inbounds %struct.Foo, ptr %agg.result, i32 0, i32 0, !dbg !31
+  %1 = load i32, ptr %x1, align 4, !dbg !31
   call void @"?some_function@@YAXH@Z"(i32 %1), !dbg !31
   ret void, !dbg !32
 }
@@ -90,11 +90,11 @@ define dso_local i32 @main() #2 !dbg !33 {
 entry:
   %retval = alloca i32, align 4
   %bar = alloca %struct.Foo, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata %struct.Foo* %bar, metadata !36, metadata !DIExpression()), !dbg !37
-  call void @"?GetFoo@@YA?AUFoo@@XZ"(%struct.Foo* sret(%struct.Foo) %bar), !dbg !37
-  %x = getelementptr inbounds %struct.Foo, %struct.Foo* %bar, i32 0, i32 0, !dbg !38
-  %0 = load i32, i32* %x, align 4, !dbg !38
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %bar, metadata !36, metadata !DIExpression()), !dbg !37
+  call void @"?GetFoo@@YA?AUFoo@@XZ"(ptr sret(%struct.Foo) %bar), !dbg !37
+  %x = getelementptr inbounds %struct.Foo, ptr %bar, i32 0, i32 0, !dbg !38
+  %0 = load i32, ptr %x, align 4, !dbg !38
   ret i32 %0, !dbg !38
 }
 

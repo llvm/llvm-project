@@ -102,7 +102,7 @@ protected:
     EXPECT_EQ(line, entry.line);
     EXPECT_EQ(address, entry.range.GetBaseAddress());
 
-    EXPECT_TRUE(FileSpecMatchesAsBaseOrFull(spec, entry.file));
+    EXPECT_TRUE(FileSpecMatchesAsBaseOrFull(spec, entry.GetFile()));
   }
 
   bool ContainsCompileUnit(const SymbolContextList &sc_list,
@@ -527,7 +527,6 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(module->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  TypeMap results;
 
   const char *TypedefsToCheck[] = {"ClassTypedef", "NSClassTypedef",
                                    "FuncPointerTypedef",

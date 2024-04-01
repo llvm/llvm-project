@@ -112,7 +112,6 @@ body:             |
   ; MIPS32-NEXT: bb.6.sw.default:
   ; MIPS32-NEXT:   successors: %bb.7(0x80000000)
   ; MIPS32-NEXT: {{  $}}
-  ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.7.sw.epilog:
   ; MIPS32-NEXT:   successors: %bb.13(0x40000000), %bb.8(0x40000000)
   ; MIPS32-NEXT: {{  $}}

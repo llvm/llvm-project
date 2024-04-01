@@ -133,19 +133,19 @@ TEST(TBDv4, ReadFile) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
-      {SymbolKind::GlobalSymbol, "_symB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
-      {SymbolKind::GlobalSymbol, "weakReexport", true, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "weakReexport", true, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
-      {SymbolKind::GlobalSymbol, "weakReference", true, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "weakReference", true, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -290,16 +290,16 @@ TEST(TBDv4, ReadMultipleDocuments) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -352,11 +352,11 @@ TEST(TBDv4, WriteFile) {
   File.addAllowableClient("ClientA", Targets[0]);
   File.addParentUmbrella(Targets[0], "System");
   File.addParentUmbrella(Targets[1], "System");
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symA", {Targets[0]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symB", {Targets[1]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symA", {Targets[0]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symB", {Targets[1]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[0]});
+  File.addSymbol(EncodeKind::ObjectiveCClass, "Class1", {Targets[0]});
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -420,11 +420,11 @@ TEST(TBDv4, WriteMultipleDocuments) {
   Document.setCurrentVersion(PackedVersion(1, 0, 0));
   Document.setTwoLevelNamespace();
   Document.setApplicationExtensionSafe(true);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symA", Targets);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symAB", {Targets[1]});
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symA", Targets);
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symAB", {Targets[1]});
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                      SymbolFlags::WeakDefined);
-  Document.addSymbol(SymbolKind::ObjectiveCClass, "Class1", Targets);
+  Document.addSymbol(EncodeKind::ObjectiveCClass, "Class1", Targets);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
 
   SmallString<4096> Buffer;
@@ -1163,7 +1163,7 @@ TEST(TBDv4, InterfaceInequality) {
                                Target(AK_i386, PLATFORM_MACOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addSymbol(SymbolKind::GlobalSymbol, "_symA",
+    File->addSymbol(EncodeKind::GlobalSymbol, "_symA",
                     {Target(AK_x86_64, PLATFORM_MACOS)});
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {

@@ -33,7 +33,7 @@ func.func @function_call() {
 // CHECK-DYNAMIC-LABEL: func @function_call()
 //       CHECK-DYNAMIC: [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-DYNAMIC-NEXT: [[ALLOC1:%.+]] = memref.alloc(
-//  CHECK-DYNAMIC-NEXT: [[RET:%.+]]:2 = call @f([[ALLOC0]], %true{{[0-9_]*}}) : (memref<f64>, i1) -> (memref<f64>, i1)
+//  CHECK-DYNAMIC-NEXT: [[RET:%.+]]:2 = call @f([[ALLOC0]]) : (memref<f64>) -> (memref<f64>, i1)
 //  CHECK-DYNAMIC-NEXT: test.copy
 //  CHECK-DYNAMIC-NEXT: [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[RET]]#0
 //  CHECK-DYNAMIC-NEXT: bufferization.dealloc ([[ALLOC0]], [[ALLOC1]], [[BASE]] :{{.*}}) if (%true{{[0-9_]*}}, %true{{[0-9_]*}}, [[RET]]#1)
@@ -102,7 +102,7 @@ func.func @function_call_requries_merged_ownership_mid_block(%arg0: i1) {
 //       CHECK-DYNAMIC:   [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-DYNAMIC-NEXT:   [[ALLOC1:%.+]] = memref.alloca(
 //  CHECK-DYNAMIC-NEXT:   [[SELECT:%.+]] = arith.select [[ARG0]], [[ALLOC0]], [[ALLOC1]]
-//  CHECK-DYNAMIC-NEXT:   [[RET:%.+]]:2 = call @f([[SELECT]], [[ARG0]])
+//  CHECK-DYNAMIC-NEXT:   [[RET:%.+]]:2 = call @f([[SELECT]])
 //  CHECK-DYNAMIC-NEXT:   test.copy
 //  CHECK-DYNAMIC-NEXT:   [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[RET]]#0
 //  CHECK-DYNAMIC-NEXT:   bufferization.dealloc ([[ALLOC0]], [[BASE]] :

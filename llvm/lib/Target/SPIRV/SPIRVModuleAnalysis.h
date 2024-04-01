@@ -71,9 +71,9 @@ private:
   SmallSet<Extension::Extension, 4> AllExtensions;
   unsigned MinVersion; // 0 if no min version is defined.
   unsigned MaxVersion; // 0 if no max version is defined.
-  // Remove a list of capabilities from dedupedCaps and add them to AllCaps,
-  // recursing through their implicitly declared capabilities too.
-  void pruneCapabilities(const CapabilityList &ToPrune);
+  // Add capabilities to AllCaps, recursing through their implicitly declared
+  // capabilities too.
+  void recursiveAddCapabilities(const CapabilityList &ToPrune);
 
   void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
@@ -163,8 +163,8 @@ struct ModuleAnalysisInfo {
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
     auto FuncPtrRegPair = FuncMap.find(F);
-    assert(FuncPtrRegPair != FuncMap.end() && "Cannot find function ID");
-    return FuncPtrRegPair->second;
+    return FuncPtrRegPair == FuncMap.end() ? Register(0)
+                                           : FuncPtrRegPair->second;
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
@@ -224,6 +224,8 @@ private:
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
+  void collectFuncPtrs();
+  void collectFuncPtrs(MachineInstr *MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;

@@ -83,7 +83,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(target_triple ${ARG_TARGET_TRIPLE})
   endif()
 
-  is_msvc_triple(is_msvc_target ${target_triple})
+  is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)

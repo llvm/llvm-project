@@ -292,6 +292,8 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     // clobbers where they don't really exist at all. Please see D43269 for
     // context.
     switch (II->getIntrinsicID()) {
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
@@ -1725,6 +1727,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::pseudoprobe:
@@ -1976,8 +1980,7 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
       }
       // Verify def-uses for full verify.
       if (VL == VerificationLevel::Full) {
-        assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
-                                            pred_begin(&B), pred_end(&B))) &&
+        assert(Phi->getNumOperands() == pred_size(&B) &&
                "Incomplete MemoryPhi Node");
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
           verifyUseInDefs(Phi->getIncomingValue(I), Phi);

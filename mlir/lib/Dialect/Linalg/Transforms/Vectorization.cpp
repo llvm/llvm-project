@@ -19,10 +19,17 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -30,7 +37,9 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <type_traits>
@@ -46,6 +55,8 @@ using namespace mlir::linalg;
 /// Try to vectorize `convOp` as a convolution.
 static FailureOr<Operation *>
 vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
+                     ArrayRef<int64_t> inputVecSizes = {},
+                     ArrayRef<bool> inputVecScalableFlags = {},
                      bool flatten1DDepthwiseConv = false);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
@@ -883,8 +894,7 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
 
   // Conservatively reject Ops that could lead to indices with stride other
   // than 1.
-  if (!isa<arith::AddIOp, arith::SubIOp, arith::ConstantOp, linalg::IndexOp>(
-          ancestor))
+  if (!isa<arith::AddIOp, arith::ConstantOp, linalg::IndexOp>(ancestor))
     return false;
 
   bool result = false;
@@ -1393,6 +1403,269 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   return success();
 }
 
+/// Given a tensor::PackOp, return the `dest` shape before any packing
+/// permutations.
+static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
+                                              ArrayRef<int64_t> destShape) {
+  return applyPermutation(destShape, tensor::getPackInverseDestPerm(packOp));
+}
+
+/// Create a TransferReadOp from `source` with static shape `readShape`. If the
+/// vector type for the read is not the same as the type of `source`, then a
+/// mask is created on the read.
+static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                    Value source, ArrayRef<int64_t> readShape,
+                                    Value padValue) {
+  assert(llvm::none_of(readShape,
+                       [](int64_t s) { return s == ShapedType::kDynamic; }));
+  auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
+  assert(sourceShape.size() == readShape.size());
+  auto maskType = VectorType::get(readShape, builder.getI1Type());
+  auto vectorType = VectorType::get(readShape, padValue.getType());
+  int64_t readRank = readShape.size();
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  auto transferReadOp = builder.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/source,
+      /*indices=*/SmallVector<Value>(readRank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(readRank, true));
+  if (llvm::equal(readShape, sourceShape)) {
+    return transferReadOp;
+  }
+  SmallVector<OpFoldResult> mixedSourceDims =
+      tensor::getMixedSizes(builder, loc, source);
+  Value mask =
+      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  return mlir::vector::maskOperation(builder, transferReadOp, mask)
+      ->getResult(0);
+}
+
+/// Given an input, the mixed destSizes, and the vector sizes for vectorization,
+/// create an empty destination tensor and create a TransferWriteOp from the
+/// input to the empty tensor. If the destination shape is not the same as the
+/// inputVectorSizes for the first rank(inputVectorSizes) dims, then create a
+/// mask for the write.
+static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                           Value input,
+                                           SmallVector<OpFoldResult> destSizes,
+                                           ArrayRef<int64_t> inputVectorSizes) {
+  auto inputType = cast<VectorType>(input.getType());
+  Value dest = builder.create<tensor::EmptyOp>(loc, destSizes,
+                                               inputType.getElementType());
+  int64_t rank = cast<ShapedType>(dest.getType()).getRank();
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Operation *write = builder.create<vector::TransferWriteOp>(
+      loc,
+      /*vector=*/input,
+      /*source=*/dest,
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  auto destShape = cast<ShapedType>(dest.getType()).getShape();
+  assert(llvm::none_of(
+             destShape.drop_front(inputVectorSizes.size()),
+             [](int64_t size) { return size == ShapedType::kDynamic; }) &&
+         "Only dims aligned with inputVectorSizes may be dynamic");
+  bool needMaskForWrite = !llvm::equal(
+      inputVectorSizes, destShape.take_front(inputVectorSizes.size()));
+  if (needMaskForWrite) {
+    SmallVector<int64_t> writeMaskShape;
+    writeMaskShape.append(inputVectorSizes.begin(), inputVectorSizes.end());
+    writeMaskShape.append(destShape.begin() + inputVectorSizes.size(),
+                          destShape.end());
+    auto writeMaskType = VectorType::get(writeMaskShape, builder.getI1Type());
+    Value maskForWrite =
+        builder.create<vector::CreateMaskOp>(loc, writeMaskType, destSizes);
+    write = mlir::vector::maskOperation(builder, write, maskForWrite);
+  }
+  return write;
+}
+
+/// Vectorize tensor::PackOp with (1) static innerTiles and (2) constant
+/// padding value into:
+/// masked_transfer_read->shape_cast->transpose->transfer_write_in_bounds
+/// As in the following example:
+///
+/// %pack = tensor.pack %src inner_dims_pos = [2, 1] inner_tiles = [16, 2]
+///     into %dst : tensor<32x8x16xf32> -> tensor<32x4x1x16x2xf32>
+///
+/// This pack would be vectorized to:
+///
+/// %load = vector.mask %mask {
+///     vector.transfer_read %arg0[%c0, %c0, %c0], %cst
+///         {in_bounds = [true, true, true]} :
+///         tensor<32x7x16xf32>, vector<32x8x16xf32>
+/// } : vector<32x8x16xi1> -> vector<32x8x16xf32>
+/// %shape_cast = vector.shape_cast %load : vector<32x8x16xf32>
+///                                         to vector<32x4x2x1x16xf32>
+/// %transpose = vector.transpose %shape_cast, [0, 1, 3, 4, 2]
+///     : vector<32x4x2x1x16xf32> to vector<32x4x1x16x2xf32>
+/// %write = vector.transfer_write %transpose,
+///     %empty[%c0_0, %c0_0, %c0_0, %c0_0, %c0_0]
+///     {in_bounds = [true, true, true, true, true]}
+///     : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+static LogicalResult
+vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
+                        ArrayRef<int64_t> inputVectorSizes,
+                        SmallVectorImpl<Value> &newResults) {
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(packOp);
+
+  Location loc = packOp.getLoc();
+  auto padValue = packOp.getPaddingValue();
+  if (!padValue) {
+    padValue = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
+  }
+  ReifiedRankedShapedTypeDims reifiedReturnShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(packOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedReturnShapes);
+  (void)status; // prevent unused variable warning on non-assert builds.
+  assert(succeeded(status) && "failed to reify result shapes");
+
+  // Create masked TransferReadOp.
+  SmallVector<int64_t> inputShape(inputVectorSizes);
+  auto innerTiles = packOp.getStaticInnerTiles();
+  auto innerDimsPos = packOp.getInnerDimsPos();
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+  if (!outerDimsPerm.empty())
+    applyPermutationToVector(inputShape,
+                             invertPermutationVector(outerDimsPerm));
+  for (auto [idx, size] : enumerate(innerTiles))
+    inputShape[innerDimsPos[idx]] *= size;
+  auto maskedRead = createReadOrMaskedRead(rewriter, loc, packOp.getSource(),
+                                           inputShape, padValue);
+
+  // Create ShapeCastOp.
+  SmallVector<int64_t> destShape(inputVectorSizes);
+  destShape.append(innerTiles.begin(), innerTiles.end());
+  auto tiledPackType = VectorType::get(getTiledPackShape(packOp, destShape),
+                                       packOp.getDestType().getElementType());
+  auto shapeCastOp =
+      rewriter.create<vector::ShapeCastOp>(loc, tiledPackType, maskedRead);
+
+  // Create TransposeOp.
+  auto destPermutation =
+      invertPermutationVector(tensor::getPackInverseDestPerm(packOp));
+  auto transposeOp = rewriter.create<vector::TransposeOp>(
+      loc, shapeCastOp.getResult(), destPermutation);
+
+  // Create TransferWriteOp.
+  Operation *write =
+      createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(),
+                               reifiedReturnShapes[0], inputVectorSizes);
+  newResults.push_back(write->getResult(0));
+  return success();
+}
+
+/// Vectorize a `tensor::UnPackOp` to these 4 Ops:
+///   Vector::TransferReadOp - Reads a vector from the source tensor
+///   vector::TransposeOp - Transpose the Source tensor
+///   ShapeCastOp - Reshape the data based on the target.
+///   vector::TransferWriteOp. - Write the result vector back to the destination
+///   tensor
+static LogicalResult
+vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
+                          ArrayRef<int64_t> inputVectorSizes,
+                          SmallVectorImpl<Value> &newResults) {
+
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(unpackOp);
+
+  RankedTensorType unpackTensorType = unpackOp.getSourceType();
+
+  ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
+  ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
+
+  SmallVector<int64_t> readMaskShape(inputVectorSizes.begin(),
+                                     inputVectorSizes.end());
+  ArrayRef<int64_t> outerDimsPerm = unpackOp.getOuterDimsPerm();
+  ArrayRef<int64_t> sourceShape = unpackTensorType.getShape();
+
+  // ReadMask is the size of tensor used to read and apply mask. It is
+  // set like this: Let's say the vectorSize (VS) array is size 'N' and
+  // the sourceShape(SS) is 'M' where M >= N and InnerTileSizes (IT) of
+  // size M-N
+  // Thus:
+  // - initially: ReadMaskShape = vectorInputSizes
+  // - Divide all the readMaskShape locations pointed by innerDimPos
+  //   by the innerTileSize attribute value.
+  // - if outer_dims_perms is present: do that permutation on readMaskShape.
+  // - Append the remaining shape from SS
+  // E.g. let's say let's say unpackTensorType.getShape() = <8x8x32x16>
+  // inner Dim Pos = [0, 1] and Inner Tiles = [32, 16], vector_sizes are [512,
+  // 128] and outer_dims_perm is [1, 0] then read shape is:
+  //   ReadMaskShape(initial): [512, 128]
+  //   Final Value(after innerDim Adjustment): [512/32, 128/16]
+  //                                           = [16, 8]
+  //   After applying outer_dims_perm: [8, 16]
+  //   After appending the rest of the sourceShape: [8, 16, 32, 16]
+
+  for (auto [index, size] : enumerate(innerTiles)) {
+    readMaskShape[innerDimPos[index]] =
+        llvm::divideCeil(readMaskShape[innerDimPos[index]], size);
+  }
+  if (!outerDimsPerm.empty()) {
+    applyPermutationToVector(readMaskShape, outerDimsPerm);
+  }
+  readMaskShape.append(sourceShape.begin() + inputVectorSizes.size(),
+                       sourceShape.end());
+
+  ReifiedRankedShapedTypeDims reifiedRetShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(unpackOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedRetShapes);
+  if (status.failed()) {
+    LDBG("Unable to reify result shapes of " << unpackOp);
+    return failure();
+  }
+  Location loc = unpackOp->getLoc();
+
+  auto padValue = rewriter.create<arith::ConstantOp>(
+      loc, rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
+
+  // Read result, mask if necessary. If transferReadOp shape is not equal
+  // to shape of source, then a mask is necessary.
+  Value readResult = createReadOrMaskedRead(
+      rewriter, loc, unpackOp.getSource(),
+      ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
+
+  PackingMetadata packMetadata;
+  SmallVector<int64_t> lastDimToInsertPosPerm =
+      tensor::getUnPackInverseSrcPerm(unpackOp, packMetadata);
+  ShapedType maskedOpShapedType = cast<ShapedType>(readResult.getType());
+  SmallVector<int64_t> stripMineShape(maskedOpShapedType.getShape());
+  mlir::Type stripMineElemType = maskedOpShapedType.getElementType();
+  applyPermutationToVector(stripMineShape, lastDimToInsertPosPerm);
+  RankedTensorType stripMineTensorType =
+      RankedTensorType::get(stripMineShape, stripMineElemType);
+  // Transpose the appropriate rows to match output.
+  vector::TransposeOp transposeOp = rewriter.create<vector::TransposeOp>(
+      loc, readResult, lastDimToInsertPosPerm);
+
+  // Collapse the vector to the size required by result.
+  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+      stripMineTensorType, packMetadata.reassociations);
+  mlir::VectorType vecCollapsedType =
+      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
+  vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
+      loc, vecCollapsedType, transposeOp->getResult(0));
+
+  // WriteMaskShape had to match the shapecast shape for dynamic sizes,
+  // otherwise the validator complains that the mask size is invalid.
+  SmallVector<int64_t> writeMaskShape(
+      unpackOp.getDestType().hasStaticShape()
+          ? inputVectorSizes
+          : shapeCastOp.getResultVectorType().getShape());
+  Operation *write =
+      createWriteOrMaskedWrite(rewriter, loc, shapeCastOp.getResult(),
+                               reifiedRetShapes[0], writeMaskShape);
+  newResults.push_back(write->getResult(0));
+  return success();
+}
+
 /// Vectorize a `padOp` with (1) static result type, (2) constant padding value
 /// and (3) all-zero lowPad to
 ///   `transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))`.
@@ -1402,9 +1675,6 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
                        SmallVectorImpl<Value> &newResults) {
   auto padValue = padOp.getConstantPaddingValue();
   Location loc = padOp.getLoc();
-  int64_t rank = inputVectorSizes.size();
-  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
-  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
 
   // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
   OpBuilder::InsertionGuard g(rewriter);
@@ -1416,36 +1686,10 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
-                                                  padValue.getType());
-  SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(rewriter, loc, padOp.getSource());
-  Value mask =
-      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/padOp.getSource(),
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  auto maskedOp = cast<vector::MaskOp>(
-      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
-  Operation *write = rewriter.create<vector::TransferWriteOp>(
-      loc,
-      /*vector=*/maskedOp->getResult(0),
-      /*source=*/emptyOp,
-      /*indices=*/SmallVector<Value>(rank, zero),
-      /*inBounds=*/SmallVector<bool>(rank, true));
-  bool needMaskForWrite = llvm::any_of(
-      llvm::zip_equal(inputVectorSizes, padOp.getResultType().getShape()),
-      [](auto it) { return std::get<0>(it) != std::get<1>(it); });
-  if (needMaskForWrite) {
-    Value maskForWrite = rewriter.create<vector::CreateMaskOp>(
-        loc, maskType, reifiedReturnShapes[0]);
-    write = mlir::vector::maskOperation(rewriter, write, maskForWrite);
-  }
+  auto maskedRead = createReadOrMaskedRead(rewriter, loc, padOp.getSource(),
+                                           inputVectorSizes, padValue);
+  Operation *write = createWriteOrMaskedWrite(
+      rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -1471,7 +1715,40 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
+static LogicalResult
+vectorizeDynamicConvOpPrecondition(linalg::LinalgOp conv,
+                                   bool flatten1DDepthwiseConv) {
+  if (flatten1DDepthwiseConv) {
+    LDBG("Vectorization of flattened convs with dynamic shapes is not "
+         "supported\n");
+    return failure();
+  }
+
+  if (!isa<linalg::DepthwiseConv1DNwcWcOp>(conv)) {
+    LDBG("Not a 1D depth-wise WC conv, dynamic shapes are not supported\n");
+    return failure();
+  }
+
+  // Support dynamic shapes in 1D depthwise convolution, but only in the
+  // _channel_ dimension.
+  Value lhs = conv.getDpsInputOperand(0)->get();
+  ArrayRef<int64_t> lhsShape = cast<ShapedType>(lhs.getType()).getShape();
+  auto shapeWithoutCh = lhsShape.drop_back(1);
+  if (ShapedType::isDynamicShape(shapeWithoutCh)) {
+    LDBG("Dynamically-shaped op vectorization precondition failed: only "
+         "channel dim can be dynamic\n");
+    return failure();
+  }
+
+  return success();
+}
+
+static LogicalResult
+vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
+                                     bool flatten1DDepthwiseConv) {
+  if (isa<ConvolutionOpInterface>(op.getOperation()))
+    return vectorizeDynamicConvOpPrecondition(op, flatten1DDepthwiseConv);
+
   // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
   // linalg.copy ops and ops that implement ContractionOpInterface for now.
   if (!isElementwise(op) &&
@@ -1518,10 +1795,28 @@ isValidMaskedInputVector(ArrayRef<int64_t> shape,
   return success();
 }
 
+/// Need to check if the inner-tiles are static/constant.
 static LogicalResult
-vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
-                              ArrayRef<int64_t> inputVectorSizes,
-                              bool vectorizeNDExtract) {
+vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
+                              ArrayRef<int64_t> inputVectorSizes) {
+
+  if (llvm::any_of(unpackOp.getInnerTiles(), [](OpFoldResult res) {
+        return !getConstantIntValue(res).has_value();
+      })) {
+    LDBG("Inner-tiles must be constant: " << unpackOp << "\n");
+    return failure();
+  }
+  llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
+  if (!inputVectorSizes.empty() &&
+      failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult vectorizeLinalgOpPrecondition(
+    LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
+    bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
   // tensor with dimension of 0 cannot be vectorized.
   if (llvm::is_contained(linalgOp.getStaticShape(), 0))
     return failure();
@@ -1531,8 +1826,8 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                                       inputVectorSizes)))
     return failure();
 
-  if (linalgOp.hasDynamicShape() &&
-      failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
+  if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
+                                        linalgOp, flatten1DDepthwiseConv))) {
     LDBG("Dynamically-shaped op failed vectorization pre-conditions\n");
     return failure();
   }
@@ -1566,9 +1861,10 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
   }
   if (isElementwise(linalgOp))
     return success();
-  // TODO: isaConvolutionOpInterface that can also infer from generic features.
-  // But we will still need stride/dilation attributes that will be annoying to
-  // reverse-engineer...
+
+  // TODO: isaConvolutionOpInterface that can also infer from generic
+  // features. But we will still need stride/dilation attributes that will be
+  // annoying to reverse-engineer...
   if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
     return success();
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -1582,6 +1878,32 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
     LDBG("precondition failed: reduction preconditions\n");
     return failure();
   }
+  return success();
+}
+
+/// TODO: Use a matcher to check for a constant padding value.
+static LogicalResult
+vectorizePackOpPrecondition(tensor::PackOp packOp,
+                            ArrayRef<int64_t> inputVectorSizes) {
+  auto padValue = packOp.getPaddingValue();
+  if (padValue && !padValue.getDefiningOp<arith::ConstantOp>()) {
+    LDBG("pad value is not constant: " << packOp << "\n");
+    return failure();
+  }
+
+  ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
+  if (failed(isValidMaskedInputVector(
+          resultTensorShape.take_front(packOp.getSourceRank()),
+          inputVectorSizes)))
+    return failure();
+
+  if (llvm::any_of(packOp.getInnerTiles(), [](OpFoldResult v) {
+        return !getConstantIntValue(v).has_value();
+      })) {
+    LDBG("inner_tiles must be constant: " << packOp << "\n");
+    return failure();
+  }
+
   return success();
 }
 
@@ -1624,14 +1946,17 @@ vectorizeScalableVectorPrecondition(Operation *op,
   if (!isScalable)
     return success();
 
-  // Only element-wise ops supported in the presence of scalable dims.
+  // Only element-wise and 1d depthwise conv ops supported in the presence of
+  // scalable dims.
   auto linalgOp = dyn_cast<LinalgOp>(op);
-  return success(linalgOp && isElementwise(linalgOp));
+  return success(linalgOp && (isElementwise(linalgOp) ||
+                              isa<linalg::DepthwiseConv1DNwcWcOp>(op)));
 }
 
 LogicalResult mlir::linalg::vectorizeOpPrecondition(
     Operation *op, ArrayRef<int64_t> inputVectorSizes,
-    ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract) {
+    ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
+    bool flatten1DDepthwiseConv) {
   if (failed(vectorizeScalableVectorPrecondition(op, inputVectorSizes,
                                                  inputScalableVecDims)))
     return failure();
@@ -1639,10 +1964,17 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
   return TypeSwitch<Operation *, LogicalResult>(op)
       .Case<linalg::LinalgOp>([&](auto linalgOp) {
         return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
-                                             vectorizeNDExtract);
+                                             vectorizeNDExtract,
+                                             flatten1DDepthwiseConv);
       })
       .Case<tensor::PadOp>([&](auto padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
+      })
+      .Case<tensor::PackOp>([&](auto packOp) {
+        return vectorizePackOpPrecondition(packOp, inputVectorSizes);
+      })
+      .Case<tensor::UnPackOp>([&](auto unpackOp) {
+        return vectorizeUnPackOpPrecondition(unpackOp, inputVectorSizes);
       })
       .Default([](auto) { return failure(); });
 }
@@ -1663,11 +1995,11 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
 }
 
 /// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the input
-/// vector sizes must be greater than or equal to their counterpart iteration
-/// space sizes, if static. `inputVectorShapes` also allows the vectorization of
-/// operations with dynamic shapes.
+/// `inputVectorSizes` are used to vectorize this operation.
+/// `inputVectorSizes` must match the rank of the iteration space of the
+/// operation and the input vector sizes must be greater than or equal to
+/// their counterpart iteration space sizes, if static. `inputVectorShapes`
+/// also allows the vectorization of operations with dynamic shapes.
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes,
                                       ArrayRef<bool> inputScalableVecDims,
@@ -1682,7 +2014,8 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
   LLVM_DEBUG(llvm::dbgs() << "\n");
 
   if (failed(vectorizeOpPrecondition(op, inputVectorSizes, inputScalableVecDims,
-                                     vectorizeNDExtract))) {
+                                     vectorizeNDExtract,
+                                     flatten1DDepthwiseConv))) {
     LDBG("Vectorization pre-conditions failed\n");
     return failure();
   }
@@ -1701,11 +2034,13 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
   auto vectorizeResult =
       TypeSwitch<Operation *, LogicalResult>(op)
           .Case<linalg::LinalgOp>([&](auto linalgOp) {
-            // TODO: isaConvolutionOpInterface that can also infer from generic
-            // features. Will require stride/dilation attributes inference.
+            // TODO: isaConvolutionOpInterface that can also infer from
+            // generic features. Will require stride/dilation attributes
+            // inference.
             if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
-                  rewriter, linalgOp, flatten1DDepthwiseConv);
+                  rewriter, linalgOp, inputVectorSizes, inputScalableVecDims,
+                  flatten1DDepthwiseConv);
               if (succeeded(convOr)) {
                 llvm::append_range(results, (*convOr)->getResults());
                 return success();
@@ -1732,6 +2067,14 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
             return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
                                           results);
           })
+          .Case<tensor::PackOp>([&](auto packOp) {
+            return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
+                                           results);
+          })
+          .Case<tensor::UnPackOp>([&](auto unpackOp) {
+            return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
+                                             inputVectorSizes, results);
+          })
           .Default([](auto) { return failure(); });
 
   if (failed(vectorizeResult)) {
@@ -1749,7 +2092,6 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
 
 LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
                                           memref::CopyOp copyOp) {
-
   auto srcType = cast<MemRefType>(copyOp.getSource().getType());
   auto dstType = cast<MemRefType>(copyOp.getTarget().getType());
   if (!srcType.hasStaticShape() || !dstType.hasStaticShape())
@@ -2663,8 +3005,8 @@ struct Conv1DGenerator
     Value res = rewriter.create<vector::TransferReadOp>(loc, resType, resShaped,
                                                         resPadding);
 
-    // The base vectorization case for channeled convolution is input: {n,w,c},
-    // weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
+    // The base vectorization case for channeled convolution is input:
+    // {n,w,c}, weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
     // vectorization case, we do pre transpose on input, weight, and output.
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::W:
@@ -2707,9 +3049,9 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
-    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f} or
-    // perform outerproduct for non-channeled convolution or
-    // perform simple arith operation for pooling
+    // Compute contraction: O{n, w, f} += I{n, sw * w + dw * kw, c} * F{c, f}
+    // or perform outerproduct for non-channeled convolution or perform simple
+    // arith operation for pooling
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         switch (oper) {
@@ -2738,9 +3080,9 @@ struct Conv1DGenerator
     // End vector-only rewrite part
     //===------------------------------------------------------------------===//
 
-    // The base vectorization case for channeled convolution is output: {n,w,f}
-    // To reuse the result from base pattern vectorization case, we post
-    // transpose the base case result.
+    // The base vectorization case for channeled convolution is output:
+    // {n,w,f} To reuse the result from base pattern vectorization case, we
+    // post transpose the base case result.
     switch (conv1DOpOrder) {
     case Conv1DOpOrder::W:
     case Conv1DOpOrder::Nwc:
@@ -2830,13 +3172,30 @@ struct Conv1DGenerator
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> depthwiseConv(bool flatten) {
+  FailureOr<Operation *> depthwiseConv(uint64_t channelDimVecSize,
+                                       bool channelDimScalableFlag,
+                                       bool flatten) {
     if (!valid)
       return rewriter.notifyMatchFailure(op, "unvectorizable depthwise conv");
 
+    bool scalableChDim = false;
+    bool useMasking = false;
     int64_t nSize, wSize, cSize, kwSize;
     // kernel{kw, c}
     bindShapeDims(rhsShapedType, kwSize, cSize);
+    if (ShapedType::isDynamic(cSize)) {
+      assert(channelDimVecSize != 0 && "Channel dim vec size must be > 0");
+      cSize = channelDimVecSize;
+      // Scalable vectors are only used when both conditions are met:
+      //  1. channel dim is dynamic
+      //  2. channelDimScalableFlag is set
+      scalableChDim = channelDimScalableFlag;
+      useMasking = true;
+    }
+
+    assert(!(useMasking && flatten) &&
+           "Unsupported flattened conv with dynamic shapes");
+
     // out{n, w, c}
     bindShapeDims(resShapedType, nSize, wSize);
 
@@ -2857,20 +3216,51 @@ struct Conv1DGenerator
          //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
          ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
-        lhsEltType);
-    VectorType rhsType = VectorType::get({kwSize, cSize}, rhsEltType);
-    VectorType resType = VectorType::get({nSize, wSize, cSize}, resEltType);
+        lhsEltType, /*scalableDims=*/{false, false, scalableChDim});
+    VectorType rhsType =
+        VectorType::get({kwSize, cSize}, rhsEltType,
+                        /*scalableDims=*/{false, scalableChDim});
+    VectorType resType =
+        VectorType::get({nSize, wSize, cSize}, resEltType,
+                        /*scalableDims=*/{false, false, scalableChDim});
+
+    // Masks the input xfer Op along the channel dim, iff the corresponding
+    // scalable flag is set.
+    auto maybeMaskXferOp = [&](ArrayRef<int64_t> maskShape,
+                               ArrayRef<bool> scalableDims,
+                               Operation *opToMask) {
+      if (!useMasking)
+        return opToMask;
+      auto maskType =
+          VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
+
+      SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
+          cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
+
+      Value maskOp =
+          rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedDims);
+
+      return mlir::vector::maskOperation(rewriter, opToMask, maskOp);
+    };
 
     // Read lhs slice of size {n, w * strideW + kw * dilationW, c} @ [0, 0,
     // 0].
     Value lhs = rewriter.create<vector::TransferReadOp>(
         loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
+    auto maybeMaskedLhs = maybeMaskXferOp(
+        lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
+
     // Read rhs slice of size {kw, c} @ [0, 0].
     Value rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
                                                         ValueRange{zero, zero});
+    auto maybeMaskedRhs = maybeMaskXferOp(
+        rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
+
     // Read res slice of size {n, w, c} @ [0, 0, 0].
     Value res = rewriter.create<vector::TransferReadOp>(
         loc, resType, resShaped, ValueRange{zero, zero, zero});
+    auto maybeMaskedRes = maybeMaskXferOp(
+        resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
 
     //===------------------------------------------------------------------===//
     // Begin vector-only rewrite part
@@ -2885,7 +3275,7 @@ struct Conv1DGenerator
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         lhsVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
-            loc, lhs,
+            loc, maybeMaskedLhs->getResult(0),
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             inOutSliceSizes, inOutStrides));
       }
@@ -2893,12 +3283,13 @@ struct Conv1DGenerator
     // Extract rhs slice of size {c} @ [kw].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       rhsVals.push_back(rewriter.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+          loc, maybeMaskedRhs->getResult(0),
+          /*offsets=*/ArrayRef<int64_t>{kw}));
     }
     // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       resVals.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, res,
+          loc, maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
           inOutStrides));
     }
@@ -2907,10 +3298,15 @@ struct Conv1DGenerator
       return kw * (wSize / wSizeStep) + w;
     };
 
+    // Note - the scalable flags are ignored as flattening combined with
+    // scalable vectorization is not supported.
     auto inOutFlattenSliceSizes =
         SmallVector<int64_t>{nSize, wSizeStep * cSize};
-    auto lhsCastType = VectorType::get(inOutFlattenSliceSizes, lhsEltType);
-    auto resCastType = VectorType::get(inOutFlattenSliceSizes, resEltType);
+    auto lhsTypeAfterFlattening =
+        VectorType::get(inOutFlattenSliceSizes, lhsEltType);
+    auto resTypeAfterFlattening =
+        VectorType::get(inOutFlattenSliceSizes, resEltType);
+
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
@@ -2920,9 +3316,9 @@ struct Conv1DGenerator
           // Flatten the input and output vectors (collapse the channel
           // dimension)
           lhsVal = rewriter.create<vector::ShapeCastOp>(
-              loc, lhsCastType, lhsVals[linearIndex(kw, w)]);
-          resVal = rewriter.create<vector::ShapeCastOp>(loc, resCastType,
-                                                        resVals[w]);
+              loc, lhsTypeAfterFlattening, lhsVals[linearIndex(kw, w)]);
+          resVal = rewriter.create<vector::ShapeCastOp>(
+              loc, resTypeAfterFlattening, resVals[w]);
         }
         resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
                                                   rhsVals[kw], resVal, flatten);
@@ -2947,8 +3343,8 @@ struct Conv1DGenerator
     // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
     // This does not depend on kw.
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      res = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, resVals[w], res,
+      maybeMaskedRes = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, resVals[w], maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0},
           /*strides=*/ArrayRef<int64_t>{1, 1, 1});
     }
@@ -2957,10 +3353,11 @@ struct Conv1DGenerator
     //===------------------------------------------------------------------===//
 
     // Write back res slice of size {n, w, c} @ [0, 0, 0].
-    return rewriter
-        .create<vector::TransferWriteOp>(loc, res, resShaped,
-                                         ValueRange{zero, zero, zero})
-        .getOperation();
+    Operation *resOut = rewriter.create<vector::TransferWriteOp>(
+        loc, maybeMaskedRes->getResult(0), resShaped,
+        ValueRange{zero, zero, zero});
+    return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
+                           resOut);
   }
 
   /// Lower:
@@ -2977,6 +3374,10 @@ struct Conv1DGenerator
     lhs = promote(rewriter, loc, lhs, resTy);
 
     if (flatten) {
+      // NOTE: This following logic won't work for scalable vectors. For this
+      // reason, "flattening" is not supported when shapes are dynamic (this
+      // should be captured by one of the pre-conditions).
+
       // There are two options for handling the filter:
       //  * shape_cast(broadcast(filter))
       //  * broadcast(shuffle(filter))
@@ -3098,7 +3499,9 @@ struct Conv1DGenerator
 
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
-  FailureOr<Operation *> generateDilatedConv(bool flatten = false) {
+  FailureOr<Operation *> generateDilatedConv(uint64_t vecChDimSize = 0,
+                                             bool vecChDimScalableFlag = false,
+                                             bool flatten = false) {
     AffineExpr n, w, c, kw;
     bindDims(ctx, n, w, c, kw);
     if (!iters({Par(), Par(), Par(), Red()}))
@@ -3109,7 +3512,7 @@ struct Conv1DGenerator
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return depthwiseConv(flatten);
+      return depthwiseConv(vecChDimSize, vecChDimScalableFlag, flatten);
 
     return rewriter.notifyMatchFailure(op, "not a depthwise::Nwc layout");
   }
@@ -3134,15 +3537,14 @@ private:
   // Otherwise, check for one or zero `ext` predecessor. The `ext` operands
   // must be block arguments or extension of block arguments.
   bool setOperKind(Operation *reduceOp) {
-    int numBlockArguments = llvm::count_if(
-        reduceOp->getOperands(), [](Value v) { return isa<BlockArgument>(v); });
+    int numBlockArguments =
+        llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
     switch (numBlockArguments) {
     case 1: {
       // Will be convolution if feeder is a MulOp.
       // Otherwise, if it can be pooling.
-      auto feedValIt = llvm::find_if(reduceOp->getOperands(), [](Value v) {
-        return !isa<BlockArgument>(v);
-      });
+      auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
+                                         llvm::IsaPred<BlockArgument>);
       Operation *feedOp = (*feedValIt).getDefiningOp();
       if (isCastOfBlockArgument(feedOp)) {
         oper = Pool;
@@ -3174,13 +3576,13 @@ private:
 
 /// Helper function to vectorize a LinalgOp with convolution semantics.
 // TODO: extend the generic vectorization to support windows and drop this.
-static FailureOr<Operation *>
-vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
-                     bool flatten1DDepthwiseConv) {
+static FailureOr<Operation *> vectorizeConvolution(
+    RewriterBase &rewriter, LinalgOp op, ArrayRef<int64_t> inputVecSizes,
+    ArrayRef<bool> inputScalableVecDims, bool flatten1DDepthwiseConv) {
   // The ConvolutionOpInterface gives us guarantees of existence for
-  // strides/dilations. However, we do not need to rely on those, we can simply
-  // use them if present, otherwise use the default and let the generic conv.
-  // matcher in the ConvGenerator succeed or fail.
+  // strides/dilations. However, we do not need to rely on those, we can
+  // simply use them if present, otherwise use the default and let the generic
+  // conv. matcher in the ConvGenerator succeed or fail.
   auto strides = op->getAttrOfType<DenseIntElementsAttr>("strides");
   auto dilations = op->getAttrOfType<DenseIntElementsAttr>("dilations");
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
@@ -3201,7 +3603,28 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp op,
   res = e.generateNcwPooling();
   if (succeeded(res))
     return res;
-  return e.generateDilatedConv(flatten1DDepthwiseConv);
+
+  // Only depthwise 1D NWC convs are left - these can be vectorized using masks
+  // and scalable vectors. Note that ATM the only dim that can be dynamic (i.e.
+  // masked/scalable) is the channel dim (i.e. the trailing dim).
+  uint64_t vecChDimSize = ShapedType::kDynamic;
+  bool vecChDimScalableFlag = false;
+  if (!inputVecSizes.empty()) {
+    // Only use the input vector size corresponding to the channel dim. Other
+    // vector dims will be inferred from the Ops.
+    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
+            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
+           "Not a 1D depthwise conv!");
+    size_t chDimIdx =
+        TypeSwitch<Operation *, size_t>(op)
+            .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
+            .Case<linalg::DepthwiseConv1DNcwCwOp>([](auto conv) { return 1; });
+
+    vecChDimSize = inputVecSizes[chDimIdx];
+    vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
+  }
+  return e.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
+                               flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {

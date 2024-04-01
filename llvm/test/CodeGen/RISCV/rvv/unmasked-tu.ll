@@ -6,10 +6,10 @@
 
 declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8(
   <vscale x 1 x i8>,
-  <vscale x 1 x i8>*,
+  ptr,
   iXLen);
 
-define <vscale x 1 x i8> @intrinsic_vle_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, iXLen %2) nounwind {
+define <vscale x 1 x i8> @intrinsic_vle_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, ptr %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vle_v_tu_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
@@ -18,7 +18,7 @@ define <vscale x 1 x i8> @intrinsic_vle_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> %0,
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     iXLen %2)
 
   ret <vscale x 1 x i8> %a
@@ -26,12 +26,12 @@ entry:
 
 declare <vscale x 1 x i8> @llvm.riscv.vlse(
   <vscale x 1 x i8>,
-  <vscale x 1 x i8>*,
+  ptr,
   iXLen,
   iXLen);
 
 
-define <vscale x 1 x i8> @intrinsic_vlse_v_tu(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, iXLen %2, iXLen %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_vlse_v_tu(<vscale x 1 x i8> %0, ptr %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vlse_v_tu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, tu, ma
@@ -40,7 +40,7 @@ define <vscale x 1 x i8> @intrinsic_vlse_v_tu(<vscale x 1 x i8> %0, <vscale x 1 
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vlse(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     iXLen %2,
     iXLen %3)
 
@@ -49,10 +49,10 @@ entry:
 
 declare { <vscale x 1 x i8>, iXLen } @llvm.riscv.vleff(
   <vscale x 1 x i8>,
-  <vscale x 1 x i8>*,
+  ptr,
   iXLen);
 
-define <vscale x 1 x i8> @intrinsic_vleff_v_tu(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, iXLen %2, iXLen* %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_vleff_v_tu(<vscale x 1 x i8> %0, ptr %1, iXLen %2, iXLen* %3) nounwind {
 ; RV32-LABEL: intrinsic_vleff_v_tu:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
@@ -71,7 +71,7 @@ define <vscale x 1 x i8> @intrinsic_vleff_v_tu(<vscale x 1 x i8> %0, <vscale x 1
 entry:
   %a = call { <vscale x 1 x i8>, iXLen } @llvm.riscv.vleff(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     iXLen %2)
   %b = extractvalue { <vscale x 1 x i8>, iXLen } %a, 0
   %c = extractvalue { <vscale x 1 x i8>, iXLen } %a, 1
@@ -81,11 +81,11 @@ entry:
 
 declare <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8(
   <vscale x 1 x i8>,
-  <vscale x 1 x i8>*,
+  ptr,
   <vscale x 1 x i8>,
   iXLen);
 
-define <vscale x 1 x i8> @intrinsic_vloxei_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8>* %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
+define <vscale x 1 x i8> @intrinsic_vloxei_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, ptr %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vloxei_v_tu_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
@@ -94,7 +94,7 @@ define <vscale x 1 x i8> @intrinsic_vloxei_v_tu_nxv1i8_nxv1i8(<vscale x 1 x i8> 
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8(
     <vscale x 1 x i8> %0,
-    <vscale x 1 x i8>* %1,
+    ptr %1,
     <vscale x 1 x i8> %2,
     iXLen %3)
 

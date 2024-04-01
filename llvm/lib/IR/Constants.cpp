@@ -35,6 +35,20 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+// As set of temporary options to help migrate how splats are represented.
+static cl::opt<bool> UseConstantIntForFixedLengthSplat(
+    "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantInt's native fixed-length vector splat support."));
+static cl::opt<bool> UseConstantFPForFixedLengthSplat(
+    "use-constant-fp-for-fixed-length-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantFP's native fixed-length vector splat support."));
+static cl::opt<bool> UseConstantIntForScalableSplat(
+    "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantInt's native scalable vector splat support."));
+static cl::opt<bool> UseConstantFPForScalableSplat(
+    "use-constant-fp-for-scalable-splat", cl::init(false), cl::Hidden,
+    cl::desc("Use ConstantFP's native scalable vector splat support."));
+
 //===----------------------------------------------------------------------===//
 //                              Constant Class
 //===----------------------------------------------------------------------===//
@@ -825,9 +839,11 @@ bool Constant::isManifestConstant() const {
 //                                ConstantInt
 //===----------------------------------------------------------------------===//
 
-ConstantInt::ConstantInt(IntegerType *Ty, const APInt &V)
+ConstantInt::ConstantInt(Type *Ty, const APInt &V)
     : ConstantData(Ty, ConstantIntVal), Val(V) {
-  assert(V.getBitWidth() == Ty->getBitWidth() && "Invalid constant for type");
+  assert(V.getBitWidth() ==
+             cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
+         "Invalid constant for type");
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -882,6 +898,26 @@ ConstantInt *ConstantInt::get(LLVMContext &Context, const APInt &V) {
     Slot.reset(new ConstantInt(ITy, V));
   }
   assert(Slot->getType() == IntegerType::get(Context, V.getBitWidth()));
+  return Slot.get();
+}
+
+// Get a ConstantInt vector with each lane set to the same APInt.
+ConstantInt *ConstantInt::get(LLVMContext &Context, ElementCount EC,
+                              const APInt &V) {
+  // Get an existing value or the insertion position.
+  std::unique_ptr<ConstantInt> &Slot =
+      Context.pImpl->IntSplatConstants[std::make_pair(EC, V)];
+  if (!Slot) {
+    IntegerType *ITy = IntegerType::get(Context, V.getBitWidth());
+    VectorType *VTy = VectorType::get(ITy, EC);
+    Slot.reset(new ConstantInt(VTy, V));
+  }
+
+#ifndef NDEBUG
+  IntegerType *ITy = IntegerType::get(Context, V.getBitWidth());
+  VectorType *VTy = VectorType::get(ITy, EC);
+  assert(Slot->getType() == VTy);
+#endif
   return Slot.get();
 }
 
@@ -1024,6 +1060,26 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
   return Slot.get();
 }
 
+// Get a ConstantFP vector with each lane set to the same APFloat.
+ConstantFP *ConstantFP::get(LLVMContext &Context, ElementCount EC,
+                            const APFloat &V) {
+  // Get an existing value or the insertion position.
+  std::unique_ptr<ConstantFP> &Slot =
+      Context.pImpl->FPSplatConstants[std::make_pair(EC, V)];
+  if (!Slot) {
+    Type *EltTy = Type::getFloatingPointTy(Context, V.getSemantics());
+    VectorType *VTy = VectorType::get(EltTy, EC);
+    Slot.reset(new ConstantFP(VTy, V));
+  }
+
+#ifndef NDEBUG
+  Type *EltTy = Type::getFloatingPointTy(Context, V.getSemantics());
+  VectorType *VTy = VectorType::get(EltTy, EC);
+  assert(Slot->getType() == VTy);
+#endif
+  return Slot.get();
+}
+
 Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
@@ -1036,7 +1092,7 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
 
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
-  assert(&V.getSemantics() == &Ty->getFltSemantics() &&
+  assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
 }
 
@@ -1356,11 +1412,13 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
+  bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
+  bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
 
-  if (isZero || isUndef) {
+  if (isZero || isUndef || isSplatFP || isSplatInt) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = isPoison = false;
+        isZero = isUndef = isPoison = isSplatFP = isSplatInt = false;
         break;
       }
   }
@@ -1371,6 +1429,12 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
     return PoisonValue::get(T);
   if (isUndef)
     return UndefValue::get(T);
+  if (isSplatFP)
+    return ConstantFP::get(C->getContext(), T->getElementCount(),
+                           cast<ConstantFP>(C)->getValue());
+  if (isSplatInt)
+    return ConstantInt::get(C->getContext(), T->getElementCount(),
+                            cast<ConstantInt>(C)->getValue());
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
   // the element type is compatible with ConstantDataVector.  If so, use it.
@@ -1384,6 +1448,16 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   if (!EC.isScalable()) {
+    // Maintain special handling of zero.
+    if (!V->isNullValue()) {
+      if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
+        return ConstantInt::get(V->getContext(), EC,
+                                cast<ConstantInt>(V)->getValue());
+      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
+        return ConstantFP::get(V->getContext(), EC,
+                               cast<ConstantFP>(V)->getValue());
+    }
+
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
     if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
@@ -1392,6 +1466,16 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
     SmallVector<Constant *, 32> Elts(EC.getKnownMinValue(), V);
     return get(Elts);
+  }
+
+  // Maintain special handling of zero.
+  if (!V->isNullValue()) {
+    if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
+      return ConstantInt::get(V->getContext(), EC,
+                              cast<ConstantInt>(V)->getValue());
+    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
+      return ConstantFP::get(V->getContext(), EC,
+                             cast<ConstantFP>(V)->getValue());
   }
 
   Type *VTy = VectorType::get(V->getType(), EC);
@@ -1484,7 +1568,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRangeIndex(), OnlyIfReducedTy);
+        GEPO->isInBounds(), GEPO->getInRange(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -2265,17 +2349,16 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
-                                         std::optional<unsigned> InRangeIndex,
+                                         std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC =
-          ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
-    return FC;          // Fold a few common cases.
+  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InBounds, InRange, Idxs))
+    return FC; // Fold a few common cases.
 
-  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) &&
-         "GEP indices invalid!");;
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+  ;
 
   // Get the result type of the getelementptr!
   Type *ReqTy = GetElementPtrInst::getGEPReturnType(C, Idxs);
@@ -2308,10 +2391,9 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   }
 
   unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
-  if (InRangeIndex && *InRangeIndex < 63)
-    SubClassOptionalData |= (*InRangeIndex + 1) << 1;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, std::nullopt, Ty);
+                                SubClassOptionalData, std::nullopt, Ty,
+                                InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
@@ -2438,10 +2520,10 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
 }
 
-Constant *ConstantExpr::getNeg(Constant *C, bool HasNUW, bool HasNSW) {
+Constant *ConstantExpr::getNeg(Constant *C, bool HasNSW) {
   assert(C->getType()->isIntOrIntVectorTy() &&
          "Cannot NEG a nonintegral value!");
-  return getSub(ConstantInt::get(C->getType(), 0), C, HasNUW, HasNSW);
+  return getSub(ConstantInt::get(C->getType(), 0), C, /*HasNUW=*/false, HasNSW);
 }
 
 Constant *ConstantExpr::getNot(Constant *C) {
@@ -2607,13 +2689,15 @@ const char *ConstantExpr::getOpcodeName() const {
 }
 
 GetElementPtrConstantExpr::GetElementPtrConstantExpr(
-    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy)
+    Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList, Type *DestTy,
+    std::optional<ConstantRange> InRange)
     : ConstantExpr(DestTy, Instruction::GetElementPtr,
                    OperandTraits<GetElementPtrConstantExpr>::op_end(this) -
                        (IdxList.size() + 1),
                    IdxList.size() + 1),
       SrcElementTy(SrcElementTy),
-      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)) {
+      ResElementTy(GetElementPtrInst::getIndexedType(SrcElementTy, IdxList)),
+      InRange(std::move(InRange)) {
   Op<0>() = C;
   Use *OperandList = getOperandList();
   for (unsigned i = 0, E = IdxList.size(); i != E; ++i)
@@ -2626,6 +2710,10 @@ Type *GetElementPtrConstantExpr::getSourceElementType() const {
 
 Type *GetElementPtrConstantExpr::getResultElementType() const {
   return ResElementTy;
+}
+
+std::optional<ConstantRange> GetElementPtrConstantExpr::getInRange() const {
+  return InRange;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3219,7 +3307,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
       NewOps, this, From, To, NumUpdated, OperandNo);
 }
 
-Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
+Instruction *ConstantExpr::getAsInstruction() const {
   SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
@@ -3238,32 +3326,31 @@ Instruction *ConstantExpr::getAsInstruction(Instruction *InsertBefore) const {
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return CastInst::Create((Instruction::CastOps)getOpcode(), Ops[0],
-                            getType(), "", InsertBefore);
+                            getType(), "");
   case Instruction::InsertElement:
-    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "", InsertBefore);
+    return InsertElementInst::Create(Ops[0], Ops[1], Ops[2], "");
   case Instruction::ExtractElement:
-    return ExtractElementInst::Create(Ops[0], Ops[1], "", InsertBefore);
+    return ExtractElementInst::Create(Ops[0], Ops[1], "");
   case Instruction::ShuffleVector:
-    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "",
-                                 InsertBefore);
+    return new ShuffleVectorInst(Ops[0], Ops[1], getShuffleMask(), "");
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
     if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(
-          GO->getSourceElementType(), Ops[0], Ops.slice(1), "", InsertBefore);
+      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
+                                               Ops[0], Ops.slice(1), "");
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1), "", InsertBefore);
+                                     Ops.slice(1), "");
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
     return CmpInst::Create((Instruction::OtherOps)getOpcode(),
                            (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
-                           "", InsertBefore);
+                           "");
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(
-        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "", InsertBefore);
+        (Instruction::BinaryOps)getOpcode(), Ops[0], Ops[1], "");
     if (isa<OverflowingBinaryOperator>(BO)) {
       BO->setHasNoUnsignedWrap(SubclassOptionalData &
                                OverflowingBinaryOperator::NoUnsignedWrap);

@@ -54,6 +54,12 @@ func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
+// expected-error@+1 {{Batch lvlType can only be leading levels}}
+#a = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : batch, d1 : compressed, d2: batch)}>
+func.func private @non_leading_batch(%arg0: tensor<?x?x?i32, #a>) -> ()
+
+// -----
+
 // expected-error@+1 {{use of undeclared identifier}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense, d1 : compressed)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
@@ -234,6 +240,22 @@ func.func private @too_many_lvl_decl(%arg0: tensor<?x?xf64, #TooManyLvlDecl>) {
 
 // -----
 
+// expected-error@+1{{expected all singleton lvlTypes stored in the same memory layout (SoA vs AoS).}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(soa, nonunique), d2 : singleton)
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
+// expected-error@+1{{SoA is only applicable to singleton lvlTypes.}}
+#COO_SoA = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : compressed(nonunique, soa), d1 : singleton(soa))
+}>
+func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
+
+// -----
+
 // expected-error@+2 {{use of undeclared identifier 'l1'}}
 #TooFewLvlDecl = #sparse_tensor.encoding<{
   map = {l0} (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)
@@ -313,5 +335,111 @@ func.func private @BSR(%arg0: tensor<?x?xf64, #BSR>) {
   )
 }>
 func.func private @BSR_explicit(%arg0: tensor<?x?xf64, #BSR_explicit>) {
+  return
+}
+
+// -----
+
+// expected-error@+6 {{expected structured size to be >= 0}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 4 : dense,
+    j            : dense,
+    k mod 4      : structured[-2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+6 {{expected n <= m in n_out_of_m}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 4 : dense,
+    j            : dense,
+    k mod 4      : structured[5, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected all dense lvlTypes before a n_out_of_m level}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 4 : compressed,
+    j            : dense,
+    k mod 4      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected n_out_of_m to be the last level type}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 4 : structured[2, 4],
+    j            : dense,
+    k mod 4      : compressed
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected 1xm block structure for n_out_of_m level}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 2 : dense,
+    j            : dense,
+    k mod 4      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected coeffiencts of Affine expressions to be equal to m of n_out_of_m level}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i            : dense,
+    k floordiv 2 : dense,
+    j            : dense,
+    k mod 2      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected only one blocked level with the same coefficients}}
+#NOutOfM = #sparse_tensor.encoding<{
+  map = ( i, j, k ) ->
+  ( i floordiv 2 : dense,
+    i mod 2      : dense,
+    j            : dense,
+    k floordiv 4 : dense,
+    k mod 4      : structured[2, 4]
+  )
+}>
+func.func private @NOutOfM(%arg0: tensor<?x?x?xf64, #NOutOfM>) {
   return
 }

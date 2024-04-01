@@ -85,8 +85,14 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       getCodeModel() == CodeModel::Large) {
     if (!GV->getValueType()->isSized())
       return true;
+    // Linker defined start/stop symbols can point to arbitrary points in the
+    // binary, so treat them as large.
+    if (GV->isDeclaration() && (GV->getName() == "__ehdr_start" ||
+                                GV->getName().starts_with("__start_") ||
+                                GV->getName().starts_with("__stop_")))
+      return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
-    uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
 
@@ -154,8 +160,7 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   llvm_unreachable("invalid TLS model");
 }
 
-bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
-                                         const GlobalValue *GV) const {
+bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
   const Triple &TT = getTargetTriple();
   Reloc::Model RM = getRelocationModel();
 
@@ -213,12 +218,13 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
 }
 
 bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
+bool TargetMachine::useTLSDESC() const { return Options.EnableTLSDESC; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
   Reloc::Model RM = getRelocationModel();
   bool IsSharedLibrary = RM == Reloc::PIC_ && !IsPIE;
-  bool IsLocal = shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = shouldAssumeDSOLocal(GV);
 
   TLSModel::Model Model;
   if (IsSharedLibrary) {

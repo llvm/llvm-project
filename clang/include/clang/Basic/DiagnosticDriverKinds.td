@@ -57,6 +57,8 @@ def warn_drv_avr_stdlib_not_linked: Warning<
   InGroup<AVRRtlibLinkingQuirks>;
 def err_drv_cuda_bad_gpu_arch : Error<"unsupported CUDA gpu architecture: %0">;
 def err_drv_offload_bad_gpu_arch : Error<"unsupported %0 gpu architecture: %1">;
+def err_drv_offload_missing_gpu_arch : Error<
+  "Must pass in an explicit %0 gpu architecture to '%1'">;
 def err_drv_no_cuda_installation : Error<
   "cannot find CUDA installation; provide its path via '--cuda-path', or pass "
   "'-nocudainc' to build without CUDA includes">;
@@ -91,6 +93,10 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to "
   "SPIR-V%select{| unless %1 is given}0.">;
 
+// TODO: Remove when COV6 is fully supported by ROCm.
+def warn_drv_amdgpu_cov6: Warning<
+  "code object v6 is still in development and not ready for production use yet;"
+  " use at your own risk">;
 def err_drv_undetermined_gpu_arch : Error<
   "cannot determine %0 architecture: %1; consider passing it via "
   "'%2'">;
@@ -581,6 +587,9 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
+def warn_drv_unsupported_tocdata: Warning<
+  "ignoring '-mtocdata' as it is only supported for -mcmodel=small">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_sdata : Warning<
   "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
   InGroup<OptionIgnored>;
@@ -687,7 +696,6 @@ def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
-def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
 def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;
 
@@ -745,7 +753,8 @@ def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
   "%select{shader model|Vulkan environment|shader stage}0 is required as %select{OS|environment}1 in target '%2' for HLSL code generation">;
-
+def err_drv_hlsl_16bit_types_unsupported: Error<
+  "'%0' option requires target HLSL Version >= 2018%select{| and shader model >= 6.2}1, but HLSL Version is '%2'%select{| and shader model is '%3'}1">;
 def err_drv_hlsl_bad_shader_unsupported : Error<
   "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "

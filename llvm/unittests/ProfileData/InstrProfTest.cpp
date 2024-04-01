@@ -366,7 +366,8 @@ IndexedMemProfRecord makeRecord(
     const MemInfoBlock &Block = MemInfoBlock()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &Frames : AllocFrames)
-    MR.AllocSites.emplace_back(Frames, Block);
+    MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
+                               Block);
   for (const auto &Frames : CallSiteFrames)
     MR.CallSites.push_back(Frames);
   return MR;
@@ -561,8 +562,7 @@ TEST_F(InstrProfTest, test_irpgo_function_name) {
     auto IRPGOFuncName = getIRPGOFuncName(*F);
     EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
 
-    auto [Filename, ParsedIRPGOFuncName] =
-        getParsedIRPGOFuncName(IRPGOFuncName);
+    auto [Filename, ParsedIRPGOFuncName] = getParsedIRPGOName(IRPGOFuncName);
     StringRef ExpectedParsedIRPGOFuncName = IRPGOFuncName;
     if (ExpectedParsedIRPGOFuncName.consume_front("MyModule.cpp;")) {
       EXPECT_EQ(Filename, "MyModule.cpp");
@@ -733,36 +733,34 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // Test the number of instrumented vtable sites and the number of profiled
   // values at each site.
-  ASSERT_EQ(2U, R->getNumValueSites(IPVK_VTableTarget));
-  EXPECT_EQ(3U, R->getNumValueDataForSite(IPVK_VTableTarget, 0));
-  EXPECT_EQ(2U, R->getNumValueDataForSite(IPVK_VTableTarget, 1));
+  ASSERT_EQ(R->getNumValueSites(IPVK_VTableTarget), 2U);
+  EXPECT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 0), 3U);
+  EXPECT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 1), 2U);
 
   // First indirect site.
   {
     uint64_t TotalC;
-    std::unique_ptr<InstrProfValueData[]> VD =
-        R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
+    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
 
-    EXPECT_EQ(3U * getProfWeight(), VD[0].Count);
-    EXPECT_EQ(2U * getProfWeight(), VD[1].Count);
-    EXPECT_EQ(1U * getProfWeight(), VD[2].Count);
-    EXPECT_EQ(6U * getProfWeight(), TotalC);
+    EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
+    EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
+    EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
+    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
-    EXPECT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
-    EXPECT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
-    EXPECT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
+    EXPECT_STREQ((const char *)VD[0].Value, "callee3");
+    EXPECT_STREQ((const char *)VD[1].Value, "callee2");
+    EXPECT_STREQ((const char *)VD[2].Value, "callee1");
   }
 
   // First vtable site.
   {
     uint64_t TotalC;
-    std::unique_ptr<InstrProfValueData[]> VD =
-        R->getValueForSite(IPVK_VTableTarget, 0, &TotalC);
+    auto VD = R->getValueForSite(IPVK_VTableTarget, 0, &TotalC);
 
-    EXPECT_EQ(3U * getProfWeight(), VD[0].Count);
-    EXPECT_EQ(2U * getProfWeight(), VD[1].Count);
-    EXPECT_EQ(1U * getProfWeight(), VD[2].Count);
-    EXPECT_EQ(6U * getProfWeight(), TotalC);
+    EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
+    EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
+    EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
+    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable2));
@@ -772,12 +770,11 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
   // Second vtable site.
   {
     uint64_t TotalC;
-    std::unique_ptr<InstrProfValueData[]> VD =
-        R->getValueForSite(IPVK_VTableTarget, 1, &TotalC);
+    auto VD = R->getValueForSite(IPVK_VTableTarget, 1, &TotalC);
 
-    EXPECT_EQ(2U * getProfWeight(), VD[0].Count);
-    EXPECT_EQ(1U * getProfWeight(), VD[1].Count);
-    EXPECT_EQ(3U * getProfWeight(), TotalC);
+    EXPECT_EQ(VD[0].Count, 2U * getProfWeight());
+    EXPECT_EQ(VD[1].Count, 1U * getProfWeight());
+    EXPECT_EQ(TotalC, 3U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable2));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable1));
@@ -999,50 +996,46 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
   ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
   ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 4));
   // For vtables.
-  ASSERT_EQ(3U, R->getNumValueSites(IPVK_VTableTarget));
-  ASSERT_EQ(4U, R->getNumValueDataForSite(IPVK_VTableTarget, 0));
-  ASSERT_EQ(4U, R->getNumValueDataForSite(IPVK_VTableTarget, 1));
-  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_VTableTarget, 2));
+  ASSERT_EQ(R->getNumValueSites(IPVK_VTableTarget), 3U);
+  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 0), 4U);
+  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
+  ASSERT_EQ(R->getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
 
   // Test the merged values for indirect calls.
   {
-    std::unique_ptr<InstrProfValueData[]> VD =
-        R->getValueForSite(IPVK_IndirectCallTarget, 0);
-    EXPECT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee2"));
-    EXPECT_EQ(7U, VD[0].Count);
-    EXPECT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee3"));
-    EXPECT_EQ(6U, VD[1].Count);
-    EXPECT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee4"));
-    EXPECT_EQ(4U, VD[2].Count);
-    EXPECT_EQ(StringRef((const char *)VD[3].Value, 7), StringRef("callee1"));
-    EXPECT_EQ(1U, VD[3].Count);
+    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0);
+    EXPECT_STREQ((const char *)VD[0].Value, "callee2");
+    EXPECT_EQ(VD[0].Count, 7U);
+    EXPECT_STREQ((const char *)VD[1].Value, "callee3");
+    EXPECT_EQ(VD[1].Count, 6U);
+    EXPECT_STREQ((const char *)VD[2].Value, "callee4");
+    EXPECT_EQ(VD[2].Count, 4U);
+    EXPECT_STREQ((const char *)VD[3].Value, "callee1");
+    EXPECT_EQ(VD[3].Count, 1U);
 
-    std::unique_ptr<InstrProfValueData[]> VD_2(
-        R->getValueForSite(IPVK_IndirectCallTarget, 2));
-    EXPECT_EQ(StringRef((const char *)VD_2[0].Value, 7), StringRef("callee3"));
-    EXPECT_EQ(6U, VD_2[0].Count);
-    EXPECT_EQ(StringRef((const char *)VD_2[1].Value, 7), StringRef("callee4"));
-    EXPECT_EQ(4U, VD_2[1].Count);
-    EXPECT_EQ(StringRef((const char *)VD_2[2].Value, 7), StringRef("callee2"));
-    EXPECT_EQ(3U, VD_2[2].Count);
-    EXPECT_EQ(StringRef((const char *)VD_2[3].Value, 7), StringRef("callee1"));
-    EXPECT_EQ(1U, VD_2[3].Count);
+    auto VD_2(R->getValueForSite(IPVK_IndirectCallTarget, 2));
+    EXPECT_STREQ((const char *)VD_2[0].Value, "callee3");
+    EXPECT_EQ(VD_2[0].Count, 6U);
+    EXPECT_STREQ((const char *)VD_2[1].Value, "callee4");
+    EXPECT_EQ(VD_2[1].Count, 4U);
+    EXPECT_STREQ((const char *)VD_2[2].Value, "callee2");
+    EXPECT_EQ(VD_2[2].Count, 3U);
+    EXPECT_STREQ((const char *)VD_2[3].Value, "callee1");
+    EXPECT_EQ(VD_2[3].Count, 1U);
 
-    std::unique_ptr<InstrProfValueData[]> VD_3(
-        R->getValueForSite(IPVK_IndirectCallTarget, 3));
-    EXPECT_EQ(StringRef((const char *)VD_3[0].Value, 7), StringRef("callee8"));
-    EXPECT_EQ(2U, VD_3[0].Count);
-    EXPECT_EQ(StringRef((const char *)VD_3[1].Value, 7), StringRef("callee7"));
-    EXPECT_EQ(1U, VD_3[1].Count);
+    auto VD_3(R->getValueForSite(IPVK_IndirectCallTarget, 3));
+    EXPECT_STREQ((const char *)VD_3[0].Value, "callee8");
+    EXPECT_EQ(VD_3[0].Count, 2U);
+    EXPECT_STREQ((const char *)VD_3[1].Value, "callee7");
+    EXPECT_EQ(VD_3[1].Count, 1U);
 
-    std::unique_ptr<InstrProfValueData[]> VD_4(
-        R->getValueForSite(IPVK_IndirectCallTarget, 4));
-    EXPECT_EQ(StringRef((const char *)VD_4[0].Value, 7), StringRef("callee3"));
-    EXPECT_EQ(6U, VD_4[0].Count);
-    EXPECT_EQ(StringRef((const char *)VD_4[1].Value, 7), StringRef("callee2"));
-    EXPECT_EQ(4U, VD_4[1].Count);
-    EXPECT_EQ(StringRef((const char *)VD_4[2].Value, 7), StringRef("callee1"));
-    EXPECT_EQ(2U, VD_4[2].Count);
+    auto VD_4(R->getValueForSite(IPVK_IndirectCallTarget, 4));
+    EXPECT_STREQ((const char *)VD_4[0].Value, "callee3");
+    EXPECT_EQ(VD_4[0].Count, 6U);
+    EXPECT_STREQ((const char *)VD_4[1].Value, "callee2");
+    EXPECT_EQ(VD_4[1].Count, 4U);
+    EXPECT_STREQ((const char *)VD_4[2].Value, "callee1");
+    EXPECT_EQ(VD_4[2].Count, 2U);
   }
 
   // Test the merged values for vtables
@@ -1281,55 +1274,54 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   std::unique_ptr<InstrProfValueData[]> VD_0(
       Record.getValueForSite(IPVK_IndirectCallTarget, 0));
   llvm::sort(&VD_0[0], &VD_0[5], Cmp);
-  EXPECT_EQ(StringRef((const char *)VD_0[0].Value, 7), StringRef("callee2"));
+  EXPECT_STREQ((const char *)VD_0[0].Value, "callee2");
   EXPECT_EQ(1000U, VD_0[0].Count);
-  EXPECT_EQ(StringRef((const char *)VD_0[1].Value, 7), StringRef("callee3"));
+  EXPECT_STREQ((const char *)VD_0[1].Value, "callee3");
   EXPECT_EQ(500U, VD_0[1].Count);
-  EXPECT_EQ(StringRef((const char *)VD_0[2].Value, 7), StringRef("callee1"));
+  EXPECT_STREQ((const char *)VD_0[2].Value, "callee1");
   EXPECT_EQ(400U, VD_0[2].Count);
-  EXPECT_EQ(StringRef((const char *)VD_0[3].Value, 7), StringRef("callee4"));
+  EXPECT_STREQ((const char *)VD_0[3].Value, "callee4");
   EXPECT_EQ(300U, VD_0[3].Count);
-  EXPECT_EQ(StringRef((const char *)VD_0[4].Value, 7), StringRef("callee5"));
+  EXPECT_STREQ((const char *)VD_0[4].Value, "callee5");
   EXPECT_EQ(100U, VD_0[4].Count);
 
   std::unique_ptr<InstrProfValueData[]> VD_1(
       Record.getValueForSite(IPVK_IndirectCallTarget, 1));
   llvm::sort(&VD_1[0], &VD_1[4], Cmp);
-  EXPECT_EQ(StringRef((const char *)VD_1[0].Value, 7), StringRef("callee2"));
-  EXPECT_EQ(2500U, VD_1[0].Count);
-  EXPECT_EQ(StringRef((const char *)VD_1[1].Value, 7), StringRef("callee1"));
-  EXPECT_EQ(1300U, VD_1[1].Count);
-  EXPECT_EQ(StringRef((const char *)VD_1[2].Value, 7), StringRef("callee3"));
-  EXPECT_EQ(1000U, VD_1[2].Count);
-  EXPECT_EQ(StringRef((const char *)VD_1[3].Value, 7), StringRef("callee5"));
-  EXPECT_EQ(800U, VD_1[3].Count);
+  EXPECT_STREQ((const char *)VD_1[0].Value, "callee2");
+  EXPECT_EQ(VD_1[0].Count, 2500U);
+  EXPECT_STREQ((const char *)VD_1[1].Value, "callee1");
+  EXPECT_EQ(VD_1[1].Count, 1300U);
+  EXPECT_STREQ((const char *)VD_1[2].Value, "callee3");
+  EXPECT_EQ(VD_1[2].Count, 1000U);
+  EXPECT_STREQ((const char *)VD_1[3].Value, "callee5");
+  EXPECT_EQ(VD_1[3].Count, 800U);
 
   std::unique_ptr<InstrProfValueData[]> VD_2(
       Record.getValueForSite(IPVK_IndirectCallTarget, 2));
   llvm::sort(&VD_2[0], &VD_2[3], Cmp);
-  EXPECT_EQ(StringRef((const char *)VD_2[0].Value, 7), StringRef("callee4"));
-  EXPECT_EQ(5500U, VD_2[0].Count);
-  EXPECT_EQ(StringRef((const char *)VD_2[1].Value, 7), StringRef("callee3"));
-  EXPECT_EQ(1000U, VD_2[1].Count);
-  EXPECT_EQ(StringRef((const char *)VD_2[2].Value, 7), StringRef("callee6"));
-  EXPECT_EQ(800U, VD_2[2].Count);
+  EXPECT_STREQ((const char *)VD_2[0].Value, "callee4");
+  EXPECT_EQ(VD_2[0].Count, 5500U);
+  EXPECT_STREQ((const char *)VD_2[1].Value, "callee3");
+  EXPECT_EQ(VD_2[1].Count, 1000U);
+  EXPECT_STREQ((const char *)VD_2[2].Value, "callee6");
+  EXPECT_EQ(VD_2[2].Count, 800U);
 
   std::unique_ptr<InstrProfValueData[]> VD_3(
       Record.getValueForSite(IPVK_IndirectCallTarget, 3));
   llvm::sort(&VD_3[0], &VD_3[2], Cmp);
-  EXPECT_EQ(StringRef((const char *)VD_3[0].Value, 7), StringRef("callee3"));
-  EXPECT_EQ(2000U, VD_3[0].Count);
-  EXPECT_EQ(StringRef((const char *)VD_3[1].Value, 7), StringRef("callee2"));
-  EXPECT_EQ(1800U, VD_3[1].Count);
+  EXPECT_STREQ((const char *)VD_3[0].Value, "callee3");
+  EXPECT_EQ(VD_3[0].Count, 2000U);
+  EXPECT_STREQ((const char *)VD_3[1].Value, "callee2");
+  EXPECT_EQ(VD_3[1].Count, 1800U);
 
-  ASSERT_EQ(4U, Record.getNumValueSites(IPVK_VTableTarget));
-  ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_VTableTarget, 0));
-  ASSERT_EQ(4U, Record.getNumValueDataForSite(IPVK_VTableTarget, 1));
-  ASSERT_EQ(3U, Record.getNumValueDataForSite(IPVK_VTableTarget, 2));
-  ASSERT_EQ(2U, Record.getNumValueDataForSite(IPVK_VTableTarget, 3));
+  ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
+  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
+  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
+  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
+  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
 
-  std::unique_ptr<InstrProfValueData[]> VD0(
-      Record.getValueForSite(IPVK_VTableTarget, 0));
+  auto VD0(Record.getValueForSite(IPVK_VTableTarget, 0));
   llvm::sort(&VD0[0], &VD0[5], Cmp);
   EXPECT_EQ(VD0[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD0[0].Count, 1000U);
@@ -1342,8 +1334,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD0[4].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD0[4].Count, 100U);
 
-  std::unique_ptr<InstrProfValueData[]> VD1(
-      Record.getValueForSite(IPVK_VTableTarget, 1));
+  auto VD1(Record.getValueForSite(IPVK_VTableTarget, 1));
   llvm::sort(&VD1[0], &VD1[4], Cmp);
   EXPECT_EQ(VD1[0].Value, getCalleeAddress(vtable2));
   EXPECT_EQ(VD1[0].Count, 2500U);
@@ -1354,8 +1345,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD1[3].Value, getCalleeAddress(vtable5));
   EXPECT_EQ(VD1[3].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD2(
-      Record.getValueForSite(IPVK_VTableTarget, 2));
+  auto VD2(Record.getValueForSite(IPVK_VTableTarget, 2));
   llvm::sort(&VD2[0], &VD2[3], Cmp);
   EXPECT_EQ(VD2[0].Value, getCalleeAddress(vtable4));
   EXPECT_EQ(VD2[0].Count, 5500U);
@@ -1364,8 +1354,7 @@ TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   EXPECT_EQ(VD2[2].Value, getCalleeAddress(vtable6));
   EXPECT_EQ(VD2[2].Count, 800U);
 
-  std::unique_ptr<InstrProfValueData[]> VD3(
-      Record.getValueForSite(IPVK_VTableTarget, 3));
+  auto VD3(Record.getValueForSite(IPVK_VTableTarget, 3));
   llvm::sort(&VD3[0], &VD3[2], Cmp);
   EXPECT_EQ(VD3[0].Value, getCalleeAddress(vtable3));
   EXPECT_EQ(VD3[0].Count, 2000U);
@@ -1393,6 +1382,9 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   auto getVTableEndAddr = [](const uint64_t *vtable) -> uint64_t {
     return uint64_t(vtable) + 16;
   };
+  auto getVTableMidAddr = [](const uint64_t *vtable) -> uint64_t {
+    return uint64_t(vtable) + 8;
+  };
   // vtable1, vtable2, vtable3, vtable4 get mapped; vtable5, vtable6 are not
   // mapped.
   Symtab.mapVTableAddress(getVTableStartAddr(vtable1),
@@ -1407,42 +1399,51 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
   VPData->deserializeTo(Record, &Symtab);
 
   // Now read data from Record and sanity check the data
-  ASSERT_EQ(6U, Record.getNumValueSites(IPVK_IndirectCallTarget));
-  ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  ASSERT_EQ(Record.getNumValueSites(IPVK_IndirectCallTarget), 6U);
+  ASSERT_EQ(Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0), 5U);
+
+  // Look up the value correpsonding to the middle of a vtable in symtab and
+  // test that it's the hash of the name.
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable1)),
+            MD5Hash("vtable1"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable2)),
+            MD5Hash("vtable2"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable3)),
+            MD5Hash("vtable3"));
+  EXPECT_EQ(Symtab.getVTableHashFromAddress(getVTableMidAddr(vtable4)),
+            MD5Hash("vtable4"));
 
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
     return VD1.Count > VD2.Count;
   };
-  std::unique_ptr<InstrProfValueData[]> VD_0(
-      Record.getValueForSite(IPVK_IndirectCallTarget, 0));
+  auto VD_0(Record.getValueForSite(IPVK_IndirectCallTarget, 0));
   llvm::sort(&VD_0[0], &VD_0[5], Cmp);
   ASSERT_EQ(VD_0[0].Value, 0x2000ULL);
-  ASSERT_EQ(1000U, VD_0[0].Count);
+  ASSERT_EQ(VD_0[0].Count, 1000U);
   ASSERT_EQ(VD_0[1].Value, 0x3000ULL);
-  ASSERT_EQ(500U, VD_0[1].Count);
+  ASSERT_EQ(VD_0[1].Count, 500U);
   ASSERT_EQ(VD_0[2].Value, 0x1000ULL);
-  ASSERT_EQ(400U, VD_0[2].Count);
+  ASSERT_EQ(VD_0[2].Count, 400U);
 
   // callee5 does not have a mapped value -- default to 0.
   ASSERT_EQ(VD_0[4].Value, 0ULL);
 
   // Sanity check the vtable value data
-  ASSERT_EQ(4U, Record.getNumValueSites(IPVK_VTableTarget));
+  ASSERT_EQ(Record.getNumValueSites(IPVK_VTableTarget), 4U);
 
   {
     // The first vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 0));
-    ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_VTableTarget, 0));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 0));
+    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 0), 5U);
     llvm::sort(&VD[0], &VD[5], Cmp);
-    EXPECT_EQ(1000U, VD[0].Count);
+    EXPECT_EQ(VD[0].Count, 1000U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable2"));
-    EXPECT_EQ(500U, VD[1].Count);
+    EXPECT_EQ(VD[1].Count, 500U);
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable3"));
     EXPECT_EQ(VD[2].Value, MD5Hash("vtable1"));
-    EXPECT_EQ(400U, VD[2].Count);
+    EXPECT_EQ(VD[2].Count, 400U);
     EXPECT_EQ(VD[3].Value, MD5Hash("vtable4"));
-    EXPECT_EQ(300U, VD[3].Count);
+    EXPECT_EQ(VD[3].Count, 300U);
 
     // vtable5 isn't mapped -- default to 0.
     EXPECT_EQ(VD[4].Value, 0U);
@@ -1451,46 +1452,43 @@ TEST(ValueProfileReadWriteTest, symtab_mapping) {
 
   {
     // The second vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 1));
-    ASSERT_EQ(4, Record.getNumValueDataForSite(IPVK_VTableTarget, 1));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 1));
+    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 1), 4U);
     llvm::sort(&VD[0], &VD[4], Cmp);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable2"));
-    EXPECT_EQ(2500U, VD[0].Count);
+    EXPECT_EQ(VD[0].Count, 2500U);
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable1"));
-    EXPECT_EQ(1300U, VD[1].Count);
+    EXPECT_EQ(VD[1].Count, 1300U);
 
     EXPECT_EQ(VD[2].Value, MD5Hash("vtable3"));
-    EXPECT_EQ(1000U, VD[2].Count);
+    EXPECT_EQ(VD[2].Count, 1000U);
     // vtable5 isn't mapped -- default to 0.
     EXPECT_EQ(VD[3].Value, 0U);
-    EXPECT_EQ(800U, VD[3].Count);
+    EXPECT_EQ(VD[3].Count, 800U);
   }
 
   {
     // The third vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 2));
-    ASSERT_EQ(3, Record.getNumValueDataForSite(IPVK_VTableTarget, 2));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 2));
+    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 2), 3U);
     llvm::sort(&VD[0], &VD[3], Cmp);
-    EXPECT_EQ(5500U, VD[0].Count);
+    EXPECT_EQ(VD[0].Count, 5500U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable4"));
-    EXPECT_EQ(1000U, VD[1].Count);
+    EXPECT_EQ(VD[1].Count, 1000U);
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable3"));
     // vtable6 isn't mapped -- default to 0.
     EXPECT_EQ(VD[2].Value, 0U);
-    EXPECT_EQ(800U, VD[2].Count);
+    EXPECT_EQ(VD[2].Count, 800U);
   }
 
   {
     // The fourth vtable site.
-    std::unique_ptr<InstrProfValueData[]> VD(
-        Record.getValueForSite(IPVK_VTableTarget, 3));
-    ASSERT_EQ(2, Record.getNumValueDataForSite(IPVK_VTableTarget, 3));
+    auto VD(Record.getValueForSite(IPVK_VTableTarget, 3));
+    ASSERT_EQ(Record.getNumValueDataForSite(IPVK_VTableTarget, 3), 2U);
     llvm::sort(&VD[0], &VD[2], Cmp);
-    EXPECT_EQ(2000U, VD[0].Count);
+    EXPECT_EQ(VD[0].Count, 2000U);
     EXPECT_EQ(VD[0].Value, MD5Hash("vtable3"));
-    EXPECT_EQ(1800U, VD[1].Count);
+    EXPECT_EQ(VD[1].Count, 1800U);
     EXPECT_EQ(VD[1].Value, MD5Hash("vtable2"));
   }
 }
@@ -1618,14 +1616,13 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
     std::string IRPGOName = getIRPGOFuncName(*F);
     auto IRPGOFuncName =
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
-    EXPECT_EQ(StringRef(IRPGOName), IRPGOFuncName);
-    EXPECT_EQ(StringRef(Funcs[I]),
-              getParsedIRPGOFuncName(IRPGOFuncName).second);
+    EXPECT_EQ(IRPGOName, IRPGOFuncName);
+    EXPECT_EQ(Funcs[I], getParsedIRPGOName(IRPGOFuncName).second);
     // Ensure we can still read this old record name.
     std::string PGOName = getPGOFuncName(*F);
     auto PGOFuncName =
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(PGOName));
-    EXPECT_EQ(StringRef(PGOName), PGOFuncName);
+    EXPECT_EQ(PGOName, PGOFuncName);
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
   }
 }

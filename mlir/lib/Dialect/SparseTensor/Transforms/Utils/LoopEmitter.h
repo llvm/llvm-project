@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -84,14 +85,17 @@ public:
   /// `isSparseOut` indicates that the sparse output tensor is empty,
   /// so the loop emitter will generate loops over it according to the
   /// level-sizes.
-  void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
-                  bool hasOutput = false, bool isSparseOut = false,
-                  unsigned numLoops = 0, DependentLvlGetter getter = nullptr);
+  void
+  initialize(ValueRange tensors, StringAttr loopTag = nullptr,
+             bool hasOutput = false, bool isSparseOut = false,
+             unsigned numLoops = 0, DependentLvlGetter getter = nullptr,
+             SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
-  explicit LoopEmitter(ValueRange tensors, StringAttr loopTag = nullptr,
-                       bool hasOutput = false, bool isSparseOut = false,
-                       unsigned numLoops = 0,
-                       DependentLvlGetter getter = nullptr);
+  explicit LoopEmitter(
+      ValueRange tensors, StringAttr loopTag = nullptr, bool hasOutput = false,
+      bool isSparseOut = false, unsigned numLoops = 0,
+      DependentLvlGetter getter = nullptr,
+      SparseEmitStrategy emitStrategy = SparseEmitStrategy::kFunctional);
 
   /// Starts a loop emitting session by generating all the buffers needed
   /// for iterating over the tensors.
@@ -124,21 +128,10 @@ public:
   /// Exits the current loop sequence, this will reset universal index to 0.
   void exitCurrentLoopSeq(OpBuilder &builder, Location loc);
 
-  /// Enters a loop that tries to locate a coordinates in a sparse level based
-  /// on the value evaluated by the provided affine expression.
-  /// DEPRECATED: affine index expression should be handled by index reduction
-  /// loop, filter loop-based solution is slow.
-  Operation *enterFilterLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
-                                            TensorId tid, Level lvl,
-                                            AffineExpr affine,
-                                            MutableArrayRef<Value> reduc = {});
-
   /// Emits the address for a dense level based on the value evaluated by the
   /// provided affine expression.
-  /// DEPRECATED: affine index expression should be handled by index reduction
-  /// loop, filter loop-based solution is slow.
-  void genDenseAffineAddress(OpBuilder &builder, Location loc,
-                             TensorLevel tidLvl, AffineExpr lvlExpr);
+  void locateLvlAtAffineAddress(OpBuilder &builder, Location loc,
+                                TensorLevel tidLvl, AffineExpr lvlExpr);
 
   // TODO: Get rid of `lvls` in the argument list? Track the level we
   // are currently at internally. Then it would be enterNextLvlForTensor.
@@ -153,7 +146,7 @@ public:
   Operation *enterCoIterationOverTensorsAtLvls(
       OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
       MutableArrayRef<Value> reduc = {}, bool isParallel = false,
-      bool genDedup = false, bool needsUniv = false);
+      bool needsUniv = false);
 
   /// Generates code to exit the current loop (e.g., generates yields, forwards
   /// loop induction variables, etc).
@@ -224,21 +217,18 @@ public:
     });
   }
 
-  template <class ContainerTy>
-  auto unpackTensorLevelFromCondRange(ContainerTy &&c) const {
-    using EltTy = decltype(*c.begin());
-    static_assert(std::is_same_v<llvm::remove_cvref_t<EltTy>, TensorLvlCond>,
-                  "Must be unpacking a TensorLvlCond range");
-    return unpackTensorLevelRange(
-        llvm::make_first_range(std::forward<ContainerTy>(c)));
-  }
-
   ///
   /// Getters.
   ///
-  const std::vector<std::vector<Value>> &getPosits() const { return posits; };
-  const std::vector<std::vector<Value>> &getCoords() const { return coords; };
-  const std::vector<std::vector<Value>> &getHighs() const { return highs; };
+  SmallVector<Value> getValPosits(TensorId tid) const {
+    SmallVector<Value> batchCrds = iters[tid].back().back()->getBatchCrds();
+    Value lastLvlPos = iters[tid].back().back()->getCurPosition().first;
+    batchCrds.push_back(lastLvlPos);
+    return batchCrds;
+  };
+  Value getCoord(TensorId tid, Level lvl) const {
+    return getCurIterator(tid, lvl).getCrd();
+  };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
   constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
@@ -250,22 +240,12 @@ private:
   /// Structure definitions that hold different kinds of loops information.
   ///
 
-  // A tuple that stored the slice-driven loop information.
-  struct SliceLoopInfo final {
-    SliceLoopInfo(TensorId tid, Level lvl, bool reduced)
-        : tid(tid), lvl(lvl), reduced(reduced) {}
-    TensorId tid;
-    Level lvl;
-    bool reduced;
-  };
   // LoopInfo stores information of a loop generated by LoopEmitter. E.g.,
   // the set of tensors levels that the loop is iterating over.
   struct LoopInfo final {
-    LoopInfo(ArrayRef<TensorLevel> trivialTidLvls,
-             ArrayRef<SliceLoopInfo> sliceDrivenInfo, Operation *loop,
-             Block *userBlock, Value iv, StringAttr loopTag)
-        : trivialTidLvls(trivialTidLvls), sliceDrivenInfo(sliceDrivenInfo),
-          loop(loop), userCodeBlock(userBlock), iv(iv) {
+    LoopInfo(ArrayRef<TensorLevel> tidLvls, Operation *loop, Block *userBlock,
+             Value iv, StringAttr loopTag)
+        : tidLvls(tidLvls), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
         loop->setAttr(LoopEmitter::getLoopEmitterLoopAttrName(), loopTag);
@@ -274,124 +254,15 @@ private:
     // used as the condition for the generated loop. Extra information is
     // required for levels with non-tivial index expressions, which is
     // maintained by the sliceDrivenInfo array below.
-    const llvm::SmallVector<TensorLevel> trivialTidLvls;
-    // The set of <tensor, lvl>, with *only* non-trivial index expressions, that
-    // are used as the condition for the generated loop.
-    const llvm::SmallVector<SliceLoopInfo> sliceDrivenInfo;
+    const llvm::SmallVector<TensorLevel> tidLvls;
     const Operation *loop;      // the loop operation
     Block *const userCodeBlock; // the block holding users' generated code.
     const Value iv;             // the induction variable for the loop
   };
 
-  // SliceInfo stores information of an extracted slice for slice-driven loop.
-  // E.g., the in-scope SSA values for the minimum coordinates and offset for
-  // the slice, etc.
-  struct SliceInfo final {
-    // Note that we do not need to create a actual sparse tensor slice but
-    // instead only need to maintain the metadata of the slice.
-    SliceInfo(Value minCrd, Value offset, Value isNonEmpty, Value posTupleNum,
-              std::optional<Level> slicedOnLvl, unsigned depth)
-        : minCrd(minCrd), offset(offset), isNonEmpty(isNonEmpty),
-          posTupleNum(posTupleNum), slicedOnLvl(slicedOnLvl), depth(depth) {
-      // TODO: use std::optional<pair<Level, minCrd>>
-      assert(!slicedOnLvl || minCrd);
-    }
-
-    // Whether this is the tensor that has not yet been sliced.
-    bool isInitialTensor() const { return !slicedOnLvl.has_value(); }
-
-    Value minCrd;      // the minimum coordinate of the slice.
-    Value offset;      // the *absolute* offset of the current slice.
-    Value isNonEmpty;  // whether the slice is empty.
-    Value posTupleNum; // The number of position tuples used in the slice.
-    std::optional<Level> slicedOnLvl; // the level on which the slice is done
-    unsigned depth; // the depth (relative to dependentDimMap[tid][lvl]).
-  };
-
-  ///
-  /// Enums for different kinds of loop conditions.
-  ///
-
-  // The bit indicating whether the loop conditions is sparse.
-  static constexpr uint8_t kSparseCond = 1 << 3;
-  // The bit indicating whether the loop iterates over sparse tensor slices
-  // (i.e., with non-empty SliceDimAttr).
-  static constexpr uint8_t kSliceCond = 1 << 2;
-  // The bit indicating whether the loop iterates over tensor levels with
-  // non-trivial affine index reduction.
-  static constexpr uint8_t kAffineIdxCond = 1 << 1;
-  // The bit indicating whether the loop iterates over tensor levels with
-  // non-trivial affine index reduction, and it is not fully reduced.
-  static constexpr uint8_t kAffineIdxCondUnRed = 1 << 0;
-
-  enum class LoopCondKind : uint8_t {
-    // Dense conditions.
-    DenseCond = 0,
-    DenseSliceCond = kSliceCond,
-    DenseAffineCond = kAffineIdxCond,
-    DenseAffineUnRedCond = kAffineIdxCond | kAffineIdxCondUnRed,
-    // Sparse Conditions.
-    SparseCond = kSparseCond,
-    SparseSliceCond = kSparseCond | kSliceCond,
-    SparseAffineCond = kSparseCond | kAffineIdxCond,
-    SparseAffineUnRedCond = kSparseCond | kAffineIdxCond | kAffineIdxCondUnRed,
-  };
-  using TensorLvlCond = std::pair<TensorLevel, LoopCondKind>;
-
-  /// Sparse or dense loop condition.
-  static bool isSparseCond(LoopCondKind k) {
-    return static_cast<uint8_t>(k) & kSparseCond;
-  }
-  static bool isDenseCond(LoopCondKind k) { return !isSparseCond(k); }
-
-  /// Whether loops over sparse tensor slices or sparse tensors.
-  static bool isSliceCond(LoopCondKind k) {
-    return static_cast<uint8_t>(k) & kSliceCond;
-  }
-
-  /// Affine or trivial index expression loop condition.
-  static bool isAffineIdxCond(LoopCondKind k) {
-    return static_cast<uint8_t>(k) & kAffineIdxCond;
-  }
-  static bool isTrivalIdxCond(LoopCondKind k) { return !isAffineIdxCond(k); }
-
-  /// Whether the affine index expression is fully reduced.
-  static bool isAffineIdxUnRedCond(LoopCondKind k) {
-    return isAffineIdxCond(k) && static_cast<uint8_t>(k) & kAffineIdxCondUnRed;
-  }
-  static bool isAffineIdxRedCond(LoopCondKind k) {
-    return isAffineIdxCond(k) && !isAffineIdxUnRedCond(k);
-  }
-
-  // Whether the loop condition kind requires extra check inside the loop body.
-  // E.g., to iterate over sparse tensor slice, we need to check whether the
-  // current cooridnate is on the slice (e.g., due to stride) or not.
-  static bool isCondWithExtraCheck(LoopCondKind k) {
-    return isSparseCond(k) && (isSliceCond(k) || isAffineIdxUnRedCond(k));
-  }
-
-  static LoopCondKind makeLoopCondKind(bool isSparse, bool isSlice,
-                                       bool isAffine, bool isUnRedu) {
-    assert(!isUnRedu || isAffine);
-    uint8_t bits = 0;
-    bits = isSparse ? bits | kSparseCond : bits;
-    bits = isSlice ? bits | kSliceCond : bits;
-    bits = isAffine ? bits | kAffineIdxCond : bits;
-    bits = isUnRedu ? bits | kAffineIdxCondUnRed : bits;
-    LoopCondKind kind = static_cast<LoopCondKind>(bits);
-
-    // Sanity checks.
-    assert(isSparse == isSparseCond(kind));
-    assert(isSlice == isSliceCond(kind));
-    assert(isAffine == isAffineIdxCond(kind));
-    assert(isUnRedu == isAffineIdxUnRedCond(kind));
-    return kind;
-  }
-
-  void categorizeLoopCondition(ArrayRef<TensorLevel> tidLvls,
-                               SmallVectorImpl<TensorLvlCond> &dnConds,
-                               SmallVectorImpl<TensorLvlCond> &spConds);
-
+  void categorizeIterators(ArrayRef<TensorLevel> tidLvls,
+                           SmallVectorImpl<SparseIterator *> &raIters,
+                           SmallVectorImpl<SparseIterator *> &spIters);
   ///
   /// LoopEmitter internal helper functions.
   ///
@@ -400,21 +271,7 @@ private:
                                                   MutableArrayRef<Value>)>;
 
   /// Whether the list of the sparse condition should be iterated by for loop.
-  bool shouldIteratedByForLoop(ArrayRef<TensorLvlCond> spConds, bool genDedup);
-
-  /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
-  Value genAddress(OpBuilder &builder, Location loc, TensorId tid, Level lvl,
-                   Value iv);
-
-  /// Generates the segment high for a non-unique level (to fast forward
-  /// duplicated coordinates).  That is, it generates the code:
-  ///
-  ///   crd = coordinates_tid_lvl[pos]
-  ///   while (pos < pHi && coordinates_tid_lvl[pos] == crd)
-  ///      pos++;
-  ///   <return pos>;
-  Value genSegmentHigh(OpBuilder &builder, Location loc, TensorId tid,
-                       Level lvl, Value pos, Value pHi);
+  bool shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters);
 
   /// Generates instructions to compute the coordinate of tensors[tid][lvl]
   /// under the current loop context.  The final argument is the
@@ -422,13 +279,6 @@ private:
   /// that to the uncollapsed-input level
   Value genSparseCrd(OpBuilder &builder, Location loc, TensorId tid,
                      Level dstLvl);
-
-  /// Generates a predicate to determine whether the tranformed coordinates are
-  /// in the given slice.
-  /// Returns std::pair<Transformed coordinates, Predicate>
-  std::pair<Value, Value> genSliceLegitPredicate(OpBuilder &builder,
-                                                 Location loc, Value crd,
-                                                 TensorId tid, Level lvl);
 
   bool isSynTensor(TensorId tid) const { return tid == getSynTensorId(); }
 
@@ -441,20 +291,13 @@ private:
   }
 
   bool isValidLevel(TensorId tid, Level lvl) const {
-    return tid < lvlTypes.size() && lvl < lvlTypes[tid].size();
+    return tid < lvls.size() && lvl < lvls[tid].size();
   }
 
   /// Prepares loop for iterating over `tensor[lvl]`, under the assumption
   /// that `tensor[0...lvl-1]` loops have already been set up.
   void prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
                                   TensorId tid, Level lvl);
-
-  /// Enter dense tensor levels. Since the dense tensor condition could be
-  /// optimized from the loop condition, we need to compute the
-  /// positions/coordinates inside the loop body.
-  void enterTensorsAtDenseLvls(OpBuilder &builder, Location loc,
-                               ArrayRef<TensorLvlCond> dnConds, Value iv,
-                               SmallVectorImpl<SliceLoopInfo> &sliceInfo);
 
   /// Emits a for loop to iterate over a tensor level with the provided
   /// lower bound `lo` and upper bound `hi`. Apart from iterating just
@@ -463,9 +306,9 @@ private:
   /// Returns a pair: the loop generated and the value for the induction
   /// variable.
   std::pair<Operation *, Value>
-  emitForLoopOverTensorAtLvl(OpBuilder &builder, Location loc, TensorId tid,
-                             Level lvl, Value lo, Value hi,
-                             MutableArrayRef<Value> reduc, bool isParallel);
+  emitForLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
+                             SparseIterator &iter, MutableArrayRef<Value> reduc,
+                             bool isParallel);
 
   /// Emits a while loop to co-iterate over a list of sparse condition, or
   /// (complex) single sparse condition that can not be handled by for loop
@@ -475,25 +318,8 @@ private:
   /// iterated).
   std::pair<Operation *, Value>
   emitWhileLoopOverTensorsAtLvls(OpBuilder &builder, Location loc,
-                                 ArrayRef<TensorLvlCond> spConds,
+                                 ArrayRef<SparseIterator *> iters,
                                  MutableArrayRef<Value> reduc, bool needsUniv);
-
-  /// Generates the while loop condition for the given tensor level condition.
-  Value genWhileLoopConditions(OpBuilder &builder, Location loc, ValueRange ivs,
-                               TensorLvlCond cond);
-
-  /// Generates the while loop body for the given tensor level condition.
-  std::optional<Value> genWhileLoopBody(OpBuilder &builder, Location loc,
-                                        ValueRange ivs, TensorLvlCond cond);
-
-  /// Generates the values (to forward the loop) if the extra check failes.
-  /// E.g., to iterate over a sparse tensor slice, we need:
-  ///
-  /// pos = onSlice(curCrd) ? pos : pos + 1
-  ///
-  /// to skip invalid coordinate that is included in the slice.
-  ValueRange genCheckedValue(OpBuilder &builder, Location loc, Value pred,
-                             ValueRange curArg, TensorLvlCond cond);
 
   /// Exits a for loop, returns the reduction results, e.g.,
   /// For sequential for loops:
@@ -530,85 +356,23 @@ private:
   // Slice-driven loop related methods.
   //
 
-  void initSliceDriven(OpBuilder &builder, Location loc);
+  void initSubSectIterator(OpBuilder &builder, Location loc);
 
-  /// Retrieves the most recent slice on lvl. To reduce affine expression like
-  /// d0 + d1 + d2, we need two slices (one of size d1 + d2, and the other of
-  /// size d2). This methods returns the latter slice (of size d2).
-  const SliceInfo &getMostRecentSliceOnLvl(TensorId tid, Level lvl);
+  /// Get the reduced number of contraints on tensor[tid][lvl].
+  unsigned redDepOnLevel(TensorId tid, Level lvl) const {
+    return levelReducedDep[tid][lvl];
+  };
 
-  /// Similar to getMostRecentSliceOnLvl, but yields error when the most recent
-  /// slice is not the final slice needed to fully reduced the dependencies.
-  const SliceInfo &getFinalSliceOnLvl(TensorId tid, Level lvl) {
-    const SliceInfo &info = getMostRecentSliceOnLvl(tid, lvl);
-    assert(info.depth == dependentLvlMap[tid][lvl].size() - 1);
-    return info;
+  SparseIterator &getCurIterator(TensorId tid, Level lvl) const {
+    if (dependentLvlMap[tid][lvl].empty())
+      return *iters[tid][lvl].back();
+
+    assert(redDepOnLevel(tid, lvl) >= 1);
+    return *iters[tid][lvl][redDepOnLevel(tid, lvl) - 1];
   }
 
-  /// Get the remaining number of constraints needed to fully *resolve*
-  /// dependent levels on tensor[tid].
-  unsigned remDepOnLevel(TensorId tid, Level lvl) const;
-
-  /// Whether the tid, lvl is fully *reduced*, i.e., the non-trivial index
-  /// expression has been reduced to a trivial one.
-  /// E.g., A[i + j] => A[i + 2] (j is reduced)
-  bool depFullyReduced(TensorId tid, Level lvl) const {
-    return remDepOnLevel(tid, lvl) == 1;
-  }
-
-  /// Whether the tid, lvl is fully resolved, i.e., we entered the level already
-  /// (the index on that level is determined).
-  /// E.g., A[i + j] => A[2 + 3] (both i and j become invariants for inner
-  /// loops).
-  bool lvlFullyResolved(TensorId tid, Level lvl) const {
-    return remDepOnLevel(tid, lvl) == 0;
-  }
-
-  /// Generates a whileOp to iterate over a subset of coordinates on tid on lvl
-  /// using the pHi and pLo provided, the loop break on the first coordinate
-  /// that exceeds the slice boundary (i.e., coord >= slice.offset +
-  /// slice.size).
-  std::pair<Operation *, ValueRange>
-  genSliceLvlTraverseLoop(OpBuilder &builder, Location loc, Value pLo,
-                          Value pHi, Value offset, Value size, TensorId tid,
-                          Level lvl, ValueRange userReduc,
-                          LoopBodyBuilder bodyBuilder);
-
-  /// Generates a nested loop that iterates over tid on all the coordinates on
-  /// lvl.
-  ValueRange genUnResolvedSliceTreeTraverse(
-      OpBuilder &builder, Location loc, TensorId tid,
-      ArrayRef<const SliceInfo *> unResLvls,
-      std::optional<std::pair<TensorId, Level>> firstResLvl,
-      ValueRange userReduc, LoopBodyBuilder bodyBuilder);
-
-  /// Generates code to get the first non-empty slice of tid on lvl, when all
-  /// the previous level before `lvl` are resolved (or lvl is the first level).
-  ///
-  /// This is the simple case because the previous level are resolved into a
-  /// single node in the storage tree.
-  void genResolvedSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
-                             Level lvl);
-
-  /// Generates code to get the first non-empty slice of tid on lvl, when
-  /// the previous levels before `lvl` are unresolved
-  ///
-  /// This is the complex case because the previous levels corresponding to a
-  /// range of nodes in the storage tree.
-  void genUnResolvedSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
-                               Level lvl);
-
-  /// Generates code to get the first non-empty slice of tid on lvl.
-  /// return true if has already been resolved.
-  bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);
-
-  /// Generates code to get the next non-empty slices of tid on lvl.
-  /// Returns a tuple of values for <NonEmpty, MinCrd, AbsOffset> (see
-  /// SliceInfo) respectively.
-  std::tuple<Value, Value, Value> genSliceNextInduction(OpBuilder &builder,
-                                                        Location loc,
-                                                        TensorId tid,
-                                                        Level lvl);
+  std::unique_ptr<SparseIterator>
+  makeLevelIterator(OpBuilder &builder, Location loc, TensorId tid, Level l);
 
   /// A optional string attribute that should be attached to the loop
   /// generated by loop emitter, it might help following passes to identify
@@ -618,53 +382,23 @@ private:
   /// tensor.
   bool hasOutput;
   bool isSparseOut;
+  SparseEmitStrategy emitStrategy;
 
   //
   // Fields which have `numTensor` many entries.
   //
-  // TODO: switch to an AOS style to avoid any possible mismatches.
-  //
 
   /// Input and (optional) output tensors.
   std::vector<Value> tensors;
-  /// Level-types for each `(TensorId, Level)` pair.
-  std::vector<std::vector<LevelType>> lvlTypes;
-  // Sparse iteration information for each `(TensorId, Level)` pair.
-  // These arrays are updated to remain current within the current loop.
-  std::vector<std::vector<Value>> posits;
-  /// The collection of coordinates for a given element (one such
-  /// collection for each tensor).
-  std::vector<std::vector<Value>> coords;
-  // The segment upper bound for non-uniques level after de-duplication.
-  std::vector<std::vector<Value>> segHi;
-  std::vector<std::vector<Value>> highs;
-  std::vector<std::vector<Value>> lvlSizes;
+  std::vector<Value> loopHighs;
   std::vector<std::vector<std::unique_ptr<SparseTensorLevel>>> lvls;
+  std::vector<std::vector<std::vector<std::unique_ptr<SparseIterator>>>> iters;
   std::vector<Value> valBuffer; // to_value
-
-  //
-  // Slice-driven loops related fields.
-  //
-
-  /// Whether the sparse input is a slice.
-  std::vector<bool> isSparseSlices;
-  /// Values related to slices.
-  std::vector<std::vector<Value>> sliceOffsets;
-  std::vector<std::vector<Value>> sliceStrides;
 
   // Map from [tid, level] to a list of dependent [tidlevel, coefficient].
   // See comments for `DependentLvlGetter`.
   std::vector<std::vector<std::vector<std::pair<LoopId, unsigned>>>>
       dependentLvlMap;
-
-  // The cached position buffer for the slices, they serve the same purpose as
-  // ptrBuffer for compressed dimensions.
-  // But they always starts with the first pidx pointing to coord > slice.offset
-  // to avoid iteration from the beginning.
-  std::vector<std::vector<std::vector<Value>>> slicePosBuffer;
-  std::vector<std::vector<Value>> sliceTupleNxStartIdx;
-  std::vector<std::vector<Value>> sliceTupleFwdCnt;
-  std::vector<std::vector<bool>> trivialSlice;
 
   // The (size, stride) for each conceptual slice used for index reduction
   // loops.
@@ -672,9 +406,6 @@ private:
 
   // The number of reduced dependencies on a tensor level so far.
   std::vector<std::vector<unsigned>> levelReducedDep;
-
-  // sliceStack[tid] holds the generated slice stack on tid.
-  std::vector<std::vector<SliceInfo>> sliceStack;
 
   //
   // Fields which have at most `numLoops` many entries.
@@ -684,11 +415,9 @@ private:
   /// alive.
   std::vector<LoopInfo> loopStack;
 
-  // Loop Sequence Stack, stores the unversial index for the current loop
-  // sequence. and a list of tids which was taken sliced.
-  // TODO: maybe we should have a LoopSeqInfo
-  std::vector<std::pair<Value, std::vector<std::tuple<TensorId, Level, bool>>>>
-      loopSeqStack;
+  // Loop Sequence Stack, stores the universal index for the current loop
+  // sequence. and a list of tid level that the loop sequence traverse.
+  std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
 };
 
 } // namespace sparse_tensor

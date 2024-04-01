@@ -68,5 +68,6 @@ auto S<>::foo(auto)
 {
     return 1;
 }
-// CHECK8: error: template parameter list matching the non-templated nested type 'S<>' should be empty ('template<>') [clang-diagnostic-error]
+// CHECK8: error: conflicting types for 'foo' [clang-diagnostic-error]
+// CHECK8: note: previous declaration is here
 #endif

@@ -47,15 +47,15 @@ We define two kinds of macros:
        e.g., ``LIBC_COMPILER_IS_CLANG``.
      * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
-     * ``float.h`` - Floating point type properties and availability.
-       e.g., ``LIBC_COMPILER_HAS_FLOAT128``.
+     * ``types.h`` - Type properties and availability.
+       e.g., ``LIBC_TYPES_HAS_FLOAT128``.
      * ``os.h`` - Target os properties.
        e.g., ``LIBC_TARGET_OS_IS_LINUX``.
 
    * ``src/__support/macros/config.h`` - Important compiler and platform
      features. Such macros can be used to produce portable code by
      parameterizing compilation based on the presence or lack of a given
-     feature. e.g., ``LIBC_HAS_BUILTIN``
+     feature. e.g., ``LIBC_HAS_FEATURE``
    * ``src/__support/macros/attributes.h`` - Attributes for functions, types,
      and variables. e.g., ``LIBC_UNUSED``
    * ``src/__support/macros/optimization.h`` - Portable macros for performance

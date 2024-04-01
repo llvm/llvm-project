@@ -54,7 +54,7 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
 
@@ -124,7 +124,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         // Return NaN and raise FE_INVALID
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::build_quiet_nan().get_val();
+        return FPBits::quiet_nan().get_val();
       }
       // x is +inf or nan
       return x;

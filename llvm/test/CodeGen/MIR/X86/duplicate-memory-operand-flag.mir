@@ -2,11 +2,11 @@
 
 --- |
 
-  define i32 @volatile_inc(i32* %x) {
+  define i32 @volatile_inc(ptr %x) {
   entry:
-    %0 = load volatile i32, i32* %x
+    %0 = load volatile i32, ptr %x
     %1 = add i32 %0, 1
-    store volatile i32 %1, i32* %x
+    store volatile i32 %1, ptr %x
     ret i32 %1
   }
 

@@ -11,11 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -37,6 +40,32 @@ static LegalityPredicate typeIsScalarFPArith(unsigned TypeIdx,
   };
 }
 
+static LegalityPredicate
+typeIsLegalIntOrFPVec(unsigned TypeIdx,
+                      std::initializer_list<LLT> IntOrFPVecTys,
+                      const RISCVSubtarget &ST) {
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getScalarSizeInBits() != 64 ||
+            ST.hasVInstructionsI64()) &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64);
+  };
+
+  return all(typeInSet(TypeIdx, IntOrFPVecTys), P);
+}
+
+static LegalityPredicate
+typeIsLegalBoolVec(unsigned TypeIdx, std::initializer_list<LLT> BoolVecTys,
+                   const RISCVSubtarget &ST) {
+  LegalityPredicate P = [=, &ST](const LegalityQuery &Query) {
+    return ST.hasVInstructions() &&
+           (Query.Types[TypeIdx].getElementCount().getKnownMinValue() != 1 ||
+            ST.getELen() == 64);
+  };
+  return all(typeInSet(TypeIdx, BoolVecTys), P);
+}
+
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
@@ -46,6 +75,14 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+
+  const LLT nxv1s1 = LLT::scalable_vector(1, s1);
+  const LLT nxv2s1 = LLT::scalable_vector(2, s1);
+  const LLT nxv4s1 = LLT::scalable_vector(4, s1);
+  const LLT nxv8s1 = LLT::scalable_vector(8, s1);
+  const LLT nxv16s1 = LLT::scalable_vector(16, s1);
+  const LLT nxv32s1 = LLT::scalable_vector(32, s1);
+  const LLT nxv64s1 = LLT::scalable_vector(64, s1);
 
   const LLT nxv1s8 = LLT::scalable_vector(1, s8);
   const LLT nxv2s8 = LLT::scalable_vector(2, s8);
@@ -75,22 +112,16 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   using namespace TargetOpcode;
 
-  auto AllVecTys = {nxv1s8,   nxv2s8,  nxv4s8,  nxv8s8,  nxv16s8, nxv32s8,
-                    nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
-                    nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
-                    nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
+  auto BoolVecTys = {nxv1s1, nxv2s1, nxv4s1, nxv8s1, nxv16s1, nxv32s1, nxv64s1};
+
+  auto IntOrFPVecTys = {nxv1s8,   nxv2s8,  nxv4s8,  nxv8s8,  nxv16s8, nxv32s8,
+                        nxv64s8,  nxv1s16, nxv2s16, nxv4s16, nxv8s16, nxv16s16,
+                        nxv32s16, nxv1s32, nxv2s32, nxv4s32, nxv8s32, nxv16s32,
+                        nxv1s64,  nxv2s64, nxv4s64, nxv8s64};
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
-      .legalIf(all(
-          typeInSet(0, AllVecTys),
-          LegalityPredicate([=, &ST](const LegalityQuery &Query) {
-            return ST.hasVInstructions() &&
-                   (Query.Types[0].getScalarSizeInBits() != 64 ||
-                    ST.hasVInstructionsI64()) &&
-                   (Query.Types[0].getElementCount().getKnownMinValue() != 1 ||
-                    ST.getELen() == 64);
-          })))
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
@@ -182,8 +213,17 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
   }
 
-  getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
+  auto &ConstantActions = getActionDefinitionsBuilder(G_CONSTANT);
+  ConstantActions.legalFor({s32, p0});
+  if (ST.is64Bit())
+    ConstantActions.customFor({s64});
+  ConstantActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen);
+
+  // TODO: transform illegal vector types into legal vector type
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, sXLen, p0})
+      .legalIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
+      .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
@@ -193,8 +233,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  auto &SelectActions = getActionDefinitionsBuilder(G_SELECT).legalFor(
-      {{s32, sXLen}, {p0, sXLen}});
+  auto &SelectActions =
+      getActionDefinitionsBuilder(G_SELECT)
+          .legalFor({{s32, sXLen}, {p0, sXLen}})
+          .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                       typeIsLegalBoolVec(1, BoolVecTys, ST)));
   if (XLen == 64 || ST.hasStdExtD())
     SelectActions.legalFor({{s64, sXLen}});
   SelectActions.widenScalarToNextPow2(0)
@@ -365,6 +408,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, sXLen)
       .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
+  getActionDefinitionsBuilder(G_VSCALE)
+      .clampScalar(0, sXLen, sXLen)
+      .customFor({sXLen});
+
   getLegacyLegalizerInfo().computeTables();
 }
 
@@ -403,7 +450,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     // Store the result in the destination va_list
     MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
         MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, Alignment);
-    MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
+    MIRBuilder.buildStore(Tmp, DstLst, *StoreMMO);
 
     MI.eraseFromParent();
     return true;
@@ -451,17 +498,106 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::shouldBeInConstantPool(APInt APImm,
+                                                bool ShouldOptForSize) const {
+  assert(APImm.getBitWidth() == 32 || APImm.getBitWidth() == 64);
+  int64_t Imm = APImm.getSExtValue();
+  // All simm32 constants should be handled by isel.
+  // NOTE: The getMaxBuildIntsCost call below should return a value >= 2 making
+  // this check redundant, but small immediates are common so this check
+  // should have better compile time.
+  if (isInt<32>(Imm))
+    return false;
+
+  // We only need to cost the immediate, if constant pool lowering is enabled.
+  if (!STI.useConstantPoolForLargeInts())
+    return false;
+
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, STI);
+  if (Seq.size() <= STI.getMaxBuildIntsCost())
+    return false;
+
+  // Optimizations below are disabled for opt size. If we're optimizing for
+  // size, use a constant pool.
+  if (ShouldOptForSize)
+    return true;
+  //
+  // Special case. See if we can build the constant as (ADD (SLLI X, C), X) do
+  // that if it will avoid a constant pool.
+  // It will require an extra temporary register though.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
+  unsigned ShiftAmt, AddOpc;
+  RISCVMatInt::InstSeq SeqLo =
+      RISCVMatInt::generateTwoRegInstSeq(Imm, STI, ShiftAmt, AddOpc);
+  return !(!SeqLo.empty() && (SeqLo.size() + 2) <= STI.getMaxBuildIntsCost());
+}
+
+bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
+                                        MachineIRBuilder &MIB) const {
+  const LLT XLenTy(STI.getXLenVT());
+  Register Dst = MI.getOperand(0).getReg();
+
+  // We define our scalable vector types for lmul=1 to use a 64 bit known
+  // minimum size. e.g. <vscale x 2 x i32>. VLENB is in bytes so we calculate
+  // vscale as VLENB / 8.
+  static_assert(RISCV::RVVBitsPerBlock == 64, "Unexpected bits per block!");
+  if (STI.getRealMinVLen() < RISCV::RVVBitsPerBlock)
+    // Support for VLEN==32 is incomplete.
+    return false;
+
+  // We assume VLENB is a multiple of 8. We manually choose the best shift
+  // here because SimplifyDemandedBits isn't always able to simplify it.
+  uint64_t Val = MI.getOperand(1).getCImm()->getZExtValue();
+  if (isPowerOf2_64(Val)) {
+    uint64_t Log2 = Log2_64(Val);
+    if (Log2 < 3) {
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+    } else if (Log2 > 3) {
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
+      MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
+    } else {
+      MIB.buildInstr(RISCV::G_READ_VLENB, {Dst}, {});
+    }
+  } else if ((Val % 8) == 0) {
+    // If the multiplier is a multiple of 8, scale it down to avoid needing
+    // to shift the VLENB value.
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
+    MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
+  } else {
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
+    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
+    MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   GISelChangeObserver &Observer = Helper.Observer;
+  MachineFunction &MF = *MI.getParent()->getParent();
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.
     return false;
   case TargetOpcode::G_ABS:
     return Helper.lowerAbsToMaxNeg(MI);
+  // TODO: G_FCONSTANT
+  case TargetOpcode::G_CONSTANT: {
+    const Function &F = MF.getFunction();
+    // TODO: if PSI and BFI are present, add " ||
+    // llvm::shouldOptForSize(*CurMBB, PSI, BFI)".
+    bool ShouldOptForSize = F.hasOptSize() || F.hasMinSize();
+    const ConstantInt *ConstVal = MI.getOperand(1).getCImm();
+    if (!shouldBeInConstantPool(ConstVal->getValue(), ShouldOptForSize))
+      return true;
+    return Helper.lowerConstant(MI);
+  }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -496,6 +632,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
   }
   case TargetOpcode::G_VASTART:
     return legalizeVAStart(MI, MIRBuilder);
+  case TargetOpcode::G_VSCALE:
+    return legalizeVScale(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

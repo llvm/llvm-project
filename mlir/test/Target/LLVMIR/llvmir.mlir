@@ -2251,14 +2251,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
   %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_start.p0(ptr %[[ALLOCA0]])
   llvm.intr.vastart %2 : !llvm.ptr
   // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
   // CHECK: ret void
@@ -2335,21 +2335,35 @@ llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
 llvm.func @new_za_func() attributes {arm_new_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_pstate_za_new" }
+// CHECK #[[ATTR]] = { "aarch64_new_za" }
 
-// CHECK-LABEL: @shared_za_func
+// CHECK-LABEL: @in_za_func
 // CHECK: #[[ATTR:[0-9]*]]
-llvm.func @shared_za_func() attributes {arm_shared_za } {
+llvm.func @in_za_func() attributes {arm_in_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_pstate_za_shared" }
+// CHECK #[[ATTR]] = { "aarch64_in_za" }
+
+// CHECK-LABEL: @out_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @out_za_func() attributes {arm_out_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_out_za" }
+
+// CHECK-LABEL: @inout_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @inout_za_func() attributes {arm_inout_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_inout_za" }
 
 // CHECK-LABEL: @preserves_za_func
 // CHECK: #[[ATTR:[0-9]*]]
 llvm.func @preserves_za_func() attributes {arm_preserves_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_pstate_za_preserved" }
+// CHECK #[[ATTR]] = { "aarch64_preserves_za" }
 
 // -----
 

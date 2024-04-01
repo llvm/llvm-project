@@ -21,7 +21,7 @@ static const llvm::StringRef AttrDoc[] = {
 };
 
 llvm::StringRef clang::Attr::getDocumentation(clang::attr::Kind K) {
-  if (K < std::size(AttrDoc))
+  if (K < (int)std::size(AttrDoc))
     return AttrDoc[K];
   return "";
 }

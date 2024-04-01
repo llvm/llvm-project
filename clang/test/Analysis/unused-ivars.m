@@ -44,6 +44,15 @@
 }
 @end
 
+// Confirm that the checker respects [[clang::suppress]].
+@interface TestC {
+@private
+  [[clang::suppress]] int x; // no-warning
+}
+@end
+@implementation TestC @end
+
+
 //===----------------------------------------------------------------------===//
 // Detect that ivar is in use, if used in category in the same file as the
 // implementation.

@@ -168,3 +168,30 @@ auto lambda4 = [] requires(sizeof(char) == 1){}; // expected-error {{expected bo
 #if __cplusplus <= 202002L
 // expected-warning@-2{{lambda without a parameter clause is a C++23 extension}}
 #endif
+
+namespace GH78524 {
+
+template <typename T> T Foo;
+
+template <typename T> auto C(Foo<T>);
+
+template <typename T> struct D {
+  decltype(T()(C<T>)) Type;
+};
+
+template <typename T, typename U> D<T> G(T, U) { return {}; }
+
+struct E {};
+
+void F() {
+  G([]<typename T>
+//     ~~~~~~~~~~ T: Depth: 0, Index: 0
+      requires requires { [](auto...) {}; }(T)
+//                           ~~~~ auto: Depth: 1, Index: 0
+    { return T(); },
+    E{});
+}
+
+int a = []<int=0> requires requires { [](auto){}; } { return 0; }();
+
+} // namespace GH78524

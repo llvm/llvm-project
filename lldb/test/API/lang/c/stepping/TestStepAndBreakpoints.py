@@ -82,7 +82,7 @@ class TestCStepping(TestBase):
 
         # Check that the stop ID increases:
         new_stop_id = process.GetStopID()
-        self.assertTrue(new_stop_id > old_stop_id, "Stop ID increases monotonically.")
+        self.assertGreater(new_stop_id, old_stop_id, "Stop ID increases monotonically.")
 
         thread = threads[0]
 
@@ -141,8 +141,9 @@ class TestCStepping(TestBase):
             "Expression calling doesn't change stop ID",
         )
 
-        self.assertTrue(
-            stop_id_after_including_expressions > stop_id_before_including_expressions,
+        self.assertGreater(
+            stop_id_after_including_expressions,
+            stop_id_before_including_expressions,
             "Stop ID including expressions increments over expression call.",
         )
 

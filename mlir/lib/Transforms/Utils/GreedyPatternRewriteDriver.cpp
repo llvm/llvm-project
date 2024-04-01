@@ -60,7 +60,9 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
   void computeFingerPrints(Operation *topLevel) {
     this->topLevel = topLevel;
     this->topLevelFingerPrint.emplace(topLevel);
-    topLevel->walk([&](Operation *op) { fingerprints.try_emplace(op, op); });
+    topLevel->walk([&](Operation *op) {
+      fingerprints.try_emplace(op, op, /*includeNested=*/false);
+    });
   }
 
   /// Clear all finger prints.
@@ -95,7 +97,8 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
       // API.) Finger print computation does may not crash if a new op was
       // created at the same memory location. (But then the finger print should
       // have changed.)
-      if (it.second != OperationFingerPrint(it.first)) {
+      if (it.second !=
+          OperationFingerPrint(it.first, /*includeNested=*/false)) {
         // Note: Run "mlir-opt -debug" to see which pattern is broken.
         llvm::report_fatal_error("operation finger print changed");
       }
@@ -125,16 +128,22 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
 
 protected:
   /// Invalidate the finger print of the given op, i.e., remove it from the map.
-  void invalidateFingerPrint(Operation *op) {
-    // Invalidate all finger prints until the top level.
-    while (op && op != topLevel) {
-      fingerprints.erase(op);
-      op = op->getParentOp();
-    }
+  void invalidateFingerPrint(Operation *op) { fingerprints.erase(op); }
+
+  void notifyBlockErased(Block *block) override {
+    RewriterBase::ForwardingListener::notifyBlockErased(block);
+
+    // The block structure (number of blocks, types of block arguments, etc.)
+    // is part of the fingerprint of the parent op.
+    // TODO: The parent op fingerprint should also be invalidated when modifying
+    // the block arguments of a block, but we do not have a
+    // `notifyBlockModified` callback yet.
+    invalidateFingerPrint(block->getParentOp());
   }
 
-  void notifyOperationInserted(Operation *op) override {
-    RewriterBase::ForwardingListener::notifyOperationInserted(op);
+  void notifyOperationInserted(Operation *op,
+                               OpBuilder::InsertPoint previous) override {
+    RewriterBase::ForwardingListener::notifyOperationInserted(op, previous);
     invalidateFingerPrint(op->getParentOp());
   }
 
@@ -143,8 +152,8 @@ protected:
     invalidateFingerPrint(op);
   }
 
-  void notifyOperationRemoved(Operation *op) override {
-    RewriterBase::ForwardingListener::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    RewriterBase::ForwardingListener::notifyOperationErased(op);
     op->walk([this](Operation *op) { invalidateFingerPrint(op); });
   }
 
@@ -331,12 +340,12 @@ protected:
   /// Notify the driver that the specified operation was inserted. Update the
   /// worklist as needed: The operation is enqueued depending on scope and
   /// strict mode.
-  void notifyOperationInserted(Operation *op) override;
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override;
 
   /// Notify the driver that the specified operation was removed. Update the
   /// worklist as needed: The operation and its children are removed from the
   /// worklist.
-  void notifyOperationRemoved(Operation *op) override;
+  void notifyOperationErased(Operation *op) override;
 
   /// Notify the driver that the specified operation was replaced. Update the
   /// worklist as needed: New users are added enqueued.
@@ -368,16 +377,17 @@ private:
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
   /// simplifications.
-  void addOperandsToWorklist(ValueRange operands);
+  void addOperandsToWorklist(Operation *op);
 
-  /// Notify the driver that the given block was created.
-  void notifyBlockCreated(Block *block) override;
+  /// Notify the driver that the given block was inserted.
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override;
 
   /// Notify the driver that the given block is about to be removed.
-  void notifyBlockRemoved(Block *block) override;
+  void notifyBlockErased(Block *block) override;
 
   /// For debugging only: Notify the driver of a pattern match failure.
-  LogicalResult
+  void
   notifyMatchFailure(Location loc,
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
@@ -552,8 +562,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     // Try to match one of the patterns. The rewriter is automatically
     // notified of any necessary changes, so there is nothing else to do
     // here.
-#ifndef NDEBUG
-    auto canApply = [&](const Pattern &pattern) {
+    auto canApplyCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG({
         logger.getOStream() << "\n";
         logger.startLine() << "* Pattern " << pattern.getDebugName() << " : '"
@@ -562,20 +571,34 @@ bool GreedyPatternRewriteDriver::processWorklist() {
         logger.getOStream() << ")' {\n";
         logger.indent();
       });
+      if (config.listener)
+        config.listener->notifyPatternBegin(pattern, op);
       return true;
     };
-    auto onFailure = [&](const Pattern &pattern) {
+    function_ref<bool(const Pattern &)> canApply = canApplyCallback;
+    auto onFailureCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("failure", "pattern failed to match"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, failure());
     };
-    auto onSuccess = [&](const Pattern &pattern) {
+    function_ref<void(const Pattern &)> onFailure = onFailureCallback;
+    auto onSuccessCallback = [&](const Pattern &pattern) {
       LLVM_DEBUG(logResult("success", "pattern applied successfully"));
+      if (config.listener)
+        config.listener->notifyPatternEnd(pattern, success());
       return success();
     };
-#else
-    function_ref<bool(const Pattern &)> canApply = {};
-    function_ref<void(const Pattern &)> onFailure = {};
-    function_ref<LogicalResult(const Pattern &)> onSuccess = {};
-#endif
+    function_ref<LogicalResult(const Pattern &)> onSuccess = onSuccessCallback;
+
+#ifdef NDEBUG
+    // Optimization: PatternApplicator callbacks are not needed when running in
+    // optimized mode and without a listener.
+    if (!config.listener) {
+      canApply = nullptr;
+      onFailure = nullptr;
+      onSuccess = nullptr;
+    }
+#endif // NDEBUG
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     if (config.scope) {
@@ -631,23 +654,25 @@ void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
     worklist.push(op);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockCreated(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockInserted(
+    Block *block, Region *previous, Region::iterator previousIt) {
   if (config.listener)
-    config.listener->notifyBlockCreated(block);
+    config.listener->notifyBlockInserted(block, previous, previousIt);
 }
 
-void GreedyPatternRewriteDriver::notifyBlockRemoved(Block *block) {
+void GreedyPatternRewriteDriver::notifyBlockErased(Block *block) {
   if (config.listener)
-    config.listener->notifyBlockRemoved(block);
+    config.listener->notifyBlockErased(block);
 }
 
-void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationInserted(Operation *op,
+                                                         InsertPoint previous) {
   LLVM_DEBUG({
     logger.startLine() << "** Insert  : '" << op->getName() << "'(" << op
                        << ")\n";
   });
   if (config.listener)
-    config.listener->notifyOperationInserted(op);
+    config.listener->notifyOperationInserted(op, previous);
   if (config.strictMode == GreedyRewriteStrictness::ExistingAndNewOps)
     strictModeFilteredOps.insert(op);
   addToWorklist(op);
@@ -663,21 +688,40 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
-  for (Value operand : operands) {
-    // If the use count of this operand is now < 2, we re-add the defining
-    // operation to the worklist.
-    // TODO: This is based on the fact that zero use operations
-    // may be deleted, and that single use values often have more
-    // canonicalization opportunities.
-    if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
+void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
+  for (Value operand : op->getOperands()) {
+    // If this operand currently has at most 2 users, add its defining op to the
+    // worklist. Indeed, after the op is deleted, then the operand will have at
+    // most 1 user left. If it has 0 users left, it can be deleted too,
+    // and if it has 1 user left, there may be further canonicalization
+    // opportunities.
+    if (!operand)
       continue;
-    if (auto *defOp = operand.getDefiningOp())
-      addToWorklist(defOp);
+
+    auto *defOp = operand.getDefiningOp();
+    if (!defOp)
+      continue;
+
+    Operation *otherUser = nullptr;
+    bool hasMoreThanTwoUses = false;
+    for (auto user : operand.getUsers()) {
+      if (user == op || user == otherUser)
+        continue;
+      if (!otherUser) {
+        otherUser = user;
+        continue;
+      }
+      hasMoreThanTwoUses = true;
+      break;
+    }
+    if (hasMoreThanTwoUses)
+      continue;
+
+    addToWorklist(defOp);
   }
 }
 
-void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
+void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   LLVM_DEBUG({
     logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
                        << ")\n";
@@ -695,9 +739,9 @@ void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
 #endif // NDEBUG
 
   if (config.listener)
-    config.listener->notifyOperationRemoved(op);
+    config.listener->notifyOperationErased(op);
 
-  addOperandsToWorklist(op->getOperands());
+  addOperandsToWorklist(op);
   worklist.remove(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
@@ -714,16 +758,15 @@ void GreedyPatternRewriteDriver::notifyOperationReplaced(
     config.listener->notifyOperationReplaced(op, replacement);
 }
 
-LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
+void GreedyPatternRewriteDriver::notifyMatchFailure(
     Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   LLVM_DEBUG({
     Diagnostic diag(loc, DiagnosticSeverity::Remark);
     reasonCallback(diag);
-    logger.startLine() << "** Failure : " << diag.str() << "\n";
+    logger.startLine() << "** Match Failure : " << diag.str() << "\n";
   });
   if (config.listener)
-    return config.listener->notifyMatchFailure(loc, reasonCallback);
-  return failure();
+    config.listener->notifyMatchFailure(loc, reasonCallback);
 }
 
 //===----------------------------------------------------------------------===//
@@ -890,8 +933,8 @@ public:
   LogicalResult simplify(ArrayRef<Operation *> ops, bool *changed = nullptr) &&;
 
 private:
-  void notifyOperationRemoved(Operation *op) override {
-    GreedyPatternRewriteDriver::notifyOperationRemoved(op);
+  void notifyOperationErased(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationErased(op);
     if (survivingOps)
       survivingOps->erase(op);
   }

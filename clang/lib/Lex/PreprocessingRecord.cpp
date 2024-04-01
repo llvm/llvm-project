@@ -472,8 +472,8 @@ void PreprocessingRecord::MacroUndefined(const Token &Id,
 void PreprocessingRecord::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
 
   switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
@@ -506,10 +506,9 @@ void PreprocessingRecord::InclusionDirective(
       EndLoc = EndLoc.getLocWithOffset(-1); // the InclusionDirective expects
                                             // a token range.
   }
-  clang::InclusionDirective *ID =
-      new (*this) clang::InclusionDirective(*this, Kind, FileName, !IsAngled,
-                                            (bool)Imported, File,
-                                            SourceRange(HashLoc, EndLoc));
+  clang::InclusionDirective *ID = new (*this) clang::InclusionDirective(
+      *this, Kind, FileName, !IsAngled, ModuleImported, File,
+      SourceRange(HashLoc, EndLoc));
   addPreprocessedEntity(ID);
 }
 

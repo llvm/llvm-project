@@ -21,6 +21,8 @@
 
 #include "Utils/ExponentialBackoff.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -33,12 +35,18 @@ using namespace llvm::omp::target::ompt;
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
-  PM->addRequirements(Flags);
+  MESSAGE("The %s function has been removed. Old OpenMP requirements will not "
+          "be handled",
+          __PRETTY_FUNCTION__);
 }
+
+EXTERN void __tgt_rtl_init() { initRuntime(); }
+EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
+  initRuntime();
   if (PM->delayRegisterLib(Desc))
     return;
 
@@ -47,12 +55,17 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
+EXTERN void __tgt_init_all_rtls() {
+  assert(PM && "Runtime not initialized");
+  PM->initAllPlugins();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   PM->unregisterLib(Desc);
+
+  deinitRuntime();
 }
 
 template <typename TargetAsyncInfoTy>
@@ -62,6 +75,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
            map_var_info_t *ArgNames, void **ArgMappers,
            TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
            const char *RegionName) {
+  assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
@@ -108,7 +122,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                         ? RegionInterface.getCallbacks<ompt_target_exit_data>()
                         : RegionInterface.getCallbacks<ompt_target_update>();
                 InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
-                                             OMPT_GET_RETURN_ADDRESS(0));)
+                                             OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = TargetDataFunction(Loc, *DeviceOrErr, ArgNum, ArgsBase, Args, ArgSizes,
@@ -130,7 +144,7 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *Loc, int64_t DeviceId,
                                            int64_t *ArgTypes,
                                            map_var_info_t *ArgNames,
                                            void **ArgMappers) {
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, targetDataBegin,
                           "Entering OpenMP data region with being_mapper",
@@ -142,7 +156,7 @@ EXTERN void __tgt_target_data_begin_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataBegin,
@@ -158,7 +172,7 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *Loc, int64_t DeviceId,
                                          int64_t *ArgTypes,
                                          map_var_info_t *ArgNames,
                                          void **ArgMappers) {
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
                           ArgTypes, ArgNames, ArgMappers, targetDataEnd,
                           "Exiting OpenMP data region with end_mapper", "end");
@@ -169,7 +183,7 @@ EXTERN void __tgt_target_data_end_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataEnd,
@@ -182,7 +196,7 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             int64_t *ArgTypes,
                                             map_var_info_t *ArgNames,
                                             void **ArgMappers) {
-
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<AsyncInfoTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataUpdate,
@@ -195,6 +209,7 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataUpdate,
@@ -205,11 +220,19 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
 static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
                                        KernelArgsTy &LocalKernelArgs,
                                        int32_t NumTeams, int32_t ThreadLimit) {
-  if (KernelArgs->Version > 2)
+  if (KernelArgs->Version > OMP_KERNEL_ARG_VERSION)
     DP("Unexpected ABI version: %u\n", KernelArgs->Version);
 
-  if (KernelArgs->Version == 1) {
-    LocalKernelArgs.Version = 2;
+  uint32_t UpgradedVersion = KernelArgs->Version;
+  if (KernelArgs->Version < OMP_KERNEL_ARG_VERSION) {
+    // The upgraded version will be based on the kernel launch environment.
+    if (KernelArgs->Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+      UpgradedVersion = OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR - 1;
+    else
+      UpgradedVersion = OMP_KERNEL_ARG_VERSION;
+  }
+  if (UpgradedVersion != KernelArgs->Version) {
+    LocalKernelArgs.Version = UpgradedVersion;
     LocalKernelArgs.NumArgs = KernelArgs->NumArgs;
     LocalKernelArgs.ArgBasePtrs = KernelArgs->ArgBasePtrs;
     LocalKernelArgs.ArgPtrs = KernelArgs->ArgPtrs;
@@ -236,6 +259,7 @@ template <typename TargetAsyncInfoTy>
 static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
+  assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
@@ -293,7 +317,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
@@ -322,6 +346,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (KernelArgs->Flags.NoWait)
     return targetKernel<TaskAsyncInfoWrapperTy>(
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
@@ -341,6 +366,8 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                         void *VAddr, bool IsRecord,
                                         bool SaveOutput,
                                         uint64_t &ReqPtrArgOffset) {
+  assert(PM && "Runtime not initialized");
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
@@ -375,7 +402,8 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                                       ptrdiff_t *TgtOffsets, int32_t NumArgs,
                                       int32_t NumTeams, int32_t ThreadLimit,
                                       uint64_t LoopTripCount) {
-
+  assert(PM && "Runtime not initialized");
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDeviceAndCtors(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
@@ -387,7 +415,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc = target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory,
@@ -425,15 +453,15 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 }
 
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
+  assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->pluginAdaptors()) {
-    if (R.set_info_flag)
-      R.set_info_flag(NewInfoLevel);
-  }
+  for (auto &R : PM->pluginAdaptors())
+    R.set_info_flag(NewInfoLevel);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
+  assert(PM && "Runtime not initialized");
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
@@ -442,6 +470,9 @@ EXTERN int __tgt_print_device_info(int64_t DeviceId) {
 }
 
 EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
+  assert(PM && "Runtime not initialized");
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+
   if (!AsyncHandle || !*AsyncHandle) {
     FATAL_MESSAGE0(
         1, "Receive an invalid async handle from the current OpenMP task. Is "

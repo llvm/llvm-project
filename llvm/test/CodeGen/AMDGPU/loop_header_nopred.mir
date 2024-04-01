@@ -43,6 +43,7 @@ body:             |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.7:
   ; GFX10-NEXT:   S_ENDPGM 0
+  ;
   ; GFX11-LABEL: name: loop_header_nopred
   ; GFX11: bb.0:
   ; GFX11-NEXT:   successors: %bb.2(0x80000000)

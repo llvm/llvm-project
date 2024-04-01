@@ -69,50 +69,18 @@ header_exportable_declarations::header_exportable_declarations(
   }
 
   std::optional<llvm::StringRef> list = Options.get("SkipDeclarations");
-  // TODO(LLVM-17) Remove clang 15 work-around.
-#if defined(__clang_major__) && __clang_major__ < 16
-  if (list) {
-    std::string_view s = *list;
-    auto b             = s.begin();
-    auto e             = std::find(b, s.end(), ' ');
-    while (b != e) {
-      skip_decls_.emplace(b, e);
-      if (e == s.end())
-        break;
-      b = e + 1;
-      e = std::find(b, s.end(), ' ');
-    }
-  }
-#else  // defined(__clang_major__) && __clang_major__ < 16
   if (list)
     for (auto decl : std::views::split(*list, ' ')) {
       std::string s;
       std::ranges::copy(decl, std::back_inserter(s)); // use range based constructor
       skip_decls_.emplace(std::move(s));
     }
-#endif // defined(__clang_major__) && __clang_major__ < 16
   decls_ = skip_decls_;
 
   list = Options.get("ExtraDeclarations");
-  // TODO(LLVM-17) Remove clang 15 work-around.
-#if defined(__clang_major__) && __clang_major__ < 16
-  if (list) {
-    std::string_view s = *list;
-    auto b             = s.begin();
-    auto e             = std::find(b, s.end(), ' ');
-    while (b != e) {
-      std::cout << "using ::" << std::string_view{b, e} << ";\n";
-      if (e == s.end())
-        break;
-      b = e + 1;
-      e = std::find(b, s.end(), ' ');
-    }
-  }
-#else  // defined(__clang_major__) && __clang_major__ < 16
   if (list)
     for (auto decl : std::views::split(*list, ' '))
       std::cout << "using ::" << std::string_view{decl.data(), decl.size()} << ";\n";
-#endif // defined(__clang_major__) && __clang_major__ < 16
 }
 
 header_exportable_declarations::~header_exportable_declarations() {

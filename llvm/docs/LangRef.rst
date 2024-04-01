@@ -61,10 +61,13 @@ run by the parser after parsing input assembly and by the optimizer
 before it outputs bitcode. The violations pointed out by the verifier
 pass indicate bugs in transformation passes or input to the parser.
 
+Syntax
+======
+
 .. _identifiers:
 
 Identifiers
-===========
+-----------
 
 LLVM identifiers come in two basic types: global and local. Global
 identifiers (functions, global variables) begin with the ``'@'``
@@ -139,6 +142,34 @@ lexical features of LLVM:
 It also shows a convention that we follow in this document. When
 demonstrating instructions, we will follow an instruction with a comment
 that defines the type and name of value produced.
+
+.. _string_constants:
+
+String constants
+----------------
+
+Strings in LLVM programs are delimited by ``"`` characters. Within a
+string, all bytes are treated literally with the exception of ``\``
+characters, which start escapes, and the first ``"`` character, which
+ends the string.
+
+There are two kinds of escapes.
+
+* ``\\`` represents a single ``\`` character.
+
+* ``\`` followed by two hexadecimal characters (0-9, a-f, or A-F)
+  represents the byte with the given value (e.g. \x00 represents a
+  null byte).
+
+To represent a ``"`` character, use ``\22``. (``\"`` will end the string
+with a trailing ``\``.)
+
+Newlines do not terminate string constants; strings can span multiple
+lines.
+
+The interpretation of string constants (e.g. their character encoding)
+depends on context.
+
 
 High Level Structure
 ====================
@@ -421,6 +452,13 @@ added in the future:
     This calling convention, like the `PreserveMost` calling convention, will be
     used by a future version of the ObjectiveC runtime and should be considered
     experimental at this time.
+"``preserve_nonecc``" - The `PreserveNone` calling convention
+    This calling convention doesn't preserve any general registers. So all
+    general registers are caller saved registers. It also uses all general
+    registers to pass arguments. This attribute doesn't impact non-general
+    purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
+    Non-general purpose registers still follow the standard c calling
+    convention. Currently it is for x86_64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization
@@ -870,7 +908,8 @@ Syntax::
 
 A function definition contains a list of basic blocks, forming the CFG (Control
 Flow Graph) for the function. Each basic block may optionally start with a label
-(giving the basic block a symbol table entry), contains a list of instructions,
+(giving the basic block a symbol table entry), contains a list of instructions
+and :ref:`debug records <debugrecords>`,
 and ends with a :ref:`terminator <terminators>` instruction (such as a branch or
 function return). If an explicit label name is not provided, a block is assigned
 an implicit numbered label, using the next value from the same counter as used
@@ -1595,6 +1634,22 @@ Currently, only the following parameter attributes are defined:
     memory, but all loads that are not preceded by a store will return poison.
 
     This attribute cannot be applied to return values.
+
+``range(<ty> <a>, <b>)``
+    This attribute expresses the possible range of the parameter or return value.
+    If the value is not in the specified range, it is converted to poison.
+    The arguments passed to ``range`` have the following properties:
+
+    -  The type must match the scalar type of the parameter or return value.
+    -  The pair ``a,b`` represents the range ``[a,b)``.
+    -  Both ``a`` and ``b`` are constants.
+    -  The range is allowed to wrap.
+    -  The range should not represent the full or empty set. That is, ``a!=b``.
+    
+    This attribute may only be applied to parameters or return values with integer 
+    or vector of integer types.
+    
+    For vector-typed parameters, the range is applied element-wise.
 
 .. _gc:
 
@@ -2516,7 +2571,7 @@ are grouped into a single :ref:`attribute group <attrgrp>`.
 ``sanitize_memtag``
     This attribute indicates that the global variable should have AArch64 memory
     tags (MTE) instrumentation applied to it. This attribute causes the
-    suppression of certain optimisations, like GlobalMerge, as well as ensuring
+    suppression of certain optimizations, like GlobalMerge, as well as ensuring
     extra directives are emitted in the assembly and extra bits of metadata are
     placed in the object file so that the linker can ensure the accesses are
     protected by MTE. This attribute is added by clang when
@@ -3583,7 +3638,7 @@ floating-point transformations.
 
 ``contract``
    Allow floating-point contraction (e.g. fusing a multiply followed by an
-   addition into a fused multiply-and-add). This does not enable reassociating
+   addition into a fused multiply-and-add). This does not enable reassociation
    to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
    be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
 
@@ -4326,7 +4381,7 @@ constants and smaller complex constants.
 
     When creating a vector whose elements have the same constant value, the
     preferred syntax is ``splat (<Ty> Val)``. For example: "``splat (i32 11)``".
-    These vector constants must have ::ref:`vector type <t_vector>` with an
+    These vector constants must have :ref:`vector type <t_vector>` with an
     element type that matches the ``splat`` operand.
 **Zero initialization**
     The string '``zeroinitializer``' can be used to zero initialize a
@@ -5075,7 +5130,7 @@ Some constraint codes are typically supported by all targets:
 - ``i``: An integer constant (of target-specific width). Allows either a simple
   immediate, or a relocatable value.
 - ``n``: An integer constant -- *not* including relocatable values.
-- ``s``: An integer constant, but allowing *only* relocatable values.
+- ``s``: A symbol or label reference with a constant offset.
 - ``X``: Allows an operand of any kind, no constraint whatsoever. Typically
   useful to pass a label for an asm branch or call.
 
@@ -5107,6 +5162,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``S``: A symbol or label reference with a constant offset. The generic ``s``
+  is not supported.
 - ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
 - ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
@@ -5283,6 +5340,7 @@ RISC-V:
 - ``f``: A 32- or 64-bit floating-point register (requires F or D extension).
 - ``r``: A 32- or 64-bit general-purpose register (depending on the platform
   ``XLEN``).
+- ``S``: Alias for ``s``.
 - ``vr``: A vector register. (requires V extension).
 - ``vm``: A vector register for masking operand. (requires V extension).
 
@@ -5564,34 +5622,106 @@ occurs on.
 Metadata
 ========
 
-LLVM IR allows metadata to be attached to instructions and global objects in the
-program that can convey extra information about the code to the optimizers and
-code generator. One example application of metadata is source-level
-debug information. There are two metadata primitives: strings and nodes.
+LLVM IR allows metadata to be attached to instructions and global objects in
+the program that can convey extra information about the code to the optimizers
+and code generator.
 
-Metadata does not have a type, and is not a value. If referenced from a
-``call`` instruction, it uses the ``metadata`` type.
+There are two metadata primitives: strings and nodes. There are
+also specialized nodes which have a distinguished name and a set of named
+arguments.
 
-All metadata are identified in syntax by an exclamation point ('``!``').
+.. note::
+
+    One example application of metadata is source-level debug information,
+    which is currently the only user of specialized nodes.
+
+Metadata does not have a type, and is not a value.
+
+A value of non-\ ``metadata`` type can be used in a metadata context using the
+syntax '``<type> <value>``'.
+
+All other metadata is identified in syntax as starting with an exclamation
+point ('``!``').
+
+Metadata may be used in the following value contexts by using the ``metadata``
+type:
+
+- Arguments to certain intrinsic functions, as described in their specification.
+- Arguments to the ``catchpad``/``cleanuppad`` instructions.
+
+.. note::
+
+    Metadata can be "wrapped" in a ``MetadataAsValue`` so it can be referenced
+    in a value context: ``MetadataAsValue`` is-a ``Value``.
+
+    A typed value can be "wrapped" in ``ValueAsMetadata`` so it can be
+    referenced in a metadata context: ``ValueAsMetadata`` is-a ``Metadata``.
+
+    There is no explicit syntax for a ``ValueAsMetadata``, and instead
+    the fact that a type identifier cannot begin with an exclamation point
+    is used to resolve ambiguity.
+
+    A ``metadata`` type implies a ``MetadataAsValue``, and when followed with a
+    '``<type> <value>``' pair it wraps the typed value in a ``ValueAsMetadata``.
+
+    For example, the first argument
+    to this call is a ``MetadataAsValue(ValueAsMetadata(Value))``:
+
+    .. code-block:: llvm
+
+        call void @llvm.foo(metadata i32 1)
+
+    Whereas the first argument to this call is a ``MetadataAsValue(MDNode)``:
+
+    .. code-block:: llvm
+
+        call void @llvm.foo(metadata !0)
+
+    The first element of this ``MDTuple`` is a ``MDNode``:
+
+    .. code-block:: llvm
+
+        !{!0}
+
+    And the first element of this ``MDTuple`` is a ``ValueAsMetadata(Value)``:
+
+    .. code-block:: llvm
+
+        !{i32 1}
 
 .. _metadata-string:
 
-Metadata Nodes and Metadata Strings
------------------------------------
+Metadata Strings (``MDString``)
+-------------------------------
+
+.. FIXME Either fix all references to "MDString" in the docs, or make that
+   identifier a formal part of the document.
 
 A metadata string is a string surrounded by double quotes. It can
 contain any character by escaping non-printable characters with
 "``\xx``" where "``xx``" is the two digit hex code. For example:
 "``!"test\00"``".
 
-Metadata nodes are represented with notation similar to structure
-constants (a comma separated list of elements, surrounded by braces and
-preceded by an exclamation point). Metadata nodes can have any values as
+.. note::
+
+   A metadata string is metadata, but is not a metadata node.
+
+.. _metadata-node:
+
+Metadata Nodes (``MDNode``)
+---------------------------
+
+.. FIXME Either fix all references to "MDNode" in the docs, or make that
+   identifier a formal part of the document.
+
+Metadata tuples are represented with notation similar to structure
+constants: a comma separated list of elements, surrounded by braces and
+preceded by an exclamation point. Metadata nodes can have any values as
 their operand. For example:
 
 .. code-block:: llvm
 
-    !{ !"test\00", i32 10}
+    !{!"test\00", i32 10}
 
 Metadata nodes that aren't uniqued use the ``distinct`` keyword. For example:
 
@@ -5617,6 +5747,12 @@ intrinsic is using three metadata arguments:
 .. code-block:: llvm
 
     call void @llvm.dbg.value(metadata !24, metadata !25, metadata !26)
+
+
+.. FIXME Attachments cannot be ValueAsMetadata, but we don't have a
+   particularly clear way to refer to ValueAsMetadata without getting into
+   implementation details. Ideally the restriction would be explicit somewhere,
+   though?
 
 Metadata can be attached to an instruction. Here metadata ``!21`` is attached
 to the ``add`` instruction using the ``!dbg`` identifier:
@@ -6251,7 +6387,7 @@ valid debug intrinsic.
     !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
-""""""""""""
+""""""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
 link together `@llvm.dbg.assign` intrinsics (:ref:`debug
@@ -6266,7 +6402,13 @@ Assignment Tracking <AssignmentTracking.html>`_ for more info.
     !2 = distinct !DIAssignID()
 
 DIArgList
-""""""""""""
+"""""""""
+
+.. FIXME In the implementation this is not a "node", but as it can only appear
+   inline in a function context that distinction isn't observable anyway. Even
+   if it is not required, it would be nice to be more clear about what is a
+   "node", and what that actually means. The names in the implementation could
+   also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
 used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
@@ -6282,7 +6424,7 @@ inlined, and cannot appear in named metadata.
                    metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
 
 DIFlags
-"""""""""""""""
+"""""""
 
 These flags encode various properties of DINodes.
 
@@ -6357,6 +6499,46 @@ within the file where the label is declared.
 .. code-block:: text
 
   !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+
+DICommonBlock
+"""""""""""""
+
+``DICommonBlock`` nodes represent Fortran common blocks. The ``scope:`` field
+is mandatory and points to a :ref:`DILexicalBlockFile`, a
+:ref:`DILexicalBlock`, or a :ref:`DISubprogram`. The ``declaration:``,
+``name:``, ``file:``, and ``line:`` fields are optional.
+
+DIModule
+""""""""
+
+``DIModule`` nodes represent a source language module, for example, a Clang
+module, or a Fortran module. The ``scope:`` field is mandatory and points to a
+:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
+The ``name:`` field is mandatory. The ``configMacros:``, ``includePath:``,
+``apinotes:``, ``file:``, ``line:``, and ``isDecl:`` fields are optional.
+
+DIStringType
+""""""""""""
+
+``DIStringType`` nodes represent a Fortran ``CHARACTER(n)`` type, with a
+dynamic length and location encoded as an expression.
+The ``tag:`` field is optional and defaults to ``DW_TAG_string_type``. The ``name:``,
+``stringLength:``, ``stringLengthExpression``, ``stringLocationExpression:``,
+``size:``, ``align:``, and ``encoding:`` fields are optional.
+
+If not present, the ``size:`` and ``align:`` fields default to the value zero.
+
+The length in bits of the string is specified by the first of the following
+fields present:
+
+- ``stringLength:``, which points to a ``DIVariable`` whose value is the string
+  length in bits.
+- ``stringLengthExpression:``, which points to a ``DIExpression`` which
+  computes the length in bits.
+- ``size``, which contains the literal length in bits.
+
+The ``stringLocationExpression:`` points to a ``DIExpression`` which describes
+the "data location" of the string object, if present.
 
 '``tbaa``' Metadata
 ^^^^^^^^^^^^^^^^^^^
@@ -7307,7 +7489,7 @@ matches the ``llvm.loop.parallel_accesses`` list.
 If all memory-accessing instructions in a loop have
 ``llvm.access.group`` metadata that each refer to one of the access
 groups of a loop's ``llvm.loop.parallel_accesses`` metadata, then the
-loop has no loop carried memory dependences and is considered to be a
+loop has no loop carried memory dependencies and is considered to be a
 parallel loop.
 
 Note that if not all memory access instructions belong to an access
@@ -8500,7 +8682,10 @@ The LLVM instruction set consists of several different classifications
 of instructions: :ref:`terminator instructions <terminators>`, :ref:`binary
 instructions <binaryops>`, :ref:`bitwise binary
 instructions <bitwiseops>`, :ref:`memory instructions <memoryops>`, and
-:ref:`other instructions <otherops>`.
+:ref:`other instructions <otherops>`. There are also :ref:`debug records
+<debugrecords>`, which are not instructions themselves but are printed
+interleaved with instructions to describe changes in the state of the program's
+debug information at each position in the program's execution.
 
 .. _terminators:
 
@@ -10988,9 +11173,10 @@ Syntax:
 
 ::
 
-      <result> = getelementptr <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr <ty>, <N x ptr> <ptrval>, [inrange] <vector index type> <idx>
+      <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr inrange(S,E) <ty>, ptr <ptrval>{, <ty> <idx>}*
+      <result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
 
 Overview:
 """""""""
@@ -11135,16 +11321,15 @@ These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
 
-If the ``inrange`` keyword is present before any index, loading from or
+If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
-behavior if the load or store would access memory outside of the bounds of
-the element selected by the index marked as ``inrange``. The result of a
-pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
+behavior if the load or store would access memory outside the half-open range
+``[Start, End)`` from the ``getelementptr`` expression result. The result of
+a pointer comparison or ``ptrtoint`` (including ``ptrtoint``-like operations
 involving memory) involving a pointer derived from a ``getelementptr`` with
 the ``inrange`` keyword is undefined, with the exception of comparisons
-in the case where both operands are in the range of the element selected
-by the ``inrange`` keyword, inclusive of the address one past the end of
-that element. Note that the ``inrange`` keyword is currently only allowed
+in the case where both operands are in the closed range ``[Start, End]``.
+Note that the ``inrange`` keyword is currently only allowed
 in constant ``getelementptr`` expressions.
 
 The getelementptr instruction is often confusing. For some more insight
@@ -11234,6 +11419,9 @@ Syntax:
 ::
 
       <result> = trunc <ty> <value> to <ty2>             ; yields ty2
+      <result> = trunc nsw <ty> <value> to <ty2>         ; yields ty2
+      <result> = trunc nuw <ty> <value> to <ty2>         ; yields ty2
+      <result> = trunc nuw nsw <ty> <value> to <ty2>     ; yields ty2
 
 Overview:
 """""""""
@@ -11256,6 +11444,11 @@ The '``trunc``' instruction truncates the high order bits in ``value``
 and converts the remaining bits to ``ty2``. Since the source size must
 be larger than the destination size, ``trunc`` cannot be a *no-op cast*.
 It will always truncate bits.
+
+If the ``nuw`` keyword is present, and any of the truncated bits are zero,
+the result is a :ref:`poison value <poisonvalues>`. If the ``nsw`` keyword
+is present, and any of the truncated bits are not the same as the top bit
+of the truncation result, the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -12654,6 +12847,29 @@ Example:
 
       %tok = cleanuppad within %cs []
 
+.. _debugrecords:
+
+Debug Records
+-----------------------
+
+Debug records appear interleaved with instructions, but are not instructions;
+they are used only to define debug information, and have no effect on generated
+code. They are distinguished from instructions by the use of a leading `#` and
+an extra level of indentation. As an example:
+
+.. code-block:: llvm
+
+  %inst1 = op1 %a, %b
+    #dbg_value(%inst1, !10, !DIExpression(), !11)
+  %inst2 = op2 %inst1, %c
+
+These debug records are an optional replacement for
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
+``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
+records and intrinsics to appear in the same module. More information about
+debug records can be found in the `LLVM Source Level Debugging
+<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+
 .. _intrinsics:
 
 Intrinsic Functions
@@ -12731,10 +12947,11 @@ Variable argument support is defined in LLVM with the
 functions. These functions are related to the similarly named macros
 defined in the ``<stdarg.h>`` header file.
 
-All of these functions operate on arguments that use a target-specific
+All of these functions take as arguments pointers to a target-specific
 value type "``va_list``". The LLVM assembly language reference manual
 does not define what this type is, so all transformations should be
-prepared to handle these functions regardless of the type used.
+prepared to handle these functions regardless of the type used. The intrinsics
+are overloaded, and can be used for pointers to different address spaces.
 
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
@@ -12751,24 +12968,24 @@ variable argument handling intrinsic functions are used.
     define i32 @test(i32 %X, ...) {
       ; Initialize variable argument processing
       %ap = alloca %struct.va_list
-      call void @llvm.va_start(ptr %ap)
+      call void @llvm.va_start.p0(ptr %ap)
 
       ; Read a single integer argument
       %tmp = va_arg ptr %ap, i32
 
       ; Demonstrate usage of llvm.va_copy and llvm.va_end
       %aq = alloca ptr
-      call void @llvm.va_copy(ptr %aq, ptr %ap)
-      call void @llvm.va_end(ptr %aq)
+      call void @llvm.va_copy.p0(ptr %aq, ptr %ap)
+      call void @llvm.va_end.p0(ptr %aq)
 
       ; Stop processing of arguments.
-      call void @llvm.va_end(ptr %ap)
+      call void @llvm.va_end.p0(ptr %ap)
       ret i32 %tmp
     }
 
-    declare void @llvm.va_start(ptr)
-    declare void @llvm.va_copy(ptr, ptr)
-    declare void @llvm.va_end(ptr)
+    declare void @llvm.va_start.p0(ptr)
+    declare void @llvm.va_copy.p0(ptr, ptr)
+    declare void @llvm.va_end.p0(ptr)
 
 .. _int_va_start:
 
@@ -12780,7 +12997,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_start(ptr <arglist>)
+      declare void @llvm.va_start.p0(ptr <arglist>)
+      declare void @llvm.va_start.p5(ptr addrspace(5) <arglist>)
 
 Overview:
 """""""""
@@ -12812,7 +13030,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_end(ptr <arglist>)
+      declare void @llvm.va_end.p0(ptr <arglist>)
+      declare void @llvm.va_end.p5(ptr addrspace(5) <arglist>)
 
 Overview:
 """""""""
@@ -12845,7 +13064,8 @@ Syntax:
 
 ::
 
-      declare void @llvm.va_copy(ptr <destarglist>, ptr <srcarglist>)
+      declare void @llvm.va_copy.p0(ptr <destarglist>, ptr <srcarglist>)
+      declare void @llvm.va_copy.p5(ptr addrspace(5) <destarglist>, ptr addrspace(5) <srcarglist>)
 
 Overview:
 """""""""
@@ -12858,6 +13078,7 @@ Arguments:
 
 The first argument is a pointer to a ``va_list`` element to initialize.
 The second argument is a pointer to a ``va_list`` element to copy from.
+The address spaces of the two arguments must match.
 
 Semantics:
 """"""""""
@@ -13493,12 +13714,12 @@ Overview:
 """""""""
 
 The '``llvm.seh.try.begin``' and '``llvm.seh.try.end``' intrinsics mark
-the boundary of a _try region for Windows SEH Asynchrous Exception Handling.
+the boundary of a _try region for Windows SEH Asynchronous Exception Handling.
 
 Semantics:
 """"""""""
 
-When a C-function is compiled with Windows SEH Asynchrous Exception option,
+When a C-function is compiled with Windows SEH Asynchronous Exception option,
 -feh_asynch (aka MSVC -EHa), these two intrinsics are injected to mark _try
 boundary and to prevent potential exceptions from being moved across boundary.
 Any set of operations can then be confined to the region by reading their leaf
@@ -13519,7 +13740,7 @@ Overview:
 """""""""
 
 The '``llvm.seh.scope.begin``' and '``llvm.seh.scope.end``' intrinsics mark
-the boundary of a CPP object lifetime for Windows SEH Asynchrous Exception
+the boundary of a CPP object lifetime for Windows SEH Asynchronous Exception
 Handling (MSVC option -EHa).
 
 Semantics:
@@ -14490,6 +14711,63 @@ The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
 integer element type. The argument types must match each other, and the return
 type must match the argument type.
 
+.. _int_scmp:
+
+'``llvm.scmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.scmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is signed less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is signed greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
+
+.. _int_ucmp:
+
+'``llvm.ucmp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``@llvm.ucmp`` on any
+integer bit width or any vector of integer elements.
+
+::
+
+      declare i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+      declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview:
+"""""""""
+
+Return ``-1`` if ``%a`` is unsigned less than ``%b``, ``0`` if they are equal, and 
+``1`` if ``%a`` is unsigned greater than ``%b``. Vector intrinsics operate on a per-element basis. 
+
+Arguments:
+""""""""""
+
+The arguments (``%a`` and ``%b``) may be of any integer type or a vector with
+integer element type. The argument types must match each other, and the return
+type must be at least as wide as ``i2``, to hold the three possible return values.
 
 .. _int_memcpy:
 
@@ -15540,7 +15818,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the lesser
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _i_maximum:
 
@@ -15580,7 +15858,7 @@ Semantics:
 If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2018.
+IEEE 754-2019.
 
 .. _int_copysign:
 
@@ -15980,6 +16258,8 @@ functions would, but without setting errno. If the rounded value is
 too large to be stored in the result type, the return value is a
 non-deterministic value (equivalent to `freeze poison`).
 
+.. _int_lrint:
+
 '``llvm.lrint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16024,6 +16304,8 @@ This function returns the same values as the libm ``lrint`` functions
 would, but without setting errno. If the rounded value is too large to
 be stored in the result type, the return value is a non-deterministic
 value (equivalent to `freeze poison`).
+
+.. _int_llrint:
 
 '``llvm.llrint.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16708,6 +16990,7 @@ an operation is greater than the maximum value, the result is set (or
 "clamped") to this maximum. If it is below the minimum, it is clamped to this
 minimum.
 
+.. _int_sadd_sat:
 
 '``llvm.sadd.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16757,6 +17040,8 @@ Examples
       %res = call i4 @llvm.sadd.sat.i4(i4 -4, i4 -5)  ; %res = -8
 
 
+.. _int_uadd_sat:
+
 '``llvm.uadd.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16803,6 +17088,8 @@ Examples
       %res = call i4 @llvm.uadd.sat.i4(i4 5, i4 6)  ; %res = 11
       %res = call i4 @llvm.uadd.sat.i4(i4 8, i4 8)  ; %res = 15
 
+
+.. _int_ssub_sat:
 
 '``llvm.ssub.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16851,6 +17138,8 @@ Examples
       %res = call i4 @llvm.ssub.sat.i4(i4 -4, i4 5)  ; %res = -8
       %res = call i4 @llvm.ssub.sat.i4(i4 4, i4 -5)  ; %res = 7
 
+
+.. _int_usub_sat:
 
 '``llvm.usub.sat.*``' Intrinsics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17561,7 +17850,7 @@ Examples
       %res = call i4 @llvm.udiv.fix.sat.i4(i4 8, i4 2, i32 2)  ; %res = 15 (2 / 0.5 = 4 => 3.75)
 
 
-Specialised Arithmetic Intrinsics
+Specialized Arithmetic Intrinsics
 ---------------------------------
 
 .. _i_intr_llvm_canonicalize:
@@ -17885,9 +18174,9 @@ The '``llvm.loop.decrement.reg.*``' intrinsics do an integer ``SUB`` of its
 two operands, which is not allowed to wrap. They return the remaining number of
 iterations still to be executed, and can be used together with a ``PHI``,
 ``ICMP`` and ``BR`` to control the number of loop iterations executed. Any
-optimisations are allowed to treat it is a ``SUB``, and it is supported by
+optimizations are allowed to treat it is a ``SUB``, and it is supported by
 SCEV, so it's the backends responsibility to handle cases where it may be
-optimised. These intrinsics are marked as ``IntrNoDuplicate`` to avoid
+optimized. These intrinsics are marked as ``IntrNoDuplicate`` to avoid
 optimizers duplicating these instructions.
 
 
@@ -18589,7 +18878,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behaviour of this intrinsic is undefined if the return type is not wide enough
+behavior of this intrinsic is undefined if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
@@ -21874,7 +22163,7 @@ and ``evl2`` are unsigned integers indicating the explicit vector lengths of
 ``vec1`` and ``vec2`` respectively.  ``imm``, ``evl1`` and ``evl2`` should
 respect the following constraints: ``-evl1 <= imm < evl1``, ``0 <= evl1 <= VL``
 and ``0 <= evl2 <= VL``, where ``VL`` is the runtime vector factor. If these
-constraints are not satisfied the intrinsic has undefined behaviour.
+constraints are not satisfied the intrinsic has undefined behavior.
 
 Semantics:
 """"""""""
@@ -23334,6 +23623,100 @@ Examples:
       %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
+.. _int_vp_lrint:
+
+'``llvm.vp.lrint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32> @llvm.vp.lrint.v16i32.v16f32(<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32> @llvm.vp.lrint.nxv4i32.nxv4f32(<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64> @llvm.vp.lrint.v256i64.v256f64(<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated lrint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+
+The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+type with the same number of elements as the result vector type. The second
+operand is the vector mask and has the same number of elements as the result
+vector type. The third operand is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.lrint``' intrinsic performs lrint (:ref:`lrint <int_lrint>`) of
+the first vector operand on each enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.lrint.v4i32.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.lrint.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+.. _int_vp_llrint:
+
+'``llvm.vp.llrint.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32> @llvm.vp.llrint.v16i32.v16f32(<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32> @llvm.vp.llrint.nxv4i32.nxv4f32(<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64> @llvm.vp.llrint.v256i64.v256f64(<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated llrint of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+The result is an integer vector and the first operand is a vector of :ref:`floating-point <t_floating>`
+type with the same number of elements as the result vector type. The second
+operand is the vector mask and has the same number of elements as the result
+vector type. The third operand is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.llrint``' intrinsic performs lrint (:ref:`llrint <int_llrint>`) of
+the first vector operand on each enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.llrint.v4i32.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.llrint.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
 .. _int_vp_bitreverse:
 
 '``llvm.vp.bitreverse.*``' Intrinsics
@@ -23566,6 +23949,202 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_sadd_sat:
+
+'``llvm.vp.sadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.sadd.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.sadd.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.sadd.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated signed saturating addition of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.sadd.sat``' intrinsic performs sadd.sat (:ref:`sadd.sat <int_sadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_uadd_sat:
+
+'``llvm.vp.uadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.uadd.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.uadd.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.uadd.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated unsigned saturating addition of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.uadd.sat``' intrinsic performs uadd.sat (:ref:`uadd.sat <int_uadd_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_ssub_sat:
+
+'``llvm.vp.ssub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.ssub.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.ssub.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.ssub.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated signed saturating subtraction of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.ssub.sat``' intrinsic performs ssub.sat (:ref:`ssub.sat <int_ssub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.ssub.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
+
+
+.. _int_vp_usub_sat:
+
+'``llvm.vp.usub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i32>  @llvm.vp.usub.sat.v16i32 (<16 x i32> <left_op> <16 x i32> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.usub.sat.nxv4i32 (<vscale x 4 x i32> <left_op>, <vscale x 4 x i32> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.usub.sat.v256i64 (<256 x i64> <left_op>, <256 x i64> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated unsigned saturating subtraction of two vectors of integers.
+
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of integer type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.usub.sat``' intrinsic performs usub.sat (:ref:`usub.sat <int_usub_sat>`)
+of the first and second vector operands on each enabled lane. The result on
+disabled lanes is a :ref:`poison value <poisonvalues>`.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i32> @llvm.vp.usub.sat.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
@@ -23934,6 +24513,9 @@ Arguments:
 
 The first operand is the base pointer for the load. It has the same underlying type as the element of the returned vector. The second operand, mask, is a vector of boolean values with the same number of elements as the return type. The third is a pass-through value that is used to fill the masked-off lanes of the result. The return type and the type of the '``passthru``' operand have the same vector type.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+operand. The pointer alignment defaults to 1.
+
 Semantics:
 """"""""""
 
@@ -23991,11 +24573,13 @@ Arguments:
 
 The first operand is the input vector, from which elements are collected and written to memory. The second operand is the base pointer for the store, it has the same underlying type as the element of the input vector operand. The third operand is the mask, a vector of boolean values. The mask and the input vector must have the same number of vector elements.
 
+The :ref:`align <attr_align>` parameter attribute can be provided for the second
+operand. The pointer alignment defaults to 1.
 
 Semantics:
 """"""""""
 
-The '``llvm.masked.compressstore``' intrinsic is designed for compressing data in memory. It allows to collect elements from possibly non-adjacent lanes of a vector and store them contiguously in memory in one IR operation. It is useful for targets that support compressing store operations and allows vectorizing loops with cross-iteration dependences like in the following example:
+The '``llvm.masked.compressstore``' intrinsic is designed for compressing data in memory. It allows to collect elements from possibly non-adjacent lanes of a vector and store them contiguously in memory in one IR operation. It is useful for targets that support compressing store operations and allows vectorizing loops with cross-iteration dependencies like in the following example:
 
 .. code-block:: c
 
@@ -25658,7 +26242,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.minimum``' Intrinsic
@@ -25690,7 +26274,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows semantics specified in the draft of IEEE 754-2018.
+This function follows semantics specified in the draft of IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic
@@ -26085,6 +26669,7 @@ similar to C library function 'fesetround', however this intrinsic does not
 return any value and uses platform-independent representation of IEEE rounding
 modes.
 
+.. _int_get_fpenv:
 
 '``llvm.get.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26108,6 +26693,7 @@ Semantics:
 The '``llvm.get.fpenv``' intrinsic reads the current floating-point environment
 and returns it as an integer value.
 
+.. _int_set_fpenv:
 
 '``llvm.set.fpenv``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26135,7 +26721,7 @@ Semantics:
 
 The '``llvm.set.fpenv``' intrinsic sets the current floating-point environment
 to the state specified by the argument. The state may be previously obtained by a
-call to '``llvm.get.fpenv``' or synthesised in a platform-dependent way.
+call to '``llvm.get.fpenv``' or synthesized in a platform-dependent way.
 
 
 '``llvm.reset.fpenv``' Intrinsic
@@ -26477,6 +27063,8 @@ Arguments:
 
 The argument should be an MDTuple containing any number of MDStrings.
 
+.. _llvm.trap:
+
 '``llvm.trap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26503,6 +27091,8 @@ Semantics:
 This intrinsic is lowered to the target dependent trap instruction. If
 the target does not have a trap instruction, this intrinsic will be
 lowered to a call of the ``abort()`` function.
+
+.. _llvm.debugtrap:
 
 '``llvm.debugtrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26531,6 +27121,8 @@ This intrinsic is lowered to code which is intended to cause an
 execution trap with the intention of requesting the attention of a
 debugger.
 
+.. _llvm.ubsantrap:
+
 '``llvm.ubsantrap``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26558,7 +27150,7 @@ This intrinsic is lowered to code which is intended to cause an execution trap,
 embedding the argument into encoding of that trap somehow to discriminate
 crashes if possible.
 
-Equivalent to ``@llvm.trap`` for targets that do not support this behaviour.
+Equivalent to ``@llvm.trap`` for targets that do not support this behavior.
 
 '``llvm.stackprotector``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27161,12 +27753,12 @@ in example below:
 .. code-block:: text
 
     %cond = call i1 @llvm.experimental.widenable.condition()
-    br i1 %cond, label %solution_1, label %solution_2
+    br i1 %cond, label %fast_path, label %slow_path
 
-  label %fast_path:
+  fast_path:
     ; Apply memory-consuming but fast solution for a task.
 
-  label %slow_path:
+  slow_path:
     ; Cheap in memory but slow solution.
 
 Whether the result of intrinsic's call is `true` or `false`,
@@ -27246,6 +27838,120 @@ call of ``@llvm.experimental.widenable.condition``  with
 constant `true`. However it is always correct to replace
 it with any other `i1` value. Any pass can
 freely do it if it can benefit from non-default lowering.
+
+'``llvm.allow.ubsan.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.ubsan.check(i8 immarg %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable the
+ubsan check in the current basic block.
+
+Rules to allow ubsan checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is the ubsan specific version of ``@llvm.allow.runtime.check()``.
+
+Arguments:
+""""""""""
+
+An integer describing the kind of ubsan check guarded by the intrinsic.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it selects one of the two paths:
+
+* `true``: Executes the UBSan check and reports any failures.
+
+* `false`: Bypasses the check, assuming it always succeeds.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.ubsan.check(i8 5)
+    %not.allow = xor i1 %allow, true
+    %cond = or i1 %ubcheck, %not.allow
+    br i1 %cond, label %cont, label %trap
+
+  cont:
+    ; Proceed
+
+  trap:
+    call void @llvm.ubsantrap(i8 5)
+    unreachable
+
+
+'``llvm.allow.runtime.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.runtime.check(metadata %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable
+runtime checks in the current basic block.
+
+Rules to allow runtime checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is non-ubsan specific version of ``@llvm.allow.ubsan.check()``.
+
+Arguments:
+""""""""""
+
+A string identifying the kind of runtime check guarded by the intrinsic. The
+string can be used to control rules to allow checks.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.runtime.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem. 
+
+If the intrinsic is evaluated as ``true``, program should execute a guarded
+check. If the intrinsic is evaluated as ``false``, the program should avoid any
+unnecessary checks.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.runtime.check(metadata !"my_check")
+    br i1 %allow, label %fast_path, label %slow_path
+
+  fast_path:
+    ; Omit diagnostics.
+
+  slow_path:
+    ; Additional diagnostics.
 
 
 '``llvm.load.relative``' Intrinsic
@@ -27499,7 +28205,7 @@ Arguments:
 The first three arguments are the same as they are in the :ref:`@llvm.memcpy <int_memcpy>`
 intrinsic, with the added constraint that ``len`` is required to be a positive integer
 multiple of the ``element_size``. If ``len`` is not a positive integer multiple of
-``element_size``, then the behaviour of the intrinsic is undefined.
+``element_size``, then the behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no greater than
 target-specific atomic access size limit.
@@ -27575,7 +28281,7 @@ The first three arguments are the same as they are in the
 :ref:`@llvm.memmove <int_memmove>` intrinsic, with the added constraint that
 ``len`` is required to be a positive integer multiple of the ``element_size``.
 If ``len`` is not a positive integer multiple of ``element_size``, then the
-behaviour of the intrinsic is undefined.
+behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no
 greater than a target-specific atomic access size limit.
@@ -27654,7 +28360,7 @@ Arguments:
 The first three arguments are the same as they are in the :ref:`@llvm.memset <int_memset>`
 intrinsic, with the added constraint that ``len`` is required to be a positive integer
 multiple of the ``element_size``. If ``len`` is not a positive integer multiple of
-``element_size``, then the behaviour of the intrinsic is undefined.
+``element_size``, then the behavior of the intrinsic is undefined.
 
 ``element_size`` must be a compile-time constant positive power of two no greater than
 target-specific atomic access size limit.

@@ -165,6 +165,9 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def warn_c11_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C11">,
+  InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
@@ -265,6 +268,8 @@ def err_expected_semi_after_namespace_name : Error<
   "expected ';' after namespace name">;
 def err_unexpected_namespace_attributes_alias : Error<
   "attributes cannot be specified on namespace alias">;
+def err_unexpected_qualified_namespace_alias : Error<
+  "namespace alias must be a single identifier">;
 def err_unexpected_nested_namespace_attribute : Error<
   "attributes cannot be specified on a nested namespace definition">;
 def err_inline_namespace_alias : Error<"namespace alias cannot be inline">;
@@ -783,6 +788,9 @@ def err_ms_property_expected_comma_or_rparen : Error<
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
 
+def err_assume_attr_expects_cond_expr : Error<
+  "use of this expression in an %0 attribute requires parentheses">;
+
 def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
@@ -1023,6 +1031,7 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1355,9 +1364,6 @@ def warn_pragma_acc_ignored
       DefaultIgnore;
 def err_acc_unexpected_directive
     : Error<"unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
-def warn_pragma_acc_unimplemented
-    : Warning<"OpenACC directives not yet implemented, pragma ignored">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;

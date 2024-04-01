@@ -287,12 +287,12 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThrea
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Event *event,
+    void *implementer, const char *method_name, lldb_private::Event *event,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated())
@@ -325,12 +325,12 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Stream *stream,
+    void *implementer, const char *method_name, lldb_private::Stream *stream,
     bool &got_error) {
   got_error = false;
 
   PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementer));
   auto pfunc = self.ResolveName<PythonCallable>(method_name);
 
   if (!pfunc.IsAllocated()) 
@@ -827,6 +827,29 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  return true;
+}
+
+#include "lldb/Interpreter/CommandReturnObject.h"
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("__call__");
+
+  if (!pfunc.IsAllocated()) {
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    return false;
+  }
+
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
+        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   return true;
 }

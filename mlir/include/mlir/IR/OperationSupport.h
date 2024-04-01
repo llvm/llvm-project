@@ -676,6 +676,11 @@ public:
   static std::optional<RegisteredOperationName> lookup(StringRef name,
                                                        MLIRContext *ctx);
 
+  /// Lookup the registered operation information for the given operation.
+  /// Returns std::nullopt if the operation isn't registered.
+  static std::optional<RegisteredOperationName> lookup(TypeID typeID,
+                                                       MLIRContext *ctx);
+
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list
   /// of operations they contain.
@@ -1316,10 +1321,10 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 //===----------------------------------------------------------------------===//
 
 /// A unique fingerprint for a specific operation, and all of it's internal
-/// operations.
+/// operations (if `includeNested` is set).
 class OperationFingerPrint {
 public:
-  OperationFingerPrint(Operation *topOp);
+  OperationFingerPrint(Operation *topOp, bool includeNested = true);
   OperationFingerPrint(const OperationFingerPrint &) = default;
   OperationFingerPrint &operator=(const OperationFingerPrint &) = default;
 

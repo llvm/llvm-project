@@ -263,16 +263,13 @@ func.func @avg_pool_f32(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>)
   // CHECK:   %[[SRC_END:.+]] = arith.muli %[[END]], %[[STRIDE]]
   // CHECK:   %[[PAD_START:.+]] = arith.constant 1
   // CHECK:   %[[START_SUB:.+]] = arith.subi %[[SRC_START]], %[[PAD_START]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[START_SUB]], %[[ZERO]]
-  // CHECK:   %[[OFFSET:.+]] = arith.select %[[CMP]], %[[START_SUB]], %[[ZERO]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[START_SUB]], %[[ZERO]]
   // CHECK:   %[[START_OFFSET:.+]] = arith.addi %[[KSIZE]], %[[OFFSET]]
   // CHECK:   %[[PAD_END:.+]] = arith.constant 1
   // CHECK:   %[[END_SUB:.+]] = arith.subi %[[SRC_END]], %[[PAD_END]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[END_SUB]], %[[ZERO]]
-  // CHECK:   %[[OFFSET:.+]] = arith.select %[[CMP]], %[[END_SUB]], %[[ZERO]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[END_SUB]], %[[ZERO]]
   // CHECK:   %[[END_OFFSET:.+]] = arith.addi %[[START_OFFSET]], %[[OFFSET]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[END_OFFSET]], %[[ONE]]
-  // CHECK:   %[[KHEIGHT:.+]] = arith.select %[[CMP]], %[[ONE]], %[[END_OFFSET]]
+  // CHECK:   %[[KHEIGHT:.+]] = arith.maxsi %[[ONE]], %[[END_OFFSET]]
 
   // Compute how much of the width does not include padding:
   // CHECK:   %[[STRIDE:.+]] = arith.constant 1
@@ -283,16 +280,13 @@ func.func @avg_pool_f32(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>)
   // CHECK:   %[[SRC_END:.+]] = arith.muli %[[END]], %[[STRIDE]]
   // CHECK:   %[[PAD_START:.+]] = arith.constant 1
   // CHECK:   %[[START_SUB:.+]] = arith.subi %[[SRC_START]], %[[PAD_START]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[START_SUB]], %[[ZERO]]
-  // CHECK:   %[[OFFSET:.+]] = arith.select %[[CMP]], %[[START_SUB]], %[[ZERO]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[START_SUB]], %[[ZERO]]
   // CHECK:   %[[START_OFFSET:.+]] = arith.addi %[[KSIZE]], %[[OFFSET]]
   // CHECK:   %[[PAD_END:.+]] = arith.constant 1
   // CHECK:   %[[END_SUB:.+]] = arith.subi %[[SRC_END]], %[[PAD_END]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[END_SUB]], %[[ZERO]]
-  // CHECK:   %[[OFFSET:.+]] = arith.select %[[CMP]], %[[END_SUB]], %[[ZERO]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[END_SUB]], %[[ZERO]]
   // CHECK:   %[[END_OFFSET:.+]] = arith.addi %[[START_OFFSET]], %[[OFFSET]]
-  // CHECK:   %[[CMP:.+]] = arith.cmpi slt, %[[END_OFFSET]], %[[ONE]]
-  // CHECK:   %[[KWIDTH:.+]] = arith.select %[[CMP]], %[[ONE]], %[[END_OFFSET]]
+  // CHECK:   %[[KWIDTH:.+]] = arith.maxsi %[[ONE]], %[[END_OFFSET]]
 
   // Divide the summed value by the number of values summed.
   // CHECK:   %[[COUNT:.+]] = arith.muli %[[KHEIGHT]], %[[KWIDTH]]
@@ -302,6 +296,91 @@ func.func @avg_pool_f32(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x5x33x62xf32>)
   // CHECK:   linalg.yield %[[DIV]]
   %0 = tosa.avg_pool2d %arg0 {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, kernel = array<i64: 4, 4>, stride = array<i64: 1, 1>} : (tensor<1x6x34x62xf32>) -> tensor<1x5x33x62xf32>
   return %0 : tensor<1x5x33x62xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @avg_pool_f16_f32acc
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
+func.func @avg_pool_f16_f32acc(%arg0: tensor<1x6x34x62xf16>) -> (tensor<1x5x33x62xf16>) {
+  // Apply padding to the input:
+  // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f16
+  // CHECK: %[[PAD:.+]] = tensor.pad %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
+  // CHECK:   tensor.yield %[[F0]] : f16
+
+  // Fill the pooling target:
+  // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<1x5x33x62xf32>
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[F0]] : f32) outs(%[[EMPTY]] : tensor<1x5x33x62xf32>)
+
+  // Compute the sum padding:
+  // CHECK: %[[KERNEL:.+]] = tensor.empty() : tensor<4x4xf32>
+  // CHECK: %[[POOL:.+]] = linalg.pooling_nhwc_sum
+  // CHECK-SAME: dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>}
+  // CHECK-SAME: ins(%[[PAD]], %[[KERNEL]] : tensor<1x8x36x62xf16>, tensor<4x4xf32>)
+  // CHECK-SAME: outs(%[[FILL]] : tensor<1x5x33x62xf32>)
+
+  // Compute dimension based constants:
+  // CHECK: %[[I1:.+]] = arith.constant 1 : index
+  // CHECK: %[[DIM1:.+]] = tensor.dim %[[POOL]], %[[I1]]
+  // CHECK: %[[I2:.+]] = arith.constant 2 : index
+  // CHECK: %[[DIM2:.+]] = tensor.dim %[[POOL]], %[[I2]]
+  // CHECK: %[[ONE:.+]] = arith.constant 1 : index
+  // CHECK: %[[HEIGHT:.+]] = arith.subi %[[DIM1]], %[[ONE]] : index
+  // CHECK: %[[WIDTH:.+]] = arith.subi %[[DIM2]], %[[ONE]] : index
+
+  // Divide the sum pooling by the number of summed values.
+  // CHECK: %[[EMPTY:.+]] = tensor.empty() : tensor<1x5x33x62xf16>
+  // CHECK: %[[GENERIC:.+]] = linalg.generic
+  // CHECK-SAME: indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  // CHECK-SAME: ins(%[[POOL]] : tensor<1x5x33x62xf32>)
+  // CHECK-SAME: outs(%[[EMPTY]] : tensor<1x5x33x62xf16>)
+  // CHECK: ^bb0(%[[IN:.+]]: f32, %{{.+}}: f16)
+  // CHECK:   %[[ZERO:.+]] = arith.constant 0
+
+  // Compute how much of the height does not include padding:
+  // CHECK:   %[[STRIDE:.+]] = arith.constant 1
+  // CHECK:   %[[KSIZE:.+]] = arith.constant 4
+  // CHECK:   %[[START:.+]] = linalg.index 1
+  // CHECK:   %[[END:.+]] = arith.subi %[[HEIGHT]], %[[START]]
+  // CHECK:   %[[SRC_START:.+]] = arith.muli %[[START]], %[[STRIDE]]
+  // CHECK:   %[[SRC_END:.+]] = arith.muli %[[END]], %[[STRIDE]]
+  // CHECK:   %[[PAD_START:.+]] = arith.constant 1
+  // CHECK:   %[[START_SUB:.+]] = arith.subi %[[SRC_START]], %[[PAD_START]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[START_SUB]], %[[ZERO]]
+  // CHECK:   %[[START_OFFSET:.+]] = arith.addi %[[KSIZE]], %[[OFFSET]]
+  // CHECK:   %[[PAD_END:.+]] = arith.constant 1
+  // CHECK:   %[[END_SUB:.+]] = arith.subi %[[SRC_END]], %[[PAD_END]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[END_SUB]], %[[ZERO]]
+  // CHECK:   %[[END_OFFSET:.+]] = arith.addi %[[START_OFFSET]], %[[OFFSET]]
+  // CHECK:   %[[KHEIGHT:.+]] = arith.maxsi %[[ONE]], %[[END_OFFSET]]
+
+  // Compute how much of the width does not include padding:
+  // CHECK:   %[[STRIDE:.+]] = arith.constant 1
+  // CHECK:   %[[KSIZE:.+]] = arith.constant 4
+  // CHECK:   %[[START:.+]] = linalg.index 2
+  // CHECK:   %[[END:.+]] = arith.subi %[[WIDTH]], %[[START]]
+  // CHECK:   %[[SRC_START:.+]] = arith.muli %[[START]], %[[STRIDE]]
+  // CHECK:   %[[SRC_END:.+]] = arith.muli %[[END]], %[[STRIDE]]
+  // CHECK:   %[[PAD_START:.+]] = arith.constant 1
+  // CHECK:   %[[START_SUB:.+]] = arith.subi %[[SRC_START]], %[[PAD_START]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[START_SUB]], %[[ZERO]]
+  // CHECK:   %[[START_OFFSET:.+]] = arith.addi %[[KSIZE]], %[[OFFSET]]
+  // CHECK:   %[[PAD_END:.+]] = arith.constant 1
+  // CHECK:   %[[END_SUB:.+]] = arith.subi %[[SRC_END]], %[[PAD_END]]
+  // CHECK:   %[[OFFSET:.+]] = arith.minsi %[[END_SUB]], %[[ZERO]]
+  // CHECK:   %[[END_OFFSET:.+]] = arith.addi %[[START_OFFSET]], %[[OFFSET]]
+  // CHECK:   %[[KWIDTH:.+]] = arith.maxsi %[[ONE]], %[[END_OFFSET]]
+
+  // Divide the summed value by the number of values summed.
+  // CHECK:   %[[COUNT:.+]] = arith.muli %[[KHEIGHT]], %[[KWIDTH]]
+  // CHECK:   %[[CAST:.+]] = arith.index_cast %[[COUNT]]
+  // CHECK:   %[[FLT:.+]] = arith.sitofp %[[CAST]]
+  // CHECK:   %[[DIV:.+]] = arith.divf %[[IN]], %[[FLT]]
+  // CHECK:   %[[TRUNC:.+]] = arith.truncf %[[DIV]]
+  // CHECK:   linalg.yield %[[TRUNC]]
+  %0 = tosa.avg_pool2d %arg0 {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, kernel = array<i64: 4, 4>, stride = array<i64: 1, 1>} : (tensor<1x6x34x62xf16>) -> tensor<1x5x33x62xf16>
+  return %0 : tensor<1x5x33x62xf16>
 }
 
 // -----
@@ -316,7 +395,7 @@ func.func @avg_pool_i8(%arg0: tensor<1x6x34x62xi8>) -> (tensor<1x5x33x62xi8>) {
 
   // Only different behavior is how the division is performed.
   // First we compute the mul and shift values for average pool:
-  // CHECK: %[[COUNT:.+]] = arith.muli %21, %35
+  // CHECK: %[[COUNT:.+]] = arith.muli %{{[0-9]+}}, %{{[0-9]+}}
   // CHECK: %[[ICAST:.+]] = arith.index_cast %[[COUNT]]
   // CHECK: %[[C1:.+]] = arith.constant 1
   // CHECK: %[[C32:.+]] = arith.constant 32
@@ -337,10 +416,8 @@ func.func @avg_pool_i8(%arg0: tensor<1x6x34x62xi8>) -> (tensor<1x5x33x62xi8>) {
   // Perform the normalization.
   // CHECK: %[[CMIN:.+]] = arith.constant -128
   // CHECK: %[[CMAX:.+]] = arith.constant 127
-  // CHECK: %[[CMP:.+]] = arith.cmpi slt, %[[SCALED]], %[[CMIN]]
-  // CHECK: %[[SEL:.+]] = arith.select %[[CMP]], %[[CMIN]], %[[SCALED]]
-  // CHECK: %[[CMP:.+]] = arith.cmpi slt, %[[CMAX]], %[[SCALED]]
-  // CHECK: %[[CLAMP:.+]] = arith.select %[[CMP]], %[[CMAX]], %[[SEL]]
+  // CHECK: %[[LOW:.+]] = arith.maxsi %[[CMIN]], %[[SCALED]]
+  // CHECK: %[[CLAMP:.+]] = arith.minsi %[[CMAX]], %[[LOW]]
   // CHECK: %[[TRUNC:.+]] = arith.trunci %[[CLAMP]]
   // CHECK: linalg.yield %[[TRUNC]]
   %0 = tosa.avg_pool2d %arg0 {acc_type = i32, pad = array<i64: 1, 1, 1, 1>, kernel = array<i64: 4, 4>, stride = array<i64: 1, 1>} : (tensor<1x6x34x62xi8>) -> tensor<1x5x33x62xi8>

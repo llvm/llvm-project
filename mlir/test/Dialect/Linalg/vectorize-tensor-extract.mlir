@@ -550,3 +550,48 @@ module attributes {transform.with_named_sequence} {
      transform.yield
    }
 }
+
+// -----
+
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0 + d1 + d2)>
+func.func @vectorize_reverse_like_tensor_extract(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x1x3xf32>, %arg2: index) -> tensor<1x1x3xf32> {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %0 = linalg.generic {indexing_maps = [#map], iterator_types = ["parallel", "parallel", "parallel"]} outs(%arg1 : tensor<1x1x3xf32>) {
+  ^bb0(%out: f32):
+    %1 = linalg.index 1 : index
+    %2 = linalg.index 0 : index
+    %3 = affine.apply #map1(%1, %2, %arg2)
+    %4 = linalg.index 2 : index
+    %5 = arith.subi %c2, %4 : index
+    %extracted = tensor.extract %arg0[%c0, %3, %5] : tensor<1x2x3xf32>
+    linalg.yield %extracted : f32
+  } -> tensor<1x1x3xf32>
+  return %0 : tensor<1x1x3xf32>
+}
+// CHECK-LABEL: func.func @vectorize_reverse_like_tensor_extract
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]
+// CHECK-SAME:    %[[ARG1:[0-9a-zA-Z]*]]
+// CHECK-SAME:    %[[ARG2:[0-9a-zA-Z]*]]
+// CHECK-DAG:    %[[CST:.+]] = arith.constant dense<3> : vector<1x1x3xindex>
+// CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:    %[[MASK:.*]] = arith.constant dense<true> : vector<1x1x3xi1>
+// CHECK-DAG:    %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x3xf32>
+// CHECK-DAG:    %[[INIT_IDX:.+]] = arith.constant dense<[2, 1, 0]> : vector<3xindex>
+// CHECK:        %[[T0:.+]] = vector.broadcast %[[ARG2]] : index to vector<1x1x3xindex>
+// CHECK:        %[[T1:.+]] = arith.muli %[[T0]], %[[CST]] : vector<1x1x3xindex>
+// CHECK:        %[[T2:.+]] = vector.broadcast %[[INIT_IDX]]
+// CHECK:        %[[T3:.+]] = arith.addi %[[T2]], %[[T1]]
+// CHECK:        %[[GATHER:.*]] = vector.gather %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]] [%[[T3]]], %[[MASK]], %[[PASSTHRU]]
+// CHECK:        vector.transfer_write %[[GATHER]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+     %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+     transform.yield
+   }
+}

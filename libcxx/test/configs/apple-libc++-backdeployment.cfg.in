@@ -45,10 +45,10 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
+    '-nostdinc++ -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++'
+    '-nostdlib++ -L %{lib-dir} -lc++'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env DYLD_LIBRARY_PATH="%{cxx-runtime-root}:%{abi-runtime-root}:%{unwind-runtime-root}" -- '

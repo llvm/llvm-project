@@ -575,7 +575,7 @@ public:
   // Emit code to generate this result as a Value *.
   std::string asValue() override {
     if (AddressType)
-      return "(" + varname() + ".getPointer())";
+      return "(" + varname() + ".emitRawPointer(*this))";
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }
@@ -1846,7 +1846,7 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
         // declared 'static inline' without a body, which is fine
         // provided clang recognizes them as builtins, and has the
         // effect that this type signature is used in place of the one
-        // that Builtins.def didn't provide. That's how we can get
+        // that Builtins.td didn't provide. That's how we can get
         // structure types that weren't defined until this header was
         // included to be part of the type signature of a builtin that
         // was known to clang already.

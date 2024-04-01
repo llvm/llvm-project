@@ -46,7 +46,7 @@ inline bool isRefType(wasm::ValType Type) {
 
 // Convert ValType or a list/signature of ValTypes to a string.
 
-// Convert an unsinged integer, which can be among wasm::ValType enum, to its
+// Convert an unsigned integer, which can be among wasm::ValType enum, to its
 // type name string. If the input is not within wasm::ValType, returns
 // "invalid_type".
 const char *anyTypeToString(unsigned Type);
