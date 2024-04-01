@@ -22,7 +22,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
-#include <queue>
 
 #define DEBUG_TYPE "mcplus"
 
