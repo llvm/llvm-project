@@ -29,14 +29,13 @@ struct CompositeFixedPointPass final
 
   CompositeFixedPointPass(
       std::string name_, llvm::function_ref<void(OpPassManager &)> populateFunc,
-      unsigned maxIterations)
-      : dynamicPM(std::make_shared<OpPassManager>()) {
+      unsigned maxIterations) {
     name = std::move(name_);
     maxIter = maxIterations;
-    populateFunc(*dynamicPM);
+    populateFunc(dynamicPM);
     std::string pipeline;
     llvm::raw_string_ostream os(pipeline);
-    dynamicPM->printAsTextualPipeline(os);
+    dynamicPM.printAsTextualPipeline(os);
     os.flush();
     pipelineStr = pipeline;
   }
@@ -45,8 +44,7 @@ struct CompositeFixedPointPass final
     if (failed(CompositeFixedPointPassBase::initializeOptions(options)))
       return failure();
 
-    dynamicPM = std::make_shared<OpPassManager>();
-    if (failed(parsePassPipeline(pipelineStr, *dynamicPM))) {
+    if (failed(parsePassPipeline(pipelineStr, dynamicPM))) {
       llvm::errs() << "Failed to parse composite pass pipeline\n";
       return failure();
     }
@@ -55,7 +53,7 @@ struct CompositeFixedPointPass final
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    dynamicPM->getDependentDialects(registry);
+    dynamicPM.getDependentDialects(registry);
   }
 
   void runOnOperation() override {
@@ -65,7 +63,7 @@ struct CompositeFixedPointPass final
     unsigned currentIter = 0;
     unsigned maxIterVal = maxIter;
     while (true) {
-      if (failed(runPipeline(*dynamicPM, op)))
+      if (failed(runPipeline(dynamicPM, op)))
         return signalPassFailure();
 
       if (currentIter++ >= maxIterVal) {
@@ -87,7 +85,7 @@ protected:
   llvm::StringRef getName() const override { return name; }
 
 private:
-  std::shared_ptr<OpPassManager> dynamicPM;
+  OpPassManager dynamicPM;
 };
 } // namespace
 
