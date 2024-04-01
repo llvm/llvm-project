@@ -620,9 +620,13 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"tanhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"acosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
           FunctionSpec<"asinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"asin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+
           FunctionSpec<"atanf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
+          FunctionSpec<"atan2f", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
           FunctionSpec<"acoshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"asinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
