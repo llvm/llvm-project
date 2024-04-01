@@ -14,7 +14,7 @@
 #ifndef BOLT_CORE_DEBUG_NAMES_H
 #define BOLT_CORE_DEBUG_NAMES_H
 
-#include "DebugData.h"
+#include "bolt/Core/DebugData.h"
 #include "llvm/CodeGen/AccelTable.h"
 
 namespace llvm {
