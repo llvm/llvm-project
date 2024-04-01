@@ -14,7 +14,6 @@
 #define BOLT_PROFILE_PROFILEYAMLMAPPING_H
 
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
