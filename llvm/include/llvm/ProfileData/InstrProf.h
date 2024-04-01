@@ -1195,6 +1195,7 @@ namespace RawInstrProf {
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
 // Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
+// Version 10: Added vtable, a new type of value profile data.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();
