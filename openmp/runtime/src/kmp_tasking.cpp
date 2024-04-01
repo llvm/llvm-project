@@ -3386,8 +3386,6 @@ static inline int __kmp_execute_tasks_template(
 
   nthreads = task_team->tt.tt_nproc;
   unfinished_threads = &(task_team->tt.tt_unfinished_threads);
-  KMP_DEBUG_ASSERT(nthreads > 1 || task_team->tt.tt_found_proxy_tasks ||
-                   task_team->tt.tt_hidden_helper_task_encountered);
   KMP_DEBUG_ASSERT(*unfinished_threads >= 0);
 
   while (1) { // Outer loop keeps trying to find tasks in case of single thread
@@ -4158,9 +4156,12 @@ void __kmp_wait_to_unref_task_teams(void) {
 void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
 
-  // For serial teams, setup the first task team pointer to point to task team.
-  // The other pointer is a stack of task teams from previous serial levels.
-  if (team->t.t_nproc == 1) {
+  // For the serial and root teams, setup the first task team pointer to point
+  // to task team. The other pointer is a stack of task teams from previous
+  // serial levels.
+  if (team == this_thr->th.th_serial_team ||
+      team == this_thr->th.th_root->r.r_root_team) {
+    KMP_DEBUG_ASSERT(team->t.t_nproc == 1);
     if (team->t.t_task_team[0] == NULL) {
       team->t.t_task_team[0] = __kmp_allocate_task_team(this_thr, team);
       KA_TRACE(20,
@@ -4168,16 +4169,16 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
                 " for serial/root team %p\n",
                 __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
 
-      return;
     } else
       __kmp_task_team_init(team->t.t_task_team[0], team);
+    return;
   }
+
   // If this task_team hasn't been created yet, allocate it. It will be used in
   // the region after the next.
   // If it exists, it is the current task team and shouldn't be touched yet as
   // it may still be in use.
-  if (team->t.t_task_team[this_thr->th.th_task_state] == NULL &&
-      team->t.t_nproc > 1) {
+  if (team->t.t_task_team[this_thr->th.th_task_state] == NULL) {
     team->t.t_task_team[this_thr->th.th_task_state] =
         __kmp_allocate_task_team(this_thr, team);
     KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
@@ -4192,29 +4193,26 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
   // threads spin in the barrier release phase, they will continue to use the
   // previous task_team struct(above), until they receive the signal to stop
   // checking for tasks (they can't safely reference the kmp_team_t struct,
-  // which could be reallocated by the primary thread). No task teams are formed
-  // for serialized teams.
-  if (team->t.t_nproc > 1) {
-    int other_team = 1 - this_thr->th.th_task_state;
-    KMP_DEBUG_ASSERT(other_team >= 0 && other_team < 2);
-    if (team->t.t_task_team[other_team] == NULL) { // setup other team as well
-      team->t.t_task_team[other_team] =
-          __kmp_allocate_task_team(this_thr, team);
-      KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created second new "
-                    "task_team %p for team %d at parity=%d\n",
-                    __kmp_gtid_from_thread(this_thr),
-                    team->t.t_task_team[other_team], team->t.t_id, other_team));
-    } else { // Leave the old task team struct in place for the upcoming region;
-      // adjust as needed
-      kmp_task_team_t *task_team = team->t.t_task_team[other_team];
-      __kmp_task_team_init(task_team, team);
-      // if team size has changed, the first thread to enable tasking will
-      // realloc threads_data if necessary
-      KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d reset next task_team "
-                    "%p for team %d at parity=%d\n",
-                    __kmp_gtid_from_thread(this_thr),
-                    team->t.t_task_team[other_team], team->t.t_id, other_team));
-    }
+  // which could be reallocated by the primary thread).
+  int other_team = 1 - this_thr->th.th_task_state;
+  KMP_DEBUG_ASSERT(other_team >= 0 && other_team < 2);
+  if (team->t.t_task_team[other_team] == NULL) { // setup other team as well
+    team->t.t_task_team[other_team] =
+        __kmp_allocate_task_team(this_thr, team);
+    KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created second new "
+                  "task_team %p for team %d at parity=%d\n",
+                  __kmp_gtid_from_thread(this_thr),
+                  team->t.t_task_team[other_team], team->t.t_id, other_team));
+  } else { // Leave the old task team struct in place for the upcoming region;
+    // adjust as needed
+    kmp_task_team_t *task_team = team->t.t_task_team[other_team];
+    __kmp_task_team_init(task_team, team);
+    // if team size has changed, the first thread to enable tasking will
+    // realloc threads_data if necessary
+    KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d reset next task_team "
+                  "%p for team %d at parity=%d\n",
+                  __kmp_gtid_from_thread(this_thr),
+                  team->t.t_task_team[other_team], team->t.t_id, other_team));
   }
 
   // For regular thread, task enabling should be called when the task is going
@@ -4240,9 +4238,11 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
 
 // __kmp_task_team_sync: Propagation of task team data from team to threads
 // which happens just after the release phase of a team barrier.  This may be
-// called by any thread, but only for teams with # threads > 1.
+// called by any thread. This is not called for serial or root teams.
 void __kmp_task_team_sync(kmp_info_t *this_thr, kmp_team_t *team) {
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
+  KMP_DEBUG_ASSERT(team != this_thr->th.th_serial_team);
+  KMP_DEBUG_ASSERT(team != this_thr->th.th_root->r.r_root_team);
 
   // Toggle the th_task_state field, to switch which task_team this thread
   // refers to
@@ -4260,8 +4260,7 @@ void __kmp_task_team_sync(kmp_info_t *this_thr, kmp_team_t *team) {
 }
 
 // __kmp_task_team_wait: Primary thread waits for outstanding tasks after the
-// barrier gather phase. Only called by primary thread if #threads in team > 1
-// or if proxy tasks were created.
+// barrier gather phase. Only called by the primary thread.
 //
 // wait is a flag that defaults to 1 (see kmp.h), but waiting can be turned off
 // by passing in 0 optionally as the last argument. When wait is zero, primary
@@ -4295,9 +4294,6 @@ void __kmp_task_team_wait(
         ("__kmp_task_team_wait: Primary T#%d deactivating task_team %p: "
          "setting active to false, setting local and team's pointer to NULL\n",
          __kmp_gtid_from_thread(this_thr), task_team));
-    KMP_DEBUG_ASSERT(task_team->tt.tt_nproc > 1 ||
-                     task_team->tt.tt_found_proxy_tasks == TRUE ||
-                     task_team->tt.tt_hidden_helper_task_encountered == TRUE);
     TCW_SYNC_4(task_team->tt.tt_found_proxy_tasks, FALSE);
     TCW_SYNC_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
     KMP_CHECK_UPDATE(task_team->tt.tt_untied_task_encountered, 0);

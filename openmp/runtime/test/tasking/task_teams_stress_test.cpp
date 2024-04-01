@@ -99,7 +99,7 @@ void test_tasks(omp_event_handle_t *handles, int expected, int *a) {
 #ifdef USE_HIDDEN_HELPERS
   task_inc_a_hidden_helper(a);
 #else
-  task_inc_a_detached(a, handles);
+  task_inc_a_detached(a, handles[tid]);
 #endif
 
 #pragma omp barrier
@@ -193,7 +193,11 @@ void test_tasks_split(omp_event_handle_t *handles, int expected, int *a) {
   check_a(a, expected);
 #pragma omp barrier
 
-  task_inc_a_for_serial(a, handles[tid]); // task team B
+#ifdef USE_HIDDEN_HELPERS
+  task_inc_a_hidden_helper(a);
+#else
+  task_inc_a_detached(a, handles[tid]);
+#endif
 
 #pragma omp barrier
   check_a(a, 2 * expected);
