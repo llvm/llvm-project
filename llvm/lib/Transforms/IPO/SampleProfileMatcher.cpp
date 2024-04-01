@@ -122,15 +122,149 @@ void SampleProfileMatcher::findProfileAnchors(
   }
 }
 
+MyersDiff::DiffResult
+MyersDiff::shortestEdit(const std::vector<Anchor> &A,
+                        const std::vector<Anchor> &B) const {
+  int32_t N = A.size(), M = B.size(), Max = N + M;
+  auto Index = [&](int32_t I) { return I + Max; };
+
+  DiffResult Diff;
+  if (Max == 0)
+    return Diff;
+
+  // Backtrack the SES result.
+  auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
+                       const std::vector<Anchor> &A,
+                       const std::vector<Anchor> &B) {
+    int32_t X = N, Y = M;
+    for (int32_t D = Trace.size() - 1; X > 0 || Y > 0; D--) {
+      const auto &P = Trace[D];
+      int32_t K = X - Y;
+      int32_t PrevK = K;
+      if (K == -D || (K != D && P[Index(K - 1)] < P[Index(K + 1)]))
+        PrevK = K + 1;
+      else
+        PrevK = K - 1;
+
+      int32_t PrevX = P[Index(PrevK)];
+      int32_t PrevY = PrevX - PrevK;
+      while (X > PrevX && Y > PrevY) {
+        X--;
+        Y--;
+        Diff.addEqualLocations(A[X].Loc, B[Y].Loc);
+      }
+
+      if (D == 0)
+        break;
+
+      if (Y == PrevY) {
+        X--;
+        Diff.addInsertion(A[X].Loc);
+      } else if (X == PrevX) {
+        Y--;
+        Diff.addDeletion(B[Y].Loc);
+      }
+      X = PrevX;
+      Y = PrevY;
+    }
+  };
+
+  // The greedy LCS/SES algorithm.
+  std::vector<int32_t> V(2 * Max + 1, -1);
+  V[Index(1)] = 0;
+  std::vector<std::vector<int32_t>> Trace;
+  for (int32_t D = 0; D <= Max; D++) {
+    Trace.push_back(V);
+    for (int32_t K = -D; K <= D; K += 2) {
+      int32_t X = 0, Y = 0;
+      if (K == -D || (K != D && V[Index(K - 1)] < V[Index(K + 1)]))
+        X = V[Index(K + 1)];
+      else
+        X = V[Index(K - 1)] + 1;
+      Y = X - K;
+      while (X < N && Y < M && A[X] == B[Y])
+        X++, Y++;
+
+      V[Index(K)] = X;
+
+      if (X >= N && Y >= M) {
+        // Length of an SES is D.
+        Backtrack(Trace, A, B);
+        return Diff;
+      }
+    }
+  }
+  // Length of an SES is greater than Max.
+  return Diff;
+}
+
+void SampleProfileMatcher::matchNonAnchorAndWriteResults(
+    const LocToLocMap &AnchorMatchings,
+    const std::map<LineLocation, StringRef> &IRAnchors,
+    LocToLocMap &IRToProfileLocationMap) {
+  auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
+    // Skip the unchanged location mapping to save memory.
+    if (From != To)
+      IRToProfileLocationMap.insert({From, To});
+  };
+
+  // Use function's beginning location as the initial anchor.
+  int32_t LocationDelta = 0;
+  SmallVector<LineLocation> LastMatchedNonAnchors;
+  for (const auto &IR : IRAnchors) {
+    const auto &Loc = IR.first;
+    StringRef CalleeName = IR.second;
+    bool IsMatchedAnchor = false;
+
+    // Match the anchor location in lexical order.
+    auto R = AnchorMatchings.find(Loc);
+    if (R != AnchorMatchings.end()) {
+      const auto &Candidate = R->second;
+      InsertMatching(Loc, Candidate);
+      LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
+                        << " is matched from " << Loc << " to " << Candidate
+                        << "\n");
+      LocationDelta = Candidate.LineOffset - Loc.LineOffset;
+
+      // Match backwards for non-anchor locations.
+      // The locations in LastMatchedNonAnchors have been matched forwards
+      // based on the previous anchor, spilt it evenly and overwrite the
+      // second half based on the current anchor.
+      for (size_t I = (LastMatchedNonAnchors.size() + 1) / 2;
+           I < LastMatchedNonAnchors.size(); I++) {
+        const auto &L = LastMatchedNonAnchors[I];
+        uint32_t CandidateLineOffset = L.LineOffset + LocationDelta;
+        LineLocation Candidate(CandidateLineOffset, L.Discriminator);
+        InsertMatching(L, Candidate);
+        LLVM_DEBUG(dbgs() << "Location is rematched backwards from " << L
+                          << " to " << Candidate << "\n");
+      }
+
+      IsMatchedAnchor = true;
+      LastMatchedNonAnchors.clear();
+    }
+
+    // Match forwards for non-anchor locations.
+    if (!IsMatchedAnchor) {
+      uint32_t CandidateLineOffset = Loc.LineOffset + LocationDelta;
+      LineLocation Candidate(CandidateLineOffset, Loc.Discriminator);
+      InsertMatching(Loc, Candidate);
+      LLVM_DEBUG(dbgs() << "Location is matched from " << Loc << " to "
+                        << Candidate << "\n");
+      LastMatchedNonAnchors.emplace_back(Loc);
+    }
+  }
+}
+
 // Call target name anchor based profile fuzzy matching.
 // Input:
 // For IR locations, the anchor is the callee name of direct callsite; For
 // profile locations, it's the call target name for BodySamples or inlinee's
 // profile name for CallsiteSamples.
 // Matching heuristic:
-// First match all the anchors in lexical order, then split the non-anchor
-// locations between the two anchors evenly, first half are matched based on the
-// start anchor, second half are matched based on the end anchor.
+// First match all the anchors using the diff algorithm, then split the
+// non-anchor locations between the two anchors evenly, first half are matched
+// based on the start anchor, second half are matched based on the end anchor.
 // For example, given:
 // IR locations:      [1, 2(foo), 3, 5, 6(bar), 7]
 // Profile locations: [1, 2, 3(foo), 4, 7, 8(bar), 9]
@@ -149,77 +283,40 @@ void SampleProfileMatcher::runStaleProfileMatching(
   assert(IRToProfileLocationMap.empty() &&
          "Run stale profile matching only once per function");
 
-  std::unordered_map<FunctionId, std::set<LineLocation>> CalleeToCallsitesMap;
+  std::vector<Anchor> ProfileCallsiteAnchors;
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
     const auto &Callees = I.second;
     // Filter out possible indirect calls, use direct callee name as anchor.
     if (Callees.size() == 1) {
-      FunctionId CalleeName = *Callees.begin();
-      const auto &Candidates = CalleeToCallsitesMap.try_emplace(
-          CalleeName, std::set<LineLocation>());
-      Candidates.first->second.insert(Loc);
+      auto CalleeName = *Callees.begin();
+      ProfileCallsiteAnchors.emplace_back(Loc, CalleeName);
+    } else if (Callees.size() > 1) {
+      ProfileCallsiteAnchors.emplace_back(Loc,
+                                          FunctionId(UnknownIndirectCallee));
     }
   }
 
-  auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
-    // Skip the unchanged location mapping to save memory.
-    if (From != To)
-      IRToProfileLocationMap.insert({From, To});
-  };
-
-  // Use function's beginning location as the initial anchor.
-  int32_t LocationDelta = 0;
-  SmallVector<LineLocation> LastMatchedNonAnchors;
-
-  for (const auto &IR : IRAnchors) {
-    const auto &Loc = IR.first;
-    auto CalleeName = IR.second;
-    bool IsMatchedAnchor = false;
-    // Match the anchor location in lexical order.
-    if (!CalleeName.empty()) {
-      auto CandidateAnchors =
-          CalleeToCallsitesMap.find(getRepInFormat(CalleeName));
-      if (CandidateAnchors != CalleeToCallsitesMap.end() &&
-          !CandidateAnchors->second.empty()) {
-        auto CI = CandidateAnchors->second.begin();
-        const auto Candidate = *CI;
-        CandidateAnchors->second.erase(CI);
-        InsertMatching(Loc, Candidate);
-        LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
-                          << " is matched from " << Loc << " to " << Candidate
-                          << "\n");
-        LocationDelta = Candidate.LineOffset - Loc.LineOffset;
-
-        // Match backwards for non-anchor locations.
-        // The locations in LastMatchedNonAnchors have been matched forwards
-        // based on the previous anchor, spilt it evenly and overwrite the
-        // second half based on the current anchor.
-        for (size_t I = (LastMatchedNonAnchors.size() + 1) / 2;
-             I < LastMatchedNonAnchors.size(); I++) {
-          const auto &L = LastMatchedNonAnchors[I];
-          uint32_t CandidateLineOffset = L.LineOffset + LocationDelta;
-          LineLocation Candidate(CandidateLineOffset, L.Discriminator);
-          InsertMatching(L, Candidate);
-          LLVM_DEBUG(dbgs() << "Location is rematched backwards from " << L
-                            << " to " << Candidate << "\n");
-        }
-
-        IsMatchedAnchor = true;
-        LastMatchedNonAnchors.clear();
-      }
-    }
-
-    // Match forwards for non-anchor locations.
-    if (!IsMatchedAnchor) {
-      uint32_t CandidateLineOffset = Loc.LineOffset + LocationDelta;
-      LineLocation Candidate(CandidateLineOffset, Loc.Discriminator);
-      InsertMatching(Loc, Candidate);
-      LLVM_DEBUG(dbgs() << "Location is matched from " << Loc << " to "
-                        << Candidate << "\n");
-      LastMatchedNonAnchors.emplace_back(Loc);
-    }
+  std::vector<Anchor> IRCallsiteAnchors;
+  for (const auto &I : IRAnchors) {
+    const auto &Loc = I.first;
+    const auto &CalleeName = I.second;
+    if (CalleeName.empty())
+      continue;
+    IRCallsiteAnchors.emplace_back(Loc, FunctionId(CalleeName));
   }
+
+  if (IRCallsiteAnchors.empty() || ProfileCallsiteAnchors.empty())
+    return;
+
+  // Use the diff algorithm to find the SES, the resulting equal locations from
+  // IR to Profile are used as anchor to match other locations. Note that here
+  // use IR anchor as base(A) to align with the order of IRToProfileLocationMap.
+  MyersDiff Diff;
+  auto DiffRes = Diff.shortestEdit(IRCallsiteAnchors, ProfileCallsiteAnchors);
+
+  matchNonAnchorAndWriteResults(DiffRes.EqualLocations, IRAnchors,
+                                IRToProfileLocationMap);
 }
 
 void SampleProfileMatcher::runOnFunction(Function &F) {

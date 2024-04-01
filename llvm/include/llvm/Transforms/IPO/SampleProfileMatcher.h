@@ -19,6 +19,53 @@
 
 namespace llvm {
 
+// Callsite location based matching anchor.
+struct Anchor {
+  LineLocation Loc;
+  FunctionId FuncId;
+
+  Anchor(const LineLocation &Loc, const FunctionId &FuncId)
+      : Loc(Loc), FuncId(FuncId) {}
+  bool operator==(const Anchor &Other) const {
+    return this->FuncId == Other.FuncId;
+  }
+};
+
+// This class implements the Myers diff algorithm used for stale profile
+// matching. The algorithm provides a simple and efficient way to find the
+// Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
+// sequences. For more details, refer to the paper 'An O(ND) Difference
+// Algorithm and Its Variations' by Eugene W. Myers.
+// In the scenario of profile fuzzy matching, the two sequences are the IR
+// callsite anchors and profile callsite anchors. The subsequence equivalent
+// parts from the resulting SES are used to remap the IR locations to the
+// profile locations.
+class MyersDiff {
+public:
+  struct DiffResult {
+    LocToLocMap EqualLocations;
+    // New IR locations that are inserted in the new version.
+    std::vector<LineLocation> Insertions;
+    // Old Profile locations that are deleted in the new version.
+    std::vector<LineLocation> Deletions;
+    void addEqualLocations(const LineLocation &IRLoc,
+                           const LineLocation &ProfLoc) {
+      EqualLocations.insert({IRLoc, ProfLoc});
+    }
+    void addInsertion(const LineLocation &IRLoc) {
+      Insertions.push_back(IRLoc);
+    }
+    void addDeletion(const LineLocation &ProfLoc) {
+      Deletions.push_back(ProfLoc);
+    }
+  };
+
+  // The basic greedy version of Myers's algorithm. Refer to page 6 of the
+  // original paper.
+  DiffResult shortestEdit(const std::vector<Anchor> &A,
+                          const std::vector<Anchor> &B) const;
+};
+
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
   Module &M;
@@ -27,8 +74,8 @@ class SampleProfileMatcher {
   const ThinOrFullLTOPhase LTOPhase;
   SampleProfileMap FlattenedProfiles;
   // For each function, the matcher generates a map, of which each entry is a
-  // mapping from the source location of current build to the source location in
-  // the profile.
+  // mapping from the source location of current build to the source location
+  // in the profile.
   StringMap<LocToLocMap> FuncMappings;
 
   // Match state for an anchor/callsite.
@@ -143,6 +190,10 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
+  void matchNonAnchorAndWriteResults(
+      const LocToLocMap &AnchorMatchings,
+      const std::map<LineLocation, StringRef> &IRAnchors,
+      LocToLocMap &IRToProfileLocationMap);
   void runStaleProfileMatching(
       const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
       const std::map<LineLocation, std::unordered_set<FunctionId>>

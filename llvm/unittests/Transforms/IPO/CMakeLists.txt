@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   Core
   IPO
+  ProfileData
   Support
   TargetParser
   TransformUtils
@@ -13,6 +14,7 @@ add_llvm_unittest(IPOTests
   WholeProgramDevirt.cpp
   AttributorTest.cpp
   FunctionSpecializationTest.cpp
+  SampleProfileMatcherTests.cpp
   )
 
 set_property(TARGET IPOTests PROPERTY FOLDER "Tests/UnitTests/TransformsTests")
