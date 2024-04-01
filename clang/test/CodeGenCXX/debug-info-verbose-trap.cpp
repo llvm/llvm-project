@@ -40,7 +40,7 @@ void f1() {
   __builtin_verbose_trap("hello");
 }
 
-// CHECK: ![[SUBPROG32:.*]] = distinct !DISubprogram(name: "f2<&constMsg[0]>", linkageName: "_Z2f2IXadsoKcL_ZL8constMsgEEEEvv",
+// CHECK: ![[SUBPROG32:.*]] = distinct !DISubprogram(name: "f2<constMsg>", linkageName: "_Z2f2IXadsoKcL_ZL8constMsgEEEEvv",
 // CHECK: ![[LOC36]] = !DILocation(line: 0, scope: ![[SUBPROG26]], inlinedAt: ![[LOC37:.*]])
 // CHECK: ![[LOC37]] = !DILocation(line: [[@LINE+3]], column: 3, scope: ![[SUBPROG32]])
 template <const char * const str>
