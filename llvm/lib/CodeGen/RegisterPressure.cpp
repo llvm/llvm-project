@@ -1041,7 +1041,7 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
   // Account for register pressure similar to RegPressureTracker::recede().
   RegisterOperands RegOpers;
   RegOpers.collect(*MI, *TRI, *MRI, TrackLaneMasks, /*IgnoreDead=*/true);
-  assert(RegOpers.DeadDefs.size() == 0);
+  assert(RegOpers.DeadDefs.empty());
   if (TrackLaneMasks)
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   else if (RequireIntervals)
