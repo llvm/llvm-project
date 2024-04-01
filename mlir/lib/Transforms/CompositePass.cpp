@@ -51,6 +51,15 @@ struct CompositeFixedPointPass final
     return success();
   }
 
+  LogicalResult initialize(MLIRContext * /*context*/) override {
+    if (maxIter <= 0) {
+      llvm::errs() << "Invalid maxIterations value: " << maxIter << "\n";
+      return failure();
+    }
+
+    return success();
+  }
+
   void getDependentDialects(DialectRegistry &registry) const override {
     dynamicPM.getDependentDialects(registry);
   }
@@ -90,7 +99,7 @@ private:
 
 std::unique_ptr<Pass> mlir::createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
-    unsigned maxIterations) {
+    int maxIterations) {
 
   return std::make_unique<CompositeFixedPointPass>(std::move(name),
                                                    populateFunc, maxIterations);

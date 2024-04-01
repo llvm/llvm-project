@@ -135,7 +135,7 @@ std::unique_ptr<Pass> createTopologicalSortPass();
 /// or maximum number of iterations reached.
 std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
-    unsigned maxIterations = 10);
+    int maxIterations = 10);
 
 //===----------------------------------------------------------------------===//
 // Registration

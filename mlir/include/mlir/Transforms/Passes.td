@@ -564,7 +564,7 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
       "Composite pass display name">,
     Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
       "Composite pass inner pipeline">,
-    Option<"maxIter", "max-iterations", "unsigned", /*default=*/"10",
+    Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
   ];
 }
