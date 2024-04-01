@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
+#include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/str_to_integer.h"

@@ -3041,6 +3041,7 @@ libc_support_library(
     deps = [
         ":__support_arg_list",
         ":__support_common",
+        ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_cpp_optional",
         ":__support_cpp_string_view",
