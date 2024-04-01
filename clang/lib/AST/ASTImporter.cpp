@@ -445,8 +445,7 @@ namespace clang {
         FunctionDecl *FromFD);
 
     template <typename DeclTy>
-    Error ImportTemplateParameterLists(const DeclTy *FromD,
-                                       DeclTy *ToD);
+    Error ImportTemplateParameterLists(const DeclTy *FromD, DeclTy *ToD);
 
     Error ImportTemplateInformation(FunctionDecl *FromFD, FunctionDecl *ToFD);
 

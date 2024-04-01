@@ -986,23 +986,26 @@ ClassTemplateSpecializationDecl::getSpecializedTemplate() const {
 SourceRange
 ClassTemplateSpecializationDecl::getSourceRange() const {
   if (getSpecializationKind() == TSK_ExplicitInstantiationDeclaration) {
-    return SourceRange(getExternLoc(), getTemplateArgsAsWritten()->getRAngleLoc());
+    return SourceRange(getExternLoc(),
+                       getTemplateArgsAsWritten()->getRAngleLoc());
   } else if (getSpecializationKind() == TSK_ExplicitInstantiationDefinition) {
-    return SourceRange(getTemplateKeywordLoc(), getTemplateArgsAsWritten()->getRAngleLoc());
+    return SourceRange(getTemplateKeywordLoc(),
+                       getTemplateArgsAsWritten()->getRAngleLoc());
   } else if (!isExplicitSpecialization()) {
     // No explicit info available.
     llvm::PointerUnion<ClassTemplateDecl *,
                        ClassTemplatePartialSpecializationDecl *>
-      InstFrom = getInstantiatedFrom();
+        InstFrom = getInstantiatedFrom();
     if (InstFrom.isNull())
       return getSpecializedTemplate()->getSourceRange();
     if (const auto *CTD = InstFrom.dyn_cast<ClassTemplateDecl *>())
       return CTD->getSourceRange();
     return InstFrom.get<ClassTemplatePartialSpecializationDecl *>()
-      ->getSourceRange();
+        ->getSourceRange();
   }
   SourceLocation Begin = TagDecl::getOuterLocStart();
-  if (const auto *CTPSD = dyn_cast<ClassTemplatePartialSpecializationDecl>(this)) {
+  if (const auto *CTPSD =
+          dyn_cast<ClassTemplatePartialSpecializationDecl>(this)) {
     if (const auto *InstFrom = CTPSD->getInstantiatedFromMember())
       return InstFrom->getSourceRange();
     else if (!getNumTemplateParameterLists())
@@ -1380,10 +1383,12 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
   if (isExplicitSpecialization() && !hasInit()) {
     if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
       return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-  } else if (getTemplateSpecializationKind() == TSK_ExplicitInstantiationDeclaration ) {
+  } else if (getTemplateSpecializationKind() ==
+             TSK_ExplicitInstantiationDeclaration) {
     if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
       return SourceRange(getExternLoc(), Info->getRAngleLoc());
-  } else if (getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition) {
+  } else if (getTemplateSpecializationKind() ==
+             TSK_ExplicitInstantiationDefinition) {
     if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
       return SourceRange(getTemplateKeywordLoc(), Info->getRAngleLoc());
   }
