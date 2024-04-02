@@ -105,10 +105,7 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
   Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
   Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
 
-  // We should not get external nodes here, but just return true
-  // for now to preserve the original behavior of the inliner pass.
-  if (!callerRegion || !calleeRegion)
-    return true;
+  assert(calleeRegion && callerRegion && "unexpected external node");
 
   auto countOps = [](Region *region) {
     unsigned count = 0;
