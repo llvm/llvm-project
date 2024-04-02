@@ -15,6 +15,7 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <map>
@@ -387,6 +388,22 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesShareFileManager : 1;
 
+  /// Whether to emit symbol graph files as a side effect of compilation.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitSymbolGraph : 1;
+
+  /// Whether to emit additional symbol graphs for extended modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitExtensionSymbolGraphs : 1;
+
+  /// Whether to emit symbol labels for testing in generated symbol graphs
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitSymbolGraphSymbolLabelsForTesting : 1;
+
+  /// Whether to emit symbol labels for testing in generated symbol graphs
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitPrettySymbolGraphs : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -496,10 +513,8 @@ public:
   // ignore when extracting documentation.
   std::vector<std::string> ExtractAPIIgnoresFileList;
 
-  // Currently this is only used as part of the `-emit-symbol-graph`
-  // action.
   // Location of output directory where symbol graph information would
-  // be dumped
+  // be dumped. This overrides regular -o output file specification
   std::string SymbolGraphOutputDir;
 
   /// Args to pass to the plugins
