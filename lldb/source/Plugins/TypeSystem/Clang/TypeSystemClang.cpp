@@ -4245,6 +4245,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     return lldb::eTypeClassArray;
   case clang::Type::DependentSizedArray:
     return lldb::eTypeClassArray;
+  case clang::Type::ArrayParameter:
+    return lldb::eTypeClassArray;
   case clang::Type::DependentSizedExtVector:
     return lldb::eTypeClassVector;
   case clang::Type::DependentVector:
@@ -4925,6 +4927,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:
@@ -5258,6 +5261,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:
