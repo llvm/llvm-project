@@ -127,7 +127,7 @@ attributes. A class will be added to handle conversion of MLIR and FIR types to
 Following sections provide details of how various language constructs will be
 handled. In these sections, the LLVM IR metadata and MLIR attributes have been
 used interchangeably. As an example, `DILocalVariableAttr` is an MLIR attribute
-which gets translate to LLVM IR's `DILocalVariable`.
+which gets translated to LLVM IR's `DILocalVariable`.
 
 ### Variables
 
@@ -167,7 +167,7 @@ which gets translate to LLVM IR's `DILocalVariable`.
 
 #### Function Arguments
 
-Arguments works in similar way. But they present a difficulty that `DeclareOp`'s
+Arguments work in similar way, but they present a difficulty that `DeclareOp`'s
 memref points to `BlockArgument`. Unlike the op in local variable case,
 the `BlockArgument` are not handled by the FIRToLLVMLowering. This can easily
 be handled by adding after conversion to LLVM dialect either in FIRToLLVMLowering 
@@ -175,8 +175,8 @@ or in a separate pass.
 
 ### Module
 
-In debug metadata, fortran module will be represented by `DIModuleAttr`.
-The variables or function inside module will have scope pointing to the parent module.
+In debug metadata, the Fortran module will be represented by `DIModuleAttr`.
+The variables or functions inside module will have scope pointing to the parent module.
 
 ```
 module helper
@@ -208,7 +208,7 @@ duplicate `DIImportedEntityAttr` entries in same function.
 ### Derived Types
 
 A derived type will be represented in metadata by `DICompositeType` with a tag of
-`DW_TAG_structure_type`. It will have elements which points to the components.
+`DW_TAG_structure_type`. It will have elements which point to the components.
 
 ```
   type :: t_pair
@@ -260,7 +260,7 @@ common /test/ a, b
 ```
 
 In FIR, a common block results in a `GlobalOp` with common linkage. Every
-function where the common block is used has `DeclareOp` for that variables.
+function where the common block is used has `DeclareOp` for that variable.
 This `DeclareOp` will point to global storage through
 `CoordinateOp` and `AddrOfOp`. The `CoordinateOp` has the offset of the
 location of this variable in global storage. There is enough information to
@@ -369,9 +369,9 @@ similar to arrays.
 
 ### Strings
 
-Fixed sized string will be treated like fixed sizes arrays and
-the allocatable string will be treated like allocatable arrays. Metadata
-will be generated to enable debuggers to find its size.
+Fixed sized strings will be treated like fixed sizes arrays and
+allocatable strings will be treated like allocatable arrays. Metadata
+will be generated to enable debuggers to find their size.
 
 ```
   character(len=:), allocatable :: var
