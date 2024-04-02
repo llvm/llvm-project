@@ -325,6 +325,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__format/formatter_bool.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/vector.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -357,7 +358,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__utility/swap.h>
 #include <climits>
 #include <cstring>
-#include <iosfwd> // for forward declaration of vector
 #include <limits>
 #include <stdexcept>
 #include <version>
@@ -2989,6 +2989,7 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <concepts>
 #  include <cstdlib>
+#  include <iosfwd>
 #  include <locale>
 #  include <tuple>
 #  include <type_traits>
