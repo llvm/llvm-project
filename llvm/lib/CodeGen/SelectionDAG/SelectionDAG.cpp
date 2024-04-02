@@ -3419,13 +3419,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::mulhs(Known, Known2);
     break;
   }
-  case ISD::AVGCEILU: {
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGCEILS: {
+    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
+    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth + 1);
-    Known2 = Known2.zext(BitWidth + 1);
-    KnownBits One = KnownBits::makeConstant(APInt(1, 1));
-    Known = KnownBits::computeForAddCarry(Known, Known2, One);
+    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
     Known = Known.extractBits(BitWidth, 1);
     break;
   }
