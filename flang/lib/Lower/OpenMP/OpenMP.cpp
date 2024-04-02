@@ -1313,14 +1313,10 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processHasDeviceAddr(deviceAddrOperands, deviceAddrTypes, deviceAddrLocs,
                           deviceAddrSymbols);
 
-  cp.processTODO<Fortran::parser::OmpClause::Private,
-                 Fortran::parser::OmpClause::Firstprivate,
-                 Fortran::parser::OmpClause::Reduction,
-                 Fortran::parser::OmpClause::InReduction,
-                 Fortran::parser::OmpClause::Allocate,
-                 Fortran::parser::OmpClause::UsesAllocators,
-                 Fortran::parser::OmpClause::Defaultmap>(
-      currentLocation, llvm::omp::Directive::OMPD_target);
+  cp.processTODO<clause::Private, clause::Firstprivate, clause::Reduction,
+                 clause::InReduction, clause::Allocate, clause::UsesAllocators,
+                 clause::Defaultmap>(currentLocation,
+                                     llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
