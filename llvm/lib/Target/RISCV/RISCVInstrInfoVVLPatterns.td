@@ -2591,7 +2591,12 @@ foreach fvti = AllFloatVectors in {
                    fvti.RegClass:$merge, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+  }
+}
 
+foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+  let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                               GetVTypeScalarPredicates<fvti>.Predicates) in {
     // 13.16. Vector Floating-Point Move Instruction
     // If we're splatting fpimm0, use vmv.v.x vd, x0.
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
