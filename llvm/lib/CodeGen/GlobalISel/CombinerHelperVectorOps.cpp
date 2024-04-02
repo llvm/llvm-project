@@ -270,7 +270,7 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   //
   //  -->
   //
-  //  %extract:_(32) = COPY %arg1(s32)
+  //  %extract:_(32) = G_TRUNC %arg1(s64)
   //
   //
   //
@@ -314,7 +314,7 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Build->getSourceReg(0));
 
-  // For buildVectorTrunc, the inputs are trunked.
+  // For buildVectorTrunc, the inputs are truncated.
   if (!isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}}))
     return false;
 
