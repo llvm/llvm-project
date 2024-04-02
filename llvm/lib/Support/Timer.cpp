@@ -455,10 +455,11 @@ void TimerGroup::clearAll() {
 }
 
 template <typename T>
-void printJsonProfileValue(raw_ostream &OS, StringRef Name, T Value, StringRef Prefix,
-                           const char *delim) {
+void printJsonProfileValue(raw_ostream &OS, StringRef Name, T Value,
+                           StringRef Prefix, const char *delim) {
   constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
-  OS << Prefix << "\"" << Name << "\": " << format("%.*e", max_digits10 - 1, Value) << delim;
+  OS << Prefix << "\"" << Name
+     << "\": " << format("%.*e", max_digits10 - 1, Value) << delim;
 }
 
 const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
