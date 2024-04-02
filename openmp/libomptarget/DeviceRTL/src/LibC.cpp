@@ -53,10 +53,23 @@ void memset(void *dst, int C, size_t count) {
     dstc[I] = C;
 }
 
+// If the user built with the GPU C library enabled we will assume that we can
+// call it.
+#ifdef OMPTARGET_HAS_LIBC
+
+// TODO: Remove this handling once we have varargs support.
+extern struct FILE *stdout;
+int32_t rpc_fprintf(FILE *, const char *, void *, uint64_t);
+
+int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
+  return rpc_fprintf(stdout, Format, Arguments, Size);
+}
+#else
 /// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf
 int32_t __llvm_omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
   return impl::omp_vprintf(Format, Arguments, Size);
 }
+#endif
 }
 
 #pragma omp end declare target
