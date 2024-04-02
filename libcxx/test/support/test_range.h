@@ -96,6 +96,7 @@ concept CanBePiped = requires(View&& view, T&& t) {
   { std::forward<View>(view) | std::forward<T>(t) };
 };
 
+// See [concept.equalitycomparable]
 template <class T, class U>
 concept weakly_equality_comparable_with =
     requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
