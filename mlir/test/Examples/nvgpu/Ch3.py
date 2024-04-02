@@ -99,13 +99,15 @@ def gemm_128_128_64(a, b, d):
         mbar_group[0].try_wait()
 
         # 3. Performs Tensor Core GEMM 128x128x64 by warpgroup
-        A = WarpgroupMatrix(a_smem, a_tma, M, K)
-        B = WarpgroupMatrix(b_smem, b_tma, K, N)
-        C = WarpgroupAccumulatorMatrix(M, N, T.f32()).op()
-        D = WarpgroupMatrix.matmul(A, B, C)
+        A = WGMMAMatrix(WGMMAType.Descriptor, [M,K], desc=a_tma, smem=a_smem)
+        B = WGMMAMatrix(WGMMAType.Descriptor, [K,N], desc=b_tma, smem=b_smem)
+        C = WGMMAMatrix(WGMMAType.Accumulator, shape=[M,N], ty=T.f32())
+
+        # Matrix Multiply
+        C += A @ B
 
         # 4. Stores fragmented registers to global memory by warpgroup
-        nvgpu.warpgroup_mma_store(D, d_dev)
+        nvgpu.warpgroup_mma_store(C, d_dev)
 
     gemm_tma_kernel()
 

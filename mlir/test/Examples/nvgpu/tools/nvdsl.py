@@ -161,42 +161,64 @@ class TMA:
         )
 
 
-class WarpgroupAccumulatorMatrix:
-    def __init__(self, M, N, ty):
-        self.M = M
-        self.N = N
-        self.ty = ty
+class WGMMAType(Enum):
+    Accumulator = 1
+    Descriptor = 2
+
+
+class WGMMAMatrix:
+    def __init__(
+        self,
+        matrix_type: WGMMAType,
+        shape: list = None,
+        desc: TMA = None,
+        smem=None,
+        ty=None,
+        acc_op=None,
+    ):
+        if acc_op is None:
+            self.M = shape[0]
+            self.N = shape[1]
+            self.ty = ty
+            self.matrix_type = matrix_type
+            self.desc = desc
+            self.smem = smem
+            if matrix_type is WGMMAType.Accumulator:
+               self.acc_op = nvgpu.warpgroup_mma_init_accumulator(self.acc_ty) 
+        elif acc_op:
+            self.acc_op = acc_op
+            self.matrix_type = WGMMAType.Accumulator
 
     @property
     def acc_ty(self):
         parse_str = f"!nvgpu.warpgroup.accumulator<fragmented=vector<{self.M}x{self.N}x{self.ty}>>"
         return ir.Type.parse(parse_str)
 
-    def op(self):
-        return nvgpu.warpgroup_mma_init_accumulator(self.acc_ty)
-
-
-class WarpgroupMatrix:
-    def __init__(self, smem, tma_descriptor: TMA, M, N):
-        self.tma_descriptor = tma_descriptor
-        self.smem = smem
-        self.M = M
-        self.N = N
-
     @property
     def wgmma_ty(self):
-        parse_str = f"!nvgpu.warpgroup.descriptor<tensor=memref<{self.M}x{self.N}x{self.tma_descriptor.memref_ty.element_type}, #gpu.address_space<workgroup>>>"
+        parse_str = f"!nvgpu.warpgroup.descriptor<tensor=memref<{self.M}x{self.N}x{self.desc.memref_ty.element_type}, #gpu.address_space<workgroup>>>"
         return ir.Type.parse(parse_str)
 
-    def matmul(lhs, rhs, acc):
-        wgmma_desc_lhs = nvgpu.warpgroup_generate_descriptor(
-            lhs.wgmma_ty, lhs.smem, lhs.tma_descriptor.tma_descriptor
+    def update_smem(self, smem):
+        self.smem = smem 
+    
+    def update_accumulator(self, acc_op):
+        self.acc_op = acc_op 
+
+    def __matmul__(self, rhs):
+        lhs = nvgpu.warpgroup_generate_descriptor(
+            self.wgmma_ty, self.smem, self.desc.tma_descriptor
         )
-        wgmma_desc_rhs = nvgpu.warpgroup_generate_descriptor(
-            rhs.wgmma_ty, rhs.smem, rhs.tma_descriptor.tma_descriptor
+        rhs = nvgpu.warpgroup_generate_descriptor(
+            rhs.wgmma_ty, rhs.smem, rhs.desc.tma_descriptor
         )
+        return [lhs, rhs]
+
+    def __iadd__(self, matmulResult):
+        lhs = matmulResult[0]
+        rhs = matmulResult[1]
         return nvgpu.WarpgroupMmaOp(
-            acc.type, wgmma_desc_lhs, wgmma_desc_rhs, acc, transposeB=True
+            self.acc_op.type, lhs, rhs, self.acc_op, transposeB=True
         )
 
 
@@ -376,7 +398,7 @@ class NVDSL:
                 module.operation.verify()
 
                 # Save IR in a file
-                # saveIR(module)
+                saveIR(module)
 
                 # Compile and JIT MLIR module
                 options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"

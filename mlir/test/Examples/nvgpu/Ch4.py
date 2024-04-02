@@ -151,11 +151,15 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
 
     size_a = TILE_M * TILE_K * get_type_size(T.f16())
 
-    C = WarpgroupAccumulatorMatrix(TILE_M, TILE_N, T.f32()).op()
+    # Initialize A and B (input matrices) and C (accumulator)
+    A = WGMMAMatrix(WGMMAType.Descriptor, [TILE_M, TILE_K], desc=a_tma)
+    B = WGMMAMatrix(WGMMAType.Descriptor, [TILE_K, TILE_N], desc=b_tma)
+    C = WGMMAMatrix(WGMMAType.Accumulator, shape=[TILE_M, TILE_N], ty=T.f32())
+    
     pp = const(False, ty=T.bool())
 
     # Main Loop
-    for_op = scf.ForOp(const(0), const(K // TILE_K), const(1), [C, pp])
+    for_op = scf.ForOp(const(0), const(K // TILE_K), const(1), [C.acc_op, pp])
     with ir.InsertionPoint(for_op.body):
         pp = for_op.inner_iter_args[1]
         iv = for_op.induction_variable
@@ -170,14 +174,18 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         a_smem = get_dynamic_shared_memory([TILE_M, TILE_K], T.f16(), offset_a)
         b_smem = get_dynamic_shared_memory([TILE_K, TILE_N], T.f16(), offset_b)
 
+        # Initialize matrices
+        A.update_smem(a_smem)
+        B.update_smem(b_smem)
+        C.update_accumulator(for_op.inner_iter_args[0])
+
         # Matrix Multiply
-        A = WarpgroupMatrix(a_smem, a_tma, TILE_M, TILE_K)
-        B = WarpgroupMatrix(b_smem, b_tma, TILE_K, TILE_N)
-        C = for_op.inner_iter_args[0]
-        D = WarpgroupMatrix.matmul(A, B, C)
+        C += A @ B
+
+        # Wait Tensor Core for single stage
         if NUM_STAGES == 1:
             nvvm.WgmmaWaitGroupSyncOp(0)
-
+            
         # Load next stage
         pred = ((iv + ns) < const(K // TILE_K)) & (tidx == 0)
         nextStage = iv + ns
@@ -191,7 +199,7 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
             switched,
             pp,
         )
-        scf.yield_([D, newPP])
+        scf.yield_([C, newPP])
 
     nvvm.WgmmaWaitGroupSyncOp(0)
 
