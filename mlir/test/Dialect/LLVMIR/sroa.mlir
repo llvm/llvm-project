@@ -82,6 +82,27 @@ llvm.func @multi_level_indirect() -> i32 {
 
 // -----
 
+// This verifies that a nested GEP's users are checked properly. In this case
+// the load goes over the bounds of the memory slot and thus should block the
+// splitting of the alloca.
+
+// CHECK-LABEL: llvm.func @nested_access_over_slot_bound
+llvm.func @nested_access_over_slot_bound() -> i64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<(i32, struct<(
+  %1 = llvm.alloca %0 x !llvm.struct<(i32, struct<(array<10 x i32>)>, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr inbounds %[[ALLOCA]]
+  %2 = llvm.getelementptr inbounds %1[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, struct<(array<10 x i32>)>, i32)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr inbounds %[[GEP0]]
+  %3 = llvm.getelementptr inbounds %2[0, 9] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
+  // CHECK: %[[RES:.*]] = llvm.load %[[GEP1]]
+  %4 = llvm.load %3 : !llvm.ptr -> i64
+  // CHECK: llvm.return %[[RES]] : i64
+  llvm.return %4 : i64
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @resolve_alias
 // CHECK-SAME: (%[[ARG:.*]]: i32)
 llvm.func @resolve_alias(%arg: i32) -> i32 {

@@ -494,7 +494,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
 }
 
 namespace {
-/// Helper that contains information about accesses into a subslot.
+/// A struct that stores both the index into the aggregate type of the slot as
+/// well as the corresponding byte offset in memory.
 struct SubslotAccessInfo {
   /// The parent slot's index that the access falls into.
   uint32_t index;
@@ -514,10 +515,11 @@ getSubslotAccessInfo(const DestructurableMemorySlot &slot,
   if (!offset)
     return {};
 
-  // Helper to check that a constant index in the bounds of the GEP index
-  // representation.
+  // Helper to check that a constant index is in the bounds of the GEP index
+  // representation. LLVM dialects's GEP arguments have a limited bitwidth, thus
+  // this additional check is necessary.
   auto isOutOfBoundsGEPIndex = [](uint64_t index) {
-    return index > (1 << LLVM::kGEPConstantBitWidth);
+    return index >= (1 << LLVM::kGEPConstantBitWidth);
   };
 
   Type type = slot.elemType;
@@ -589,7 +591,7 @@ LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
   // Every access that remains in bounds of the remaining slot is considered
   // legal.
   mustBeSafelyUsed.emplace_back<MemorySlot>(
-      {getBase(), getByteArrayType(getContext(), slotSize - *gepOffset)});
+      {getRes(), getByteArrayType(getContext(), slotSize - *gepOffset)});
   return success();
 }
 
