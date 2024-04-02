@@ -76,8 +76,11 @@ public:
   virtual ArrayRef<unsigned> getSupportedIntrinsics() const { return {}; }
 
   /// Hook for derived dialect interfaces to publish the supported instructions.
-  /// As every LLVM IR instructions has a unique integer identifier, the
-  /// function returns the list of supported instructions identifiers.
+  /// As every LLVM IR instruction has a unique integer identifier, the function
+  /// returns the list of supported instruction identifiers. These identifiers
+  /// will then be used to match LLVM instructions to the appropriate import
+  /// interface and `convertInstruction` method. It is an error to have multiple
+  /// interfaces overriding the same instruction.
   virtual ArrayRef<unsigned> getSupportedInstructions() const { return {}; }
 
   /// Hook for derived dialect interfaces to publish the supported metadata
