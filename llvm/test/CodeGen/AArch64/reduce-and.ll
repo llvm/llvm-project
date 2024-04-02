@@ -30,10 +30,9 @@ define i1 @test_redand_v2i1(<2 x i1> %a) {
 ; GISEL-LABEL: test_redand_v2i1:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    and w8, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    and w8, w9, w8
 ; GISEL-NEXT:    and w0, w8, #0x1
 ; GISEL-NEXT:    ret
   %or_result = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %a)
@@ -457,10 +456,9 @@ define i32 @test_redand_v2i32(<2 x i32> %a) {
 ; GISEL-LABEL: test_redand_v2i32:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and_result = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %a)
   ret i32 %and_result
@@ -480,10 +478,9 @@ define i32 @test_redand_v4i32(<4 x i32> %a) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    mov d1, v0.d[1]
 ; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and_result = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
   ret i32 %and_result
@@ -505,10 +502,9 @@ define i32 @test_redand_v8i32(<8 x i32> %a) {
 ; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
 ; GISEL-NEXT:    mov d1, v0.d[1]
 ; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    mov s1, v0.s[1]
-; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    mov w8, v0.s[1]
+; GISEL-NEXT:    fmov w9, s0
+; GISEL-NEXT:    and w0, w9, w8
 ; GISEL-NEXT:    ret
   %and_result = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %a)
   ret i32 %and_result

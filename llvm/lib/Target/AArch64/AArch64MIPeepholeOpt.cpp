@@ -61,6 +61,12 @@
 //   %6:fpr128 = IMPLICIT_DEF
 //   %7:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
 //
+// 8.   %129:fpr32 = DUPi32 %167:fpr128, 3
+//      %173:gpr32 = COPY %129:fpr32
+//   ==>
+//      %173:gpr32 = UMOVvi32 %167:fpr128, 3
+//   Similar peephole for 64-bit moves.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -128,6 +134,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
   bool visitFMOVDr(MachineInstr &MI);
+  bool visitCOPY(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -690,6 +697,42 @@ bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitCOPY(MachineInstr &MI) {
+  // Optimize COPY of FPR extract into GPR regbank to UMOV
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!Dst.isVirtual() || !Src.isVirtual())
+    return false;
+
+  auto TryMatchDUP = [&](const TargetRegisterClass *GPRRegClass,
+                         const TargetRegisterClass *FPRRegClass, unsigned DUP,
+                         unsigned UMOV) {
+    if (MRI->getRegClassOrNull(Dst) != GPRRegClass ||
+        MRI->getRegClassOrNull(Src) != FPRRegClass)
+      return false;
+
+    MachineInstr *SrcMI = MRI->getUniqueVRegDef(Src);
+    if (!SrcMI || SrcMI->getOpcode() != DUP || !MRI->hasOneUse(Src))
+      return false;
+
+    Register DupSrc = SrcMI->getOperand(1).getReg();
+    int64_t DupImm = SrcMI->getOperand(2).getImm();
+
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(UMOV), Dst)
+        .addReg(DupSrc)
+        .addImm(DupImm);
+    SrcMI->eraseFromParent();
+    MI.eraseFromParent();
+    return true;
+  };
+
+  return TryMatchDUP(&AArch64::GPR32RegClass, &AArch64::FPR32RegClass,
+                     AArch64::DUPi32, AArch64::UMOVvi32) ||
+         TryMatchDUP(&AArch64::GPR64RegClass, &AArch64::FPR64RegClass,
+                     AArch64::DUPi32, AArch64::UMOVvi64);
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -770,6 +813,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::FMOVDr:
         Changed |= visitFMOVDr(MI);
+        break;
+      case AArch64::COPY:
+        Changed |= visitCOPY(MI);
         break;
       }
     }
