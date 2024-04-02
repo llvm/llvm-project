@@ -946,17 +946,10 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooLoc =
-            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
-        EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+        const auto &FooLoc =
+            getLocForDecl<ScalarStorageLocation>(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl<PointerValue>(ASTCtx, Env, "Bar");
+        EXPECT_EQ(&BarVal.getPointeeLoc(), &FooLoc);
       });
 }
 
@@ -979,12 +972,8 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        EXPECT_EQ(FooVal->getProperty("is_null"),
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        EXPECT_EQ(FooVal.getProperty("is_null"),
                   &Env.getBoolLiteralValue(false));
       });
 }
@@ -1007,10 +996,6 @@ TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
         const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
         ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
         EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
