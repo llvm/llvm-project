@@ -1,0 +1,69 @@
+# RUN: llvm-readobj --symbols %p/Inputs/goff-basics.o | \
+# RUN: FileCheck --check-prefix=SYMBOLSEXP %s
+
+# SYMBOLSEXP: File: {{.*}}goff-basics.o
+# SYMBOLSEXP-NEXT: Format: GOFF-SystemZ
+# SYMBOLSEXP-NEXT: Arch: s390x
+# SYMBOLSEXP-NEXT: AddressSize: 64bit
+# SYMBOLSEXP-NEXT: Symbols [
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: goff-basics#S
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: goff-basics#C
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: .&ppa2
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: a
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: b
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: d
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: CELQSTRT
+# SYMBOLSEXP-NEXT:     Value: 0
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: A
+# SYMBOLSEXP-NEXT:     Value: 16
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: B
+# SYMBOLSEXP-NEXT:     Value: 48
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT:   Symbol {
+# SYMBOLSEXP-NEXT:     Name: D
+# SYMBOLSEXP-NEXT:     Value: 80
+# SYMBOLSEXP-NEXT:     Alignment: 0
+# SYMBOLSEXP-NEXT:   }
+# SYMBOLSEXP-NEXT: ]
+
+
+# goff-basics.o was compiled with `clang -c goff-basics.c`
+# from the following source:
+# int a = 55;
+# int b;
+# double d;
+# int A() { return a; }
+# int B() { return b; }
+# double D() { return d; }
