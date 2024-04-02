@@ -211,9 +211,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
-
-    # unistd.h entrypoints
-    libc.src.unistd._exit
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
