@@ -250,6 +250,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
 
+  mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
+
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
   mutable llvm::FoldingSet<SubstTemplateTemplateParmStorage>
@@ -257,6 +259,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<SubstTemplateTemplateParmPackStorage,
                                      ASTContext&>
     SubstTemplateTemplateParmPacks;
+
+  mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
+      ArrayParameterTypes;
 
   /// The set of nested name specifiers.
   ///
@@ -1341,6 +1346,11 @@ public:
     return CanQualType::CreateUnsafe(getPointerType((QualType) T));
   }
 
+  QualType
+  getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
+                         bool OrNull,
+                         ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
   QualType getAdjustedType(QualType Orig, QualType New) const;
@@ -1359,6 +1369,10 @@ public:
   /// Return the uniqued reference to a specified decay from the original
   /// type to the decayed type.
   QualType getDecayedType(QualType Orig, QualType Decayed) const;
+
+  /// Return the uniqued reference to a specified array parameter type from the
+  /// original array type.
+  QualType getArrayParameterType(QualType Ty) const;
 
   /// Return the uniqued reference to the atomic type for the specified
   /// type.

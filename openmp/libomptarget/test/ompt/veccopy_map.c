@@ -4,6 +4,8 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: s390x-ibm-linux-gnu
+// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
 /*
  * Example OpenMP program that shows that map callbacks are not supported.

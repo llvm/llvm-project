@@ -136,10 +136,12 @@ inline uint32_t getDebugLevel() {
   } while (0)
 
 /// Print a generic information string used if LIBOMPTARGET_INFO=1
-#define INFO_MESSAGE(_num, ...)                                                \
+#define INFO_MESSAGE(_num, ...) INFO_MESSAGE_TO(stderr, _num, __VA_ARGS__)
+
+#define INFO_MESSAGE_TO(_stdDst, _num, ...)                                    \
   do {                                                                         \
-    fprintf(stderr, GETNAME(TARGET_NAME) " device %d info: ", (int)_num);      \
-    fprintf(stderr, __VA_ARGS__);                                              \
+    fprintf(_stdDst, GETNAME(TARGET_NAME) " device %d info: ", (int)_num);     \
+    fprintf(_stdDst, __VA_ARGS__);                                             \
   } while (0)
 
 // Debugging messages
@@ -184,6 +186,15 @@ inline uint32_t getDebugLevel() {
       DEBUGP(DEBUG_PREFIX, __VA_ARGS__);                                       \
     } else if (getInfoLevel() & _flags) {                                      \
       INFO_MESSAGE(_id, __VA_ARGS__);                                          \
+    }                                                                          \
+  } while (false)
+
+#define DUMP_INFO(toStdOut, _flags, _id, ...)                                  \
+  do {                                                                         \
+    if (toStdOut) {                                                            \
+      INFO_MESSAGE_TO(stdout, _id, __VA_ARGS__);                               \
+    } else {                                                                   \
+      INFO(_flags, _id, __VA_ARGS__);                                          \
     }                                                                          \
   } while (false)
 

@@ -35,6 +35,7 @@ static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
                                ArrayRef<uint64_t> args);
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrInterfaces.cpp.inc"
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
@@ -183,6 +184,24 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// DICompositeTypeAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::withRecId(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(getContext(), getTag(), recId, getName(),
+                                  getFile(), getLine(), getScope(),
+                                  getBaseType(), getFlags(), getSizeInBits(),
+                                  getAlignInBits(), getElements());
+}
+
+DIRecursiveTypeAttrInterface
+DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
+  return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
+                                  {}, DIFlags(), 0, 0, {});
 }
 
 //===----------------------------------------------------------------------===//

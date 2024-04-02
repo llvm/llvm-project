@@ -594,6 +594,10 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction \p MI from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
@@ -673,6 +677,14 @@ public:
   bool matchSDivByConst(MachineInstr &MI);
   void applySDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  bool matchDivByPow2(MachineInstr &MI, bool IsSigned);
+  void applySDivByPow2(MachineInstr &MI);
+  /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  void applyUDivByPow2(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);
@@ -695,10 +707,6 @@ public:
   /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
   bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Match:
-  /// (G_*ADDO x, 0) -> x + no carry out
-  bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
@@ -810,11 +818,35 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addos.
+  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element.
+  bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with freeze on the vector register.
+  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
+                                           BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector on the vector register.
+  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+                                                BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector trunc on the vector
+  /// register.
+  bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a insert vector element on the vector
+  /// register and different indices.
+  bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -919,6 +951,7 @@ private:
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src) const;
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 

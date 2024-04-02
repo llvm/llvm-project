@@ -14,6 +14,8 @@
 ---
 name:            test_av_spill_cross_bb_usage
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4 }
 machineFunctionInfo:

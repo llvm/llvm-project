@@ -10,8 +10,8 @@ define i1 @patatino(ptr %blah, i32 %choice) {
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[FOO:%.*]] = phi ptr [ [[BLAH:%.*]], [[ENTRY:%.*]] ], [ null, [[WHILE_BODY:%.*]] ]
 ; CHECK-NEXT:    switch i32 [[CHOICE:%.*]], label [[WHILE_BODY]] [
-; CHECK-NEXT:    i32 -1, label [[WHILE_END:%.*]]
-; CHECK-NEXT:    i32 40, label [[LAND_END:%.*]]
+; CHECK-NEXT:      i32 -1, label [[WHILE_END:%.*]]
+; CHECK-NEXT:      i32 40, label [[LAND_END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    br label [[WHILE_END]]
@@ -66,7 +66,7 @@ define void @foo(ptr %arg) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i8 0, ptr [[TMP]], align 1, !g !0
+; CHECK-NEXT:    store i8 0, ptr [[TMP]], align 1, !g [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
@@ -74,13 +74,13 @@ define void @foo(ptr %arg) {
 ; CHECK-NEXT:    br i1 undef, label [[BB9:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    switch i8 0, label [[BB6]] [
-; CHECK-NEXT:    i8 6, label [[BB8:%.*]]
+; CHECK-NEXT:      i8 6, label [[BB8:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    store i8 0, ptr [[ARG]], align 1, !g !0
+; CHECK-NEXT:    store i8 0, ptr [[ARG]], align 1, !g [[META0]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:

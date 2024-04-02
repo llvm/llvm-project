@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "in_float_range_test_helper.h"
+#include "include/llvm-libc-macros/math-macros.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/math/fabs.h"
+#include "src/math/fabsf.h"
 #include "src/math/generic/explogxf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 using LlvmLibcExplogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -22,7 +24,7 @@ constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
 auto f_normal = [](float x) -> bool {
-  return !(isnan(x) || isinf(x) || fabs(x) < 2E-38);
+  return !(isnan(x) || isinf(x) || LIBC_NAMESPACE::fabs(x) < 2E-38);
 };
 
 TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
@@ -32,8 +34,8 @@ TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
     return static_cast<float>(result.mh * r);
   };
   auto f_check = [](float x) -> bool {
-    return !(
-        (isnan(x) || isinf(x) || x < -70 || x > 70 || fabsf(x) < 0x1.0p-10));
+    return !((isnan(x) || isinf(x) || x < -70 || x > 70 ||
+              LIBC_NAMESPACE::fabsf(x) < 0x1.0p-10));
   };
   CHECK_DATA(0.0f, neg_inf, mpfr::Operation::Exp, fx, f_check, def_count,
              def_prec);

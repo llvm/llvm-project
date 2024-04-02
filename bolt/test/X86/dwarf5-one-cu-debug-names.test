@@ -9,7 +9,7 @@
 ; BOLT: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
 ; BOLT:       Name Index @ 0x0 {
 ; BOLT-NEXT:   Header {
-; BOLT-NEXT:     Length: 0x13E
+; BOLT-NEXT:     Length: 0x14F
 ; BOLT-NEXT:     Format: DWARF32
 ; BOLT-NEXT:     Version: 5
 ; BOLT-NEXT:     CU count: 1
@@ -17,7 +17,7 @@
 ; BOLT-NEXT:     Foreign TU count: 0
 ; BOLT-NEXT:     Bucket count: 11
 ; BOLT-NEXT:     Name count: 11
-; BOLT-NEXT:     Abbreviations table size: 0x1F
+; BOLT-NEXT:     Abbreviations table size: 0x31
 ; BOLT-NEXT:     Augmentation: 'BOLT'
 ; BOLT-NEXT:   }
 ; BOLT-NEXT:   Compilation Unit offsets [
@@ -27,22 +27,32 @@
 ; BOLT-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
 ; BOLT-NEXT:       Tag: DW_TAG_structure_type
 ; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
 ; BOLT-NEXT:       Tag: DW_TAG_base_type
 ; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
-; BOLT-NEXT:       Tag: DW_TAG_variable
-; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:        Tag: DW_TAG_structure_type
+; BOLT-NEXT:        DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:        DW_IDX_parent: DW_FORM_ref4
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Abbreviation [[ABBREV4:0x[0-9a-f]*]] {
-; BOLT-NEXT:       Tag: DW_TAG_subprogram
+; BOLT-NEXT:       Tag: DW_TAG_variable
 ; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Abbreviation [[ABBREV5:0x[0-9a-f]*]] {
+; BOLT-NEXT:       Tag: DW_TAG_subprogram
+; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; BOLT-NEXT:     }
+; BOLT-NEXT:     Abbreviation [[ABBREV6:0x[0-9a-f]*]] {
 ; BOLT-NEXT:       Tag: DW_TAG_namespace
 ; BOLT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; BOLT-NEXT:       DW_IDX_parent: DW_FORM_flag_present
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
 ; BOLT-NEXT:   Bucket 0 [
@@ -53,6 +63,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV1]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000104
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Name 2 {
@@ -62,6 +73,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV2]]
 ; BOLT-NEXT:         Tag: DW_TAG_base_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x000000c5
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -73,6 +85,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV1]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x000000c9
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Name 4 {
@@ -82,6 +95,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV1]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x0000003f
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -93,6 +107,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV1]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x000000eb
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -107,18 +122,20 @@
 ; BOLT-NEXT:       Hash: 0x59796A
 ; BOLT-NEXT:       String: {{.+}} "t1"
 ; BOLT-NEXT:       Entry @ {{.+}} {
-; BOLT-NEXT:         Abbrev: [[ABBREV1]]
+; BOLT-NEXT:         Abbrev: [[ABBREV3]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000062
+; BOLT-NEXT:         DW_IDX_parent: Entry @ 0x14d
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Name 7 {
 ; BOLT-NEXT:       Hash: 0x5979AC
 ; BOLT-NEXT:       String: {{.+}} "v1"
 ; BOLT-NEXT:       Entry @ {{.+}} {
-; BOLT-NEXT:         Abbrev: [[ABBREV3]]
+; BOLT-NEXT:         Abbrev: [[ABBREV4]]
 ; BOLT-NEXT:         Tag: DW_TAG_variable
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000024
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -130,6 +147,7 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV2]]
 ; BOLT-NEXT:         Tag: DW_TAG_base_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x0000005d
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -141,15 +159,17 @@
 ; BOLT-NEXT:         Abbrev: [[ABBREV1]]
 ; BOLT-NEXT:         Tag: DW_TAG_structure_type
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x0000002f
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:     Name 10 {
 ; BOLT-NEXT:       Hash: 0x7C9A7F6A
 ; BOLT-NEXT:       String: {{.+}} "main"
 ; BOLT-NEXT:       Entry @ {{.+}} {
-; BOLT-NEXT:         Abbrev: [[ABBREV4]]
+; BOLT-NEXT:         Abbrev: [[ABBREV5]]
 ; BOLT-NEXT:         Tag: DW_TAG_subprogram
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000073
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]
@@ -157,15 +177,11 @@
 ; BOLT-NEXT:     Name 11 {
 ; BOLT-NEXT:       Hash: 0x8CFC710C
 ; BOLT-NEXT:       String: {{.+}} "(anonymous namespace)"
-; BOLT-NEXT:       Entry @ {{.+}} {
-; BOLT-NEXT:         Abbrev: [[ABBREV5]]
+; BOLT-NEXT:       Entry @ 0x14d {
+; BOLT-NEXT:         Abbrev: [[ABBREV6]]
 ; BOLT-NEXT:         Tag: DW_TAG_namespace
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000061
-; BOLT-NEXT:       }
-; BOLT-NEXT:       Entry @ {{.+}} {
-; BOLT-NEXT:         Abbrev: [[ABBREV5]]
-; BOLT-NEXT:         Tag: DW_TAG_namespace
-; BOLT-NEXT:         DW_IDX_die_offset: 0x00000061
+; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
 ; BOLT-NEXT:       }
 ; BOLT-NEXT:     }
 ; BOLT-NEXT:   ]

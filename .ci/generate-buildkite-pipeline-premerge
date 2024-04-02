@@ -68,7 +68,7 @@ function compute-projects-to-test() {
       done
     ;;
     clang)
-      for p in clang-tools-extra compiler-rt flang libc lldb openmp cross-project-tests; do
+      for p in clang-tools-extra compiler-rt flang lldb cross-project-tests; do
         echo $p
       done
     ;;
@@ -224,7 +224,7 @@ fi
 # needs while letting them run on the infrastructure provided by LLVM.
 
 # Figure out which projects need to be built on each platform
-all_projects="bolt clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
 modified_projects="$(keep-modified-projects ${all_projects})"
 
 linux_projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))

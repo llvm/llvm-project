@@ -39,7 +39,7 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
-using Sign = fputil::Sign;
+
 using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)
@@ -276,7 +276,7 @@ double set_exceptional(double x) {
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
 
   bool x_is_neg = xbits.is_neg();

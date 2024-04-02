@@ -315,7 +315,11 @@ class CapturedAllocatableAndPointer
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
-    return fir::ReferenceType::get(converter.genType(sym));
+    mlir::Type baseType = converter.genType(sym);
+    if (sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
+      return fir::ReferenceType::get(
+          Fortran::lower::getCrayPointeeBoxType(baseType));
+    return fir::ReferenceType::get(baseType);
   }
   static void instantiateHostTuple(const InstantiateHostTuple &args,
                                    Fortran::lower::AbstractConverter &converter,
@@ -507,7 +511,8 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsProcedure(sym))
     return CapturedProcedure::visit(visitor, converter, sym, ba);
   ba.analyze(sym);
-  if (Fortran::semantics::IsAllocatableOrPointer(sym))
+  if (Fortran::semantics::IsAllocatableOrPointer(sym) ||
+      sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
   if (ba.isArray())
     return CapturedArrays::visit(visitor, converter, sym, ba);

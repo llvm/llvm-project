@@ -333,3 +333,7 @@ void SymbolTable::scanVersionScript() {
   // --dynamic-list.
   handleDynamicList();
 }
+
+Symbol *SymbolTable::addUnusedUndefined(StringRef name, uint8_t binding) {
+  return addSymbol(Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
+}

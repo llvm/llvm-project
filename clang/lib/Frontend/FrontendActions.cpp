@@ -69,7 +69,10 @@ void InitOnlyAction::ExecuteAction() {
 
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
-  Preprocessor &PP = getCompilerInstance().getPreprocessor();
+  CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
+  Preprocessor &PP = CI.getPreprocessor();
 
   // Ignore unknown pragmas.
   PP.IgnorePragmas();
@@ -293,11 +296,9 @@ GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
 std::unique_ptr<ASTConsumer>
 GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                         StringRef InFile) {
-  auto Buffer = std::make_shared<PCHBuffer>();
-  return std::make_unique<ReducedBMIGenerator>(
-      CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile, Buffer,
-      /*IncludeTimestamps=*/+CI.getFrontendOpts().IncludeTimestamps);
+  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
+                                               CI.getModuleCache(),
+                                               CI.getFrontendOpts().OutputFile);
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -1085,6 +1086,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
+  case Language::CIR:
     break;
 
   case Language::Unknown:
@@ -1189,6 +1191,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();

@@ -407,6 +407,6 @@ DEFAULT_PARAMETERS = [
             AddFeature('has-clang-tidy'),
             AddSubstitution('%{clang-tidy}', exe),
         ]
-     ),
+    ),
 ]
 # fmt: on
