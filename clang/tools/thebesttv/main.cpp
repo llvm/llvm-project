@@ -547,6 +547,10 @@ int main(int argc, const char **argv) {
             std::vector<VarLocResult> path;
             for (const ordered_json &loc : locations) {
                 std::string type = loc["type"].template get<std::string>();
+                if (type != "source" && type != "sink" && type != "stmt") {
+                    logger.warn("Skipping path type: {}", type);
+                    continue;
+                }
 
                 bool isStmt = type == "stmt";
                 VarLocResult varLoc =
