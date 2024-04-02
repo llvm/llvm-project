@@ -10124,23 +10124,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         Diag(D.getDeclSpec().getVirtualSpecLoc(), diag::err_auto_fn_virtual);
     }
 
-    if (getLangOpts().CPlusPlus14 &&
-        (NewFD->isDependentContext() ||
-         (isFriend && CurContext->isDependentContext())) &&
-        NewFD->getReturnType()->isUndeducedType()) {
-      // If the function template is referenced directly (for instance, as a
-      // member of the current instantiation), pretend it has a dependent type.
-      // This is not really justified by the standard, but is the only sane
-      // thing to do.
-      // FIXME: For a friend function, we have not marked the function as being
-      // a friend yet, so 'isDependentContext' on the FD doesn't work.
-      const FunctionProtoType *FPT =
-          NewFD->getType()->castAs<FunctionProtoType>();
-      QualType Result = SubstAutoTypeDependent(FPT->getReturnType());
-      NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(),
-                                             FPT->getExtProtoInfo()));
-    }
-
     // C++ [dcl.fct.spec]p3:
     //  The inline specifier shall not appear on a block scope function
     //  declaration.
@@ -12111,6 +12094,35 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   CheckConstPureAttributesUsage(*this, NewFD);
+
+  // C++ [dcl.spec.auto.general]p12:
+  //   Return type deduction for a templated function with a placeholder in its
+  //   declared type occurs when the definition is instantiated even if the
+  //   function body contains a return statement with a non-type-dependent
+  //   operand.
+  //
+  // C++ [temp.dep.expr]p3:
+  //   An id-expression is type-dependent if it is a template-id that is not a
+  //   concept-id and is dependent; or if its terminal name is:
+  //   - [...]
+  //   - associated by name lookup with one or more declarations of member
+  //     functions of a class that is the current instantiation declared with a
+  //     return type that contains a placeholder type,
+  //   - [...]
+  //
+  // If this is a templated function with a placeholder in its return type,
+  // make the placeholder type dependent since it won't be deduced until the
+  // definition is instantiated. We do this here because it needs to happen
+  // for implicitly instantiated member functions/member function templates.
+  if (getLangOpts().CPlusPlus14 &&
+      (NewFD->isDependentContext() &&
+       NewFD->getReturnType()->isUndeducedType())) {
+    const FunctionProtoType *FPT =
+        NewFD->getType()->castAs<FunctionProtoType>();
+    QualType NewReturnType = SubstAutoTypeDependent(FPT->getReturnType());
+    NewFD->setType(Context.getFunctionType(NewReturnType, FPT->getParamTypes(),
+                                           FPT->getExtProtoInfo()));
+  }
 
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
