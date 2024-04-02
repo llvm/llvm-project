@@ -2051,9 +2051,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
+        SmallString<40> ErrorComments;
+        raw_svector_ostream ErrorCommentsStream(ErrorComments);
+
         auto Status = DT->DisAsm->onSymbolStart(
             Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
-            CommentStream);
+            ErrorCommentsStream);
 
         if (!Status) {
           // If onSymbolStart returns std::nullopt, that means it didn't trigger
@@ -2078,9 +2081,23 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // distance to the next symbol, and sometimes it will be just a
           // prologue and we should start disassembling instructions from where
           // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
+
+          // Print any error comments onSymbolStart emitted, or a generic error.
+          StringRef CommentStr = DT->Context->getAsmInfo()->getCommentString();
+          if (!ErrorComments.empty()) {
+            StringRef Comments = ErrorComments;
+            do {
+              StringRef Line;
+              std::tie(Line, Comments) = Comments.split('\n');
+              outs() << CommentStr << " error decoding " << SymNamesHere[SHI]
+                     << ": " << Line << '\n';
+            } while (!Comments.empty());
+            outs() << CommentStr << " decoding failed region as bytes.\n";
+          } else {
+            outs() << CommentStr << " error in decoding " << SymNamesHere[SHI]
+                   << " : decoding failed region as bytes.\n";
+          }
+
           for (uint64_t I = 0; I < Size; ++I) {
             outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
                    << "\n";

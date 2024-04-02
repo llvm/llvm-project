@@ -147,7 +147,8 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param CStream  - The stream to print comments and annotations on.
+  /// \param ErrS     - A stream to print newline seperated error comments that
+  ///                   will be emitted if Fail is returned.
   /// \return         - MCDisassembler::Success if bytes are decoded
   ///                   successfully. Size must hold the number of bytes that
   ///                   were decoded.
@@ -160,7 +161,7 @@ public:
   ///                   case.
   virtual std::optional<DecodeStatus>
   onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const;
+                uint64_t Address, raw_ostream &ErrS) const;
   // TODO:
   // Implement similar hooks that can be used at other points during
   // disassembly. Something along the following lines:
