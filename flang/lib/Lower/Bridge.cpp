@@ -3780,7 +3780,8 @@ private:
         if (details->cudaDataAttr()) {
           // TODO: This should probably being checked in semantic and give a
           // proper error.
-          assert(nbDeviceResidentObject <= 1 &&
+          assert(
+              nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
           auto addr = getSymbolAddress(sym);
           hlfir::Entity entity{addr};
