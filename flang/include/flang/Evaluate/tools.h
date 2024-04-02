@@ -1243,8 +1243,8 @@ inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
 inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols = 0;
-  unsigned deviceSymbols = 0;
+  unsigned hostSymbols{0};
+  unsigned deviceSymbols{0};
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
