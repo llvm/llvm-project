@@ -3810,7 +3810,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
   if (name) {
     funcName = converter.mangleName(*name->symbol);
     funcOp =
-        builder.getNamedFunction(mod, funcName, builder.getMLIRSymbolTable());
+        builder.getNamedFunction(mod, builder.getMLIRSymbolTable(), funcName);
   } else {
     Fortran::semantics::Scope &scope =
         semanticsContext.FindScope(routineConstruct.source);
@@ -3823,7 +3823,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     if (subpDetails && subpDetails->isInterface()) {
       funcName = converter.mangleName(*progUnit.symbol());
       funcOp =
-          builder.getNamedFunction(mod, funcName, builder.getMLIRSymbolTable());
+          builder.getNamedFunction(mod, builder.getMLIRSymbolTable(), funcName);
     } else {
       funcOp = builder.getFunction();
       funcName = funcOp.getName();

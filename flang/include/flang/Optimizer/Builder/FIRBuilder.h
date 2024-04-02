@@ -290,28 +290,28 @@ public:
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
   mlir::func::FuncOp getNamedFunction(llvm::StringRef name) {
-    return getNamedFunction(getModule(), name, getMLIRSymbolTable());
+    return getNamedFunction(getModule(), getMLIRSymbolTable(), name);
   }
   static mlir::func::FuncOp
-  getNamedFunction(mlir::ModuleOp module, llvm::StringRef name,
-                   const mlir::SymbolTable *symbolTable);
+  getNamedFunction(mlir::ModuleOp module, const mlir::SymbolTable *symbolTable,
+                   llvm::StringRef name);
 
   /// Get a function by symbol name. The result will be null if there is no
   /// function with the given symbol in the module.
   mlir::func::FuncOp getNamedFunction(mlir::SymbolRefAttr symbol) {
-    return getNamedFunction(getModule(), symbol, getMLIRSymbolTable());
+    return getNamedFunction(getModule(), getMLIRSymbolTable(), symbol);
   }
   static mlir::func::FuncOp
-  getNamedFunction(mlir::ModuleOp module, mlir::SymbolRefAttr symbol,
-                   const mlir::SymbolTable *symbolTable);
+  getNamedFunction(mlir::ModuleOp module, const mlir::SymbolTable *symbolTable,
+                   mlir::SymbolRefAttr symbol);
 
   fir::GlobalOp getNamedGlobal(llvm::StringRef name) {
-    return getNamedGlobal(getModule(), name, getMLIRSymbolTable());
+    return getNamedGlobal(getModule(), getMLIRSymbolTable(), name);
   }
 
   static fir::GlobalOp getNamedGlobal(mlir::ModuleOp module,
-                                      llvm::StringRef name,
-                                      const mlir::SymbolTable *symbolTable);
+                                      const mlir::SymbolTable *symbolTable,
+                                      llvm::StringRef name);
 
   /// Lazy creation of fir.convert op.
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,

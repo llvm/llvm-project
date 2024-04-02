@@ -44,8 +44,9 @@ fir::FirOpBuilder::createFunction(mlir::Location loc, mlir::ModuleOp module,
 }
 
 mlir::func::FuncOp
-fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp, llvm::StringRef name,
-                                    const mlir::SymbolTable *symbolTable) {
+fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
+                                    const mlir::SymbolTable *symbolTable,
+                                    llvm::StringRef name) {
   if (symbolTable)
     if (auto func = symbolTable->lookup<mlir::func::FuncOp>(name)) {
 #ifdef EXPENSIVE_CHECKS
@@ -59,8 +60,8 @@ fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp, llvm::StringRef name,
 
 mlir::func::FuncOp
 fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
-                                    mlir::SymbolRefAttr symbol,
-                                    const mlir::SymbolTable *symbolTable) {
+                                    const mlir::SymbolTable *symbolTable,
+                                    mlir::SymbolRefAttr symbol) {
   if (symbolTable)
     if (auto func = symbolTable->lookup<mlir::func::FuncOp>(
             symbol.getLeafReference())) {
@@ -74,8 +75,9 @@ fir::FirOpBuilder::getNamedFunction(mlir::ModuleOp modOp,
 }
 
 fir::GlobalOp
-fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp, llvm::StringRef name,
-                                  const mlir::SymbolTable *symbolTable) {
+fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
+                                  const mlir::SymbolTable *symbolTable,
+                                  llvm::StringRef name) {
   if (symbolTable)
     if (auto global = symbolTable->lookup<fir::GlobalOp>(name)) {
 #ifdef EXPENSIVE_CHECKS

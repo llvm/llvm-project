@@ -668,7 +668,7 @@ void Fortran::lower::CallInterface<T>::declare() {
     std::string name = side().getMangledName();
     mlir::ModuleOp module = converter.getModuleOp();
     mlir::SymbolTable *symbolTable = converter.getMLIRSymbolTable();
-    func = fir::FirOpBuilder::getNamedFunction(module, name, symbolTable);
+    func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
       mlir::FunctionType ty = genFunctionType();
@@ -1647,7 +1647,7 @@ mlir::func::FuncOp Fortran::lower::getOrDeclareFunction(
   mlir::ModuleOp module = converter.getModuleOp();
   std::string name = getProcMangledName(proc, converter);
   mlir::func::FuncOp func = fir::FirOpBuilder::getNamedFunction(
-      module, name, converter.getMLIRSymbolTable());
+      module, converter.getMLIRSymbolTable(), name);
   if (func)
     return func;
 
