@@ -90,10 +90,9 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 // pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
 
-// When `EnableContiguousRegions` is true, the virtual address for all regions
-// will be preserved within a big chunk of memory. This will reduce the
-// fragmentation caused by region allocations but may require a huge amount of
-// contiguous pages at initialization.
+// When `EnableContiguousRegions` is true, all regions will be be arranged in
+// adjacency. This will reduce the fragmentation caused by region allocations
+// but may require a huge amount of contiguous pages at initialization.
 PRIMARY_OPTIONAL(const bool, EnableContiguousRegions, true)
 
 // PRIMARY_OPTIONAL_TYPE(NAME, DEFAULT)

@@ -139,7 +139,7 @@ public:
 
         initRegion(Region, I, RegionMemMap, Config::getEnableRandomOffset());
       }
-      shuffle(RegionInfoArray, NumClasses, &getRegionInfo(0)->RandState);
+      shuffle(RegionInfoArray, NumClasses, &Seed);
     }
 
     // The binding should be done after region shuffling so that it won't bind
@@ -1016,7 +1016,7 @@ private:
       if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, RegionSize,
                                           "scudo:primary_reserve",
                                           MAP_ALLOWNOMEM))) {
-        Printf("Can't preserve pages for size class %zu.\n",
+        Printf("Can't reserve pages for size class %zu.\n",
                getSizeByClassId(ClassId));
         Region->Exhausted = true;
         return 0U;
