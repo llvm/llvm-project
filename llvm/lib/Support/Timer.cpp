@@ -471,7 +471,7 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
     delim = ",\n";
     const TimeRecord &T = R.Time;
     StringRef Prefix = "  ";
-    OS << Prefix << "\"check\": {\n";
+    OS << Prefix << "{\n";
     Prefix = "    ";
     OS << Prefix << "\"name\": \"" << Name << '.' << R.Name << "\"" << delim;
     printJsonProfileValue(OS, "wall", T.getWallTime(), Prefix, delim);
