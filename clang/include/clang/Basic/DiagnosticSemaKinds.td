@@ -1748,8 +1748,8 @@ def err_type_defined_in_condition : Error<
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
 def ext_type_defined_in_offsetof : Extension<
-  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
-  "extension">, InGroup<GNUOffsetofExtensions>;
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a C23 "
+  "extension">, InGroup<C23>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -9821,6 +9821,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
+def warn_format_conversion_argument_type_mismatch_signedness : Warning<
+  warn_format_conversion_argument_type_mismatch.Summary>,
+  InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;

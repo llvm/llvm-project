@@ -39,6 +39,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -4000,16 +4001,16 @@ public:
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
                                             StmtResult StrBlock) {
-    getSema().ActOnOpenACCConstruct(K, BeginLoc);
+    getSema().OpenACC().ActOnConstruct(K, BeginLoc);
 
     // TODO OpenACC: Include clauses.
-    if (getSema().ActOnStartOpenACCStmtDirective(K, BeginLoc))
+    if (getSema().OpenACC().ActOnStartStmtDirective(K, BeginLoc))
       return StmtError();
 
-    StrBlock = getSema().ActOnOpenACCAssociatedStmt(K, StrBlock);
+    StrBlock = getSema().OpenACC().ActOnAssociatedStmt(K, StrBlock);
 
-    return getSema().ActOnEndOpenACCStmtDirective(K, BeginLoc, EndLoc,
-                                                  StrBlock);
+    return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
+                                                     StrBlock);
   }
 
 private:
@@ -5240,6 +5241,23 @@ QualType TreeTransform<Derived>::TransformDecayedType(TypeLocBuilder &TLB,
     Result = SemaRef.Context.getDecayedType(OriginalType);
   TLB.push<DecayedTypeLoc>(Result);
   // Nothing to set for DecayedTypeLoc.
+  return Result;
+}
+
+template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformArrayParameterType(TypeLocBuilder &TLB,
+                                                    ArrayParameterTypeLoc TL) {
+  QualType OriginalType = getDerived().TransformType(TLB, TL.getElementLoc());
+  if (OriginalType.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() ||
+      OriginalType != TL.getElementLoc().getType())
+    Result = SemaRef.Context.getArrayParameterType(OriginalType);
+  TLB.push<ArrayParameterTypeLoc>(Result);
+  // Nothing to set for ArrayParameterTypeLoc.
   return Result;
 }
 

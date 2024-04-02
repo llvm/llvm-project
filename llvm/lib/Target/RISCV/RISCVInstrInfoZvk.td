@@ -233,6 +233,19 @@ class VPseudoTernaryNoMask_Zvk<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+multiclass VPseudoBinaryNoMaskTU_Zvk<VReg RetClass,
+                                     VReg Op1Class,
+                                     DAGOperand Op2Class,
+                                     LMULInfo MInfo,
+                                     string Constraint = "",
+                                     int sew = 0> {
+  let VLMul = MInfo.value, SEW=sew in {
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
+                                       Constraint>;
+  }
+}
+
 multiclass VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                    VReg Op1Class,
                                    DAGOperand Op2Class,
@@ -306,7 +319,7 @@ multiclass VPseudoVALU_VI_NoMaskTU_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VI : VPseudoBinaryNoMask<m.vrclass, m.vrclass, uimm5, m>,
+    defm _VI : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, uimm5, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
@@ -317,7 +330,7 @@ multiclass VPseudoVALU_VV_NoMaskTU_Zvk {
     defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
     defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
 
-    defm _VV : VPseudoBinaryNoMask<m.vrclass, m.vrclass, m.vrclass, m>,
+    defm _VV : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
                Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
   }
 }
