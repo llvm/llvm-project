@@ -42,7 +42,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
                                          "Loop body must have single cmp op");
 
     scf::ConditionOp beforeTerm = loop.getConditionOp();
-    if (!cmp->hasOneUse() && beforeTerm.getCondition() == cmp.getResult())
+    if (!cmp->hasOneUse() || beforeTerm.getCondition() != cmp.getResult())
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
         diag << "Expected single condition use: " << *cmp;
       });
