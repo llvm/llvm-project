@@ -251,6 +251,13 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
+  // LLVM types in a consistent manner
+  if (isUntypedPointerTy(OriginalArgType)) {
+    OriginalArgType =
+        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
+                              getPointerAddressSpace(OriginalArgType));
+  }
   return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 }
 
