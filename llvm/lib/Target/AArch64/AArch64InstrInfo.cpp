@@ -4813,20 +4813,22 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   case 2:
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRHui;
-    else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
-             "Unexpected register store without SVE store instructions");
-      Opc = AArch64::STR_PXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
-      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register store without SVE2p1 or SME2");
-      if (SrcReg.isVirtual())
-        MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::PPRRegClass);
-      else
-        SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
-      Opc = AArch64::STR_PXI;
-      StackID = TargetStackID::ScalableVector;
+    else {
+      bool IsPPR = AArch64::PPRRegClass.hasSubClassEq(RC);
+      bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
+      if (IsPPR || IsPNR) {
+        assert((!IsPPR || Subtarget.hasSVEorSME()) &&
+               "Unexpected register store without SVE store instructions");
+        assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+               "Unexpected register store without SVE2p1 or SME2");
+        Opc = AArch64::STR_PXI;
+        StackID = TargetStackID::ScalableVector;
+        if (SrcReg.isVirtual())
+          MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::PPRRegClass);
+        else if (IsPNR)
+          // Normalise to PPR
+          SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
+      }
     }
     break;
   case 4:
@@ -4992,21 +4994,27 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   case 2:
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRHui;
-    else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
-             "Unexpected register load without SVE load instructions");
-      Opc = AArch64::LDR_PXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
-      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register load without SVE2p1 or SME2");
-      PNRReg = DestReg;
-      if (DestReg.isVirtual())
-        MF.getRegInfo().constrainRegClass(DestReg, &AArch64::PPRRegClass);
-      else
-        DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
-      Opc = AArch64::LDR_PXI;
-      StackID = TargetStackID::ScalableVector;
+    else {
+      bool IsPPR = AArch64::PPRRegClass.hasSubClassEq(RC);
+      bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
+      if (IsPPR || IsPNR) {
+        assert((!IsPPR || Subtarget.hasSVEorSME()) &&
+               "Unexpected register load without SVE load instructions");
+        assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+               "Unexpected register load without SVE2p1 or SME2");
+
+        if (IsPNR)
+          PNRReg = DestReg;
+
+        if (DestReg.isVirtual())
+          MF.getRegInfo().constrainRegClass(DestReg, &AArch64::PPRRegClass);
+        else if (IsPNR)
+          // Normalise to PPR
+          DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+
+        Opc = AArch64::LDR_PXI;
+        StackID = TargetStackID::ScalableVector;
+      }
     }
     break;
   case 4:
