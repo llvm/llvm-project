@@ -8791,6 +8791,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       } else if (It != MinBWs.end()) {
         assert(BWSz > SrcBWSz && "Invalid cast!");
         VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+      } else if (SrcIt != MinBWs.end()) {
+        assert(BWSz > SrcBWSz && "Invalid cast!");
+        VecOpcode =
+            SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
       }
     }
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
@@ -12142,6 +12146,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           VecOpcode = Instruction::BitCast;
         } else if (BWSz < SrcBWSz) {
           VecOpcode = Instruction::Trunc;
+        } else if (It != MinBWs.end()) {
+          assert(BWSz > SrcBWSz && "Invalid cast!");
+          VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
         } else if (SrcIt != MinBWs.end()) {
           assert(BWSz > SrcBWSz && "Invalid cast!");
           VecOpcode =
