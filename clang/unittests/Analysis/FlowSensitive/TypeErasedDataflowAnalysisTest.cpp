@@ -865,7 +865,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2", "p3"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -908,8 +907,6 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(),
-                    UnorderedElementsAre("p1", "p2", "p3", "p4"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
         const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
@@ -948,7 +945,6 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -982,7 +978,6 @@ TEST_F(WideningTest, DistinctValuesWithSamePropertiesAreEquivalent) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -1011,13 +1006,13 @@ TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooVal = Env.getValue(*FooDecl);
+        ASSERT_THAT(FooVal->getProperty("is_null"), NotNull());
         EXPECT_TRUE(areEquivalentValues(*FooVal->getProperty("is_null"),
                                         Env.makeTopBoolValue()));
       });

@@ -99,8 +99,7 @@ public:
 
     /// The result of the `widen` operation.
     struct WidenResult {
-      /// Non-null pointer to a potentially widened version of the widening
-      /// input.
+      /// Non-null pointer to a potentially widened version of the input value.
       Value *V;
       /// Whether `V` represents a "change" (that is, a different value) with
       /// respect to the previous value in the sequence.

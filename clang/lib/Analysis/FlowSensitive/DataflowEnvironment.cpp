@@ -166,14 +166,10 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
   return JoinedVal;
 }
 
-namespace {
-using WidenResult = Environment::ValueModel::WidenResult;
-}
-
-static WidenResult widenDistinctValues(QualType Type, Value &Prev,
-                                       const Environment &PrevEnv,
-                                       Value &Current, Environment &CurrentEnv,
-                                       Environment::ValueModel &Model) {
+static Environment::ValueModel::WidenResult
+widenDistinctValues(QualType Type, Value &Prev, const Environment &PrevEnv,
+                    Value &Current, Environment &CurrentEnv,
+                    Environment::ValueModel &Model) {
   // Boolean-model widening.
   if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
     if (isa<TopBoolValue>(Prev))
