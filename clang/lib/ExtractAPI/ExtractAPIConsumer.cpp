@@ -30,7 +30,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -40,7 +39,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -329,12 +327,11 @@ public:
 
       StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
       PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
-      SmallString<128> USR;
-      index::generateUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM,
-                                 USR);
+      StringRef USR =
+          API.recordUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM);
 
-      API.createRecord<extractapi::MacroDefinitionRecord>(
-          USR, Name, SymbolReference(), Loc,
+      API.addMacroDefinition(
+          Name, USR, Loc,
           DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
           DeclarationFragmentsBuilder::getSubHeadingForMacro(Name),
           SM.isInSystemHeader(PM.MacroNameToken.getLocation()));
@@ -375,56 +372,39 @@ private:
   LocationFileChecker &LCF;
 };
 
-std::unique_ptr<llvm::raw_pwrite_stream>
-createAdditionalSymbolGraphFile(CompilerInstance &CI, Twine BaseName) {
-  auto OutputDirectory = CI.getFrontendOpts().SymbolGraphOutputDir;
-
-  SmallString<256> FileName;
-  llvm::sys::path::append(FileName, OutputDirectory,
-                          BaseName + ".symbols.json");
-  return CI.createOutputFile(
-      FileName, /*Binary*/ false, /*RemoveFileOnSignal*/ false,
-      /*UseTemporary*/ true, /*CreateMissingDirectories*/ true);
-}
-
 } // namespace
 
-void ExtractAPIActionBase::ImplEndSourceFileAction(CompilerInstance &CI) {
-  SymbolGraphSerializerOption SerializationOptions;
-  SerializationOptions.Compact = !CI.getFrontendOpts().EmitPrettySymbolGraphs;
-  SerializationOptions.EmitSymbolLabelsForTesting =
-      CI.getFrontendOpts().EmitSymbolGraphSymbolLabelsForTesting;
+void ExtractAPIActionBase::ImplEndSourceFileAction() {
+  if (!OS)
+    return;
 
-  if (CI.getFrontendOpts().EmitExtensionSymbolGraphs) {
-    auto ConstructOutputFile = [&CI](Twine BaseName) {
-      return createAdditionalSymbolGraphFile(CI, BaseName);
-    };
-
-    SymbolGraphSerializer::serializeWithExtensionGraphs(
-        *OS, *API, IgnoresList, ConstructOutputFile, SerializationOptions);
-  } else {
-    SymbolGraphSerializer::serializeMainSymbolGraph(*OS, *API, IgnoresList,
-                                                    SerializationOptions);
-  }
-
-  // Flush the stream and close the main output stream.
+  // Setup a SymbolGraphSerializer to write out collected API information in
+  // the Symbol Graph format.
+  // FIXME: Make the kind of APISerializer configurable.
+  SymbolGraphSerializer SGSerializer(*API, IgnoresList);
+  SGSerializer.serialize(*OS);
   OS.reset();
+}
+
+std::unique_ptr<raw_pwrite_stream>
+ExtractAPIAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile) {
+  std::unique_ptr<raw_pwrite_stream> OS;
+  OS = CI.createDefaultOutputFile(/*Binary=*/false, InFile,
+                                  /*Extension=*/"json",
+                                  /*RemoveFileOnSignal=*/false);
+  if (!OS)
+    return nullptr;
+  return OS;
 }
 
 std::unique_ptr<ASTConsumer>
 ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  auto ProductName = CI.getFrontendOpts().ProductName;
-
-  if (CI.getFrontendOpts().SymbolGraphOutputDir.empty())
-    OS = CI.createDefaultOutputFile(/*Binary*/ false, InFile,
-                                    /*Extension*/ "symbols.json",
-                                    /*RemoveFileOnSignal*/ false,
-                                    /*CreateMissingDirectories*/ true);
-  else
-    OS = createAdditionalSymbolGraphFile(CI, ProductName);
+  OS = CreateOutputFile(CI, InFile);
 
   if (!OS)
     return nullptr;
+
+  auto ProductName = CI.getFrontendOpts().ProductName;
 
   // Now that we have enough information about the language options and the
   // target triple, let's create the APISet before anyone uses it.
@@ -515,9 +495,7 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
   return true;
 }
 
-void ExtractAPIAction::EndSourceFileAction() {
-  ImplEndSourceFileAction(getCompilerInstance());
-}
+void ExtractAPIAction::EndSourceFileAction() { ImplEndSourceFileAction(); }
 
 std::unique_ptr<ASTConsumer>
 WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
@@ -528,9 +506,11 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
 
   CreatedASTConsumer = true;
 
-  ProductName = CI.getFrontendOpts().ProductName;
-  auto InputFilename = llvm::sys::path::filename(InFile);
-  OS = createAdditionalSymbolGraphFile(CI, InputFilename);
+  OS = CreateOutputFile(CI, InFile);
+  if (!OS)
+    return nullptr;
+
+  auto ProductName = CI.getFrontendOpts().ProductName;
 
   // Now that we have enough information about the language options and the
   // target triple, let's create the APISet before anyone uses it.
@@ -572,6 +552,32 @@ void WrappingExtractAPIAction::EndSourceFileAction() {
   WrapperFrontendAction::EndSourceFileAction();
 
   if (CreatedASTConsumer) {
-    ImplEndSourceFileAction(getCompilerInstance());
+    ImplEndSourceFileAction();
   }
+}
+
+std::unique_ptr<raw_pwrite_stream>
+WrappingExtractAPIAction::CreateOutputFile(CompilerInstance &CI,
+                                           StringRef InFile) {
+  std::unique_ptr<raw_pwrite_stream> OS;
+  std::string OutputDir = CI.getFrontendOpts().SymbolGraphOutputDir;
+
+  // The symbol graphs need to be generated as a side effect of regular
+  // compilation so the output should be dumped in the directory provided with
+  // the command line option.
+  llvm::SmallString<128> OutFilePath(OutputDir);
+  auto Seperator = llvm::sys::path::get_separator();
+  auto Infilename = llvm::sys::path::filename(InFile);
+  OutFilePath.append({Seperator, Infilename});
+  llvm::sys::path::replace_extension(OutFilePath, "json");
+  // StringRef outputFilePathref = *OutFilePath;
+
+  // don't use the default output file
+  OS = CI.createOutputFile(/*OutputPath=*/OutFilePath, /*Binary=*/false,
+                           /*RemoveFileOnSignal=*/true,
+                           /*UseTemporary=*/true,
+                           /*CreateMissingDirectories=*/true);
+  if (!OS)
+    return nullptr;
+  return OS;
 }

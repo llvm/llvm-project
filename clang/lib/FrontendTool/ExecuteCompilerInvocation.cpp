@@ -181,13 +181,9 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of compilation (enabled with
-  // --emit-symbol-graph option)
-  if (FEOpts.EmitSymbolGraph) {
-    if (FEOpts.SymbolGraphOutputDir.empty()) {
-      CI.getDiagnostics().Report(diag::warn_missing_symbol_graph_dir);
-      CI.getFrontendOpts().SymbolGraphOutputDir = ".";
-    }
+  // symbol graph as a biproduct of compilation ( enabled with
+  // --emit-symbol-graph option )
+  if (!FEOpts.SymbolGraphOutputDir.empty()) {
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
   }

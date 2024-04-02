@@ -17,8 +17,6 @@
 
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/APIIgnoresList.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
@@ -31,8 +29,8 @@ protected:
   /// A representation of the APIs this action extracts.
   std::unique_ptr<extractapi::APISet> API;
 
-  /// A stream to the main output file of this action.
-  std::unique_ptr<llvm::raw_pwrite_stream> OS;
+  /// A stream to the output file of this action.
+  std::unique_ptr<raw_pwrite_stream> OS;
 
   /// The product this action is extracting API information for.
   std::string ProductName;
@@ -48,7 +46,7 @@ protected:
   ///
   /// Use the serializer to generate output symbol graph files from
   /// the information gathered during the execution of Action.
-  void ImplEndSourceFileAction(CompilerInstance &CI);
+  void ImplEndSourceFileAction();
 };
 
 } // namespace clang
