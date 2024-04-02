@@ -46,6 +46,9 @@ void initializeRISCVFoldMasksPass(PassRegistry &);
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
 
+FunctionPass *createRISCVOptZbaPass();
+void initializeRISCVOptZbaPass(PassRegistry &);
+
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
