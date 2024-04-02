@@ -523,3 +523,14 @@ define <2 x i129> @urem129(<2 x i129> %a, <2 x i129> %b) nounwind {
   %res = urem <2 x i129> %a, %b
   ret <2 x i129> %res
 }
+
+
+define <vscale x 2 x i129> @sdiv129_scalable(<vscale x 2 x i129> %a, <vscale x 2 x i129> %b) nounwind {
+; CHECK-LABEL: define <vscale x 2 x i129> @sdiv129_scalable(
+; CHECK-SAME: <vscale x 2 x i129> [[A:%.*]], <vscale x 2 x i129> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = sdiv <vscale x 2 x i129> [[A]], [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i129> [[RES]]
+;
+  %res = sdiv <vscale x 2 x i129> %a, %b
+  ret <vscale x 2 x i129> %res
+}

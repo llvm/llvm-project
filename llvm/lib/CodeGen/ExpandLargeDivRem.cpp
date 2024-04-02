@@ -61,14 +61,13 @@ static void scalarize(BinaryOperator *BO,
 
   IRBuilder<> Builder(BO);
 
-  unsigned NumElements = VTy->getElementCount().getKnownMinValue();
-  Value *Result = nullptr;
+  unsigned NumElements = VTy->getElementCount().getFixedValue();
+  Value *Result = PoisonValue::get(VTy);
   for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
     Value *LHS = Builder.CreateExtractElement(BO->getOperand(0), Idx);
     Value *RHS = Builder.CreateExtractElement(BO->getOperand(1), Idx);
     Value *Op = Builder.CreateBinOp(BO->getOpcode(), LHS, RHS);
-    Result = Builder.CreateInsertElement(
-        Result ? Result : PoisonValue::get(VTy), Op, Idx);
+    Result = Builder.CreateInsertElement(Result, Op, Idx);
     if (auto *NewBO = dyn_cast<BinaryOperator>(Op)) {
       NewBO->copyIRFlags(Op, true);
       Replace.push_back(NewBO);
