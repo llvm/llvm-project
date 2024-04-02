@@ -34,6 +34,9 @@ build --incompatible_no_implicit_file_export
 # eventually become the default
 common --incompatible_disallow_empty_glob
 
+# TODO: Remove once we move to bazel 7.x
+build --experimental_cc_shared_library
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
