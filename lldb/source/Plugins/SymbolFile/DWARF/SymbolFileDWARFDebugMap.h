@@ -20,6 +20,7 @@
 
 #include "UniqueDWARFASTType.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/lldb-enumerations.h"
 
 class DWARFASTParserClang;
 
@@ -235,11 +236,12 @@ protected:
 
   // If closure returns "false", iteration continues.  If it returns
   // "true", iteration terminates.
-  void ForEachSymbolFile(std::function<bool(SymbolFileDWARF *)> closure) {
+  void ForEachSymbolFile(
+      std::function<lldb::IterationMarker(SymbolFileDWARF *)> closure) {
     for (uint32_t oso_idx = 0, num_oso_idxs = m_compile_unit_infos.size();
          oso_idx < num_oso_idxs; ++oso_idx) {
       if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-        if (closure(oso_dwarf))
+        if (closure(oso_dwarf) == lldb::IterationMarker::eStop)
           return;
       }
     }

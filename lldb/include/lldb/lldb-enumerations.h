@@ -1339,6 +1339,13 @@ enum AddressMaskRange {
   eAddressMaskRangeAll = eAddressMaskRangeAny,
 };
 
+/// Useful for callbacks whose return type indicates
+/// whether to continue iteration or short-circuit.
+enum class IterationMarker {
+  eContinue = 0,
+  eStop,
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
