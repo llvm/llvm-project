@@ -7254,13 +7254,8 @@ void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
 
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) {
-  GSext *Sext = getOpcodeDef<GSext>(MO.getReg(), MRI);
-  if (!Sext)
-    return false;
-
-  GTrunc *Trunc = getOpcodeDef<GTrunc>(Sext->getSrcReg(), MRI);
-  if (!Trunc)
-    return false;
+  GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Sext->getSrcReg(), MRI));
 
   Register Dst = Sext->getReg(0);
   Register Src = Trunc->getSrcReg();
@@ -7279,13 +7274,8 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 
 bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) {
-  GZext *Zext = getOpcodeDef<GZext>(MO.getReg(), MRI);
-  if (!Zext)
-    return false;
-
-  GTrunc *Trunc = getOpcodeDef<GTrunc>(Zext->getSrcReg(), MRI);
-  if (!Trunc)
-    return false;
+  GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Zext->getSrcReg(), MRI));
 
   Register Dst = Zext->getReg(0);
   Register Src = Trunc->getSrcReg();
