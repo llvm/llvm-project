@@ -44,9 +44,10 @@ void f() {
 
   // Not a 32-bit type
   {
-    static_assert(sizeof(unsigned char) * CHAR_BIT < 32, "the test doesn't work on this platform");
+#if UCHAR_MAX < UINT32_MAX
     unsigned char* p = nullptr;
     seq.generate(p, p); // expected-error-re@*:* {{static assertion failed{{.+}}: [rand.util.seedseq]/7 requires{{.+}}}}
+#endif
   }
 
   // Everything satisfied
