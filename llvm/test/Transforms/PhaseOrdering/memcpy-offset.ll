@@ -8,26 +8,16 @@
 define void @forward_offset_and_store(ptr %dep_src) {
 ; CUSTOM-LABEL: define void @forward_offset_and_store(
 ; CUSTOM-SAME: ptr [[DEP_SRC:%.*]]) {
-; CUSTOM-NEXT:    [[DEP_DEST:%.*]] = alloca [7 x i8], align 1
-; CUSTOM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DEP_DEST]], ptr noundef nonnull align 1 dereferenceable(7) [[DEP_SRC]], i64 7, i1 false)
 ; CUSTOM-NEXT:    store i8 1, ptr [[DEP_SRC]], align 1
 ; CUSTOM-NEXT:    [[DEP_SRC_END:%.*]] = getelementptr inbounds i8, ptr [[DEP_SRC]], i64 6
 ; CUSTOM-NEXT:    store i8 1, ptr [[DEP_SRC_END]], align 1
-; CUSTOM-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[DEP_DEST]], i64 1
-; CUSTOM-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[DEP_SRC]], i64 1
-; CUSTOM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DEST]], ptr noundef nonnull align 1 dereferenceable(5) [[SRC]], i64 5, i1 false)
 ; CUSTOM-NEXT:    ret void
 ;
 ; O2-LABEL: define void @forward_offset_and_store(
-; O2-SAME: ptr nocapture [[DEP_SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; O2-NEXT:    [[DEP_DEST:%.*]] = alloca [7 x i8], align 1
-; O2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DEP_DEST]], ptr noundef nonnull align 1 dereferenceable(7) [[DEP_SRC]], i64 7, i1 false)
+; O2-SAME: ptr nocapture writeonly [[DEP_SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:    store i8 1, ptr [[DEP_SRC]], align 1
 ; O2-NEXT:    [[DEP_SRC_END:%.*]] = getelementptr inbounds i8, ptr [[DEP_SRC]], i64 6
 ; O2-NEXT:    store i8 1, ptr [[DEP_SRC_END]], align 1
-; O2-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[DEP_DEST]], i64 1
-; O2-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[DEP_SRC]], i64 1
-; O2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DEST]], ptr noundef nonnull align 1 dereferenceable(5) [[SRC]], i64 5, i1 false)
 ; O2-NEXT:    ret void
 ;
   %dep_dest = alloca %buf, align 1
