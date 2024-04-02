@@ -569,8 +569,7 @@ static void expandIToFP(Instruction *IToFP) {
 }
 
 static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
-  VectorType *VTy = cast<VectorType>(I->getType());
-  assert(!VTy->isScalableTy() && "Tried to scalarize scalable vector!");
+  VectorType *VTy = cast<FixedVectorType>(I->getType());
 
   IRBuilder<> Builder(I);
 
