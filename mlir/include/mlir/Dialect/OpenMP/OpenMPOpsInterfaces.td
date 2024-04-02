@@ -93,18 +93,17 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
         if ($_op->getNumRegions() != 1)
           return false;
 
-        ::mlir::Region &r = $_op->getRegion(0);
+        Region &r = $_op->getRegion(0);
         if (!r.hasOneBlock())
           return false;
 
-        if (std::distance(r.op_begin(), r.op_end()) != 2)
+        if (::llvm::range_size(r.getOps()) != 2)
           return false;
 
-        ::mlir::Operation &firstOp = *r.op_begin();
-        ::mlir::Operation &secondOp = *(++r.op_begin());
-        return ::llvm::isa<::mlir::omp::LoopNestOp,
-                           ::mlir::omp::LoopWrapperInterface>(firstOp) &&
-               secondOp.hasTrait<::mlir::OpTrait::IsTerminator>();
+        Operation &firstOp = *r.op_begin();
+        Operation &secondOp = *(std::next(r.op_begin()));
+        return ::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp) &&
+               secondOp.hasTrait<OpTrait::IsTerminator>();
       }]
     >,
     InterfaceMethod<
@@ -116,8 +115,8 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       /*methodName=*/"getNestedWrapper",
       (ins), [{}], [{
         assert($_op.isWrapper() && "Unexpected non-wrapper op");
-        ::mlir::Operation *nested = &*$_op->getRegion(0).op_begin();
-        return ::llvm::dyn_cast<::mlir::omp::LoopWrapperInterface>(nested);
+        Operation *nested = &*$_op->getRegion(0).op_begin();
+        return ::llvm::dyn_cast<LoopWrapperInterface>(nested);
       }]
     >,
     InterfaceMethod<
@@ -129,7 +128,7 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       /*methodName=*/"getWrappedLoop",
       (ins), [{}], [{
         assert($_op.isWrapper() && "Unexpected non-wrapper op");
-        if (::mlir::omp::LoopWrapperInterface nested = $_op.getNestedWrapper())
+        if (LoopWrapperInterface nested = $_op.getNestedWrapper())
           return nested.getWrappedLoop();
         return &*$_op->getRegion(0).op_begin();
       }]

@@ -568,9 +568,9 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
     /// Returns the induction variables of the loop nest.
     ArrayRef<BlockArgument> getIVs() { return getRegion().getArguments(); }
 
-    /// Returns the list of wrapper operations around this loop nest. Wrappers
+    /// Fills a list of wrapper operations around this loop nest. Wrappers
     /// in the resulting vector will be sorted from innermost to outermost.
-    SmallVector<LoopWrapperInterface> getWrappers();
+    void gatherWrappers(SmallVectorImpl<LoopWrapperInterface> &wrappers);
   }];
 
   let hasCustomAssemblyFormat = 1;
