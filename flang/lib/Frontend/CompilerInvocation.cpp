@@ -891,6 +891,10 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::OpenACC);
   }
+  if (args.hasArg(clang::driver::options::OPT_fsanitize_EQ) && llvm::StringRef(args.getLastArg(clang::driver::options::OPT_fsanitize_EQ)->getValue()) == "thread" ) {
+    res.getFrontendOpts().features.Enable(
+        Fortran::common::LanguageFeature::TSan);
+  }
   if (args.hasArg(clang::driver::options::OPT_fopenmp)) {
     // By default OpenMP is set to 1.1 version
     res.getLangOpts().OpenMPVersion = 11;
