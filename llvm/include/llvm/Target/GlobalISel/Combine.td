@@ -1501,6 +1501,7 @@ def extract_vector_element_freeze : GICombineRule<
    (match (G_FREEZE $src, $input),
           (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
    [{ return Helper.matchExtractVectorElementWithFreeze(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
