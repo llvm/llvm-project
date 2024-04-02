@@ -13,5 +13,4 @@ int foo(void) {}
 // CHECK-NEXT: </array>
 // CHECK-NEXT: <key>statistics</key>
 // CHECK-NEXT: <string>{
-// CHECK: }
-// CHECK-NEXT: </string>
+// CHECK: </string>

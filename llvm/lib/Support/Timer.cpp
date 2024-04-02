@@ -479,7 +479,8 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
     printJsonProfileValue(OS, "sys", T.getSystemTime(), Prefix, delim);
     printJsonProfileValue(OS, "mem", T.getMemUsed(), Prefix, delim);
     printJsonProfileValue(OS, "instr", T.getInstructionsExecuted(), Prefix, "");
-    OS << "\n  }";
+    Prefix = "  ";
+    OS << "\n" << Prefix << "}";
   }
   TimersToPrint.clear();
   return delim;
