@@ -7,38 +7,10 @@ define { i1, i8 } @f(i8 noundef %character) unnamed_addr {
 ; CHECK-LABEL: define { i1, i8 } @f(
 ; CHECK-SAME: i8 noundef [[CHARACTER:%.*]]) unnamed_addr {
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    switch i8 [[CHARACTER]], label [[BB11:%.*]] [
-; CHECK-NEXT:      i8 48, label [[BB2:%.*]]
-; CHECK-NEXT:      i8 49, label [[BB3:%.*]]
-; CHECK-NEXT:      i8 50, label [[BB4:%.*]]
-; CHECK-NEXT:      i8 51, label [[BB5:%.*]]
-; CHECK-NEXT:      i8 52, label [[BB6:%.*]]
-; CHECK-NEXT:      i8 53, label [[BB7:%.*]]
-; CHECK-NEXT:      i8 54, label [[BB8:%.*]]
-; CHECK-NEXT:      i8 55, label [[BB9:%.*]]
-; CHECK-NEXT:      i8 56, label [[BB10:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb4:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb6:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb7:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb8:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb9:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb10:
-; CHECK-NEXT:    br label [[BB11]]
-; CHECK:       bb11:
-; CHECK-NEXT:    [[_0_SROA_11_0:%.*]] = phi i8 [ 8, [[BB10]] ], [ 7, [[BB9]] ], [ 6, [[BB8]] ], [ 5, [[BB7]] ], [ 4, [[BB6]] ], [ 3, [[BB5]] ], [ 2, [[BB4]] ], [ 1, [[BB3]] ], [ 0, [[BB2]] ], [ undef, [[START:%.*]] ]
-; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i1 [ true, [[BB10]] ], [ true, [[BB9]] ], [ true, [[BB8]] ], [ true, [[BB7]] ], [ true, [[BB6]] ], [ true, [[BB5]] ], [ true, [[BB4]] ], [ true, [[BB3]] ], [ true, [[BB2]] ], [ false, [[START]] ]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i8 [[CHARACTER]], 48
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[SWITCH_TABLEIDX]], 9
+; CHECK-NEXT:    [[_0_SROA_11_0:%.*]] = select i1 [[TMP2]], i8 [[SWITCH_TABLEIDX]], i8 undef
+; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = select i1 [[TMP2]], i1 true, i1 false
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i1, i8 } poison, i1 [[_0_SROA_0_0]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i1, i8 } [[TMP0]], i8 [[_0_SROA_11_0]], 1
 ; CHECK-NEXT:    ret { i1, i8 } [[TMP1]]
