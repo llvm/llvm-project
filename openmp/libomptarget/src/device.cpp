@@ -12,6 +12,7 @@
 
 #include "device.h"
 #include "OffloadEntry.h"
+#include "OmptTracing.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -174,7 +175,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
 #ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || !AsyncInfo || ompt::CallbacksInitialized)
+  if (ForceSynchronousTargetRegions || !AsyncInfo || ompt::TracingActive)
 #else
   if (ForceSynchronousTargetRegions || !AsyncInfo)
 #endif
@@ -206,7 +207,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
 #ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || ompt::CallbacksInitialized)
+  if (ForceSynchronousTargetRegions || ompt::TracingActive)
 #else
   if (ForceSynchronousTargetRegions)
 #endif
@@ -237,8 +238,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
 #ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || !AsyncInfo ||
-      ompt::CallbacksInitialized) {
+  if (ForceSynchronousTargetRegions || !AsyncInfo || ompt::TracingActive) {
 #else
   if (ForceSynchronousTargetRegions || !AsyncInfo) {
 #endif
@@ -277,7 +277,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                AsyncInfoTy &AsyncInfo) {
   if (ForceSynchronousTargetRegions || !RTL->launch_kernel ||
 #ifdef OMPT_SUPPORT
-      ompt::CallbacksInitialized ||
+      ompt::TracingActive ||
 #endif
       !RTL->synchronize)
     return RTL->launch_kernel_sync(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
