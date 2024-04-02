@@ -22,7 +22,7 @@
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -296,22 +296,14 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
                                  "scf.forall op requires a mapping attribute");
   }
 
-  bool hasBlockMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUBlockMappingAttr>(attr);
-      });
-  bool hasWarpgroupMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpgroupMappingAttr>(attr);
-      });
-  bool hasWarpMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpMappingAttr>(attr);
-      });
-  bool hasThreadMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUThreadMappingAttr>(attr);
-      });
+  bool hasBlockMapping = llvm::any_of(forallOp.getMapping().value(),
+                                      llvm::IsaPred<GPUBlockMappingAttr>);
+  bool hasWarpgroupMapping = llvm::any_of(
+      forallOp.getMapping().value(), llvm::IsaPred<GPUWarpgroupMappingAttr>);
+  bool hasWarpMapping = llvm::any_of(forallOp.getMapping().value(),
+                                     llvm::IsaPred<GPUWarpMappingAttr>);
+  bool hasThreadMapping = llvm::any_of(forallOp.getMapping().value(),
+                                       llvm::IsaPred<GPUThreadMappingAttr>);
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
   countMappingTypes += hasWarpgroupMapping ? 1 : 0;

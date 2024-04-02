@@ -51,6 +51,7 @@ set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
 set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
 set_default("has_compiler_rt_libatomic", @COMPILER_RT_BUILD_STANDALONE_LIBATOMIC_PYBOOL@)
 set_default("aarch64_sme", @COMPILER_RT_HAS_AARCH64_SME_PYBOOL@)
+set_default("darwin_linker_version", "@COMPILER_RT_DARWIN_LINKER_VERSION@")
 # True iff the test suite supports ignoring the test compiler's runtime library path
 # and using `config.compiler_rt_libdir` instead. This only matters when the runtime
 # library paths differ.

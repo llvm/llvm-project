@@ -34,6 +34,7 @@ def math_test(name, hdrs = [], deps = [], **kwargs):
             "//libc:__support_math_extras",
             "//libc:__support_uint128",
             "//libc/test/UnitTest:fp_test_helpers",
+            "//libc:llvm_libc_macros_math_macros",
         ] + deps,
         **kwargs
     )

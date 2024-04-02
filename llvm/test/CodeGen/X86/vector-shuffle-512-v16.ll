@@ -177,6 +177,36 @@ define <16 x float> @shuffle_v16f32_02_03_16_17_06_07_20_21_10_11_24_25_14_15_28
   ret <16 x float> %shuffle
 }
 
+; PR86076
+define <16 x float> @shuffle_f32_v16f32_00_08_01_09_02_10_03_11_04_12_05_13_06_14_07_15(float %a0, float %a1) {
+; ALL-LABEL: shuffle_f32_v16f32_00_08_01_09_02_10_03_11_04_12_05_13_06_14_07_15:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vbroadcastss %xmm0, %ymm0
+; ALL-NEXT:    vbroadcastss %xmm1, %ymm1
+; ALL-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; ALL-NEXT:    retq
+  %v0 = insertelement <8 x float> poison, float %a0, i64 0
+  %v1 = insertelement <8 x float> poison, float %a1, i64 0
+  %b0 = shufflevector <8 x float> %v0, <8 x float> poison, <8 x i32> zeroinitializer
+  %b1 = shufflevector <8 x float> %v1, <8 x float> poison, <8 x i32> zeroinitializer
+  %r = shufflevector <8 x float> %b0, <8 x float> %b1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <16 x float> %r
+}
+
+; PR86076
+define <16 x float> @shuffle_f32_v16f32_00_08_00_08_00_08_00_08_00_08_00_08_00_08_00_08(float %a0, float %a1) {
+; ALL-LABEL: shuffle_f32_v16f32_00_08_00_08_00_08_00_08_00_08_00_08_00_08_00_08:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
+; ALL-NEXT:    vbroadcastsd %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %v0 = insertelement <8 x float> poison, float %a0, i64 0
+  %v1 = insertelement <8 x float> poison, float %a1, i64 0
+  %sv = shufflevector <8 x float> %v0, <8 x float> %v1, <16 x i32> <i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8, i32 0, i32 8>
+  ret <16 x float> %sv
+}
+
 define <16 x i32> @shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; ALL:       # %bb.0:

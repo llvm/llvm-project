@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -31,6 +32,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -374,6 +376,14 @@ void VectorDialect::initialize() {
       >();
 
   addInterfaces<VectorInlinerInterface>();
+
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface,
+                            TransferReadOp, TransferWriteOp, GatherOp, MaskOp,
+                            YieldOp>();
+  declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
+                            TransferWriteOp>();
+  declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
+  declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -888,13 +898,12 @@ static LogicalResult verifyOutputShape(
 
     AffineMap resMap = op.getIndexingMapsArray()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
-                                     /*symCount=*/0, extents, ctx);
+                                     /*symbolCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
     AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
-    assert(
-        llvm::all_of(expectedMap.getResults(),
-                     [](AffineExpr e) { return isa<AffineConstantExpr>(e); }) &&
-        "expected constant extent along all dimensions.");
+    assert(llvm::all_of(expectedMap.getResults(),
+                        llvm::IsaPred<AffineConstantExpr>) &&
+           "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
     auto expectedShape = llvm::to_vector<4>(
         llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
@@ -6054,7 +6063,7 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
-  results.push_back(maskableOp->getResult(0));
+  llvm::append_range(results, maskableOp->getResults());
   return success();
 }
 
