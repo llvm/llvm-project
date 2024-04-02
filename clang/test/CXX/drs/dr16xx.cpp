@@ -40,7 +40,7 @@ namespace dr1606 { // dr1606: 3.1
   std::size_t test() {
     int i = 1;
     int j = 1;
-    auto f = [=]{ return i + j;};
+    auto f = [=]{ return i + j; };
     return sizeof(f);
   }
 #endif
