@@ -1278,8 +1278,10 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResu
   let hasVerifier = 1;
 }
 
-def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
-    Arguments<(ins Optional<AnyType>:$result)> {
+def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator,
+    ParentOneOf<["BinaryOp", "UnaryOp", "ReduceOp", "SelectOp",
+                 "ForeachOp"]>]>,
+    Arguments<(ins Variadic<AnyType>:$results)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
@@ -1302,14 +1304,27 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
   let builders = [
     OpBuilder<(ins),
     [{
-      build($_builder, $_state, Value());
+      build($_builder, $_state, ValueRange());
+    }]>,
+    OpBuilder<(ins "Value":$yieldVal),
+    [{
+      build($_builder, $_state, ValueRange(yieldVal));
     }]>
   ];
 
-  let assemblyFormat = [{
-        $result attr-dict `:` type($result)
+  let extraClassDeclaration = [{
+     Value getSingleResult() {
+        assert(hasSingleResult());
+        return getResults().front();
+     }
+     bool hasSingleResult() {
+        return getResults().size() == 1;
+     }
   }];
-  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+        $results attr-dict `:` type($results)
+  }];
 }
 
 def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
@@ -1419,7 +1434,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Debugging Operations.
+// Sparse Tensor Debugging and Test-Only Operations.
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_PrintOp : SparseTensor_Op<"print">,
@@ -1438,6 +1453,27 @@ def SparseTensor_PrintOp : SparseTensor_Op<"print">,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_HasRuntimeLibraryOp
+    : SparseTensor_Op<"has_runtime_library", []>, Results<(outs I1:$result)> {
+  string summary = "Indicates whether running in runtime/codegen mode";
+  string description = [{
+    Returns a boolean value that indicates whether the sparsifier runs in
+    runtime library mode or not. For testing only! This operation is useful
+    for writing test cases that require different code depending on
+    runtime/codegen mode.
+
+    Example:
+
+    ```mlir
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      ...
+    }
+    ```
+  }];
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // SPARSETENSOR_OPS

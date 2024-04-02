@@ -1,0 +1,207 @@
+; RUN: rm -rf %t 
+; RUN: split-file %s %t
+; RUN: mkdir -p %t/System/Library/Frameworks 
+; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
+
+// Add exclude options.
+; RUN: clang-installapi -target x86_64-apple-macosx10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3 -compatibility_version 1 \
+; RUN: -F%t/System/Library/Frameworks \
+; RUN: %t/inputs.json -o %t/Simple.tbd \
+; RUN: --verify-against=%t/Simple --verify-mode=ErrorsAndWarnings \
+; RUN: --exclude-public-header=**/SimpleAPI.h \
+; RUN: --exclude-private-header=**/SimplePrivateSPI.h 2>&1 | FileCheck -check-prefix=WARNINGS %s
+; RUN: llvm-readtapi -compare %t/Simple.tbd %t/expected-excluded.tbd
+
+// Add extra options.
+; RUN: clang-installapi -target x86_64-apple-macosx10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3 -compatibility_version 1 \
+; RUN: -F%t/System/Library/Frameworks \
+; RUN: %t/inputs.json -o %t/Simple.tbd \
+; RUN: --verify-against=%t/Simple --verify-mode=Pedantic \
+; RUN: --extra-project-header=%S/Inputs/Simple/SimpleInternalAPI2.h \
+; RUN: --extra-project-header=%S/Inputs/Simple/SimpleInternalAPI.h \
+; RUN: --extra-public-header=%S/Inputs/Simple/Extra \
+; RUN: --extra-private-header=%S/Inputs/Simple/SimpleInternalSPI.h \
+; RUN: --exclude-public-header=**/SimpleAPI.h \
+; RUN: --exclude-private-header=**/SimplePrivateSPI.h 2>&1 | FileCheck -check-prefix=PEDANTIC -allow-empty %s
+; RUN: llvm-readtapi -compare %t/Simple.tbd %t/expected-extra.tbd
+
+// Check fatal missing file input.
+; RUN: not clang-installapi -target x86_64-apple-macosx10.12 \
+; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
+; RUN: -current_version 1.2.3 -compatibility_version 1 \
+; RUN: -F%t/System/Library/Frameworks \
+; RUN: %t/inputs.json -o %t/Simple.tbd \
+; RUN: --extra-public-header=%S/Inputs/Simple/NoSuchFile.h 2>&1 | FileCheck -allow-empty -check-prefix=NOPUBLIC %s
+
+; WARNINGS: warning: no declaration was found for exported symbol '_extraGlobalAPI1' in dynamic library
+; WARNINGS: warning: no declaration was found for exported symbol '_extraGlobalAPI2' in dynamic library
+; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalSPI' in dynamic library
+; WARNINGS: warning: no declaration was found for exported symbol '(ObjC Class) SimpleInternalAPI' in dynamic library
+
+; PEDANTIC-NOT: error
+; PEDANTIC: warning: cannot find protocol definition for 'ForwardProcotol'
+
+; NOPUBLIC: error: no such public header file:
+
+;--- expected-excluded.tbd
+{
+  "main_library": {
+    "current_versions": [
+      {
+        "version": "1.2.3"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "_publicGlobalVariable",
+            "_privateGlobalVariable"
+          ],
+          "objc_class": [
+            "ExternalManagedObject", "Basic6",
+            "Basic1", "Base", "Basic3",
+            "FooClass", "Simple",
+            "Basic4_2", "Basic5",
+            "Basic9","Basic8",
+            "Basic2", "Basic4", "A", "SubClass"
+          ],
+          "objc_eh_type": [
+            "SubClass", "Base"
+          ],
+          "objc_ivar": [
+            "Basic4.ivar2", "Basic4_2.ivar1", "Basic6.ivar1",
+            "Basic4.ivar1", "Basic4_2.ivar2"
+          ],
+          "weak": [
+            "_weakPrivateGlobalVariable", "_weakPublicGlobalVariable"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": ["not_app_extension_safe"]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/Simple.framework/Versions/A/Simple"
+      }
+    ],
+    "target_info": [
+      {"min_deployment": "10.12", "target": "x86_64-macos"}
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- expected-extra.tbd
+{
+  "main_library": {
+    "current_versions": [
+      { "version": "1.2.3" }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "_publicGlobalVariable", "_extraGlobalAPI2",
+            "_extraGlobalAPI1", "_privateGlobalVariable"
+          ],
+          "objc_class": [
+            "SubClass", "SimpleInternalSPI",
+            "Basic6", "Basic1", "Base",
+            "Basic3", "Simple", "Basic4_2",
+            "Basic5", "FooClass", "Basic9",
+            "Basic8", "Basic2", "Basic4",
+            "A", "SimpleInternalAPI",
+            "ExternalManagedObject"
+          ],
+          "objc_eh_type": [
+            "SubClass", "SimpleInternalAPI",
+            "Base", "SimpleInternalSPI"
+          ],
+          "objc_ivar": [
+            "Basic4.ivar2", "Basic4_2.ivar1",
+            "Basic6.ivar1", "Basic4.ivar1",
+            "Basic4_2.ivar2"
+          ],
+          "weak": [
+            "_weakPrivateGlobalVariable", "_weakPublicGlobalVariable"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [ "not_app_extension_safe"]
+      }
+    ],
+    "install_names": [
+      { "name": "/System/Library/Frameworks/Simple.framework/Versions/A/Simple" }
+    ],
+    "target_info": [
+      { "min_deployment": "10.12", "target": "x86_64-macos" }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- inputs.json.in
+{
+  "headers": [ 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/Headers/Basic.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/Headers/External.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/Headers/Simple.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/Headers/SimpleAPI.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/PrivateHeaders/SimplePrivate.h",
+    "type" : "private"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Simple.framework/PrivateHeaders/SimplePrivateSPI.h",
+    "type" : "private"
+  }
+  ],
+  "version": "3"
+}
+
+;--- System/Library/Frameworks/Foundation.framework/Headers/Foundation.h
+@interface NSObject 
+@end
+
+typedef unsigned char BOOL; 
+#ifndef NS_AVAILABLE
+#define NS_AVAILABLE(x,y) __attribute__((availability(macosx,introduced=x)))
+#endif 
+#ifndef NS_UNAVAILABLE
+#define NS_UNAVAILABLE  __attribute__((unavailable))
+#endif 
+#ifndef NS_DEPRECATED_MAC
+#define NS_DEPRECATED_MAC(x,y) __attribute__((availability(macosx,introduced=x,deprecated=y,message="" )));
+#endif 
+
+@interface NSManagedObject
+@end 
+
+@interface NSSet 
+@end 

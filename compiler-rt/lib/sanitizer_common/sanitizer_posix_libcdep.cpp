@@ -120,6 +120,9 @@ void DisableCoreDumperIfNecessary() {
     // The alternative to using RLIMIT_CORE=1 would be to use prctl() with the
     // PR_SET_DUMPABLE flag, however that also prevents ptrace(), so makes it
     // impossible to attach a debugger.
+    //
+    // Note: we use rlim_max in the Min() call here since that is the upper
+    // limit for what can be set without getting an EINVAL error.
     rlim.rlim_cur = Min<rlim_t>(SANITIZER_LINUX ? 1 : 0, rlim.rlim_max);
     CHECK_EQ(0, setrlimit(RLIMIT_CORE, &rlim));
   }

@@ -618,8 +618,8 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output register
 // in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0, unknown:$callee, unknown:$token),
-  [(AMDGPUcall i64:$src0, tglobaladdr:$callee, untyped:$token)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
@@ -629,8 +629,8 @@ def SI_CALL_ISEL : SPseudoInstSI <
 }
 
 def : GCNPat<
-  (AMDGPUcall i64:$src0, (i64 0), untyped:$token),
-  (SI_CALL_ISEL $src0, (i64 0), untyped:$token)
+  (AMDGPUcall i64:$src0, (i64 0)),
+  (SI_CALL_ISEL $src0, (i64 0))
 >;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -2946,30 +2946,12 @@ def : GCNPat<
 
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 1000 in {
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f16:$src),
-  (COPY f16:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> v2f16:$src),
-  (COPY v2f16:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f32:$src),
-  (COPY f32:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> v2f32:$src),
-  (COPY v2f32:$src)
->;
-
-def : GCNPat<
-  (is_canonicalized_1<fcanonicalize> f64:$src),
-  (COPY f64:$src)
->;
+foreach vt = [f16, v2f16, f32, v2f32, f64] in {
+  def : GCNPat<
+    (fcanonicalize (vt is_canonicalized:$src)),
+    (COPY vt:$src)
+  >;
+}
 }
 
 // Prefer selecting to max when legal, but using mul is always valid.

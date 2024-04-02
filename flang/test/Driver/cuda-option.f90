@@ -1,6 +1,6 @@
 ! Test -fcuda option
-! RUN: %flang -fc1 -cpp -x cuda -fdebug-unparse %s -o - | FileCheck %s
-! RUN: not %flang -fc1 -cpp %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: %flang_fc1 -cpp -x cuda -fdebug-unparse %s -o - | FileCheck %s
+! RUN: not %flang_fc1 -cpp %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
 program main
 #if _CUDA
   integer :: var = _CUDA

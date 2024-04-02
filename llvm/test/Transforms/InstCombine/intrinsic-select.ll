@@ -240,3 +240,43 @@ define i32 @vec_to_scalar_select_vector(<2 x i1> %b) {
   %c = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %s)
   ret i32 %c
 }
+
+define i8 @test_drop_noundef(i1 %cond, i8 %val) {
+; CHECK-LABEL: @test_drop_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.smin.i8(i8 [[VAL:%.*]], i8 0)
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND:%.*]], i8 -1, i8 [[TMP0]]
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+entry:
+  %sel = select i1 %cond, i8 -1, i8 %val
+  %ret = call noundef i8 @llvm.smin.i8(i8 %sel, i8 0)
+  ret i8 %ret
+}
+
+define i1 @pr85536(i32 %a) {
+; CHECK-LABEL: @pr85536(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], 31
+; CHECK-NEXT:    [[SHL1:%.*]] = shl nsw i32 -1, [[A]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[SHL1]] to i64
+; CHECK-NEXT:    [[SHL2:%.*]] = shl i64 [[ZEXT]], 48
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i64 [[SHL2]], 48
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smin.i64(i64 [[SHR]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 65535
+; CHECK-NEXT:    [[RET1:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP1]], i1 [[RET1]], i1 false
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  %cmp1 = icmp ugt i32 %a, 30
+  %shl1 = shl nsw i32 -1, %a
+  %zext = zext i32 %shl1 to i64
+  %shl2 = shl i64 %zext, 48
+  %shr = ashr exact i64 %shl2, 48
+  %sel = select i1 %cmp1, i64 -1, i64 %shr
+  %smin = call noundef i64 @llvm.smin.i64(i64 %sel, i64 0)
+  %masked = and i64 %smin, 65535
+  %ret = icmp eq i64 %masked, 0
+  ret i1 %ret
+}

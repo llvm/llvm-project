@@ -23,7 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <regex>
 
@@ -130,6 +129,19 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   };
 
+  // Dump `valobj` according to whether `po` was requested or not.
+  auto dump_val_object = [&](ValueObject &valobj) {
+    if (is_po) {
+      StreamString temp_result_stream;
+      valobj.Dump(temp_result_stream, dump_options);
+      llvm::StringRef output = temp_result_stream.GetString();
+      maybe_add_hint(output);
+      result.GetOutputStream() << output;
+    } else {
+      valobj.Dump(result.GetOutputStream(), dump_options);
+    }
+  };
+
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
@@ -147,21 +159,23 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         flags, expr);
       }
 
-      if (is_po) {
-        StreamString temp_result_stream;
-        valobj_sp->Dump(temp_result_stream, dump_options);
-        llvm::StringRef output = temp_result_stream.GetString();
-        maybe_add_hint(output);
-        result.GetOutputStream() << output;
-      } else {
-        valobj_sp->Dump(result.GetOutputStream(), dump_options);
-      }
+      dump_val_object(*valobj_sp);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
     }
   }
 
-  // Second, also lastly, try `expr` as a source expression to evaluate.
+  // Second, try `expr` as a persistent variable.
+  if (expr.starts_with("$"))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(expr))
+        if (auto valobj_sp = var_sp->GetValueObject()) {
+          dump_val_object(*valobj_sp);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+          return;
+        }
+
+  // Third, and lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
@@ -187,17 +201,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
-        if (is_po) {
-          StreamString temp_result_stream;
-          valobj_sp->Dump(temp_result_stream, dump_options);
-          llvm::StringRef output = temp_result_stream.GetString();
-          maybe_add_hint(output);
-          result.GetOutputStream() << output;
-        } else {
-          valobj_sp->Dump(result.GetOutputStream(), dump_options);
-        }
-      }
+      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
+        dump_val_object(*valobj_sp);
 
       if (suppress_result)
         if (auto result_var_sp =

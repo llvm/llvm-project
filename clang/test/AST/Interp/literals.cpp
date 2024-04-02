@@ -910,6 +910,18 @@ namespace TypeTraits {
   struct U {};
   static_assert(S3<U>{}.foo(), "");
   static_assert(!S3<T>{}.foo(), "");
+
+  typedef int Int;
+  typedef Int IntAr[10];
+  typedef const IntAr ConstIntAr;
+  typedef ConstIntAr ConstIntArAr[4];
+
+  static_assert(__array_rank(IntAr) == 1, "");
+  static_assert(__array_rank(ConstIntArAr) == 2, "");
+
+  static_assert(__array_extent(IntAr, 0) == 10, "");
+  static_assert(__array_extent(ConstIntArAr, 0) == 4, "");
+  static_assert(__array_extent(ConstIntArAr, 1) == 10, "");
 }
 
 #if __cplusplus >= 201402L
@@ -1190,6 +1202,11 @@ namespace incdecbool {
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{indexing of array without known bound}}
+                  // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
 }
 #endif
+
+namespace Extern {
+  constexpr extern char Oops = 1;
+  static_assert(Oops == 1, "");
+}

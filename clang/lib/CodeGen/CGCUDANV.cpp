@@ -331,11 +331,11 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
       llvm::ConstantInt::get(SizeTy, std::max<size_t>(1, Args.size())));
   // Store pointers to the arguments in a locally allocated launch_args.
   for (unsigned i = 0; i < Args.size(); ++i) {
-    llvm::Value* VarPtr = CGF.GetAddrOfLocalVar(Args[i]).getPointer();
+    llvm::Value *VarPtr = CGF.GetAddrOfLocalVar(Args[i]).emitRawPointer(CGF);
     llvm::Value *VoidVarPtr = CGF.Builder.CreatePointerCast(VarPtr, PtrTy);
     CGF.Builder.CreateDefaultAlignedStore(
-        VoidVarPtr,
-        CGF.Builder.CreateConstGEP1_32(PtrTy, KernelArgs.getPointer(), i));
+        VoidVarPtr, CGF.Builder.CreateConstGEP1_32(
+                        PtrTy, KernelArgs.emitRawPointer(CGF), i));
   }
 
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
@@ -393,9 +393,10 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                               /*isVarArg=*/false),
       addUnderscoredPrefixToName("PopCallConfiguration"));
 
-  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn,
-                              {GridDim.getPointer(), BlockDim.getPointer(),
-                               ShmemSize.getPointer(), Stream.getPointer()});
+  CGF.EmitRuntimeCallOrInvoke(cudaPopConfigFn, {GridDim.emitRawPointer(CGF),
+                                                BlockDim.emitRawPointer(CGF),
+                                                ShmemSize.emitRawPointer(CGF),
+                                                Stream.emitRawPointer(CGF)});
 
   // Emit the call to cudaLaunch
   llvm::Value *Kernel =
@@ -405,7 +406,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
                        cudaLaunchKernelFD->getParamDecl(0)->getType());
   LaunchKernelArgs.add(RValue::getAggregate(GridDim), Dim3Ty);
   LaunchKernelArgs.add(RValue::getAggregate(BlockDim), Dim3Ty);
-  LaunchKernelArgs.add(RValue::get(KernelArgs.getPointer()),
+  LaunchKernelArgs.add(RValue::get(KernelArgs, CGF),
                        cudaLaunchKernelFD->getParamDecl(3)->getType());
   LaunchKernelArgs.add(RValue::get(CGF.Builder.CreateLoad(ShmemSize)),
                        cudaLaunchKernelFD->getParamDecl(4)->getType());
@@ -438,8 +439,8 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
     auto TInfo = CGM.getContext().getTypeInfoInChars(A->getType());
     Offset = Offset.alignTo(TInfo.Align);
     llvm::Value *Args[] = {
-        CGF.Builder.CreatePointerCast(CGF.GetAddrOfLocalVar(A).getPointer(),
-                                      PtrTy),
+        CGF.Builder.CreatePointerCast(
+            CGF.GetAddrOfLocalVar(A).emitRawPointer(CGF), PtrTy),
         llvm::ConstantInt::get(SizeTy, TInfo.Width.getQuantity()),
         llvm::ConstantInt::get(SizeTy, Offset.getQuantity()),
     };
@@ -491,7 +492,8 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
       // variable with instructions.
       for (auto &&Op : WorkItem) {
         auto *CE = cast<llvm::ConstantExpr>(Op);
-        auto *NewInst = CE->getAsInstruction(I);
+        auto *NewInst = CE->getAsInstruction();
+        NewInst->insertBefore(*I->getParent(), I->getIterator());
         NewInst->replaceUsesOfWith(OldV, NewV);
         OldV = CE;
         NewV = NewInst;
@@ -604,20 +606,10 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       uint64_t VarSize =
           CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
       if (Info.Flags.isManaged()) {
-        auto *ManagedVar = new llvm::GlobalVariable(
-            CGM.getModule(), Var->getType(),
-            /*isConstant=*/false, Var->getLinkage(),
-            /*Init=*/Var->isDeclaration()
-                ? nullptr
-                : llvm::ConstantPointerNull::get(Var->getType()),
-            /*Name=*/"", /*InsertBefore=*/nullptr,
-            llvm::GlobalVariable::NotThreadLocal);
-        ManagedVar->setDSOLocal(Var->isDSOLocal());
-        ManagedVar->setVisibility(Var->getVisibility());
-        ManagedVar->setExternallyInitialized(true);
-        ManagedVar->takeName(Var);
-        Var->setName(Twine(ManagedVar->getName() + ".managed"));
-        replaceManagedVar(Var, ManagedVar);
+        assert(Var->getName().ends_with(".managed") &&
+               "HIP managed variables not transformed");
+        auto *ManagedVar = CGM.getModule().getNamedGlobal(
+            Var->getName().drop_back(StringRef(".managed").size()));
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
             ManagedVar,
@@ -1092,7 +1084,9 @@ void CGNVCUDARuntime::transformManagedVars() {
               : llvm::ConstantPointerNull::get(Var->getType()),
           /*Name=*/"", /*InsertBefore=*/nullptr,
           llvm::GlobalVariable::NotThreadLocal,
-          CGM.getContext().getTargetAddressSpace(LangAS::cuda_device));
+          CGM.getContext().getTargetAddressSpace(CGM.getLangOpts().CUDAIsDevice
+                                                     ? LangAS::cuda_device
+                                                     : LangAS::Default));
       ManagedVar->setDSOLocal(Var->isDSOLocal());
       ManagedVar->setVisibility(Var->getVisibility());
       ManagedVar->setExternallyInitialized(true);
@@ -1101,7 +1095,7 @@ void CGNVCUDARuntime::transformManagedVars() {
       Var->setName(Twine(ManagedVar->getName()) + ".managed");
       // Keep managed variables even if they are not used in device code since
       // they need to be allocated by the runtime.
-      if (!Var->isDeclaration()) {
+      if (CGM.getLangOpts().CUDAIsDevice && !Var->isDeclaration()) {
         assert(!ManagedVar->isDeclaration());
         CGM.addCompilerUsedGlobal(Var);
         CGM.addCompilerUsedGlobal(ManagedVar);
@@ -1159,9 +1153,8 @@ void CGNVCUDARuntime::createOffloadingEntries() {
 
 // Returns module constructor to be added.
 llvm::Function *CGNVCUDARuntime::finalizeModule() {
+  transformManagedVars();
   if (CGM.getLangOpts().CUDAIsDevice) {
-    transformManagedVars();
-
     // Mark ODR-used device variables as compiler used to prevent it from being
     // eliminated by optimization. This is necessary for device variables
     // ODR-used by host functions. Sema correctly marks them as ODR-used no

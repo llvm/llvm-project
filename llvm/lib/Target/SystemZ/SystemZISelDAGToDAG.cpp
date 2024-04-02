@@ -344,6 +344,9 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // requirements for a PC-relative access.
   bool storeLoadIsAligned(SDNode *N) const;
 
+  // Return the load extension type of a load or atomic load.
+  ISD::LoadExtType getLoadExtType(SDNode *N) const;
+
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
 
@@ -1507,15 +1510,17 @@ bool SystemZDAGToDAGISel::storeLoadCanUseBlockBinary(SDNode *N,
 
 bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
 
-  auto *MemAccess = cast<LSBaseSDNode>(N);
+  auto *MemAccess = cast<MemSDNode>(N);
+  auto *LdSt = dyn_cast<LSBaseSDNode>(MemAccess);
   TypeSize StoreSize = MemAccess->getMemoryVT().getStoreSize();
   SDValue BasePtr = MemAccess->getBasePtr();
   MachineMemOperand *MMO = MemAccess->getMemOperand();
   assert(MMO && "Expected a memory operand.");
 
   // The memory access must have a proper alignment and no index register.
+  // Only load and store nodes have the offset operand (atomic loads do not).
   if (MemAccess->getAlign().value() < StoreSize ||
-      !MemAccess->getOffset().isUndef())
+      (LdSt && !LdSt->getOffset().isUndef()))
     return false;
 
   // The MMO must not have an unaligned offset.
@@ -1543,6 +1548,17 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
     }
 
   return true;
+}
+
+ISD::LoadExtType SystemZDAGToDAGISel::getLoadExtType(SDNode *N) const {
+  ISD::LoadExtType ETy;
+  if (auto *L = dyn_cast<LoadSDNode>(N))
+    ETy = L->getExtensionType();
+  else if (auto *AL = dyn_cast<AtomicSDNode>(N))
+    ETy = AL->getExtensionType();
+  else
+    llvm_unreachable("Unkown load node type.");
+  return ETy;
 }
 
 void SystemZDAGToDAGISel::Select(SDNode *Node) {
@@ -1741,6 +1757,26 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
         return;
     }
     break;
+  }
+
+  case ISD::ATOMIC_STORE: {
+    auto *AtomOp = cast<AtomicSDNode>(Node);
+    // Replace the atomic_store with a regular store and select it. This is
+    // ok since we know all store instructions <= 8 bytes are atomic, and the
+    // 16 byte case is already handled during lowering.
+    StoreSDNode *St = cast<StoreSDNode>(CurDAG->getTruncStore(
+         AtomOp->getChain(), SDLoc(AtomOp), AtomOp->getVal(),
+         AtomOp->getBasePtr(), AtomOp->getMemoryVT(), AtomOp->getMemOperand()));
+    assert(St->getMemOperand()->isAtomic() && "Broken MMO.");
+    SDNode *Chain = St;
+    // We have to enforce sequential consistency by performing a
+    // serialization operation after the store.
+    if (AtomOp->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent)
+      Chain = CurDAG->getMachineNode(SystemZ::Serialize, SDLoc(AtomOp),
+                                     MVT::Other, SDValue(Chain, 0));
+    ReplaceNode(Node, Chain);
+    SelectCode(St);
+    return;
   }
   }
 

@@ -10,12 +10,9 @@ int main() {
   getrlimit(RLIMIT_CORE, &lim_core);
   void *p;
   if (sizeof(p) == 8) {
-#ifdef __linux__
-    // See comments in DisableCoreDumperIfNecessary().
-    assert(lim_core.rlim_cur == 1);
-#else
-    assert(lim_core.rlim_cur == 0);
-#endif
+    // rlim_cur will be set to zero or one depending on the target OS and
+    // initial core limits. See comments in DisableCoreDumperIfNecessary().
+    assert(lim_core.rlim_cur <= 1u);
   }
   return 0;
 }

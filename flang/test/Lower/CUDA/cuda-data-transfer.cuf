@@ -1,0 +1,57 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran data transfer using assignment statements.
+
+subroutine sub1()
+  integer, device :: m
+  integer, device :: adev(10)
+  integer :: i, ahost(10), bhost(10)
+
+  m = 1 + i
+
+  m = 1
+
+  adev = ahost
+
+  adev = ahost + 1
+
+  adev(1:5) = ahost(1:5)
+
+  adev = ahost + bhost
+
+end
+
+! CHECK-LABEL: func.func @_QPsub1()
+
+! CHECK: %[[ADEV:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub1Eadev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[AHOST:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub1Eahost"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[M:.*]]:2 = hlfir.declare %{{.*}} {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub1Em"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[LOADED_I:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
+! CHECK: %[[ADD:.*]] = arith.addi %[[C1]], %[[LOADED_I]] : i32
+! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[ADD]] {uniq_name = ".cuf_host_tmp"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK: fir.cuda_data_transfer %[[ASSOC]]#0 to %[[M]]#0 {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<i32>, !fir.ref<i32>
+! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
+
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[C1]] {uniq_name = ".cuf_host_tmp"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK: fir.cuda_data_transfer %[[ASSOC]]#0 to %[[M]]#0 {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<i32>, !fir.ref<i32>
+! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
+
+! CHECK: fir.cuda_data_transfer %[[AHOST]]#0 to %[[ADEV]]#0 {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
+
+! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
+! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[ELEMENTAL]](%{{.*}}) {uniq_name = ".cuf_host_tmp"} : (!hlfir.expr<10xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, i1)
+! CHECK: fir.cuda_data_transfer %[[ASSOC]]#0 to %[[ADEV]]#0 {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
+! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<!fir.array<10xi32>>, i1
+
+! CHECK: %[[DES_AHOST:.*]] = hlfir.designate %[[AHOST]]#0 (%c1{{.*}}:%c5{{.*}}:%c1{{.*}})  shape %{{.*}} : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
+! CHECK: %[[DES_ADEV:.*]] = hlfir.designate %[[ADEV]]#0 (%c1{{.*}}:%c5{{.*}}:%c1{{.*}})  shape %{{.*}} : (!fir.ref<!fir.array<10xi32>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<5xi32>>
+! CHECK: fir.cuda_data_transfer %[[DES_AHOST]] to %[[DES_ADEV]] {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>
+
+! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
+! CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[ELEMENTAL]](%{{.*}}) {uniq_name = ".cuf_host_tmp"} : (!hlfir.expr<10xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, i1)
+! CHECK: fir.cuda_data_transfer %[[ASSOC]]#0 to %[[ADEV]]#0 {transfer_kind = #fir.cuda_transfer<host_device>} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>
+! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<!fir.array<10xi32>>, i1
