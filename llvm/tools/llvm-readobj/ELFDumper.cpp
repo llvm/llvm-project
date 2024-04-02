@@ -5117,9 +5117,8 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
   }
 
   uint64_t Platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t Version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
+      support::endian::read64<ELFT::Endianness>(Desc.data() + 0);
+  uint64_t Version = support::endian::read64<ELFT::Endianness>(Desc.data() + 8);
 
   const char *PlatformDesc = [Platform]() {
     switch (Platform) {
