@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
@@ -299,6 +300,24 @@ private:
     }
   };
 
+  struct GOFFSectionKey {
+    std::string SectionName;
+    GOFF::GOFFSectionType SectionType;
+    bool HasParentSection;
+
+    GOFFSectionKey(StringRef SectionName, GOFF::GOFFSectionType SectionType,
+                   bool HasParentSection)
+        : SectionName(SectionName), SectionType(SectionType),
+          HasParentSection(HasParentSection) {}
+
+    bool operator<(const GOFFSectionKey &Other) const {
+      if (!HasParentSection && SectionType != GOFF::GOFFSectionType::Other) {
+        return SectionType < Other.SectionType;
+      }
+      return SectionName < Other.SectionName;
+    }
+  };
+
   struct WasmSectionKey {
     std::string SectionName;
     StringRef GroupName;
@@ -352,7 +371,7 @@ private:
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-  std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
+  std::map<GOFFSectionKey, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
@@ -633,8 +652,16 @@ public:
                                                    unsigned Flags,
                                                    unsigned EntrySize);
 
-  MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, const MCExpr *SubsectionId);
+  MCSectionGOFF *getGOFFLSDASection(StringRef Section, SectionKind Kind);
+
+  MCSectionGOFF *
+  getGOFFSection(StringRef Section, SectionKind Kind,
+                 MCSection *Parent = nullptr,
+                 const MCExpr *SubsectionId = nullptr,
+                 GOFF::GOFFSectionType SectionType = GOFF::Other,
+                 GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                 GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                 bool isRooted = false);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,

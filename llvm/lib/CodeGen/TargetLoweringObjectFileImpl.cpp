@@ -54,6 +54,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -2737,16 +2738,37 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr,
-                                     nullptr);
+  return getContext().getGOFFLSDASection(Name, SectionKind::getData());
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
+  if (Kind.isData())
+    return getContext().getGOFFSection(Symbol->getName(),
+                                       SectionKind::getData());
+
   if (Kind.isBSS())
-    return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
-                                       nullptr, nullptr);
+    return getContext().getGOFFSection(Symbol->getName(),
+                                       SectionKind::getBSS());
 
   return getContext().getObjectFileInfo()->getTextSection();
+}
+
+MCSymbol *
+TargetLoweringObjectFileGOFF::getTargetSymbol(const GlobalValue *GV,
+                                              const TargetMachine &TM) const {
+  // Set alignment.
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
+    if (!GVar->hasInitializer() && GVar->getValueType()->isSized()) {
+      SmallString<128> NameStr;
+      getNameWithPrefix(NameStr, GV, TM); 
+      MCSymbolGOFF *Sym =
+          static_cast<MCSymbolGOFF *>(getContext().getOrCreateSymbol(NameStr));
+      auto Alignment = GVar->getParent()->getDataLayout().getPreferredAlign(GVar);
+      auto Size = GVar->getParent()->getDataLayout().getTypeSizeInBits(GVar->getValueType());
+      Sym->declareCommon(Size, Alignment, true);  
+    }
+  }
+  return nullptr;
 }

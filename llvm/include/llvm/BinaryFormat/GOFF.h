@@ -29,6 +29,8 @@ constexpr uint8_t RecordLength = 80;
 constexpr uint8_t RecordPrefixLength = 3;
 constexpr uint8_t PayloadLength = 77;
 constexpr uint8_t RecordContentLength = RecordLength - RecordPrefixLength;
+constexpr uint8_t ESDMetadataLength = 69;
+constexpr uint8_t TXTMetadataLength = 21;
 
 /// \brief Maximum data length before starting a new card for RLD and TXT data.
 ///
@@ -65,12 +67,7 @@ enum ESDNameSpaceId : uint8_t {
   ESD_NS_Parts = 3
 };
 
-enum ESDReserveQwords : uint8_t {
-  ESD_RQ_0 = 0,
-  ESD_RQ_1 = 1,
-  ESD_RQ_2 = 2,
-  ESD_RQ_3 = 3
-};
+enum ESDReserveQwords : uint8_t { ESD_RQ_0 = 0, ESD_RQ_1 = 1 };
 
 enum ESDAmode : uint8_t {
   ESD_AMODE_None = 0,
@@ -157,6 +154,12 @@ enum ESDAlignment : uint8_t {
   ESD_ALIGN_4Kpage = 12,
 };
 
+enum TXTRecordStyle : uint8_t {
+  TXT_RS_Byte = 0,
+  TXT_RS_Structured = 1,
+  TXT_RS_Unstructured = 2,
+};
+
 enum ENDEntryPointRequest : uint8_t {
   END_EPR_None = 0,
   END_EPR_EsdidOffset = 1,
@@ -166,8 +169,29 @@ enum ENDEntryPointRequest : uint8_t {
 
 // \brief Subsections of the primary C_CODE section in the object file.
 enum SubsectionKind : uint8_t {
+  SK_ReadOnly = 1,
   SK_PPA1 = 2,
   SK_PPA2 = 4,
+};
+
+// \brief Type of sections (properly - classes or modules) in the object file.
+enum GOFFSectionType : uint8_t {
+  /// Code - This section belongs to the the Code CSECT.
+  Code,
+
+  /// Static - This section belongs to the Static CSECT.
+  Static,
+
+  /// PPA2Offset - This section contains the offset to the PPA2.
+  /// Note: This is NOT the PPA2 section itself, which should
+  /// reside within the Code CSECT.
+  PPA2Offset,
+
+  /// B_IDRL -
+  B_IDRL,
+
+  /// Other - All other sections.
+  Other,
 };
 } // end namespace GOFF
 

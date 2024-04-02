@@ -28,6 +28,7 @@ private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
   MCSymbol *PPA2Sym;
+  MCSymbol *ADASym;
 
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
@@ -117,6 +118,8 @@ public:
   }
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
+  void emitGlobalVariable(const GlobalVariable *GV) override;
+  const MCExpr *lowerConstant(const Constant *CV) override;
   void emitStartOfAsmFile(Module &M) override;
 
 private:

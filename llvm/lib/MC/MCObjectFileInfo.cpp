@@ -544,25 +544,29 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  TextSection =
-      Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr, nullptr);
+  TextSection = Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr,
+                                    nullptr, GOFF::GOFFSectionType::Code);
   BSSSection =
       Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr, nullptr);
+  ReadOnlySection =
+      Ctx->getGOFFSection(".rodata", SectionKind::getReadOnly(), TextSection,
+                          MCConstantExpr::create(GOFF::SK_ReadOnly, *Ctx));
   PPA1Section =
       Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
   PPA2Section =
       Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(), TextSection,
-                          MCConstantExpr::create(GOFF::SK_PPA2, *Ctx));
+                          MCConstantExpr::create(GOFF::SK_PPA2, *Ctx),
+                          GOFF::GOFFSectionType::PPA2Offset);
 
   PPA2ListSection =
       Ctx->getGOFFSection(".ppa2list", SectionKind::getData(),
-                          nullptr, nullptr);
+                          nullptr, nullptr, GOFF::GOFFSectionType::PPA2Offset);
 
-  ADASection =
-      Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr, nullptr);
-  IDRLSection =
-      Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr, nullptr);
+  ADASection = Ctx->getGOFFSection(".ada", SectionKind::getText(), nullptr,
+                                   nullptr, GOFF::GOFFSectionType::Static);
+  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr,
+                                    nullptr, GOFF::GOFFSectionType::B_IDRL);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

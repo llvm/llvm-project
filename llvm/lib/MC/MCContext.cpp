@@ -651,19 +651,33 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
-                                         MCSection *Parent,
-                                         const MCExpr *SubsectionId) {
+MCSectionGOFF *MCContext::getGOFFLSDASection(StringRef Section,
+                                             SectionKind Kind) {
+  return getGOFFSection(Section, Kind, nullptr, nullptr, GOFF::GOFFSectionType::Other,
+                        GOFF::ESD_TS_Unstructured, GOFF::ESD_LB_Deferred, true);
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(
+    StringRef Section, SectionKind Kind, MCSection *Parent,
+    const MCExpr *SubsectionId, GOFF::GOFFSectionType SectionType,
+    GOFF::ESDTextStyle TextStyle, GOFF::ESDLoadingBehavior LoadBehavior,
+    bool isRooted) {
   // Do the lookup. If we don't have a hit, return a new section.
-  auto IterBool =
-      GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
+  auto IterBool = GOFFUniquingMap.insert(std::make_pair(
+      GOFFSectionKey{Section.str(), GOFF::GOFFSectionType::Other, false},
+      nullptr));
   auto Iter = IterBool.first;
   if (!IterBool.second)
     return Iter->second;
 
-  StringRef CachedName = Iter->first;
-  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
+  StringRef CachedName = Iter->first.SectionName;
+  MCSectionGOFF *GOFFSection;
+  if (SectionType != GOFF::GOFFSectionType::Other)
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, SectionType);
+  else
+    GOFFSection = new (GOFFAllocator.Allocate())
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
   Iter->second = GOFFSection;
 
   return GOFFSection;
