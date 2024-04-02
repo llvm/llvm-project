@@ -3300,7 +3300,6 @@ bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
     default:
       return false;
     }
-    return true;
   };
 
   // We can have multiple nested nodes, so unravel them all if needed.
