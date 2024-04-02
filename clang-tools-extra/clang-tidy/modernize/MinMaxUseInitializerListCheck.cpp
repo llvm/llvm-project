@@ -48,35 +48,30 @@ static FindArgsResult findArgs(const CallExpr *Call) {
                   InitListExpr->getSubExpr()->IgnoreImplicit())
             : nullptr;
 
-    if (InitListExpr && InitList) {
-      Result.Args.insert(Result.Args.begin(), InitList->inits().begin(),
-                         InitList->inits().end());
+    if (InitList) {
+      Result.Args.append(InitList->inits().begin(), InitList->inits().end());
       Result.First = *ArgIterator;
       Result.Last = *ArgIterator;
 
       // check if there is a comparison argument
       std::advance(ArgIterator, 1);
-      if (ArgIterator != Call->arguments().end()) {
+      if (ArgIterator != Call->arguments().end())
         Result.Compare = *ArgIterator;
-      }
 
       return Result;
     }
-    // if it has 3 arguments then the last will be the comparison
   } else {
+    // if it has 3 arguments then the last will be the comparison
     Result.Compare = *(std::next(Call->arguments().begin(), 2));
   }
 
-  for (const Expr *Arg : Call->arguments()) {
-    if (!Result.First)
-      Result.First = Arg;
+  if (Result.Compare)
+    Result.Args = SmallVector<const Expr *>(llvm::drop_end(Call->arguments()));
+  else
+    Result.Args = SmallVector<const Expr *>(Call->arguments());
 
-    if (Arg == Result.Compare)
-      continue;
-
-    Result.Args.push_back(Arg);
-    Result.Last = Arg;
-  }
+  Result.First = Result.Args.front();
+  Result.Last = Result.Args.back();
 
   return Result;
 }
@@ -91,24 +86,8 @@ generateReplacement(const MatchFinder::MatchResult &Match,
                                   .getNonReferenceType()
                                   .getUnqualifiedType()
                                   .getCanonicalType();
-  const auto &SourceMngr = *Match.SourceManager;
-  const auto LanguageOpts = Match.Context->getLangOpts();
-  const bool IsInitializerList = Result.First == Result.Last;
-
-  // add { and } if the top call doesn't have an initializer list arg
-  if (!IsInitializerList) {
-    FixItHints.push_back(
-        FixItHint::CreateInsertion(Result.First->getBeginLoc(), "{"));
-
-    if (Result.Compare)
-      FixItHints.push_back(FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0, SourceMngr,
-                                     LanguageOpts),
-          "}"));
-    else
-      FixItHints.push_back(
-          FixItHint::CreateInsertion(TopCall->getEndLoc(), "}"));
-  }
+  const SourceManager &SourceMngr = *Match.SourceManager;
+  const LangOptions &LanguageOpts = Match.Context->getLangOpts();
 
   for (const Expr *Arg : Result.Args) {
     const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
@@ -140,10 +119,7 @@ generateReplacement(const MatchFinder::MatchResult &Match,
       continue;
     }
 
-    const auto InnerResult = findArgs(InnerCall);
-    const auto InnerReplacements =
-        generateReplacement(Match, InnerCall, InnerResult);
-    const bool IsInnerInitializerList = InnerResult.First == InnerResult.Last;
+    const FindArgsResult InnerResult = findArgs(InnerCall);
 
     // if the nested call doesn't have arguments skip it
     if (!InnerResult.First || !InnerResult.Last)
@@ -162,8 +138,7 @@ generateReplacement(const MatchFinder::MatchResult &Match,
 
     // remove the function call
     FixItHints.push_back(
-        FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            InnerCall->getCallee()->getSourceRange())));
+        FixItHint::CreateRemoval(InnerCall->getCallee()->getSourceRange()));
 
     // remove the parentheses
     const auto LParen = utils::lexer::findNextTokenSkippingComments(
@@ -174,7 +149,7 @@ generateReplacement(const MatchFinder::MatchResult &Match,
         FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
 
     // if the inner call has an initializer list arg
-    if (IsInnerInitializerList) {
+    if (InnerResult.First == InnerResult.Last) {
       // remove the initializer list braces
       FixItHints.push_back(FixItHint::CreateRemoval(
           CharSourceRange::getTokenRange(InnerResult.First->getBeginLoc())));
@@ -182,33 +157,25 @@ generateReplacement(const MatchFinder::MatchResult &Match,
           CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
     }
 
+    const SmallVector<FixItHint> InnerReplacements =
+        generateReplacement(Match, InnerCall, InnerResult);
+
     FixItHints.insert(FixItHints.end(),
                       // ignore { and } insertions for the inner call if it does
                       // not have an initializer list arg
-                      InnerReplacements.begin() + (!IsInnerInitializerList) * 2,
-                      InnerReplacements.end());
+                      InnerReplacements.begin(), InnerReplacements.end());
 
     if (InnerResult.Compare) {
       // find the comma after the value arguments
       const auto Comma = utils::lexer::findNextTokenSkippingComments(
           InnerResult.Last->getEndLoc(), SourceMngr, LanguageOpts);
 
-      // if there are comments between the comma and the comparison
-      if (utils::lexer::getPreviousToken(InnerResult.Compare->getExprLoc(),
-                                         SourceMngr, LanguageOpts, false)
-              .getLocation() != Comma->getLocation()) {
-        // remove the comma and the comparison
-        FixItHints.push_back(
-            FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
+      // remove the comma and the comparison
+      FixItHints.push_back(
+          FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
 
-        FixItHints.push_back(
-            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                InnerResult.Compare->getSourceRange())));
-      } else
-        // remove everything after the last argument
-        FixItHints.push_back(
-            FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                Comma->getLocation(), InnerResult.Compare->getEndLoc())));
+      FixItHints.push_back(
+          FixItHint::CreateRemoval(InnerResult.Compare->getSourceRange()));
     }
   }
 
@@ -258,9 +225,8 @@ void MinMaxUseInitializerListCheck::check(
   const SmallVector<FixItHint> Replacement =
       generateReplacement(Match, TopCall, Result);
 
-  if (Replacement.size() <= 2) {
+  if (Replacement.empty())
     return;
-  }
 
   const DiagnosticBuilder Diagnostic =
       diag(TopCall->getBeginLoc(),
@@ -270,9 +236,20 @@ void MinMaxUseInitializerListCheck::check(
              Match.SourceManager->getFileID(TopCall->getBeginLoc()),
              "<algorithm>");
 
-  for (const auto &FixIt : Replacement) {
-    Diagnostic << FixIt;
+  // if the top call doesn't have an initializer list argument
+  if (Result.First != Result.Last) {
+    // add { and } insertions
+    Diagnostic << FixItHint::CreateInsertion(Result.First->getBeginLoc(), "{");
+
+      Diagnostic << FixItHint::CreateInsertion(
+          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0,
+                                     *Match.SourceManager,
+                                     Match.Context->getLangOpts()),
+          "}");
   }
+
+  for (const auto &FixIt : Replacement)
+    Diagnostic << FixIt;
 }
 
 } // namespace clang::tidy::modernize

@@ -192,11 +192,11 @@ int min5 = std::min(1, std::min(2, 3), less_than);
 
 int max6 = std::max(1, std::max(2, 3, greater_than), greater_than);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
-// CHECK-FIXES: int max6 = std::max({1, 2, 3}, greater_than);
+// CHECK-FIXES: int max6 = std::max({1, 2, 3 }, greater_than);
 
 int min6 = std::min(1, std::min(2, 3, greater_than), greater_than);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: do not use nested 'std::min' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
-// CHECK-FIXES: int min6 = std::min({1, 2, 3}, greater_than);
+// CHECK-FIXES: int min6 = std::min({1, 2, 3 }, greater_than);
 
 int max7 = std::max(1, std::max(2, 3, fless_than), fgreater_than);
 // CHECK-FIXES: int max7 = std::max(1, std::max(2, 3, fless_than), fgreater_than);
@@ -212,11 +212,11 @@ int min8 = std::min(1, std::min(2, 3, fless_than), less_than);
 
 int max9 = std::max(1, std::max(2, 3, fless_than), fless_than);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
-// CHECK-FIXES: int max9 = std::max({1, 2, 3}, fless_than);
+// CHECK-FIXES: int max9 = std::max({1, 2, 3 }, fless_than);
 
 int min9 = std::min(1, std::min(2, 3, fless_than), fless_than);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: do not use nested 'std::min' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
-// CHECK-FIXES: int min9 = std::min({1, 2, 3}, fless_than);
+// CHECK-FIXES: int min9 = std::min({1, 2, 3 }, fless_than);
 
 int min10 = std::min(std::min(4, 5), std::max(2, utils::max(3, 1)));
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: do not use nested 'std::min' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
@@ -254,5 +254,15 @@ int macroVarMax = std::max(value, std::max(1, 2));
 int macroVarMax2 = std::max(1, std::max<int>(value2, 2.0f));
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: do not use nested 'std::max' calls, use an initializer list instead [modernize-min-max-use-initializer-list]
 // CHECK-FIXES: int macroVarMax2 = std::max({1, static_cast<int>(value2), static_cast<int>(2.0f)});
+
+// True-negative tests
+int maxTN1 = std::max(1, 2);
+// CHECK-FIXES: int maxTN1 = std::max(1, 2);
+
+int maxTN2 = std::max({1, 2, 3});
+// CHECK-FIXES: int maxTN2 = std::max({1, 2, 3});
+
+int maxTN3 = std::max({1, 2, 3}, less_than);
+// CHECK-FIXES: int maxTN3 = std::max({1, 2, 3}, less_than);
 
 }
