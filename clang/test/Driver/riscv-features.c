@@ -41,10 +41,10 @@
 // FAST-UNALIGNED-ACCESS: "-target-feature" "+fast-unaligned-access"
 // NO-FAST-UNALIGNED-ACCESS: "-target-feature" "-fast-unaligned-access"
 
-// RUN: %clang --target=riscv32-unknown-elf --gcc-toolchain="" -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
-// RUN: %clang --target=riscv32-unknown-elf --gcc-toolchain="" -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
-// RUN: %clang --target=riscv64-unknown-elf --gcc-toolchain="" -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
-// RUN: %clang --target=riscv64-unknown-elf --gcc-toolchain="" -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
+// RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
+// RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
+// RUN: %clang --target=riscv64-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
+// RUN: %clang --target=riscv64-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
 //
 // UWTABLE: "-funwind-tables=2"
 // NOUWTABLE-NOT: "-funwind-tables=2"
