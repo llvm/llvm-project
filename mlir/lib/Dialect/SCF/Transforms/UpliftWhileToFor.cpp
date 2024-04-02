@@ -44,7 +44,7 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
     scf::ConditionOp beforeTerm = loop.getConditionOp();
     if (!cmp->hasOneUse() && beforeTerm.getCondition() == cmp.getResult())
       return rewriter.notifyMatchFailure(loop, [&](Diagnostic &diag) {
-        diag << "Expected single condiditon use: " << *cmp;
+        diag << "Expected single condition use: " << *cmp;
       });
 
     // All `before` block args must be directly forwarded to ConditionOp.
