@@ -3287,22 +3287,25 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
-  // Truncates are custom lowered during legalization.
-  auto IsTrunc = [this](SDValue N) {
-    if (N->getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL)
+  auto IsVLNode = [this](SDValue N) {
+    switch (N->getOpcode()) {
+    case RISCVISD::TRUNCATE_VECTOR_VL:
+    case RISCVISD::VSEXT_VL:
+    case RISCVISD::VZEXT_VL:
+      break;
+    default:
       return false;
+    }
     SDValue VL;
     selectVLOp(N->getOperand(2), VL);
-    // Any vmset_vl is ok, since any bits past VL are undefined and we can
-    // assume they are set.
-    return N->getOperand(1).getOpcode() == RISCVISD::VMSET_VL &&
-           isa<ConstantSDNode>(VL) &&
-           cast<ConstantSDNode>(VL)->getSExtValue() == RISCV::VLMaxSentinel;
+    // There's no passthru so any mask is ok, since any inactive elements will
+    // be undef.
+    return true;
   };
 
-  // We can have multiple nested truncates, so unravel them all if needed.
+  // We can have multiple nested nodes, so unravel them all if needed.
   while (N->getOpcode() == ISD::SIGN_EXTEND ||
-         N->getOpcode() == ISD::ZERO_EXTEND || IsTrunc(N)) {
+         N->getOpcode() == ISD::ZERO_EXTEND || IsVLNode(N)) {
     if (!N.hasOneUse() ||
         N.getValueType().getSizeInBits().getKnownMinValue() < 8)
       return false;
