@@ -3330,11 +3330,11 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   // Merge MMRAs.
   // This is handled separately because we also want to handle cases where K
   // doesn't have tags but J does.
-  auto JTags = MMRAMetadata(J->getMetadata(LLVMContext::MD_mmra));
-  auto KTags = MMRAMetadata(K->getMetadata(LLVMContext::MD_mmra));
-  if (JTags || KTags) {
+  auto JMMRA = J->getMetadata(LLVMContext::MD_mmra);
+  auto KMMRA = K->getMetadata(LLVMContext::MD_mmra);
+  if (JMMRA || KMMRA) {
     K->setMetadata(LLVMContext::MD_mmra,
-                   JTags.combine(KTags).getAsMD(K->getContext()));
+                   MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
   }
 }
 

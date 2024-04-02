@@ -802,9 +802,7 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
 
       switch (Kind) {
       case LLVMContext::MD_mmra: {
-        auto Tags = MMRAMetadata(dyn_cast_or_null<MDTuple>(MD));
-        auto ITags = MMRAMetadata(dyn_cast_or_null<MDTuple>(IMD));
-        MD = Tags.combine(ITags).getAsMD(Inst->getContext());
+        MD = MMRAMetadata::combine(Inst->getContext(), MD, IMD);
         break;
       }
       case LLVMContext::MD_tbaa:

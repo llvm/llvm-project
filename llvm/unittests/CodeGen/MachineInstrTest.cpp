@@ -278,7 +278,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
-  MDNode *MMRA = MMRAMetadata().addTag("foo", "bar").getAsMD(Ctx);
+  MDNode *MMRA = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
 
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
@@ -360,8 +360,8 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
-  MDNode *MMRA1 = MMRAMetadata().addTag("foo", "bar").getAsMD(Ctx);
-  MDNode *MMRA2 = MMRAMetadata().addTag("bar", "bux").getAsMD(Ctx);
+  MDNode *MMRA1 = MMRAMetadata::getTagMD(Ctx, "foo", "bar");
+  MDNode *MMRA2 = MMRAMetadata::getTagMD(Ctx, "bar", "bux");
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
@@ -416,7 +416,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MDNode *HAM = MDNode::getDistinct(Ctx, std::nullopt);
   MDNode *PCS = MDNode::getDistinct(Ctx, std::nullopt);
 
-  MDNode *MMRA = MMRAMetadata().getAsMD(Ctx);
+  MDNode *MMRA = MDTuple::get(Ctx, {});
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);

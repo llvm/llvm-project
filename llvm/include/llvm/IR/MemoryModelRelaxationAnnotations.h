@@ -5,34 +5,33 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
 /// \file
 /// This file provides utility for Memory Model Relaxation Annotations (MMRAs).
 /// Those annotations are represented using Metadata. The MMRATagSet class
 /// offers a simple API to parse the metadata and perform common operations on
 /// it. The MMRAMetadata class is a simple tuple of MDNode that provides easy
 /// access to all MMRA annotations on an instruction.
-///
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_MEMORYMODELRELAXATIONANNOTATIONS_H
 #define LLVM_IR_MEMORYMODELRELAXATIONANNOTATIONS_H
 
-#include <set>
-#include <string>
-#include <vector>
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringRef.h"
+#include <tuple> // for std::pair
 
 namespace llvm {
 
 class MDNode;
 class MDTuple;
 class Metadata;
-class StringRef;
 class raw_ostream;
 class LLVMContext;
 class Instruction;
 
-/// Helper class for `!mmra` metadata nodes which can both build MMRA MDNodes,
-/// and parse them.
+/// Helper class to manipulate `!mmra` metadata nodes.
 ///
 /// This can be visualized as a set of "tags", with each tag
 /// representing a particular property of an instruction, as
@@ -44,48 +43,65 @@ class Instruction;
 /// are a prefix/suffix pair of strings.
 class MMRAMetadata {
 public:
-  using TagT = std::pair<std::string, std::string>;
-  using SetT = std::set<TagT>;
+  using TagT = std::pair<StringRef, StringRef>;
+  using SetT = DenseSet<TagT>;
   using const_iterator = SetT::const_iterator;
 
+  /// \name Constructors
+  /// @{
   MMRAMetadata() = default;
   MMRAMetadata(const Instruction &I);
   MMRAMetadata(MDNode *MD);
+  /// @}
+
+  /// \name Metadata Helpers & Builders
+  /// @{
+
+  /// Combines \p A and \p B according to MMRA semantics.
+  /// \returns !mmra metadata for the combined MMRAs.
+  static MDNode *combine(LLVMContext &Ctx, const MMRAMetadata &A,
+                         const MMRAMetadata &B);
+
+  /// Creates !mmra metadata for a single tag.
+  ///
+  /// !mmra metadata can either be a single tag, or a MDTuple containing
+  /// multiple tags.
+  static MDTuple *getTagMD(LLVMContext &Ctx, StringRef Prefix,
+                           StringRef Suffix);
+  static MDTuple *getTagMD(LLVMContext &Ctx, const TagT &T) {
+    return getTagMD(Ctx, T.first, T.second);
+  }
+
+  /// \returns true if \p MD is a well-formed MMRA tag.
+  static bool isTagMD(const Metadata *MD);
+
+  /// @}
+
+  /// \name Compatibility Helpers
+  /// @{
 
   /// \returns whether the MMRAs on \p A and \p B are compatible.
   static bool checkCompatibility(const Instruction &A, const Instruction &B) {
     return MMRAMetadata(A).isCompatibleWith(B);
   }
 
-  /// \returns true if \p MD is a well-formed MMRA tag.
-  static bool isTagMD(const Metadata *MD);
-
   /// \returns whether this set of tags is compatible with \p Other.
   bool isCompatibleWith(const MMRAMetadata &Other) const;
 
-  /// Combines this set of tags with \p Other.
-  /// \returns a new set of tags containing the result.
-  MMRAMetadata combine(const MMRAMetadata &Other) const;
+  /// @}
 
-  MMRAMetadata &addTag(StringRef Prefix, StringRef Suffix);
-  MMRAMetadata &addTag(const TagT &Tag) {
-    Tags.insert(Tag);
-    return *this;
-  }
+  /// \name Content Queries
+  /// @{
 
   bool hasTag(StringRef Prefix, StringRef Suffix) const;
-  bool hasTag(const TagT &Tag) const { return Tags.count(Tag); }
-
   bool hasTagWithPrefix(StringRef Prefix) const;
-
-  std::vector<TagT> getAllTagsWithPrefix(StringRef Prefix) const;
-
-  MDTuple *getAsMD(LLVMContext &Ctx) const;
 
   const_iterator begin() const;
   const_iterator end() const;
   bool empty() const;
   unsigned size() const;
+
+  /// @}
 
   void print(raw_ostream &OS) const;
   void dump() const;
@@ -102,6 +118,7 @@ private:
   SetT Tags;
 };
 
+/// \returns true if \p I can have !mmra metadata.
 bool canInstructionHaveMMRAs(const Instruction &I);
 
 } // namespace llvm

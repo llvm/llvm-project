@@ -141,7 +141,8 @@ struct ReplacementIRBuilder : IRBuilder<InstSimplifyFolder> {
     SetInsertPoint(I);
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
-    this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections, LLVMContext::MD_mmra});
+    this->CollectMetadataToCopy(
+        I, {LLVMContext::MD_pcsections, LLVMContext::MD_mmra});
   }
 };
 
