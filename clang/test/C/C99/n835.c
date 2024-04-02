@@ -3,13 +3,10 @@
    expected-no-diagnostics
  */
 
-/* WG14 ???: Yes
+/* WG14 N835: Yes
  * Conversion of array to pointer not limited to lvalues
  *
- * NB: the original paper number is unknown, this was gleaned from the editor's report
- * in the C99 foreword. The C99 rationale document did not shed much light on
- * the situation either, mostly talking about user confusion between lvalue and
- * modifiable lvalue. However, the crux of the change was C89 changing:
+ * NB: The crux of the change was C99 changing:
  *
  * C89 3.2.2.1: Except when it is the operand of ..., an lvalue that has type
  * 'array of type' is converted to an expression that has type 'pointer to
