@@ -709,12 +709,12 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/make_tuple_types.h
-  __tuple/pair_like.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
+  __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_const.h
