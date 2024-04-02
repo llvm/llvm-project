@@ -137,6 +137,10 @@ static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
 
+static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
+    "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
+    cl::desc("max depth when checking alias info in GatherAllAliases()"));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -1512,6 +1516,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // than the corresponding branch. This information is used in CGP to decide
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.isPredictableSelectIsExpensive();
+
+  GatherAllAliasesMaxDepth = PPCGatherAllAliasesMaxDepth;
 }
 
 // *********************************** NOTE ************************************
