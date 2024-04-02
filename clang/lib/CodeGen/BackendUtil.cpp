@@ -101,20 +101,19 @@ extern cl::opt<bool> PrintPipelinePasses;
 
 static cl::opt<bool>
     ClLowerBuiltinHot("clang-lower-builtin-hot", cl::Optional,
-                      cl::desc("Insert lower-builtin-hot pass."),
-                      cl::init(false));
+                      cl::desc("Insert lower-builtin-hot pass."));
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
-    cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
+    cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 
 // Re-link builtin bitcodes after optimization
 cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     "relink-builtin-bitcode-postop", cl::Optional,
-    cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
+    cl::desc("Re-link builtin bitcodes after optimization."));
 } // namespace llvm
 
 namespace {

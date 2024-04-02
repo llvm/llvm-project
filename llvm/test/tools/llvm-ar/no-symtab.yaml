@@ -1,0 +1,32 @@
+## Create archives with no symtab in various formats and check that we can read them.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: rm -f %t.*.a
+
+# RUN: llvm-ar --format=gnu rcS %t.gnu.a %t.o
+# RUN: llvm-ar --format=coff rcS %t.coff.a %t.o
+# RUN: llvm-ar --format=darwin rcS %t.darwin.a %t.o
+# RUN: llvm-ar --format=bsd rcS %t.bsd.a %t.o
+# RUN: llvm-ar --format=bigarchive rcS %t.bigarchive.a %t.o
+
+# RUN: llvm-nm --print-armap %t.gnu.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.coff.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.darwin.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.bsd.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.bigarchive.a | FileCheck %s
+
+# CHECK-NOT: Archive map
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol
+    Binding: STB_GLOBAL
+    Section: .text

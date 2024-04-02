@@ -57,7 +57,7 @@ TEST_F(IRBuilderTest, Intrinsics) {
   IRBuilder<> Builder(BB);
   Value *V;
   Instruction *I;
-  CallInst *Call;
+  Value *Result;
   IntrinsicInst *II;
 
   V = Builder.CreateLoad(GV->getValueType(), GV);
@@ -65,78 +65,80 @@ TEST_F(IRBuilderTest, Intrinsics) {
   I->setHasNoInfs(true);
   I->setHasNoNaNs(false);
 
-  Call = Builder.CreateMinNum(V, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateMinNum(V, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::minnum);
 
-  Call = Builder.CreateMaxNum(V, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateMaxNum(V, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maxnum);
 
-  Call = Builder.CreateMinimum(V, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateMinimum(V, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::minimum);
 
-  Call = Builder.CreateMaximum(V, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateMaximum(V, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maximum);
 
-  Call = Builder.CreateIntrinsic(Intrinsic::readcyclecounter, {}, {});
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateIntrinsic(Intrinsic::readcyclecounter, {}, {});
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::readcyclecounter);
 
-  Call = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, V, I);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, V, I);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::pow);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V, I);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V, I);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::pow);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V});
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V});
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
-  II = cast<IntrinsicInst>(Call);
+  Result =
+      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
-  II = cast<IntrinsicInst>(Call);
+  Result =
+      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
-  II = cast<IntrinsicInst>(Call);
+  Result = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::roundeven);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Call = Builder.CreateIntrinsic(
+  Result = Builder.CreateIntrinsic(
       Intrinsic::set_rounding, {},
       {Builder.getInt32(static_cast<uint32_t>(RoundingMode::TowardZero))});
-  II = cast<IntrinsicInst>(Call);
+  II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::set_rounding);
 }
 
@@ -920,7 +922,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILabel *Label =
         DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
 
-    { /* dbg.label | DPLabel */
+    { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
       ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
 
@@ -929,7 +931,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // inserted into the block untill another instruction is added.
       DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
       // Specifically do not insert a terminator, to check this works. `I`
-      // should have absorbed the DPLabel in the new debug info mode.
+      // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(LabelRecord, I->getIterator());
     }
@@ -942,7 +944,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
         DIB.createAutoVariable(BarSP, "X", File, 2, IntType, true);
     DILocalVariable *VarY =
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
-    { /* dbg.value | DPValue::Value */
+    { /* dbg.value | DbgVariableRecord::Value */
       ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
                                               VarLoc, I),
                   I->getIterator());
@@ -953,7 +955,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       ExpectOrder(VarXValue, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
-    { /* dbg.declare | DPValue::Declare */
+    { /* dbg.declare | DbgVariableRecord::Declare */
       ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
@@ -963,7 +965,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       ExpectOrder(VarYDeclare, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
-    { /* dbg.assign | DPValue::Assign */
+    { /* dbg.assign | DbgVariableRecord::Assign */
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       I->setMetadata(LLVMContext::MD_DIAssignID, DIAssignID::getDistinct(Ctx));
       // DbgAssign interface is slightly different - it always inserts after the

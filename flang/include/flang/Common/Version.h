@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FLANG_COMMON_VERSION_H
-#define LLVM_FLANG_COMMON_VERSION_H
+#ifndef FORTRAN_COMMON_VERSION_H
+#define FORTRAN_COMMON_VERSION_H
 
 #include "flang/Version.inc"
 #include "llvm/ADT/StringRef.h"
@@ -53,4 +53,4 @@ std::string getFlangFullVersion();
 std::string getFlangToolFullVersion(llvm::StringRef ToolName);
 } // namespace Fortran::common
 
-#endif // LLVM_FLANG_COMMON_VERSION_H
+#endif // FORTRAN_COMMON_VERSION_H

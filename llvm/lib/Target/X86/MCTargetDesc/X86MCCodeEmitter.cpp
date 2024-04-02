@@ -1071,6 +1071,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::MRM_C0:
   case X86II::RawFrm:
     break;
+  case X86II::MRMDestMemCC:
   case X86II::MRMDestMemFSIB:
   case X86II::MRMDestMem: {
     // MRMDestMem instructions forms:
@@ -1102,6 +1103,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     }
     break;
   }
+  case X86II::MRMSrcMemCC:
   case X86II::MRMSrcMemFSIB:
   case X86II::MRMSrcMem: {
     // MRMSrcMem instructions forms:
@@ -1180,6 +1182,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     }
     break;
   }
+  case X86II::MRMSrcRegCC:
   case X86II::MRMSrcReg: {
     // MRMSrcReg instructions forms:
     //  dst(ModR/M), src1(VEX_4V), src2(ModR/M), src3(Imm[7:4])
@@ -1242,6 +1245,7 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
     ++CurOp;
     break;
   }
+  case X86II::MRMDestRegCC:
   case X86II::MRMDestReg: {
     // MRMDestReg instructions forms:
     //  dst(ModR/M), src(ModR/M)
@@ -1638,6 +1642,15 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     CurOp = SrcRegNum + 1;
     break;
   }
+  case X86II::MRMDestRegCC: {
+    unsigned FirstOp = CurOp++;
+    unsigned SecondOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitRegModRMByte(MI.getOperand(FirstOp),
+                     getX86RegNum(MI.getOperand(SecondOp)), CB);
+    break;
+  }
   case X86II::MRMDestMem4VOp3CC: {
     unsigned CC = MI.getOperand(8).getImm();
     emitByte(BaseOpcode + CC, CB);
@@ -1665,6 +1678,16 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     emitMemModRMByte(MI, CurOp, getX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
                      Kind, StartByte, CB, Fixups, STI, ForceSIB);
     CurOp = SrcRegNum + 1;
+    break;
+  }
+  case X86II::MRMDestMemCC: {
+    unsigned MemOp = CurOp;
+    CurOp = MemOp + X86::AddrNumOperands;
+    unsigned RegOp = CurOp++;
+    unsigned CC = MI.getOperand(CurOp++).getImm();
+    emitByte(BaseOpcode + CC, CB);
+    emitMemModRMByte(MI, MemOp, getX86RegNum(MI.getOperand(RegOp)), TSFlags,
+                     Kind, StartByte, CB, Fixups, STI);
     break;
   }
   case X86II::MRMSrcReg: {
@@ -1717,6 +1740,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcRegCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned FirstOp = CurOp++;
     unsigned SecondOp = CurOp++;
 
@@ -1778,6 +1803,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     break;
   }
   case X86II::MRMSrcMemCC: {
+    if (IsND) // Skip new data destination
+      ++CurOp;
     unsigned RegOp = CurOp++;
     unsigned FirstMemOp = CurOp;
     CurOp = FirstMemOp + X86::AddrNumOperands;

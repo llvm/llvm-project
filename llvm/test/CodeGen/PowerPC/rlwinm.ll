@@ -97,4 +97,24 @@ entry:
   ret i32 %r
 }
 
+define i32 @test10(i32 %a, i32 %s) {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwnm(i32 %a, i32 %s, i32 0)
+  ret i32 %r
+}
+
+define i32 @test11(i32 %a, i32 %s) {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    rotlw 3, 3, 4
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwnm(i32 %a, i32 %s, i32 -1)
+  ret i32 %r
+}
+
 declare i32 @llvm.ppc.rlwnm(i32, i32, i32 immarg)

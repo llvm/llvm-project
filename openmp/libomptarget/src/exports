@@ -35,6 +35,7 @@ VERS1.0 {
     __tgt_push_mapper_component;
     __kmpc_push_target_tripcount;
     __kmpc_push_target_tripcount_mapper;
+    ompx_dump_mapping_tables;
     omp_get_mapped_ptr;
     omp_get_num_devices;
     omp_get_device_num;
