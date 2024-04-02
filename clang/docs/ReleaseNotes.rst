@@ -483,6 +483,11 @@ Bug Fixes to C++ Support
   following the first `::` were ignored).
 - Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
+- Fixed a bug that prevented member function templates of class templates declared with a deduced return type
+  from being explicitly specialized for a given implicit instantiation of the class template.
+
+- Fix crash when inheriting from a cv-qualified type. Fixes:
+  (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
