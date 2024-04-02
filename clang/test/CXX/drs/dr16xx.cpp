@@ -35,6 +35,17 @@ void g() {
 }
 } // namespace dr1601
 
+namespace dr1606 { // dr1606: 3.1
+#if __cplusplus >= 201103L
+  std::size_t test() {
+    int i = 1;
+    int j = 1;
+    auto f = [=]{ return i + j; };
+    return sizeof(f);
+  }
+#endif
+} // namespace dr1606
+
 namespace dr1611 { // dr1611: dup 1658
   struct A { A(int); };
   struct B : virtual A { virtual void f() = 0; };
