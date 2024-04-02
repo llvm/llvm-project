@@ -94,7 +94,7 @@ private:
   /// distinct id attribute.
   DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
-  // Translation copilot for recursive types.
+  /// A translation helper for recursive types.
   std::unique_ptr<RecursionPruner> recursionPruner;
 
   MLIRContext *context;

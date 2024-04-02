@@ -625,7 +625,6 @@ declare !dbg !1 void @declaration()
 
 ; CHECK: #llvm.di_subprogram<{{.*}}scope = #[[A_OUTER]]
 
-
 define void @class_field(ptr %arg1) !dbg !18 {
   ret void
 }
@@ -637,7 +636,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-
 
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
 !4 = !{!7, !8}

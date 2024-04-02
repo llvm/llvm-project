@@ -127,16 +127,15 @@ public:
       // rely on it.
       // Only need to look at the caches at this level.
       uint64_t numRemaining = state.cacheSize;
-      for (auto &cacheEntry : llvm::make_range(cache.rbegin(), cache.rend())) {
+      for (CachedTranslation &cacheEntry :
+           llvm::make_second_range(llvm::reverse(cache))) {
         if (numRemaining == 0)
           break;
-
-        if (auto refIter = cacheEntry.second.pendingReplacements.find(recSelf);
-            refIter != cacheEntry.second.pendingReplacements.end()) {
-          refIter->second = result;
-        }
-
         --numRemaining;
+
+        if (auto refIter = cacheEntry.pendingReplacements.find(recSelf);
+            refIter != cacheEntry.pendingReplacements.end())
+          refIter->second = result;
       }
     }
 
@@ -157,7 +156,7 @@ public:
 
   /// Pop off a frame from the translation stack after a node is done being
   /// translated.
-  void finally(llvm::DINode *node) {
+  void popTranslationStack(llvm::DINode *node) {
     // If `node` is not a potentially recursive type, it will not be on the
     // translation stack. Nothing to handle in this case.
     if (translationStack.empty() || translationStack.back().first != node)
@@ -195,7 +194,7 @@ private:
   /// cached result.
   /// The cache entry will also be updated with the replaced result and with the
   /// applied replacements removed from the pendingReplacements map.
-  std::pair<DINodeAttr, llvm::DenseSet<DIRecursiveTypeAttrInterface>>
+  std::pair<DINodeAttr, DenseSet<DIRecursiveTypeAttrInterface>>
   lookup(llvm::DINode *node) {
     auto cacheIter = cache.find(node);
     if (cacheIter == cache.end())
@@ -205,9 +204,9 @@ private:
 
     if (entry.pendingReplacements.empty())
       return std::make_pair(entry.attr,
-                            llvm::DenseSet<DIRecursiveTypeAttrInterface>{});
+                            DenseSet<DIRecursiveTypeAttrInterface>{});
 
-    mlir::AttrTypeReplacer replacer;
+    AttrTypeReplacer replacer;
     replacer.addReplacement(
         [&entry](DIRecursiveTypeAttrInterface attr)
             -> std::optional<std::pair<Attribute, WalkResult>> {
@@ -514,7 +513,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = recursionPruner->tryPrune(node))
     return attr;
 
-  auto guard = llvm::make_scope_exit([&]() { recursionPruner->finally(node); });
+  auto guard = llvm::make_scope_exit(
+      [&]() { recursionPruner->popTranslationStack(node); });
 
   // Convert the debug metadata if possible.
   auto translateNode = [this](llvm::DINode *node) -> DINodeAttr {
