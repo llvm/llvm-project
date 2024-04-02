@@ -1660,6 +1660,9 @@ public:
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
+  /// Add _Nullable attributes for std:: types.
+  void inferNullableClassAttribute(CXXRecordDecl *CRD);
+
   enum PragmaOptionsAlignKind {
     POAK_Native,  // #pragma options align=native
     POAK_Natural, // #pragma options align=natural
