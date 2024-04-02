@@ -274,7 +274,7 @@ static InstructionCost ComputeSpeculationCost(const Instruction *I,
 //   call void @llvm.dbg.value(%x, !"x", !DIExpression())
 //   call void foo()
 //
-// If SpeculativeExecution might decide to hoist the 'y * z' calculation
+// SpeculativeExecution might decide to hoist the 'y * z' calculation
 // out of the 'if' block, because it is more efficient that way, so the
 // '%x = mul i32 %y, %z' moves to the block above. But it might also
 // decide to hoist the 'llvm.dbg.value' call.
