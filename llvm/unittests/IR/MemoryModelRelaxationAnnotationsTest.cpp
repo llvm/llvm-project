@@ -52,6 +52,27 @@ TEST(MMRATest, MDParse) {
   checkMMRA(NestedMMRA, {{"foo", "bar"}, {"bux", "qux"}});
 }
 
+TEST(MMRATest, GetMD) {
+  LLVMContext Ctx;
+
+  EXPECT_EQ(MMRAMetadata::getMD(Ctx, {}), nullptr);
+
+  MDTuple *SingleMD = MMRAMetadata::getMD(Ctx, {{"foo", "bar"}});
+  EXPECT_EQ(SingleMD->getNumOperands(), 2);
+  EXPECT_EQ(cast<MDString>(SingleMD->getOperand(0))->getString(), "foo");
+  EXPECT_EQ(cast<MDString>(SingleMD->getOperand(1))->getString(), "bar");
+
+  MDTuple *MultiMD = MMRAMetadata::getMD(Ctx, {{"foo", "bar"}, {"bux", "qux"}});
+  EXPECT_EQ(MultiMD->getNumOperands(), 2);
+
+  MDTuple *FooBar = cast<MDTuple>(MultiMD->getOperand(0));
+  EXPECT_EQ(cast<MDString>(FooBar->getOperand(0))->getString(), "foo");
+  EXPECT_EQ(cast<MDString>(FooBar->getOperand(1))->getString(), "bar");
+  MDTuple *BuxQux = cast<MDTuple>(MultiMD->getOperand(1));
+  EXPECT_EQ(cast<MDString>(BuxQux->getOperand(0))->getString(), "bux");
+  EXPECT_EQ(cast<MDString>(BuxQux->getOperand(1))->getString(), "qux");
+}
+
 TEST(MMRATest, Utility) {
   LLVMContext Ctx;
   MMRAMetadata MMRA =

@@ -24,6 +24,8 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+
 class MDNode;
 class MDTuple;
 class Metadata;
@@ -71,6 +73,10 @@ public:
   static MDTuple *getTagMD(LLVMContext &Ctx, const TagT &T) {
     return getTagMD(Ctx, T.first, T.second);
   }
+
+  /// Creates !mmra metadata from \p Tags.
+  /// \returns nullptr or a MDTuple* from \p Tags.
+  static MDTuple *getMD(LLVMContext &Ctx, ArrayRef<TagT> Tags);
 
   /// \returns true if \p MD is a well-formed MMRA tag.
   static bool isTagMD(const Metadata *MD);

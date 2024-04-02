@@ -62,6 +62,20 @@ MDTuple *MMRAMetadata::getTagMD(LLVMContext &Ctx, StringRef Prefix,
                       {MDString::get(Ctx, Prefix), MDString::get(Ctx, Suffix)});
 }
 
+MDTuple *MMRAMetadata::getMD(LLVMContext &Ctx,
+                             ArrayRef<MMRAMetadata::TagT> Tags) {
+  if (Tags.empty())
+    return nullptr;
+
+  if (Tags.size() == 1)
+    return getTagMD(Ctx, Tags.front());
+
+  SmallVector<Metadata *> MMRAs;
+  for (const auto &Tag : Tags)
+    MMRAs.push_back(getTagMD(Ctx, Tag));
+  return MDTuple::get(Ctx, MMRAs);
+}
+
 MDNode *MMRAMetadata::combine(LLVMContext &Ctx, const MMRAMetadata &A,
                               const MMRAMetadata &B) {
   // Let A and B be two tags set, and U be the prefix-wise union of A and B.
