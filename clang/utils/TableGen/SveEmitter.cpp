@@ -99,7 +99,7 @@ public:
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
-  bool isVoid() const { return Void & !Pointer; }
+  bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
