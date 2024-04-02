@@ -22,10 +22,9 @@
 namespace lldb_private {
 
 enum class SingleThreadPlanTimeoutState {
-  InitialResume,
-  TimeoutHalt,
-  ResumingAllThreads,
-  AfterThreadResumed,
+  WaitTimeout,
+  AsyncInterrupt,
+  Done,
 };
 
 class ThreadPlanSingleThreadTimeout : public ThreadPlan {
@@ -33,9 +32,8 @@ public:
   ThreadPlanSingleThreadTimeout(Thread &thread)
       : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout,
                    "Single thread timeout", thread, eVoteNo, eVoteNoOpinion),
-        m_state(SingleThreadPlanTimeoutState::InitialResume) {
-    std::thread t(thread_function, this);
-    t.detach();
+        m_state(SingleThreadPlanTimeoutState::WaitTimeout) {
+    m_timer_thread = std::thread(thread_function, this);
   }
 
   ~ThreadPlanSingleThreadTimeout() override = default;
@@ -45,22 +43,57 @@ public:
   }
   bool ValidatePlan(Stream *error) override { return true; }
   bool WillStop() override { return true; }
-  bool DoPlanExplainsStop(Event *event_ptr) override { return true; }
+
+  void DidPop() override {
+    Log *log = GetLog(LLDBLog::Step);
+    LLDB_LOGF(log,
+              "ThreadPlanSingleThreadTimeout::DidPop().");
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      // Tell timer thread to exit.
+      m_exit_flag = true;
+    }
+    // Wait for timer thread to exit.
+    m_timer_thread.join();
+  }
+
+  bool DoPlanExplainsStop(Event *event_ptr) override { 
+    lldb::StateType stop_state =
+        Process::ProcessEventData::GetStateFromEvent(event_ptr);
+    Log *log = GetLog(LLDBLog::Step);
+    LLDB_LOGF(log,
+              "ThreadPlanSingleThreadTimeout::DoPlanExplainsStop(): got event: %s.",
+              StateAsCString(stop_state));
+    lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
+    return m_state == SingleThreadPlanTimeoutState::AsyncInterrupt &&
+        stop_state == lldb::eStateStopped && stop_info &&
+        stop_info->GetStopReason() == lldb::eStopReasonInterrupt;
+  }
+
   lldb::StateType GetPlanRunState() override { return lldb::eStateStepping; }
   static void thread_function(ThreadPlanSingleThreadTimeout *self) {
-    int timeout_ms = 5000; // 5 seconds timeout
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(timeout_ms));
+    std::unique_lock<std::mutex> lock(self->m_mutex);
+    self->m_wakeup_cv.wait_for(lock, std::chrono::seconds(1));
+
+    Log *log = GetLog(LLDBLog::Step);
+    LLDB_LOGF(log,
+              "ThreadPlanSingleThreadTimeout::thread_function() called with m_exit_flag(%d).", self->m_exit_flag);
+    if (self->m_exit_flag)
+      return;
+
     self->HandleTimeout();
   }
 
   bool MischiefManaged() override {
-    // return m_state == SingleThreadPlanTimeoutState::AfterThreadResumed;
-    return GetPreviousPlan()->MischiefManaged();
+    Log *log = GetLog(LLDBLog::Step);
+    LLDB_LOGF(log,
+              "ThreadPlanSingleThreadTimeout::MischiefManaged() called.");
+    // Should reset timer on each internal stop/execution progress.
+    return true;
   }
 
   bool ShouldStop(Event *event_ptr) override {
-    if (m_state == SingleThreadPlanTimeoutState::InitialResume) {
+    if (m_state == SingleThreadPlanTimeoutState::WaitTimeout) {
       return GetPreviousPlan()->ShouldStop(event_ptr);
     }
     return HandleEvent(event_ptr);
@@ -71,20 +104,19 @@ public:
   }
 
   bool StopOthers() override {
-    if (m_state == SingleThreadPlanTimeoutState::ResumingAllThreads ||
-        m_state == SingleThreadPlanTimeoutState::AfterThreadResumed)
+    if (m_state == SingleThreadPlanTimeoutState::Done)
       return false;
     else
       return GetPreviousPlan()->StopOthers();
   }
 
 protected:
-  bool DoWillResume(lldb::StateType resume_state, bool current_plan) override {
-    if (m_state == SingleThreadPlanTimeoutState::ResumingAllThreads) {
-      m_state = SingleThreadPlanTimeoutState::AfterThreadResumed;
-    }
-    return GetPreviousPlan()->WillResume(resume_state, current_plan);
-  }
+  // bool DoWillResume(lldb::StateType resume_state, bool current_plan) override {
+  //   if (m_state == SingleThreadPlanTimeoutState::Done) {
+  //     m_state = SingleThreadPlanTimeoutState::AfterThreadResumed;
+  //   }
+  //   return GetPreviousPlan()->WillResume(resume_state, current_plan);
+  // }
 
   bool HandleEvent(Event *event_ptr) {
     lldb::StateType stop_state =
@@ -95,8 +127,7 @@ protected:
               StateAsCString(stop_state));
 
     lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
-    bool should_stop = true;
-    if (m_state == SingleThreadPlanTimeoutState::TimeoutHalt &&
+    if (m_state == SingleThreadPlanTimeoutState::AsyncInterrupt &&
         stop_state == lldb::eStateStopped && stop_info &&
         stop_info->GetStopReason() == lldb::eStopReasonInterrupt) {
       if (Process::ProcessEventData::GetRestartedFromEvent(event_ptr)) {
@@ -111,21 +142,22 @@ protected:
             log, "ThreadPlanSingleThreadTimeout::HandleEvent(): Got async interrupt "
                  ", so we will resume all threads.");
         GetThread().SetStopOthers(false);
-        m_state = SingleThreadPlanTimeoutState::ResumingAllThreads;
+        m_state = SingleThreadPlanTimeoutState::Done;
       }
-      should_stop = false;
     }
-    if (should_stop)
-      return GetPreviousPlan()->ShouldStop(event_ptr);
-    else
-      return false;
+    // Should not report stop.
+    return false;
   }
 
   void HandleTimeout() {
     Log *log = GetLog(LLDBLog::Step);
     LLDB_LOGF(log,
               "ThreadPlanSingleThreadTimeout::HandleTimeout() send async interrupt.");
-    m_state = SingleThreadPlanTimeoutState::TimeoutHalt;
+    // TODO: mutex
+    m_state = SingleThreadPlanTimeoutState::AsyncInterrupt;
+
+    // Private state thread will only send async interrupt
+    // in running state so no need to check state here.
     m_process.SendAsyncInterrupt(&GetThread());
   }
 
@@ -135,6 +167,11 @@ private:
   ThreadPlanSingleThreadTimeout(const ThreadPlanSingleThreadTimeout &) = delete;
   const ThreadPlanSingleThreadTimeout &
   operator=(const ThreadPlanSingleThreadTimeout &) = delete;
+
+  std::mutex m_mutex;
+  std::condition_variable m_wakeup_cv;
+  bool m_exit_flag = false;
+  std::thread m_timer_thread;
 };
 
 } // namespace lldb_private

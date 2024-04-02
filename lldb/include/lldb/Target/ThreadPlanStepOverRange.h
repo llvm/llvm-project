@@ -28,7 +28,6 @@ public:
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ShouldStop(Event *event_ptr) override;
-  void DidPush() override;
   void SetStopOthers(bool new_value) override;
 
 protected:
@@ -44,6 +43,7 @@ private:
 
   void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
   bool IsEquivalentContext(const SymbolContext &context);
+  void ResetSingleThreadTimeout();
 
   bool m_first_resume;
   lldb::RunMode m_run_mode;

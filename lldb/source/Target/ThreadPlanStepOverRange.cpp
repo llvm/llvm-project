@@ -45,14 +45,22 @@ ThreadPlanStepOverRange::ThreadPlanStepOverRange(
 
 ThreadPlanStepOverRange::~ThreadPlanStepOverRange() = default;
 
-void ThreadPlanStepOverRange::DidPush() {
-  if (m_run_mode == lldb::eOnlyThisThread) {
-    Thread &thread = GetThread();
-    auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
-    ThreadPlanSP thread_plan_sp(timeout_plan);
-    auto status = thread.QueueThreadPlan(thread_plan_sp,
-                                         /*abort_other_plans*/ false);
-  }
+void ThreadPlanStepOverRange::ResetSingleThreadTimeout() {
+  if (m_run_mode != lldb::eOnlyThisThread)
+    return;
+
+  // Do not create timeout if we are not stopping other threads.
+  if (!GetThread().GetCurrentPlan()->StopOthers())
+    return;
+
+  Thread &thread = GetThread();
+  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+  ThreadPlanSP thread_plan_sp(timeout_plan);
+  auto status = thread.QueueThreadPlan(thread_plan_sp,
+                                        /*abort_other_plans*/ false);
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log,
+            "ThreadPlanSingleThreadTimeout pushing a new one");
 }
 
 void ThreadPlanStepOverRange::GetDescription(Stream *s,
@@ -428,6 +436,6 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       }
     }
   }
-
+  ResetSingleThreadTimeout();
   return true;
 }
