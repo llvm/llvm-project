@@ -405,6 +405,11 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
         FunctionSpec<
+          "_exit",
+          RetValSpec<NoReturn>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
           "access",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<IntType>]

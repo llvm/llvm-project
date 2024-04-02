@@ -675,6 +675,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd._exit
     libc.src.unistd.environ
     libc.src.unistd.execv
     libc.src.unistd.getopt

@@ -3,6 +3,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_entrypoint_object(
+  _exit
+  SRCS
+    _exit.cpp
+  HDRS
+    _exit.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   access
   ALIAS
   DEPENDS
