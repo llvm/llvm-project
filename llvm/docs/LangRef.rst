@@ -11419,6 +11419,9 @@ Syntax:
 ::
 
       <result> = trunc <ty> <value> to <ty2>             ; yields ty2
+      <result> = trunc nsw <ty> <value> to <ty2>         ; yields ty2
+      <result> = trunc nuw <ty> <value> to <ty2>         ; yields ty2
+      <result> = trunc nuw nsw <ty> <value> to <ty2>     ; yields ty2
 
 Overview:
 """""""""
@@ -11441,6 +11444,11 @@ The '``trunc``' instruction truncates the high order bits in ``value``
 and converts the remaining bits to ``ty2``. Since the source size must
 be larger than the destination size, ``trunc`` cannot be a *no-op cast*.
 It will always truncate bits.
+
+If the ``nuw`` keyword is present, and any of the truncated bits are zero,
+the result is a :ref:`poison value <poisonvalues>`. If the ``nsw`` keyword
+is present, and any of the truncated bits are not the same as the top bit
+of the truncation result, the result is a :ref:`poison value <poisonvalues>`.
 
 Example:
 """"""""
@@ -27830,6 +27838,120 @@ call of ``@llvm.experimental.widenable.condition``  with
 constant `true`. However it is always correct to replace
 it with any other `i1` value. Any pass can
 freely do it if it can benefit from non-default lowering.
+
+'``llvm.allow.ubsan.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.ubsan.check(i8 immarg %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable the
+ubsan check in the current basic block.
+
+Rules to allow ubsan checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is the ubsan specific version of ``@llvm.allow.runtime.check()``.
+
+Arguments:
+""""""""""
+
+An integer describing the kind of ubsan check guarded by the intrinsic.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it selects one of the two paths:
+
+* `true``: Executes the UBSan check and reports any failures.
+
+* `false`: Bypasses the check, assuming it always succeeds.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.ubsan.check(i8 5)
+    %not.allow = xor i1 %allow, true
+    %cond = or i1 %ubcheck, %not.allow
+    br i1 %cond, label %cont, label %trap
+
+  cont:
+    ; Proceed
+
+  trap:
+    call void @llvm.ubsantrap(i8 5)
+    unreachable
+
+
+'``llvm.allow.runtime.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.runtime.check(metadata %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable
+runtime checks in the current basic block.
+
+Rules to allow runtime checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is non-ubsan specific version of ``@llvm.allow.ubsan.check()``.
+
+Arguments:
+""""""""""
+
+A string identifying the kind of runtime check guarded by the intrinsic. The
+string can be used to control rules to allow checks.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.runtime.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem. 
+
+If the intrinsic is evaluated as ``true``, program should execute a guarded
+check. If the intrinsic is evaluated as ``false``, the program should avoid any
+unnecessary checks.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.runtime.check(metadata !"my_check")
+    br i1 %allow, label %fast_path, label %slow_path
+
+  fast_path:
+    ; Omit diagnostics.
+
+  slow_path:
+    ; Additional diagnostics.
 
 
 '``llvm.load.relative``' Intrinsic

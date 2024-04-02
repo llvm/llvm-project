@@ -913,6 +913,11 @@ public:
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
 
+  struct DisjointFlagsTy {
+    char IsDisjoint : 1;
+    DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
+  };
+
 protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
@@ -920,9 +925,6 @@ protected:
   };
 
 private:
-  struct DisjointFlagsTy {
-    char IsDisjoint : 1;
-  };
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -1015,6 +1017,12 @@ public:
                       FastMathFlags FMFs, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
+        DisjointFlags(DisjointFlags) {}
 
 protected:
   template <typename IterT>
@@ -1220,6 +1228,14 @@ public:
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
         Opcode(Opcode), Name(Name.str()) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
+        Opcode(Opcode), Name(Name.str()) {
+    assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
+  }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
@@ -2278,8 +2294,8 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}, DL),
         Ingredient(Load), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     new VPValue(this, &Load);
@@ -2288,8 +2304,9 @@ public:
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue},
+                     DL),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -2299,10 +2316,11 @@ public:
     if (isStore())
       return new VPWidenMemoryInstructionRecipe(
           cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-          Consecutive, Reverse);
+          Consecutive, Reverse, getDebugLoc());
 
-    return new VPWidenMemoryInstructionRecipe(
-        cast<LoadInst>(Ingredient), getAddr(), getMask(), Consecutive, Reverse);
+    return new VPWidenMemoryInstructionRecipe(cast<LoadInst>(Ingredient),
+                                              getAddr(), getMask(), Consecutive,
+                                              Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenMemoryInstructionSC)
@@ -3006,22 +3024,6 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  void addVPValue(Value *V, VPValue *VPV) {
-    assert(VPV->isLiveIn() && "VPV must be a live-in.");
-    assert(V && "Trying to add a null Value to VPlan");
-    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    Value2VPValue[V] = VPV;
-  }
-
-  /// Returns the VPValue for \p V.
-  VPValue *getVPValue(Value *V) {
-    assert(V && "Trying to get the VPValue of a null Value");
-    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert(Value2VPValue[V]->isLiveIn() &&
-           "Only live-ins should be in mapping");
-    return Value2VPValue[V];
-  }
-
   /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
@@ -3029,10 +3031,15 @@ public:
     if (!Value2VPValue.count(V)) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
-      addVPValue(V, VPV);
+      assert(VPV->isLiveIn() && "VPV must be a live-in.");
+      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
+      Value2VPValue[V] = VPV;
     }
 
-    return getVPValue(V);
+    assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
+    assert(Value2VPValue[V]->isLiveIn() &&
+           "Only live-ins should be in mapping");
+    return Value2VPValue[V];
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

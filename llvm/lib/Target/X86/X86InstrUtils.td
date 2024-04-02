@@ -119,6 +119,8 @@ class NDD<bit ndd> {
 class NF: T_MAP4, EVEX, EVEX_NF;
 // PL - Helper for promoted legacy instructions
 class PL: T_MAP4, EVEX, ExplicitEVEXPrefix;
+// ZU - Helper for Zero Upper instructions
+class ZU: T_MAP4, EVEX, EVEX_B;
 
 //===----------------------------------------------------------------------===//
 // X86 Type infomation definitions

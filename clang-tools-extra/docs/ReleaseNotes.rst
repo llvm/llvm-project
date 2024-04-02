@@ -123,6 +123,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check.
+
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 

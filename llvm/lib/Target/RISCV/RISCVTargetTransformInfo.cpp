@@ -810,9 +810,27 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
   case Intrinsic::smax: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if ((ST->hasVInstructions() && LT.second.isVector()) ||
-        (LT.second.isScalarInteger() && ST->hasStdExtZbb()))
+    if (LT.second.isScalarInteger() && ST->hasStdExtZbb())
       return LT.first;
+
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::umin:
+        Op = RISCV::VMINU_VV;
+        break;
+      case Intrinsic::umax:
+        Op = RISCV::VMAXU_VV;
+        break;
+      case Intrinsic::smin:
+        Op = RISCV::VMIN_VV;
+        break;
+      case Intrinsic::smax:
+        Op = RISCV::VMAX_VV;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::sadd_sat:
@@ -909,6 +927,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -943,13 +962,31 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // Instead we use the following instructions to truncate to mask vector:
       // vand.vi v8, v8, 1
       // vmsne.vi v0, v8, 0
-      return 2;
+      return getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                     SrcLT.second, CostKind);
     }
     [[fallthrough]];
   case ISD::FP_EXTEND:
-  case ISD::FP_ROUND:
+  case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
-    return std::abs(PowDiff);
+    unsigned SrcEltSize = Src->getScalarSizeInBits();
+    unsigned DstEltSize = Dst->getScalarSizeInBits();
+
+    unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
+                  : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V
+                                            : RISCV::VFNCVT_F_F_W;
+    InstructionCost Cost = 0;
+    for (; SrcEltSize != DstEltSize;) {
+      MVT ElementMVT = (ISD == ISD::TRUNCATE)
+                           ? MVT::getIntegerVT(DstEltSize)
+                           : MVT::getFloatingPointVT(DstEltSize);
+      MVT DstMVT = DstLT.second.changeVectorElementType(ElementMVT);
+      DstEltSize =
+          (DstEltSize > SrcEltSize) ? DstEltSize >> 1 : DstEltSize << 1;
+      Cost += getRISCVInstructionCost(Op, DstMVT, CostKind);
+    }
+    return Cost;
+  }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
@@ -1058,13 +1095,42 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   }
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
-  InstructionCost BaseCost = 2;
-
-  if (CostKind == TTI::TCK_CodeSize)
-    return (LT.first - 1) + BaseCost;
-
-  unsigned VL = getEstimatedVLFor(Ty);
-  return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
+  unsigned SplitOp;
+  SmallVector<unsigned, 3> Opcodes;
+  switch (IID) {
+  default:
+    llvm_unreachable("Unsupported intrinsic");
+  case Intrinsic::smax:
+    SplitOp = RISCV::VMAX_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAX_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::smin:
+    SplitOp = RISCV::VMIN_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMIN_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umax:
+    SplitOp = RISCV::VMAXU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::umin:
+    SplitOp = RISCV::VMINU_VV;
+    Opcodes = {RISCV::VMV_S_X, RISCV::VREDMINU_VS, RISCV::VMV_X_S};
+    break;
+  case Intrinsic::maxnum:
+    SplitOp = RISCV::VFMAX_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
+    break;
+  case Intrinsic::minnum:
+    SplitOp = RISCV::VFMIN_VV;
+    Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
+    break;
+  }
+  // Add a cost for data larger than LMUL8
+  InstructionCost SplitCost =
+      (LT.first > 1) ? (LT.first - 1) *
+                           getRISCVInstructionCost(SplitOp, LT.second, CostKind)
+                     : 0;
+  return SplitCost + getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
 InstructionCost
