@@ -29,8 +29,6 @@ DebugImporter::DebugImporter(ModuleOp mlirModule)
     : recursionPruner(mlirModule.getContext()),
       context(mlirModule.getContext()), mlirModule(mlirModule) {}
 
-DebugImporter::~DebugImporter() {}
-
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   llvm::DISubprogram *subprogram = func->getSubprogram();
   if (!subprogram)
@@ -357,9 +355,6 @@ DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
   return nullptr;
 }
 
-/// Register the translated result of `node`. Returns the finalized result
-/// (with recId if recursive) and whether the result is self-contained
-/// (i.e. contains no unbound self-refs).
 std::pair<DINodeAttr, bool>
 DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
                                                     DINodeAttr result) {
@@ -411,8 +406,6 @@ DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
   return {result, state.unboundSelfRefs.empty()};
 }
 
-/// Pop off a frame from the translation stack after a node is done being
-/// translated.
 void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
   // If `node` is not a potentially recursive type, it will not be on the
   // translation stack. Nothing to handle in this case.
@@ -444,11 +437,6 @@ void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
   translationStack.pop_back();
 }
 
-/// Returns the cached result (if exists) with all known replacements applied.
-/// Also returns the set of unbound self-refs that are unresolved in this
-/// cached result.
-/// The cache entry will also be updated with the replaced result and with the
-/// applied replacements removed from the pendingReplacements map.
 std::pair<DINodeAttr, DenseSet<DIRecursiveTypeAttrInterface>>
 DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
   auto cacheIter = cache.find(node);

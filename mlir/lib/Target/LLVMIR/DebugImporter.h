@@ -30,7 +30,6 @@ namespace detail {
 class DebugImporter {
 public:
   DebugImporter(ModuleOp mlirModule);
-  ~DebugImporter();
 
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
