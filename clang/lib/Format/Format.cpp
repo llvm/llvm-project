@@ -3578,7 +3578,7 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
   // We need to use lambda function here since there are two versions of
   // `cleanup`.
   auto Cleanup = [](const FormatStyle &Style, StringRef Code,
-                    std::vector<tooling::Range> Ranges,
+                    const std::vector<tooling::Range> &Ranges,
                     StringRef FileName) -> tooling::Replacements {
     return cleanup(Style, Code, Ranges, FileName);
   };
