@@ -27,6 +27,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/FormatString.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -7610,6 +7611,14 @@ bool Sema::getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
 ///
 /// Returns true if the value evaluates to null.
 static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
+  // Treat (smart) pointers constructed from nullptr as null, whether we can
+  // const-evaluate them or not.
+  // This must happen first: the smart pointer expr might have _Nonnull type!
+  if (isa<CXXNullPtrLiteralExpr>(
+          IgnoreExprNodes(Expr, IgnoreImplicitAsWrittenSingleStep,
+                          IgnoreElidableImplicitConstructorSingleStep)))
+    return true;
+
   // If the expression has non-null type, it doesn't evaluate to null.
   if (auto nullability = Expr->IgnoreImplicit()->getType()->getNullability()) {
     if (*nullability == NullabilityKind::NonNull)

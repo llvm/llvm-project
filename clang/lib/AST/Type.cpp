@@ -4652,16 +4652,15 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Auto:
     return ResultIfUnknown;
 
-  // Dependent template specializations can instantiate to pointer
-  // types unless they're known to be specializations of a class
-  // template.
+  // Dependent template specializations could instantiate to pointer types.
   case Type::TemplateSpecialization:
-    if (TemplateDecl *templateDecl
-          = cast<TemplateSpecializationType>(type.getTypePtr())
-              ->getTemplateName().getAsTemplateDecl()) {
-      if (isa<ClassTemplateDecl>(templateDecl))
-        return false;
-    }
+    // If it's a known class template, we can already check if it's nullable.
+    if (TemplateDecl *templateDecl =
+            cast<TemplateSpecializationType>(type.getTypePtr())
+                ->getTemplateName()
+                .getAsTemplateDecl())
+      if (auto *CTD = dyn_cast<ClassTemplateDecl>(templateDecl))
+        return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
     return ResultIfUnknown;
 
   case Type::Builtin:
@@ -4718,6 +4717,17 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     }
     llvm_unreachable("unknown builtin type");
 
+  case Type::Record: {
+    const RecordDecl *RD = cast<RecordType>(type)->getDecl();
+    // For template specializations, look only at primary template attributes.
+    // This is a consistent regardless of whether the instantiation is known.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      return CTSD->getSpecializedTemplate()
+          ->getTemplatedDecl()
+          ->hasAttr<TypeNullableAttr>();
+    return RD->hasAttr<TypeNullableAttr>();
+  }
+
   // Non-pointer types.
   case Type::Complex:
   case Type::LValueReference:
@@ -4735,7 +4745,6 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentAddressSpace:
   case Type::FunctionProto:
   case Type::FunctionNoProto:
-  case Type::Record:
   case Type::DeducedTemplateSpecialization:
   case Type::Enum:
   case Type::InjectedClassName:
