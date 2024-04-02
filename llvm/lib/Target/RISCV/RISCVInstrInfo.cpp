@@ -314,27 +314,48 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
   if (ReversedCopy) {
     // If the src and dest overlap when copying a tuple, we need to copy the
     // registers in reverse.
-    SrcEncoding += NumRegs - LMulVal;
-    DstEncoding += NumRegs - LMulVal;
+    SrcEncoding += NumRegs - 1;
+    DstEncoding += NumRegs - 1;
   }
 
   unsigned I = 0;
   auto GetCopyInfo = [&](uint16_t SrcEncoding, uint16_t DstEncoding)
       -> std::tuple<RISCVII::VLMUL, const TargetRegisterClass &, unsigned,
                     unsigned, unsigned> {
-    // If source register encoding and destination register encoding are aligned
-    // to 8, we can do a LMUL8 copying.
-    if (SrcEncoding % 8 == 0 && DstEncoding % 8 == 0 && I + 8 <= NumRegs)
+    if (ReversedCopy) {
+      // For reversed copying, if there are enough aligned registers(8/4/2), we
+      // can do a larger copy(LMUL8/4/2).
+      // Besides, we have already known that DstEncoding is larger than
+      // SrcEncoding in forwardCopyWillClobberTuple, so the difference between
+      // DstEncoding and SrcEncoding should be >= LMUL value we try to use to
+      // avoid clobbering.
+      uint16_t Diff = DstEncoding - SrcEncoding;
+      if (I + 8 <= NumRegs && Diff >= 8 && SrcEncoding % 8 == 7 &&
+          DstEncoding % 8 == 7)
+        return {RISCVII::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
+                RISCV::PseudoVMV_V_V_M8, RISCV::PseudoVMV_V_I_M8};
+      if (I + 4 <= NumRegs && Diff >= 4 && SrcEncoding % 4 == 3 &&
+          DstEncoding % 4 == 3)
+        return {RISCVII::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
+                RISCV::PseudoVMV_V_V_M4, RISCV::PseudoVMV_V_I_M4};
+      if (I + 2 <= NumRegs && Diff >= 2 && SrcEncoding % 2 == 1 &&
+          DstEncoding % 2 == 1)
+        return {RISCVII::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
+                RISCV::PseudoVMV_V_V_M2, RISCV::PseudoVMV_V_I_M2};
+      // Or we should do LMUL1 copying.
+      return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
+              RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
+    }
+
+    // For forward copying, if source register encoding and destination register
+    // encoding are aligned to 8/4/2, we can do a LMUL8/4/2 copying.
+    if (I + 8 <= NumRegs && SrcEncoding % 8 == 0 && DstEncoding % 8 == 0)
       return {RISCVII::LMUL_8, RISCV::VRM8RegClass, RISCV::VMV8R_V,
               RISCV::PseudoVMV_V_V_M8, RISCV::PseudoVMV_V_I_M8};
-    // If source register encoding and destination register encoding are aligned
-    // to 4, we can do a LMUL4 copying.
-    if (SrcEncoding % 4 == 0 && DstEncoding % 4 == 0 && I + 4 <= NumRegs)
+    if (I + 4 <= NumRegs && SrcEncoding % 4 == 0 && DstEncoding % 4 == 0)
       return {RISCVII::LMUL_4, RISCV::VRM4RegClass, RISCV::VMV4R_V,
               RISCV::PseudoVMV_V_V_M4, RISCV::PseudoVMV_V_I_M4};
-    // If source register encoding and destination register encoding are aligned
-    // to 2, we can do a LMUL2 copying.
-    if (SrcEncoding % 2 == 0 && DstEncoding % 2 == 0 && I + 2 <= NumRegs)
+    if (I + 2 <= NumRegs && SrcEncoding % 2 == 0 && DstEncoding % 2 == 0)
       return {RISCVII::LMUL_2, RISCV::VRM2RegClass, RISCV::VMV2R_V,
               RISCV::PseudoVMV_V_V_M2, RISCV::PseudoVMV_V_I_M2};
     // Or we should do LMUL1 copying.
@@ -369,8 +390,11 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
     }
 
     // Emit actual copying.
-    MCRegister ActualSrcReg = FindRegWithEncoding(RegClass, SrcEncoding);
-    MCRegister ActualDstReg = FindRegWithEncoding(RegClass, DstEncoding);
+    // For reversed copying, the encoding should be decreased.
+    MCRegister ActualSrcReg = FindRegWithEncoding(
+        RegClass, ReversedCopy ? (SrcEncoding - NumCopied + 1) : SrcEncoding);
+    MCRegister ActualDstReg = FindRegWithEncoding(
+        RegClass, ReversedCopy ? (DstEncoding - NumCopied + 1) : DstEncoding);
 
     auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), ActualDstReg);
     bool UseVMV_V_I = RISCV::getRVVMCOpcode(Opc) == RISCV::VMV_V_I;
@@ -390,8 +414,7 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
     }
 
-    // If we are copying reversely, we should decrease the register encoding
-    // number.
+    // If we are copying reversely, we should decrease the encoding.
     SrcEncoding += (ReversedCopy ? -NumCopied : NumCopied);
     DstEncoding += (ReversedCopy ? -NumCopied : NumCopied);
     I += NumCopied;
