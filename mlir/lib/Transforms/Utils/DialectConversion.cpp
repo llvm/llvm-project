@@ -279,6 +279,8 @@ public:
     auto &blockOps = block->getOperations();
     while (!blockOps.empty())
       blockOps.remove(blockOps.begin());
+    for (auto arg : block->getArguments())
+      arg.dropAllUses();
     block->dropAllUses();
     if (block->getParent())
       block->erase();
