@@ -56,8 +56,7 @@ static bool isSigned(unsigned int Opcode) {
 
 static void scalarize(BinaryOperator *BO,
                       SmallVectorImpl<BinaryOperator *> &Replace) {
-  VectorType *VTy = cast<VectorType>(BO->getType());
-  assert(!VTy->isScalableTy() && "Tried to scalarize scalable vector!");
+  VectorType *VTy = cast<FixedVectorType>(BO->getType());
 
   IRBuilder<> Builder(BO);
 
