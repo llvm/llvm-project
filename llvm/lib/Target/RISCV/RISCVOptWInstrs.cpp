@@ -707,27 +707,43 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      unsigned Opc;
-      // TODO: Add more.
+      unsigned WOpc;
+      // TODO: Add more?
       switch (MI.getOpcode()) {
       default:
         continue;
       case RISCV::ADD:
-        Opc = RISCV::ADDW;
+        WOpc = RISCV::ADDW;
         break;
       case RISCV::ADDI:
-        Opc = RISCV::ADDIW;
+        WOpc = RISCV::ADDIW;
+        break;
+      case RISCV::SUB:
+        WOpc = RISCV::SUBW;
         break;
       case RISCV::MUL:
-        Opc = RISCV::MULW;
+        WOpc = RISCV::MULW;
         break;
       case RISCV::SLLI:
-        Opc = RISCV::SLLIW;
+        // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
+        if (MI.getOperand(2).getImm() >= 32)
+          continue;
+        WOpc = RISCV::SLLIW;
+        break;
+      case RISCV::LD:
+      case RISCV::LWU:
+        WOpc = RISCV::LW;
         break;
       }
 
       if (hasAllWUsers(MI, ST, MRI)) {
-        MI.setDesc(TII.get(Opc));
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
+        MI.setDesc(TII.get(WOpc));
+        MI.clearFlag(MachineInstr::MIFlag::NoSWrap);
+        MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+        MI.clearFlag(MachineInstr::MIFlag::IsExact);
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        ++NumTransformedToWInstrs;
         MadeChange = true;
       }
     }
