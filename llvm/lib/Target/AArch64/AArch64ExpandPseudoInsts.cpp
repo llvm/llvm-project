@@ -1605,7 +1605,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
 
      if ((!FuncAttrs.hasStreamingBody() && FuncAttrs.hasStreamingInterface()) ||
-         !AFI->hasStreamingModeChanges())
+         !AFI->requiresVGSpill(MF))
        return false;
 
      int64_t StreamingVGIdx = AFI->getStreamingVGIdx();

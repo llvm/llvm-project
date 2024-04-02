@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -497,6 +498,11 @@ public:
   bool hasStreamingModeChanges() const { return HasStreamingModeChanges; }
   void setHasStreamingModeChanges(bool HasChanges) {
     HasStreamingModeChanges = HasChanges;
+  }
+
+  bool requiresVGSpill(const MachineFunction &MF) const {
+    const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+    return STI.hasSVE() && HasStreamingModeChanges;
   }
 
   bool hasStackProbing() const { return StackProbeSize != 0; }

@@ -321,7 +321,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     return false;
 
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->hasSwiftAsyncContext() || AFI->hasStreamingModeChanges())
+  if (AFI->hasSwiftAsyncContext() || AFI->requiresVGSpill(MF))
     return false;
 
   // If there are an odd number of GPRs before LR and FP in the CSRs list,
@@ -575,7 +575,7 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
-    unsigned DwarfReg = TRI.getDwarfRegNum(Info.getReg(), true);
+    int64_t DwarfReg = TRI.getDwarfRegNum(Info.getReg(), true);
     int64_t Offset = MFI.getObjectOffset(FrameIdx) - getOffsetOfLocalArea();
 
     // Locally streaming functions save two values for VG, but we should only
@@ -1369,8 +1369,9 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // vector length. Move past these instructions if necessary.
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI) {
-    AArch64FunctionInfo AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
-    assert(AFI.hasStreamingModeChanges() &&
+    MachineFunction &MF = *MBB.getParent();
+    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    assert(AFI->requiresVGSpill(MF) &&
            "Unexpected callee-save save/restore opcode!");
     ++MBBI;
     if (MBBI->getOpcode() == AArch64::UBFMXri)
@@ -1873,10 +1874,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
          !IsSVECalleeSave(MBBI)) {
     unsigned Opc = MBBI->getOpcode();
     // Move past instructions generated to calculate VG
-    if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI ||
-        Opc == AArch64::UBFMXri) {
-      assert(AFI->hasStreamingModeChanges() && "Unexpected opcode!");
+    if (Opc == AArch64::CNTD_XPiI || Opc == AArch64::RDSVLI_XI) {
+      assert(AFI->requiresVGSpill(MF) && "Unexpected opcode!");
       ++MBBI;
+      if (MBBI->getOpcode() == AArch64::UBFMXri)
+        ++MBBI;
     }
     if (CombineSPBump)
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
@@ -3040,11 +3042,10 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
-  bool SpilledStreamingVG = false;
-  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
@@ -3123,7 +3124,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       SMEAttrs Attrs(MF.getFunction());
 
       if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface() &&
-          !SpilledStreamingVG) {
+          AFI->getStreamingVGIdx() == std::numeric_limits<int>::max()) {
         // For locally-streaming functions, we need to store both the streaming
         // & non-streaming VG. Spill the streaming value first.
         BuildMI(MBB, MI, DL, TII.get(AArch64::RDSVLI_XI), Reg1)
@@ -3135,9 +3136,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             .addImm(63)
             .setMIFlag(MachineInstr::FrameSetup);
 
-        AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
         AFI->setStreamingVGIdx(RPI.FrameIdx);
-        SpilledStreamingVG = true;
       } else {
         BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
             .addImm(31)
@@ -3523,7 +3522,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // non-streaming VG value.
   const Function &F = MF.getFunction();
   SMEAttrs Attrs(F);
-  if (AFI->hasStreamingModeChanges() && F.needsUnwindTableEntry()) {
+  if (AFI->requiresVGSpill(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
     else
@@ -3667,8 +3666,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Insert VG into the list of CSRs, immediately before LR if saved.
-  const Function &F = MF.getFunction();
-  if (AFI->hasStreamingModeChanges() && F.needsUnwindTableEntry()) {
+  if (AFI->requiresVGSpill(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
     SMEAttrs Attrs(MF.getFunction());
 

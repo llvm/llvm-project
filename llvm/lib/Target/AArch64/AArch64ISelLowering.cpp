@@ -8523,7 +8523,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
 
-    if (IsLocallyStreaming && MF.getFunction().needsUnwindTableEntry()) {
+    if (IsLocallyStreaming && Subtarget->hasSVE()) {
       NewChain = DAG.getNode(
           AArch64ISD::VG_UNWIND, DL, DAG.getVTList(MVT::Other, MVT::Glue),
           {Chain, DAG.getTargetConstant(/*Save*/ 1, DL, MVT::i64), InGlue});
@@ -8703,7 +8703,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
 
-    if (IsLocallyStreaming && MF.getFunction().needsUnwindTableEntry())
+    if (IsLocallyStreaming && Subtarget->hasSVE())
       Result = DAG.getNode(
           AArch64ISD::VG_UNWIND, DL, MVT::Other,
           {Result, DAG.getTargetConstant(/*Restore*/ 0, DL, MVT::i64)});
