@@ -78,6 +78,7 @@ def libc_function(
                      its deps.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
+
     # We use the explicit equals pattern here because append and += mutate the
     # original list, where this creates a new list and stores it in deps.
     copts = copts or []
@@ -89,6 +90,7 @@ def libc_function(
         "-fno-omit-frame-pointer",
         "-fstack-protector-strong",
     ]
+
     # x86 targets have -mno-omit-leaf-frame-pointer.
     platform_copts = selects.with_or({
         PLATFORM_CPU_X86_64: ["-mno-omit-leaf-frame-pointer"],
