@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 #define _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 
-#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>

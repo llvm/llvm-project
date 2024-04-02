@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
-#include <__availability>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
