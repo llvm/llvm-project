@@ -33,7 +33,7 @@ jobs:
       - name: Fetch code formatting utils
         uses: actions/checkout@v4
         with:
-          reository: ${{ github.repository }}
+          repository: ${{ github.repository }}
           ref: ${{ github.base_ref }}
           sparse-checkout: |
             llvm/utils/git/requirements_formatting.txt
