@@ -145,41 +145,43 @@ inline _LIBCPP_HIDE_FROM_ABI void atomic_flag_clear_explicit(atomic_flag* __o, m
   __o->clear(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_wait(const volatile atomic_flag* __o, bool __v) _NOEXCEPT {
   __o->wait(__v);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_wait(const atomic_flag* __o, bool __v) _NOEXCEPT {
   __o->wait(__v);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_wait_explicit(const volatile atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
   __o->wait(__v, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_wait_explicit(const atomic_flag* __o, bool __v, memory_order __m) _NOEXCEPT {
   __o->wait(__v, __m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_notify_one(volatile atomic_flag* __o) _NOEXCEPT {
   __o->notify_one();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT {
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+atomic_flag_notify_one(atomic_flag* __o) _NOEXCEPT {
   __o->notify_one();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
 atomic_flag_notify_all(volatile atomic_flag* __o) _NOEXCEPT {
   __o->notify_all();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
+inline _LIBCPP_DEPRECATED_ATOMIC_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_SYNC void
+atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
   __o->notify_all();
 }
 

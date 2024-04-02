@@ -957,7 +957,7 @@ typedef __char32_t char32_t;
 #  if _LIBCPP_STD_VER < 20
 #    define _LIBCPP_DEPRECATED_ATOMIC_SYNC                                                                             \
       _LIBCPP_DEPRECATED_("The C++20 synchronization library has been deprecated prior to C++20. Please update to "    \
-                          "using -std=c++20 if you need to use these facilities")
+                          "using -std=c++20 if you need to use these facilities.")
 #  else
 #    define _LIBCPP_DEPRECATED_ATOMIC_SYNC /* nothing */
 #  endif
