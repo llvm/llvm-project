@@ -455,8 +455,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
 
-    State.setDebugLocFrom(getDebugLoc());
-
     VPValue *LoopExitingDef = getOperand(1);
     Type *PhiTy = OrigPhi->getType();
     VectorParts RdxParts(State.UF);
@@ -551,7 +549,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
-  State.Builder.SetCurrentDebugLocation(getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
