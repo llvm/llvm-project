@@ -39,7 +39,6 @@
 
 // Check x86_64-unknown-haiku, X86_64
 // RUN: %clang -### %s 2>&1 --target=x86_64-unknown-haiku \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X86_64 %s
 // CHECK-LD-X86_64: "-cc1" "-triple" "x86_64-unknown-haiku"
@@ -63,7 +62,6 @@
 
 // Check the right flags are present with -shared
 // RUN: %clang -### %s -shared 2>&1 --target=x86_64-unknown-haiku \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X86_64-SHARED %s
 // CHECK-X86_64-SHARED: "-cc1" "-triple" "x86_64-unknown-haiku"
