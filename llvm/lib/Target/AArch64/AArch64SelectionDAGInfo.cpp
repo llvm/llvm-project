@@ -132,8 +132,6 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   Args.push_back(SizeEntry);
   assert(Symbol->getOpcode() == ISD::ExternalSymbol &&
          "Function name is not set");
-  if (!LowerToSMERoutines)
-    return SDValue();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
@@ -154,7 +152,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (!Attrs.hasNonStreamingInterfaceAndBody())
+  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, DL, Chain, Dst, Src, Size,
                                              RTLIB::MEMCPY);
   return SDValue();
@@ -172,7 +170,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
                     Alignment, isVolatile, DstPtrInfo, MachinePointerInfo{});
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (!Attrs.hasNonStreamingInterfaceAndBody())
+  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMSET);
   return SDValue();
@@ -190,7 +188,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
                     Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
   SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-  if (!Attrs.hasNonStreamingInterfaceAndBody())
+  if (LowerToSMERoutines && !Attrs.hasNonStreamingInterfaceAndBody())
     return EmitStreamingCompatibleMemLibCall(DAG, dl, Chain, Dst, Src, Size,
                                              RTLIB::MEMMOVE);
   return SDValue();
