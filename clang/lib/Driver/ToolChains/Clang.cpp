@@ -1776,6 +1776,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   }
 
   AddUnalignedAccessWarning(CmdArgs);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
+                    options::OPT_fno_ptrauth_intrinsics);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3834,6 +3837,24 @@ bool Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
     return true;
   }
   return false;
+}
+
+llvm::SmallString<256>
+clang::driver::tools::getCXX20NamedModuleOutputPath(const ArgList &Args,
+                                                    const char *BaseInput) {
+  if (Arg *ModuleOutputEQ = Args.getLastArg(options::OPT_fmodule_output_EQ))
+    return StringRef(ModuleOutputEQ->getValue());
+
+  SmallString<256> OutputPath;
+  if (Arg *FinalOutput = Args.getLastArg(options::OPT_o);
+      FinalOutput && Args.hasArg(options::OPT_c))
+    OutputPath = FinalOutput->getValue();
+  else
+    OutputPath = BaseInput;
+
+  const char *Extension = types::getTypeTempSuffix(types::TY_ModuleFile);
+  llvm::sys::path::replace_extension(OutputPath, Extension);
+  return OutputPath;
 }
 
 static bool RenderModulesOptions(Compilation &C, const Driver &D,
@@ -7257,10 +7278,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
-
-  if (Args.hasFlag(options::OPT_fptrauth_intrinsics,
-                   options::OPT_fno_ptrauth_intrinsics, false))
-    CmdArgs.push_back("-fptrauth-intrinsics");
 
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.

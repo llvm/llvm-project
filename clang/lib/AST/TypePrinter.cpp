@@ -268,6 +268,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
 
     case Type::Adjusted:
     case Type::Decayed:
+    case Type::ArrayParameter:
     case Type::Pointer:
     case Type::BlockPointer:
     case Type::LValueReference:
@@ -538,7 +539,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
-  OS << T->getSize().getZExtValue() << ']';
+  OS << T->getZExtSize() << ']';
   printAfter(T->getElementType(), OS);
 }
 
@@ -593,6 +594,16 @@ void TypePrinter::printAdjustedAfter(const AdjustedType *T, raw_ostream &OS) {
 void TypePrinter::printDecayedBefore(const DecayedType *T, raw_ostream &OS) {
   // Print as though it's a pointer.
   printAdjustedBefore(T, OS);
+}
+
+void TypePrinter::printArrayParameterAfter(const ArrayParameterType *T,
+                                           raw_ostream &OS) {
+  printConstantArrayAfter(T, OS);
+}
+
+void TypePrinter::printArrayParameterBefore(const ArrayParameterType *T,
+                                            raw_ostream &OS) {
+  printConstantArrayBefore(T, OS);
 }
 
 void TypePrinter::printDecayedAfter(const DecayedType *T, raw_ostream &OS) {
@@ -1070,6 +1081,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       break;
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
+      break;
+    case CC_RISCVVectorCall:
+      OS << "__attribute__((riscv_vector_cc))";
       break;
     }
   }
@@ -1960,6 +1974,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveNone:
     OS << "preserve_none";
     break;
+  case attr::RISCVVectorCC:
+    OS << "riscv_vector_cc";
+    break;
   case attr::NoDeref:
     OS << "noderef";
     break;
@@ -2303,15 +2320,10 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      if (!Policy.SuppressTagKeyword &&
-          Argument.getKind() == TemplateArgument::Type &&
-          isa<TagType>(Argument.getAsType()))
-        OS << Argument.getAsType().getAsString();
-      else
-        // Tries to print the argument with location info if exists.
-        printArgument(Arg, Policy, ArgOS,
-                      TemplateParameterList::shouldIncludeTypeForArgument(
-                          Policy, TPL, ParmIndex));
+      // Tries to print the argument with location info if exists.
+      printArgument(Arg, Policy, ArgOS,
+                    TemplateParameterList::shouldIncludeTypeForArgument(
+                        Policy, TPL, ParmIndex));
     }
     StringRef ArgString = ArgOS.str();
 

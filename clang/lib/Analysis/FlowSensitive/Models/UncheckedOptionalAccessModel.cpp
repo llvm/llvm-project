@@ -512,27 +512,26 @@ void constructOptionalValue(const Expr &E, Environment &Env,
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
 /// value that is constructed/assigned from a value of type `U` or `optional<U>`
 /// where `T` is constructible from `U`.
-BoolValue &valueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
+BoolValue &valueOrConversionHasValue(QualType DestType, const Expr &E,
                                      const MatchFinder::MatchResult &MatchRes,
                                      LatticeTransferState &State) {
-  assert(F.getTemplateSpecializationArgs() != nullptr);
-  assert(F.getTemplateSpecializationArgs()->size() > 0);
-
-  const int TemplateParamOptionalWrappersCount =
-      countOptionalWrappers(*MatchRes.Context, F.getTemplateSpecializationArgs()
-                                                   ->get(0)
-                                                   .getAsType()
-                                                   .getNonReferenceType());
+  const int DestTypeOptionalWrappersCount =
+      countOptionalWrappers(*MatchRes.Context, DestType);
   const int ArgTypeOptionalWrappersCount = countOptionalWrappers(
       *MatchRes.Context, E.getType().getNonReferenceType());
 
-  // Check if this is a constructor/assignment call for `optional<T>` with
-  // argument of type `U` such that `T` is constructible from `U`.
-  if (TemplateParamOptionalWrappersCount == ArgTypeOptionalWrappersCount)
+  // Is this an constructor of the form `template<class U> optional(U &&)` /
+  // assignment of the form `template<class U> optional& operator=(U &&)`
+  // (where `T` is assignable / constructible from `U`)?
+  // We recognize this because the number of optionals in the optional being
+  // assigned to is different from the function argument type.
+  if (DestTypeOptionalWrappersCount != ArgTypeOptionalWrappersCount)
     return State.Env.getBoolLiteralValue(true);
 
-  // This is a constructor/assignment call for `optional<T>` with argument of
-  // type `optional<U>` such that `T` is constructible from `U`.
+  // Otherwise, this must be a constructor of the form
+  // `template <class U> optional<optional<U> &&)` / assignment of the form
+  // `template <class U> optional& operator=(optional<U> &&)
+  // (where, again, `T` is assignable / constructible from `U`).
   auto *Loc = State.Env.get<RecordStorageLocation>(E);
   if (auto *HasValueVal = getHasValue(State.Env, Loc))
     return *HasValueVal;
@@ -544,10 +543,11 @@ void transferValueOrConversionConstructor(
     LatticeTransferState &State) {
   assert(E->getNumArgs() > 0);
 
-  constructOptionalValue(*E, State.Env,
-                         valueOrConversionHasValue(*E->getConstructor(),
-                                                   *E->getArg(0), MatchRes,
-                                                   State));
+  constructOptionalValue(
+      *E, State.Env,
+      valueOrConversionHasValue(
+          E->getConstructor()->getThisType()->getPointeeType(), *E->getArg(0),
+          MatchRes, State));
 }
 
 void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
@@ -566,10 +566,11 @@ void transferValueOrConversionAssignment(
     const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &MatchRes,
     LatticeTransferState &State) {
   assert(E->getNumArgs() > 1);
-  transferAssignment(E,
-                     valueOrConversionHasValue(*E->getDirectCallee(),
-                                               *E->getArg(1), MatchRes, State),
-                     State);
+  transferAssignment(
+      E,
+      valueOrConversionHasValue(E->getArg(0)->getType().getNonReferenceType(),
+                                *E->getArg(1), MatchRes, State),
+      State);
 }
 
 void transferNulloptAssignment(const CXXOperatorCallExpr *E,

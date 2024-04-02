@@ -1836,7 +1836,27 @@ static TemplateParameterList *GetTemplateParameterList(TemplateDecl *TD) {
   // Make sure we get the template parameter list from the most
   // recent declaration, since that is the only one that is guaranteed to
   // have all the default template argument information.
-  return cast<TemplateDecl>(TD->getMostRecentDecl())->getTemplateParameters();
+  Decl *D = TD->getMostRecentDecl();
+  // C++11 N3337 [temp.param]p12:
+  // A default template argument shall not be specified in a friend class
+  // template declaration.
+  //
+  // Skip past friend *declarations* because they are not supposed to contain
+  // default template arguments. Moreover, these declarations may introduce
+  // template parameters living in different template depths than the
+  // corresponding template parameters in TD, causing unmatched constraint
+  // substitution.
+  //
+  // FIXME: Diagnose such cases within a class template:
+  //  template <class T>
+  //  struct S {
+  //    template <class = void> friend struct C;
+  //  };
+  //  template struct S<int>;
+  while (D->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None &&
+         D->getPreviousDecl())
+    D = D->getPreviousDecl();
+  return cast<TemplateDecl>(D)->getTemplateParameters();
 }
 
 DeclResult Sema::CheckClassTemplate(
@@ -2171,6 +2191,7 @@ DeclResult Sema::CheckClassTemplate(
 
   AddPushedVisibilityAttribute(NewClass);
   inferGslOwnerPointerAttribute(NewClass);
+  inferNullableClassAttribute(NewClass);
 
   if (TUK != TUK_Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.
@@ -2699,6 +2720,12 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
       return true;
     }
 
+    bool TraverseTemplateName(TemplateName Template) {
+      if (auto *TD = Template.getAsTemplateDecl())
+        MarkAppeared(TD);
+      return RecursiveASTVisitor::TraverseTemplateName(Template);
+    }
+
     void MarkAppeared(NamedDecl *ND) {
       if (TemplateParams.contains(ND))
         ReferencedTemplateParams.insert(ND);
@@ -2731,6 +2758,8 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
 // Build deduction guides for a type alias template.
 void DeclareImplicitDeductionGuidesForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate, SourceLocation Loc) {
+  if (AliasTemplate->isInvalidDecl())
+    return;
   auto &Context = SemaRef.Context;
   // FIXME: if there is an explicit deduction guide after the first use of the
   // type alias usage, we will not cover this explicit deduction guide. fix this
@@ -2974,7 +3003,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     if (auto *FPrime = SemaRef.InstantiateFunctionDeclaration(
             F, TemplateArgListForBuildingFPrime, AliasTemplate->getLocation(),
             Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
-      auto *GG = dyn_cast<CXXDeductionGuideDecl>(FPrime);
+      auto *GG = cast<CXXDeductionGuideDecl>(FPrime);
       buildDeductionGuide(SemaRef, AliasTemplate, FPrimeTemplateParamList,
                           GG->getCorrespondingConstructor(),
                           GG->getExplicitSpecifier(), GG->getTypeSourceInfo(),
@@ -6874,6 +6903,11 @@ bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
 
 bool UnnamedLocalNoLinkageFinder::VisitBitIntType(const BitIntType *T) {
   return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitArrayParameterType(
+    const ArrayParameterType *T) {
+  return VisitConstantArrayType(T);
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDependentBitIntType(

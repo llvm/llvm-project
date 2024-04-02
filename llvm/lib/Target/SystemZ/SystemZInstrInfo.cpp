@@ -59,7 +59,7 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(SystemZ::ADJCALLSTACKDOWN, SystemZ::ADJCALLSTACKUP),
+    : SystemZGenInstrInfo(-1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister()),
       STI(sti) {}
 
