@@ -574,14 +574,13 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
 
   IRBuilder<> Builder(I);
 
-  unsigned NumElements = VTy->getElementCount().getKnownMinValue();
-  Value *Result = nullptr;
+  unsigned NumElements = VTy->getElementCount().getFixedValue();
+  Value *Result = PoisonValue::get(VTy);
   for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
     Value *Ext = Builder.CreateExtractElement(I->getOperand(0), Idx);
     Value *Cast = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
                                      I->getType()->getScalarType());
-    Result = Builder.CreateInsertElement(
-        Result ? Result : PoisonValue::get(VTy), Cast, Idx);
+    Result = Builder.CreateInsertElement(Result, Cast, Idx);
     if (isa<Instruction>(Cast))
       Replace.push_back(cast<Instruction>(Cast));
   }
