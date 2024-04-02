@@ -1916,6 +1916,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("__attribute__((cold)) C() : Base(obj->func()) {}");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
+
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
