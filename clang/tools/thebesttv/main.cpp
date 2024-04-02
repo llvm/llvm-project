@@ -104,8 +104,12 @@ struct VarLocResult {
     bool isValid() const { return fid != -1; }
 };
 
+/**
+ * requireExact: 只对路径有效，表示是否需要精确匹配
+ */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
-                            int line, int column, bool isStmt) {
+                            int line, int column, bool isStmt,
+                            bool requireExact = true) {
     FindVarVisitor visitor;
 
     for (const FunctionInfo *fi : functionsInFile.at(file)) {
@@ -120,8 +124,19 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 // search for stmt
                 auto bLoc =
                     Location::fromSourceLocation(*Context, stmt->getBeginLoc());
-                if (bLoc && bLoc->file == file && bLoc->line == line &&
-                    bLoc->column == column) {
+                auto eLoc =
+                    Location::fromSourceLocation(*Context, stmt->getEndLoc());
+
+                if (!bLoc || bLoc->file != file)
+                    continue;
+
+                // 精确匹配：要求行号、列号相同
+                bool matchExact = bLoc->line == line && bLoc->column == column;
+                // 模糊匹配：行号在语句 begin 和 end 之间即可
+                bool matchInexact = bLoc->line <= line && line <= eLoc->line;
+
+                if ((requireExact && matchExact) ||
+                    (!requireExact && matchInexact)) {
                     int id = block->getBlockID();
                     logger.info("Found stmt in {} B{} at {}:{}:{}",
                                 fi->signature, id, file, line, column);
@@ -198,8 +213,17 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
+    auto exactResult =
+        locateVariable(functionsInFile, loc.file, loc.line, loc.column, isStmt);
+    // 若不是语句，必须精确匹配
+    if (!isStmt || exactResult.isValid())
+        return exactResult;
+    // 对语句精确匹配失败
+    logger.warn("Unable to find exact match for stmt! Trying inexact "
+                "matching...");
+    logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
     return locateVariable(functionsInFile, loc.file, loc.line, loc.column,
-                          isStmt);
+                          isStmt, false);
 }
 
 std::string getSourceCode(SourceManager &SM, const SourceRange &range) {
