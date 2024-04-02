@@ -5835,7 +5835,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
     }
-    [[fallthrough]];
+    llvm_unreachable("Unexpected enqueue_kernel signature");
   }
   // OpenCL v2.0 s6.13.17.6 - Kernel query functions need bitcast of block
   // parameter.
