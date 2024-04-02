@@ -564,7 +564,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
 
 def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     DeclareOpInterfaceMethods<PromotableOpInterface, [
-      "requiresAmendingMutatedDefs", "amendMutatedDefs"
+      "requiresReplacedValues", "visitReplacedValues"
     ]>]> {
   let summary = "Describes how the address relates to a source language variable.";
   let arguments = (ins

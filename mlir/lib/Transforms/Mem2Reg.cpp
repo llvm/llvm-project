@@ -202,7 +202,7 @@ private:
   /// Contains the reaching definition at this operation. Reaching definitions
   /// are only computed for promotable memory operations with blocking uses.
   DenseMap<PromotableMemOpInterface, Value> reachingDefs;
-  DenseMap<PromotableMemOpInterface, Value> mutatedValues;
+  DenseMap<PromotableMemOpInterface, Value> replacedValuesMap;
   DominanceInfo &dominance;
   MemorySlotPromotionInfo info;
   const Mem2RegStatistics &statistics;
@@ -439,7 +439,7 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
         reachingDef = stored;
-        mutatedValues[memOp] = stored;
+        replacedValuesMap[memOp] = stored;
       }
     }
   }
@@ -554,8 +554,10 @@ void MemorySlotPromoter::removeBlockingUses() {
   dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
 
   llvm::SmallVector<Operation *> toErase;
-  llvm::SmallVector<std::pair<Operation *, Value>> mutatedDefinitions;
-  llvm::SmallVector<PromotableOpInterface> toAmend;
+  // List of all replaced values in the slot.
+  llvm::SmallVector<std::pair<Operation *, Value>> replacedValuesList;
+  // Ops to visit with the `visitReplacedValues` method.
+  llvm::SmallVector<PromotableOpInterface> toVisit;
   for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
@@ -570,8 +572,8 @@ void MemorySlotPromoter::removeBlockingUses() {
               reachingDef) == DeletionKind::Delete)
         toErase.push_back(toPromote);
       if (toPromoteMemOp.storesTo(slot))
-        if (Value mutatedValue = mutatedValues[toPromoteMemOp])
-          mutatedDefinitions.push_back({toPromoteMemOp, mutatedValue});
+        if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
+          replacedValuesList.push_back({toPromoteMemOp, replacedValue});
       continue;
     }
 
@@ -580,12 +582,12 @@ void MemorySlotPromoter::removeBlockingUses() {
     if (toPromoteBasic.removeBlockingUses(info.userToBlockingUses[toPromote],
                                           rewriter) == DeletionKind::Delete)
       toErase.push_back(toPromote);
-    if (toPromoteBasic.requiresAmendingMutatedDefs())
-      toAmend.push_back(toPromoteBasic);
+    if (toPromoteBasic.requiresReplacedValues())
+      toVisit.push_back(toPromoteBasic);
   }
-  for (PromotableOpInterface op : toAmend) {
+  for (PromotableOpInterface op : toVisit) {
     rewriter.setInsertionPointAfter(op);
-    op.amendMutatedDefs(mutatedDefinitions, rewriter);
+    op.visitReplacedValues(replacedValuesList, rewriter);
   }
 
   for (Operation *toEraseOp : toErase)

@@ -230,32 +230,32 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
            "::mlir::RewriterBase &":$rewriter)
     >,
     InterfaceMethod<[{
-        This method returns whether the promoted operation requires amending the
-        mutated definitions by a store operation.
+        This method allows the promoted operation to visit the SSA values used
+        in place of the memory slot once the promotion process of the memory
+        slot is complete.
 
-        If this method returns true, the operation will be visited using the
-        `amendMutatedDefs` method after the main mutation stage finishes
+        If this method returns true, the `visitReplacedValues` method on this
+        operation will be called after the main mutation stage finishes
         (i.e., after all ops have been processed with `removeBlockingUses`).
 
-        Operations should only request amending the mutated definitions if the
-        intended transformation applies to all mutated values. Furthermore,
-        mutated values must not be deleted.
-      }], "bool", "requiresAmendingMutatedDefs", (ins), [{}],
+        Operations should only the replaced values if the intended
+        transformation applies to all the replaced values. Furthermore, replaced
+        values must not be deleted.
+      }], "bool", "requiresReplacedValues", (ins), [{}],
       [{ return false; }]
     >,
     InterfaceMethod<[{
-        Transforms the IR to amend all the mutated definitions to the slot by a
-        store operation.
+        Transforms the IR using the SSA values that replaced the memory slot.
 
         This method will only be called after all blocking uses have been
-        scheduled for removal and if `requiresAmendingMutatedDefs` returned
+        scheduled for removal and if `requiresReplacedValues` returned
         true.
 
         The rewriter is located after the promotable operation on call. All IR
         mutations must happen through the rewriter. During the transformation,
         *no operation should be deleted*.
       }],
-      "void", "amendMutatedDefs",
+      "void", "visitReplacedValues",
       (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
            "::mlir::RewriterBase &":$rewriter), [{}], [{ return; }]
     >,
