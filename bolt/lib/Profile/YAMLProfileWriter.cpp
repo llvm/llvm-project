@@ -34,40 +34,15 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
                   const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
-  auto setBATSecondaryEntry = [&](const BinaryFunction &Callee) {
-    // The symbol could be a secondary entry in a cold fragment.
-    uint64_t SymbolValue =
-        cantFail(errorOrToExpected(BC.getSymbolValue(*Symbol)));
-
-    // Containing function, not necessarily the same as symbol value.
-    const uint64_t CalleeAddress = Callee.getAddress();
-    const uint32_t OutputOffset = SymbolValue - CalleeAddress;
-
-    const uint64_t ParentAddress = BAT->fetchParentAddress(CalleeAddress);
-    const uint64_t HotAddress = ParentAddress ? ParentAddress : CalleeAddress;
-
-    if (const BinaryFunction *ParentBF =
-            BC.getBinaryFunctionAtAddress(HotAddress))
-      CSI.DestId = ParentBF->getFunctionNumber();
-
-    const uint32_t InputOffset =
-        BAT->translate(CalleeAddress, OutputOffset, /*IsBranchSrc*/ false);
-
-    if (!InputOffset)
-      return;
-
-    CSI.EntryDiscriminator =
-        BAT->getSecondaryEntryPointId(HotAddress, InputOffset);
-  };
 
   if (Symbol) {
     uint64_t EntryID = 0;
-    if (const BinaryFunction *const Callee =
+    if (const BinaryFunction *Callee =
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol);
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
-      if (BAT && BAT->isBATFunction(Callee->getAddress()))
-        setBATSecondaryEntry(*Callee);
       return Callee;
     }
   }
