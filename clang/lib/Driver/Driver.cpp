@@ -4645,12 +4645,17 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     }
   }
 
+  // HIP code in non-RDC mode will bundle the output if it invoked the linker.
+  bool ShouldBundleHIP =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_gpu_bundle_output,
+                   options::OPT_no_gpu_bundle_output, true) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+      !llvm::any_of(OffloadActions,
+                    [](Action *A) { return A->getType() != types::TY_Image; });
+
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
-  if (offloadDeviceOnly() &&
-      (!C.isOffloadingHostKind(Action::OFK_HIP) ||
-       !Args.hasFlag(options::OPT_gpu_bundle_output,
-                     options::OPT_no_gpu_bundle_output, true) ||
-       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false)))
+  if (offloadDeviceOnly() && !ShouldBundleHIP)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   if (OffloadActions.empty())
@@ -5809,19 +5814,9 @@ static const char *GetModuleOutputPath(Compilation &C, const JobAction &JA,
          (C.getArgs().hasArg(options::OPT_fmodule_output) ||
           C.getArgs().hasArg(options::OPT_fmodule_output_EQ)));
 
-  if (Arg *ModuleOutputEQ =
-          C.getArgs().getLastArg(options::OPT_fmodule_output_EQ))
-    return C.addResultFile(ModuleOutputEQ->getValue(), &JA);
+  SmallString<256> OutputPath =
+      tools::getCXX20NamedModuleOutputPath(C.getArgs(), BaseInput);
 
-  SmallString<64> OutputPath;
-  Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
-  if (FinalOutput && C.getArgs().hasArg(options::OPT_c))
-    OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
-
-  const char *Extension = types::getTypeTempSuffix(JA.getType());
-  llvm::sys::path::replace_extension(OutputPath, Extension);
   return C.addResultFile(C.getArgs().MakeArgString(OutputPath.c_str()), &JA);
 }
 
@@ -6198,28 +6193,35 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
 
   switch (TC.GetCXXStdlibType(C.getArgs())) {
   case ToolChain::CST_Libcxx: {
-    std::string lib = GetFilePath("libc++.so", TC);
+    auto evaluate = [&](const char *library) -> std::optional<std::string> {
+      std::string lib = GetFilePath(library, TC);
 
-    // Note when there are multiple flavours of libc++ the module json needs to
-    // look at the command-line arguments for the proper json.
-    // These flavours do not exist at the moment, but there are plans to
-    // provide a variant that is built with sanitizer instrumentation enabled.
+      // Note when there are multiple flavours of libc++ the module json needs
+      // to look at the command-line arguments for the proper json. These
+      // flavours do not exist at the moment, but there are plans to provide a
+      // variant that is built with sanitizer instrumentation enabled.
 
-    // For example
-    //  StringRef modules = [&] {
-    //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
-    //    if (Sanitize.needsAsanRt())
-    //      return "modules-asan.json";
-    //    return "modules.json";
-    //  }();
+      // For example
+      //  StringRef modules = [&] {
+      //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+      //    if (Sanitize.needsAsanRt())
+      //      return "libc++.modules-asan.json";
+      //    return "libc++.modules.json";
+      //  }();
 
-    SmallString<128> path(lib.begin(), lib.end());
-    llvm::sys::path::remove_filename(path);
-    llvm::sys::path::append(path, "modules.json");
-    if (TC.getVFS().exists(path))
-      return static_cast<std::string>(path);
+      SmallString<128> path(lib.begin(), lib.end());
+      llvm::sys::path::remove_filename(path);
+      llvm::sys::path::append(path, "libc++.modules.json");
+      if (TC.getVFS().exists(path))
+        return static_cast<std::string>(path);
 
-    return error;
+      return {};
+    };
+
+    if (std::optional<std::string> result = evaluate("libc++.so"); result)
+      return *result;
+
+    return evaluate("libc++.a").value_or(error);
   }
 
   case ToolChain::CST_Libstdcxx:

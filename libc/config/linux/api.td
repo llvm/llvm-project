@@ -117,7 +117,7 @@ def SchedAPI : PublicAPI<"sched.h"> {
 }
 
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
-  let Types = ["off_t", "size_t"];
+  let Types = ["off_t", "size_t", "mode_t"];
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
@@ -261,4 +261,8 @@ def SetJmpAPI : PublicAPI<"setjmp.h"> {
 
 def SearchAPI : PublicAPI<"search.h"> {
   let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
+}
+
+def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
+  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
 }

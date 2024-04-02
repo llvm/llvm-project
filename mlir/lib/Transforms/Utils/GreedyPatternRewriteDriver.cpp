@@ -377,7 +377,7 @@ private:
   /// be re-added to the worklist. This function should be called when an
   /// operation is modified or removed, as it may trigger further
   /// simplifications.
-  void addOperandsToWorklist(ValueRange operands);
+  void addOperandsToWorklist(Operation *op);
 
   /// Notify the driver that the given block was inserted.
   void notifyBlockInserted(Block *block, Region *previous,
@@ -688,17 +688,36 @@ void GreedyPatternRewriteDriver::notifyOperationModified(Operation *op) {
   addToWorklist(op);
 }
 
-void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
-  for (Value operand : operands) {
-    // If the use count of this operand is now < 2, we re-add the defining
-    // operation to the worklist.
-    // TODO: This is based on the fact that zero use operations
-    // may be deleted, and that single use values often have more
-    // canonicalization opportunities.
-    if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
+void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
+  for (Value operand : op->getOperands()) {
+    // If this operand currently has at most 2 users, add its defining op to the
+    // worklist. Indeed, after the op is deleted, then the operand will have at
+    // most 1 user left. If it has 0 users left, it can be deleted too,
+    // and if it has 1 user left, there may be further canonicalization
+    // opportunities.
+    if (!operand)
       continue;
-    if (auto *defOp = operand.getDefiningOp())
-      addToWorklist(defOp);
+
+    auto *defOp = operand.getDefiningOp();
+    if (!defOp)
+      continue;
+
+    Operation *otherUser = nullptr;
+    bool hasMoreThanTwoUses = false;
+    for (auto user : operand.getUsers()) {
+      if (user == op || user == otherUser)
+        continue;
+      if (!otherUser) {
+        otherUser = user;
+        continue;
+      }
+      hasMoreThanTwoUses = true;
+      break;
+    }
+    if (hasMoreThanTwoUses)
+      continue;
+
+    addToWorklist(defOp);
   }
 }
 
@@ -722,7 +741,7 @@ void GreedyPatternRewriteDriver::notifyOperationErased(Operation *op) {
   if (config.listener)
     config.listener->notifyOperationErased(op);
 
-  addOperandsToWorklist(op->getOperands());
+  addOperandsToWorklist(op);
   worklist.remove(op);
 
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)

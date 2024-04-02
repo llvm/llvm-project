@@ -1279,11 +1279,11 @@ TEST(Local, ExpressionForConstant) {
   EXPECT_EQ(Expr, nullptr);
 }
 
-TEST(Local, ReplaceDPValue) {
+TEST(Local, ReplaceDbgVariableRecord) {
   LLVMContext C;
 
-  // Test that RAUW also replaces the operands of DPValue objects, i.e.
-  // non-instruction stored debugging information.
+  // Test that RAUW also replaces the operands of DbgVariableRecord objects,
+  // i.e. non-instruction stored debugging information.
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1323,24 +1323,23 @@ TEST(Local, ReplaceDPValue) {
   It = std::next(It);
   Instruction *RetInst = &*It;
 
-  // Convert DVI into a DPValue.
-  RetInst->DbgMarker = new DPMarker();
-  RetInst->DbgMarker->MarkedInstr = RetInst;
-  DPValue *DPV = new DPValue(DVI);
-  RetInst->DbgMarker->insertDbgRecord(DPV, false);
+  // Convert DVI into a DbgVariableRecord.
+  RetInst->DebugMarker = new DbgMarker();
+  RetInst->DebugMarker->MarkedInstr = RetInst;
+  DbgVariableRecord *DVR = new DbgVariableRecord(DVI);
+  RetInst->DebugMarker->insertDbgRecord(DVR, false);
   // ... and erase the dbg.value.
   DVI->eraseFromParent();
 
-  // DPV should originally refer to %bar,
-  EXPECT_EQ(DPV->getVariableLocationOp(0), BarInst);
+  // DVR should originally refer to %bar,
+  EXPECT_EQ(DVR->getVariableLocationOp(0), BarInst);
 
   // Now try to replace the computation of %bar with %foo -- this should cause
-  // the DPValue's to have it's operand updated beneath it.
+  // the DbgVariableRecord's to have it's operand updated beneath it.
   BarInst->replaceAllUsesWith(FooInst);
-  // Check DPV now points at %foo.
-  EXPECT_EQ(DPV->getVariableLocationOp(0), FooInst);
+  // Check DVR now points at %foo.
+  EXPECT_EQ(DVR->getVariableLocationOp(0), FooInst);
 
   // Teardown.
-  RetInst->DbgMarker->eraseFromParent();
+  RetInst->DebugMarker->eraseFromParent();
 }
-

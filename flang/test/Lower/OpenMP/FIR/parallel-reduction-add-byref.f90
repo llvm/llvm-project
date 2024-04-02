@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_F32_NAME:.*]] : !fir.ref<f32>
 !CHECK-SAME: init {
 !CHECK: ^bb0(%{{.*}}: !fir.ref<f32>):
@@ -18,7 +18,7 @@
 !CHECK:  omp.yield(%[[ARG0]] : !fir.ref<f32>)
 !CHECK: }
 
-!CHECK-LABEL: omp.reduction.declare
+!CHECK-LABEL: omp.declare_reduction
 !CHECK-SAME: @[[RED_I32_NAME:.*]] : !fir.ref<i32>
 !CHECK-SAME: init {
 !CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):

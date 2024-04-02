@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 !RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
@@ -57,7 +59,7 @@ subroutine single_allocate()
   integer :: x
   !CHECK: omp.parallel {
   !$omp parallel
-  !CHECK: omp.single allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.single allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
   !$omp single allocate(omp_high_bw_mem_alloc: x) private(x)
   !CHECK: arith.addi
   x = x + 12

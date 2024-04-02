@@ -37,6 +37,9 @@ These changes are ones which we think may surprise users when upgrading to
 Clang |release| because of the opportunity they pose for disruption to existing
 code bases.
 
+- Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
+  default ``--gcc-toolchain=``) now leads to a fatal error.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -53,6 +56,12 @@ ABI Changes in This Version
   incompatibilities with code compiled by earlier versions of Clang when an
   inline member function that contains a static local variable with a dynamic
   initializer is declared with ``__declspec(dllimport)``. (#GH83616).
+
+- Fixed Microsoft name mangling of lifetime extended temporary objects. This
+  change corrects missing back reference registrations that could result in
+  incorrect back reference indexes and suprising demangled name results. Since
+  MSVC uses a different mangling for these objects, compatibility is not affected.
+  (#GH85423).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -177,6 +186,13 @@ Non-comprehensive list of changes in this release
   the previous builtins, this new builtin is constexpr and may be used in
   constant expressions.
 
+- Lambda expressions are now accepted in C++03 mode as an extension.
+
+- Added ``__builtin_clzg`` and ``__builtin_ctzg`` as type-generic alternatives
+  to ``__builtin_clz{,s,l,ll}`` and ``__builtin_ctz{,s,l,ll}`` respectively,
+  with support for any unsigned integer type. Like the previous builtins, these
+  new builtins are constexpr and may be used in constant expressions.
+
 New Compiler Flags
 ------------------
 
@@ -192,6 +208,26 @@ Modified Compiler Flags
 - Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
+
+- Added ``-Wcast-function-type-mismatch`` under the ``-Wcast-function-type``
+  warning group. Moved the diagnostic previously controlled by
+  ``-Wcast-function-type`` to the new warning group and added
+  ``-Wcast-function-type-mismatch`` to ``-Wextra``. #GH76872
+
+  .. code-block:: c
+
+     int x(long);
+     typedef int (f2)(void*);
+     typedef int (f3)();
+
+     void func(void) {
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-mismatch,
+       // -Wcast-function-type-strict, -Wextra
+       f2 *b = (f2 *)x;
+       // Diagnoses under -Wcast-function-type, -Wcast-function-type-strict
+       f3 *c = (f3 *)x;
+     }
+
 
 Removed Compiler Flags
 -------------------------
@@ -209,6 +245,13 @@ Attribute Changes in Clang
   ``x``, ``y``, and ``z`` specify the maximum number of workgroups for the respective dimensions,
   and each must be a positive integer when provided. The parameter ``x`` is required, while ``y`` and
   ``z`` are optional with default value of 1.
+
+- The ``swiftasynccc`` attribute is now considered to be a Clang extension
+  rather than a language standard feature. Please use
+  ``__has_extension(swiftasynccc)`` to check the availability of this attribute
+  for the target platform instead of ``__has_feature(swiftasynccc)``. Also,
+  added a new extension query ``__has_extension(swiftcc)`` corresponding to the
+  ``__attribute__((swiftcc))`` attribute.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -250,6 +293,26 @@ Improvements to Clang's diagnostics
   such as attempting to call ``free`` on an unallocated object. Fixes
   `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
 
+- Clang no longer warns when the ``bitand`` operator is used with boolean
+  operands, distinguishing it from potential typographical errors or unintended
+  bitwise operations. Fixes #GH77601.
+
+- Clang now correctly diagnoses no arguments to a variadic macro parameter as a C23/C++20 extension.
+  Fixes #GH84495.
+
+- Clang no longer emits a ``-Wexit-time destructors`` warning on static variables explicitly
+  annotated with the ``clang::always_destroy`` attribute.
+  Fixes #GH68686, #GH86486
+
+- ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
+  flexible array members in a union or alone in a struct. Fixes GH#84565.
+
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
+- New ``-Wformat-signedness`` diagnostic that warn if the format string requires an
+  unsigned argument and the argument is signed and vice versa.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -280,6 +343,9 @@ Bug Fixes in This Version
   for variables created through copy initialization having side-effects in C++17 and later.
   Fixes (#GH64356) (#GH79518).
 
+- Fix value of predefined macro ``__FUNCTION__`` in MSVC compatibility mode.
+  Fixes (#GH66114).
+
 - Clang now emits errors for explicit specializations/instatiations of lambda call
   operator.
   Fixes (#GH83267).
@@ -296,6 +362,9 @@ Bug Fixes in This Version
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
+
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution. (#GH86769).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -394,6 +463,11 @@ Bug Fixes to C++ Support
   expression references to an entity declared outside of the lambda. (#GH64808)
 - Clang's __builtin_bit_cast will now produce a constant value for records with empty bases. See:
   (#GH82383)
+- Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
+- Fix an issue where a namespace alias could be defined using a qualified name (all name components
+  following the first `::` were ignored).
+- Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -441,12 +515,34 @@ Arm and AArch64 Support
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
     * Arm Cortex-A78AE (cortex-a78ae).
+    * Arm Cortex-A520AE (cortex-a520ae).
+    * Arm Cortex-A720AE (cortex-a720ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang-cl now supports function targets with intrinsic headers. This allows
+  for runtime feature detection of intrinsics. Previously under clang-cl
+  ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
+  if building with that feature enabled at compile time, e.g. ``avxintrin.h``
+  would only be included if AVX was enabled at compile time. This was done to work
+  around include times from MSVC STL including ``intrin.h`` under clang-cl.
+  Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
+  features without requiring enablement at compile time.
+  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+
+- Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
+  header that only includes intrinsics that are used by MSVC STL to avoid the
+  use of ``intrin.h``. MSVC STL when compiled under clang uses ``intrin.h``
+  instead. Clang-cl now provides ``intrin0.h`` for the same compiler throughput
+  purposes as MSVC. Clang-cl also provides ``yvals_core.h`` to redefine
+  ``_STL_INTRIN_HEADER`` to expand to ``intrin0.h`` instead of ``intrin.h``.
+  This also means that if all intrinsic features are enabled at compile time
+  including STL headers will no longer slow down compile times since ``intrin.h``
+  is not included from MSVC STL.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -455,6 +551,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
+- Profile names in ``-march`` option are now supported.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -511,6 +608,7 @@ Static Analyzer
 - Fixed crashing on loops if the loop variable was declared in switch blocks
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
+- Support C++23 static operator calls. (#GH84972)
 
 New features
 ^^^^^^^^^^^^
@@ -542,10 +640,16 @@ Sanitizers
   manually disable potentially noisy signed integer overflow checks with
   ``-fno-sanitize=signed-integer-overflow``
 
+- ``-fsanitize=cfi -fsanitize-cfi-cross-dso`` (cross-DSO CFI instrumentation)
+  now generates the ``__cfi_check`` function with proper target-specific
+  attributes, for example allowing unwind table generation.
+
 Python Binding Changes
 ----------------------
 
 - Exposed `CXRewriter` API as `class Rewriter`.
+- Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
+  TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
 
 OpenMP Support
 --------------

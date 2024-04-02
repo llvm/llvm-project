@@ -330,12 +330,24 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-template <class ELFT> static void doParseArmCMSEImportLib(InputFile *file) {
-  cast<ObjFile<ELFT>>(file)->importCmseSymbols();
+template <class ELFT>
+static void doParseFiles(const std::vector<InputFile *> &files,
+                         InputFile *armCmseImpLib) {
+  // Add all files to the symbol table. This will add almost all symbols that we
+  // need to the symbol table. This process might add files to the link due to
+  // addDependentLibrary.
+  for (size_t i = 0; i < files.size(); ++i) {
+    llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
+    doParseFile<ELFT>(files[i]);
+  }
+  if (armCmseImpLib)
+    cast<ObjFile<ELFT>>(*armCmseImpLib).importCmseSymbols();
 }
 
-void elf::parseArmCMSEImportLib(InputFile *file) {
-  invokeELFT(doParseArmCMSEImportLib, file);
+void elf::parseFiles(const std::vector<InputFile *> &files,
+                     InputFile *armCmseImpLib) {
+  llvm::TimeTraceScope timeScope("Parse input files");
+  invokeELFT(doParseFiles, files, armCmseImpLib);
 }
 
 // Concatenates arguments to construct a string representing an error location.
@@ -835,7 +847,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 
   // We have a second loop. It is used to:
   // 1) handle SHF_LINK_ORDER sections.
-  // 2) create SHT_REL[A] sections. In some cases the section header index of a
+  // 2) create relocation sections. In some cases the section header index of a
   //    relocation section may be smaller than that of the relocated section. In
   //    such cases, the relocation section would attempt to reference a target
   //    section that has not yet been created. For simplicity, delay creation of
@@ -845,7 +857,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
+    if (isStaticRelSecType(sec.sh_type)) {
       // Find a relocation target section and associate this section with that.
       // Target may have been discarded if it is in a different section group
       // and the group is discarded, even though it's a violation of the spec.
@@ -959,8 +971,8 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
         reportFatal(place, "program property is too short");
-      uint32_t type = read32<ELFT::TargetEndianness>(desc.data());
-      uint32_t size = read32<ELFT::TargetEndianness>(desc.data() + 4);
+      uint32_t type = read32<ELFT::Endianness>(desc.data());
+      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
       desc = desc.slice(8);
       if (desc.size() < size)
         reportFatal(place, "program property is too short");
@@ -971,7 +983,7 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
         // accumulate the bits set.
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
-        featuresSet |= read32<ELFT::TargetEndianness>(desc.data());
+        featuresSet |= read32<ELFT::Endianness>(desc.data());
       }
 
       // Padding is present in the note descriptor, if necessary.
@@ -1545,7 +1557,7 @@ template <class ELFT> void SharedFile::parse() {
       Symbol *s = symtab.addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
       s->exportDynamic = true;
-      if (s->isUndefined() && sym.getBinding() != STB_WEAK &&
+      if (sym.getBinding() != STB_WEAK &&
           config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
       continue;

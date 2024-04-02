@@ -1141,6 +1141,22 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_JSCVT,       AArch64::AEK_FCMA}),
             "9.2-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
+            "cortex-a520ae", "armv9.2-a", "crypto-neon-fp-armv8",
+            AArch64::ExtensionBitset(
+                {AArch64::AEK_BF16,        AArch64::AEK_I8MM,
+                 AArch64::AEK_SVE,         AArch64::AEK_SVE2,
+                 AArch64::AEK_FP16,        AArch64::AEK_DOTPROD,
+                 AArch64::AEK_LSE,         AArch64::AEK_RDM,
+                 AArch64::AEK_SIMD,        AArch64::AEK_RCPC,
+                 AArch64::AEK_RAS,         AArch64::AEK_CRC,
+                 AArch64::AEK_FP,          AArch64::AEK_SB,
+                 AArch64::AEK_SSBS,        AArch64::AEK_MTE,
+                 AArch64::AEK_FP16FML,     AArch64::AEK_PAUTH,
+                 AArch64::AEK_SVE2BITPERM, AArch64::AEK_FLAGM,
+                 AArch64::AEK_PERFMON,     AArch64::AEK_PREDRES,
+                 AArch64::AEK_JSCVT,       AArch64::AEK_FCMA}),
+            "9.2-A"),
+        ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset({AArch64::AEK_CRC, AArch64::AEK_AES,
                                       AArch64::AEK_SHA2, AArch64::AEK_FP,
@@ -1268,6 +1284,23 @@ INSTANTIATE_TEST_SUITE_P(
             "9-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-a720", "armv9.2-a", "crypto-neon-fp-armv8",
+            AArch64::ExtensionBitset(
+                {AArch64::AEK_BF16,        AArch64::AEK_I8MM,
+                 AArch64::AEK_SVE,         AArch64::AEK_SVE2,
+                 AArch64::AEK_FP16,        AArch64::AEK_DOTPROD,
+                 AArch64::AEK_LSE,         AArch64::AEK_RDM,
+                 AArch64::AEK_SIMD,        AArch64::AEK_RCPC,
+                 AArch64::AEK_RAS,         AArch64::AEK_CRC,
+                 AArch64::AEK_FP,          AArch64::AEK_SB,
+                 AArch64::AEK_SSBS,        AArch64::AEK_MTE,
+                 AArch64::AEK_FP16FML,     AArch64::AEK_PAUTH,
+                 AArch64::AEK_SVE2BITPERM, AArch64::AEK_FLAGM,
+                 AArch64::AEK_PERFMON,     AArch64::AEK_PREDRES,
+                 AArch64::AEK_PROFILE,     AArch64::AEK_JSCVT,
+                 AArch64::AEK_FCMA}),
+            "9.2-A"),
+        ARMCPUTestParams<AArch64::ExtensionBitset>(
+            "cortex-a720ae", "armv9.2-a", "crypto-neon-fp-armv8",
             AArch64::ExtensionBitset(
                 {AArch64::AEK_BF16,        AArch64::AEK_I8MM,
                  AArch64::AEK_SVE,         AArch64::AEK_SVE2,
@@ -1717,7 +1750,7 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 70;
+static constexpr unsigned NumAArch64CPUArchs = 72;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2314,13 +2347,6 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"aes", "sha2", "sha3", "sm4"}},
 
-        // +sve implies +f32mm if the base architecture is v8.6A+ or v9.1A+, but
-        // not earlier architectures.
-        {AArch64::ARMV8_5A, {"sve"}, {"sve"}, {"f32mm"}},
-        {AArch64::ARMV9A, {"sve"}, {"sve"}, {"f32mm"}},
-        {AArch64::ARMV8_6A, {"sve"}, {"sve", "f32mm"}, {}},
-        {AArch64::ARMV9_1A, {"sve"}, {"sve", "f32mm"}, {}},
-
         // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
         {AArch64::ARMV8_3A, {"fp16"}, {"fullfp16"}, {"fp16fml"}},
         {AArch64::ARMV9A, {"fp16"}, {"fullfp16"}, {"fp16fml"}},
@@ -2487,10 +2513,10 @@ AArch64ExtensionDependenciesBaseCPUTestParams
          {}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",     "crc",     "dotprod", "f32mm",        "flagm",
-          "fp-armv8", "fullfp16", "fp16fml", "i8mm",    "lse",          "mte",
-          "pauth",    "perfmon",  "predres", "ras",     "rcpc",         "rdm",
-          "sb",       "neon",     "ssbs",    "sve",     "sve2-bitperm", "sve2"},
+         {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
+          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
+          "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
+          "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
          {}},
 
         // Negative modifiers

@@ -516,8 +516,8 @@ void test7(void) {
   const void *X;
 #if !defined(_AIX)
   X = CFSTR("\242"); // both-warning {{input conversion stopped}}
-#endif
   X = CFSTR("\0"); // no-warning
   X = CFSTR(242); // both-error {{cannot initialize a parameter of type 'const char *' with an rvalue of type 'int'}}
   X = CFSTR("foo", "bar"); // both-error {{too many arguments to function call}}
+#endif
 }

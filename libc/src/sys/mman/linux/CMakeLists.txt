@@ -152,3 +152,40 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_header_library(
+  shm_common
+  HDRS
+    shm_common.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.optional
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
+  shm_open
+  SRCS
+    shm_open.cpp
+  HDRS
+    ../shm_open.h
+  DEPENDS
+    libc.src.fcntl.open
+    libc.include.llvm-libc-macros.fcntl_macros
+    libc.include.llvm-libc-types.mode_t
+    .shm_common
+)
+
+add_entrypoint_object(
+  shm_unlink
+  SRCS
+    shm_unlink.cpp
+  HDRS
+    ../shm_unlink.h
+  DEPENDS
+    libc.src.unistd.unlink
+    .shm_common
+)

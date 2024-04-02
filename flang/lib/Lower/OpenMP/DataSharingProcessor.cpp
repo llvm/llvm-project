@@ -50,6 +50,7 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 }
 
 void DataSharingProcessor::insertDeallocs() {
+  // TODO Extend delayed privatization to include a `dealloc` region.
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
     if (Fortran::semantics::IsAllocatable(sym->GetUltimate())) {
       converter.createHostAssociateVarCloneDealloc(*sym);
@@ -98,7 +99,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(lastPrivateClause->v, privatizedSymbols);
+      const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
+      collectOmpObjectListSymbol(objects, privatizedSymbols);
       hasLastPrivateOp = true;
     } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
       hasCollapse = true;
@@ -207,7 +209,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
-    } else if (mlir::isa<mlir::omp::WsLoopOp>(op)) {
+    } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
@@ -236,8 +238,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
       mlir::Value iv = op->getRegion(0).front().getArguments()[0];
       mlir::Value ub =
-          mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0];
-      mlir::Value step = mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getStep()[0];
+          mlir::dyn_cast<mlir::omp::WsloopOp>(op).getUpperBound()[0];
+      mlir::Value step = mlir::dyn_cast<mlir::omp::WsloopOp>(op).getStep()[0];
 
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
@@ -285,12 +287,13 @@ void DataSharingProcessor::collectSymbols(
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
+  using DataSharingAttribute = omp::clause::Default::DataSharingAttribute;
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
-      if (defaultClause->v == omp::clause::Default::Type::Private)
+      if (defaultClause->v == DataSharingAttribute::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
-      else if (defaultClause->v == omp::clause::Default::Type::Firstprivate)
+      else if (defaultClause->v == DataSharingAttribute::Firstprivate)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
     }
   }
@@ -367,6 +370,7 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
+    fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
 
     symTable->pushScope();
 
@@ -377,7 +381,8 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
           &allocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym, allocRegion.getArgument(0));
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, allocRegion.getArgument(0)));
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
@@ -394,10 +399,12 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym, copyRegion.getArgument(0),
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, copyRegion.getArgument(0)),
                           /*force=*/true);
       symTable->pushScope();
-      symTable->addSymbol(*sym, copyRegion.getArgument(1));
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, copyRegion.getArgument(1)));
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 

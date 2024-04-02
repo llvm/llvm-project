@@ -758,10 +758,9 @@ public:
   void tryToSinkInstructionDbgValues(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
       BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
-  void tryToSinkInstructionDPValues(Instruction *I,
-                                    BasicBlock::iterator InsertPos,
-                                    BasicBlock *SrcBlock, BasicBlock *DestBlock,
-                                    SmallVectorImpl<DPValue *> &DPUsers);
+  void tryToSinkInstructionDbgVariableRecords(
+      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableRecord *> &DPUsers);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   void addDeadEdge(BasicBlock *From, BasicBlock *To,

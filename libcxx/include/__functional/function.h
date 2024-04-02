@@ -28,7 +28,7 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/is_core_convertible.h>
 #include <__type_traits/is_scalar.h>
-#include <__type_traits/is_trivially_copy_constructible.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/strip_signature.h>

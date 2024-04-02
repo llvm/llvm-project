@@ -658,8 +658,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   QualType T = E->getType();
   assert(!T.isNull() && "r-value conversion on typeless expression?");
 
-  // lvalue-to-rvalue conversion cannot be applied to function or array types.
-  if (T->isFunctionType() || T->isArrayType())
+  // lvalue-to-rvalue conversion cannot be applied to types that decay to
+  // pointers (i.e. function or array types).
+  if (T->canDecayToPointerType())
     return E;
 
   // We don't want to throw lvalue-to-rvalue casts on top of
@@ -2737,6 +2738,24 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                       IsAddressOfOperand, TemplateArgs);
 
+  // BoundsSafety: This specially handles arguments of bounds attributes
+  // appertains to a type of C struct field such that the name lookup
+  // within a struct finds the member name, which is not the case for other
+  // contexts in C.
+  if (isBoundsAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+    // See if this is reference to a field of struct.
+    LookupResult R(*this, NameInfo, LookupMemberName);
+    // LookupParsedName handles a name lookup from within anonymous struct.
+    if (LookupParsedName(R, S, &SS)) {
+      if (auto *VD = dyn_cast<ValueDecl>(R.getFoundDecl())) {
+        QualType type = VD->getType().getNonReferenceType();
+        // This will eventually be translated into MemberExpr upon
+        // the use of instantiated struct fields.
+        return BuildDeclRefExpr(VD, type, VK_PRValue, NameLoc);
+      }
+    }
+  }
+
   // Perform the required lookup.
   LookupResult R(*this, NameInfo,
                  (Id.getKind() == UnqualifiedIdKind::IK_ImplicitSelfParam)
@@ -2893,7 +2912,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (!R.empty() && (*R.begin())->isCXXClassMember()) {
+  if (getLangOpts().CPlusPlus && !R.empty() &&
+      (*R.begin())->isCXXClassMember()) {
     bool MightBeImplicitMember;
     if (!IsAddressOfOperand)
       MightBeImplicitMember = true;
@@ -3549,7 +3569,8 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::Field:
   case Decl::IndirectField:
   case Decl::ObjCIvar:
-    assert(getLangOpts().CPlusPlus && "building reference to field in C?");
+    assert((getLangOpts().CPlusPlus || isBoundsAttrContext()) &&
+           "building reference to field in C?");
 
     // These can't have reference type in well-formed programs, but
     // for internal consistency we do this anyway.
@@ -3740,7 +3761,10 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   else {
     // Pre-defined identifiers are of type char[x], where x is the length of
     // the string.
-    auto Str = PredefinedExpr::ComputeName(IK, currentDecl);
+    bool ForceElaboratedPrinting =
+        IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
+    auto Str =
+        PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);
@@ -4663,6 +4687,9 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::Decayed:
       T = cast<DecayedType>(Ty)->getPointeeType();
       break;
+    case Type::ArrayParameter:
+      T = cast<ArrayParameterType>(Ty)->getElementType();
+      break;
     case Type::Pointer:
       T = cast<PointerType>(Ty)->getPointeeType();
       break;
@@ -4706,6 +4733,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::BTFTagAttributed:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::CountAttributed:
       // Keep walking after single level desugaring.
       T = T.getSingleStepDesugaredType(Context);
       break;
@@ -6833,9 +6861,8 @@ Sema::CheckStaticArrayArgument(SourceLocation CallLoc,
                                              ArgCAT->getElementType())) {
     if (ArgCAT->getSize().ult(CAT->getSize())) {
       Diag(CallLoc, diag::warn_static_array_too_small)
-          << ArgExpr->getSourceRange()
-          << (unsigned)ArgCAT->getSize().getZExtValue()
-          << (unsigned)CAT->getSize().getZExtValue() << 0;
+          << ArgExpr->getSourceRange() << (unsigned)ArgCAT->getZExtSize()
+          << (unsigned)CAT->getZExtSize() << 0;
       DiagnoseCalleeStaticArrayParam(*this, Param);
     }
     return;
@@ -12885,6 +12912,8 @@ static ImplicitConversionKind castKindToImplicitConversionKind(CastKind CK) {
   case CK_IntegralComplexToReal:
   case CK_IntegralRealToComplex:
     return ICK_Complex_Real;
+  case CK_HLSLArrayRValue:
+    return ICK_HLSL_Array_RValue;
   }
 }
 

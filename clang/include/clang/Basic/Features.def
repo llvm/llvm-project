@@ -102,7 +102,10 @@ FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
-FEATURE(swiftasynccc,
+EXTENSION(swiftcc,
+  PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
+  clang::TargetInfo::CCCR_OK)
+EXTENSION(swiftasynccc,
   PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
   clang::TargetInfo::CCCR_OK)
 FEATURE(pragma_stdc_cx_limited_range, true)
@@ -258,6 +261,7 @@ EXTENSION(cxx_defaulted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_deleted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_explicit_conversions, LangOpts.CPlusPlus)
 EXTENSION(cxx_inline_namespaces, LangOpts.CPlusPlus)
+EXTENSION(cxx_lambdas, LangOpts.CPlusPlus)
 EXTENSION(cxx_local_type_template_args, LangOpts.CPlusPlus)
 EXTENSION(cxx_nonstatic_member_init, LangOpts.CPlusPlus)
 EXTENSION(cxx_override_control, LangOpts.CPlusPlus)

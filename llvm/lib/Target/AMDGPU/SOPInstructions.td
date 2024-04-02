@@ -60,6 +60,11 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
+  let isTerminator       = ps.isTerminator;
+  let isReturn           = ps.isReturn;
+  let isCall             = ps.isCall;
+  let isBranch           = ps.isBranch;
+  let isBarrier          = ps.isBarrier;
 
   // encoding
   bits<7> sdst;
@@ -977,6 +982,9 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   let mayStore           = ps.mayStore;
   let isBranch           = ps.isBranch;
   let isCall             = ps.isCall;
+  let isTerminator       = ps.isTerminator;
+  let isReturn           = ps.isReturn;
+  let isBarrier          = ps.isBarrier;
 
   // encoding
   bits<7>  sdst;
@@ -1426,6 +1434,11 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let isTerminator         = ps.isTerminator;
+  let isReturn             = ps.isReturn;
+  let isCall               = ps.isCall;
+  let isBranch             = ps.isBranch;
+  let isBarrier            = ps.isBarrier;
   bits <16> simm16;
 }
 

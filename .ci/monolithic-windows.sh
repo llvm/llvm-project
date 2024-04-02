@@ -19,7 +19,7 @@ set -o pipefail
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 
-rm -rf ${BUILD_DIR}
+rm -rf "${BUILD_DIR}"
 
 if [[ -n "${CLEAR_CACHE:-}" ]]; then
   echo "clearing sccache"
@@ -37,14 +37,14 @@ projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
-pip install -q -r ${MONOREPO_ROOT}/mlir/python/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
 # on fixing a build reliability issue on the build server, please
 # see https://github.com/llvm/llvm-project/pull/82393 and
 # https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
 # for further information.
-cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
+cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
       -D CMAKE_BUILD_TYPE=Release \
