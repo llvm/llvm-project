@@ -12,9 +12,10 @@
 // standards before C23, and Clang has followed suit. Neither compiler exposes
 // 'typeof_unqual' as a non-conforming extension.
 
-// Show what happens with the underscored version of the keyword, which is a
-// conforming extension.
+// Show what happens with the underscored version of the keywords, which are
+// conforming extensions.
 __typeof__(int) i = 12;
+__typeof_unqual__(int) u = 12;
 
 // Show what happens with a regular 'typeof' use.
 typeof(i) j = 12; // c11-error {{expected function body after function declarator}} \
