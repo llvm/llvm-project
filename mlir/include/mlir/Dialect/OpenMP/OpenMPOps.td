@@ -552,7 +552,8 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
     is intended to serve as a unique source for loop information during the
     transition to making `omp.distribute`, `omp.simdloop`, `omp.taskloop` and
     `omp.wsloop` wrapper operations. It is not intended to help with the
-    addition of support for loop transformations.
+    addition of support for loop transformations, non-rectangular loops and
+    non-perfectly nested loops.
   }];
 
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
