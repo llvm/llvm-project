@@ -3742,7 +3742,7 @@ private:
       if (!rhs.isVariable()) {
         // evaluateRhs loads scalar. Look for the memory reference to be used in
         // the transfer.
-        if (mlir::isa<fir::LoadOp>(rhs.getDefiningOp())) {
+        if (mlir::isa_and_nonnull<fir::LoadOp>(rhs.getDefiningOp())) {
           auto loadOp = mlir::dyn_cast<fir::LoadOp>(rhs.getDefiningOp());
           builder.create<fir::CUDADataTransferOp>(loc, loadOp.getMemref(), lhs,
                                                   transferKindAttr);
