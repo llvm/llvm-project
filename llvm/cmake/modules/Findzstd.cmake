@@ -5,6 +5,7 @@
 # zstd_LIBRARY
 # zstd_STATIC_LIBRARY
 # zstd_FOUND
+# zstd_VERSION
 #
 # Additionally, one of the following import targets will be defined:
 # zstd::libzstd_shared
@@ -29,6 +30,16 @@ find_package_handle_standard_args(
 )
 
 if(zstd_FOUND)
+  file(STRINGS ${zstd_INCLUDE_DIR}/zstd.h ZSTD_VERSION_MAJOR_STRING_CONTENT REGEX "^#define[ ]+ZSTD_VERSION_MAJOR[ ]+" )
+  file(STRINGS ${zstd_INCLUDE_DIR}/zstd.h ZSTD_VERSION_MINOR_STRING_CONTENT REGEX "^#define[ ]+ZSTD_VERSION_MINOR[ ]+" )
+  file(STRINGS ${zstd_INCLUDE_DIR}/zstd.h ZSTD_VERSION_RELEASE_STRING_CONTENT REGEX "^#define[ ]+ZSTD_VERSION_RELEASE[ ]+" )
+  set(zstd_VERSION "0.0.0")
+  if (ZSTD_VERSION_MAJOR_STRING_CONTENT AND ZSTD_VERSION_MINOR_STRING_CONTENT AND ZSTD_VERSION_RELEASE_STRING_CONTENT)
+      string(REGEX MATCH "[1234567890.]+[a-zA-Z]*" ZSTD_VERSION_MAJOR ${ZSTD_VERSION_MAJOR_STRING_CONTENT})
+      string(REGEX MATCH "[1234567890.]+[a-zA-Z]*" ZSTD_VERSION_MINOR ${ZSTD_VERSION_MINOR_STRING_CONTENT})
+      string(REGEX MATCH "[1234567890.]+[a-zA-Z]*" ZSTD_VERSION_RELEASE ${ZSTD_VERSION_RELEASE_STRING_CONTENT})
+      set(zstd_VERSION "${ZSTD_VERSION_MAJOR}.${ZSTD_VERSION_MINOR}.${ZSTD_VERSION_RELEASE}")
+  endif()
   if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$")
     set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   elseif (NOT TARGET zstd::libzstd_shared)
@@ -62,4 +73,10 @@ endif()
 
 unset(zstd_STATIC_LIBRARY_SUFFIX)
 
-mark_as_advanced(zstd_INCLUDE_DIR zstd_LIBRARY zstd_STATIC_LIBRARY)
+
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(zstd REQUIRED_VARS zstd_INCLUDE_DIR zstd_LIBRARY zstd_STATIC_LIBRARY
+                               VERSION_VAR zstd_VERSION
+                               )
+
+mark_as_advanced(zstd_INCLUDE_DIR zstd_LIBRARY zstd_STATIC_LIBRARY zstd_VERSION)
