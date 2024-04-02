@@ -62,11 +62,20 @@
 # RUN: ld.lld atomic_abi_unknown.o atomic_abi_A6C.o -o atomic_abi_A6C_unknown
 # RUN: llvm-readobj -A atomic_abi_A6C_unknown | FileCheck %s --check-prefixes=UNKNOWN_A6C
 
+# RUN: ld.lld atomic_abi_unknown.o diff_stack_align.o -o atomic_abi_none_unknown
+# RUN: llvm-readobj -A atomic_abi_none_unknown | FileCheck %s --check-prefixes=UNKNOWN_UNKNOWN
+
+# RUN: ld.lld diff_stack_align.o atomic_abi_A6C.o -o atomic_abi_A6C_unknown
+# RUN: llvm-readobj -A atomic_abi_A6C_unknown | FileCheck %s --check-prefixes=NONE_A6C
+
 # RUN: ld.lld atomic_abi_unknown.o atomic_abi_A6S.o -o atomic_abi_A6S_unknown
 # RUN: llvm-readobj -A atomic_abi_A6S_unknown | FileCheck %s --check-prefix=UNKNOWN_A6S
 
 # RUN: ld.lld atomic_abi_unknown.o atomic_abi_A7.o -o atomic_abi_A7_unknown
 # RUN: llvm-readobj -A atomic_abi_A7_unknown | FileCheck %s --check-prefix=UNKNOWN_A7
+
+# RUN: ld.lld diff_stack_align.o atomic_abi_A7.o -o atomic_abi_A7_none
+# RUN: llvm-readobj -A atomic_abi_A7_none | FileCheck %s --check-prefix=NONE_A7
 
 ## The deprecated priv_spec is not handled as GNU ld does.
 ## Differing priv_spec attributes lead to an absent attribute.
@@ -322,6 +331,49 @@
 #--- atomic_abi_A7.s
 .attribute atomic_abi, 3
 
+
+#      UNKNOWN_UNKNOWN: BuildAttributes {
+# UNKNOWN_UNKNOWN-NEXT:   FormatVersion: 0x41
+# UNKNOWN_UNKNOWN-NEXT:   Section 1 {
+# UNKNOWN_UNKNOWN-NEXT:     SectionLength: 17
+# UNKNOWN_UNKNOWN-NEXT:     Vendor: riscv
+# UNKNOWN_UNKNOWN-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_UNKNOWN-NEXT:     Size: 7
+# UNKNOWN_UNKNOWN-NEXT:     FileAttributes {
+# UNKNOWN_UNKNOWN-NEXT:       Attribute {
+# UNKNOWN_UNKNOWN-NEXT:         Tag: 4
+# UNKNOWN_UNKNOWN-NEXT:         Value: 32
+# UNKNOWN_UNKNOWN-NEXT:         TagName: stack_align
+# UNKNOWN_UNKNOWN-NEXT:         Description: Stack alignment is 32-bytes
+# UNKNOWN_UNKNOWN-NEXT:       }
+# UNKNOWN_UNKNOWN-NEXT:     }
+# UNKNOWN_UNKNOWN-NEXT:   }
+# UNKNOWN_UNKNOWN-NEXT: }
+
+#      NONE_A6C: BuildAttributes {
+# NONE_A6C-NEXT:   FormatVersion: 0x41
+# NONE_A6C-NEXT:   Section 1 {
+# NONE_A6C-NEXT:     SectionLength: 19
+# NONE_A6C-NEXT:     Vendor: riscv
+# NONE_A6C-NEXT:     Tag: Tag_File (0x1)
+# NONE_A6C-NEXT:     Size: 9
+# NONE_A6C-NEXT:     FileAttributes {
+# NONE_A6C-NEXT:       Attribute {
+# NONE_A6C-NEXT:         Tag: 14
+# NONE_A6C-NEXT:         Value: 1
+# NONE_A6C-NEXT:         TagName: atomic_abi
+# NONE_A6C-NEXT:         Description: Atomic ABI is 1
+# NONE_A6C-NEXT:       }
+# NONE_A6C-NEXT:       Attribute {
+# NONE_A6C-NEXT:         Tag: 4
+# NONE_A6C-NEXT:         Value: 32
+# NONE_A6C-NEXT:         TagName: stack_align
+# NONE_A6C-NEXT:         Description: Stack alignment is 32-bytes
+# NONE_A6C-NEXT:       }
+# NONE_A6C-NEXT:     }
+# NONE_A6C-NEXT:   }
+# NONE_A6C-NEXT: }
+
 #      UNKNOWN_A6C: BuildAttributes {
 # UNKNOWN_A6C-NEXT:   FormatVersion: 0x41
 # UNKNOWN_A6C-NEXT:   Section 1 {
@@ -343,7 +395,7 @@
 #      UNKNOWN_A6S: BuildAttributes {
 # UNKNOWN_A6S-NEXT:   FormatVersion: 0x41
 # UNKNOWN_A6S-NEXT:   Section 1 {
-# UNKNOWN_A6S-NEXT:     SectionLength: 17
+# UNKNOWN_A6S-NEXT:     SectionLength:
 # UNKNOWN_A6S-NEXT:     Vendor: riscv
 # UNKNOWN_A6S-NEXT:     Tag: Tag_File (0x1)
 # UNKNOWN_A6S-NEXT:     Size: 7
@@ -357,6 +409,31 @@
 # UNKNOWN_A6S-NEXT:     }
 # UNKNOWN_A6S-NEXT:   }
 # UNKNOWN_A6S-NEXT: }
+
+#      NONE_A7: BuildAttributes {
+# NONE_A7-NEXT:   FormatVersion: 0x41
+# NONE_A7-NEXT:   Section 1 {
+# NONE_A7-NEXT:     SectionLength: 19
+# NONE_A7-NEXT:     Vendor: riscv
+# NONE_A7-NEXT:     Tag: Tag_File (0x1)
+# NONE_A7-NEXT:     Size: 9
+# NONE_A7-NEXT:     FileAttributes {
+# NONE_A7-NEXT:       Attribute {
+# NONE_A7-NEXT:         Tag: 14
+# NONE_A7-NEXT:         Value: 3
+# NONE_A7-NEXT:         TagName: atomic_abi
+# NONE_A7-NEXT:         Description: Atomic ABI is 3
+# NONE_A7-NEXT:       }
+# NONE_A7-NEXT:       Attribute {
+# NONE_A7-NEXT:         Tag: 4
+# NONE_A7-NEXT:         Value: 32
+# NONE_A7-NEXT:         TagName: stack_align
+# NONE_A7-NEXT:         Description: Stack alignment is 32-bytes
+# NONE_A7-NEXT:       }
+# NONE_A7-NEXT:     }
+# NONE_A7-NEXT:   }
+# NONE_A7-NEXT: }
+
 
 #      UNKNOWN_A7: BuildAttributes {
 # UNKNOWN_A7-NEXT:   FormatVersion: 0x41
