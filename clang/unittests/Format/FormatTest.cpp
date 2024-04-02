@@ -7976,6 +7976,43 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
 }
 
+TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BreakFunctionDefinitionParameters);
+  StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
+                    "void emptyFunctionDefinition() {}\n"
+                    "void functionDefinition(int A, int B, int C) {}\n"
+                    "Class::Class(int A, int B) : m_A(A), m_B(B) {}\n";
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(int A, int B, int C) {}\n"
+                         "Class::Class(int A, int B) : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(\n"
+                         "    int A, int B, int C) {}\n"
+                         "Class::Class(\n"
+                         "    int A, int B)\n"
+                         "    : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+  // Test the style where all parameters are on their own lines
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.BinPackParameters = false;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(\n"
+                         "    int A,\n"
+                         "    int B,\n"
+                         "    int C) {}\n"
+                         "Class::Class(\n"
+                         "    int A,\n"
+                         "    int B)\n"
+                         "    : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+}
+
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Never;
