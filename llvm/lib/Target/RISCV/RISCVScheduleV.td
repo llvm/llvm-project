@@ -397,8 +397,8 @@ defm "" : LMULSchedWritesW<"WriteVNClipI">;
 
 // 13. Vector Floating-Point Instructions
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm "" : LMULSchedWrites<"WriteVFALUV">;
-defm "" : LMULSchedWrites<"WriteVFALUF">;
+defm "" : LMULSEWSchedWritesF<"WriteVFALUV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFALUF">;
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm "" : LMULSchedWritesFW<"WriteVFWALUV">;
 defm "" : LMULSchedWritesFW<"WriteVFWALUF">;
@@ -622,8 +622,8 @@ defm "" : LMULSchedReadsW<"ReadVNClipX">;
 
 // 13. Vector Floating-Point Instructions
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm "" : LMULSchedReads<"ReadVFALUV">;
-defm "" : LMULSchedReads<"ReadVFALUF">;
+defm "" : LMULSEWSchedReadsF<"ReadVFALUV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFALUF">;
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm "" : LMULSchedReadsFW<"ReadVFWALUV">;
 defm "" : LMULSchedReadsFW<"ReadVFWALUF">;
@@ -868,8 +868,8 @@ defm "" : LMULWriteResW<"WriteVNClipX", []>;
 defm "" : LMULWriteResW<"WriteVNClipI", []>;
 
 // 13. Vector Floating-Point Instructions
-defm "" : LMULWriteRes<"WriteVFALUV", []>;
-defm "" : LMULWriteRes<"WriteVFALUF", []>;
+defm "" : LMULSEWWriteResF<"WriteVFALUV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFALUF", []>;
 defm "" : LMULWriteResFW<"WriteVFWALUV", []>;
 defm "" : LMULWriteResFW<"WriteVFWALUF", []>;
 defm "" : LMULWriteRes<"WriteVFMulV", []>;
@@ -1024,8 +1024,8 @@ defm "" : LMULReadAdvanceW<"ReadVNClipV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
 
 // 13. Vector Floating-Point Instructions
-defm "" : LMULReadAdvance<"ReadVFALUV", 0>;
-defm "" : LMULReadAdvance<"ReadVFALUF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWALUV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWALUF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
