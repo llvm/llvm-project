@@ -51,20 +51,16 @@ mask_leading_zeros() {
   return mask_trailing_ones<T, CHAR_BIT * sizeof(T) - count>();
 }
 
-// Returns whether 'a + b' overflows.
-// The result is stored in 'res' it not 'nullptr', dropped otherwise.
-// We keep the pass by pointer interface for consistency with the intrinsic.
+// Returns whether 'a + b' overflows, the result is stored in 'res'.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T *res) {
-  return __builtin_add_overflow(a, b, res);
+[[nodiscard]] LIBC_INLINE constexpr bool add_overflow(T a, T b, T &res) {
+  return __builtin_add_overflow(a, b, &res);
 }
 
-// Returns whether 'a - b' overflows.
-// The result is stored in 'res' it not 'nullptr', dropped otherwise.
-// We keep the pass by pointer interface for consistency with the intrinsic.
+// Returns whether 'a - b' overflows, the result is stored in 'res'.
 template <typename T>
-[[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T *res) {
-  return __builtin_sub_overflow(a, b, res);
+[[nodiscard]] LIBC_INLINE constexpr bool sub_overflow(T a, T b, T &res) {
+  return __builtin_sub_overflow(a, b, &res);
 }
 
 #define RETURN_IF(TYPE, BUILTIN)                                               \
@@ -76,7 +72,7 @@ template <typename T>
 // We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
+add_with_carry(T a, T b, T carry_in, T &carry_out) {
   if constexpr (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_addcb)
     RETURN_IF(unsigned char, __builtin_addcb)
@@ -91,10 +87,9 @@ add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
 #endif
   }
   T sum;
-  T carry1 = add_overflow(a, b, &sum);
-  T carry2 = add_overflow(sum, carry_in, &sum);
-  if (carry_out)
-    *carry_out = carry1 | carry2;
+  T carry1 = add_overflow(a, b, sum);
+  T carry2 = add_overflow(sum, carry_in, sum);
+  carry_out = carry1 | carry2;
   return sum;
 }
 
@@ -103,7 +98,7 @@ add_with_carry(T a, T b, T carry_in, T *carry_out = nullptr) {
 // We keep the pass by pointer interface for consistency with the intrinsic.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
-sub_with_borrow(T a, T b, T carry_in, T *carry_out = nullptr) {
+sub_with_borrow(T a, T b, T carry_in, T &carry_out) {
   if constexpr (!cpp::is_constant_evaluated()) {
 #if __has_builtin(__builtin_subcb)
     RETURN_IF(unsigned char, __builtin_subcb)
@@ -118,10 +113,9 @@ sub_with_borrow(T a, T b, T carry_in, T *carry_out = nullptr) {
 #endif
   }
   T sub;
-  T carry1 = sub_overflow(a, b, &sub);
-  T carry2 = sub_overflow(sub, carry_in, &sub);
-  if (carry_out)
-    *carry_out = carry1 | carry2;
+  T carry1 = sub_overflow(a, b, sub);
+  T carry2 = sub_overflow(sub, carry_in, sub);
+  carry_out = carry1 | carry2;
   return sub;
 }
 

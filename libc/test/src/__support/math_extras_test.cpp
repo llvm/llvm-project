@@ -127,7 +127,7 @@ TYPED_TEST(LlvmLibcBlockMathExtrasTest, add_overflow, UnsignedTypes) {
   };
   for (auto tc : TESTS) {
     T sum;
-    bool carry = add_overflow<T>(tc.lhs, tc.rhs, &sum);
+    bool carry = add_overflow<T>(tc.lhs, tc.rhs, sum);
     EXPECT_EQ(sum, tc.sum);
     EXPECT_EQ(carry, tc.carry);
   }
@@ -152,7 +152,7 @@ TYPED_TEST(LlvmLibcBlockMathExtrasTest, sub_overflow, UnsignedTypes) {
   };
   for (auto tc : TESTS) {
     T sub;
-    bool carry = sub_overflow<T>(tc.lhs, tc.rhs, &sub);
+    bool carry = sub_overflow<T>(tc.lhs, tc.rhs, sub);
     EXPECT_EQ(sub, tc.sub);
     EXPECT_EQ(carry, tc.carry);
   }

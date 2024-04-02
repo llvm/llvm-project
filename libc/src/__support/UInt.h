@@ -118,10 +118,11 @@ LIBC_INLINE constexpr DoubleWide<word> mul2(word a, word b) {
     word hi_digit = step4;
     const word no_carry = 0;
     word carry;
-    lo_digit = add_with_carry<word>(lo_digit, shiftl(step2), no_carry, &carry);
-    hi_digit = add_with_carry<word>(hi_digit, shiftr(step2), carry);
-    lo_digit = add_with_carry<word>(lo_digit, shiftl(step3), no_carry, &carry);
-    hi_digit = add_with_carry<word>(hi_digit, shiftr(step3), carry);
+    word _; // unused carry variable.
+    lo_digit = add_with_carry<word>(lo_digit, shiftl(step2), no_carry, carry);
+    hi_digit = add_with_carry<word>(hi_digit, shiftr(step2), carry, _);
+    lo_digit = add_with_carry<word>(lo_digit, shiftl(step3), no_carry, carry);
+    hi_digit = add_with_carry<word>(hi_digit, shiftr(step3), carry, _);
     return DoubleWide<word>(lo_digit, hi_digit);
   }
 }
@@ -137,7 +138,7 @@ LIBC_INLINE constexpr word inplace_binop(Function op_with_carry,
     const bool has_rhs_value = i < M;
     const word rhs_value = has_rhs_value ? rhs[i] : 0;
     const word carry_in = carry_out;
-    dst[i] = op_with_carry(dst[i], rhs_value, carry_in, &carry_out);
+    dst[i] = op_with_carry(dst[i], rhs_value, carry_in, carry_out);
     // stop early when rhs is over and no carry is to be propagated.
     if (!has_rhs_value && carry_out == 0)
       break;
@@ -1234,16 +1235,14 @@ mask_leading_zeros() {
 
 // Specialization of count_zeros ('math_extras.h') for BigInt.
 template <typename T>
-[[nodiscard]]
-LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 count_zeros(T value) {
   return cpp::popcount(~value);
 }
 
 // Specialization of first_leading_zero ('math_extras.h') for BigInt.
 template <typename T>
-[[nodiscard]]
-LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_leading_zero(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0
                                                 : cpp::countl_one(value) + 1;
@@ -1251,16 +1250,14 @@ first_leading_zero(T value) {
 
 // Specialization of first_leading_one ('math_extras.h') for BigInt.
 template <typename T>
-[[nodiscard]]
-LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_leading_one(T value) {
   return first_leading_zero(~value);
 }
 
 // Specialization of first_trailing_zero ('math_extras.h') for BigInt.
 template <typename T>
-[[nodiscard]]
-LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_trailing_zero(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0
                                                 : cpp::countr_zero(~value) + 1;
@@ -1268,8 +1265,7 @@ first_trailing_zero(T value) {
 
 // Specialization of first_trailing_one ('math_extras.h') for BigInt.
 template <typename T>
-[[nodiscard]]
-LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_trailing_one(T value) {
   return value == cpp::numeric_limits<T>::max() ? 0
                                                 : cpp::countr_zero(value) + 1;
