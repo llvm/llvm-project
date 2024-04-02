@@ -1392,3 +1392,77 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
   store i9 42, ptr %p
   ret <vscale x 1 x i64> %vd
 }
+
+; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
+; FIXME: We should be able to recover the or into vwaddu.vv if the disjoint
+; flag is set.
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %x.i16 = zext <vscale x 2 x i8> %x.i8 to <vscale x 2 x i16>
+  %x.shl = shl <vscale x 2 x i16> %x.i16, shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 8, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+  %x.i32 = zext <vscale x 2 x i16> %x.shl to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i8> %y.i8 to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %add
+}
+
+; TODO: We could select vwaddu.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+; TODO: We could select vwadd.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwadd_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwaddu_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwadd_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}

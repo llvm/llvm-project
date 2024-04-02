@@ -1550,6 +1550,7 @@ private:
             (!Previous->isAttribute() &&
              !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation))) {
           Line.MightBeFunctionDecl = true;
+          Tok->MightBeFunctionDeclParen = true;
         }
       }
       break;
@@ -4827,6 +4828,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
+    if (Left.is(tok::identifier) && Right.is(tok::numeric_constant) &&
+        Right.TokenText[0] == '.') {
+      return false;
+    }
   } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
@@ -5387,6 +5392,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
+
+  if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
+      Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&
+      Left.ParameterCount > 0) {
+    return true;
+  }
 
   if (Style.isCSharp()) {
     if (Left.is(TT_FatArrow) && Right.is(tok::l_brace) &&

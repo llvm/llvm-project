@@ -2133,19 +2133,6 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
-multiclass VPseudoBinaryNoMask<VReg RetClass,
-                               VReg Op1Class,
-                               DAGOperand Op2Class,
-                               LMULInfo MInfo,
-                               string Constraint = "",
-                               int sew = 0> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint>;
-  }
-}
-
 multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      VReg Op1Class,
                                      DAGOperand Op2Class,
@@ -2212,7 +2199,8 @@ multiclass VPseudoTiedBinary<VReg RetClass,
     def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
                                                           Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" : VPseudoTiedBinaryMask<RetClass, Op2Class,
-                                                         Constraint, TargetConstraintType>;
+                                                         Constraint, TargetConstraintType>,
+                                        RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -2225,7 +2213,8 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
     def "_" # MInfo.MX # "_TIED":
       VPseudoTiedBinaryNoMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" :
-      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
+      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>,
+      RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -2993,12 +2982,6 @@ multiclass VPseudoVWALU_VV_VX {
     defm "" : VPseudoBinaryW_VX<m>, 
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx,
                           forceMergeOpRead=true>;
-  }
-}
-
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
-  foreach m = MxListW in {
-    defm "" : VPseudoBinaryW_VI<ImmType, m>;
   }
 }
 

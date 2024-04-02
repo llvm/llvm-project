@@ -545,8 +545,7 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
                                       const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
-  if (llvm::none_of(operandTypes,
-                    [](Type type) { return isa<VectorType>(type); })) {
+  if (llvm::none_of(operandTypes, llvm::IsaPred<VectorType>)) {
     return rewriter.notifyMatchFailure(op, "expected vector operand");
   }
   if (op->getNumRegions() != 0 || op->getNumSuccessors() != 0)

@@ -289,7 +289,7 @@ public:
                                         const BinOpInfo &Op);
 
   QualType GetHigherPrecisionFPType(QualType ElementType) {
-    const auto *CurrentBT = dyn_cast<BuiltinType>(ElementType);
+    const auto *CurrentBT = cast<BuiltinType>(ElementType);
     switch (CurrentBT->getKind()) {
     case BuiltinType::Kind::Float16:
       return CGF.getContext().FloatTy;
@@ -616,6 +616,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_FloatingRealToComplex:
