@@ -70,3 +70,22 @@ Design Decisions
 Resizable Tables for hsearch
 ----------------------------
 The POSIX.1 standard does not delineate the behavior consequent to invoking hsearch or hdestroy without prior initialization of the hash table via hcreate. Furthermore, the standard does not specify the outcomes of successive invocations of hsearch absent intervening hdestroy calls. Libraries such as MUSL and Glibc do not apply checks to these scenarios, potentially leading to memory corruption or leakage. Conversely, FreeBSD's libc and Bionic automatically initialize the hash table to a minimal size if it is found uninitialized, and proceeding to destroy the table only if initialization has occurred. This approach also avoids redundant table allocation if an initialized hash table is already present. Given that the hash table starts with a minimal size, resizing becomes necessary to accommodate additional user insertions. LLVM's libc mirrors the approach of FreeBSD's libc and Bionic, owing to its enhanced robustness and user-friendliness. Notably, such resizing behavior itself aligns with POSIX.1 standards, which explicitly permit implementations to modify the capacity of the hash table.
+
+Path without Leading Slashs in shm_open
+----------------------------------------
+POSIX.1 leaves that when the name of a shared memory object does not begin with a slash, the behavior is implementation defined. In such cases, the shm_open in LLVM libc is implemented to behave as if the name began with a slash.
+
+Handling of NULL arguments to the 's' format specifier
+------------------------------------------------------
+The C standard does not specify behavior for ``printf("%s", NULL)``. We will
+print the string literal ``(null)`` unless using the 
+``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
+behavior<printf_behavior>`.
+
+Unknown Math Rounding Direction
+-------------------------------
+The C23 standard states that if the value of the ``rnd`` argument of the
+``fromfp``, ``ufromfp``, ``fromfpx`` and ``ufromfpx`` functions is not equal to
+the value of a math rounding direction macro, the direction of rounding is
+unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
+direction in this case.

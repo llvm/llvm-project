@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AsmWriterInst.h"
-#include "CodeGenInstAlias.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "SequenceToOffsetTable.h"
-#include "Types.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/AsmWriterInst.h"
+#include "Common/CodeGenInstAlias.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"

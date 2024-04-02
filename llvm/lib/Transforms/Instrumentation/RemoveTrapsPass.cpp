@@ -57,7 +57,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
         continue;
       auto ID = II->getIntrinsicID();
       switch (ID) {
-      case Intrinsic::experimental_hot: {
+      case Intrinsic::allow_ubsan_check:
+      case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
         bool IsHot = false;
@@ -73,8 +74,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
         bool ToRemove = ShouldRemove(IsHot);
         ReplaceWithValue.push_back({
             II,
-            ToRemove ? Constant::getAllOnesValue(II->getType())
-                     : (Constant::getNullValue(II->getType())),
+            ToRemove ? Constant::getNullValue(II->getType())
+                     : (Constant::getAllOnesValue(II->getType())),
         });
         if (ToRemove)
           ++NumChecksRemoved;

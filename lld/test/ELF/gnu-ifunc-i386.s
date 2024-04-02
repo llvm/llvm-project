@@ -11,13 +11,12 @@
 // CHECK-NEXT:  Type: SHT_REL
 // CHECK-NEXT:  Flags [
 // CHECK-NEXT:    SHF_ALLOC
-// CHECK-NEXT:    SHF_INFO_LINK
 // CHECK-NEXT:  ]
 // CHECK-NEXT:  Address: [[RELA:.*]]
 // CHECK-NEXT:  Offset: 0xD4
 // CHECK-NEXT:  Size: 16
 // CHECK-NEXT:  Link: 0
-// CHECK-NEXT:  Info: 4
+// CHECK-NEXT:  Info: 0
 // CHECK-NEXT:  AddressAlignment: 4
 // CHECK-NEXT:  EntrySize: 8
 // CHECK-NEXT: }

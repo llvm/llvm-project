@@ -14,9 +14,8 @@
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_empty.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>

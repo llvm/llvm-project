@@ -993,11 +993,20 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
       // If the macro contains the comma pasting extension, the diagnostic
       // is suppressed; we know we'll get another diagnostic later.
       if (!MI->hasCommaPasting()) {
-        // C++20 allows this construct, but standards before C++20 and all C
-        // standards do not allow the construct (we allow it as an extension).
-        Diag(Tok, getLangOpts().CPlusPlus20
-                      ? diag::warn_cxx17_compat_missing_varargs_arg
-                      : diag::ext_missing_varargs_arg);
+        // C++20 [cpp.replace]p15, C23 6.10.5p12
+        //
+        // C++20 and C23 allow this construct, but standards before that
+        // do not (we allow it as an extension).
+        unsigned ID;
+        if (getLangOpts().CPlusPlus20)
+          ID = diag::warn_cxx17_compat_missing_varargs_arg;
+        else if (getLangOpts().CPlusPlus)
+          ID = diag::ext_cxx_missing_varargs_arg;
+        else if (getLangOpts().C23)
+          ID = diag::warn_c17_compat_missing_varargs_arg;
+        else
+          ID = diag::ext_c_missing_varargs_arg;
+        Diag(Tok, ID);
         Diag(MI->getDefinitionLoc(), diag::note_macro_here)
           << MacroName.getIdentifierInfo();
       }

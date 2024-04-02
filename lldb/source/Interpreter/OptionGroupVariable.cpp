@@ -50,6 +50,11 @@ static constexpr OptionDefinition g_variable_options[] = {
      "Specify a summary string to use to format the variable output."},
 };
 
+static constexpr auto g_num_frame_options = 4;
+static const auto g_variable_options_noframe =
+    llvm::ArrayRef<OptionDefinition>(g_variable_options)
+        .drop_front(g_num_frame_options);
+
 static Status ValidateNamedSummary(const char *str, void *) {
   if (!str || !str[0])
     return Status("must specify a valid named summary");
@@ -77,9 +82,9 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
                                     llvm::StringRef option_arg,
                                     ExecutionContext *execution_context) {
   Status error;
-  if (!include_frame_options)
-    option_idx += 3;
-  const int short_option = g_variable_options[option_idx].short_option;
+  llvm::ArrayRef<OptionDefinition> variable_options =
+      include_frame_options ? g_variable_options : g_variable_options_noframe;
+  const int short_option = variable_options[option_idx].short_option;
   switch (short_option) {
   case 'r':
     use_regex = true;
@@ -128,16 +133,9 @@ void OptionGroupVariable::OptionParsingStarting(
   summary_string.Clear();
 }
 
-#define NUM_FRAME_OPTS 3
-
 llvm::ArrayRef<OptionDefinition> OptionGroupVariable::GetDefinitions() {
-  auto result = llvm::ArrayRef(g_variable_options);
-  // Show the "--no-args", "--no-locals" and "--show-globals" options if we are
-  // showing frame specific options
-  if (include_frame_options)
-    return result;
-
-  // Skip the "--no-args", "--no-locals" and "--show-globals" options if we are
-  // not showing frame specific options (globals only)
-  return result.drop_front(NUM_FRAME_OPTS);
+  // Show the "--no-args", "--no-recognized-args", "--no-locals" and
+  // "--show-globals" options if we are showing frame specific options
+  return include_frame_options ? g_variable_options
+                               : g_variable_options_noframe;
 }

@@ -206,7 +206,7 @@ public:
     auto *lvlCOO = readCOO<V>(map, lvlSizes);
     auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
         dimRank, getDimSizes(), lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,
-        *lvlCOO);
+        lvlCOO);
     delete lvlCOO;
     return tensor;
   }

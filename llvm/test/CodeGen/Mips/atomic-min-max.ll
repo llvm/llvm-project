@@ -2146,6 +2146,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB6_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
 ; MIPS32-NEXT:    sltu $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movn $3, $7, $5
@@ -2186,6 +2188,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB6_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
 ; MIPSEL-NEXT:    sltu $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movn $3, $7, $5
@@ -2225,6 +2229,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB6_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
 ; MIPSELR6-NEXT:    sltu $5, $2, $7
 ; MIPSELR6-NEXT:    seleqz $3, $2, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
@@ -2263,6 +2269,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB6_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
 ; MMEL-NEXT:    sltu $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
@@ -2300,6 +2308,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB6_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
 ; MMELR6-NEXT:    sltu $5, $2, $7
 ; MMELR6-NEXT:    seleqz $3, $2, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
@@ -2417,6 +2427,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB6_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
 ; MIPS64EL-NEXT:    sltu $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movn $3, $7, $5
@@ -2456,6 +2468,8 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB6_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
 ; MIPS64ELR6-NEXT:    sltu $5, $2, $7
 ; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
@@ -2655,6 +2669,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB7_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
 ; MIPS32-NEXT:    sltu $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movz $3, $7, $5
@@ -2696,6 +2712,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB7_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
 ; MIPSEL-NEXT:    sltu $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movz $3, $7, $5
@@ -2735,6 +2753,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB7_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
 ; MIPSELR6-NEXT:    sltu $5, $2, $7
 ; MIPSELR6-NEXT:    selnez $3, $2, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
@@ -2773,6 +2793,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB7_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
 ; MMEL-NEXT:    sltu $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
@@ -2810,6 +2832,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB7_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
 ; MMELR6-NEXT:    sltu $5, $2, $7
 ; MMELR6-NEXT:    selnez $3, $2, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
@@ -2927,6 +2951,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB7_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
 ; MIPS64EL-NEXT:    sltu $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movz $3, $7, $5
@@ -2966,6 +2992,8 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB7_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
 ; MIPS64ELR6-NEXT:    sltu $5, $2, $7
 ; MIPS64ELR6-NEXT:    selnez $3, $2, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
@@ -4244,6 +4272,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB10_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
 ; MIPS32-NEXT:    sltu $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movn $3, $7, $5
@@ -4284,6 +4314,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB10_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
 ; MIPSEL-NEXT:    sltu $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movn $3, $7, $5
@@ -4323,6 +4355,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB10_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
 ; MIPSELR6-NEXT:    sltu $5, $2, $7
 ; MIPSELR6-NEXT:    seleqz $3, $2, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
@@ -4361,6 +4395,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB10_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
 ; MMEL-NEXT:    sltu $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
@@ -4398,6 +4434,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB10_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
 ; MMELR6-NEXT:    sltu $5, $2, $7
 ; MMELR6-NEXT:    seleqz $3, $2, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
@@ -4515,6 +4553,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB10_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
 ; MIPS64EL-NEXT:    sltu $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movn $3, $7, $5
@@ -4554,6 +4594,8 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB10_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
 ; MIPS64ELR6-NEXT:    sltu $5, $2, $7
 ; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
@@ -4753,6 +4795,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB11_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
 ; MIPS32-NEXT:    sltu $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movz $3, $7, $5
@@ -4793,6 +4837,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB11_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
+; MIPSEL-NEXT:    and $2, $2, $8
+; MIPSEL-NEXT:    and $7, $7, $8
 ; MIPSEL-NEXT:    sltu $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movz $3, $7, $5
@@ -4832,6 +4878,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB11_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
+; MIPSELR6-NEXT:    and $2, $2, $8
+; MIPSELR6-NEXT:    and $7, $7, $8
 ; MIPSELR6-NEXT:    sltu $5, $2, $7
 ; MIPSELR6-NEXT:    selnez $3, $2, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
@@ -4870,6 +4918,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB11_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
+; MMEL-NEXT:    and $2, $2, $8
+; MMEL-NEXT:    and $7, $7, $8
 ; MMEL-NEXT:    sltu $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
@@ -4907,6 +4957,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB11_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
+; MMELR6-NEXT:    and $2, $2, $8
+; MMELR6-NEXT:    and $7, $7, $8
 ; MMELR6-NEXT:    sltu $5, $2, $7
 ; MMELR6-NEXT:    selnez $3, $2, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
@@ -5024,6 +5076,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB11_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
+; MIPS64EL-NEXT:    and $2, $2, $8
+; MIPS64EL-NEXT:    and $7, $7, $8
 ; MIPS64EL-NEXT:    sltu $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movz $3, $7, $5
@@ -5063,6 +5117,8 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB11_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
+; MIPS64ELR6-NEXT:    and $2, $2, $8
+; MIPS64ELR6-NEXT:    and $7, $7, $8
 ; MIPS64ELR6-NEXT:    sltu $5, $2, $7
 ; MIPS64ELR6-NEXT:    selnez $3, $2, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5

@@ -53,7 +53,8 @@ const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindFunctionResult(const Symbol &);
-const Symbol *FindOverriddenBinding(const Symbol &);
+const Symbol *FindOverriddenBinding(
+    const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
 
 const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
@@ -180,7 +181,8 @@ const Symbol *IsFinalizable(const Symbol &,
 const Symbol *IsFinalizable(const DerivedTypeSpec &,
     std::set<const DerivedTypeSpec *> * = nullptr,
     bool withImpureFinalizer = false, std::optional<int> rank = std::nullopt);
-const Symbol *HasImpureFinal(const Symbol &);
+const Symbol *HasImpureFinal(
+    const Symbol &, std::optional<int> rank = std::nullopt);
 // Is this type finalizable or does it contain any polymorphic allocatable
 // ultimate components?
 bool MayRequireFinalization(const DerivedTypeSpec &derived);
@@ -280,6 +282,9 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
+
+// Given a cray pointee symbol, returns the related cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 

@@ -2277,6 +2277,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::DependentTemplateSpecialization:
     case Type::PackExpansion:
     case Type::Pipe:
+    case Type::ArrayParameter:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -5514,9 +5515,9 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   QualType Obj2Ty;
   if (TPOC == TPOC_Call) {
     const FunctionProtoType *Proto1 =
-        FD1->getType()->getAs<FunctionProtoType>();
+        FD1->getType()->castAs<FunctionProtoType>();
     const FunctionProtoType *Proto2 =
-        FD2->getType()->getAs<FunctionProtoType>();
+        FD2->getType()->castAs<FunctionProtoType>();
 
     //   - In the context of a function call, the function parameter types are
     //     used.
@@ -6355,11 +6356,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::ConstantArray:
   case Type::IncompleteArray:
+  case Type::ArrayParameter:
     MarkUsedTemplateParameters(Ctx,
                                cast<ArrayType>(T)->getElementType(),
                                OnlyDeduced, Depth, Used);
     break;
-
   case Type::Vector:
   case Type::ExtVector:
     MarkUsedTemplateParameters(Ctx,

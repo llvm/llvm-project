@@ -329,9 +329,29 @@ define <8 x i16> @hadds_i_undef(<8 x i16> %t, <8 x i16> %src1) {
   ret <8 x i16> %result
 }
 
+define <8 x i16> @sub_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: sub_fixedwidth_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %or = or <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = lshr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = sub <8 x i16> %or, %srl
+  ret <8 x i16> %res
+}
 
-
-
+define <8 x i16> @srhadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: srhadd_fixedwidth_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %or = or <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = ashr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = sub <8 x i16> %or, %srl
+  ret <8 x i16> %res
+}
 
 define <8 x i16> @rhaddu_base(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: rhaddu_base:
@@ -857,6 +877,30 @@ define <4 x i32> @urhadd_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i32> @llvm.aarch64.neon.urhadd.v4i32(<4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
+}
+
+define <8 x i16> @uhadd_fixedwidth_v4i32(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: uhadd_fixedwidth_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %and = and <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = lshr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = add <8 x i16> %and, %srl
+  ret <8 x i16> %res
+}
+
+define <8 x i16> @shadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
+; CHECK-LABEL: shadd_fixedwidth_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %and = and <8 x i16> %a0, %a1
+  %xor = xor <8 x i16> %a0, %a1
+  %srl = ashr <8 x i16> %xor, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %res = add <8 x i16> %and, %srl
+  ret <8 x i16> %res
 }
 
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)

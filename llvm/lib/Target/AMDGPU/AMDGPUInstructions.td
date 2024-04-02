@@ -194,7 +194,25 @@ class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   }];
 }
 
-class is_canonicalized<SDPatternOperator op> : PatFrag<
+class is_canonicalized_1<SDPatternOperator op> : PatFrag<
+  (ops node:$src0),
+  (op $src0),
+  [{
+    const SITargetLowering &Lowering =
+              *static_cast<const SITargetLowering *>(getTargetLowering());
+
+    return Lowering.isCanonicalized(*CurDAG, N->getOperand(0));
+   }]> {
+
+  let GISelPredicateCode = [{
+    const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+      MF.getSubtarget().getTargetLowering());
+
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF);
+  }];
+}
+
+class is_canonicalized_2<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
   [{
@@ -210,8 +228,8 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
 
-    return TLI->isCanonicalized(MI.getOperand(1).getReg(), const_cast<MachineFunction&>(MF)) &&
-      TLI->isCanonicalized(MI.getOperand(2).getReg(), const_cast<MachineFunction&>(MF));
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF) &&
+      TLI->isCanonicalized(MI.getOperand(2).getReg(), MF);
   }];
 }
 

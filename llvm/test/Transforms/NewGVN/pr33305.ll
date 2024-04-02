@@ -19,14 +19,14 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTPR_I:%.*]] = load i32, ptr @c, align 4, !tbaa !3
+; CHECK-NEXT:    [[DOTPR_I:%.*]] = load i32, ptr @c, align 4, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp slt i32 [[DOTPR_I]], 1
 ; CHECK-NEXT:    br i1 [[CMP13_I]], label [[FOR_COND1_PREHEADER_LR_PH_I:%.*]], label [[ENTRY_FOR_END9_I_CRIT_EDGE:%.*]]
 ; CHECK:       entry.for.end9.i_crit_edge:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr @h, align 4, !tbaa !3
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr @h, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[FOR_END9_I:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.i:
-; CHECK-NEXT:    [[G_PROMOTED14_I:%.*]] = load i32, ptr @g, align 4, !tbaa !3
+; CHECK-NEXT:    [[G_PROMOTED14_I:%.*]] = load i32, ptr @g, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_I:%.*]]
 ; CHECK:       for.cond1.preheader.i:
 ; CHECK-NEXT:    [[INC816_I:%.*]] = phi i32 [ [[DOTPR_I]], [[FOR_COND1_PREHEADER_LR_PH_I]] ], [ [[INC8_I:%.*]], [[FOR_INC7_I:%.*]] ]
@@ -42,9 +42,9 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK:       lor.rhs.i:
 ; CHECK-NEXT:    [[LNOT_I:%.*]] = xor i1 [[TOBOOL_I]], true
 ; CHECK-NEXT:    [[LNOT_EXT_I:%.*]] = zext i1 [[LNOT_I]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @e, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @e, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[TMP3]], [[LNOT_EXT_I]]
-; CHECK-NEXT:    store i32 [[XOR_I]], ptr @e, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 [[XOR_I]], ptr @e, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[LOR_END_I]]
 ; CHECK:       lor.end.i:
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[INC12_I]], 1
@@ -55,28 +55,28 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[INC816_I]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[FOR_COND1_PREHEADER_I]], label [[FOR_COND_FOR_END9_CRIT_EDGE_I:%.*]]
 ; CHECK:       for.cond.for.end9_crit_edge.i:
-; CHECK-NEXT:    store i32 0, ptr @g, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 2, ptr @h, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 [[INC8_I]], ptr @c, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 0, ptr @g, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 2, ptr @h, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[INC8_I]], ptr @c, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[FOR_END9_I]]
 ; CHECK:       for.end9.i:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY_FOR_END9_I_CRIT_EDGE]] ], [ 2, [[FOR_COND_FOR_END9_CRIT_EDGE_I]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr @b, align 8, !tbaa !7
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4, !tbaa !3
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr @e, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr @b, align 8, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr @e, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[CMP10_I:%.*]] = icmp slt i32 [[TMP6]], -1
 ; CHECK-NEXT:    br i1 [[CMP10_I]], label [[IF_THEN_I:%.*]], label [[FN1_EXIT:%.*]]
 ; CHECK:       if.then.i:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr @f, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP5]], align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr @f, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP5]], align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    br label [[FN1_EXIT]]
 ; CHECK:       fn1.exit:
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr @a, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr @a, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[PUTS2:%.*]] = tail call i32 @puts(ptr @str.2)
-; CHECK-NEXT:    tail call void @abort()
+; CHECK-NEXT:    tail call void @abort() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PUTS:%.*]] = tail call i32 @puts(ptr @str)

@@ -66,11 +66,11 @@ _Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extensio
                                      // pedantic-ref-note {{-100 of non-array}} \
                                      // pedantic-expected-note {{-100 of non-array}}
 /// extern variable of a composite type.
-/// FIXME: The 'cast from void*' note is missing in the new interpreter.
+/// FIXME: The 'this conversion is not allowed' note is missing in the new interpreter.
 extern struct Test50S Test50;
 _Static_assert(&Test50 != (void*)0, ""); // all-warning {{always true}} \
                                          // pedantic-ref-warning {{is a GNU extension}} \
-                                         // pedantic-ref-note {{cast from 'void *' is not allowed}} \
+                                         // pedantic-ref-note {{this conversion is not allowed in a constant expression}} \
                                          // pedantic-expected-warning {{is a GNU extension}}
 
 struct y {int x,y;};
@@ -201,3 +201,11 @@ void localCompoundLiteral(void) {
        // pedantic-ref-warning {{use of an empty initializer}}
   };
 }
+
+/// struct copy
+struct StrA {int a; };
+const struct StrA sa = { 12 };
+const struct StrA * const sb = &sa;
+const struct StrA sc = *sb;
+_Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
+                                // pedantic-expected-warning {{GNU extension}}

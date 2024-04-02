@@ -101,9 +101,10 @@ namespace llvm {
     DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
                            BasicBlock *InsertBB, Instruction *InsertBefore);
 
-    /// Internal helper. Track metadata if untracked and insert \p DPV.
-    void insertDPValue(DPValue *DPV, BasicBlock *InsertBB,
-                       Instruction *InsertBefore, bool InsertAtHead = false);
+    /// Internal helper. Track metadata if untracked and insert \p DVR.
+    void insertDbgVariableRecord(DbgVariableRecord *DVR, BasicBlock *InsertBB,
+                                 Instruction *InsertBefore,
+                                 bool InsertAtHead = false);
 
     /// Internal helper with common code used by insertDbg{Value,Addr}Intrinsic.
     Instruction *insertDbgIntrinsic(llvm::Function *Intrinsic, llvm::Value *Val,
@@ -269,6 +270,13 @@ namespace llvm {
                       uint32_t AlignInBits = 0,
                       std::optional<unsigned> DWARFAddressSpace = std::nullopt,
                       StringRef Name = "", DINodeArray Annotations = nullptr);
+
+    /// Create a __ptrauth qualifier.
+    DIDerivedType *createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
+                                              bool IsAddressDiscriminated,
+                                              unsigned ExtraDiscriminator,
+                                              bool IsaPointer,
+                                              bool authenticatesNullValues);
 
     /// Create debugging information entry for a pointer to member.
     /// \param PointeeTy Type pointed to by this pointer.

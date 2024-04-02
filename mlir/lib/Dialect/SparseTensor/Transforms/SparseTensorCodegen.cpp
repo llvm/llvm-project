@@ -1561,6 +1561,19 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
   }
 };
 
+struct SparseHasRuntimeLibraryConverter
+    : public OpConversionPattern<HasRuntimeLibraryOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(HasRuntimeLibraryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 0));
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1572,21 +1585,21 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
 void mlir::populateSparseTensorCodegenPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     bool createSparseDeallocs, bool enableBufferInitialization) {
-  patterns.add<SparseAssembleOpConverter, SparseDisassembleOpConverter,
-               SparseReturnConverter, SparseCallConverter, SparseLvlOpConverter,
-               SparseCastConverter, SparseExtractSliceConverter,
-               SparseTensorLoadConverter, SparseExpandConverter,
-               SparseCompressConverter, SparseInsertConverter,
-               SparseReorderCOOConverter, SparseReMapConverter,
-               SparseSliceGetterOpConverter<ToSliceOffsetOp,
-                                            StorageSpecifierKind::DimOffset>,
-               SparseSliceGetterOpConverter<ToSliceStrideOp,
-                                            StorageSpecifierKind::DimStride>,
-               SparseToPositionsConverter, SparseToCoordinatesConverter,
-               SparseToCoordinatesBufferConverter, SparseToValuesConverter,
-               SparseConvertConverter, SparseNewConverter,
-               SparseNumberOfEntriesConverter>(typeConverter,
-                                               patterns.getContext());
+  patterns.add<
+      SparseAssembleOpConverter, SparseDisassembleOpConverter,
+      SparseReturnConverter, SparseCallConverter, SparseLvlOpConverter,
+      SparseCastConverter, SparseExtractSliceConverter,
+      SparseTensorLoadConverter, SparseExpandConverter, SparseCompressConverter,
+      SparseInsertConverter, SparseReorderCOOConverter, SparseReMapConverter,
+      SparseSliceGetterOpConverter<ToSliceOffsetOp,
+                                   StorageSpecifierKind::DimOffset>,
+      SparseSliceGetterOpConverter<ToSliceStrideOp,
+                                   StorageSpecifierKind::DimStride>,
+      SparseToPositionsConverter, SparseToCoordinatesConverter,
+      SparseToCoordinatesBufferConverter, SparseToValuesConverter,
+      SparseConvertConverter, SparseNewConverter,
+      SparseNumberOfEntriesConverter, SparseHasRuntimeLibraryConverter>(
+      typeConverter, patterns.getContext());
   patterns.add<SparseTensorDeallocConverter>(
       typeConverter, patterns.getContext(), createSparseDeallocs);
   patterns.add<SparseTensorAllocConverter, SparseTensorEmptyConverter>(

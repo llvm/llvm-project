@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___MEMORY_SHARED_PTR_H
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
-#include <__availability>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
@@ -37,8 +36,8 @@
 #include <__type_traits/disjunction.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_bounded_array.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/nat.h>

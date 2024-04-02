@@ -66,20 +66,20 @@ protected:
               AST->getASTContext()));
     assert(Func != nullptr);
 
-    CFCtx = std::make_unique<ControlFlowContext>(
-        llvm::cantFail(ControlFlowContext::build(*Func)));
+    ACFG =
+        std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(*Func)));
 
     AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
     DACtx = std::make_unique<DataflowAnalysisContext>(
         std::make_unique<WatchedLiteralsSolver>());
     Environment Env(*DACtx, *Func);
 
-    return runDataflowAnalysis(*CFCtx, Analysis, Env);
+    return runDataflowAnalysis(*ACFG, Analysis, Env);
   }
 
   /// Returns the `CFGBlock` containing `S` (and asserts that it exists).
   const CFGBlock *blockForStmt(const Stmt &S) {
-    const CFGBlock *Block = CFCtx->getStmtToBlock().lookup(&S);
+    const CFGBlock *Block = ACFG->getStmtToBlock().lookup(&S);
     assert(Block != nullptr);
     return Block;
   }
@@ -105,7 +105,7 @@ protected:
   }
 
   std::unique_ptr<ASTUnit> AST;
-  std::unique_ptr<ControlFlowContext> CFCtx;
+  std::unique_ptr<AdornedCFG> ACFG;
   std::unique_ptr<DataflowAnalysisContext> DACtx;
 };
 

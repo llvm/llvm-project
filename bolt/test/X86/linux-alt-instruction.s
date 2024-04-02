@@ -6,8 +6,8 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --keep-nops -o %t.out \
-# RUN:   --alt-inst-feature-size=2 | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=2 -o %t.out \
+# RUN:   | FileCheck %s
 
 ## Older kernels used to have padlen field in alt_instr. Check compatibility.
 
@@ -15,8 +15,8 @@
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --keep-nops --alt-inst-has-padlen \
-# RUN:   -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-has-padlen -o %t.out \
+# RUN:   | FileCheck %s
 
 ## Check with a larger size of "feature" field in alt_instr.
 
@@ -24,13 +24,12 @@
 # RUN:   --defsym FEATURE_SIZE_4=1 %s -o %t.o
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --keep-nops \
-# RUN:   --alt-inst-feature-size=4 -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=4 -o %t.out \
+# RUN:   | FileCheck %s
 
 ## Check that out-of-bounds read is handled properly.
 
-# RUN: not llvm-bolt %t.exe --print-normalized --keep-nops \
-# RUN:   --alt-inst-feature-size=2 -o %t.out
+# RUN: not llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=2 -o %t.out
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 alternative instruction entries

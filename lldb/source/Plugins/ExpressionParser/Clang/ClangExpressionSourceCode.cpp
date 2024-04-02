@@ -417,7 +417,7 @@ bool ClangExpressionSourceCode::GetText(
     if (sc.comp_unit && sc.line_entry.IsValid()) {
       DebugMacros *dm = sc.comp_unit->GetDebugMacros();
       if (dm) {
-        AddMacroState state(sc.line_entry.file, sc.line_entry.line);
+        AddMacroState state(sc.line_entry.GetFile(), sc.line_entry.line);
         AddMacros(dm, sc.comp_unit, state, debug_macros_stream);
       }
     }

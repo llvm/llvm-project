@@ -295,6 +295,10 @@ namespace llvm {
     // thunk at the address from an earlier relocation.
     TLSCALL,
 
+    // Thread Local Storage. A descriptor containing pointer to
+    // code and to argument to get the TLS offset for the symbol.
+    TLSDESC,
+
     // Exception Handling helpers.
     EH_RETURN,
 
