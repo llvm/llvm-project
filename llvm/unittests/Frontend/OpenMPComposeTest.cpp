@@ -32,10 +32,8 @@ TEST(Composition, GetCompoundConstruct) {
   ASSERT_EQ(C3, OMPD_unknown);
   Directive C4 = getCompoundConstruct({OMPD_target, OMPD_teams_distribute});
   ASSERT_EQ(C4, OMPD_target_teams_distribute);
-  Directive C5 = getCompoundConstruct({OMPD_target, OMPD_teams_distribute});
-  ASSERT_EQ(C5, OMPD_target_teams_distribute);
-  Directive C6 = getCompoundConstruct({});
-  ASSERT_EQ(C6, OMPD_unknown);
-  Directive C7 = getCompoundConstruct({OMPD_parallel_for, OMPD_simd});
-  ASSERT_EQ(C7, OMPD_parallel_for_simd);
+  Directive C5 = getCompoundConstruct({});
+  ASSERT_EQ(C5, OMPD_unknown);
+  Directive C6 = getCompoundConstruct({OMPD_parallel_for, OMPD_simd});
+  ASSERT_EQ(C6, OMPD_parallel_for_simd);
 }
