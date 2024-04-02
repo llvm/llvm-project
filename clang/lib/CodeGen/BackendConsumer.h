@@ -115,10 +115,6 @@ public:
   // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M, bool ShouldLinkFiles = true);
 
-  // Load a bitcode module from -mlink-builtin-bitcode option using
-  // methods from a BackendConsumer instead of CompilerInstance
-  bool ReloadModules(llvm::Module *M);
-
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.
   const FullSourceLoc getBestLocationFromDebugLoc(

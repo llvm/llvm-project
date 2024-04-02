@@ -229,35 +229,6 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
     HandleTopLevelDecl(D);
 }
 
-bool BackendConsumer::ReloadModules(llvm::Module *M) {
-  for (const CodeGenOptions::BitcodeFileToLink &F :
-       CodeGenOpts.LinkBitcodeFiles) {
-    auto BCBuf = FileMgr.getBufferForFile(F.Filename);
-    if (!BCBuf) {
-      Diags.Report(diag::err_cannot_open_file)
-          << F.Filename << BCBuf.getError().message();
-      LinkModules.clear();
-      return true;
-    }
-
-    LLVMContext &Ctx = getModule()->getContext();
-    Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
-        getOwningLazyBitcodeModule(std::move(*BCBuf), Ctx);
-
-    if (!ModuleOrErr) {
-      handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        Diags.Report(diag::err_cannot_open_file) << F.Filename << EIB.message();
-      });
-      LinkModules.clear();
-      return true;
-    }
-    LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
-                           F.Internalize, F.LinkFlags});
-  }
-
-  return false; // success
-}
-
 // Links each entry in LinkModules into our module.  Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
   for (auto &LM : LinkModules) {
