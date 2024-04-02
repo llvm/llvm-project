@@ -178,7 +178,7 @@ define void @log2(float %a, <16 x float> %va) {
   ret void
 }
 
-define void @constrained_fadd(float %a, <16 x float> %va) {
+define void @constrained_fadd(float %a, <16 x float> %va) strictfp {
 ; THRU-LABEL: 'constrained_fadd'
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call float @llvm.experimental.constrained.fadd.f32(float %a, float %a, metadata !"round.dynamic", metadata !"fpexcept.ignore")
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %t = call <16 x float> @llvm.experimental.constrained.fadd.v16f32(<16 x float> %va, <16 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.ignore")
