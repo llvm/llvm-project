@@ -3524,7 +3524,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fblocks);
 
   if (Opts.ConvergentFunctions &&
-      !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice))
+      !(Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) || Opts.SYCLIsDevice ||
+        Opts.HLSL))
     GenerateArg(Consumer, OPT_fconvergent_functions);
 
   if (Opts.NoBuiltin && !Opts.Freestanding)
@@ -3970,7 +3971,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   Opts.ConvergentFunctions = Args.hasArg(OPT_fconvergent_functions) ||
                              Opts.OpenCL || (Opts.CUDA && Opts.CUDAIsDevice) ||
-                             Opts.SYCLIsDevice;
+                             Opts.SYCLIsDevice || Opts.HLSL;
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)

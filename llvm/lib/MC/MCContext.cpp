@@ -155,6 +155,7 @@ void MCContext::reset() {
   XCOFFAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
   SPIRVAllocator.DestroyAll();
+  WasmSignatureAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
@@ -381,6 +382,10 @@ void MCContext::setSymbolValue(MCStreamer &Streamer, const Twine &Sym,
 
 void MCContext::registerInlineAsmLabel(MCSymbol *Sym) {
   InlineAsmUsedLabelNames[Sym->getName()] = Sym;
+}
+
+wasm::WasmSignature *MCContext::createWasmSignature() {
+  return new (WasmSignatureAllocator.Allocate()) wasm::WasmSignature;
 }
 
 MCSymbolXCOFF *
