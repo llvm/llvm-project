@@ -158,10 +158,10 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, [[COPY]], implicit $exec
-  ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64 = S_XOR_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[S_ANDN2_B64_:%[0-9]+]]:sreg_64 = S_ANDN2_B64 $exec, [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_XOR_B64_]], -1, implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_CSELECT_B64 [[S_XOR_B64_]], [[S_OR_B64_]], implicit $scc
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_ANDN2_B64_]], -1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_CSELECT_B64 [[S_ANDN2_B64_]], [[S_OR_B64_]], implicit $scc
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[COPY1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.2

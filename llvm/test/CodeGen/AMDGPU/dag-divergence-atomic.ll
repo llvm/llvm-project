@@ -134,7 +134,7 @@ define protected amdgpu_kernel void @nand(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -437,7 +437,7 @@ define protected amdgpu_kernel void @fadd(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -476,7 +476,7 @@ define protected amdgpu_kernel void @fsub(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; CHECK-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]

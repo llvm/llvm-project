@@ -86,6 +86,7 @@ private:
   unsigned Select;
   unsigned CmovOpc;
   unsigned AndOpc;
+  unsigned Andn2Opc;
   unsigned OrOpc;
   unsigned XorOpc;
   unsigned MovTermOpc;
@@ -100,6 +101,9 @@ private:
   void emitIfBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
   void emitWaveDiverge(MachineInstr &MI, Register EnabledLanesMask,
+                       Register DisableLanesMask);
+
+  void emitWaveInvert(MachineInstr &MI, Register EnabledLanesMask,
                        Register DisableLanesMask);
 
   void emitEndCf(MachineInstr &MI);
@@ -194,7 +198,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
   Register InvCondReg = MI.getOperand(0).getReg();
   Register CondReg = MI.getOperand(1).getReg();
-  emitWaveDiverge(MI, CondReg, InvCondReg);
+  emitWaveInvert(MI, CondReg, InvCondReg);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -260,10 +264,9 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
   Register MaskExit = MRI->createVirtualRegister(BoolRC);
   Register AndZero = MRI->createVirtualRegister(BoolRC);
 
-  MachineInstr *CondLoop =
-      BuildMI(MBB, &MI, DL, TII->get(Andn2TermOpc), MaskLoop)
-          .addReg(Exec)
-          .addReg(Cond);
+  MachineInstr *CondLoop = BuildMI(MBB, &MI, DL, TII->get(Andn2Opc), MaskLoop)
+                               .addReg(Exec)
+                               .addReg(Cond);
 
   MachineInstr *ExitExec = BuildMI(MBB, &MI, DL, TII->get(OrOpc), MaskExit)
                                .addReg(Cond)
@@ -368,6 +371,88 @@ void SILowerControlFlow::emitWaveDiverge(MachineInstr &MI,
   MI.eraseFromParent();
 
   LIS->createAndComputeVirtRegInterval(TestResultReg);
+
+  LIS->removeAllRegUnitsForPhysReg(Exec);
+}
+
+void SILowerControlFlow::emitWaveInvert(MachineInstr &MI,
+                                        Register EnabledLanesMask,
+                                        Register DisableLanesMask) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock::iterator I(MI);
+
+  MachineInstr *CondInverted =
+      BuildMI(MBB, I, DL, TII->get(XorOpc), DisableLanesMask)
+          .addReg(EnabledLanesMask)
+          .addReg(Exec);
+
+  if (LV) {
+    LV->replaceKillInstruction(DisableLanesMask, MI, *CondInverted);
+  }
+
+  Register TestResultReg = MRI->createVirtualRegister(BoolRC);
+  // If the EnableLanesMask is zero we have to restore the masked bits on the
+  // skip way
+  Register ExitMask = MRI->createVirtualRegister(BoolRC);
+  MachineInstr *ExitMaskSet = BuildMI(MBB, I, DL, TII->get(OrOpc), ExitMask)
+                                  .addReg(Exec)
+                                  .addReg(DisableLanesMask);
+
+  MachineInstr *IfZeroMask =
+      BuildMI(MBB, I, DL, TII->get(AndOpc), TestResultReg)
+          .addReg(EnabledLanesMask)
+          .addImm(TestMask);
+
+  MachineInstr *SetExecForSucc = BuildMI(MBB, I, DL, TII->get(Select), Exec)
+                                     .addReg(EnabledLanesMask)
+                                     .addReg(ExitMask);
+
+  MachineBasicBlock *FlowBB = MI.getOperand(2).getMBB();
+  MachineBasicBlock *TargetBB = nullptr;
+  // determine target BBs
+  I = skipToUncondBrOrEnd(MBB, I);
+  if (I != MBB.end()) {
+    // skipToUncondBrOrEnd returns either unconditional branch or end()
+    TargetBB = I->getOperand(0).getMBB();
+    I->getOperand(0).setMBB(FlowBB);
+  } else {
+    // assert(MBB.succ_size() == 2);
+    for (auto Succ : successors(&MBB)) {
+      if (Succ != FlowBB) {
+        TargetBB = Succ;
+        break;
+      }
+    }
+    I = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(FlowBB);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*I);
+  }
+
+  if (TargetBB) {
+    MachineInstr *NewBr =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1)).addMBB(TargetBB);
+    if (LIS)
+      LIS->InsertMachineInstrInMaps(*NewBr);
+  }
+
+  if (!LIS) {
+    MI.eraseFromParent();
+    return;
+  }
+
+  LIS->InsertMachineInstrInMaps(*CondInverted);
+  LIS->InsertMachineInstrInMaps(*ExitMaskSet);
+  LIS->InsertMachineInstrInMaps(*IfZeroMask);
+  LIS->ReplaceMachineInstrInMaps(MI, *SetExecForSucc);
+
+  RecomputeRegs.insert(MI.getOperand(0).getReg());
+  RecomputeRegs.insert(MI.getOperand(1).getReg());
+
+  MI.eraseFromParent();
+
+  LIS->createAndComputeVirtRegInterval(TestResultReg);
+  LIS->createAndComputeVirtRegInterval(ExitMask);
 
   LIS->removeAllRegUnitsForPhysReg(Exec);
 }
@@ -610,6 +695,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     Select = AMDGPU::S_CSELECT_B32;
     CmovOpc = AMDGPU::S_CMOV_B32;
     AndOpc = AMDGPU::S_AND_B32;
+    Andn2Opc = AMDGPU::S_ANDN2_B32;
     OrOpc = AMDGPU::S_OR_B32;
     XorOpc = AMDGPU::S_XOR_B32;
     MovTermOpc = AMDGPU::S_MOV_B32_term;
@@ -623,6 +709,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     Select = AMDGPU::S_CSELECT_B64;
     CmovOpc = AMDGPU::S_CMOV_B64;
     AndOpc = AMDGPU::S_AND_B64;
+    Andn2Opc = AMDGPU::S_ANDN2_B64;
     OrOpc = AMDGPU::S_OR_B64;
     XorOpc = AMDGPU::S_XOR_B64;
     MovTermOpc = AMDGPU::S_MOV_B64_term;

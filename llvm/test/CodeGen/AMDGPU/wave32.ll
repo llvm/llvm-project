@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfe, v4
 ; GFX1032-NEXT:    v_add_nc_u32_e32 v1, 1, v4
 ; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX1032-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX1032-NEXT:    s_andn2_b32 s3, exec_lo, s2
 ; GFX1032-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX1032-NEXT:    s_and_b32 s5, s3, -1
 ; GFX1032-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -445,7 +445,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    v_cmp_lt_i32_e32 vcc, 0xfe, v4
 ; GFX1064-NEXT:    v_add_nc_u32_e32 v1, 1, v4
 ; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX1064-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX1064-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX1064-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX1064-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX1064-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
@@ -573,7 +573,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    ; in Loop: Header=BB11_4 Depth=1
 ; GFX1032-NEXT:    s_and_b32 s5, exec_lo, s4
 ; GFX1032-NEXT:    s_or_b32 s2, s5, s2
-; GFX1032-NEXT:    s_xor_b32 s5, s2, exec_lo
+; GFX1032-NEXT:    s_andn2_b32 s5, exec_lo, s2
 ; GFX1032-NEXT:    s_or_b32 s6, s2, exec_lo
 ; GFX1032-NEXT:    s_and_b32 s7, s5, -1
 ; GFX1032-NEXT:    s_cselect_b32 exec_lo, s5, s6
@@ -623,7 +623,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    ; in Loop: Header=BB11_4 Depth=1
 ; GFX1064-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
 ; GFX1064-NEXT:    s_or_b64 s[2:3], s[8:9], s[2:3]
-; GFX1064-NEXT:    s_xor_b64 s[8:9], s[2:3], exec
+; GFX1064-NEXT:    s_andn2_b64 s[8:9], exec, s[2:3]
 ; GFX1064-NEXT:    s_or_b64 s[10:11], s[2:3], exec
 ; GFX1064-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX1064-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -1588,7 +1588,7 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1032-NEXT:    s_add_i32 s2, s2, 1
 ; GFX1032-NEXT:    s_and_b32 s3, exec_lo, s3
 ; GFX1032-NEXT:    s_or_b32 s0, s3, s0
-; GFX1032-NEXT:    s_xor_b32 s3, s0, exec_lo
+; GFX1032-NEXT:    s_andn2_b32 s3, exec_lo, s0
 ; GFX1032-NEXT:    s_or_b32 s4, s0, exec_lo
 ; GFX1032-NEXT:    s_and_b32 s5, s3, -1
 ; GFX1032-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -1628,7 +1628,7 @@ define amdgpu_kernel void @test_invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GFX1064-NEXT:    s_add_i32 s4, s4, 1
 ; GFX1064-NEXT:    s_and_b64 s[6:7], exec, s[6:7]
 ; GFX1064-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
-; GFX1064-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; GFX1064-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; GFX1064-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; GFX1064-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX1064-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]

@@ -29,7 +29,7 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    v_mov_b32_e32 v7, v6
 ; ISA-NEXT:    s_and_b32 s5, exec_lo, vcc_lo
 ; ISA-NEXT:    s_or_b32 s4, s5, s4
-; ISA-NEXT:    s_xor_b32 s5, s4, exec_lo
+; ISA-NEXT:    s_andn2_b32 s5, exec_lo, s4
 ; ISA-NEXT:    v_add_f32_e32 v6, v7, v0
 ; ISA-NEXT:    s_or_b32 s6, s4, exec_lo
 ; ISA-NEXT:    s_and_b32 s7, s5, -1

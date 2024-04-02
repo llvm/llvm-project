@@ -28,7 +28,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -54,7 +54,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -84,7 +84,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -117,7 +117,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -143,7 +143,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -173,7 +173,7 @@ define amdgpu_ps float @global_max_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -205,7 +205,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -231,7 +231,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -259,7 +259,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -289,7 +289,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -315,7 +315,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -343,7 +343,7 @@ define amdgpu_ps void @global_max_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -378,7 +378,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -408,7 +408,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -442,7 +442,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -479,7 +479,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -509,7 +509,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -543,7 +543,7 @@ define amdgpu_ps <2 x float> @global_max_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -580,7 +580,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -609,7 +609,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -640,7 +640,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -673,7 +673,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -702,7 +702,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -733,7 +733,7 @@ define amdgpu_ps void @global_max_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -770,7 +770,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -796,7 +796,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -826,7 +826,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn(ptr addrspace(1) inreg %sbase, 
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -859,7 +859,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -885,7 +885,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -915,7 +915,7 @@ define amdgpu_ps float @global_min_saddr_i32_rtn_neg128(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -947,7 +947,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -973,7 +973,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1001,7 +1001,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1031,7 +1031,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -1057,7 +1057,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1085,7 +1085,7 @@ define amdgpu_ps void @global_min_saddr_i32_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1120,7 +1120,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1150,7 +1150,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1184,7 +1184,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn(ptr addrspace(1) inreg %s
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1221,7 +1221,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1251,7 +1251,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1285,7 +1285,7 @@ define amdgpu_ps <2 x float> @global_min_saddr_i64_rtn_neg128(ptr addrspace(1) i
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1322,7 +1322,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -1351,7 +1351,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1382,7 +1382,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1415,7 +1415,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -1444,7 +1444,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1475,7 +1475,7 @@ define amdgpu_ps void @global_min_saddr_i64_nortn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1512,7 +1512,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1538,7 +1538,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1568,7 +1568,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1601,7 +1601,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1627,7 +1627,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1657,7 +1657,7 @@ define amdgpu_ps float @global_umax_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1689,7 +1689,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -1715,7 +1715,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1743,7 +1743,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1773,7 +1773,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -1799,7 +1799,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1827,7 +1827,7 @@ define amdgpu_ps void @global_umax_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1862,7 +1862,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1892,7 +1892,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1926,7 +1926,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1963,7 +1963,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -1993,7 +1993,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2027,7 +2027,7 @@ define amdgpu_ps <2 x float> @global_umax_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2064,7 +2064,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -2093,7 +2093,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2124,7 +2124,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2157,7 +2157,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -2186,7 +2186,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2217,7 +2217,7 @@ define amdgpu_ps void @global_umax_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2254,7 +2254,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2280,7 +2280,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2310,7 +2310,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2343,7 +2343,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2369,7 +2369,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2399,7 +2399,7 @@ define amdgpu_ps float @global_umin_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2431,7 +2431,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -2457,7 +2457,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2485,7 +2485,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2515,7 +2515,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v0
@@ -2541,7 +2541,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v5
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2569,7 +2569,7 @@ define amdgpu_ps void @global_umin_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2604,7 +2604,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2634,7 +2634,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2668,7 +2668,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn(ptr addrspace(1) inreg %
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2705,7 +2705,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX9-NEXT:    buffer_wbinvl1
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2735,7 +2735,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2769,7 +2769,7 @@ define amdgpu_ps <2 x float> @global_umin_saddr_i64_rtn_neg128(ptr addrspace(1) 
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[9:10]
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2806,7 +2806,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -2835,7 +2835,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2866,7 +2866,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn(ptr addrspace(1) inreg %sbase
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2899,7 +2899,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX9-NEXT:    v_cmp_eq_u64_e32 vcc, v[3:4], v[5:6]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v3
@@ -2928,7 +2928,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX10-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX10-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX10-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX10-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX10-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]
@@ -2959,7 +2959,7 @@ define amdgpu_ps void @global_umin_saddr_i64_nortn_neg128(ptr addrspace(1) inreg
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v3
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[2:3], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[6:7], s[2:3], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[2:3], s[4:5]

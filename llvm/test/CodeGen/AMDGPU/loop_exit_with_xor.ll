@@ -18,7 +18,7 @@ define void @needs_and(i32 %arg) {
 ; GCN-NEXT:    s_and_b64 s[6:7], exec, vcc
 ; GCN-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GCN-NEXT:    s_add_i32 s8, s8, 1
-; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[12:13], s[6:7], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[10:11]
@@ -75,7 +75,7 @@ define void @doesnt_need_and(i32 %arg) {
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s6, v0
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4
@@ -116,7 +116,7 @@ define void @break_cond_is_arg(i32 %arg, i1 %breakcond) {
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GCN-NEXT:    s_add_i32 s10, s10, 1
-; GCN-NEXT:    s_xor_b64 s[8:9], s[6:7], exec
+; GCN-NEXT:    s_andn2_b64 s[8:9], exec, s[6:7]
 ; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], exec
 ; GCN-NEXT:    s_and_b64 s[14:15], s[8:9], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[8:9], s[12:13]

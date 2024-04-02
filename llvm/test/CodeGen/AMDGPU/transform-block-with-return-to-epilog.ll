@@ -125,7 +125,7 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_AND_B64 $exec, renamable $vcc, implicit-def $scc
   ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr4_sgpr5, implicit-def $scc
-  ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_XOR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+  ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def $scc
   ; GCN-NEXT:   renamable $sgpr8_sgpr9 = S_OR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
   ; GCN-NEXT:   dead renamable $sgpr10_sgpr11 = S_AND_B64 renamable $sgpr6_sgpr7, -1, implicit-def $scc
   ; GCN-NEXT:   $exec = S_CSELECT_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr8_sgpr9, implicit $scc

@@ -1068,7 +1068,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
 ; GCN-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
-; GCN-NEXT:    s_xor_b64 s[10:11], s[12:13], exec
+; GCN-NEXT:    s_andn2_b64 s[10:11], exec, s[12:13]
 ; GCN-NEXT:    s_or_b64 s[14:15], s[12:13], exec
 ; GCN-NEXT:    s_and_b64 s[6:7], s[10:11], -1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
@@ -1078,7 +1078,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_and_b64 s[10:11], exec, vcc
 ; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
-; GCN-NEXT:    s_xor_b64 s[10:11], s[6:7], exec
+; GCN-NEXT:    s_andn2_b64 s[10:11], exec, s[6:7]
 ; GCN-NEXT:    s_or_b64 s[14:15], s[6:7], exec
 ; GCN-NEXT:    s_and_b64 s[16:17], s[10:11], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[10:11], s[14:15]
@@ -1181,7 +1181,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; GCN-O0-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; GCN-O0-NEXT:    s_andn2_b64 s[4:5], exec, s[6:7]
 ; GCN-O0-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GCN-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
@@ -1399,7 +1399,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; GCN-O0-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; GCN-O0-NEXT:    s_andn2_b64 s[4:5], exec, s[6:7]
 ; GCN-O0-NEXT:    s_or_b64 s[6:7], s[6:7], exec
 ; GCN-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GCN-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]

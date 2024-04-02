@@ -16,7 +16,7 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_and_b64 s[4:5], exec, vcc
 ; SI-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
-; SI-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; SI-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; SI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
@@ -43,7 +43,7 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_and_b64 s[4:5], exec, vcc
 ; FLAT-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
-; FLAT-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; FLAT-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; FLAT-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; FLAT-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; FLAT-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
@@ -93,7 +93,7 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; SI-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
-; SI-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; SI-NEXT:    s_andn2_b64 s[0:1], exec, s[2:3]
 ; SI-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; SI-NEXT:    s_and_b64 s[8:9], s[0:1], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[0:1], s[6:7]
@@ -123,7 +123,7 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; FLAT-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
-; FLAT-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; FLAT-NEXT:    s_andn2_b64 s[0:1], exec, s[2:3]
 ; FLAT-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; FLAT-NEXT:    s_and_b64 s[8:9], s[0:1], -1
 ; FLAT-NEXT:    s_cselect_b64 exec, s[0:1], s[6:7]

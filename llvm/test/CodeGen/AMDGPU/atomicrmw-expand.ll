@@ -21,7 +21,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -47,7 +47,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX90A-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX90A-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX90A-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX90A-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -84,7 +84,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX1100-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX1100-NEXT:    s_and_not1_b32 s1, exec_lo, s0
 ; GFX1100-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX1100-NEXT:    s_and_b32 s3, s1, -1
 ; GFX1100-NEXT:    s_cselect_b32 exec_lo, s1, s2
@@ -115,7 +115,7 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX1200-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1200-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX1200-NEXT:    s_and_not1_b32 s1, exec_lo, s0
 ; GFX1200-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX1200-NEXT:    s_and_b32 s3, s1, -1
 ; GFX1200-NEXT:    s_cselect_b32 exec_lo, s1, s2
@@ -142,7 +142,7 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -395,7 +395,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -418,7 +418,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX90A-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX90A-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX90A-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX90A-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -452,7 +452,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX1100-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX1100-NEXT:    s_and_not1_b32 s1, exec_lo, s0
 ; GFX1100-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX1100-NEXT:    s_and_b32 s3, s1, -1
 ; GFX1100-NEXT:    s_cselect_b32 exec_lo, s1, s2
@@ -483,7 +483,7 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1200-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX1200-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1200-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX1200-NEXT:    s_and_not1_b32 s1, exec_lo, s0
 ; GFX1200-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX1200-NEXT:    s_and_b32 s3, s1, -1
 ; GFX1200-NEXT:    s_cselect_b32 exec_lo, s1, s2

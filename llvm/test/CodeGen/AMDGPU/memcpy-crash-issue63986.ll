@@ -159,7 +159,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[14:15], v[4:5]
 ; CHECK-NEXT:    s_addc_u32 s11, s11, 0
 ; CHECK-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
-; CHECK-NEXT:    s_xor_b64 s[16:17], s[12:13], exec
+; CHECK-NEXT:    s_andn2_b64 s[16:17], exec, s[12:13]
 ; CHECK-NEXT:    s_or_b64 s[18:19], s[12:13], exec
 ; CHECK-NEXT:    s_and_b64 s[20:21], s[16:17], -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -210,7 +210,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    v_cmp_ge_u64_e64 s[8:9], s[14:15], v[6:7]
 ; CHECK-NEXT:    v_addc_co_u32_e32 v11, vcc, v9, v12, vcc
 ; CHECK-NEXT:    s_or_b64 s[12:13], s[8:9], s[12:13]
-; CHECK-NEXT:    s_xor_b64 s[8:9], s[12:13], exec
+; CHECK-NEXT:    s_andn2_b64 s[8:9], exec, s[12:13]
 ; CHECK-NEXT:    s_or_b64 s[16:17], s[12:13], exec
 ; CHECK-NEXT:    s_and_b64 s[18:19], s[8:9], -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

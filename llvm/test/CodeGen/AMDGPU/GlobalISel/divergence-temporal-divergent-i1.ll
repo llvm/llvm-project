@@ -21,7 +21,7 @@ define void @temporal_divergent_i1_phi(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_andn2_b32 s6, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s6, s6, s4
-; GFX10-NEXT:    s_xor_b32 s4, s5, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s7, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s8, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s7
@@ -69,7 +69,7 @@ define void @temporal_divergent_i1_non_phi(float %val, ptr %addr) {
 ; GFX10-NEXT:    s_andn2_b32 s6, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s4, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s6, s6, s4
-; GFX10-NEXT:    s_xor_b32 s4, s5, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s7, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s8, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s7
@@ -133,7 +133,7 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, i32 %x.size, ptr ad
 ; GFX10-NEXT:    s_andn2_b32 s0, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s0, s0, s5
-; GFX10-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s5, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s6, s4, exec_lo
 ; GFX10-NEXT:    s_and_b32 s7, s5, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s5, s6

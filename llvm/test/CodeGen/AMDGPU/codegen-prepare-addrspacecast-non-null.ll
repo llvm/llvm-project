@@ -212,7 +212,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; DAGISEL-ASM-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; DAGISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
-; DAGISEL-ASM-NEXT:    s_xor_b64 s[8:9], s[6:7], exec
+; DAGISEL-ASM-NEXT:    s_andn2_b64 s[8:9], exec, s[6:7]
 ; DAGISEL-ASM-NEXT:    s_or_b64 s[10:11], s[6:7], exec
 ; DAGISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; DAGISEL-ASM-NEXT:    s_and_b64 s[12:13], s[8:9], -1
@@ -246,7 +246,7 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GISEL-ASM-NEXT:    s_mov_b64 s[8:9], src_private_base
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v1, s9
-; GISEL-ASM-NEXT:    s_xor_b64 s[8:9], s[6:7], exec
+; GISEL-ASM-NEXT:    s_andn2_b64 s[8:9], exec, s[6:7]
 ; GISEL-ASM-NEXT:    s_or_b64 s[10:11], s[6:7], exec
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v2, 7
 ; GISEL-ASM-NEXT:    s_and_b64 s[12:13], s[8:9], -1

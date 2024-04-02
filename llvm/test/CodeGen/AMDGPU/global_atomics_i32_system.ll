@@ -2182,7 +2182,7 @@ define void @global_atomic_nand_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -2207,7 +2207,7 @@ define void @global_atomic_nand_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -2231,7 +2231,7 @@ define void @global_atomic_nand_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -2266,7 +2266,7 @@ define void @global_atomic_nand_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -2293,7 +2293,7 @@ define void @global_atomic_nand_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -2317,7 +2317,7 @@ define void @global_atomic_nand_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -2354,7 +2354,7 @@ define i32 @global_atomic_nand_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -2380,7 +2380,7 @@ define i32 @global_atomic_nand_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -2405,7 +2405,7 @@ define i32 @global_atomic_nand_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -2441,7 +2441,7 @@ define i32 @global_atomic_nand_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -2469,7 +2469,7 @@ define i32 @global_atomic_nand_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -2493,7 +2493,7 @@ define i32 @global_atomic_nand_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -2534,7 +2534,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_scalar(ptr addrspace(1) inr
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -2566,7 +2566,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -2591,7 +2591,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_scalar(ptr addrspace(1) inr
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -2631,7 +2631,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_offset_scalar(ptr addrspace
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -2665,7 +2665,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_offset_scalar(ptr addrspace
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -2690,7 +2690,7 @@ define amdgpu_gfx void @global_atomic_nand_i32_noret_offset_scalar(ptr addrspace
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -2732,7 +2732,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -2766,7 +2766,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -2791,7 +2791,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_scalar(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -2831,7 +2831,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -2865,7 +2865,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_offset_scalar(ptr addrspace(1)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -2890,7 +2890,7 @@ define amdgpu_gfx i32 @global_atomic_nand_i32_ret_offset_scalar(ptr addrspace(1)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -4012,7 +4012,7 @@ define void @global_atomic_max_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -4036,7 +4036,7 @@ define void @global_atomic_max_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -4059,7 +4059,7 @@ define void @global_atomic_max_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -4093,7 +4093,7 @@ define void @global_atomic_max_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -4119,7 +4119,7 @@ define void @global_atomic_max_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -4142,7 +4142,7 @@ define void @global_atomic_max_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -4178,7 +4178,7 @@ define i32 @global_atomic_max_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -4203,7 +4203,7 @@ define i32 @global_atomic_max_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -4227,7 +4227,7 @@ define i32 @global_atomic_max_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -4262,7 +4262,7 @@ define i32 @global_atomic_max_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -4289,7 +4289,7 @@ define i32 @global_atomic_max_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -4312,7 +4312,7 @@ define i32 @global_atomic_max_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -4352,7 +4352,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_scalar(ptr addrspace(1) inre
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -4383,7 +4383,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -4407,7 +4407,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_scalar(ptr addrspace(1) inre
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -4446,7 +4446,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_offset_scalar(ptr addrspace(
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -4479,7 +4479,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -4503,7 +4503,7 @@ define amdgpu_gfx void @global_atomic_max_i32_noret_offset_scalar(ptr addrspace(
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -4544,7 +4544,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_scalar(ptr addrspace(1) inreg %
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -4577,7 +4577,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -4601,7 +4601,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_scalar(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -4640,7 +4640,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_offset_scalar(ptr addrspace(1) 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -4673,7 +4673,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -4697,7 +4697,7 @@ define amdgpu_gfx i32 @global_atomic_max_i32_ret_offset_scalar(ptr addrspace(1) 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -4736,7 +4736,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -4770,7 +4770,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[6:7], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -4801,7 +4801,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -4844,7 +4844,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -4885,7 +4885,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -4920,7 +4920,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -4964,7 +4964,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -4996,7 +4996,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[6:7], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -5027,7 +5027,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -5069,7 +5069,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -5108,7 +5108,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -5143,7 +5143,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -5343,7 +5343,7 @@ define void @global_atomic_umax_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -5367,7 +5367,7 @@ define void @global_atomic_umax_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -5390,7 +5390,7 @@ define void @global_atomic_umax_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -5424,7 +5424,7 @@ define void @global_atomic_umax_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -5450,7 +5450,7 @@ define void @global_atomic_umax_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -5473,7 +5473,7 @@ define void @global_atomic_umax_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -5509,7 +5509,7 @@ define i32 @global_atomic_umax_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -5534,7 +5534,7 @@ define i32 @global_atomic_umax_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -5558,7 +5558,7 @@ define i32 @global_atomic_umax_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -5593,7 +5593,7 @@ define i32 @global_atomic_umax_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -5620,7 +5620,7 @@ define i32 @global_atomic_umax_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -5643,7 +5643,7 @@ define i32 @global_atomic_umax_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -5683,7 +5683,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_scalar(ptr addrspace(1) inr
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -5714,7 +5714,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -5738,7 +5738,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_scalar(ptr addrspace(1) inr
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -5777,7 +5777,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_offset_scalar(ptr addrspace
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -5810,7 +5810,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_offset_scalar(ptr addrspace
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -5834,7 +5834,7 @@ define amdgpu_gfx void @global_atomic_umax_i32_noret_offset_scalar(ptr addrspace
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -5875,7 +5875,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -5908,7 +5908,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -5932,7 +5932,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_scalar(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -5971,7 +5971,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -6004,7 +6004,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_offset_scalar(ptr addrspace(1)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -6028,7 +6028,7 @@ define amdgpu_gfx i32 @global_atomic_umax_i32_ret_offset_scalar(ptr addrspace(1)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -6067,7 +6067,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -6101,7 +6101,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[6:7], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -6132,7 +6132,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -6175,7 +6175,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -6216,7 +6216,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6251,7 +6251,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -6296,7 +6296,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -6335,7 +6335,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6370,7 +6370,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -6570,7 +6570,7 @@ define void @global_atomic_umin_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -6594,7 +6594,7 @@ define void @global_atomic_umin_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -6617,7 +6617,7 @@ define void @global_atomic_umin_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -6651,7 +6651,7 @@ define void @global_atomic_umin_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -6677,7 +6677,7 @@ define void @global_atomic_umin_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -6700,7 +6700,7 @@ define void @global_atomic_umin_i32_noret_offset(ptr addrspace(1) %out, i32 %in)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -6736,7 +6736,7 @@ define i32 @global_atomic_umin_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -6761,7 +6761,7 @@ define i32 @global_atomic_umin_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6785,7 +6785,7 @@ define i32 @global_atomic_umin_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6820,7 +6820,7 @@ define i32 @global_atomic_umin_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -6847,7 +6847,7 @@ define i32 @global_atomic_umin_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6870,7 +6870,7 @@ define i32 @global_atomic_umin_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -6910,7 +6910,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_scalar(ptr addrspace(1) inr
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -6941,7 +6941,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_scalar(ptr addrspace(1) inr
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -6965,7 +6965,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_scalar(ptr addrspace(1) inr
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -7004,7 +7004,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_offset_scalar(ptr addrspace
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -7037,7 +7037,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_offset_scalar(ptr addrspace
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -7061,7 +7061,7 @@ define amdgpu_gfx void @global_atomic_umin_i32_noret_offset_scalar(ptr addrspace
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -7102,7 +7102,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_scalar(ptr addrspace(1) inreg 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -7135,7 +7135,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_scalar(ptr addrspace(1) inreg 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -7159,7 +7159,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_scalar(ptr addrspace(1) inreg 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -7198,7 +7198,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_offset_scalar(ptr addrspace(1)
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -7231,7 +7231,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_offset_scalar(ptr addrspace(1)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -7255,7 +7255,7 @@ define amdgpu_gfx i32 @global_atomic_umin_i32_ret_offset_scalar(ptr addrspace(1)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -7451,7 +7451,7 @@ define void @global_atomic_min_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -7475,7 +7475,7 @@ define void @global_atomic_min_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -7498,7 +7498,7 @@ define void @global_atomic_min_i32_noret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -7532,7 +7532,7 @@ define void @global_atomic_min_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v4, v5
@@ -7558,7 +7558,7 @@ define void @global_atomic_min_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    v_mov_b32_e32 v4, v3
@@ -7581,7 +7581,7 @@ define void @global_atomic_min_i32_noret_offset(ptr addrspace(1) %out, i32 %in) 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v3
@@ -7617,7 +7617,7 @@ define i32 @global_atomic_min_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -7642,7 +7642,7 @@ define i32 @global_atomic_min_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -7666,7 +7666,7 @@ define i32 @global_atomic_min_i32_ret(ptr addrspace(1) %ptr, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -7701,7 +7701,7 @@ define i32 @global_atomic_min_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; SI-NEXT:    s_xor_b64 s[10:11], s[8:9], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[8:9]
 ; SI-NEXT:    s_or_b64 s[12:13], s[8:9], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[10:11], s[12:13]
@@ -7728,7 +7728,7 @@ define i32 @global_atomic_min_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; VI-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; VI-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; VI-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -7751,7 +7751,7 @@ define i32 @global_atomic_min_i32_ret_offset(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -7791,7 +7791,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_scalar(ptr addrspace(1) inre
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -7822,7 +7822,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_scalar(ptr addrspace(1) inre
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -7846,7 +7846,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_scalar(ptr addrspace(1) inre
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -7885,7 +7885,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_offset_scalar(ptr addrspace(
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -7918,7 +7918,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_offset_scalar(ptr addrspace(
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -7942,7 +7942,7 @@ define amdgpu_gfx void @global_atomic_min_i32_noret_offset_scalar(ptr addrspace(
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -7983,7 +7983,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_scalar(ptr addrspace(1) inreg %
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -8016,7 +8016,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_scalar(ptr addrspace(1) inreg %
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -8040,7 +8040,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_scalar(ptr addrspace(1) inreg %
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -8079,7 +8079,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_offset_scalar(ptr addrspace(1) 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[36:37], vcc, s[36:37]
-; SI-NEXT:    s_xor_b64 s[38:39], s[36:37], exec
+; SI-NEXT:    s_andn2_b64 s[38:39], exec, s[36:37]
 ; SI-NEXT:    s_or_b64 s[40:41], s[36:37], exec
 ; SI-NEXT:    s_and_b64 s[42:43], s[38:39], -1
 ; SI-NEXT:    s_cselect_b64 exec, s[38:39], s[40:41]
@@ -8112,7 +8112,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_offset_scalar(ptr addrspace(1) 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v4
 ; VI-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; VI-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; VI-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; VI-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; VI-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -8136,7 +8136,7 @@ define amdgpu_gfx i32 @global_atomic_min_i32_ret_offset_scalar(ptr addrspace(1) 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[34:35], vcc, s[34:35]
-; GFX9-NEXT:    s_xor_b64 s[36:37], s[34:35], exec
+; GFX9-NEXT:    s_andn2_b64 s[36:37], exec, s[34:35]
 ; GFX9-NEXT:    s_or_b64 s[38:39], s[34:35], exec
 ; GFX9-NEXT:    s_and_b64 s[40:41], s[36:37], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[36:37], s[38:39]
@@ -8175,7 +8175,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -8209,7 +8209,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[6:7], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -8240,7 +8240,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -8283,7 +8283,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -8324,7 +8324,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -8359,7 +8359,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -8399,7 +8399,7 @@ define amdgpu_kernel void @atomic_min_i32(ptr addrspace(1) %out, i32 %in) {
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; SI-NEXT:    v_mov_b32_e32 v1, v2
@@ -8427,7 +8427,7 @@ define amdgpu_kernel void @atomic_min_i32(ptr addrspace(1) %out, i32 %in) {
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[6:7], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; VI-NEXT:    v_mov_b32_e32 v3, v2
@@ -8454,7 +8454,7 @@ define amdgpu_kernel void @atomic_min_i32(ptr addrspace(1) %out, i32 %in) {
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX9-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
@@ -8495,7 +8495,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; SI-NEXT:    buffer_wbinvl1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v2
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[10:11], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[10:11], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[14:15], s[10:11], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, v0
@@ -8534,7 +8534,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; VI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; VI-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; VI-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; VI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; VI-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; VI-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -8569,7 +8569,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[8:9], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]

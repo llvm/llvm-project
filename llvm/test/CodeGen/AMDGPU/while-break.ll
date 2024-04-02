@@ -11,7 +11,7 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_and_b32 s2, exec_lo, s2
 ; GCN-NEXT:    s_or_b32 s1, s2, s1
-; GCN-NEXT:    s_xor_b32 s2, s1, exec_lo
+; GCN-NEXT:    s_andn2_b32 s2, exec_lo, s1
 ; GCN-NEXT:    s_or_b32 s3, s1, exec_lo
 ; GCN-NEXT:    s_and_b32 s4, s2, -1
 ; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s3
@@ -97,7 +97,7 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_and_b32 s2, exec_lo, s2
 ; GCN-NEXT:    s_or_b32 s1, s2, s1
-; GCN-NEXT:    s_xor_b32 s2, s1, exec_lo
+; GCN-NEXT:    s_andn2_b32 s2, exec_lo, s1
 ; GCN-NEXT:    s_or_b32 s3, s1, exec_lo
 ; GCN-NEXT:    s_and_b32 s4, s2, -1
 ; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s3

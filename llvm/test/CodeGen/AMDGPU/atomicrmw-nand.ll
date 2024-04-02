@@ -17,7 +17,7 @@ define i32 @atomic_nand_i32_lds(ptr addrspace(3) %ptr) nounwind {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -46,7 +46,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -75,7 +75,7 @@ define i32 @atomic_nand_i32_flat(ptr %ptr) nounwind {
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]

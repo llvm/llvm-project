@@ -24,7 +24,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    v_add_u32_e32 v5, v5, v0
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX9-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX9-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -99,7 +99,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    global_load_dword v3, v[18:19], off
 ; GFX9-NEXT:    v_cmp_ge_u32_e64 s[6:7], v0, v1
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[10:11], exec
+; GFX9-NEXT:    s_andn2_b64 s[6:7], exec, s[10:11]
 ; GFX9-NEXT:    s_or_b64 s[12:13], s[10:11], exec
 ; GFX9-NEXT:    s_and_b64 s[14:15], s[6:7], -1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

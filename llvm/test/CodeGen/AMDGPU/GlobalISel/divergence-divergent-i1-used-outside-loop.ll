@@ -33,7 +33,7 @@ define void @divergent_i1_phi_used_outside_loop(float %val, float %pre.cond.val,
 ; GFX10-NEXT:    s_and_b32 s6, exec_lo, s6
 ; GFX10-NEXT:    s_or_b32 s7, s8, s7
 ; GFX10-NEXT:    s_or_b32 s5, s5, s6
-; GFX10-NEXT:    s_xor_b32 s8, s4, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s8, exec_lo, s4
 ; GFX10-NEXT:    s_mov_b32 s6, s7
 ; GFX10-NEXT:    s_or_b32 s7, s4, exec_lo
 ; GFX10-NEXT:    s_and_b32 s9, s8, -1
@@ -156,7 +156,7 @@ define void @divergent_i1_xor_used_outside_loop(float %val, float %pre.cond.val,
 ; GFX10-NEXT:    s_andn2_b32 s6, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s7, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s6, s6, s7
-; GFX10-NEXT:    s_xor_b32 s7, s4, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s7, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s8, s4, exec_lo
 ; GFX10-NEXT:    s_and_b32 s9, s7, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s7, s8
@@ -220,7 +220,7 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-NEXT:    s_andn2_b32 s6, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s9, exec_lo, s9
 ; GFX10-NEXT:    s_or_b32 s6, s6, s9
-; GFX10-NEXT:    s_xor_b32 s9, s5, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s9, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s10, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s11, s9, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s9, s10
@@ -325,7 +325,7 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    s_andn2_b32 s4, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s6, s4, s6
-; GFX10-NEXT:    s_xor_b32 s4, s5, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s5
 ; GFX10-NEXT:    s_or_b32 s7, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s8, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s7
@@ -450,7 +450,7 @@ define amdgpu_ps void @divergent_i1_freeze_used_outside_loop(i32 %n, ptr addrspa
 ; GFX10-NEXT:    s_andn2_b32 s1, s1, exec_lo
 ; GFX10-NEXT:    s_or_b32 s3, s3, s4
 ; GFX10-NEXT:    s_or_b32 s1, s1, s4
-; GFX10-NEXT:    s_xor_b32 s4, s0, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s0
 ; GFX10-NEXT:    s_or_b32 s5, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -528,7 +528,7 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:    s_andn2_b32 s1, s1, exec_lo
 ; GFX10-NEXT:    s_and_b32 s4, exec_lo, s3
 ; GFX10-NEXT:    s_or_b32 s1, s1, s4
-; GFX10-NEXT:    s_xor_b32 s4, s0, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s0
 ; GFX10-NEXT:    s_or_b32 s5, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3

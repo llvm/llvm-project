@@ -38,7 +38,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX900-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX900-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX900-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX900-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX900-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -84,7 +84,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -132,7 +132,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX90A-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX90A-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX90A-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX90A-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -178,7 +178,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX10-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s3
 ; GFX10-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -223,7 +223,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(ptr addrspace(1) %ptr) #0 
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX11-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX11-NEXT:    s_and_not1_b32 s4, exec_lo, s3
 ; GFX11-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX11-NEXT:    s_and_b32 s6, s4, -1
 ; GFX11-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -277,7 +277,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX900-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX900-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX900-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX900-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX900-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -324,7 +324,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -402,7 +402,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(ptr addrspace(1) %ptr
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX10-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s3
 ; GFX10-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -484,7 +484,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) #
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX900-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX900-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX900-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX900-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
@@ -572,7 +572,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32(ptr addrspace(1) %ptr) #
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX10-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s3, exec_lo, s2
 ; GFX10-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, s3, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -637,7 +637,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %p
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX900-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX900-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX900-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX900-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
@@ -725,7 +725,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_ieee(ptr addrspace(1) %p
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX10-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s3, exec_lo, s2
 ; GFX10-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, s3, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -792,7 +792,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %pt
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX900-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX900-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX900-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX900-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX900-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -838,7 +838,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %pt
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -914,7 +914,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(ptr addrspace(1) %pt
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX10-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s3
 ; GFX10-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -997,7 +997,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX900-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX900-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX900-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX900-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX900-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -1043,7 +1043,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX908-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX908-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX908-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX908-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX908-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -1091,7 +1091,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX90A-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX90A-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX90A-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX90A-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX90A-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -1137,7 +1137,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX10-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX10-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s4, exec_lo, s3
 ; GFX10-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, s4, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -1182,7 +1182,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(ptr addrspace(1) %p
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v5
 ; GFX11-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-NEXT:    s_xor_b32 s4, s3, exec_lo
+; GFX11-NEXT:    s_and_not1_b32 s4, exec_lo, s3
 ; GFX11-NEXT:    s_or_b32 s5, s3, exec_lo
 ; GFX11-NEXT:    s_and_b32 s6, s4, -1
 ; GFX11-NEXT:    s_cselect_b32 exec_lo, s4, s5
@@ -1236,7 +1236,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrsp
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GCN-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GCN-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -1282,7 +1282,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(ptr addrsp
 ; GFX11-NEXT:    buffer_wbinvl1_vol
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
 ; GFX11-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX11-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; GFX11-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
 ; GFX11-NEXT:    s_or_b64 s[8:9], s[4:5], exec
 ; GFX11-NEXT:    s_and_b64 s[10:11], s[6:7], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
@@ -1383,7 +1383,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX900-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX900-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX900-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX900-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
@@ -1422,7 +1422,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX908-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX908-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX908-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX908-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX908-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX908-NEXT:    v_mov_b32_e32 v1, v0
@@ -1461,7 +1461,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX90A-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX90A-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX90A-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX90A-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX90A-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
@@ -1501,7 +1501,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX10-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s3, exec_lo, s2
 ; GFX10-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, s3, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -1539,7 +1539,7 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_safe(ptr addrspace(1) %p
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX11-NEXT:    s_and_not1_b32 s3, exec_lo, s2
 ; GFX11-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX11-NEXT:    s_and_b32 s5, s3, -1
 ; GFX11-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -1581,7 +1581,7 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX900-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
-; GFX900-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
+; GFX900-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
 ; GFX900-NEXT:    s_or_b64 s[6:7], s[2:3], exec
 ; GFX900-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
@@ -1666,7 +1666,7 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX10-NEXT:    s_xor_b32 s3, s2, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s3, exec_lo, s2
 ; GFX10-NEXT:    s_or_b32 s4, s2, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, s3, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -1736,7 +1736,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GFX900-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX900-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX900-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX900-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX900-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -1779,7 +1779,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GFX908-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX908-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX908-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX908-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX908-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -1822,7 +1822,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
 ; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX90A-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX90A-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX90A-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX90A-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -1865,7 +1865,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s5, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s6, s4, exec_lo
 ; GFX10-NEXT:    s_and_b32 s7, s5, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s5, s6
@@ -1911,7 +1911,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_agent(ptr addrspace(1) %p
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX11-NEXT:    s_and_not1_b32 s5, exec_lo, s4
 ; GFX11-NEXT:    s_or_b32 s6, s4, exec_lo
 ; GFX11-NEXT:    s_and_b32 s7, s5, -1
 ; GFX11-NEXT:    s_cselect_b32 exec_lo, s5, s6
@@ -1961,7 +1961,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
 ; GFX900-NEXT:    buffer_wbinvl1_vol
 ; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GFX900-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX900-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX900-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX900-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX900-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX900-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -2004,7 +2004,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
 ; GFX908-NEXT:    buffer_wbinvl1_vol
 ; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
 ; GFX908-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX908-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX908-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX908-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX908-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX908-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -2049,7 +2049,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
 ; GFX90A-NEXT:    buffer_wbinvl1_vol
 ; GFX90A-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
 ; GFX90A-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX90A-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GFX90A-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GFX90A-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GFX90A-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GFX90A-NEXT:    s_cselect_b64 exec, s[8:9], s[10:11]
@@ -2092,7 +2092,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
 ; GFX10-NEXT:    buffer_gl0_inv
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX10-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX10-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s5, exec_lo, s4
 ; GFX10-NEXT:    s_or_b32 s6, s4, exec_lo
 ; GFX10-NEXT:    s_and_b32 s7, s5, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s5, s6
@@ -2138,7 +2138,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_bf16_system(ptr addrspace(1) %
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX11-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-NEXT:    s_xor_b32 s5, s4, exec_lo
+; GFX11-NEXT:    s_and_not1_b32 s5, exec_lo, s4
 ; GFX11-NEXT:    s_or_b32 s6, s4, exec_lo
 ; GFX11-NEXT:    s_and_b32 s7, s5, -1
 ; GFX11-NEXT:    s_cselect_b32 exec_lo, s5, s6

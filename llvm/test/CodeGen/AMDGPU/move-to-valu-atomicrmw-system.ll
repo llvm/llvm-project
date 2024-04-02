@@ -46,7 +46,7 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, ptr addrspace(1
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; GCN-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN-NEXT:    s_xor_b64 s[6:7], s[0:1], exec
+; GCN-NEXT:    s_andn2_b64 s[6:7], exec, s[0:1]
 ; GCN-NEXT:    s_or_b64 s[12:13], s[0:1], exec
 ; GCN-NEXT:    s_and_b64 s[14:15], s[6:7], -1
 ; GCN-NEXT:    v_mov_b32_e32 v4, v5
@@ -110,7 +110,7 @@ define amdgpu_kernel void @atomic_max_i32_noret(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    buffer_wbinvl1
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v4
 ; GCN-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GCN-NEXT:    s_xor_b64 s[8:9], s[0:1], exec
+; GCN-NEXT:    s_andn2_b64 s[8:9], exec, s[0:1]
 ; GCN-NEXT:    s_or_b64 s[10:11], s[0:1], exec
 ; GCN-NEXT:    s_and_b64 s[12:13], s[8:9], -1
 ; GCN-NEXT:    v_mov_b32_e32 v4, v5

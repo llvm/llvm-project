@@ -1768,7 +1768,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; SI-NEXT:    s_add_i32 s6, s6, 1
 ; SI-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v1
 ; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; SI-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; SI-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; SI-NEXT:    s_and_b64 s[10:11], s[4:5], -1
 ; SI-NEXT:    v_mov_b32_e32 v2, s6
@@ -1818,7 +1818,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE64-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v1
 ; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX10-WAVE64-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX10-WAVE64-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; GFX10-WAVE64-NEXT:    s_andn2_b64 s[4:5], exec, s[0:1]
 ; GFX10-WAVE64-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; GFX10-WAVE64-NEXT:    s_and_b64 s[10:11], s[4:5], -1
 ; GFX10-WAVE64-NEXT:    s_cselect_b64 exec, s[4:5], s[8:9]
@@ -1867,7 +1867,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE32-NEXT:    v_cmp_ge_i32_e32 vcc_lo, s2, v1
 ; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-WAVE32-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX10-WAVE32-NEXT:    s_xor_b32 s3, s0, exec_lo
+; GFX10-WAVE32-NEXT:    s_andn2_b32 s3, exec_lo, s0
 ; GFX10-WAVE32-NEXT:    s_or_b32 s4, s0, exec_lo
 ; GFX10-WAVE32-NEXT:    s_and_b32 s5, s3, -1
 ; GFX10-WAVE32-NEXT:    s_cselect_b32 exec_lo, s3, s4
@@ -1918,7 +1918,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX11-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX11-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
+; GFX11-NEXT:    s_and_not1_b64 s[4:5], exec, s[0:1]
 ; GFX11-NEXT:    s_or_b64 s[8:9], s[0:1], exec
 ; GFX11-NEXT:    s_and_b64 s[10:11], s[4:5], -1
 ; GFX11-NEXT:    s_cselect_b64 exec, s[4:5], s[8:9]

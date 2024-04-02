@@ -17,7 +17,7 @@ define amdgpu_cs void @should_not_hoist_set_inactive(<4 x i32> inreg %i14, i32 i
 ; GCN-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GCN-NEXT:    s_and_b32 s8, exec_lo, s6
 ; GCN-NEXT:    s_or_b32 s7, s8, s7
-; GCN-NEXT:    s_xor_b32 s8, s7, exec_lo
+; GCN-NEXT:    s_andn2_b32 s8, exec_lo, s7
 ; GCN-NEXT:    s_or_b32 s9, s7, exec_lo
 ; GCN-NEXT:    s_and_b32 s10, s8, -1
 ; GCN-NEXT:    s_cselect_b32 exec_lo, s8, s9

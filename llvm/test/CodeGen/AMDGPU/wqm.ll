@@ -790,7 +790,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX9-W64-NEXT:    v_add_u32_e32 v3, -1, v3
 ; GFX9-W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
 ; GFX9-W64-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-W64-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-W64-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-W64-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-W64-NEXT:    v_add_f32_e32 v2, v1, v2
@@ -824,7 +824,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX10-W32-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10-W32-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX10-W32-NEXT:    s_andn2_b32 s1, exec_lo, s0
 ; GFX10-W32-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s3, s1, -1
 ; GFX10-W32-NEXT:    s_cselect_b32 exec_lo, s1, s2
@@ -1285,7 +1285,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX9-W64-NEXT:    v_add_u32_e32 v3, -1, v3
 ; GFX9-W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
 ; GFX9-W64-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-W64-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-W64-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
@@ -1324,7 +1324,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX10-W32-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10-W32-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX10-W32-NEXT:    s_andn2_b32 s1, exec_lo, s0
 ; GFX10-W32-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s3, s1, -1
 ; GFX10-W32-NEXT:    s_cselect_b32 exec_lo, s1, s2
@@ -2781,7 +2781,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX9-W64-NEXT:    v_add_u32_e32 v3, -1, v3
 ; GFX9-W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
 ; GFX9-W64-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX9-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-W64-NEXT:    s_andn2_b64 s[2:3], exec, s[0:1]
 ; GFX9-W64-NEXT:    s_or_b64 s[4:5], s[0:1], exec
 ; GFX9-W64-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-W64-NEXT:    v_add_f32_e32 v2, v1, v2
@@ -2815,7 +2815,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX10-W32-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10-W32-NEXT:    s_xor_b32 s1, s0, exec_lo
+; GFX10-W32-NEXT:    s_andn2_b32 s1, exec_lo, s0
 ; GFX10-W32-NEXT:    s_or_b32 s2, s0, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s3, s1, -1
 ; GFX10-W32-NEXT:    s_cselect_b32 exec_lo, s1, s2

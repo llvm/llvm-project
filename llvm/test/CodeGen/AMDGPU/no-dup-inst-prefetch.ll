@@ -19,7 +19,7 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_or_b32 s1, s0, s1
-; GFX10-NEXT:    s_xor_b32 s0, s1, exec_lo
+; GFX10-NEXT:    s_andn2_b32 s0, exec_lo, s1
 ; GFX10-NEXT:    s_or_b32 s3, s1, exec_lo
 ; GFX10-NEXT:    s_and_b32 s5, s0, -1
 ; GFX10-NEXT:    s_cselect_b32 exec_lo, s0, s3
@@ -73,7 +73,7 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX12-NEXT:    s_or_b32 s1, s0, s1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_xor_b32 s0, s1, exec_lo
+; GFX12-NEXT:    s_and_not1_b32 s0, exec_lo, s1
 ; GFX12-NEXT:    s_or_b32 s3, s1, exec_lo
 ; GFX12-NEXT:    s_and_b32 s5, s0, -1
 ; GFX12-NEXT:    s_cselect_b32 exec_lo, s0, s3
