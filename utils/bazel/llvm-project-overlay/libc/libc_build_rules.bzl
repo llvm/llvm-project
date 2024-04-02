@@ -92,7 +92,7 @@ def libc_function(
     # x86 targets have -mno-omit-leaf-frame-pointer.
     platform_copts = selects.with_or({
         PLATFORM_CPU_X86_64: ["-mno-omit-leaf-frame-pointer"],
-        "//conditions:default": []
+        "//conditions:default": [],
     })
     copts = copts + platform_copts
 
