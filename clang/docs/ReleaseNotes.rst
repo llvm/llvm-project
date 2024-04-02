@@ -486,6 +486,9 @@ Bug Fixes to C++ Support
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
 
+- Fix crash when inheriting from a cv-qualified type. Fixes:
+  (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
