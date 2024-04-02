@@ -37,7 +37,7 @@
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
-#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include <memory>
 #include <optional>
@@ -808,9 +808,9 @@ bool SymbolFileDWARFDebugMap::CompleteType(CompilerType &compiler_type) {
       if (oso_dwarf->HasForwardDeclForCompilerType(compiler_type)) {
         oso_dwarf->CompleteType(compiler_type);
         success = true;
-        return IterationAction::eStop;
+        return IterationAction::Stop;
       }
-      return IterationAction::eContinue;
+      return IterationAction::Continue;
     });
   }
   return success;
@@ -926,18 +926,18 @@ void SymbolFileDWARFDebugMap::FindGlobalVariables(
 
       // Are we getting all matches?
       if (max_matches == UINT32_MAX)
-        return IterationAction::eContinue; // Yep, continue getting everything
+        return IterationAction::Continue; // Yep, continue getting everything
 
       // If we have found enough matches, lets get out
       if (max_matches >= total_matches)
-        return IterationAction::eStop;
+        return IterationAction::Stop;
 
       // Update the max matches for any subsequent calls to find globals in any
       // other object files with DWARF
       max_matches -= oso_matches;
     }
 
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
 
@@ -956,18 +956,18 @@ void SymbolFileDWARFDebugMap::FindGlobalVariables(
 
       // Are we getting all matches?
       if (max_matches == UINT32_MAX)
-        return IterationAction::eContinue; // Yep, continue getting everything
+        return IterationAction::Continue; // Yep, continue getting everything
 
       // If we have found enough matches, lets get out
       if (max_matches >= total_matches)
-        return IterationAction::eStop;
+        return IterationAction::Stop;
 
       // Update the max matches for any subsequent calls to find globals in any
       // other object files with DWARF
       max_matches -= oso_matches;
     }
 
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
 
@@ -1080,7 +1080,7 @@ void SymbolFileDWARFDebugMap::FindFunctions(
       RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);
     }
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
 
@@ -1099,7 +1099,7 @@ void SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
       RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);
     }
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
 
@@ -1124,7 +1124,7 @@ void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
   } else {
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
       oso_dwarf->GetTypes(sc_scope, type_mask, type_list);
-      return IterationAction::eContinue;
+      return IterationAction::Continue;
     });
   }
 }
@@ -1144,7 +1144,7 @@ TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
   TypeSP type_sp;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
     type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die);
-    return type_sp ? IterationAction::eStop : IterationAction::eContinue;
+    return type_sp ? IterationAction::Stop : IterationAction::Continue;
   });
   return type_sp;
 }
@@ -1157,9 +1157,9 @@ bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(
       if (skip_dwarf_oso != oso_dwarf &&
           oso_dwarf->Supports_DW_AT_APPLE_objc_complete_type(nullptr)) {
         m_supports_DW_AT_APPLE_objc_complete_type = eLazyBoolYes;
-        return IterationAction::eStop;
+        return IterationAction::Stop;
       }
-      return IterationAction::eContinue;
+      return IterationAction::Continue;
     });
   }
   return m_supports_DW_AT_APPLE_objc_complete_type == eLazyBoolYes;
@@ -1221,7 +1221,7 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
     ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
       type_sp = oso_dwarf->FindCompleteObjCDefinitionTypeForDIE(
           die, type_name, must_be_implementation);
-      return type_sp ? IterationAction::eStop : IterationAction::eContinue;
+      return type_sp ? IterationAction::Stop : IterationAction::Continue;
     });
 
     return type_sp;
@@ -1234,8 +1234,8 @@ void SymbolFileDWARFDebugMap::FindTypes(const TypeQuery &query,
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
     oso_dwarf->FindTypes(query, results);
-    return results.Done(query) ? IterationAction::eStop
-                               : IterationAction::eContinue;
+    return results.Done(query) ? IterationAction::Stop
+                               : IterationAction::Continue;
   });
 }
 
@@ -1249,8 +1249,8 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
     matching_namespace =
         oso_dwarf->FindNamespace(name, parent_decl_ctx, only_root_namespaces);
 
-    return matching_namespace ? IterationAction::eStop
-                              : IterationAction::eContinue;
+    return matching_namespace ? IterationAction::Stop
+                              : IterationAction::Continue;
   });
 
   return matching_namespace;
@@ -1262,7 +1262,7 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.
-    return IterationAction::eStop;
+    return IterationAction::Stop;
   });
 }
 
@@ -1394,7 +1394,7 @@ void SymbolFileDWARFDebugMap::ParseDeclsForContext(
     lldb_private::CompilerDeclContext decl_ctx) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
     oso_dwarf->ParseDeclsForContext(decl_ctx);
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
 
@@ -1529,7 +1529,7 @@ ModuleList SymbolFileDWARFDebugMap::GetDebugInfoModules() {
       if (module_sp)
         oso_modules.Append(module_sp);
     }
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
   return oso_modules;
 }
@@ -1584,6 +1584,6 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
     oso_dwarf->GetCompileOptions(args);
-    return IterationAction::eContinue;
+    return IterationAction::Continue;
   });
 }
