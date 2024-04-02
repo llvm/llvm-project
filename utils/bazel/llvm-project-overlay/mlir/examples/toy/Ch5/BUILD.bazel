@@ -108,6 +108,7 @@ cc_binary(
         "//mlir:FuncExtensions",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
+        "//mlir:InliningUtils",
         "//mlir:MemRefDialect",
         "//mlir:Parser",
         "//mlir:Pass",

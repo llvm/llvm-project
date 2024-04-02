@@ -10,6 +10,7 @@
 #include "clang/InstallAPI/FrontendRecords.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/TextAPI/DylibReader.h"
 
 using namespace llvm::MachO;
 
@@ -33,6 +34,14 @@ struct DylibVerifier::SymbolContext {
 
   // Whether Decl is inlined.
   bool Inlined = false;
+};
+
+struct DylibVerifier::DWARFContext {
+  // Track whether DSYM parsing has already been attempted to avoid re-parsing.
+  bool ParsedDSYM{false};
+
+  // Lookup table for source locations by symbol name.
+  DylibReader::SymbolToSourceLocMap SourceLocs{};
 };
 
 static bool isCppMangled(StringRef Name) {
@@ -511,14 +520,16 @@ DylibVerifier::Result DylibVerifier::verify(GlobalRecord *R,
   return verifyImpl(R, SymCtx);
 }
 
-void DylibVerifier::VerifierContext::emitDiag(
-    llvm::function_ref<void()> Report) {
+void DylibVerifier::VerifierContext::emitDiag(llvm::function_ref<void()> Report,
+                                              RecordLoc *Loc) {
   if (!DiscoveredFirstError) {
     Diag->Report(diag::warn_target)
         << (PrintArch ? getArchitectureName(Target.Arch)
                       : getTargetTripleName(Target));
     DiscoveredFirstError = true;
   }
+  if (Loc && Loc->isValid())
+    llvm::errs() << Loc->File << ":" << Loc->Line << ":" << 0 << ": ";
 
   Report();
 }
@@ -561,26 +572,36 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     return;
   }
 
-  // All checks at this point classify as some kind of violation that should be
-  // reported.
+  const bool IsLinkerSymbol = SymbolName.starts_with("$ld$");
+
+  // All checks at this point classify as some kind of violation.
+  // The different verification modes dictate whether they are reported to the
+  // user.
+  if (IsLinkerSymbol || (Mode > VerificationMode::ErrorsOnly))
+    accumulateSrcLocForDylibSymbols();
+  RecordLoc Loc = DWARFCtx->SourceLocs.lookup(SymCtx.SymbolName);
 
   // Regardless of verification mode, error out on mismatched special linker
   // symbols.
-  if (SymbolName.starts_with("$ld$")) {
-    Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(diag::err_header_symbol_missing)
-          << getAnnotatedName(&R, SymCtx, /*ValidSourceLoc=*/false);
-    });
+  if (IsLinkerSymbol) {
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::err_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
     updateState(Result::Invalid);
     return;
   }
 
   // Missing declarations for exported symbols are hard errors on Pedantic mode.
   if (Mode == VerificationMode::Pedantic) {
-    Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(diag::err_header_symbol_missing)
-          << getAnnotatedName(&R, SymCtx, /*ValidSourceLoc=*/false);
-    });
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::err_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
     updateState(Result::Invalid);
     return;
   }
@@ -588,10 +609,12 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
   // Missing declarations for exported symbols are warnings on ErrorsAndWarnings
   // mode.
   if (Mode == VerificationMode::ErrorsAndWarnings) {
-    Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(diag::warn_header_symbol_missing)
-          << getAnnotatedName(&R, SymCtx, /*ValidSourceLoc=*/false);
-    });
+    Ctx.emitDiag(
+        [&]() {
+          Ctx.Diag->Report(diag::warn_header_symbol_missing)
+              << getAnnotatedName(&R, SymCtx, Loc.isValid());
+        },
+        &Loc);
     updateState(Result::Ignore);
     return;
   }
@@ -620,6 +643,18 @@ void DylibVerifier::visitObjCIVar(const ObjCIVarRecord &R,
   SymCtx.SymbolName = ObjCIVarRecord::createScopedName(Super, R.getName());
   SymCtx.Kind = EncodeKind::ObjectiveCInstanceVariable;
   visitSymbolInDylib(R, SymCtx);
+}
+
+void DylibVerifier::accumulateSrcLocForDylibSymbols() {
+  if (DSYMPath.empty())
+    return;
+
+  assert(DWARFCtx != nullptr && "Expected an initialized DWARFContext");
+  if (DWARFCtx->ParsedDSYM)
+    return;
+  DWARFCtx->ParsedDSYM = true;
+  DWARFCtx->SourceLocs =
+      DylibReader::accumulateSourceLocFromDSYM(DSYMPath, Ctx.Target);
 }
 
 void DylibVerifier::visitObjCInterface(const ObjCInterfaceRecord &R) {
@@ -655,6 +690,8 @@ DylibVerifier::Result DylibVerifier::verifyRemainingSymbols() {
     return Result::NoVerify;
   assert(!Dylib.empty() && "No binary to verify against");
 
+  DWARFContext DWARFInfo;
+  DWARFCtx = &DWARFInfo;
   Ctx.DiscoveredFirstError = false;
   Ctx.PrintArch = true;
   for (std::shared_ptr<RecordsSlice> Slice : Dylib) {

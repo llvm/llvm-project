@@ -2402,6 +2402,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
 
+    // For large transfers use synchronous behavior.
+    if (Size >= OMPX_MaxAsyncCopyBytes) {
+      if (AsyncInfoWrapper.hasQueue())
+        if (auto Err = synchronize(AsyncInfoWrapper))
+          return Err;
+
+      AMDGPUSignalTy Signal;
+      if (auto Err = Signal.init())
+        return Err;
+
+      if (auto Err = utils::asyncMemCopy(
+              useMultipleSdmaEngines(), DstPtr, DstDevice.getAgent(), SrcPtr,
+              getAgent(), (uint64_t)Size, 0, nullptr, Signal.get()))
+        return Err;
+
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
+        return Err;
+
+      return Signal.deinit();
+    }
+
     AMDGPUStreamTy *Stream = nullptr;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;

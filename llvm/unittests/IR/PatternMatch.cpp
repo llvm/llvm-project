@@ -948,6 +948,16 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
   MatchL = MatchR = nullptr;
+
+  EXPECT_TRUE(
+      m_c_NUWAdd(m_Specific(L), m_Specific(R)).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_TRUE(
+      m_c_NUWAdd(m_Specific(R), m_Specific(L)).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_FALSE(
+      m_c_NUWAdd(m_Specific(R), m_ZeroInt()).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_FALSE(
+      m_NUWAdd(m_Specific(R), m_Specific(L)).match(IRB.CreateNUWAdd(L, R)));
+
   EXPECT_TRUE(
       m_NUWSub(m_Value(MatchL), m_Value(MatchR)).match(IRB.CreateNUWSub(L, R)));
   EXPECT_EQ(L, MatchL);

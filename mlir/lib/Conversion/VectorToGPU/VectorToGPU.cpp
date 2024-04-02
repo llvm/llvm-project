@@ -202,9 +202,7 @@ template <typename ExtOpTy>
 static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   if (!isa<vector::TransferReadOp>(extOp.getOperand().getDefiningOp()))
     return false;
-  return llvm::all_of(extOp->getUsers(), [](Operation *user) {
-    return isa<vector::ContractionOp>(user);
-  });
+  return llvm::all_of(extOp->getUsers(), llvm::IsaPred<vector::ContractionOp>);
 }
 
 static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
@@ -345,15 +343,13 @@ getSliceContract(Operation *op,
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
                                              bool useNvGpu) {
   auto hasVectorDest = [](Operation *op) {
-    return llvm::any_of(op->getResultTypes(),
-                        [](Type t) { return isa<VectorType>(t); });
+    return llvm::any_of(op->getResultTypes(), llvm::IsaPred<VectorType>);
   };
   BackwardSliceOptions backwardSliceOptions;
   backwardSliceOptions.filter = hasVectorDest;
 
   auto hasVectorSrc = [](Operation *op) {
-    return llvm::any_of(op->getOperandTypes(),
-                        [](Type t) { return isa<VectorType>(t); });
+    return llvm::any_of(op->getOperandTypes(), llvm::IsaPred<VectorType>);
   };
   ForwardSliceOptions forwardSliceOptions;
   forwardSliceOptions.filter = hasVectorSrc;

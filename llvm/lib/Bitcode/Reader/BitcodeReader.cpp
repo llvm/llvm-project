@@ -5022,9 +5022,19 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid cast");
         I = CastInst::Create(CastOp, Op, ResTy);
       }
-      if (OpNum < Record.size() && isa<PossiblyNonNegInst>(I) &&
-          (Record[OpNum] & (1 << bitc::PNNI_NON_NEG)))
-        I->setNonNeg(true);
+
+      if (OpNum < Record.size()) {
+        if (Opc == Instruction::ZExt) {
+          if (Record[OpNum] & (1 << bitc::PNNI_NON_NEG))
+            cast<PossiblyNonNegInst>(I)->setNonNeg(true);
+        } else if (Opc == Instruction::Trunc) {
+          if (Record[OpNum] & (1 << bitc::TIO_NO_UNSIGNED_WRAP))
+            cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
+          if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
+            cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        }
+      }
+
       InstructionList.push_back(I);
       break;
     }
