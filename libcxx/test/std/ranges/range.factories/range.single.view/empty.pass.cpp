@@ -27,7 +27,8 @@ constexpr void test_empty(T value) {
   using SingleView = std::ranges::single_view<T>;
   SingleView sv{value};
 
-  assert(!SingleView::empty());
+  std::same_as<bool> decltype(auto) result = SingleView::empty();
+  assert(result == false);
   static_assert(noexcept(SingleView::empty()));
   static_assert(noexcept(std::ranges::empty(sv)));
   static_assert(noexcept(std::ranges::empty(std::as_const(sv))));
