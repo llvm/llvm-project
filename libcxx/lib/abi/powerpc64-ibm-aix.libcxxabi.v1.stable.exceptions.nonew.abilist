@@ -910,6 +910,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__117__widen_from_utf8ILm32EEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__117bad_function_callE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__119__shared_weak_countE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__119bad_expected_accessIvEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTINSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
@@ -969,6 +970,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__117__widen_from_utf8ILm32EEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__117bad_function_callE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__119__shared_weak_countE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__119bad_expected_accessIvEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTSNSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
@@ -1031,6 +1033,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__117__widen_from_utf8ILm32EEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__117bad_function_callE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__119__shared_weak_countE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__119bad_expected_accessIvEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
