@@ -38,14 +38,15 @@ struct CompositeFixedPointPass final
     dynamicPM.printAsTextualPipeline(os);
   }
 
-  LogicalResult initializeOptions(StringRef options) override {
-    if (failed(CompositeFixedPointPassBase::initializeOptions(options)))
+  LogicalResult initializeOptions(
+      StringRef options,
+      function_ref<LogicalResult(const Twine &)> errorHandler) override {
+    if (failed(CompositeFixedPointPassBase::initializeOptions(options,
+                                                              errorHandler)))
       return failure();
 
-    if (failed(parsePassPipeline(pipelineStr, dynamicPM))) {
-      llvm::errs() << "Failed to parse composite pass pipeline\n";
-      return failure();
-    }
+    if (failed(parsePassPipeline(pipelineStr, dynamicPM)))
+      return errorHandler("Failed to parse composite pass pipeline");
 
     return success();
   }
