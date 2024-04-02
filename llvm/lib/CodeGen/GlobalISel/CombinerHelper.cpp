@@ -4058,6 +4058,14 @@ void CombinerHelper::applyBuildFn(
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
+                                    BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  Builder.setInstrAndDebugLoc(*Root);
+  MatchInfo(Builder);
+  Root->eraseFromParent();
+}
+
 void CombinerHelper::applyBuildFnNoErase(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   MatchInfo(Builder);
