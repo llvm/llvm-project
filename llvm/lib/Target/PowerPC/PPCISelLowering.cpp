@@ -10781,12 +10781,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return Op.getOperand(2);
     if (Mask.isAllOnes())
       return DAG.getNode(ISD::ROTL, dl, MVT::i64, Src, Op.getOperand(3));
-
     uint64_t SH = Op.getConstantOperandVal(3);
     unsigned MB = 0, ME = 0;
     if (!isRunOfOnes64(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rldimi mask!");
-
     // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
     if (ME < 63 - SH) {
       Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
@@ -10813,14 +10811,12 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned MB = 0, ME = 0;
     if (!isRunOfOnes(Mask.getZExtValue(), MB, ME))
       report_fatal_error("invalid rlwimi mask!");
-    return SDValue(
-        DAG.getMachineNode(
-            PPC::RLWIMI, dl, MVT::i32,
-            {Op.getOperand(2), Op.getOperand(1),
-             DAG.getTargetConstant(Op.getConstantOperandVal(3), dl, MVT::i32),
-             DAG.getTargetConstant(MB, dl, MVT::i32),
-             DAG.getTargetConstant(ME, dl, MVT::i32)}),
-        0);
+    return SDValue(DAG.getMachineNode(
+                       PPC::RLWIMI, dl, MVT::i32,
+                       {Op.getOperand(2), Op.getOperand(1), Op.getOperand(3),
+                        DAG.getTargetConstant(MB, dl, MVT::i32),
+                        DAG.getTargetConstant(ME, dl, MVT::i32)}),
+                   0);
   }
 
   case Intrinsic::ppc_rlwnm: {
