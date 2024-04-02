@@ -36,35 +36,32 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, PtrType type,
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
-    if (cast<PtrType>(entry.getKey().get<Type>()).getAddressSpace() ==
-        type.getAddressSpace()) {
+    if (cast<PtrType>(entry.getKey().get<Type>()).getMemorySpace() ==
+        type.getMemorySpace()) {
       currentEntry = entry.getValue();
       break;
     }
   }
+  bool isSizeOrIndex =
+      pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
   if (currentEntry) {
     std::optional<uint64_t> value = extractPointerSpecValue(currentEntry, pos);
     // If the optional `PtrDLEntryPos::Index` entry is not available, use the
     // pointer size as the index bitwidth.
     if (!value && pos == PtrDLEntryPos::Index)
       value = extractPointerSpecValue(currentEntry, PtrDLEntryPos::Size);
-    bool isSizeOrIndex =
-        pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
     return *value / (isSizeOrIndex ? 1 : kBitsInByte);
   }
 
   // If not found, and this is the pointer to the default memory space, assume
   // 64-bit pointers.
-  if (type.getAddressSpace() == 0) {
-    bool isSizeOrIndex =
-        pos == PtrDLEntryPos::Size || pos == PtrDLEntryPos::Index;
+  if (type.getMemorySpace() == type.getDefaultMemorySpace())
     return isSizeOrIndex ? kDefaultPointerSizeBits : kDefaultPointerAlignment;
-  }
 
   return std::nullopt;
 }
 
-int64_t PtrType::getAddressSpace() const { return 0; }
+uint64_t PtrType::getAddressSpace() const { return 0; }
 
 Attribute PtrType::getDefaultMemorySpace() const { return nullptr; }
 
@@ -85,9 +82,10 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
           return false;
         });
     if (it == oldLayout.end()) {
-      llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
+      it = llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
         if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
-          return llvm::cast<PtrType>(type).getAddressSpace() == 0;
+          auto ptrTy = llvm::cast<PtrType>(type);
+          return ptrTy.getMemorySpace() == ptrTy.getDefaultMemorySpace();
         }
         return false;
       });

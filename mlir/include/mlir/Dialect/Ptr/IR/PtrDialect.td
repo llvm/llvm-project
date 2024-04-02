@@ -55,8 +55,8 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   let parameters = (ins OptionalParameter<"Attribute">:$memorySpace);
   let assemblyFormat = "(`<` $memorySpace^ `>`)?";
   let builders = [
-    TypeBuilder<(ins CArg<"Attribute", "nullptr">:$addressSpace), [{
-      return $_get($_ctxt, addressSpace);
+    TypeBuilder<(ins CArg<"Attribute", "nullptr">:$memorySpace), [{
+      return $_get($_ctxt, memorySpace);
     }]>,
     TypeBuilder<(ins CArg<"unsigned">:$addressSpace), [{
       return $_get($_ctxt, IntegerAttr::get(IntegerType::get($_ctxt, 32),
@@ -69,7 +69,7 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     Attribute getDefaultMemorySpace() const;
 
     /// Returns the memory space as an unsigned number.
-    int64_t getAddressSpace() const;
+    uint64_t getAddressSpace() const;
   }];
 }
 
