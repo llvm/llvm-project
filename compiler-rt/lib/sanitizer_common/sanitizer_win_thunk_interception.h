@@ -66,8 +66,8 @@ void initialize_thunks(const sanitizer_thunk *begin,
   extern "C" void WEAK_EXPORT_NAME(local_function)();                    \
   WIN_WEAK_IMPORT_DEF(local_function)                                    \
   __attribute__((optnone)) static int register_weak_##local_function() { \
-    if ((uintptr_t)&local_function !=                                    \
-        (uintptr_t)&WEAK_EXPORT_NAME(local_function)) {                  \
+    if ((uintptr_t) & local_function != (uintptr_t) &                    \
+        WEAK_EXPORT_NAME(local_function)) {                              \
       return __sanitizer::register_weak(                                 \
           SANITIZER_STRINGIFY(WEAK_EXPORT_NAME(local_function)),         \
           reinterpret_cast<__sanitizer::uptr>(local_function));          \
