@@ -2606,10 +2606,12 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent ||
         MOI.getFailureOrdering() == AtomicOrdering::Acquire ||
         MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent) {
-      Changed |=
-          CC->insertWait(MI, MOI.getScope(), MOI.getInstrAddrSpace(),
-                         isAtomicRet(*MI) ? SIMemOp::LOAD : SIMemOp::STORE,
-                         MOI.getIsCrossAddressSpaceOrdering(), Position::AFTER);
+      Changed |= CC->insertWait(MI, MOI.getScope(),
+                                MOI.getInstrAddrSpace(),
+                                isAtomicRet(*MI) ? SIMemOp::LOAD :
+                                                   SIMemOp::STORE,
+                                MOI.getIsCrossAddressSpaceOrdering(),
+                                Position::AFTER);
       Changed |= CC->insertAcquire(MI, MOI.getScope(),
                                    MOI.getOrderingAddrSpace(),
                                    Position::AFTER);
