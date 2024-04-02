@@ -2926,7 +2926,7 @@ multiclass VGLOBAL_Real_AllAddr_gfx12<bits<8> op,
 }
 
 multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
-  let AssemblerPredicate = isGFX12PlusNot12_10 in {
+  let AssemblerPredicate = isGFX12Not12_10 in {
     defm "" : VFLAT_Real_gfx12<op>;
     defm _SADDR : VFLAT_Real_gfx12<op>;
   }
