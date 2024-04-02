@@ -2720,6 +2720,12 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
       return true;
     }
 
+    bool TraverseTemplateName(TemplateName Template) {
+      if (auto *TD = Template.getAsTemplateDecl())
+        MarkAppeared(TD);
+      return RecursiveASTVisitor::TraverseTemplateName(Template);
+    }
+
     void MarkAppeared(NamedDecl *ND) {
       if (TemplateParams.contains(ND))
         ReferencedTemplateParams.insert(ND);
