@@ -175,7 +175,10 @@ public:
 
   VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
+
+    return tryInsertInstruction(new VPInstruction(
+        Instruction::BinaryOps::Or, {LHS, RHS},
+        VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
