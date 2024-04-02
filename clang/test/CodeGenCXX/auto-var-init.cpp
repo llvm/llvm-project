@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,CHECK-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=ZERO,ZERO-O1
 // RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
@@ -1303,9 +1303,10 @@ TEST_CUSTOM(semivolatile, semivolatile, { 0x44444444, 0x44444444 });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store i32 1145324612, ptr %custom, align 4
-// CHECK-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 4
-// CHECK-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
+// PATTERN-O1:       store i32 1145324612, ptr %custom, align 4
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 4
+// PATTERN-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
+// ZERO-O1:          store i64 4919131752989213764, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(semivolatileinit, semivolatileinit);
@@ -1418,7 +1419,8 @@ TEST_CUSTOM(matching, matching, { .f = 0xf00f });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store float 6.145500e+04, ptr {{.*}}, align 4
+// PATTERN-O1:  store float 6.145500e+04, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1198526208, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(matchingreverse, matchingreverse);
@@ -1445,7 +1447,8 @@ TEST_CUSTOM(matchingreverse, matchingreverse, { .i = 0xf00f });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 61455, ptr %custom, align 4
+// PATTERN-O1:  store i32 61455, ptr %custom, align 4
+// ZERO-O1:     store i32 61455, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatched, unmatched);
@@ -1471,7 +1474,8 @@ TEST_CUSTOM(unmatched, unmatched, { .i = 0x3badbeef });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 1001242351, ptr {{.*}}, align 4
+// PATTERN-O1:  store i32 1001242351, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1001242351, ptr {{.*}}, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatchedreverse, unmatchedreverse);
@@ -1504,9 +1508,7 @@ TEST_CUSTOM(unmatchedreverse, unmatchedreverse, { .c = 42  });
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
 // PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 3
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// ZERO-O1:     store i8 42, ptr {{.*}}, align 4
-// ZERO-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
-// ZERO-O1-NEXT:  call void @llvm.memset.{{.*}}({{.*}}, i8 0, i64 3, {{.*}})
+// ZERO-O1:     store i32 42, ptr {{.*}}, align 4
 
 TEST_UNINIT(unmatchedfp, unmatchedfp);
 // CHECK-LABEL: @test_unmatchedfp_uninit()
@@ -1531,7 +1533,8 @@ TEST_CUSTOM(unmatchedfp, unmatchedfp, { .d = 3.1415926535897932384626433 });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store double 0x400921FB54442D18, ptr %custom, align 8
+// PATTERN-O1:  store double 0x400921FB54442D18, ptr %custom, align 8
+// ZERO-O1:     store i64 4614256656552045848, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(emptyenum, emptyenum);

@@ -152,6 +152,7 @@ namespace format {
   TYPE(TableGenCondOperatorComma)                                              \
   TYPE(TableGenDAGArgCloser)                                                   \
   TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListColonToAlign)                                         \
   TYPE(TableGenDAGArgListComma)                                                \
   TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \

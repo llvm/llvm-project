@@ -10,6 +10,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/InstallAPI/FileList.h"
+#include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "llvm/Support/Program.h"
 #include "llvm/TargetParser/Host.h"
@@ -181,6 +182,26 @@ bool Options::processFrontendOptions(InputArgList &Args) {
   return true;
 }
 
+bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
+                           OptSpecifier ID) {
+  for (const StringRef Path : Args.getAllArgValues(ID)) {
+    if ((bool)FM->getDirectory(Path, /*CacheFailure=*/false)) {
+      auto InputHeadersOrErr = enumerateFiles(*FM, Path);
+      if (!InputHeadersOrErr) {
+        Diags->Report(diag::err_cannot_open_file)
+            << Path << toString(InputHeadersOrErr.takeError());
+        return false;
+      }
+      // Sort headers to ensure deterministic behavior.
+      sort(*InputHeadersOrErr);
+      for (std::string &H : *InputHeadersOrErr)
+        Headers.emplace_back(std::move(H));
+    } else
+      Headers.emplace_back(Path);
+  }
+  return true;
+}
+
 std::vector<const char *>
 Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
   std::unique_ptr<llvm::opt::OptTable> Table;
@@ -219,6 +240,48 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
 
   if (const Arg *A = ParsedArgs.getLastArg(OPT_verify_against))
     DriverOpts.DylibToVerify = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_dsym))
+    DriverOpts.DSYMPath = A->getValue();
+
+  // Handle exclude & extra header directories or files.
+  auto handleAdditionalInputArgs = [&](PathSeq &Headers,
+                                       clang::installapi::ID OptID) {
+    if (ParsedArgs.hasArgNoClaim(OptID))
+      Headers.clear();
+    return addFilePaths(ParsedArgs, Headers, OptID);
+  };
+
+  if (!handleAdditionalInputArgs(DriverOpts.ExtraPublicHeaders,
+                                 OPT_extra_public_header))
+    return {};
+
+  if (!handleAdditionalInputArgs(DriverOpts.ExtraPrivateHeaders,
+                                 OPT_extra_private_header))
+    return {};
+  if (!handleAdditionalInputArgs(DriverOpts.ExtraProjectHeaders,
+                                 OPT_extra_project_header))
+    return {};
+
+  if (!handleAdditionalInputArgs(DriverOpts.ExcludePublicHeaders,
+                                 OPT_exclude_public_header))
+    return {};
+  if (!handleAdditionalInputArgs(DriverOpts.ExcludePrivateHeaders,
+                                 OPT_exclude_private_header))
+    return {};
+  if (!handleAdditionalInputArgs(DriverOpts.ExcludeProjectHeaders,
+                                 OPT_exclude_project_header))
+    return {};
+
+  // Handle umbrella headers.
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_public_umbrella_header))
+    DriverOpts.PublicUmbrellaHeader = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_private_umbrella_header))
+    DriverOpts.PrivateUmbrellaHeader = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_project_umbrella_header))
+    DriverOpts.ProjectUmbrellaHeader = A->getValue();
 
   /// Any unclaimed arguments should be forwarded to the clang driver.
   std::vector<const char *> ClangDriverArgs(ParsedArgs.size());
@@ -273,6 +336,15 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   }
 }
 
+static const Regex Rule("(.+)/(.+)\\.framework/");
+static StringRef getFrameworkNameFromInstallName(StringRef InstallName) {
+  SmallVector<StringRef, 3> Match;
+  Rule.match(InstallName, &Match);
+  if (Match.empty())
+    return "";
+  return Match.back();
+}
+
 InstallAPIContext Options::createContext() {
   InstallAPIContext Ctx;
   Ctx.FM = FM;
@@ -289,6 +361,11 @@ InstallAPIContext Options::createContext() {
   Ctx.OutputLoc = DriverOpts.OutputPath;
   Ctx.LangMode = FEOpts.LangMode;
 
+  // Attempt to find umbrella headers by capturing framework name.
+  StringRef FrameworkName;
+  if (!LinkerOpts.IsDylib)
+    FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
+
   // Process inputs.
   for (const std::string &ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
@@ -302,6 +379,128 @@ InstallAPIContext Options::createContext() {
       return Ctx;
     }
   }
+  // After initial input has been processed, add any extra headers.
+  auto HandleExtraHeaders = [&](PathSeq &Headers, HeaderType Type) -> bool {
+    assert(Type != HeaderType::Unknown && "Missing header type.");
+    for (const StringRef Path : Headers) {
+      if (!FM->getOptionalFileRef(Path)) {
+        Diags->Report(diag::err_no_such_header_file) << Path << (unsigned)Type;
+        return false;
+      }
+      SmallString<PATH_MAX> FullPath(Path);
+      FM->makeAbsolutePath(FullPath);
+
+      auto IncludeName = createIncludeHeaderName(FullPath);
+      Ctx.InputHeaders.emplace_back(
+          FullPath, Type, IncludeName.has_value() ? *IncludeName : "");
+      Ctx.InputHeaders.back().setExtra();
+    }
+    return true;
+  };
+
+  if (!HandleExtraHeaders(DriverOpts.ExtraPublicHeaders, HeaderType::Public) ||
+      !HandleExtraHeaders(DriverOpts.ExtraPrivateHeaders,
+                          HeaderType::Private) ||
+      !HandleExtraHeaders(DriverOpts.ExtraProjectHeaders, HeaderType::Project))
+    return Ctx;
+
+  // After all headers have been added, consider excluded headers.
+  std::vector<std::unique_ptr<HeaderGlob>> ExcludedHeaderGlobs;
+  std::set<FileEntryRef> ExcludedHeaderFiles;
+  auto ParseGlobs = [&](const PathSeq &Paths, HeaderType Type) {
+    assert(Type != HeaderType::Unknown && "Missing header type.");
+    for (const StringRef Path : Paths) {
+      auto Glob = HeaderGlob::create(Path, Type);
+      if (Glob)
+        ExcludedHeaderGlobs.emplace_back(std::move(Glob.get()));
+      else {
+        consumeError(Glob.takeError());
+        if (auto File = FM->getFileRef(Path))
+          ExcludedHeaderFiles.emplace(*File);
+        else {
+          Diags->Report(diag::err_no_such_header_file)
+              << Path << (unsigned)Type;
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  if (!ParseGlobs(DriverOpts.ExcludePublicHeaders, HeaderType::Public) ||
+      !ParseGlobs(DriverOpts.ExcludePrivateHeaders, HeaderType::Private) ||
+      !ParseGlobs(DriverOpts.ExcludeProjectHeaders, HeaderType::Project))
+    return Ctx;
+
+  for (HeaderFile &Header : Ctx.InputHeaders) {
+    for (auto &Glob : ExcludedHeaderGlobs)
+      if (Glob->match(Header))
+        Header.setExcluded();
+  }
+  if (!ExcludedHeaderFiles.empty()) {
+    for (HeaderFile &Header : Ctx.InputHeaders) {
+      auto FileRef = FM->getFileRef(Header.getPath());
+      if (!FileRef)
+        continue;
+      if (ExcludedHeaderFiles.count(*FileRef))
+        Header.setExcluded();
+    }
+  }
+  // Report if glob was ignored.
+  for (const auto &Glob : ExcludedHeaderGlobs)
+    if (!Glob->didMatch())
+      Diags->Report(diag::warn_glob_did_not_match) << Glob->str();
+
+  // Mark any explicit or inferred umbrella headers. If one exists, move
+  // that to the beginning of the input headers.
+  auto MarkandMoveUmbrellaInHeaders = [&](llvm::Regex &Regex,
+                                          HeaderType Type) -> bool {
+    auto It = find_if(Ctx.InputHeaders, [&Regex, Type](const HeaderFile &H) {
+      return (H.getType() == Type) && Regex.match(H.getPath());
+    });
+
+    if (It == Ctx.InputHeaders.end())
+      return false;
+    It->setUmbrellaHeader();
+
+    // Because there can be an umbrella header per header type,
+    // find the first non umbrella header to swap position with.
+    auto BeginPos = find_if(Ctx.InputHeaders, [](const HeaderFile &H) {
+      return !H.isUmbrellaHeader();
+    });
+    if (BeginPos != Ctx.InputHeaders.end() && BeginPos < It)
+      std::swap(*BeginPos, *It);
+    return true;
+  };
+
+  auto FindUmbrellaHeader = [&](StringRef HeaderPath, HeaderType Type) -> bool {
+    assert(Type != HeaderType::Unknown && "Missing header type.");
+    if (!HeaderPath.empty()) {
+      auto EscapedString = Regex::escape(HeaderPath);
+      Regex UmbrellaRegex(EscapedString);
+      if (!MarkandMoveUmbrellaInHeaders(UmbrellaRegex, Type)) {
+        Diags->Report(diag::err_no_such_umbrella_header_file)
+            << HeaderPath << (unsigned)Type;
+        return false;
+      }
+    } else if (!FrameworkName.empty() && (Type != HeaderType::Project)) {
+      auto UmbrellaName = "/" + Regex::escape(FrameworkName);
+      if (Type == HeaderType::Public)
+        UmbrellaName += "\\.h";
+      else
+        UmbrellaName += "[_]?Private\\.h";
+      Regex UmbrellaRegex(UmbrellaName);
+      MarkandMoveUmbrellaInHeaders(UmbrellaRegex, Type);
+    }
+    return true;
+  };
+  if (!FindUmbrellaHeader(DriverOpts.PublicUmbrellaHeader,
+                          HeaderType::Public) ||
+      !FindUmbrellaHeader(DriverOpts.PrivateUmbrellaHeader,
+                          HeaderType::Private) ||
+      !FindUmbrellaHeader(DriverOpts.ProjectUmbrellaHeader,
+                          HeaderType::Project))
+    return Ctx;
 
   // Parse binary dylib and initialize verifier.
   if (DriverOpts.DylibToVerify.empty()) {
@@ -326,7 +525,8 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle);
+      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle,
+      DriverOpts.DSYMPath);
   return Ctx;
 }
 

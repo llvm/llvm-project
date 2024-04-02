@@ -2,6 +2,9 @@
 ; RUN: opt -aarch64-lit -aarch64-lit-verify -verify-dom-info -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s
 ; RUN: opt -aarch64-lit -simplifycfg -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=LOOP-DEL
 ; RUN: opt -aarch64-lit -mtriple aarch64-unknown-linux-gnu -S < %s | FileCheck %s --check-prefix=NO-TRANSFORM
+; RUN: opt -p aarch64-lit -aarch64-lit-verify -verify-dom-info -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s
+; RUN: opt -passes='function(loop(aarch64-lit)),simplifycfg' -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=LOOP-DEL
+; RUN: opt -p aarch64-lit -mtriple aarch64-unknown-linux-gnu -S < %s | FileCheck %s --check-prefix=NO-TRANSFORM
 
 define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 %len, i32 %extra, i32 %n) {
 ; CHECK-LABEL: define i32 @compare_bytes_simple(

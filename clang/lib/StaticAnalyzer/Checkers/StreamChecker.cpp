@@ -1200,10 +1200,25 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
 
     // Add transition for the successful state.
     NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
-    ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+    ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+
+    // On success, a buffer is allocated.
+    auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State);
+    if (NewLinePtr && isa<DefinedOrUnknownSVal>(*NewLinePtr))
+      StateNotFailed = StateNotFailed->assume(
+          NewLinePtr->castAs<DefinedOrUnknownSVal>(), true);
+
+    // The buffer size `*n` must be enough to hold the whole line, and
+    // greater than the return value, since it has to account for '\0'.
+    SVal SizePtrSval = Call.getArgSVal(1);
+    auto NVal = getPointeeVal(SizePtrSval, State);
+    if (NVal && isa<NonLoc>(*NVal)) {
+      StateNotFailed = E.assumeBinOpNN(StateNotFailed, BO_GT,
+                                       NVal->castAs<NonLoc>(), RetVal);
+      StateNotFailed = E.bindReturnValue(StateNotFailed, C, RetVal);
+    }
     if (!StateNotFailed)
       return;
     C.addTransition(StateNotFailed);
@@ -1217,6 +1232,10 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
       E.isStreamEof() ? ErrorFEof : ErrorFEof | ErrorFError;
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
+  // On failure, the content of the buffer is undefined.
+  if (auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State))
+    StateFailed = StateFailed->bindLoc(*NewLinePtr, UndefinedVal(),
+                                       C.getLocationContext());
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 

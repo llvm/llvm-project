@@ -283,18 +283,19 @@ define <vscale x 2 x i32> @vwop_vscale_sext_i8i32_multiple_users(ptr %x, ptr %y,
 ;
 ; FOLDING-LABEL: vwop_vscale_sext_i8i32_multiple_users:
 ; FOLDING:       # %bb.0:
-; FOLDING-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; FOLDING-NEXT:    vsetvli a3, zero, e16, mf2, ta, ma
 ; FOLDING-NEXT:    vle8.v v8, (a0)
 ; FOLDING-NEXT:    vle8.v v9, (a1)
 ; FOLDING-NEXT:    vle8.v v10, (a2)
-; FOLDING-NEXT:    vsext.vf4 v11, v8
-; FOLDING-NEXT:    vsext.vf4 v8, v9
-; FOLDING-NEXT:    vsext.vf4 v9, v10
-; FOLDING-NEXT:    vmul.vv v8, v11, v8
-; FOLDING-NEXT:    vadd.vv v10, v11, v9
-; FOLDING-NEXT:    vsub.vv v9, v11, v9
-; FOLDING-NEXT:    vor.vv v8, v8, v10
-; FOLDING-NEXT:    vor.vv v8, v8, v9
+; FOLDING-NEXT:    vsext.vf2 v11, v8
+; FOLDING-NEXT:    vsext.vf2 v8, v9
+; FOLDING-NEXT:    vsext.vf2 v9, v10
+; FOLDING-NEXT:    vwmul.vv v10, v11, v8
+; FOLDING-NEXT:    vwadd.vv v8, v11, v9
+; FOLDING-NEXT:    vwsub.vv v12, v11, v9
+; FOLDING-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; FOLDING-NEXT:    vor.vv v8, v10, v8
+; FOLDING-NEXT:    vor.vv v8, v8, v12
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i8>, ptr %x
   %b = load <vscale x 2 x i8>, ptr %y
@@ -563,18 +564,19 @@ define <vscale x 2 x i32> @vwop_vscale_zext_i8i32_multiple_users(ptr %x, ptr %y,
 ;
 ; FOLDING-LABEL: vwop_vscale_zext_i8i32_multiple_users:
 ; FOLDING:       # %bb.0:
-; FOLDING-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; FOLDING-NEXT:    vsetvli a3, zero, e16, mf2, ta, ma
 ; FOLDING-NEXT:    vle8.v v8, (a0)
 ; FOLDING-NEXT:    vle8.v v9, (a1)
 ; FOLDING-NEXT:    vle8.v v10, (a2)
-; FOLDING-NEXT:    vzext.vf4 v11, v8
-; FOLDING-NEXT:    vzext.vf4 v8, v9
-; FOLDING-NEXT:    vzext.vf4 v9, v10
-; FOLDING-NEXT:    vmul.vv v8, v11, v8
-; FOLDING-NEXT:    vadd.vv v10, v11, v9
-; FOLDING-NEXT:    vsub.vv v9, v11, v9
-; FOLDING-NEXT:    vor.vv v8, v8, v10
-; FOLDING-NEXT:    vor.vv v8, v8, v9
+; FOLDING-NEXT:    vzext.vf2 v11, v8
+; FOLDING-NEXT:    vzext.vf2 v8, v9
+; FOLDING-NEXT:    vzext.vf2 v9, v10
+; FOLDING-NEXT:    vwmulu.vv v10, v11, v8
+; FOLDING-NEXT:    vwaddu.vv v8, v11, v9
+; FOLDING-NEXT:    vwsubu.vv v12, v11, v9
+; FOLDING-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; FOLDING-NEXT:    vor.vv v8, v10, v8
+; FOLDING-NEXT:    vor.vv v8, v8, v12
 ; FOLDING-NEXT:    ret
   %a = load <vscale x 2 x i8>, ptr %x
   %b = load <vscale x 2 x i8>, ptr %y

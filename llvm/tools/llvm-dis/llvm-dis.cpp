@@ -82,6 +82,8 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
 
 extern cl::opt<bool> WriteNewDbgInfoFormat;
 
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
+
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -168,6 +170,10 @@ int main(int argc, char **argv) {
 
   cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
+
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(

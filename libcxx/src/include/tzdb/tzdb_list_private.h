@@ -54,14 +54,14 @@ public:
 
   using const_iterator = tzdb_list::const_iterator;
 
-  const tzdb& front() const noexcept {
+  const tzdb& __front() const noexcept {
 #ifndef _LIBCPP_HAS_NO_THREADS
     shared_lock __lock{__mutex_};
 #endif
     return __tzdb_.front();
   }
 
-  const_iterator erase_after(const_iterator __p) {
+  const_iterator __erase_after(const_iterator __p) {
 #ifndef _LIBCPP_HAS_NO_THREADS
     unique_lock __lock{__mutex_};
 #endif
@@ -70,19 +70,16 @@ public:
     return __tzdb_.erase_after(__p);
   }
 
-  const_iterator begin() const noexcept {
+  const_iterator __begin() const noexcept {
 #ifndef _LIBCPP_HAS_NO_THREADS
     shared_lock __lock{__mutex_};
 #endif
     return __tzdb_.begin();
   }
-  const_iterator end() const noexcept {
+  const_iterator __end() const noexcept {
     //  forward_list<T>::end does not access the list, so no need to take a lock.
     return __tzdb_.end();
   }
-
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
 
 private:
   // Loads the tzdbs

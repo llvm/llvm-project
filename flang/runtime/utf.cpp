@@ -11,7 +11,8 @@
 namespace Fortran::runtime {
 
 // clang-format off
-const std::uint8_t UTF8FirstByteTable[256]{
+RT_OFFLOAD_VAR_GROUP_BEGIN
+const RT_CONST_VAR_ATTRS std::uint8_t UTF8FirstByteTable[256]{
   /* 00 - 7F:  7 bit payload in single byte */
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -37,8 +38,10 @@ const std::uint8_t UTF8FirstByteTable[256]{
   /* FE:      32 bit payload */ 7,
   /* FF:      invalid */ 0
 };
+RT_OFFLOAD_VAR_GROUP_END
 // clang-format on
 
+RT_OFFLOAD_API_GROUP_BEGIN
 // Non-minimal encodings are accepted.
 Fortran::common::optional<char32_t> DecodeUTF8(const char *p0) {
   const std::uint8_t *p{reinterpret_cast<const std::uint8_t *>(p0)};
@@ -107,5 +110,6 @@ std::size_t EncodeUTF8(char *p0, char32_t ucs) {
     return 7;
   }
 }
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime
