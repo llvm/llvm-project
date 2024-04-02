@@ -1011,9 +1011,9 @@ TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const auto *FooVal = Env.getValue(*FooDecl);
-        ASSERT_THAT(FooVal->getProperty("is_null"), NotNull());
-        EXPECT_TRUE(areEquivalentValues(*FooVal->getProperty("is_null"),
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
+        EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
                                         Env.makeTopBoolValue()));
       });
 }
