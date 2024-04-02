@@ -179,15 +179,21 @@ class A57BranchForm<SchedWriteRes non_br> :
   BranchWriteRes<2, 1, [A57UnitB], [1], non_br>;
 
 // shift by register, conditional or unconditional
+//
 // TODO: according to the doc, conditional uses I0/I1, unconditional uses M
 // Why more complex instruction uses more simple pipeline?
-// May be an error in doc.
+// It makes no sense that a shift operation uses the I0/I1 anyway as opposed to M,
+// and this is the only operation to do so, so it makes logical sense that both
+// actually use the M pipeline.
+//
+// For now, assume the doc makes an error in this regard.
+
 def A57WriteALUsr : SchedWriteVariant<[
-  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1I>>]>,
+  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>,
   SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
 ]>;
 def A57WriteALUSsr : SchedWriteVariant<[
-  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1I>>]>,
+  SchedVar<IsPredicatedPred, [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>,
   SchedVar<NoSchedPred,      [CheckBranchForm<0, A57BranchForm<A57Write_2cyc_1M>>]>
 ]>;
 def A57ReadALUsr : SchedReadVariant<[
