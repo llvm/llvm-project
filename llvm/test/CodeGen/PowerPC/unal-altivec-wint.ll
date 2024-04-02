@@ -17,7 +17,7 @@ entry:
 ; CHECK-LABEL: @test1
 ; CHECK: li [[REG:[0-9]+]], 16
 ; CHECK-NOT: li {{[0-9]+}}, 15
-; CHECK-DAG: lxvw4x {{[0-9]+}}, 0, 3
+; CHECK-DAG: lvx {{[0-9]+}}, 0, 3
 ; CHECK-DAG: lvx {{[0-9]+}}, 3, [[REG]]
 ; CHECK: blr
 }
@@ -36,8 +36,8 @@ entry:
 ; CHECK-LABEL: @test2
 ; CHECK: li [[REG:[0-9]+]], 16
 ; CHECK-NOT: li {{[0-9]+}}, 15
-; CHECK-DAG: stvx 2, 3, [[REG]]
-; CHECK-DAG: lxvw4x {{[0-9]+}}, 0, 3
+; CHECK-DAG: lvx {{[0-9]+}}, 0, 3
+; CHECK-DAG: lvx {{[0-9]+}}, 3, [[REG]]
 ; CHECK: blr
 }
 

@@ -13,5 +13,5 @@ entry:
 ; CHECK:     v4i32,ch = llvm.ppc.altivec.lvx{{.*}}<(load (s248) from %ir.p - 15, align 1)>
 }
 
-attributes #0 = { nounwind "target-cpu"="pwr6" }
+attributes #0 = { nounwind "target-cpu"="pwr7" }
 

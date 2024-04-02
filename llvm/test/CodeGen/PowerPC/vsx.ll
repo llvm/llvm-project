@@ -1079,17 +1079,29 @@ define void @test33(ptr %a, <4 x float> %b) {
 define <4 x float> @test32u(ptr %a) {
 ; CHECK-LABEL: test32u:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvw4x v2, 0, r3
+; CHECK-NEXT:    li r4, 15
+; CHECK-NEXT:    lvsl v3, 0, r3
+; CHECK-NEXT:    lvx v2, r3, r4
+; CHECK-NEXT:    lvx v4, 0, r3
+; CHECK-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test32u:
 ; CHECK-REG:       # %bb.0:
-; CHECK-REG-NEXT:    lxvw4x v2, 0, r3
+; CHECK-REG-NEXT:    li r4, 15
+; CHECK-REG-NEXT:    lvsl v3, 0, r3
+; CHECK-REG-NEXT:    lvx v2, r3, r4
+; CHECK-REG-NEXT:    lvx v4, 0, r3
+; CHECK-REG-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-REG-NEXT:    blr
 ;
 ; CHECK-FISL-LABEL: test32u:
 ; CHECK-FISL:       # %bb.0:
-; CHECK-FISL-NEXT:    lxvw4x v2, 0, r3
+; CHECK-FISL-NEXT:    li r4, 15
+; CHECK-FISL-NEXT:    lvx v3, r3, r4
+; CHECK-FISL-NEXT:    lvsl v4, 0, r3
+; CHECK-FISL-NEXT:    lvx v2, 0, r3
+; CHECK-FISL-NEXT:    vperm v2, v2, v3, v4
 ; CHECK-FISL-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test32u:

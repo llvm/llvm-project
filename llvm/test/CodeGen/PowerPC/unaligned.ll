@@ -123,8 +123,12 @@ define void @foo6(ptr %p, ptr %r) nounwind {
 ;
 ; CHECK-VSX-LABEL: foo6:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    lxvw4x 0, 0, 3
-; CHECK-VSX-NEXT:    stxvw4x 0, 0, 4
+; CHECK-VSX-NEXT:    li 5, 15
+; CHECK-VSX-NEXT:    lvsl 3, 0, 3
+; CHECK-VSX-NEXT:    lvx 2, 3, 5
+; CHECK-VSX-NEXT:    lvx 4, 0, 3
+; CHECK-VSX-NEXT:    vperm 2, 4, 2, 3
+; CHECK-VSX-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-VSX-NEXT:    blr
 ; For VSX on P7, unaligned loads and stores are preferable to aligned
 ; stack slots, but lvsl/vperm is better still.  (On P8 lxvw4x is preferable.)
