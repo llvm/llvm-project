@@ -261,6 +261,9 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
   Undefined(sym.file, sym.getName(), binding, sym.stOther, sym.type,
             /*discardedSecIdx=*/map.lookup(sym.section))
       .overwrite(sym);
+  // Eliminate from the symbol table, otherwise we would leave an undefined
+  // symbol if the symbol is unreferenced in the absence of GC.
+  sym.isUsedInRegularObj = false;
 }
 
 // If all references to a DSO happen to be weak, the DSO is not added to
@@ -446,8 +449,8 @@ template <class ELFT> void elf::createSyntheticSections() {
 
       add(*part.dynamic);
       add(*part.dynStrTab);
-      add(*part.relaDyn);
     }
+    add(*part.relaDyn);
 
     if (config->relrPackDynRelocs) {
       part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
@@ -546,17 +549,6 @@ template <class ELFT> void elf::createSyntheticSections() {
       config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
       /*threadCount=*/1);
   add(*in.relaPlt);
-
-  // The relaIplt immediately follows .rel[a].dyn to ensure that the IRelative
-  // relocations are processed last by the dynamic loader. We cannot place the
-  // iplt section in .rel.dyn when Android relocation packing is enabled because
-  // that would cause a section type mismatch. However, because the Android
-  // dynamic loader reads .rel.plt after .rel.dyn, we can get the desired
-  // behaviour by placing the iplt section in .rel.plt.
-  in.relaIplt = std::make_unique<RelocationSection<ELFT>>(
-      config->androidPackDynRelocs ? in.relaPlt->name : relaDynName,
-      /*sort=*/false, /*threadCount=*/1);
-  add(*in.relaIplt);
 
   if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
       (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
@@ -793,7 +785,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
         continue;
       for (InputSectionBase *s : isd->sections) {
         // Relocations are not using REL[A] section symbols.
-        if (s->type == SHT_REL || s->type == SHT_RELA)
+        if (isStaticRelSecType(s->type))
           continue;
 
         // Unlike other synthetic sections, mergeable output sections contain
@@ -1068,20 +1060,18 @@ void PhdrEntry::add(OutputSection *sec) {
     sec->ptLoad = this;
 }
 
-// The beginning and the ending of .rel[a].plt section are marked
-// with __rel[a]_iplt_{start,end} symbols if it is a statically linked
-// executable. The runtime needs these symbols in order to resolve
-// all IRELATIVE relocs on startup. For dynamic executables, we don't
-// need these symbols, since IRELATIVE relocs are resolved through GOT
-// and PLT. For details, see http://www.airs.com/blog/archives/403.
+// A statically linked position-dependent executable should only contain
+// IRELATIVE relocations and no other dynamic relocations. Encapsulation symbols
+// __rel[a]_iplt_{start,end} will be defined for .rel[a].dyn, to be
+// processed by the libc runtime. Other executables or DSOs use dynamic tags
+// instead.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (config->isPic)
     return;
 
-  // By default, __rela_iplt_{start,end} belong to a dummy section 0
-  // because .rela.plt might be empty and thus removed from output.
-  // We'll override Out::elfHeader with In.relaIplt later when we are
-  // sure that .rela.plt exists in output.
+  // __rela_iplt_{start,end} are initially defined relative to dummy section 0.
+  // We'll override Out::elfHeader with relaDyn later when we are sure that
+  // .rela.dyn will be present in the output.
   ElfSym::relaIpltStart = addOptionalRegular(
       config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
       Out::elfHeader, 0, STV_HIDDEN);
@@ -1107,11 +1097,11 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
     ElfSym::globalOffsetTable->section = sec;
   }
 
-  // .rela_iplt_{start,end} mark the start and the end of in.relaIplt.
-  if (ElfSym::relaIpltStart && in.relaIplt->isNeeded()) {
-    ElfSym::relaIpltStart->section = in.relaIplt.get();
-    ElfSym::relaIpltEnd->section = in.relaIplt.get();
-    ElfSym::relaIpltEnd->value = in.relaIplt->getSize();
+  // .rela_iplt_{start,end} mark the start and the end of .rel[a].dyn.
+  if (ElfSym::relaIpltStart && mainPart->relaDyn->isNeeded()) {
+    ElfSym::relaIpltStart->section = mainPart->relaDyn.get();
+    ElfSym::relaIpltEnd->section = mainPart->relaDyn.get();
+    ElfSym::relaIpltEnd->value = mainPart->relaDyn->getSize();
   }
 
   PhdrEntry *last = nullptr;
@@ -1465,14 +1455,6 @@ static void sortSection(OutputSection &osec,
 
   // Never sort these.
   if (name == ".init" || name == ".fini")
-    return;
-
-  // IRelative relocations that usually live in the .rel[a].dyn section should
-  // be processed last by the dynamic loader. To achieve that we add synthetic
-  // sections in the required order from the beginning so that the in.relaIplt
-  // section is placed last in an output section. Here we just do not apply
-  // sorting for an output section which holds the in.relaIplt section.
-  if (in.relaIplt->getParent() == &osec)
     return;
 
   // Sort input sections by priority using the list provided by
@@ -2193,7 +2175,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(in.mipsGot.get());
     finalizeSynthetic(in.igotPlt.get());
     finalizeSynthetic(in.gotPlt.get());
-    finalizeSynthetic(in.relaIplt.get());
     finalizeSynthetic(in.relaPlt.get());
     finalizeSynthetic(in.plt.get());
     finalizeSynthetic(in.iplt.get());
@@ -3042,20 +3023,20 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     // section while doing it.
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
   {
     parallel::TaskGroup tg;
     for (OutputSection *sec : outputSections)
-      if (sec->type != SHT_REL && sec->type != SHT_RELA)
+      if (!isStaticRelSecType(sec->type))
         sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->checkDynamicRelocs && config->writeAddends) {
     for (OutputSection *sec : outputSections)
-      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+      if (isStaticRelSecType(sec->type))
         sec->checkDynRelAddends(Out::bufferStart);
   }
 }

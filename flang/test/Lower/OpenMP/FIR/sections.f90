@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! This test checks the lowering of OpenMP sections construct with several clauses present
 
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
@@ -5,8 +7,8 @@
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "sample"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
 !CHECK:   %[[ETA:.*]] = fir.alloca f32 {bindc_name = "eta", uniq_name = "_QFEeta"}
-!CHECK:   %[[CONST_1:.*]] = arith.constant 1 : i32
-!CHECK:   omp.sections allocate(%[[CONST_1]] : i32 -> %0 : !fir.ref<i32>)  {
+!CHECK:   %[[CONST_1:.*]] = arith.constant 4 : i64
+!CHECK:   omp.sections allocate(%[[CONST_1]] : i64 -> %0 : !fir.ref<i32>)  {
 !CHECK:     omp.section {
 !CHECK:       %[[PRIVATE_ETA:.*]] = fir.alloca f32 {bindc_name = "eta", pinned, uniq_name = "_QFEeta"}
 !CHECK:       %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 {bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"} 

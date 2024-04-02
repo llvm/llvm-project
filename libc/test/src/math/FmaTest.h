@@ -23,7 +23,6 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T min_subnormal = FPBits::min_subnormal(Sign::POS).get_val();
   const T min_normal = FPBits::min_normal(Sign::POS).get_val();

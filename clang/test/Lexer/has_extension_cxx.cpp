@@ -33,6 +33,11 @@ int has_deleted_functions();
 int has_inline_namespaces();
 #endif
 
+// CHECK: has_lambdas
+#if __has_extension(cxx_lambdas)
+int has_lambdas();
+#endif
+
 // CHECK: has_override_control
 #if __has_extension(cxx_override_control)
 int has_override_control();

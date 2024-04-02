@@ -13,7 +13,7 @@
 ; CHECK: %[[#OBJ:]] = OpFunctionParameter %[[#TYSTRUCT]]
 ; CHECK: %[[#ARGPTR2:]] = OpFunctionParameter %[[#TYLONGPTR]]
 ; CHECK: %[[#PTRTOSTRUCT:]] = OpBitcast %[[#TYSTRUCTPTR]] %[[#ARGPTR2]]
-; CHECK: OpStore %[[#PTRTOSTRUCT]] %[[#OBJ]]
+; CHECK-NEXT: OpStore %[[#PTRTOSTRUCT]] %[[#OBJ]]
 
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }

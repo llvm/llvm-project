@@ -744,6 +744,35 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 std::vector<const FieldDecl *>
 getFieldsForInitListExpr(const InitListExpr *InitList);
 
+/// Helper class for initialization of a record with an `InitListExpr`.
+/// `InitListExpr::inits()` contains the initializers for both the base classes
+/// and the fields of the record; this helper class separates these out into two
+/// different lists. In addition, it deals with special cases associated with
+/// unions.
+class RecordInitListHelper {
+public:
+  // `InitList` must have record type.
+  RecordInitListHelper(const InitListExpr *InitList);
+
+  // Base classes with their associated initializer expressions.
+  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
+    return BaseInits;
+  }
+
+  // Fields with their associated initializer expressions.
+  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
+    return FieldInits;
+  }
+
+private:
+  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
+  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
+
+  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
+  // member variable because we store a pointer to it in `FieldInits`.
+  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
+};
+
 /// Associates a new `RecordValue` with `Loc` and returns the new value.
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 

@@ -117,12 +117,8 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   if (!BasePtr0.BaseReg.isValid() || !BasePtr1.BaseReg.isValid())
     return false;
 
-  LocationSize Size1 = LdSt1->getMemSize() != MemoryLocation::UnknownSize
-                           ? LdSt1->getMemSize()
-                           : LocationSize::beforeOrAfterPointer();
-  LocationSize Size2 = LdSt2->getMemSize() != MemoryLocation::UnknownSize
-                           ? LdSt2->getMemSize()
-                           : LocationSize::beforeOrAfterPointer();
+  LocationSize Size1 = LdSt1->getMemSize();
+  LocationSize Size2 = LdSt2->getMemSize();
 
   int64_t PtrDiff;
   if (BasePtr0.BaseReg == BasePtr1.BaseReg) {
@@ -132,14 +128,14 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
     // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    if (PtrDiff >= 0 && Size1.hasValue()) {
+    if (PtrDiff >= 0 && Size1.hasValue() && !Size1.isScalable()) {
       // [----BasePtr0----]
       //                         [---BasePtr1--]
       // ========PtrDiff========>
       IsAlias = !((int64_t)Size1.getValue() <= PtrDiff);
       return true;
     }
-    if (PtrDiff < 0 && Size2.hasValue()) {
+    if (PtrDiff < 0 && Size2.hasValue() && !Size2.isScalable()) {
       //                     [----BasePtr0----]
       // [---BasePtr1--]
       // =====(-PtrDiff)====>
@@ -214,14 +210,9 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
         Offset = 0;
       }
 
-      TypeSize Size = LS->getMMO().getMemoryType().getSizeInBytes();
-      return {LS->isVolatile(),
-              LS->isAtomic(),
-              BaseReg,
-              Offset /*base offset*/,
-              Size.isScalable() ? LocationSize::beforeOrAfterPointer()
-                                : LocationSize::precise(Size),
-              &LS->getMMO()};
+      LocationSize Size = LS->getMMO().getSize();
+      return {LS->isVolatile(),       LS->isAtomic(), BaseReg,
+              Offset /*base offset*/, Size,           &LS->getMMO()};
     }
     // FIXME: support recognizing lifetime instructions.
     // Default.
@@ -257,10 +248,20 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
       return false;
   }
 
+  // If NumBytes is scalable and offset is not 0, conservatively return may
+  // alias
+  if ((MUC0.NumBytes.isScalable() && MUC0.Offset != 0) ||
+      (MUC1.NumBytes.isScalable() && MUC1.Offset != 0))
+    return true;
+
+  const bool BothNotScalable =
+      !MUC0.NumBytes.isScalable() && !MUC1.NumBytes.isScalable();
+
   // Try to prove that there is aliasing, or that there is no aliasing. Either
   // way, we can return now. If nothing can be proved, proceed with more tests.
   bool IsAlias;
-  if (GISelAddressing::aliasIsKnownForLoadStore(MI, Other, IsAlias, MRI))
+  if (BothNotScalable &&
+      GISelAddressing::aliasIsKnownForLoadStore(MI, Other, IsAlias, MRI))
     return IsAlias;
 
   // The following all rely on MMO0 and MMO1 being valid.
@@ -276,12 +277,18 @@ bool GISelAddressing::instMayAlias(const MachineInstr &MI,
       Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = Size0.getValue() + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = Size1.getValue() + SrcValOffset1 - MinOffset;
-    if (AA->isNoAlias(MemoryLocation(MUC0.MMO->getValue(), Overlap0,
-                                     MUC0.MMO->getAAInfo()),
-                      MemoryLocation(MUC1.MMO->getValue(), Overlap1,
-                                     MUC1.MMO->getAAInfo())))
+    int64_t Overlap0 =
+        Size0.getValue().getKnownMinValue() + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 =
+        Size1.getValue().getKnownMinValue() + SrcValOffset1 - MinOffset;
+    LocationSize Loc0 =
+        Size0.isScalable() ? Size0 : LocationSize::precise(Overlap0);
+    LocationSize Loc1 =
+        Size1.isScalable() ? Size1 : LocationSize::precise(Overlap1);
+
+    if (AA->isNoAlias(
+            MemoryLocation(MUC0.MMO->getValue(), Loc0, MUC0.MMO->getAAInfo()),
+            MemoryLocation(MUC1.MMO->getValue(), Loc1, MUC1.MMO->getAAInfo())))
       return false;
   }
 

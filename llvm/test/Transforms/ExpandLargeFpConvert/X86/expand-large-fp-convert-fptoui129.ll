@@ -27,7 +27,7 @@ define i129 @floattoui129(float %a) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_END:%.*]]
 ; CHECK:       fp-to-i-if-end:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i129 [[TMP5]], -256
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], 4294967167
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], -129
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[FP_TO_I_IF_THEN5:%.*]], label [[FP_TO_I_IF_END9:%.*]]
 ; CHECK:       fp-to-i-if-then5:
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
@@ -41,7 +41,7 @@ define i129 @floattoui129(float %a) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i129 [[TMP14]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-else:
-; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], 4294967146
+; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], -150
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i129 [[TMP7]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i129 [[TMP17]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
@@ -68,7 +68,7 @@ define i129 @doubletoui129(double %a) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_END:%.*]]
 ; CHECK:       fp-to-i-if-end:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i129 [[TMP5]], -1152
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], 4294967167
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], -129
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[FP_TO_I_IF_THEN5:%.*]], label [[FP_TO_I_IF_END9:%.*]]
 ; CHECK:       fp-to-i-if-then5:
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
@@ -82,7 +82,7 @@ define i129 @doubletoui129(double %a) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i129 [[TMP14]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-else:
-; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], 4294966221
+; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], -1075
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i129 [[TMP7]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i129 [[TMP17]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
@@ -110,7 +110,7 @@ define i129 @x86_fp80toui129(x86_fp80 %a) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_END:%.*]]
 ; CHECK:       fp-to-i-if-end:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i129 [[TMP6]], -16512
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i129 [[TMP10]], 4294967167
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i129 [[TMP10]], -129
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[FP_TO_I_IF_THEN5:%.*]], label [[FP_TO_I_IF_END9:%.*]]
 ; CHECK:       fp-to-i-if-then5:
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP3]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
@@ -124,7 +124,7 @@ define i129 @x86_fp80toui129(x86_fp80 %a) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i129 [[TMP15]], [[TMP4]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-else:
-; CHECK-NEXT:    [[TMP17:%.*]] = add i129 [[TMP6]], 4294950801
+; CHECK-NEXT:    [[TMP17:%.*]] = add i129 [[TMP6]], -16495
 ; CHECK-NEXT:    [[TMP18:%.*]] = shl i129 [[TMP8]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i129 [[TMP18]], [[TMP4]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
@@ -151,7 +151,7 @@ define i129 @fp128toui129(fp128 %a) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_END:%.*]]
 ; CHECK:       fp-to-i-if-end:
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i129 [[TMP5]], -16512
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], 4294967167
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i129 [[TMP9]], -129
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[FP_TO_I_IF_THEN5:%.*]], label [[FP_TO_I_IF_END9:%.*]]
 ; CHECK:       fp-to-i-if-then5:
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP2]], i129 340282366920938463463374607431768211455, i129 -340282366920938463463374607431768211456
@@ -165,7 +165,7 @@ define i129 @fp128toui129(fp128 %a) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i129 [[TMP14]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
 ; CHECK:       fp-to-i-if-else:
-; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], 4294950801
+; CHECK-NEXT:    [[TMP16:%.*]] = add i129 [[TMP5]], -16495
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl i129 [[TMP7]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i129 [[TMP17]], [[TMP3]]
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]

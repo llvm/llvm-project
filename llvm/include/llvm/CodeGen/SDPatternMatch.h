@@ -496,6 +496,41 @@ inline BinaryOpc_match<LHS, RHS, true> m_Mul(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_And(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::AND, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Or(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::OR, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Xor(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::XOR, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, false> m_UDiv(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, false>(ISD::UDIV, L, R);
 }
@@ -597,6 +632,38 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
 }
 
+/// Match a zext or identity
+/// Allows to peek through optional extensions
+template <typename Opnd>
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_ZExtOrSelf(Opnd &&Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_ZExt(std::forward<Opnd>(Op)),
+                                        std::forward<Opnd>(Op));
+}
+
+/// Match a sext or identity
+/// Allows to peek through optional extensions
+template <typename Opnd>
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_SExtOrSelf(Opnd &&Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_SExt(std::forward<Opnd>(Op)),
+                                        std::forward<Opnd>(Op));
+}
+
+/// Match a aext or identity
+/// Allows to peek through optional extensions
+template <typename Opnd>
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_AExtOrSelf(Opnd &&Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_AnyExt(std::forward<Opnd>(Op)),
+                                        std::forward<Opnd>(Op));
+}
+
+/// Match a trunc or identity
+/// Allows to peek through optional truncations
+template <typename Opnd>
+inline Or<UnaryOpc_match<Opnd>, Opnd> m_TruncOrSelf(Opnd &&Op) {
+  return Or<UnaryOpc_match<Opnd>, Opnd>(m_Trunc(std::forward<Opnd>(Op)),
+                                        std::forward<Opnd>(Op));
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
@@ -648,6 +715,7 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
 }
 
 inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
+inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
 inline SpecificInt_match m_AllOnes() { return m_SpecificInt(~0U); }
 
 /// Match true boolean value based on the information provided by
@@ -689,6 +757,19 @@ inline auto m_False() {
       },
       m_Value()};
 }
+
+/// Match a negate as a sub(0, v)
+template <typename ValTy>
+inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
+  return m_Sub(m_Zero(), V);
+}
+
+/// Match a Not as a xor(v, -1) or xor(-1, v)
+template <typename ValTy>
+inline BinaryOpc_match<ValTy, SpecificInt_match, true> m_Not(const ValTy &V) {
+  return m_Xor(V, m_AllOnes());
+}
+
 } // namespace SDPatternMatch
 } // namespace llvm
 #endif

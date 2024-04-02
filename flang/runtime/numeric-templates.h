@@ -20,8 +20,8 @@
 
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/float128.h"
-#include "flang/Runtime/api-attrs.h"
 #include <cstdint>
 #include <limits>
 
@@ -122,11 +122,18 @@ template <typename T> struct ABSTy {
   static constexpr RT_API_ATTRS T compute(T x) { return std::abs(x); }
 };
 
+// Suppress the warnings about calling __host__-only
+// 'long double' std::frexp, from __device__ code.
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 template <typename T> struct FREXPTy {
   static constexpr RT_API_ATTRS T compute(T x, int *e) {
     return std::frexp(x, e);
   }
 };
+
+RT_DIAG_POP
 
 template <typename T> struct ILOGBTy {
   static constexpr RT_API_ATTRS int compute(T x) { return std::ilogb(x); }
@@ -186,11 +193,6 @@ inline RT_API_ATTRS RESULT Exponent(ARG x) {
   }
 }
 
-// Suppress the warnings about calling __host__-only std::frexp,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
-
 // FRACTION (16.9.80)
 template <typename T> inline RT_API_ATTRS T Fraction(T x) {
   if (ISNANTy<T>::compute(x)) {
@@ -204,8 +206,6 @@ template <typename T> inline RT_API_ATTRS T Fraction(T x) {
     return FREXPTy<T>::compute(x, &ignoredExp);
   }
 }
-
-RT_DIAG_POP
 
 // SET_EXPONENT (16.9.171)
 template <typename T> inline RT_API_ATTRS T SetExponent(T x, std::int64_t p) {

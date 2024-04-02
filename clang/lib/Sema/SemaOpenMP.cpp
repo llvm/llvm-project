@@ -14366,7 +14366,8 @@ StmtResult Sema::ActOnOpenMPTargetParallelForSimdDirective(
   // The point of exit cannot be a branch out of the structured block.
   // longjmp() and throw() must not violate the entry/exit criteria.
   CS->getCapturedDecl()->setNothrow();
-  for (int ThisCaptureLevel = getOpenMPCaptureLevels(OMPD_target_parallel_for);
+  for (int ThisCaptureLevel =
+           getOpenMPCaptureLevels(OMPD_target_parallel_for_simd);
        ThisCaptureLevel > 1; --ThisCaptureLevel) {
     CS = cast<CapturedStmt>(CS->getCapturedStmt());
     // 1.2.2 OpenMP Language Terminology
@@ -21283,7 +21284,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   if (isa<ArraySubscriptExpr>(E) ||
       (OASE && OASE->getColonLocFirst().isInvalid())) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // Size can't be evaluated statically.
     return false;
   }
@@ -21324,7 +21325,7 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
     return false; // Can't get the integer value as a constant.
 
   llvm::APSInt ConstLength = Result.Val.getInt();
-  return CATy->getSize().getSExtValue() != ConstLength.getSExtValue();
+  return CATy->getSExtSize() != ConstLength.getSExtValue();
 }
 
 // Return true if it can be proven that the provided array expression (array
@@ -21349,7 +21350,7 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   // is pointer.
   if (!Length) {
     if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-      return ATy->getSize().getSExtValue() != 1;
+      return ATy->getSExtSize() != 1;
     // We cannot assume anything.
     return false;
   }

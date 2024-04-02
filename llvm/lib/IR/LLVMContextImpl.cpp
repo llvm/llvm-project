@@ -48,9 +48,9 @@ LLVMContextImpl::~LLVMContextImpl() {
 #ifndef NDEBUG
   // Check that any variable location records that fell off the end of a block
   // when it's terminator was removed were eventually replaced. This assertion
-  // firing indicates that DPValues went missing during the lifetime of the
-  // LLVMContext.
-  assert(TrailingDPValues.empty() && "DPValue records in blocks not cleaned");
+  // firing indicates that DbgVariableRecords went missing during the lifetime
+  // of the LLVMContext.
+  assert(TrailingDbgRecords.empty() && "DbgRecords in blocks not cleaned");
 #endif
 
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor

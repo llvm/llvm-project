@@ -1778,6 +1778,10 @@ bool CursorVisitor::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   return Visit(TL.getModifiedLoc());
 }
 
+bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -1919,6 +1923,7 @@ DEFAULT_TYPELOC_IMPL(ConstantArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(IncompleteArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(VariableArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(DependentSizedArray, ArrayType)
+DEFAULT_TYPELOC_IMPL(ArrayParameter, ConstantArrayType)
 DEFAULT_TYPELOC_IMPL(DependentAddressSpace, Type)
 DEFAULT_TYPELOC_IMPL(DependentVector, Type)
 DEFAULT_TYPELOC_IMPL(DependentSizedExtVector, Type)
