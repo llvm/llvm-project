@@ -182,6 +182,18 @@ public:
   /// appending to chain up consecutive appends.
   DeclarationFragments &appendSpace();
 
+  /// Append a text Fragment of a semicolon character.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive appends.
+  DeclarationFragments &appendSemicolon();
+
+  /// Removes a trailing semicolon character if present.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// removing to chain up consecutive operations.
+  DeclarationFragments &removeTrailingSemicolon();
+
   /// Get the string description of a FragmentKind \p Kind.
   static StringRef getFragmentKindString(FragmentKind Kind);
 
@@ -194,12 +206,14 @@ public:
   static DeclarationFragments getStructureTypeFragment(const RecordDecl *Decl);
 
 private:
+  DeclarationFragments &appendUnduplicatedTextCharacter(char Character);
   std::vector<Fragment> Fragments;
 };
 
 class AccessControl {
 public:
   AccessControl(std::string Access) : Access(Access) {}
+  AccessControl() : Access("public") {}
 
   const std::string &getAccess() const { return Access; }
 
