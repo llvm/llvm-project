@@ -2761,7 +2761,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   }
 
   // Update the entries with the relocated string offsets.
-  for (auto &stringEntry : mergedEntries) {
+  for (NamedEntry &stringEntry : mergedEntries) {
     uint32_t oldOffset = stringEntry.stringOffsetOffset;
     uint32_t idx = stringEntry.chunkIdx;
     stringEntry.relocatedEntryOffset = chunksRelocs[idx][oldOffset];
@@ -2802,7 +2802,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   // Write the hash table.
   // ... Write the buckets
   uint32_t idx = 1;
-  for (const auto &bucket : bucketList) {
+  for (const SmallVector<NamedEntry *, 0> &bucket : bucketList) {
     if (!bucket.empty())
       endian::write32<ELFT::Endianness>(buf + 0, idx);
     idx += bucket.size();
@@ -2819,7 +2819,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   }
 
   // Write the string offsets.
-  for (const auto &entry : mergedEntries) {
+  for (const NamedEntry &entry : mergedEntries) {
     endian::write32<ELFT::Endianness>(buf + 0, entry.relocatedEntryOffset);
     buf += 4;
   }
@@ -2831,10 +2831,10 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   }
 
   // Write the abbrev table.
-  for (const auto *abbrev : mergedAbbrevTable) {
+  for (const Abbrev *abbrev : mergedAbbrevTable) {
     buf += encodeULEB128(abbrev->code, buf);
     buf += encodeULEB128(abbrev->tag, buf);
-    for (auto attr : abbrev->attributes) {
+    for (DWARFDebugNames::AttributeEncoding attr : abbrev->attributes) {
       buf += encodeULEB128(attr.Index, buf);
       buf += encodeULEB128(attr.Form, buf);
     }
@@ -2846,7 +2846,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   // Write the entry pool.
   for (const auto &stringEntry : mergedEntries) {
     // Write all the entries for the string.
-    for (const auto &entry : stringEntry.indexEntries) {
+    for (const std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
       buf += encodeULEB128(entry->abbrevCode, buf);
       for (const auto &value : entry->attrValues) {
         endian::write32<ELFT::Endianness>(buf + 0, value.attrValue);
@@ -2901,7 +2901,7 @@ static void readAttributeValues(
   const LLDDWARFSection &namesSection = *chunk.namesSection;
   uint64_t *offsetPtr = &offset;
   typename DebugNamesSection<ELFT>::AttrValueData cuOrTuAttr = {0, 0};
-  for (auto attr : abbrev.Attributes) {
+  for (DWARFDebugNames::AttributeEncoding attr : abbrev.Attributes) {
     Error err = Error::success();
     typename DebugNamesSection<ELFT>::AttrValueData newAttr;
     uint32_t value;
@@ -3153,13 +3153,13 @@ std::pair<uint8_t, dwarf::Form> DebugNamesSection<ELFT>::getMergedCuSizeData() {
   uint8_t size;
   dwarf::Form form;
   // TODO: Investigate possibly using DIEInteger::BestForm here
-  if (mergedHdr.CompUnitCount > 0xffffffff) {
+  if (mergedHdr.CompUnitCount > UINT32_MAX) {
     form = DW_FORM_data8;
     size = 8;
-  } else if (mergedHdr.CompUnitCount > 0xffff) {
+  } else if (mergedHdr.CompUnitCount > UINT16_MAX) {
     form = DW_FORM_data4;
     size = 4;
-  } else if (mergedHdr.CompUnitCount > 0xff) {
+  } else if (mergedHdr.CompUnitCount > UINT8_MAX) {
     form = DW_FORM_data2;
     size = 2;
   } else {
@@ -3191,7 +3191,8 @@ void DebugNamesSection<ELFT>::getMergedAbbrevTable(
                                                       compileUnitAttrForm);
         newAbbrev.code = abbrev.Code;
         newAbbrev.tag = abbrev.Tag;
-        for (const auto attr : abbrev.Attributes) {
+        for (const DWARFDebugNames::AttributeEncoding attr :
+             abbrev.Attributes) {
           DWARFDebugNames::AttributeEncoding newAttr(attr.Index, attr.Form);
           if (attr.Index == DW_IDX_compile_unit)
             // Save it, to put it at the end.
@@ -3232,7 +3233,7 @@ void DebugNamesSection<ELFT>::getMergedAbbrevTable(
   for (Abbrev *a : mergedAbbrevTable) {
     mergedHdr.AbbrevTableSize += getULEB128Size(a->code);
     mergedHdr.AbbrevTableSize += getULEB128Size(a->tag);
-    for (const auto &attr : a->attributes) {
+    for (const DWARFDebugNames::AttributeEncoding &attr : a->attributes) {
       mergedHdr.AbbrevTableSize += getULEB128Size(attr.Index);
       mergedHdr.AbbrevTableSize += getULEB128Size(attr.Form);
     }
@@ -3267,7 +3268,7 @@ void DebugNamesSection<ELFT>::getMergedSymbols(
   parallelFor(0, concurrency, [&](size_t threadId) {
     for (size_t i = 0, e = numChunks; i != e; ++i) {
       DebugNamesInputChunk &chunk = inputChunks[i];
-      for (auto &secData : chunk.sectionsData) {
+      for (DebugNamesSectionData &secData : chunk.sectionsData) {
         // Deduplicate the NamedEntry records (based on the string/name),
         // using a map from string/name to NamedEntry records.
         // Note there is a twist: If there is already a record for the current
@@ -3275,14 +3276,14 @@ void DebugNamesSection<ELFT>::getMergedSymbols(
         // current record to the record that's in the nameMap. I.e. we
         // deduplicate the *strings* but we keep all the IndexEntry records
         // (moving them to the appropriate 'kept' NamedEntry record).
-        for (auto &stringEntry : secData.namedEntries) {
+        for (NamedEntry &stringEntry : secData.namedEntries) {
           size_t shardId = stringEntry.hashValue >> shift;
           if ((shardId & (concurrency - 1)) != threadId)
             continue;
 
           auto &shard = shards[shardId];
           stringEntry.chunkIdx = i;
-          for (auto &entry : stringEntry.indexEntries) {
+          for (std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
             // The DW_IDX_compile_unit is always the last attribute (we set it
             // up that way when we read/created the attributes). We need to
             // update the index value to use the correct merged offset, and we
@@ -3312,7 +3313,7 @@ void DebugNamesSection<ELFT>::getMergedSymbols(
   });
 
   // Combined the shared symbols into mergedEntries
-  for (auto &shard : shards)
+  for (ShardData &shard : shards)
     for (auto &mapEntry : shard.nameMap)
       mergedEntries.push_back(std::move(mapEntry.second));
   mergedHdr.NameCount = mergedEntries.size();
@@ -3330,14 +3331,14 @@ void DebugNamesSection<ELFT>::computeUniqueHashes(
 
 template <class ELFT> void DebugNamesSection<ELFT>::generateBuckets() {
   bucketList.resize(mergedHdr.BucketCount);
-  for (auto &entry : mergedEntries) {
+  for (NamedEntry &entry : mergedEntries) {
     uint32_t bucketIdx = entry.hashValue % mergedHdr.BucketCount;
     bucketList[bucketIdx].push_back(&entry);
   }
 
   // Sort the contents of the buckets by hash value so that the hash collisions
   // end up together.
-  for (auto &bucket : bucketList)
+  for (SmallVector<NamedEntry *, 0> &bucket : bucketList)
     stable_sort(bucket, [](NamedEntry *lhs, NamedEntry *rhs) {
       return lhs->hashValue < rhs->hashValue;
     });
@@ -3348,7 +3349,7 @@ void DebugNamesSection<ELFT>::calculateEntriesSizeAndOffsets() {
   uint32_t offset = 0;
   for (NamedEntry &stringEntry : mergedEntries) {
     stringEntry.entryOffset = offset;
-    for (auto &entry : stringEntry.indexEntries) {
+    for (std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
       uint32_t entrySize = 0;
       entry->poolOffset = offset;
       entrySize += getULEB128Size(entry->abbrevCode);
@@ -3364,7 +3365,7 @@ void DebugNamesSection<ELFT>::calculateEntriesSizeAndOffsets() {
 
 template <class ELFT> void DebugNamesSection<ELFT>::updateParentIndexEntries() {
   for (NamedEntry &stringEntry : mergedEntries) {
-    for (auto &childEntry : stringEntry.indexEntries) {
+    for (std::unique_ptr<IndexEntry> &childEntry : stringEntry.indexEntries) {
       if (!childEntry->parentEntry)
         continue;
 
@@ -3377,7 +3378,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::updateParentIndexEntries() {
       // correct parent offset (in the merged entry pool).
       for (size_t idx = 0, size = abbrev->attributes.size(); idx != size;
            ++idx) {
-        auto attr = abbrev->attributes[idx];
+        DWARFDebugNames::AttributeEncoding attr = abbrev->attributes[idx];
         if (attr.Index == DW_IDX_parent && attr.Form == DW_FORM_ref4)
           childEntry->attrValues[idx].attrValue =
               childEntry->parentEntry->poolOffset;
