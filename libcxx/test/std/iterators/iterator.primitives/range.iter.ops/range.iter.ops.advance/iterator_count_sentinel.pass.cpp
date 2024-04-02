@@ -88,8 +88,8 @@ template <bool Count, typename It>
 constexpr void
 check_backward(int* first, int* last, std::iter_difference_t<It> n, int* expected, Expected expected_counts) {
   // Check preconditions for `advance` when called with negative `n`
-  // (see [range.iter.op.advance]).
-  assert(n < 0);
+  // (see [range.iter.op.advance]). In addition, allow `n == 0`.
+  assert(n <= 0);
   static_assert(std::bidirectional_iterator<It>);
 
   using Difference = std::iter_difference_t<It>;
@@ -212,11 +212,9 @@ constexpr bool test() {
         check_forward_sized_sentinel<int*>(                        range, range+size, n, expected);
       }
 
-      // Exclude the `n == 0` case for the backwards checks (this is tested by
-      // the forward tests above).
       // Input and forward iterators are not tested as the backwards case does
       // not apply for them.
-      if (n > 0) {
+      {
         int* expected = n > size ? range : range + size - n;
         {
           Expected expected_counts = {
