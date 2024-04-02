@@ -342,6 +342,8 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", SDTIntUnaryOp>;
+
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt
@@ -504,3 +506,7 @@ def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc
 def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
    (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUreadfirstlane : PatFrags<(ops node:$src),
+  [(int_amdgcn_readfirstlane node:$src),
+   (AMDGPUreadfirstlane_impl node:$src)]>;

@@ -238,7 +238,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Promote);
     AddPromotedToType(ISD::BUILD_VECTOR, MVT::v2bf16, MVT::v2i16);
   }
-
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
   setTruncStoreAction(MVT::v3i32, MVT::v3i16, Expand);
   setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
@@ -8452,6 +8451,26 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
+  case Intrinsic::amdgcn_readfirstlane2:
+    if (VT.getSizeInBits() <= 32) {
+      MVT IntVT = MVT::getIntegerVT(VT.getSizeInBits());
+      return DAG.getBitcast(
+          VT, DAG.getAnyExtOrTrunc(
+                  DAG.getNode(AMDGPUISD::READFIRSTLANE, DL, MVT::i32,
+                              DAG.getAnyExtOrTrunc(
+                                  DAG.getBitcast(IntVT, Op.getOperand(1)), DL,
+                                  MVT::i32)),
+                  DL, IntVT));
+    }
+    if (VT.getSizeInBits() % 32 == 0) {
+      MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+      return DAG.getBitcast(
+          VT, DAG.UnrollVectorOp(
+                  DAG.getNode(AMDGPUISD::READFIRSTLANE, DL, VecVT,
+                              DAG.getBitcast(VecVT, Op.getOperand(1)))
+                      .getNode()));
+    }
+    return SDValue();
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

@@ -393,6 +393,7 @@ def UniformIntrinsics : GenericTable {
 }
 
 def : AlwaysUniform<int_amdgcn_readfirstlane>;
+def : AlwaysUniform<int_amdgcn_readfirstlane2>;
 def : AlwaysUniform<int_amdgcn_readlane>;
 def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;

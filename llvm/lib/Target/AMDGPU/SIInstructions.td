@@ -3405,7 +3405,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (AMDGPUreadfirstlane (i32 imm:$src)),
   (S_MOV_B32 SReg_32:$src)
 >;
 

@@ -97,3 +97,80 @@ define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) {
   call void asm sideeffect "; use $0", "s"(i32 %readfirstlane)
   ret void
 }
+
+define void @test_readfirstlane2_i32(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: test_readfirstlane2_i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %x = call i32 @llvm.amdgcn.readfirstlane2.i32(i32 %src)
+  call void asm sideeffect "; use $0", "s"(i32 %x)
+  ret void
+}
+
+define void @test_readfirstlane2_i64(ptr addrspace(1) %out, i64 %src) {
+; CHECK-LABEL: test_readfirstlane2_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[4:5]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %x = call i64 @llvm.amdgcn.readfirstlane2.i64(i64 %src)
+  call void asm sideeffect "; use $0", "s"(i64 %x)
+  ret void
+}
+
+define void @test_readfirstlane2_v7i32(ptr addrspace(1) %out, <7 x i32> %src) {
+; CHECK-LABEL: test_readfirstlane2_v7i32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s10, v8
+; CHECK-NEXT:    v_readfirstlane_b32 s9, v7
+; CHECK-NEXT:    v_readfirstlane_b32 s8, v6
+; CHECK-NEXT:    v_readfirstlane_b32 s7, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s[4:10]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %x = call <7 x i32> @llvm.amdgcn.readfirstlane2.v7i32(<7 x i32> %src)
+  call void asm sideeffect "; use $0", "s"(<7 x i32> %x)
+  ret void
+}
+
+define void @test_readfirstlane2_f16(ptr addrspace(1) %out, half %src) {
+; CHECK-LABEL: test_readfirstlane2_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %x = call half @llvm.amdgcn.readfirstlane2.f16(half %src)
+  call void asm sideeffect "; use $0", "s"(half %x)
+  ret void
+}
+
+define void @test_readfirstlane2_float(ptr addrspace(1) %out, float %src) {
+; CHECK-LABEL: test_readfirstlane2_float:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use s4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %x = call float @llvm.amdgcn.readfirstlane2.f32(float %src)
+  call void asm sideeffect "; use $0", "s"(float %x)
+  ret void
+}

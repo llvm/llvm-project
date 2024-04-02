@@ -2206,9 +2206,16 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
 def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 
+// i32 llvm.amdgcn.readfirstlane(i32)
 def int_amdgcn_readfirstlane :
   ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+// ty llvm.amdgcn.readfirstlane2(ty)
+// A type-generic version of readfirstlane.
+def int_amdgcn_readfirstlane2 :
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The lane argument must be uniform across the currently active threads of the
