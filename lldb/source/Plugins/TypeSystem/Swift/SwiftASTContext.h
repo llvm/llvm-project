@@ -362,9 +362,14 @@ public:
                   bool append = true);
 
   /// Reconstruct a Swift AST type from a mangled name by looking its
+  /// components up in Swift modules. Diagnose a warning on error.
+  swift::TypeBase *ReconstructTypeOrWarn(ConstString mangled_typename);
+  /// Reconstruct a Swift AST type from a mangled name by looking its
   /// components up in Swift modules.
-  swift::TypeBase *ReconstructType(ConstString mangled_typename);
-  swift::TypeBase *ReconstructType(ConstString mangled_typename, Status &error);
+  llvm::Expected<swift::TypeBase *>
+  ReconstructType(ConstString mangled_typename);
+  /// Reconstruct a Swift AST type from a mangled name by looking its
+  /// components up in Swift modules.
   CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
@@ -415,11 +420,12 @@ public:
   CompilerType GetCompilerType(swift::TypeBase *swift_type);
   CompilerType GetCompilerType(ConstString mangled_name);
   /// Import compiler_type into this context and return the swift::Type.
-  swift::Type GetSwiftType(CompilerType compiler_type);
+  llvm::Expected<swift::Type> GetSwiftType(CompilerType compiler_type);
   /// Import compiler_type into this context and return the swift::CanType.
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
 protected:
   swift::Type GetSwiftType(lldb::opaque_compiler_type_t opaque_type);
+  swift::Type GetSwiftTypeIgnoringErrors(CompilerType compiler_type);
   swift::CanType
   GetCanonicalSwiftType(lldb::opaque_compiler_type_t opaque_type);
 

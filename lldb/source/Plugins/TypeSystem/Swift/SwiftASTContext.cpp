@@ -214,7 +214,8 @@ CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
   return {weak_from_this(), swift_type};
 }
 
-swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
+llvm::Expected<swift::Type>
+SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
   if (compiler_type.GetTypeSystem().GetSharedPointer().get() == this)
     return reinterpret_cast<swift::TypeBase *>(
         compiler_type.GetOpaqueQualType());
@@ -224,12 +225,19 @@ swift::Type SwiftASTContext::GetSwiftType(CompilerType compiler_type) {
 swift::Type SwiftASTContext::GetSwiftType(opaque_compiler_type_t opaque_type) {
   assert(opaque_type && *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
-  return GetSwiftType(CompilerType(weak_from_this(), opaque_type));
+  return GetSwiftTypeIgnoringErrors(
+      CompilerType(weak_from_this(), opaque_type));
+}
+
+swift::Type
+SwiftASTContext::GetSwiftTypeIgnoringErrors(CompilerType compiler_type) {
+  return llvm::expectedToStdOptional(GetSwiftType(compiler_type))
+      .value_or(swift::Type());
 }
 
 swift::CanType
 SwiftASTContext::GetCanonicalSwiftType(CompilerType compiler_type) {
-  swift::Type swift_type = GetSwiftType(compiler_type);
+  swift::Type swift_type = GetSwiftTypeIgnoringErrors(compiler_type);
   return swift_type ? swift_type->getCanonicalType() : swift::CanType();
 }
 
@@ -243,7 +251,7 @@ SwiftASTContext::GetCanonicalSwiftType(opaque_compiler_type_t opaque_type) {
 ConstString SwiftASTContext::GetMangledTypeName(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
-  return GetMangledTypeName(GetSwiftType({weak_from_this(), type}).getPointer());
+  return GetMangledTypeName(GetSwiftType(type).getPointer());
 }
 
 typedef lldb_private::ThreadSafeDenseMap<swift::ASTContext *, SwiftASTContext *>
@@ -938,8 +946,8 @@ llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
   // Retrieve the error message from the DiagnosticConsumer.
   DiagnosticManager diagnostic_manager;
   PrintDiagnostics(diagnostic_manager);
-  return llvm::make_error<llvm::StringError>(diagnostic_manager.GetString(),
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 diagnostic_manager.GetString());
 }
 
 SwiftASTContext::ScopedDiagnostics::~ScopedDiagnostics() {
@@ -1075,6 +1083,8 @@ static const char *getImportFailureString(swift::serialization::Status status) {
            "was required to do so.";
   case swift::serialization::Status::SDKMismatch:
     return "The module file was built with a different SDK version.";
+  case swift::serialization::Status::ChannelIncompatible:
+    return "The distribution channel doesn't match.";
   }
 }
 
@@ -4422,7 +4432,9 @@ static swift::Type ConvertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename) {
   if (llvm::isa<SwiftASTContextForExpressions>(this))
-    return GetCompilerType(ReconstructType(mangled_typename));
+    return GetCompilerType(
+        llvm::expectedToStdOptional(ReconstructType(mangled_typename))
+            .value_or(nullptr));
   return GetCompilerType(mangled_typename);
 }
 
@@ -4479,25 +4491,27 @@ CompilerType SwiftASTContext::GetAsClangType(ConstString mangled_name) {
 }
 
 swift::TypeBase *
-SwiftASTContext::ReconstructType(ConstString mangled_typename) {
+SwiftASTContext::ReconstructTypeOrWarn(ConstString mangled_typename) {
   Status error;
 
-  auto reconstructed_type = ReconstructType(mangled_typename, error);
-  if (!error.Success())
-    AddDiagnostic(eDiagnosticSeverityWarning, error.AsCString());
-  return reconstructed_type;
+  auto reconstructed_type = ReconstructType(mangled_typename);
+  if (!reconstructed_type)
+    AddDiagnostic(eDiagnosticSeverityWarning,
+                  llvm::toString(reconstructed_type.takeError()));
+  return *reconstructed_type;
 }
 
-swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
-                                                  Status &error) {
+llvm::Expected<swift::TypeBase *>
+SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   VALID_OR_RETURN(nullptr);
 
   const char *mangled_cstr = mangled_typename.AsCString();
-  if (mangled_typename.IsEmpty() ||
-      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename.GetStringRef())) {
-    error.SetErrorStringWithFormat(
-        "typename \"%s\" is not a valid Swift mangled name", mangled_cstr);
-    return {};
+  if (mangled_typename.IsEmpty() || !SwiftLanguageRuntime::IsSwiftMangledName(
+                                        mangled_typename.GetStringRef())) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "typename \"" +
+                                       mangled_typename.GetStringRef() +
+                                       "\" is not a valid Swift mangled name");
   }
 
   LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "(\"%s\")", mangled_cstr);
@@ -4506,11 +4520,9 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
   if (!ast_ctx) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- null Swift AST Context",
                mangled_cstr);
-    error.SetErrorString("null Swift AST Context");
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "null Swift AST Context");
   }
-
-  error.Clear();
 
   // If we were to crash doing this, remember what type caused it.
   llvm::PrettyStackTraceFormat PST("error finding type for %s", mangled_cstr);
@@ -4525,7 +4537,10 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
   if (m_negative_type_cache.Lookup(mangled_cstr)) {
     LOG_PRINTF(GetLog(LLDBLog::Types),
                "(\"%s\") -- found in the negative cache", mangled_cstr);
-    return {};
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "type for typename \"" +
+                                       mangled_typename.GetString() +
+                                       "\" was not found (cached)");
   }
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- not cached, searching",
@@ -4590,10 +4605,11 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- not found", mangled_cstr);
 
-  error.SetErrorStringWithFormat("type for typename \"%s\" was not found",
-                                 mangled_cstr);
   CacheDemangledTypeFailure(mangled_typename);
-  return {};
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "type for typename \"" +
+                                     mangled_typename.GetString() +
+                                     "\" was not found");
 }
 
 CompilerType SwiftASTContext::GetAnyObjectType() {
@@ -4726,7 +4742,7 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
 
   if (!name.empty() &&
       container_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>()) {
-    swift::Type swift_type = GetSwiftType(container_type);
+    swift::Type swift_type = GetSwiftTypeIgnoringErrors(container_type);
     if (!swift_type)
       return 0;
     swift::CanType swift_can_type(swift_type->getCanonicalType());
@@ -5045,7 +5061,7 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
   else {
     std::vector<swift::TupleTypeElt> tuple_elems;
     for (const TupleElement &element : elements) {
-      if (auto swift_type = GetSwiftType(element.element_type)) {
+      if (auto swift_type = GetSwiftTypeIgnoringErrors(element.element_type)) {
         if (element.element_name.IsEmpty())
           tuple_elems.push_back(swift::TupleTypeElt(swift_type));
         else
@@ -5600,7 +5616,8 @@ bool SwiftASTContext::IsVoidType(opaque_compiler_type_t type) {
 bool SwiftASTContext::IsGenericType(const CompilerType &compiler_type) {
   if (auto swift_ast_ctx =
           compiler_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>()) {
-    if (swift::Type swift_type = swift_ast_ctx->GetSwiftType(compiler_type))
+    if (swift::Type swift_type =
+            swift_ast_ctx->GetSwiftTypeIgnoringErrors(compiler_type))
       return swift_type->hasTypeParameter();
   } else
     return compiler_type.GetTypeInfo() & eTypeIsGenericTypeParam;
@@ -6248,7 +6265,7 @@ CompilerType SwiftASTContext::GetPointeeType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  auto swift_type = GetSwiftType({weak_from_this(), type});
+  auto swift_type = GetSwiftType(type);
   auto pointer_type =
       swift_type->wrapInPointer(swift::PointerTypeKind::PTK_UnsafePointer);
   if (pointer_type)
@@ -6260,7 +6277,7 @@ CompilerType SwiftASTContext::GetPointerType(opaque_compiler_type_t type) {
 CompilerType SwiftASTContext::GetTypedefedType(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  swift::Type swift_type(GetSwiftType({weak_from_this(), type}));
+  swift::Type swift_type(GetSwiftType(type));
   swift::TypeAliasType *name_alias_type =
       swift::dyn_cast<swift::TypeAliasType>(swift_type.getPointer());
   if (name_alias_type) {
@@ -6563,8 +6580,8 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
                                 bool omit_empty_base_classes,
                                 const ExecutionContext *exe_ctx) {
   VALID_OR_RETURN_CHECK_TYPE(
-      type, llvm::make_error<llvm::StringError>(
-                "invalid type", llvm::inconvertibleErrorCode()));
+      type,
+      llvm::createStringError(llvm::inconvertibleErrorCode(), "invalid type"));
   LLDB_SCOPED_TIMER();
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
@@ -7914,7 +7931,7 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
 
 CompilerType SwiftASTContext::GetGenericArgumentType(CompilerType ct,
                                                      size_t idx) {
-  swift::Type swift_type = GetSwiftType(ct);
+  swift::Type swift_type = GetSwiftTypeIgnoringErrors(ct);
   if (!swift_type)
     return {};
   auto *ast = GetSwiftASTContext(&swift_type->getASTContext());
@@ -8248,17 +8265,15 @@ SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
   if (!typeref_type)
     return {};
 
-  Status error;
-  auto *ast_type = ReconstructType(typeref_type.GetMangledTypeName(), error);
-  if (error.Fail()) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "[SwiftASTContext::ConvertClangTypeToSwiftType] Could not "
-              "reconstruct type. Error: %s",
-              error.AsCString());
+  auto ast_type = ReconstructType(typeref_type.GetMangledTypeName());
+  if (!ast_type) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ast_type.takeError(),
+                   "[SwiftASTContext::ConvertClangTypeToSwiftType] Could not "
+                   "reconstruct type. Error: {0}");
     return {};
   }
 
-  return {this->weak_from_this(), ast_type};
+  return {this->weak_from_this(), *ast_type};
 }
 
 CompilerType SwiftASTContext::GetBuiltinIntType() {
@@ -8267,7 +8282,7 @@ CompilerType SwiftASTContext::GetBuiltinIntType() {
 }
 
 bool SwiftASTContext::TypeHasArchetype(CompilerType type) {
-  auto swift_type = GetSwiftType(type);
+  auto swift_type = GetSwiftTypeIgnoringErrors(type);
   if (swift_type)
     return swift_type->hasArchetype();
   return false;
@@ -8598,6 +8613,9 @@ static void DescribeFileUnit(Stream &s, const swift::FileUnit *file_unit) {
         break;
       case swift::SourceFileKind::Interface:
         s.PutCString("Interface");
+        break;
+      case swift::SourceFileKind::DefaultArgument:
+        s.PutCString("Default Argument");
         break;
       }
     }

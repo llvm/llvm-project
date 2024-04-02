@@ -52,13 +52,12 @@ SwiftASTManipulator::VariableInfo::GetVarIntroducer() const {
     return m_var_introducer;
 }
 
-bool SwiftASTManipulator::VariableInfo::GetIsCaptureList() const {
+bool SwiftASTManipulator::VariableInfo::IsCaptureList() const {
   if (m_decl)
     return m_decl->isCaptureList();
   else
     return m_is_capture_list;
 }
-
 
 SwiftASTManipulatorBase::VariableMetadataResult::~VariableMetadataResult() {}
 
@@ -533,12 +532,8 @@ void SwiftASTManipulator::FindVariableDeclarations(
 
     auto type = var_decl->getDeclContext()->mapTypeIntoContext(
         var_decl->getInterfaceType());
-    persistent_info.m_name = name;
-    persistent_info.m_type = ToCompilerType({type.getPointer()});
-    persistent_info.m_decl = var_decl;
-
-    m_variables.push_back(persistent_info);
-
+    m_variables.emplace_back(ToCompilerType({type.getPointer()}), name,
+                             var_decl);
     found_declarations.push_back(persistent_info_location);
   };
 
@@ -692,25 +687,23 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
   m_catch_stmt->setBody(body_stmt);
 }
 
-bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
-  if (!IsValid()) {
-    error.SetErrorString("Operating on invalid SwiftASTManipulator");
-    return false;
-  }
+llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
+  if (!IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Operating on invalid SwiftASTManipulator");
   // Run through the result decls and figure out the return type.
 
   size_t num_results = m_result_info.size();
   if (num_results == 0)
-    return true;
+    return llvm::Error::success();
 
   swift::Type result_type;
   for (size_t i = 0; i < num_results; i++) {
     swift::VarDecl *the_decl = m_result_info[i].tmp_var_decl;
-    if (!the_decl->hasInterfaceType()) {
-      error.SetErrorStringWithFormat(
+    if (!the_decl->hasInterfaceType())
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Type of %zuth return value could not be determined.", i);
-      return false;
-    }
     swift::Type its_type = the_decl->getTypeInContext();
     if (result_type.isNull()) {
       result_type = its_type;
@@ -718,21 +711,21 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
       std::string prev_type_name = result_type.getPointer()->getString();
       std::string cur_type_name = its_type.getPointer()->getString();
 
-      error.SetErrorStringWithFormat(
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
           "Type for %zuth return value is inconsistent, previous type: %s, "
           "current type: %s.",
           i, prev_type_name.c_str(), cur_type_name.c_str());
-      return false;
     }
   }
 
-  if (result_type.isNull()) {
-    error.SetErrorString("Could not find the result type for this expression.");
-    return false;
-  } else if (result_type->is<swift::ErrorType>()) {
-    error.SetErrorString("Result type is the error type.");
-    return false;
-  }
+  if (result_type.isNull())
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Could not find the result type for this expression.");
+  if (result_type->is<swift::ErrorType>())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Result type is the error type.");
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
   CompilerType return_ast_type = ToCompilerType(result_type.getPointer());
@@ -741,12 +734,17 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
       new VariableMetadataResult());
 
-  swift::VarDecl *result_var =
+  auto result_var_or_err =
       AddExternalVariable(result_var_name, return_ast_type, metadata_sp);
-  if (!result_var) {
-    error.SetErrorString("Could not add external result variable.");
-    return false;
-  }
+  if (!result_var_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Could not add external result variable." +
+            llvm::toString(result_var_or_err.takeError()));
+  swift::VarDecl *result_var = *result_var_or_err;
+  if (!result_var)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "null result var");
 
   result_var->overwriteAccess(swift::AccessLevel::Public);
   result_var->overwriteSetterAccess(swift::AccessLevel::Public);
@@ -754,9 +752,8 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   // Finally, go reset the return expression to the new result variable for each
   // of the return expressions.
 
-  for (SwiftASTManipulator::ResultLocationInfo &result_info : m_result_info) {
+  for (SwiftASTManipulator::ResultLocationInfo &result_info : m_result_info)
     InsertResult(result_var, result_type, result_info);
-  }
 
   // Finally we have to do pretty much the same transformation on the error
   // object.
@@ -788,14 +785,18 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
             SwiftASTManipulatorBase::VariableMetadataSP error_metadata_sp(
                 new VariableMetadataError());
 
-            swift::VarDecl *error_var = AddExternalVariable(
+            auto error_var_or_err = AddExternalVariable(
                 error_var_name, error_ast_type, error_metadata_sp);
 
-            if (!error_var) {
-              error.SetErrorString("Could not add external error variable.");
-              return false;
-            }
-
+            if (!error_var_or_err)
+              return llvm::createStringError(
+                  llvm::inconvertibleErrorCode(),
+                  "Could not add external error variable: " +
+                      llvm::toString(error_var_or_err.takeError()));
+            swift::VarDecl *error_var = *error_var_or_err;
+            if (!error_var)
+              return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                             "null error variable.");
             error_var->overwriteAccess(swift::AccessLevel::Public);
             error_var->overwriteSetterAccess(
                 swift::AccessLevel::Public);
@@ -808,10 +809,10 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
     }
   }
 
-  return true;
+  return llvm::Error::success();
 }
 
-swift::VarDecl *
+llvm::Expected<swift::VarDecl *>
 SwiftASTManipulator::AddExternalVariable(swift::Identifier name,
                                          CompilerType &type,
                                          VariableMetadataSP &metadata_sp) {
@@ -819,14 +820,11 @@ SwiftASTManipulator::AddExternalVariable(swift::Identifier name,
     return nullptr;
 
   VariableInfo variables[1];
-
   variables[0].m_name = name;
   variables[0].m_type = type;
   variables[0].m_metadata = metadata_sp;
 
-  if (!AddExternalVariables(variables))
-    return nullptr;
-
+  AddExternalVariables(variables);
   return variables[0].m_decl;
 }
 
@@ -878,25 +876,30 @@ swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
   return m_function_decl;
 }
 
-std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
+llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
     const SwiftASTManipulator::VariableInfo &variable) const {
   auto type_system_swift =
       variable.m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
 
   if (!type_system_swift)
-    return {};
+    return llvm::make_error<llvm::StringError>("no typesystem",
+                                               llvm::inconvertibleErrorCode());
 
   // When injecting a value pack or pack count into the outer
   // lldb_expr function, treat it as an opaque raw pointer.
   if (m_bind_generic_types == lldb::eDontBind && variable.IsUnboundPack()) {
     auto swift_ast_ctx = type_system_swift->GetSwiftASTContext(&m_sc);
-    if (swift_ast_ctx) {
-      auto it = m_type_aliases.find("$__lldb_builtin_ptr_t");
-      if (it == m_type_aliases.end())
-        return {};
-      return swift::Type(it->second);
-    }
-    return {};
+    if (!swift_ast_ctx)
+      return llvm::make_error<llvm::StringError>(
+          "no typesystem for variable " + variable.GetName().str(),
+          llvm::inconvertibleErrorCode());
+
+    auto it = m_type_aliases.find("$__lldb_builtin_ptr_t");
+    if (it == m_type_aliases.end())
+      return llvm::make_error<llvm::StringError>(
+          "no $__lldb_builtin_ptr_t", llvm::inconvertibleErrorCode());
+
+    return swift::Type(it->second);
   }
 
   // This might be a referenced type, which will confuse the type checker.
@@ -904,10 +907,9 @@ std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   // type, so it is fine to just strip it off.
   CompilerType referent_type =
       type_system_swift->GetReferentType(variable.m_type.GetOpaqueQualType());
-
-  swift::Type swift_type = m_swift_ast_ctx.GetSwiftType(referent_type);
-  if (!swift_type)
-    return {};
+  auto swift_type_or_err = m_swift_ast_ctx.GetSwiftType(referent_type);
+  if (!swift_type_or_err)
+    return swift_type_or_err.takeError();
 
   // One tricky bit here is that this var may be an argument to the
   // function whose context we are emulating, and that argument might be
@@ -915,7 +917,7 @@ std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   // initial parse will fail.  Fortunately, the variable access goes the
   // same regardless of whether it is inout or not, so we don't have to do
   // anything more to get this to work.
-  swift_type = swift_type->getWithoutSpecifierType();
+  swift::Type swift_type = swift_type_or_err.get()->getWithoutSpecifierType();
 
   if (variable.IsSelf()) {
     // Another tricky bit is that the Metatype types we get have the
@@ -925,10 +927,9 @@ std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
     // verifier error & aborts.  So we strip it off here:
     swift::MetatypeType *metatype_type =
         llvm::dyn_cast<swift::MetatypeType>(swift_type.getPointer());
-    if (metatype_type) {
+    if (metatype_type)
       swift_type = swift::Type(
           swift::MetatypeType::get(metatype_type->getInstanceType()));
-    }
   }
 
   if (swift_type->hasArchetype())
@@ -937,13 +938,14 @@ std::optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   return {swift_type};
 }
 
-swift::VarDecl *SwiftASTManipulator::GetVarDeclForVariableInFunction(
+llvm::Expected<swift::VarDecl *>
+SwiftASTManipulator::GetVarDeclForVariableInFunction(
     const SwiftASTManipulator::VariableInfo &variable,
     swift::FuncDecl *containing_function) {
-  const auto maybe_swift_type = GetSwiftTypeForVariable(variable);
+  auto maybe_swift_type = GetSwiftTypeForVariable(variable);
 
   if (!maybe_swift_type)
-    return {};
+    return maybe_swift_type.takeError();
 
   const auto &swift_type = *maybe_swift_type;
 
@@ -1001,6 +1003,7 @@ static void AddNodesToBeginningFunction(
 
 bool SwiftASTManipulator::AddExternalVariables(
     llvm::MutableArrayRef<VariableInfo> variables) {
+  llvm::SmallVector<llvm::Error, 4> errors;
   if (!IsValid())
     return false;
 
@@ -1010,10 +1013,8 @@ bool SwiftASTManipulator::AddExternalVariables(
 
   if (m_repl) {
     // In the REPL, we're only adding the result variable.
-
-    if (variables.empty()) {
-      return true;
-    }
+    if (variables.empty())
+      return false;
 
     assert(variables.size() == 1);
 
@@ -1023,10 +1024,12 @@ bool SwiftASTManipulator::AddExternalVariables(
     auto introducer = variable.GetVarIntroducer();
     swift::SourceLoc loc;
     swift::Identifier name = variable.m_name;
-    swift::Type var_type = m_swift_ast_ctx.GetSwiftType(variable.m_type);
-
-    if (!var_type)
+    auto var_type_or_err = m_swift_ast_ctx.GetSwiftType(variable.m_type);
+    if (!var_type_or_err) {
+      variable.SetLookupError(var_type_or_err.takeError());
       return false;
+    }
+    swift::Type var_type = *var_type_or_err;
 
     // If the type is an inout or lvalue type (happens if this is an argument)
     // strip that part off:
@@ -1072,62 +1075,64 @@ bool SwiftASTManipulator::AddExternalVariables(
           "[SwiftASTManipulator::AddExternalVariables] Injected variable %s",
           s.c_str());
     }
+    m_variables.push_back(variable);
+    return true;
+  }
+
+  // The new nodes that should be added to each function.
+  llvm::DenseMap<swift::FuncDecl *, llvm::SmallVector<swift::ASTNode, 3>>
+      injected_nodes;
+
+  for (SwiftASTManipulator::VariableInfo &variable : variables) {
+    swift::FuncDecl *containing_function =
+        GetFunctionToInjectVariableInto(variable);
+    assert(containing_function && "No function to inject variable into!");
+    if (!containing_function) {
+      continue;
+    }
+
+    llvm::Expected<swift::VarDecl *> redirected_var_decl =
+        GetVarDeclForVariableInFunction(variable, containing_function);
+    if (!redirected_var_decl) {
+      LLDB_LOG(log, "No var decl.");
+      variable.SetLookupError(redirected_var_decl.takeError());
+      continue;
+    }
+    swift::PatternBindingDecl *pattern_binding =
+        GetPatternBindingForVarDecl(*redirected_var_decl, containing_function);
+    if (!pattern_binding) {
+      LLDB_LOG(log, "No pattern binding.");
+      continue;
+    }
+
+    // Push the var decl and pattern binding so we add them to the function
+    // later.
+    injected_nodes[containing_function].push_back(
+        swift::ASTNode(pattern_binding));
+    injected_nodes[containing_function].push_back(
+        swift::ASTNode(*redirected_var_decl));
+
+    variable.m_decl = *redirected_var_decl;
+
+    if (log) {
+      std::string s;
+      llvm::raw_string_ostream ss(s);
+      variable.m_decl->dump(ss);
+      ss.flush();
+
+      LLDB_LOG(log,
+               "[SwiftASTManipulator::AddExternalVariables] Injected "
+               "variable {0} into {1}",
+               s, containing_function->getName().getBaseIdentifier().str());
+    }
 
     m_variables.push_back(variable);
-  } else {
-    // The new nodes that should be added to each function.
-    std::unordered_map<swift::FuncDecl *, llvm::SmallVector<swift::ASTNode, 3>>
-        injected_nodes;
+  }
 
-    for (SwiftASTManipulator::VariableInfo &variable : variables) {
-      swift::FuncDecl *containing_function =
-          GetFunctionToInjectVariableInto(variable);
-      assert(containing_function && "No function to inject variable into!");
-      if (!containing_function)
-        continue;
-
-      swift::VarDecl *redirected_var_decl =
-          GetVarDeclForVariableInFunction(variable, containing_function);
-      if (!redirected_var_decl) {
-        LLDB_LOG(log, "No var decl.");
-        continue;
-      }
-      swift::PatternBindingDecl *pattern_binding =
-          GetPatternBindingForVarDecl(redirected_var_decl, containing_function);
-      if (!pattern_binding) {
-        LLDB_LOG(log, "No pattern binding.");
-        continue;
-      }
-
-      // Push the var decl and pattern binding so we add them to the function
-      // later.
-      injected_nodes[containing_function].push_back(
-          swift::ASTNode(pattern_binding));
-      injected_nodes[containing_function].push_back(
-          swift::ASTNode(redirected_var_decl));
-
-      variable.m_decl = redirected_var_decl;
-
-      if (log) {
-        std::string s;
-        llvm::raw_string_ostream ss(s);
-        variable.m_decl->dump(ss);
-        ss.flush();
-
-        LLDB_LOG(log,
-                 "[SwiftASTManipulator::AddExternalVariables] Injected "
-                 "variable {0} into {1}",
-                 s, containing_function->getName().getBaseIdentifier().str());
-      }
-
-      m_variables.push_back(variable);
-    }
-
-    for (auto &pair : injected_nodes) {
-      auto *containing_function = pair.first;
-      auto &new_nodes = pair.second;
-      AddNodesToBeginningFunction(containing_function, new_nodes, ast_context);
-    }
+  for (auto &pair : injected_nodes) {
+    auto *containing_function = pair.first;
+    auto &new_nodes = pair.second;
+    AddNodesToBeginningFunction(containing_function, new_nodes, ast_context);
   }
 
   return true;
@@ -1217,12 +1222,13 @@ bool SwiftASTManipulator::FixCaptures() {
   return true;
 }
 
-swift::TypeAliasDecl *
+llvm::Expected<swift::TypeAliasDecl *>
 SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
                                    bool make_private,
                                    swift::DeclContext *decl_ctx) {
   if (!IsValid())
-    return nullptr;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid SwiftASTManipulator");
 
   // If no DeclContext was passed in make this a global typealias.
   if (!decl_ctx)
@@ -1233,24 +1239,23 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(swift::SourceLoc(), swift::SourceLoc(), name,
                            swift::SourceLoc(), nullptr, decl_ctx);
-  swift::Type underlying_type = m_swift_ast_ctx.GetSwiftType(type);
+  auto underlying_type = m_swift_ast_ctx.GetSwiftType(type);
   if (!underlying_type)
-    return nullptr;
+    return underlying_type.takeError();
 
-  type_alias_decl->setUnderlyingType(underlying_type);
+  type_alias_decl->setUnderlyingType(*underlying_type);
   type_alias_decl->markAsDebuggerAlias(true);
   type_alias_decl->setImplicit(true);
 
-  Log *log = GetLog(LLDBLog::Expressions);
+  if (!type_alias_decl || !*underlying_type)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Could not make typealias from %s to %s in decl context (%p) and "
+        "context (%p)",
+        name.get(), type.GetMangledTypeName().GetCString(),
+        static_cast<void *>(decl_ctx), static_cast<void *>(&ast_context));
 
-  if (!type_alias_decl) {
-    LLDB_LOGF(log,
-              "Could not make typealias from %s to %s in decl context (%p) and "
-              "context (%p)",
-              name.get(), type.GetMangledTypeName().GetCString(),
-              static_cast<void *>(decl_ctx), static_cast<void *>(&ast_context));
-    return nullptr;
-  }
+  Log *log = GetLog(LLDBLog::Expressions);
   if (log) {
 
     std::string s;
@@ -1259,10 +1264,8 @@ SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
     ss.flush();
 
     log->Printf(
-        "Made type alias for %s (%p) in decl context (%p) and context "
-        "(%p):\n%s",
+        "Made type alias for %s in decl context (%p) and context (%p):\n%s",
         name.get(),
-        static_cast<void *>(m_swift_ast_ctx.GetSwiftType(type).getPointer()),
         static_cast<void *>(decl_ctx), static_cast<void *>(&ast_context),
         s.c_str());
   }
