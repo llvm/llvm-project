@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
       int a = 0;
 
 #ifdef USE_HIDDEN_HELPERS
-#pragma omp target map(tofrom: a) nowait
+#pragma omp target map(tofrom : a) nowait
 #else
 #pragma omp task shared(a) detach(event)
 #endif

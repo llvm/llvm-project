@@ -56,7 +56,7 @@ void task_inc_split_a(int *a, int low, int high) {
 #ifdef USE_HIDDEN_HELPERS
 // Hidden helper tasks force serial regions to create task teams
 void task_inc_a_hidden_helper(int *a) {
-#pragma omp target map(tofrom: a[0]) nowait
+#pragma omp target map(tofrom : a[0]) nowait
   {
 #pragma omp atomic
     (*a)++;

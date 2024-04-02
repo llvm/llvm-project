@@ -4164,10 +4164,10 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
     KMP_DEBUG_ASSERT(team->t.t_nproc == 1);
     if (team->t.t_task_team[0] == NULL) {
       team->t.t_task_team[0] = __kmp_allocate_task_team(this_thr, team);
-      KA_TRACE(20,
-               ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
-                " for serial/root team %p\n",
-                __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
+      KA_TRACE(
+          20, ("__kmp_task_team_setup: Primary T#%d created new task_team %p"
+               " for serial/root team %p\n",
+               __kmp_gtid_from_thread(this_thr), team->t.t_task_team[0], team));
 
     } else
       __kmp_task_team_init(team->t.t_task_team[0], team);
@@ -4197,8 +4197,7 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team) {
   int other_team = 1 - this_thr->th.th_task_state;
   KMP_DEBUG_ASSERT(other_team >= 0 && other_team < 2);
   if (team->t.t_task_team[other_team] == NULL) { // setup other team as well
-    team->t.t_task_team[other_team] =
-        __kmp_allocate_task_team(this_thr, team);
+    team->t.t_task_team[other_team] = __kmp_allocate_task_team(this_thr, team);
     KA_TRACE(20, ("__kmp_task_team_setup: Primary T#%d created second new "
                   "task_team %p for team %d at parity=%d\n",
                   __kmp_gtid_from_thread(this_thr),

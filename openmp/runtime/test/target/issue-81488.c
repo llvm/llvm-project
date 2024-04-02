@@ -1,5 +1,6 @@
 // RUN: %libomp-compile
-// RUN: env OMP_NUM_THREADS=1 LIBOMP_USE_HIDDEN_HELPER_TASK=1 LIBOMP_NUM_HIDDEN_HELPER_THREADS=8 %libomp-run
+// RUN: env OMP_NUM_THREADS=1 LIBOMP_USE_HIDDEN_HELPER_TASK=1 \
+// RUN:     LIBOMP_NUM_HIDDEN_HELPER_THREADS=8 %libomp-run
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,16 +16,17 @@ int main(void) {
     for (int k = 0; k < Nz; ++k) {
       a[k] = -1;
     }
-    #pragma omp parallel shared(a)
+#pragma omp parallel shared(a)
     {
-      #pragma omp single
+#pragma omp single
       {
-        #pragma omp target teams distribute parallel for nowait device(DEVICE_ID) map(tofrom: a[0:8])
+#pragma omp target teams distribute parallel for nowait device(DEVICE_ID)      \
+    map(tofrom : a[0 : 8])
         for (int i = 0; i < Nz; ++i) {
           a[i] = i;
         }
       }
-      #pragma omp barrier
+#pragma omp barrier
     }
     for (int k = 0; k < Nz; ++k) {
       printf("a[%d] = %d\n", k, a[k]);
