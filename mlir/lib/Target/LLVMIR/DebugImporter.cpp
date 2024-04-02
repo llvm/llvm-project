@@ -252,9 +252,9 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   if (DINodeAttr attr = nodeToAttr.lookup(node))
     return attr;
 
-  // Register with the recursive translator. If it is seen before, return the
-  // result immediately.
-  if (DINodeAttr attr = recursionPruner.tryPrune(node))
+  // Register with the recursive translator. If it can be handled without
+  // recursing into it, return the result immediately.
+  if (DINodeAttr attr = recursionPruner.pruneOrPushTranslationStack(node))
     return attr;
 
   auto guard = llvm::make_scope_exit(
@@ -320,7 +320,8 @@ getRecSelfConstructor(llvm::DINode *node) {
       .Default(CtorType());
 }
 
-DINodeAttr DebugImporter::RecursionPruner::tryPrune(llvm::DINode *node) {
+DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
+    llvm::DINode *node) {
   // Lookup the cache first.
   auto [result, unboundSelfRefs] = lookup(node);
   if (result) {

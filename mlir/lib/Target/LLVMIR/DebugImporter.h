@@ -97,15 +97,16 @@ private:
   /// for gracefully handling DINodes that are recursive.
   ///
   /// Usage:
-  /// - Before translating a node, call `tryPrune` to see if the pruner can
-  ///   preempt this translation. If this is a node that the pruner already
-  ///   knows how to handle, it will return the translated DINodeAttr.
+  /// - Before translating a node, call `pruneOrPushTranslationStack` to see if
+  ///   the pruner can preempt this translation. If this is a node that the
+  ///   pruner already knows how to handle, it will return the translated
+  ///   DINodeAttr.
   /// - After a node is successfully translated by the main translator, call
   ///   `finalizeTranslation` to save the translated result with the pruner, and
   ///   give it a chance to further modify the result.
   /// - Regardless of success or failure by the main translator, always call
-  ///   `finally` at the end of translating a node. This is necessary to keep
-  ///   the internal book-keeping in sync.
+  ///   `popTranslationStack` at the end of translating a node. This is
+  ///   necessary to keep the internal book-keeping in sync.
   ///
   /// This helper maintains an internal cache so that no recursive type will
   /// be translated more than once by the main translator.
@@ -119,8 +120,10 @@ private:
     /// If this node was previously cached, returns the cached result.
     /// If this node is a recursive instance that was previously seen, returns a
     /// self-reference.
-    /// Otherwise, returns null attr.
-    DINodeAttr tryPrune(llvm::DINode *node);
+    /// Otherwise, returns null attr, and a translation stack frame is created
+    /// for this node. Expects `finalizeTranslation` & `popTranslationStack`
+    /// to be called on this node later.
+    DINodeAttr pruneOrPushTranslationStack(llvm::DINode *node);
 
     /// Register the translated result of `node`. Returns the finalized result
     /// (with recId if recursive) and whether the result is self-contained
