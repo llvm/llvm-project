@@ -1243,7 +1243,7 @@ public:
                   const StackFrameContext *OriginSFC = nullptr)
       : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
         OriginSFC(OriginSFC) {
-    assert(!V.isUnknown() && R);
+    assert(R);
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
