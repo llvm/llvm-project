@@ -164,7 +164,6 @@ private:
   /// Map a function to its secondary entry points vector
   std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
 
-  /// Translates a given \p Symbol into a BinaryFunction and
   /// Returns a secondary entry point id for a given \p Address and \p Offset.
   unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
 
