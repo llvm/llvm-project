@@ -811,6 +811,13 @@ class DebugCommunication(object):
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
+    def request_stepIn(self, threadId, targetId):
+        if self.exit_status is not None:
+            raise ValueError("request_stepIn called after process exited")
+        args_dict = {"threadId": threadId, "targetId": targetId}
+        command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
+        return self.send_recv(command_dict)
+
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
@@ -820,13 +827,6 @@ class DebugCommunication(object):
             "type": "request",
             "arguments": args_dict,
         }
-        return self.send_recv(command_dict)
-
-    def request_stepIn(self, threadId, targetId):
-        if self.exit_status is not None:
-            raise ValueError("request_stepIn called after process exited")
-        args_dict = {"threadId": threadId, "targetId": targetId}
-        command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
     def request_stepOut(self, threadId):

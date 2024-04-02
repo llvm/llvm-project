@@ -3303,11 +3303,13 @@ void request_stepInTargets(const llvm::json::Object &request) {
         if (!call_target_load_addr.IsValid())
           continue;
 
-        // Step in targets only supports functions with debug info.
+        // The existing ThreadPlanStepInRange only accept step in target
+        // function with debug info.
         lldb::SBSymbolContext sc = g_dap.target.ResolveSymbolContextForAddress(
             call_target_load_addr, lldb::eSymbolContextFunction);
 
-        // Step in targets only supports functions with debug info.
+        // The existing ThreadPlanStepInRange only accept step in target
+        // function with debug info.
         std::string step_in_target_name;
         if (sc.IsValid() && sc.GetFunction().IsValid())
           step_in_target_name = sc.GetFunction().GetDisplayName();
