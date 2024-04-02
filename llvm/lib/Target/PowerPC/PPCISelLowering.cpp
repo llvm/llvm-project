@@ -643,7 +643,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::ppcf128, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v2f64, Custom);
@@ -10774,7 +10773,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
 
   case Intrinsic::ppc_rldimi: {
-    assert(Subtarget.isPPC64() && "rldimi intrinsic is 64-bit only!");
+    assert(Subtarget.isPPC64() && "rldimi is only available in 64-bit!");
     SDValue Src = Op.getOperand(1);
     APInt Mask = Op.getConstantOperandAPInt(4);
     if (Mask.isZero())
@@ -11834,7 +11833,6 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::ppc_maxfe:
     case Intrinsic::ppc_minfe:
     case Intrinsic::ppc_fnmsub:
-    case Intrinsic::ppc_rldimi:
     case Intrinsic::ppc_convert_f128_to_ppcf128:
       Results.push_back(LowerINTRINSIC_WO_CHAIN(SDValue(N, 0), DAG));
       break;
