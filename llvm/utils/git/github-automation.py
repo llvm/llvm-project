@@ -36,7 +36,7 @@ If you have any further questions about this issue, don't hesitate to ask via a 
 """
 
 
-def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     for team in teams:
         if team_name == team.name.lower():
             return team
@@ -70,7 +70,7 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -125,7 +125,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -201,7 +201,7 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             )
         return True
 
-    def _get_curent_team(self) -> Optional[github.Team.Team]:
+    def _get_current_team(self) -> Optional[github.Team.Team]:
         for team in self.org.get_teams():
             if self.team_name == team.name.lower():
                 return team
@@ -281,7 +281,7 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
 
 Please check whether problems have been caused by your change specifically, as
 the builds can include changes from many authors. It is not uncommon for your
@@ -639,7 +639,7 @@ class ReleaseWorkflow:
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--token", type=str, required=True, help="GitHub authentiation token"
+    "--token", type=str, required=True, help="GitHub authentication token"
 )
 parser.add_argument(
     "--repo",
@@ -669,7 +669,7 @@ release_workflow_parser.add_argument(
     "--llvm-project-dir",
     type=str,
     default=".",
-    help="directory containing the llvm-project checout",
+    help="directory containing the llvm-project checkout",
 )
 release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"

@@ -454,15 +454,11 @@ void TimerGroup::clearAll() {
     TG->clear();
 }
 
-void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
-                                const char *suffix, double Value) {
-  assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
-         "TimerGroup name should not need quotes");
-  assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
-         "Timer name should not need quotes");
+template <typename T>
+void printJsonProfileValue(raw_ostream &OS, StringRef Name, T Value, StringRef Prefix,
+                           const char *delim) {
   constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
-  OS << "\t\"time." << Name << '.' << R.Name << suffix
-     << "\": " << format("%.*e", max_digits10 - 1, Value);
+  OS << Prefix << "\"" << Name << "\": " << format("%.*e", max_digits10 - 1, Value) << delim;
 }
 
 const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
@@ -473,19 +469,15 @@ const char *TimerGroup::printJSONValues(raw_ostream &OS, const char *delim) {
     OS << delim;
     delim = ",\n";
     const TimeRecord &T = R.Time;
-    constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
-    OS << "  \"check\": {\n";
-    OS << "    \"name\": \"" << Name << '.' << R.Name << "\""<< delim;
-    OS << "    \"wall\": " << format("%.*e", max_digits10 - 1, T.getWallTime())
-       << delim;
-    OS << "    \"user\": " << format("%.*e", max_digits10 - 1, T.getUserTime())
-       << delim;
-    OS << "    \"sys\": " << format("%.*e", max_digits10 - 1, T.getSystemTime())
-       << delim;
-    OS << "    \"mem\": " << format("%.*e", max_digits10 - 1, T.getMemUsed())
-       << delim;
-    OS << "    \"instr\": "
-       << format("%.*e", max_digits10 - 1, T.getInstructionsExecuted());
+    StringRef Prefix = "  ";
+    OS << Prefix << "\"check\": {\n";
+    Prefix = "    ";
+    OS << Prefix << "\"name\": \"" << Name << '.' << R.Name << "\"" << delim;
+    printJsonProfileValue(OS, "wall", T.getWallTime(), Prefix, delim);
+    printJsonProfileValue(OS, "user", T.getUserTime(), Prefix, delim);
+    printJsonProfileValue(OS, "sys", T.getSystemTime(), Prefix, delim);
+    printJsonProfileValue(OS, "mem", T.getMemUsed(), Prefix, delim);
+    printJsonProfileValue(OS, "instr", T.getInstructionsExecuted(), Prefix, "");
     OS << "\n  }";
   }
   TimersToPrint.clear();
