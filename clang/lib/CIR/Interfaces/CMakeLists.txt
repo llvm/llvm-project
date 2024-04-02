@@ -9,9 +9,10 @@ add_clang_library(MLIRCIRInterfaces
 
   DEPENDS
   MLIRCIRASTAttrInterfacesIncGen
-  MLIRCIROpInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
+  MLIRCIREnumsGen
   MLIRCIRFPTypeInterfaceIncGen
+  MLIRCIRLoopOpInterfaceIncGen
+  MLIRCIROpInterfacesIncGen
 
   LINK_LIBS
   ${dialect_libs}
