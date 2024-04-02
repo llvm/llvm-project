@@ -3287,25 +3287,24 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
-  auto IsVLNode = [this](SDValue N) {
+  auto IsExtOrTrunc = [](SDValue N) {
     switch (N->getOpcode()) {
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    // There's no passthru on these _VL nodes so any VL/mask is ok, since any
+    // inactive elements will be undef.
     case RISCVISD::TRUNCATE_VECTOR_VL:
     case RISCVISD::VSEXT_VL:
     case RISCVISD::VZEXT_VL:
-      break;
+      return true;
     default:
       return false;
     }
-    SDValue VL;
-    selectVLOp(N->getOperand(2), VL);
-    // There's no passthru so any mask is ok, since any inactive elements will
-    // be undef.
     return true;
   };
 
   // We can have multiple nested nodes, so unravel them all if needed.
-  while (N->getOpcode() == ISD::SIGN_EXTEND ||
-         N->getOpcode() == ISD::ZERO_EXTEND || IsVLNode(N)) {
+  while (IsExtOrTrunc(N)) {
     if (!N.hasOneUse() ||
         N.getValueType().getSizeInBits().getKnownMinValue() < 8)
       return false;
