@@ -319,7 +319,6 @@ public:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
   bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const override;
-  int getExtendResourceLenLimit() const override { return 0; } //XXX
   // SystemZ specific version of setSpecialOperandAttr that copies Flags to
   // MI and clears nuw, nsw, and exact flags.
   void setSpecialOperandAttr(MachineInstr &MI, uint32_t Flags) const;

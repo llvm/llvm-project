@@ -1,8 +1,9 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 -verify-machineinstrs -O3 \
 ; RUN:   -print-before=machine-combiner -print-after=machine-combiner -ppc-fma \
 ; RUN:    2>&1 | FileCheck %s
-
 ; REQUIRES: asserts
+
+; Test reassociation involving fma using a ppc pattern.
 
 define double @fun0_fma2_add(ptr %x, double %A, double %B) {
 ; CHECK:      # *** IR Dump Before Machine InstCombiner (machine-combiner) ***:
@@ -61,13 +62,12 @@ define double @fun1_fma2_add_divop(ptr %x, double %A, double %B) {
 ; CHECK-NEXT: %0:addr64bit = COPY $r2d
 ; CHECK-NEXT: %3:vr64bit = VL64 %0:addr64bit, 0, $noreg :: (load (s64) from %ir.x)
 ; CHECK-NEXT: %4:vr64bit = VL64 %0:addr64bit, 8, $noreg :: (load (s64) from %ir.arrayidx1)
-; CHECK-NEXT: %5:vr64bit = VL64 %0:addr64bit, 16, $noreg :: (load (s64) from %ir.arrayidx2)
-; CHECK-NEXT: %6:vr64bit = VL64 %0:addr64bit, 24, $noreg :: (load (s64) from %ir.arrayidx4)
-; CHECK-NEXT: %7:vr64bit = nofpexcept WFDDB %5:vr64bit, killed %6:vr64bit, implicit $fpc
-; CHECK-NEXT: %8:vr64bit = {{.*}} WFADB_CCPseudo %1:fp64bit, %2:fp64bit
-; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB_CCPseudo killed %3:vr64bit, killed %4:vr64bit, killed %8:vr64bit
-; CHECK-NEXT: %10:vr64bit = {{.*}} WFMADB_CCPseudo %5:vr64bit, killed %7:vr64bit, killed %9:vr64bit
-; CHECK-NEXT: $f0d = COPY %10:vr64bit
+; CHECK-NEXT: %5:fp64bit = VL64 %0:addr64bit, 16, $noreg :: (load (s64) from %ir.arrayidx2)
+; CHECK-NEXT: %6:fp64bit = {{.*}} DDB %5:fp64bit(tied-def 0), %0:addr64bit, 24, $noreg
+; CHECK-NEXT: %7:vr64bit = {{.*}} WFADB_CCPseudo %1:fp64bit, %2:fp64bit
+; CHECK-NEXT: %8:vr64bit = {{.*}} WFMADB_CCPseudo killed %3:vr64bit, killed %4:vr64bit, killed %7:vr64bit
+; CHECK-NEXT: %9:vr64bit = {{.*}} WFMADB_CCPseudo %5:fp64bit, killed %6:fp64bit, killed %8:vr64bit
+; CHECK-NEXT: $f0d = COPY %9:vr64bit
 ; CHECK-NEXT: Return implicit $f0d
 entry:
   %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1

@@ -20,7 +20,7 @@ add_llvm_target(SystemZCodeGen
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
   SystemZElimCompare.cpp
-  SystemZFinalizeRegMem.cpp
+  SystemZFinalizeReassociation.cpp
   SystemZFrameLowering.cpp
   SystemZHazardRecognizer.cpp
   SystemZISelDAGToDAG.cpp

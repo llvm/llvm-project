@@ -1,8 +1,9 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 -verify-machineinstrs -O3 \
 ; RUN:   -print-before=machine-combiner -print-after=machine-combiner -z-fma \
 ; RUN:    2>&1 | FileCheck %s
-
 ; REQUIRES: asserts
+
+; Test reassociation involving fma.
 
 ; The incoming accumulator is stalling so it is worth putting the
 ; multiplications in parallell with it.

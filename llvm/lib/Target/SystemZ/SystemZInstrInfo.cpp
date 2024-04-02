@@ -632,7 +632,6 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                                   MachineRegisterInfo *MRI,
                                                   Register &FoldAsLoadDefReg,
                                                   MachineInstr *&DefMI) const {
-  // TODO: Would it be beneficial to not fold in cases of high register pressure?
   if (DISABLE_FOLDING)
     return nullptr;
 
@@ -646,6 +645,9 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
       !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
     return nullptr;
 
+  // For reassociable FP operations, any loads have been purposefully left
+  // unfolded so that MachineCombiner can do its work on reg/reg
+  // opcodes. After that, as many loads as possible are now folded.
   unsigned LoadOpcD12 = 0;
   unsigned LoadOpcD20 = 0;
   unsigned RegMemOpcode = 0;
@@ -653,11 +655,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   RegMemOpcode = MI.getOpcode() == SystemZ::WFADB_CCPseudo    ? SystemZ::ADB
                  : MI.getOpcode() == SystemZ::WFSDB_CCPseudo  ? SystemZ::SDB
                  : MI.getOpcode() == SystemZ::WFMDB           ? SystemZ::MDB
-                 : MI.getOpcode() == SystemZ::WFDDB           ? SystemZ::DDB
                  : MI.getOpcode() == SystemZ::WFMADB_CCPseudo ? SystemZ::MADB
-                 : MI.getOpcode() == SystemZ::WFMSDB          ? SystemZ::MSDB
-                 : MI.getOpcode() == SystemZ::WFSQDB          ? SystemZ::SQDB
-                 : MI.getOpcode() == SystemZ::WFCDB           ? SystemZ::CDB
                                                               : 0;
   if (RegMemOpcode) {
     LoadOpcD12 = SystemZ::VL64;
@@ -667,23 +665,13 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
     RegMemOpcode = MI.getOpcode() == SystemZ::WFASB_CCPseudo    ? SystemZ::AEB
                    : MI.getOpcode() == SystemZ::WFSSB_CCPseudo  ? SystemZ::SEB
                    : MI.getOpcode() == SystemZ::WFMSB           ? SystemZ::MEEB
-                   : MI.getOpcode() == SystemZ::WFDSB           ? SystemZ::DEB
                    : MI.getOpcode() == SystemZ::WFMASB_CCPseudo ? SystemZ::MAEB
-                   : MI.getOpcode() == SystemZ::WFMSSB          ? SystemZ::MSEB
-                   : MI.getOpcode() == SystemZ::WFSQSB          ? SystemZ::SQEB
-                   : MI.getOpcode() == SystemZ::WFCSB           ? SystemZ::CEB
                                                                 : 0;
     if (RegMemOpcode) {
       LoadOpcD12 = SystemZ::VL32;
       LoadOpcD20 = SystemZ::LEY;
       FPRC = &SystemZ::FP32BitRegClass;
     }
-  }
-  if (MI.getOpcode() == SystemZ::WLDEB) {
-    RegMemOpcode = SystemZ::LDEB;
-    LoadOpcD12 = SystemZ::VL32;
-    LoadOpcD20 = SystemZ::LEY;
-    FPRC = &SystemZ::FP64BitRegClass;
   }
 
   if (!RegMemOpcode ||
@@ -695,39 +683,27 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
 
   DebugLoc DL = MI.getDebugLoc();
   Register DstReg = MI.getOperand(0).getReg();
-
-  bool IsUnary = (RegMemOpcode == SystemZ::LDEB || RegMemOpcode == SystemZ::SQEB ||
-                  RegMemOpcode == SystemZ::SQDB);
+  MachineOperand LHS = MI.getOperand(1);
+  MachineOperand RHS = MI.getOperand(2);
   bool IsTernary =
-    (RegMemOpcode == SystemZ::MADB || RegMemOpcode == SystemZ::MAEB ||
-     RegMemOpcode == SystemZ::MSDB || RegMemOpcode == SystemZ::MSEB);
-  bool IsCmp = (RegMemOpcode == SystemZ::CEB ||RegMemOpcode == SystemZ::CDB);
-  // (TODO: handle also strict FP compares?)
-
-  MachineOperand LHS = MI.getOperand(1 - IsCmp);
-  MachineOperand RHS = MI.getOperand(2 - IsCmp);
+    (RegMemOpcode == SystemZ::MADB || RegMemOpcode == SystemZ::MAEB);
   MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
   MachineOperand *AccMO = IsTernary ? &MI.getOperand(3) : nullptr;
-  if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB ||
-       RegMemOpcode == SystemZ::DDB || RegMemOpcode == SystemZ::DEB ||
-       RegMemOpcode == SystemZ::CDB || RegMemOpcode == SystemZ::CEB) &&
+  if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
       FoldAsLoadDefReg != RHS.getReg())
     return nullptr;
   if (IsTernary && FoldAsLoadDefReg == AccMO->getReg())
     return nullptr;
 
   MachineInstrBuilder MIB =
-    BuildMI(*MI.getParent(), MI, DL, get(RegMemOpcode));
-  if (!IsCmp)
-    MIB.addReg(DstReg, RegState::Define);
-  if (!IsUnary) {
-    if (IsTernary) {
-      MIB.add(*AccMO);
-      MRI->setRegClass(AccMO->getReg(), FPRC);
-    }
-    MIB.add(RegMO);
-    MRI->setRegClass(RegMO.getReg(), FPRC);
+    BuildMI(*MI.getParent(), MI, DL, get(RegMemOpcode), DstReg);
+  MRI->setRegClass(DstReg, FPRC);
+  if (IsTernary) {
+    MIB.add(*AccMO);
+    MRI->setRegClass(AccMO->getReg(), FPRC);
   }
+  MIB.add(RegMO);
+  MRI->setRegClass(RegMO.getReg(), FPRC);
 
   MachineOperand &Base = DefMI->getOperand(1);
   MachineOperand &Disp = DefMI->getOperand(2);
@@ -745,9 +721,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   }
   MIB.addMemOperand(*DefMI->memoperands_begin());
   transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
-  if (!IsCmp)
-    MIB->addRegisterDead(SystemZ::CC, TRI);
-  MRI->setRegClass(DstReg, FPRC);
+  MIB->addRegisterDead(SystemZ::CC, TRI);
 
   return MIB;
 }
@@ -1196,6 +1170,7 @@ bool SystemZInstrInfo::getFMAPatterns(
   if (!AllOpsOK(Root))
     return false;
 
+  // XXX Rewrite this for the patterns we want to actually use.
   MachineInstr *TopAdd = nullptr;
   std::vector<MachineInstr *> FMAChain;
   FMAChain.push_back(&Root);
@@ -1268,6 +1243,8 @@ void SystemZInstrInfo::finalizeInsInstrs(
     case SystemZ::WFASB_CCPseudo:
     case SystemZ::WFSDB_CCPseudo:
     case SystemZ::WFSSB_CCPseudo:
+    case SystemZ::WFMADB_CCPseudo:
+    case SystemZ::WFMASB_CCPseudo:
       Inst->addRegisterDead(SystemZ::CC, TRI);
       break;
     default: break;
@@ -1372,7 +1349,7 @@ void SystemZInstrInfo::reassociateFMA(
 
   const TargetRegisterClass *RC = Root.getRegClassConstraint(0, this, TRI);
   Register DstReg = Root.getOperand(0).getReg();
-  std::vector<MachineInstr *> Chain; // XXXXX
+  std::vector<MachineInstr *> Chain; // XXX Rework this method for final patterns used.
   Chain.push_back(&Root);
 
   uint16_t IntersectedFlags = Root.getFlags();
@@ -1426,7 +1403,7 @@ void SystemZInstrInfo::reassociateFMA(
       LLVM_DEBUG(dbgs() << "reassociating using pattern FMA_P0P1\n");
     Chain.push_back(MRI.getUniqueVRegDef(Chain.back()->getOperand(3).getReg()));
     assert(IsAllFMA());
-    getIntersectedFlags(); // XXXXXXXXXx
+    getIntersectedFlags(); // XXX Refactor (here and below)
     Register NewVRA = createNewVReg(0);
     Register NewVRB = createNewVReg(1);
     unsigned FirstMulIdx =
@@ -1559,7 +1536,8 @@ bool
 SystemZInstrInfo::accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
   // This doesn't make much sense for FMA patterns as they typically use an
   // extra Add to do things in parallell.
-  if (IsReassociableFMA(&Root))    // XXXXXXXXXXXX
+  if (IsReassociableFMA(&Root))    // XXX Fine tune this a bit depending on
+                                   // used patterns.
     return false;
 
   return true;

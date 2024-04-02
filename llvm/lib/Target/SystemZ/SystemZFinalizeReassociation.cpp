@@ -1,4 +1,4 @@
-//===------- SystemZFinalizeRegMem.cpp - Finalize FP reg/mem folding ------===//
+//===---- SystemZFinalizeReassociation.cpp - Finalize FP reassociation ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,32 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass converts any remaining reg/reg pseudos into the real target
-// instruction in cases where the peephole optimizer did not fold a load into
-// a reg/mem instruction.
+// This pass is the last step of the process of enabling reassociation with
+// the MachineCombiner. These are the steps involved:
+//
+// 1. Instruction selection: Disable reg/mem folding for any operations that
+//    are reassociable since MachineCombiner will not succeed otherwise.
+//    Select a reg/reg pseudo that pretends to clobber CC since the reg/mem
+//    opcode clobbers it.
+//
+// 2. MachineCombiner: Performs reassociation with the reg/reg instructions.
+//
+// 3. PeepholeOptimizer: Fold loads into reg/mem instructions.
+//
+// 4. This pass: Convert any remaining reg/reg pseudos.
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZMachineFunctionInfo.h"
 #include "SystemZTargetMachine.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 namespace {
 
-class SystemZFinalizeRegMem : public MachineFunctionPass {
+class SystemZFinalizeReassociation : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZFinalizeRegMem()
-    : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {
-    initializeSystemZFinalizeRegMemPass(*PassRegistry::getPassRegistry());
+  SystemZFinalizeReassociation()
+    : MachineFunctionPass(ID), TII(nullptr) {
+    initializeSystemZFinalizeReassociationPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -42,27 +46,26 @@ private:
   bool visitMBB(MachineBasicBlock &MBB);
 
   const SystemZInstrInfo *TII;
-  MachineRegisterInfo *MRI;
 };
 
-char SystemZFinalizeRegMem::ID = 0;
+char SystemZFinalizeReassociation::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(SystemZFinalizeRegMem, "systemz-finalize-regmem",
-                "SystemZ Finalize RegMem", false, false)
+INITIALIZE_PASS(SystemZFinalizeReassociation, "systemz-finalize-reassoc",
+                "SystemZ Finalize Reassociation", false, false)
 
 FunctionPass *llvm::
-createSystemZFinalizeRegMemPass(SystemZTargetMachine &TM) {
-  return new SystemZFinalizeRegMem();
+createSystemZFinalizeReassociationPass(SystemZTargetMachine &TM) {
+  return new SystemZFinalizeReassociation();
 }
 
-void SystemZFinalizeRegMem::getAnalysisUsage(AnalysisUsage &AU) const {
+void SystemZFinalizeReassociation::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool SystemZFinalizeRegMem::visitMBB(MachineBasicBlock &MBB) {
+bool SystemZFinalizeReassociation::visitMBB(MachineBasicBlock &MBB) {
   bool Changed = false;
   for (MachineInstr &MI : MBB) {
     unsigned PseudoOpcode = MI.getOpcode();
@@ -71,8 +74,8 @@ bool SystemZFinalizeRegMem::visitMBB(MachineBasicBlock &MBB) {
       : PseudoOpcode == SystemZ::WFASB_CCPseudo  ? SystemZ::WFASB
       : PseudoOpcode == SystemZ::WFSDB_CCPseudo  ? SystemZ::WFSDB
       : PseudoOpcode == SystemZ::WFSSB_CCPseudo  ? SystemZ::WFSSB
-      : PseudoOpcode == SystemZ::WFMADB_CCPseudo  ? SystemZ::WFMADB
-      : PseudoOpcode == SystemZ::WFMASB_CCPseudo  ? SystemZ::WFMASB
+      : PseudoOpcode == SystemZ::WFMADB_CCPseudo ? SystemZ::WFMADB
+      : PseudoOpcode == SystemZ::WFMASB_CCPseudo ? SystemZ::WFMASB
       : 0;
     if (TargetOpcode) {
         MI.setDesc(TII->get(TargetOpcode));
@@ -84,9 +87,8 @@ bool SystemZFinalizeRegMem::visitMBB(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool SystemZFinalizeRegMem::runOnMachineFunction(MachineFunction &F) {
+bool SystemZFinalizeReassociation::runOnMachineFunction(MachineFunction &F) {
   TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
-  MRI = &F.getRegInfo();
 
   bool Modified = false;
   for (auto &MBB : F)

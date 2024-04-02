@@ -744,19 +744,6 @@ defm block_and : block_op<and>;
 defm block_or  : block_op<or>;
 defm block_xor : block_op<xor>;
 
-// A load (into FPR) selected only if the vector facility (/f32 enhancement)
-// is not present.
-def z_fprload : PatFrag<(ops node:$ptr), (load node:$ptr),
-                        [{ EVT MemVT = cast<LoadSDNode>(N)->getMemoryVT();
-                           EVT LoadVT = N->getValueType(0);
-                           assert(MemVT == LoadVT && "Unexpected load.");
-                           if (MemVT == MVT::f32)
-                             return !Subtarget->hasVectorEnhancements1();
-                           return !Subtarget->hasVector();
-                         }]>;
-def z_fpr_any_extloadf32 : PatFrag<(ops node:$ptr), (any_extloadf32 node:$ptr),
-                                   [{ return !Subtarget->hasVector(); }]>;
-
 // Insertions.
 def inserti8 : PatFrag<(ops node:$src1, node:$src2),
                        (or (and node:$src1, -256), node:$src2)>;
@@ -841,6 +828,36 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
+
+// Floating-point operations which will not participate in reassociation, and
+// therefore candidates for reg/mem folding during isel.
+def z_any_fadd_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fadd node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fsub_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fsub node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fmul node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fma_noreassoc  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                                   (any_fma node:$src2, node:$src3, node:$src1),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+
+// Floating-point operations which are reassociable, and therefore should be
+// selected as reg/reg instructions (no memop folding).
+def z_fadd_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fadd node:$src1, node:$src2),
+                             [{ return shouldSelectForReassoc(N); }]>;
+def z_fsub_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fsub node:$src1, node:$src2),
+                             [{ return shouldSelectForReassoc(N); }]>;
+def z_fmul_reassoc : PatFrag<(ops node:$src1, node:$src2),
+                             (fmul node:$src1, node:$src2),
+                             [{ return shouldSelectForReassoc(N); }]>;
+def z_fma_reassoc  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                             (fma node:$src1, node:$src2, node:$src3),
+                             [{ return shouldSelectForReassoc(N); }]>;
 
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),

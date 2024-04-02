@@ -5539,29 +5539,31 @@ multiclass StringRRE<string mnemonic, bits<16> opcode,
 
 multiclass BinaryVRRcAndCCPseudo<string mnemonic, bits<16> opcode,
                                  SDPatternOperator operator,
+                                 SDPatternOperator reassoc_operator,
                                  TypedReg tr1, TypedReg tr2, bits<4> type = 0,
                                  bits<4> m5 = 0, bits<4> m6 = 0,
                                  string fp_mnemonic = ""> {
-  def "" : BinaryVRRc<mnemonic, opcode, null_frag, tr1, tr2, type, m5, m6,
+  def "" : BinaryVRRc<mnemonic, opcode, operator, tr1, tr2, type, m5, m6,
                       fp_mnemonic>;
-  let Defs = [CC] in
+  let Defs = [CC], AddedComplexity = 1 in // Win over "".
     def _CCPseudo : Pseudo<(outs tr1.op:$V1), (ins tr2.op:$V2, tr2.op:$V3),
                            [(set (tr1.vt tr1.op:$V1),
-                                 (operator (tr2.vt tr2.op:$V2),
-                                           (tr2.vt tr2.op:$V3)))]>;
+                                 (reassoc_operator (tr2.vt tr2.op:$V2),
+                                                   (tr2.vt tr2.op:$V3)))]>;
 }
 
 multiclass TernaryVRReAndCCPseudo<string mnemonic, bits<16> opcode,
                                   SDPatternOperator operator,
+                                  SDPatternOperator reassoc_operator,
                                   TypedReg tr1, TypedReg tr2, bits<4> m5 = 0,
                                   bits<4> type = 0, string fp_mnemonic = ""> {
-  def "" : TernaryVRRe<mnemonic, opcode, null_frag, tr1, tr2, m5, type,
+  def "" : TernaryVRRe<mnemonic, opcode, operator, tr1, tr2, m5, type,
                        fp_mnemonic>;
-  let Defs = [CC] in
+  let Defs = [CC], AddedComplexity = 1 in // Win over "".
     def _CCPseudo : Pseudo<(outs tr1.op:$V1),
                            (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4),
                            [(set (tr1.vt tr1.op:$V1),
-                                 (operator (tr2.vt tr2.op:$V2),
-                                           (tr2.vt tr2.op:$V3),
-                                           (tr1.vt tr1.op:$V4)))]>;
+                                 (reassoc_operator (tr2.vt tr2.op:$V2),
+                                                   (tr2.vt tr2.op:$V3),
+                                                   (tr1.vt tr1.op:$V4)))]>;
 }

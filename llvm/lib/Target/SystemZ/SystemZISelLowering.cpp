@@ -692,10 +692,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f64, Expand);
   }
 
-  // Don't select reg/mem LDEB if WLDEB is available.
-  if (Subtarget.hasVector())
-    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
-
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64,  MVT::f32, Expand);
   setTruncStoreAction(MVT::f128, MVT::f32, Expand);

@@ -1,11 +1,9 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -print-before=machine-combiner \
 ; RUN:    -print-after=machine-combiner -debug-only=machine-combiner,systemz-II -z-fma 2>&1 \
 ; RUN:    | FileCheck %s
-
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z15 -O3 \
 ; RUN:    -print-after=machine-combiner -debug-only=machine-combiner,systemz-II -ppc-fma 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=ALT
-
 ; REQUIRES: asserts
 
 ; Test transformation of a sequence of 8 FMAs, with different patterns.
