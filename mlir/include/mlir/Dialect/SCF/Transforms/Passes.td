@@ -154,18 +154,4 @@ def SCFForToWhileLoop : Pass<"scf-for-to-while"> {
   }];
 }
 
-def TestSCFUpliftWhileToFor : Pass<"test-scf-uplift-while-to-for"> {
-  let summary = "Uplift scf.while ops to scf.for";
-  let description = [{
-    This pass tries to uplift `scf.while` ops to `scf.for` if they have a
-    compatible form. `scf.while` are left unchanged if uplifting is not
-    possible.
-
-    This pass expects a specific ops pattern:
-    * `before` block consisting of single arith.cmp op
-    * `after` block containing arith.addi
-  }];
- }
-
-
 #endif // MLIR_DIALECT_SCF_PASSES

@@ -17,12 +17,6 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_TESTSCFUPLIFTWHILETOFOR
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -33,20 +27,6 @@ struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
   LogicalResult matchAndRewrite(scf::WhileOp loop,
                                 PatternRewriter &rewriter) const override {
     return upliftWhileToForLoop(rewriter, loop);
-  }
-};
-
-struct TestSCFUpliftWhileToFor final
-    : impl::TestSCFUpliftWhileToForBase<TestSCFUpliftWhileToFor> {
-  using TestSCFUpliftWhileToForBase::TestSCFUpliftWhileToForBase;
-
-  void runOnOperation() override {
-    Operation *op = getOperation();
-    MLIRContext *ctx = op->getContext();
-    RewritePatternSet patterns(ctx);
-    mlir::scf::populateUpliftWhileToForPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
-      signalPassFailure();
   }
 };
 } // namespace
