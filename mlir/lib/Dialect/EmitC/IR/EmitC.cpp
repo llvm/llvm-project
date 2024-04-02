@@ -839,8 +839,8 @@ LogicalResult emitc::SubscriptOp::verify() {
     return success();
   }
 
-  // The operand has opaque type, so we can't assume anything about arity or
-  // types of index operands.
+  // The operand has opaque type, so we can't assume anything about the number
+  // or types of index operands.
   return success();
 }
 
