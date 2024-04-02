@@ -18,6 +18,9 @@ namespace clang::tidy::readability {
 static SourceLocation advanceBeyondCurrentLine(const SourceManager &SM,
                                                SourceLocation Start,
                                                int Offset) {
+  // Keep macro location as it is
+  if (Start.isMacroID())
+    return Start;
   const FileID Id = SM.getFileID(Start);
   const unsigned LineNumber = SM.getSpellingLineNumber(Start);
   while (SM.getFileID(Start) == Id &&
