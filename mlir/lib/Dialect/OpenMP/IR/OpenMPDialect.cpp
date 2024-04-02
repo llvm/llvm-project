@@ -1484,10 +1484,7 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 // Verifier for Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
-LogicalResult SimdLoopOp::verify() {
-  if (this->getLowerBound().empty()) {
-    return emitOpError() << "empty lowerbound for simd loop operation";
-  }
+LogicalResult SimdOp::verify() {
   if (this->getSimdlen().has_value() && this->getSafelen().has_value() &&
       this->getSimdlen().value() > this->getSafelen().value()) {
     return emitOpError()
@@ -1500,6 +1497,13 @@ LogicalResult SimdLoopOp::verify() {
     return failure();
   if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
     return failure();
+
+  if (!isWrapper())
+    return emitOpError() << "must be a loop wrapper";
+
+  if (getNestedWrapper())
+    return emitOpError() << "must wrap an 'omp.loop_nest' directly";
+
   return success();
 }
 
