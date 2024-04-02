@@ -3951,8 +3951,9 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
     for (auto &&[i, j] : llvm::enumerate(*mapping))
       newResultTypes[j] = loop.getResult(i).getType();
 
-    auto newLoop = rewriter.create<WhileOp>(loop.getLoc(), newResultTypes,
-                                            loop.getInits(), nullptr, nullptr);
+    auto newLoop = rewriter.create<WhileOp>(
+        loop.getLoc(), newResultTypes, loop.getInits(),
+        /*beforeBuilder=*/nullptr, /*afterBuilder=*/nullptr);
     auto newBefore = newLoop.getBeforeBody();
     auto newAfter = newLoop.getAfterBody();
 
