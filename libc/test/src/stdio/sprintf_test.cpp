@@ -203,9 +203,10 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
 
   char format[64];
   char uintmax[128];
-  LIBC_NAMESPACE::sprintf(format, "%%w%du", UINTMAX_WIDTH);
-  const int uintmax_len = LIBC_NAMESPACE::sprintf(uintmax, "%ju", UINTMAX_MAX);
-  written = LIBC_NAMESPACE::sprintf(buff, format, UINTMAX_MAX);
+  LIBC_NAMESPACE::sprintf(format, "%%w%du", sizeof(uintmax_t) * CHAR_BIT);
+  const int uintmax_len =
+      LIBC_NAMESPACE::sprintf(uintmax, "%ju", sizeof(uintmax_t) * CHAR_BIT);
+  written = LIBC_NAMESPACE::sprintf(buff, format, sizeof(uintmax_t) * CHAR_BIT);
   EXPECT_EQ(written, uintmax_len);
   ASSERT_STREQ(buff, uintmax);
 

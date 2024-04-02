@@ -2459,6 +2459,7 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
     OS << "  switch(ApplyID) {\n";
     for (const auto &Apply : ApplyCode) {
       OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
+         << "    Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n"
          << "    " << join(split(Apply->Code, '\n'), "\n    ") << '\n'
          << "    return;\n";
       OS << "  }\n";
