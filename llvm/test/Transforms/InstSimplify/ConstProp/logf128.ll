@@ -70,10 +70,50 @@ define  fp128 @log_e_smallest_number_larger_than_one(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_minus_2(){
-; CHECK-LABEL: define fp128 @log_e_minus_2() {
+define  fp128 @log_e_negative_2(){
+; CHECK-LABEL: define fp128 @log_e_negative_2() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000C000000000000000)
+  ret fp128 %A
+}
+
+define  fp128 @log_e_0(){
+; CHECK-LABEL: define fp128 @log_e_0() {
+; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+;
+  %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000000000000000000000)
+  ret fp128 %A
+}
+
+define  fp128 @log_e_negative_0(){
+; CHECK-LABEL: define fp128 @log_e_negative_0() {
+; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+;
+  %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000008000000000000000)
+  ret fp128 %A
+}
+
+define  fp128 @log_e_infinity(){
+; CHECK-LABEL: define fp128 @log_e_infinity() {
+; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF000000000000
+;
+  %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000007FFF000000000000)
+  ret fp128 %A
+}
+
+define  fp128 @log_e_negative_infinity(){
+; CHECK-LABEL: define fp128 @log_e_negative_infinity() {
+; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+;
+  %A = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000FFFF000000000000)
+  ret fp128 %A
+}
+
+define  fp128 @log_e_nan(){
+; CHECK-LABEL: define fp128 @log_e_nan() {
+; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000001
+;
+  %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000007FFF000000000001)
   ret fp128 %A
 }
