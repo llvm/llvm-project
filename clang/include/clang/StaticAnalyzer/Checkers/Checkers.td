@@ -604,6 +604,14 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 def StreamChecker : Checker<"Stream">,
   HelpText<"Check stream handling functions">,
   WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream write operations do never "
+                  "fail.",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
