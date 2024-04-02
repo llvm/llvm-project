@@ -1047,30 +1047,22 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   E->MemberDNLoc = Record.readDeclarationNameLoc(E->MemberDecl->getDeclName());
   E->MemberLoc = Record.readSourceLocation();
   E->MemberExprBits.IsArrow = CurrentUnpackingBits->getNextBit();
-  E->MemberExprBits.HasQualifierOrFoundDecl = HasQualifier || HasFoundDecl;
+  E->MemberExprBits.HasQualifier = HasQualifier;
+  E->MemberExprBits.HasFoundDecl = HasFoundDecl;
   E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
   E->MemberExprBits.HadMultipleCandidates = CurrentUnpackingBits->getNextBit();
   E->MemberExprBits.NonOdrUseReason =
       CurrentUnpackingBits->getNextBits(/*Width=*/2);
   E->MemberExprBits.OperatorLoc = Record.readSourceLocation();
 
-  if (HasQualifier || HasFoundDecl) {
-    DeclAccessPair FoundDecl;
-    if (HasFoundDecl) {
-      auto *FoundD = Record.readDeclAs<NamedDecl>();
-      auto AS = (AccessSpecifier)CurrentUnpackingBits->getNextBits(/*Width=*/2);
-      FoundDecl = DeclAccessPair::make(FoundD, AS);
-    } else {
-      FoundDecl = DeclAccessPair::make(E->MemberDecl,
-                                       E->MemberDecl->getAccess());
-    }
-    E->getTrailingObjects<MemberExprNameQualifier>()->FoundDecl = FoundDecl;
+  if (HasQualifier)
+    new (E->getTrailingObjects<NestedNameSpecifierLoc>())
+        NestedNameSpecifierLoc(Record.readNestedNameSpecifierLoc());
 
-    NestedNameSpecifierLoc QualifierLoc;
-    if (HasQualifier)
-      QualifierLoc = Record.readNestedNameSpecifierLoc();
-    E->getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc =
-        QualifierLoc;
+  if (HasFoundDecl) {
+    auto *FoundD = Record.readDeclAs<NamedDecl>();
+    auto AS = (AccessSpecifier)CurrentUnpackingBits->getNextBits(/*Width=*/2);
+    *E->getTrailingObjects<DeclAccessPair>() = DeclAccessPair::make(FoundD, AS);
   }
 
   if (HasTemplateInfo)

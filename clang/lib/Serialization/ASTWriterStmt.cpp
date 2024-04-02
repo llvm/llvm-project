@@ -970,10 +970,7 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   VisitExpr(E);
 
   bool HasQualifier = E->hasQualifier();
-  bool HasFoundDecl =
-      E->hasQualifierOrFoundDecl() &&
-      (E->getFoundDecl().getDecl() != E->getMemberDecl() ||
-       E->getFoundDecl().getAccess() != E->getMemberDecl()->getAccess());
+  bool HasFoundDecl = E->hasFoundDecl();
   bool HasTemplateInfo = E->hasTemplateKWAndArgsInfo();
   unsigned NumTemplateArgs = E->getNumTemplateArgs();
 
@@ -995,14 +992,14 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   CurrentPackingBits.addBits(E->isNonOdrUse(), /*Width=*/2);
   Record.AddSourceLocation(E->getOperatorLoc());
 
+  if (HasQualifier)
+    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+
   if (HasFoundDecl) {
     DeclAccessPair FoundDecl = E->getFoundDecl();
     Record.AddDeclRef(FoundDecl.getDecl());
     CurrentPackingBits.addBits(FoundDecl.getAccess(), /*BitWidth=*/2);
   }
-
-  if (HasQualifier)
-    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
 
   if (HasTemplateInfo)
     AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
