@@ -53,14 +53,16 @@ else()
     list(APPEND implicitDirs -I ${implicitDir})
   endforeach()
 
+  setup_host_tool(clang-ast-dump CLANG_AST_DUMP clang_ast_dump_exe clang_ast_dump_target)
+
   include(GetClangResourceDir)
   get_clang_resource_dir(resource_dir PREFIX ${LLVM_BINARY_DIR})
   add_custom_command(
       COMMENT Generate ASTNodeAPI.json
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
-      DEPENDS clang-ast-dump clang-resource-headers
+      DEPENDS ${clang_ast_dump_target} clang-resource-headers
       COMMAND
-      $<TARGET_FILE:clang-ast-dump>
+      ${clang_ast_dump_exe}
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
         -I ${resource_dir}/include
