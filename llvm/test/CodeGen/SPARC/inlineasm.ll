@@ -149,6 +149,6 @@ entry:
 ; CHECK: srlx %i1, 32, %i0
 
 define i64 @test_twinword(){
-  %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "=r"()
+  %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i0}"()
   ret i64 %1
 }

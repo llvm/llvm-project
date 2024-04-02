@@ -442,26 +442,32 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
       const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
       const MachineOperand &MO = MI->getOperand(OpNo);
-      const Register MOReg = MO.getReg();
+      const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+      Register MOReg = MO.getReg();
 
       Register HiReg, LoReg;
-      if (SP::IntPairRegClass.contains(MOReg)) {
-        // If we're given a register pair, decompose it
-        // to its constituents and use them as-is.
-        const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
-        HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
-        LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
-      } else {
-        // Otherwise we should be given an even-numbered register,
-        // which will become the Hi part of the pair.
-        HiReg = MOReg;
-        LoReg = MOReg + 1;
+      if (!SP::IntPairRegClass.contains(MOReg)) {
+        // If we aren't given a register pair already, find out which pair it
+        // belongs to. Note that here, the specified register operand, which
+        // refers to the high part of the twinword, needs to be an even-numbered
+        // register.
+        if ((MOReg - SP::G0) % 2 != 0) {
+          SMLoc Loc = SMLoc();
+          OutContext.reportError(
+              Loc, "Hi part of pair should point to an even-numbered register");
+          OutContext.reportError(
+              Loc, "(note that in some cases it might be necessary to manually "
+                   "bind the input/output registers instead of relying on "
+                   "automatic allocation)");
+          return true;
+        }
 
-        // FIXME this really should not be an assert check, but
-        // I have no good idea on how to raise an error with explainations.
-        assert(((HiReg - SP::G0) % 2 == 0) &&
-               "Hi part of pair should point to an even-numbered register!");
+        MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
+                                                  &SP::IntPairRegClass);
       }
+
+      HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+      LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
 
       Register Reg;
       switch (ExtraCode[0]) {
