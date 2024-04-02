@@ -659,7 +659,6 @@ getDbgRecordRange(DbgMarker *DebugMarker) {
 
 DEFINE_ISA_CONVERSION_FUNCTIONS(DbgRecord, LLVMDbgRecordRef)
 
-
 /// Used to temporarily set the debug info format of a function, module, or
 /// basic block for the duration of this object's lifetime, after which the
 /// prior state will be restored.
@@ -676,8 +675,8 @@ public:
 };
 
 template <typename T>
-ScopedDbgInfoFormatSetter(T &Obj, bool NewState)
-    -> ScopedDbgInfoFormatSetter<T>;
+ScopedDbgInfoFormatSetter(T &Obj,
+                          bool NewState) -> ScopedDbgInfoFormatSetter<T>;
 
 } // namespace llvm
 

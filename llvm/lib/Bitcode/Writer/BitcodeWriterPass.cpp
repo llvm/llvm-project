@@ -21,7 +21,8 @@ using namespace llvm;
 extern bool WriteNewDbgInfoFormatToBitcode;
 
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
+  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
+                                                WriteNewDbgInfoFormatToBitcode);
 
   const ModuleSummaryIndex *Index =
       EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
@@ -51,7 +52,8 @@ namespace {
     StringRef getPassName() const override { return "Bitcode Writer"; }
 
     bool runOnModule(Module &M) override {
-      ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
+      ScopedDbgInfoFormatSetter FormatSetter(
+          M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
 
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, /*Index=*/nullptr,
                          /*EmitModuleHash=*/false);

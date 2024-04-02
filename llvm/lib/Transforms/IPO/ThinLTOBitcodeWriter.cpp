@@ -583,7 +583,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   // RemoveDIs: there's no bitcode representation of the DbgVariableRecord
   // debug-info, convert to dbg.values before writing out.
-  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
+  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
+                                                WriteNewDbgInfoFormatToBitcode);
 
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
