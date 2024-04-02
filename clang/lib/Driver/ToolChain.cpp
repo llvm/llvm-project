@@ -692,12 +692,21 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/true);
   SmallString<128> OldPath(getCompilerRTPath());
   llvm::sys::path::append(OldPath, CRTBasename);
-  if (Path.empty() || getVFS().exists(OldPath))
+  if (getVFS().exists(OldPath))
     return std::string(OldPath);
 
   // If none is found, use a file name from the new layout, which may get
   // printed in an error message, aiding users in knowing what Clang is
   // looking for.
+  if (Path.empty()) {
+    CRTBasename =
+        buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+    SmallString<128> NewP(D.ResourceDir);
+    llvm::sys::path::append(NewP, "lib");
+    llvm::sys::path::append(NewP, getTriple().str());
+    llvm::sys::path::append(NewP, CRTBasename);
+    return std::string(NewP);
+  }
   return std::string(Path);
 }
 
