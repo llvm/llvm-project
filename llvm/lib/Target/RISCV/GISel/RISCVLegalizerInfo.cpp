@@ -183,6 +183,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
+  getActionDefinitionsBuilder(G_BITCAST).legalIf(
+      all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                                  typeIsLegalBoolVec(0, BoolVecTys, ST)),
+          LegalityPredicates::any(typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST),
+                                  typeIsLegalBoolVec(1, BoolVecTys, ST))));
+
   auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
   if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
     BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
