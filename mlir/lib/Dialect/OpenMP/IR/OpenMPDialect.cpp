@@ -1749,8 +1749,8 @@ LogicalResult LoopNestOp::verify() {
   return success();
 }
 
-SmallVector<LoopWrapperInterface> LoopNestOp::getWrappers() {
-  SmallVector<LoopWrapperInterface> wrappers;
+void LoopNestOp::gatherWrappers(
+    SmallVectorImpl<LoopWrapperInterface> &wrappers) {
   Operation *parent = (*this)->getParentOp();
   while (auto wrapper =
              llvm::dyn_cast_if_present<LoopWrapperInterface>(parent)) {
@@ -1759,7 +1759,6 @@ SmallVector<LoopWrapperInterface> LoopNestOp::getWrappers() {
     wrappers.push_back(wrapper);
     parent = parent->getParentOp();
   }
-  return wrappers;
 }
 
 //===----------------------------------------------------------------------===//
