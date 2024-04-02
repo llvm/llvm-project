@@ -1341,7 +1341,7 @@ enum AddressMaskRange {
 
 /// Useful for callbacks whose return type indicates
 /// whether to continue iteration or short-circuit.
-enum class IterationMarker {
+enum class IterationAction {
   eContinue = 0,
   eStop,
 };

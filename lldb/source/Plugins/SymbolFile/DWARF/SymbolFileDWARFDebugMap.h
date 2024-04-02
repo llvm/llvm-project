@@ -234,14 +234,14 @@ protected:
 
   SymbolFileDWARF *GetSymbolFileByOSOIndex(uint32_t oso_idx);
 
-  // If closure returns "false", iteration continues.  If it returns
-  // "true", iteration terminates.
+  /// If closure returns \ref lldb::IterationAction::eContinue, iteration continues.
+  /// Otherwise, iteration terminates.
   void ForEachSymbolFile(
-      std::function<lldb::IterationMarker(SymbolFileDWARF *)> closure) {
+      std::function<lldb::IterationAction(SymbolFileDWARF *)> closure) {
     for (uint32_t oso_idx = 0, num_oso_idxs = m_compile_unit_infos.size();
          oso_idx < num_oso_idxs; ++oso_idx) {
       if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-        if (closure(oso_dwarf) == lldb::IterationMarker::eStop)
+        if (closure(oso_dwarf) == lldb::IterationAction::eStop)
           return;
       }
     }
