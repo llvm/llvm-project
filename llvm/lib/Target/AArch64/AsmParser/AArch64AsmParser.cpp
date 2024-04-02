@@ -1792,7 +1792,7 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     unsigned Reg = getReg();
     // Normalise to PPR
-    if (Reg >= AArch64::PN0)
+    if (Reg >= AArch64::PN0 && Reg <= AArch64::PN15)
       Reg = Reg - AArch64::PN0 + AArch64::P0;
     Inst.addOperand(MCOperand::createReg(Reg));
   }
