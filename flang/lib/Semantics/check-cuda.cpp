@@ -278,6 +278,22 @@ private:
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::PrintStmt> &x) {
+              if (!std::holds_alternative<Fortran::parser::Star>(
+                      std::get<Fortran::parser::Format>(x.value().t).u)) {
+                context_.Say(source,
+                    "Only list-directed PRINT statement may appear in device code"_err_en_US);
+              }
+            },
+            [&](const common::Indirection<parser::WriteStmt> &x) {
+              if (x.value().format) {
+                if (!std::holds_alternative<Fortran::parser::Star>(
+                        x.value().format->u)) {
+                  context_.Say(source,
+                      "Only list-directed WRITE statement may appear in device code"_err_en_US);
+                }
+              }
+            },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
