@@ -16,12 +16,14 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RPC_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RPC_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
 
 namespace llvm::omp::target {
 namespace plugin {
+struct GenericPluginTy;
 struct GenericDeviceTy;
 class GenericGlobalHandlerTy;
 class DeviceImageTy;
@@ -32,7 +34,8 @@ class DeviceImageTy;
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
-  RPCServerTy(uint32_t NumDevices);
+  /// Initializes the handles to the number of devices we may need to service.
+  RPCServerTy(plugin::GenericPluginTy &Plugin);
 
   /// Check if this device image is using an RPC server. This checks for the
   /// precense of an externally visible symbol in the device image that will
@@ -56,7 +59,9 @@ public:
   /// memory associated with the k
   llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
 
-  ~RPCServerTy();
+private:
+  /// Array from this device's identifier to its attached devices.
+  llvm::SmallVector<uintptr_t> Handles;
 };
 
 } // namespace llvm::omp::target
