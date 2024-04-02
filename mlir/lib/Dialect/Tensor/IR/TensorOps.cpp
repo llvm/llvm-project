@@ -1068,7 +1068,8 @@ void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 /// Try to remove a tensor operation if it would only reshape a constant.
 /// Removes the op and replaces the constant with a new constant of the result
-/// shape.
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
 static OpFoldResult
 reshapeConstantSource(DenseElementsAttr source, TensorType result,
                       std::optional<Attribute> cst = std::nullopt) {
@@ -4146,8 +4147,8 @@ bool PackOp::isLikePad() {
 
 OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
   std::optional<Attribute> paddingValue;
-  if (adaptor.getPaddingValue())
-    paddingValue = adaptor.getPaddingValue();
+  if (auto pad = adaptor.getPaddingValue())
+    paddingValue = pad;
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getDestType(), paddingValue))
