@@ -21,8 +21,8 @@
 #include "../types.h"
 
 template <bool Count, typename It>
-constexpr void check_forward(
-    int* first, int* last, std::iter_difference_t<It> n, int* expected, std::ptrdiff_t expected_equals_count) {
+constexpr void
+check_forward(int* first, int* last, std::iter_difference_t<It> n, int* expected, int expected_equals_count = -1) {
   using Difference = std::iter_difference_t<It>;
   Difference const M = (expected - first); // expected travel distance
   // `expected_equals_count` is only relevant when `Count` is true.
@@ -78,15 +78,15 @@ constexpr void check_forward_sized_sentinel(int* first, int* last, std::iter_dif
   }
 }
 
+struct Expected {
+  int stride_count;
+  int stride_displacement;
+  int equals_count;
+};
+
 template <bool Count, typename It>
-constexpr void check_backward(
-    int* first,
-    int* last,
-    std::iter_difference_t<It> n,
-    int* expected,
-    std::ptrdiff_t expected_stride_count,
-    std::ptrdiff_t expected_stride_displacement,
-    std::ptrdiff_t expected_equals_count) {
+constexpr void
+check_backward(int* first, int* last, std::iter_difference_t<It> n, int* expected, Expected expected_counts) {
   // Check preconditions for `advance` when called with negative `n`
   // (see [range.iter.op.advance]).
   assert(n < 0);
@@ -112,9 +112,9 @@ constexpr void check_backward(
 
     (void)std::ranges::advance(it, n, sent);
 
-    assert(it.stride_count() == expected_stride_count);
-    assert(it.stride_displacement() == expected_stride_displacement);
-    assert(it.equals_count() == expected_equals_count);
+    assert(it.stride_count() == expected_counts.stride_count);
+    assert(it.stride_displacement() == expected_counts.stride_displacement);
+    assert(it.equals_count() == expected_counts.equals_count);
   }
 }
 
@@ -191,11 +191,11 @@ constexpr bool test() {
 
       {
         int* expected = n > size ? range + size : range + n;
-        std::ptrdiff_t equals_count = n > size ? size + 1 : n;
+        int equals_count = n > size ? size + 1 : n;
 
         // clang-format off
-        check_forward<false, cpp17_input_iterator<int*>>(  range, range+size, n, expected, -1);
-        check_forward<false, cpp20_input_iterator<int*>>(  range, range+size, n, expected, -1);
+        check_forward<false, cpp17_input_iterator<int*>>(  range, range+size, n, expected);
+        check_forward<false, cpp20_input_iterator<int*>>(  range, range+size, n, expected);
         check_forward<true,  forward_iterator<int*>>(      range, range+size, n, expected, equals_count);
         check_forward<true,  bidirectional_iterator<int*>>(range, range+size, n, expected, equals_count);
         check_forward<true,  random_access_iterator<int*>>(range, range+size, n, expected, equals_count);
@@ -219,26 +219,26 @@ constexpr bool test() {
       if (n > 0) {
         int* expected = n > size ? range : range + size - n;
         {
-          std::ptrdiff_t stride_count        = range + size - expected;
-          std::ptrdiff_t stride_displacement = -stride_count;
-          std::ptrdiff_t equals_count        = n > size ? size + 1 : n;
+          Expected expected_counts = {
+              .stride_count        = static_cast<int>(range + size - expected),
+              .stride_displacement = -expected_counts.stride_count,
+              .equals_count        = n > size ? size + 1 : n,
+          };
 
-          check_backward<true, bidirectional_iterator<int*>>(
-              range, range + size, -n, expected, stride_count, stride_displacement, equals_count);
+          check_backward<true, bidirectional_iterator<int*>>(range, range + size, -n, expected, expected_counts);
         }
         {
-          // If `n >= size`, the algorithm can just do `it = std::move(sent);`
-          // instead of doing iterator arithmetic.
-          std::ptrdiff_t stride_count        = (n >= size) ? 0 : 1;
-          std::ptrdiff_t stride_displacement = (n >= size) ? 0 : 1;
-          std::ptrdiff_t equals_count        = 0;
+          Expected expected_counts = {
+              // If `n >= size`, the algorithm can just do `it = std::move(sent);`
+              // instead of doing iterator arithmetic.
+              .stride_count        = (n >= size) ? 0 : 1,
+              .stride_displacement = (n >= size) ? 0 : 1,
+              .equals_count        = 0,
+          };
 
-          check_backward<false, random_access_iterator<int*>>(
-              range, range + size, -n, expected, stride_count, stride_displacement, equals_count);
-          check_backward<false, contiguous_iterator<int*>>(
-              range, range + size, -n, expected, stride_count, stride_displacement, equals_count);
-          check_backward<false, int*>(
-              range, range + size, -n, expected, stride_count, stride_displacement, equals_count);
+          check_backward<false, random_access_iterator<int*>>(range, range + size, -n, expected, expected_counts);
+          check_backward<false, contiguous_iterator<int*>>(range, range + size, -n, expected, expected_counts);
+          check_backward<false, int*>(range, range + size, -n, expected, expected_counts);
         }
       }
     }
