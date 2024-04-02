@@ -724,7 +724,7 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp funcOp = builder.getNamedFunction(libFuncName);
 
   if (!funcOp) {
-    funcOp = builder.addNamedFunction(loc, libFuncName, libFuncType);
+    funcOp = builder.createFunction(loc, libFuncName, libFuncType);
     // C-interoperability rules apply to these library functions.
     funcOp->setAttr(fir::getSymbolAttrName(),
                     mlir::StringAttr::get(builder.getContext(), libFuncName));
@@ -1894,8 +1894,8 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // Create local context to emit code into the newly created function
     // This new function is not linked to a source file location, only
     // its calls will be.
-    auto localBuilder =
-        std::make_unique<fir::FirOpBuilder>(function, builder.getKindMap());
+    auto localBuilder = std::make_unique<fir::FirOpBuilder>(
+        function, builder.getKindMap(), builder.getMLIRSymbolTable());
     localBuilder->setFastMathFlags(builder.getFastMathFlags());
     localBuilder->setInsertionPointToStart(&function.front());
     // Location of code inside wrapper of the wrapper is independent from
