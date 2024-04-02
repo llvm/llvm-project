@@ -201,6 +201,17 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
     }
 }
 
+// Validation of an access chain.
+void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
+                         SPIRVGlobalRegistry &GR, MachineInstr &I) {
+  SPIRVType *BaseTypeInst = GR.getSPIRVTypeForVReg(I.getOperand(0).getReg());
+  if (BaseTypeInst && BaseTypeInst->getOpcode() == SPIRV::OpTypePointer) {
+    SPIRVType *BaseElemType =
+        GR.getSPIRVTypeForVReg(BaseTypeInst->getOperand(2).getReg());
+    validatePtrTypes(STI, MRI, GR, I, 2, BaseElemType);
+  }
+}
+
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
@@ -213,15 +224,46 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI++;
       switch (MI.getOpcode()) {
+      case SPIRV::OpAtomicLoad:
+      case SPIRV::OpAtomicExchange:
+      case SPIRV::OpAtomicCompareExchange:
+      case SPIRV::OpAtomicCompareExchangeWeak:
+      case SPIRV::OpAtomicIIncrement:
+      case SPIRV::OpAtomicIDecrement:
+      case SPIRV::OpAtomicIAdd:
+      case SPIRV::OpAtomicISub:
+      case SPIRV::OpAtomicSMin:
+      case SPIRV::OpAtomicUMin:
+      case SPIRV::OpAtomicSMax:
+      case SPIRV::OpAtomicUMax:
+      case SPIRV::OpAtomicAnd:
+      case SPIRV::OpAtomicOr:
+      case SPIRV::OpAtomicXor:
+        // for the above listed instructions
+        // OpAtomicXXX <ResType>, ptr %Op, ...
+        // implies that %Op is a pointer to <ResType>
       case SPIRV::OpLoad:
         // OpLoad <ResType>, ptr %Op implies that %Op is a pointer to <ResType>
         validatePtrTypes(STI, MRI, GR, MI, 2,
                          GR.getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
         break;
+      case SPIRV::OpAtomicStore:
+        // OpAtomicStore ptr %Op, <Scope>, <Mem>, <Obj>
+        // implies that %Op points to the <Obj>'s type
+        validatePtrTypes(STI, MRI, GR, MI, 0,
+                         GR.getSPIRVTypeForVReg(MI.getOperand(3).getReg()));
+        break;
       case SPIRV::OpStore:
         // OpStore ptr %Op, <Obj> implies that %Op points to the <Obj>'s type
         validatePtrTypes(STI, MRI, GR, MI, 0,
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()));
+        break;
+      case SPIRV::OpPtrCastToGeneric:
+        validateAccessChain(STI, MRI, GR, MI);
+        break;
+      case SPIRV::OpInBoundsPtrAccessChain:
+        if (MI.getNumOperands() == 4)
+          validateAccessChain(STI, MRI, GR, MI);
         break;
 
       case SPIRV::OpFunctionCall:
