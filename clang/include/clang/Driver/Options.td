@@ -1507,14 +1507,29 @@ def extract_api : Flag<["-"], "extract-api">,
 def product_name_EQ: Joined<["--"], "product-name=">,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ProductName">>;
-def emit_symbol_graph_EQ: JoinedOrSeparate<["--"], "emit-symbol-graph=">,
+def emit_symbol_graph: Flag<["-"], "emit-symbol-graph">,
   Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Generate Extract API information as a side effect of compilation.">,
-    MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+  HelpText<"Generate Extract API information as a side effect of compilation.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraph">>;
+def emit_extension_symbol_graphs: Flag<["--"], "emit-extension-symbol-graphs">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate additional symbol graphs for extended modules.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitExtensionSymbolGraphs">>;
 def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
+def symbol_graph_dir_EQ: Joined<["--"], "symbol-graph-dir=">,
+   Visibility<[ClangOption, CC1Option]>,
+   HelpText<"Directory in which to emit symbol graphs.">,
+   MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+def emit_pretty_sgf: Flag<["--"], "pretty-sgf">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Emit pretty printed symbol graphs">,
+    MarshallingInfoFlag<FrontendOpts<"EmitPrettySymbolGraphs">>;
+def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for-testing">,
+   Visibility<[CC1Option]>,
+   MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
 def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
