@@ -635,11 +635,13 @@ public:
   /// Find uses of `from` and replace them with `to`. Also notify the listener
   /// about every in-place op modification (for every use that was replaced).
   void replaceAllUsesWith(Value from, Value to) {
-    return replaceAllUsesWith(from.getImpl(), to);
+    for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
+      Operation *op = operand.getOwner();
+      modifyOpInPlace(op, [&]() { operand.set(to); });
+    }
   }
-  template <typename OperandType, typename ValueT>
-  void replaceAllUsesWith(IRObjectWithUseList<OperandType> *from, ValueT &&to) {
-    for (OperandType &operand : llvm::make_early_inc_range(from->getUses())) {
+  void replaceAllUsesWith(Block *from, Block *to) {
+    for (BlockOperand &operand : llvm::make_early_inc_range(from->getUses())) {
       Operation *op = operand.getOwner();
       modifyOpInPlace(op, [&]() { operand.set(to); });
     }
