@@ -77,7 +77,7 @@ static FindArgsResult findArgs(const CallExpr *Call) {
 }
 
 static SmallVector<FixItHint>
-generateReplacement(const MatchFinder::MatchResult &Match,
+generateReplacements(const MatchFinder::MatchResult &Match,
                     const CallExpr *TopCall, const FindArgsResult &Result) {
   SmallVector<FixItHint> FixItHints;
 
@@ -158,12 +158,9 @@ generateReplacement(const MatchFinder::MatchResult &Match,
     }
 
     const SmallVector<FixItHint> InnerReplacements =
-        generateReplacement(Match, InnerCall, InnerResult);
+        generateReplacements(Match, InnerCall, InnerResult);
 
-    FixItHints.insert(FixItHints.end(),
-                      // ignore { and } insertions for the inner call if it does
-                      // not have an initializer list arg
-                      InnerReplacements.begin(), InnerReplacements.end());
+    FixItHints.append(InnerReplacements);
 
     if (InnerResult.Compare) {
       // find the comma after the value arguments
@@ -222,10 +219,10 @@ void MinMaxUseInitializerListCheck::check(
   const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
 
   const FindArgsResult Result = findArgs(TopCall);
-  const SmallVector<FixItHint> Replacement =
-      generateReplacement(Match, TopCall, Result);
+  const SmallVector<FixItHint> Replacements =
+      generateReplacements(Match, TopCall, Result);
 
-  if (Replacement.empty())
+  if (Replacements.empty())
     return;
 
   const DiagnosticBuilder Diagnostic =
@@ -248,8 +245,7 @@ void MinMaxUseInitializerListCheck::check(
           "}");
   }
 
-  for (const auto &FixIt : Replacement)
-    Diagnostic << FixIt;
+  Diagnostic << Replacements;
 }
 
 } // namespace clang::tidy::modernize
