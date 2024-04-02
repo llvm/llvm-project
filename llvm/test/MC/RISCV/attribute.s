@@ -24,3 +24,6 @@
 
 .attribute priv_spec_revision, 0
 # CHECK: attribute      12, 0
+
+.attribute atomic_abi, 0
+# CHECK: attribute      14, 0
