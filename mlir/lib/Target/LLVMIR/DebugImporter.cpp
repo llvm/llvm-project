@@ -468,7 +468,7 @@ DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
           // A replacement may contain additional unbound self-refs.
           return std::make_pair(replacement, mlir::WalkResult::advance());
         }
-        return std::make_pair(attr, mlir::WalkResult::skip());
+        return std::make_pair(attr, mlir::WalkResult::advance());
       });
 
   Attribute replacedAttr = replacer.replace(entry.attr);
