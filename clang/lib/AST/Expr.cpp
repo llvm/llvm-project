@@ -1712,8 +1712,11 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
 }
 
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
-                       ValueDecl *MemberDecl,
-                       const DeclarationNameInfo &NameInfo, QualType T,
+                       NestedNameSpecifierLoc QualifierLoc,
+                       SourceLocation TemplateKWLoc, ValueDecl *MemberDecl,
+                       DeclAccessPair FoundDecl,
+                       const DeclarationNameInfo &NameInfo,
+                       const TemplateArgumentListInfo *TemplateArgs, QualType T,
                        ExprValueKind VK, ExprObjectKind OK,
                        NonOdrUseReason NOUR)
     : Expr(MemberExprClass, T, VK, OK), Base(Base), MemberDecl(MemberDecl),
@@ -1721,12 +1724,30 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   assert(!NameInfo.getName() ||
          MemberDecl->getDeclName() == NameInfo.getName());
   MemberExprBits.IsArrow = IsArrow;
-  MemberExprBits.HasQualifier = false;
-  MemberExprBits.HasFoundDecl = false;
-  MemberExprBits.HasTemplateKWAndArgsInfo = false;
+  MemberExprBits.HasQualifier = QualifierLoc.hasQualifier();
+  MemberExprBits.HasFoundDecl =
+      FoundDecl.getDecl() != MemberDecl ||
+      FoundDecl.getAccess() != MemberDecl->getAccess();
+  MemberExprBits.HasTemplateKWAndArgsInfo =
+      TemplateArgs || TemplateKWLoc.isValid();
   MemberExprBits.HadMultipleCandidates = false;
   MemberExprBits.NonOdrUseReason = NOUR;
   MemberExprBits.OperatorLoc = OperatorLoc;
+
+  if (hasQualifier())
+    new (getTrailingObjects<NestedNameSpecifierLoc>())
+        NestedNameSpecifierLoc(QualifierLoc);
+  if (hasFoundDecl())
+    *getTrailingObjects<DeclAccessPair>() = FoundDecl;
+  if (TemplateArgs) {
+    auto Deps = TemplateArgumentDependence::None;
+    getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
+        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
+        Deps);
+  } else if (TemplateKWLoc.isValid()) {
+    getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
+        TemplateKWLoc);
+  }
   setDependence(computeDependence(this));
 }
 
@@ -1747,36 +1768,9 @@ MemberExpr *MemberExpr::Create(
           TemplateArgs ? TemplateArgs->size() : 0);
 
   void *Mem = C.Allocate(Size, alignof(MemberExpr));
-  MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
-                                       NameInfo, T, VK, OK, NOUR);
-
-  E->MemberExprBits.HasQualifier = HasQualifier;
-  E->MemberExprBits.HasFoundDecl = HasFoundDecl;
-  E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateKWAndArgsInfo;
-
-  if (HasQualifier)
-    new (E->getTrailingObjects<NestedNameSpecifierLoc>())
-        NestedNameSpecifierLoc(QualifierLoc);
-  if (HasFoundDecl)
-    *E->getTrailingObjects<DeclAccessPair>() = FoundDecl;
-
-  // FIXME: remove remaining dependence computation to computeDependence().
-  auto Deps = E->getDependence();
-  if (TemplateArgs) {
-    auto TemplateArgDeps = TemplateArgumentDependence::None;
-    E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs,
-        E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
-    for (const TemplateArgumentLoc &ArgLoc : TemplateArgs->arguments()) {
-      Deps |= toExprDependence(ArgLoc.getArgument().getDependence());
-    }
-  } else if (TemplateKWLoc.isValid()) {
-    E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc);
-  }
-  E->setDependence(Deps);
-
-  return E;
+  return new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, QualifierLoc,
+                              TemplateKWLoc, MemberDecl, FoundDecl, NameInfo,
+                              TemplateArgs, T, VK, OK, NOUR);
 }
 
 MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
