@@ -4150,7 +4150,7 @@ OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
     paddingValue = adaptor.getPaddingValue();
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          adaptor.getDestType(), paddingValue))
+          getDestType(), paddingValue))
     return reshapedSource;
   return {};
 }
