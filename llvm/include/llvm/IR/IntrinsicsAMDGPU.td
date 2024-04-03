@@ -2175,7 +2175,7 @@ def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 def int_amdgcn_readfirstlane :
   ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
-            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPOptInGlue]>;
 
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.

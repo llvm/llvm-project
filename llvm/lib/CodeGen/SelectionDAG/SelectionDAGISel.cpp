@@ -2385,6 +2385,11 @@ void SelectionDAGISel::Select_CONVERGENCECTRL_LOOP(SDNode *N) {
                        N->getValueType(0), N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_CONVERGENCECTRL_GLUE(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::CONVERGENCECTRL_GLUE,
+                       N->getValueType(0), N->getOperand(0));
+}
+
 void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
                                                 SDValue OpVal, SDLoc DL) {
   SDNode *OpNode = OpVal.getNode();
@@ -3140,6 +3145,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::CONVERGENCECTRL_LOOP:
     Select_CONVERGENCECTRL_LOOP(NodeToMatch);
+    return;
+  case ISD::CONVERGENCECTRL_GLUE:
+    Select_CONVERGENCECTRL_GLUE(NodeToMatch);
     return;
   }
 
