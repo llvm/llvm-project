@@ -12,15 +12,24 @@
 // extended bits aren't consumed or because the input was already sign extended
 // by an earlier instruction.
 //
-// Then it removes the -w suffix from opw instructions whenever all users are
-// dependent only on the lower word of the result of the instruction.
-// The cases handled are:
-// * addw because c.add has a larger register encoding than c.addw.
-// * addiw because it helps reduce test differences between RV32 and RV64
-//   w/o being a pessimization.
-// * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
-// * slliw because c.slliw doesn't exist and c.slli does
+// Then:
+// 1. Unless explicit disabled or the target prefers instructions with W suffix,
+//    it removes the -w suffix from opw instructions whenever all users are
+//    dependent only on the lower word of the result of the instruction.
+//    The cases handled are:
+//    * addw because c.add has a larger register encoding than c.addw.
+//    * addiw because it helps reduce test differences between RV32 and RV64
+//      w/o being a pessimization.
+//    * mulw because c.mulw doesn't exist but c.mul does (w/ zcb)
+//    * slliw because c.slliw doesn't exist and c.slli does
 //
+// 2. Or if explicit enabled or the target prefers instructions with W suffix,
+//    it adds the W suffix to the instruction whenever all users are dependent
+//    only on the lower word of the result of the instruction.
+//    The cases handled are:
+//    * add/addi/sub/mul.
+//    * slli with imm < 32.
+//    * ld/lwu.
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
