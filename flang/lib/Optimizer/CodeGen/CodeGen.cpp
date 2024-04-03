@@ -44,6 +44,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Ptr/IR/PtrDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -3615,6 +3616,7 @@ public:
     fir::populateOpenMPFIRToLLVMConversionPatterns(typeConverter, pattern);
 
     mlir::ConversionTarget target{*context};
+    target.addLegalDialect<mlir::ptr::PtrDialect>();
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     // The OpenMP dialect is legal for Operations without regions, for those
     // which contains regions it is legal if the region contains only the

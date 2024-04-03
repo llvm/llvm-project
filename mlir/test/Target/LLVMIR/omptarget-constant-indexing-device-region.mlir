@@ -14,11 +14,11 @@ module attributes {omp.is_target_device = true} {
       %7 = llvm.mlir.constant(20 : i32) : i32
       %8 = llvm.mlir.constant(0 : i64) : i64
       %9 = llvm.getelementptr %arg0[0, %8] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<10 x i32>
-      llvm.store %7, %9 : i32, !llvm.ptr
+      ptr.store %7, %9 : i32, !llvm.ptr
       %10 = llvm.mlir.constant(10 : i32) : i32
       %11 = llvm.mlir.constant(4 : i64) : i64
       %12 = llvm.getelementptr %arg0[0, %11] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<10 x i32>
-      llvm.store %10, %12 : i32, !llvm.ptr
+      ptr.store %10, %12 : i32, !llvm.ptr
       omp.terminator
     }
     llvm.return

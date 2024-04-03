@@ -44,35 +44,35 @@
     fir.has_value %0 : i32
   }
 
-// CHECK: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QMmodPcallee">
-// CHECK: #[[ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
-// CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
-// CHECK: #[[ANY_GLBL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK: #[[ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK: #[[ANY_DIRECT:.+]] = #llvm.tbaa_type_desc<id = "direct data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK: #[[GLBL_ZSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstart", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[GLBL_ZSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstop", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[GLBL_YSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystart", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[GLBL_YSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystop", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[GLBL_XSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodExstart", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeElow", members = {<#[[ANY_ARG]], 0>}>
-// CHECK: #[[DIRECT_A:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEa", members = {<#[[ANY_DIRECT]], 0>}>
-// CHECK: #[[DIRECT_B:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEb", members = {<#[[ANY_DIRECT]], 0>}>
-// CHECK: #[[ARG_Z:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEz", members = {<#[[ANY_ARG]], 0>}>
-// CHECK: #[[GLBL_DYINV:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEdyinv", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[ARG_Y:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEy", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[ROOT:.+]] = #ptr.tbaa_root<id = "Flang function root _QMmodPcallee">
+// CHECK: #[[ANY_ACCESS:.+]] = #ptr.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// CHECK: #[[ANY_DATA:.+]] = #ptr.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
+// CHECK: #[[ANY_GLBL:.+]] = #ptr.tbaa_type_desc<id = "global data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK: #[[ANY_ARG:.+]] = #ptr.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK: #[[ANY_DIRECT:.+]] = #ptr.tbaa_type_desc<id = "direct data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK: #[[GLBL_ZSTART:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodEzstart", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[GLBL_ZSTOP:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodEzstop", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[GLBL_YSTART:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodEystart", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[GLBL_YSTOP:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodEystop", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[GLBL_XSTART:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodExstart", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[ARG_LOW:.+]] = #ptr.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeElow", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[DIRECT_A:.+]] = #ptr.tbaa_type_desc<id = "direct data/_QMmodEa", members = {<#[[ANY_DIRECT]], 0>}>
+// CHECK: #[[DIRECT_B:.+]] = #ptr.tbaa_type_desc<id = "direct data/_QMmodEb", members = {<#[[ANY_DIRECT]], 0>}>
+// CHECK: #[[ARG_Z:.+]] = #ptr.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEz", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[GLBL_DYINV:.+]] = #ptr.tbaa_type_desc<id = "global data/_QMmodEdyinv", members = {<#[[ANY_GLBL]], 0>}>
+// CHECK: #[[ARG_Y:.+]] = #ptr.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEy", members = {<#[[ANY_ARG]], 0>}>
 
-// CHECK: #[[GLBL_ZSTART_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_ZSTART]], access_type = #[[GLBL_ZSTART]], offset = 0>
-// CHECK: #[[GLBL_ZSTOP_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_ZSTOP]], access_type = #[[GLBL_ZSTOP]], offset = 0>
-// CHECK: #[[GLBL_YSTART_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_YSTART]], access_type = #[[GLBL_YSTART]], offset = 0>
-// CHECK: #[[GLBL_YSTOP_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_YSTOP]], access_type = #[[GLBL_YSTOP]], offset = 0>
-// CHECK: #[[GLBL_XSTART_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_XSTART]], access_type = #[[GLBL_XSTART]], offset = 0>
-// CHECK: #[[ARG_LOW_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_LOW]], access_type = #[[ARG_LOW]], offset = 0>
-// CHECK: #[[DIRECT_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[DIRECT_A]], access_type = #[[DIRECT_A]], offset = 0>
-// CHECK: #[[DIRECT_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[DIRECT_B]], access_type = #[[DIRECT_B]], offset = 0>
-// CHECK: #[[ARG_Z_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Z]], access_type = #[[ARG_Z]], offset = 0>
-// CHECK: #[[GLBL_DYINV_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLBL_DYINV]], access_type = #[[GLBL_DYINV]], offset = 0>
-// CHECK: #[[ARG_Y_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[ARG_Y]], access_type = #[[ARG_Y]], offset = 0>
+// CHECK: #[[GLBL_ZSTART_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_ZSTART]], access_type = #[[GLBL_ZSTART]], offset = 0>
+// CHECK: #[[GLBL_ZSTOP_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_ZSTOP]], access_type = #[[GLBL_ZSTOP]], offset = 0>
+// CHECK: #[[GLBL_YSTART_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_YSTART]], access_type = #[[GLBL_YSTART]], offset = 0>
+// CHECK: #[[GLBL_YSTOP_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_YSTOP]], access_type = #[[GLBL_YSTOP]], offset = 0>
+// CHECK: #[[GLBL_XSTART_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_XSTART]], access_type = #[[GLBL_XSTART]], offset = 0>
+// CHECK: #[[ARG_LOW_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[ARG_LOW]], access_type = #[[ARG_LOW]], offset = 0>
+// CHECK: #[[DIRECT_A_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[DIRECT_A]], access_type = #[[DIRECT_A]], offset = 0>
+// CHECK: #[[DIRECT_B_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[DIRECT_B]], access_type = #[[DIRECT_B]], offset = 0>
+// CHECK: #[[ARG_Z_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[ARG_Z]], access_type = #[[ARG_Z]], offset = 0>
+// CHECK: #[[GLBL_DYINV_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[GLBL_DYINV]], access_type = #[[GLBL_DYINV]], offset = 0>
+// CHECK: #[[ARG_Y_TAG:.+]] = #ptr.tbaa_tag<base_type = #[[ARG_Y]], access_type = #[[ARG_Y]], offset = 0>
 
   func.func @_QMmodPcallee(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "z"}, %arg1: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "y"}, %arg2: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>> {fir.bindc_name = "low"}) {
     %c2 = arith.constant 2 : index

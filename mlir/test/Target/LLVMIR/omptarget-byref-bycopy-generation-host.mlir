@@ -8,8 +8,8 @@ module attributes {omp.is_target_device = false} {
     %3 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr {name = "i"}
     omp.target map_entries(%2 -> %arg0, %3 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-      %4 = llvm.load %arg1 : !llvm.ptr -> i32
-      llvm.store %4, %arg0 : i32, !llvm.ptr
+      %4 = ptr.load %arg1 : !llvm.ptr -> i32
+      ptr.store %4, %arg0 : i32, !llvm.ptr
       omp.terminator
     }
     llvm.return

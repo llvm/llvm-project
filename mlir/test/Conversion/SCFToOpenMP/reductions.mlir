@@ -13,8 +13,8 @@
 
 // CHECK: atomic
 // CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> f32
-// CHECK: llvm.atomicrmw fadd %[[ARG0]], %[[RHS]] monotonic
+// CHECK: %[[RHS:.*]] = ptr.load %[[ARG1]] : !llvm.ptr -> f32
+// CHECK: ptr.atomicrmw fadd %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction1
 func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
@@ -22,7 +22,7 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
   // CHECK: %[[CST:.*]] = arith.constant 0.0
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1
   // CHECK: %[[BUF:.*]] = llvm.alloca %[[ONE]] x f32
-  // CHECK: llvm.store %[[CST]], %[[BUF]]
+  // CHECK: ptr.store %[[CST]], %[[BUF]]
   %step = arith.constant 1 : index
   %zero = arith.constant 0.0 : f32
   // CHECK: omp.parallel
@@ -33,9 +33,9 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
                             step (%arg4, %step) init (%zero) -> (f32) {
     // CHECK: %[[CST_INNER:.*]] = arith.constant 1.0
     %one = arith.constant 1.0 : f32
-    // CHECK: %[[PVT_VAL:.*]] = llvm.load %[[PVT_BUF]] : !llvm.ptr -> f32
+    // CHECK: %[[PVT_VAL:.*]] = ptr.load %[[PVT_BUF]] : !llvm.ptr -> f32
     // CHECK: %[[ADD_RESULT:.*]] = arith.addf %[[PVT_VAL]], %[[CST_INNER]] : f32
-    // CHECK: llvm.store %[[ADD_RESULT]], %[[PVT_BUF]] : f32, !llvm.ptr
+    // CHECK: ptr.store %[[ADD_RESULT]], %[[PVT_BUF]] : f32, !llvm.ptr
     scf.reduce(%one : f32) {
     ^bb0(%lhs : f32, %rhs: f32):
       %res = arith.addf %lhs, %rhs : f32
@@ -44,7 +44,7 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
     // CHECK: omp.yield
   }
   // CHECK: omp.terminator
-  // CHECK: llvm.load %[[BUF]]
+  // CHECK: ptr.load %[[BUF]]
   return
 }
 
@@ -111,9 +111,9 @@ func.func @reduction_muli(%arg0 : index, %arg1 : index, %arg2 : index,
                             step (%arg4, %step) init (%one) -> (i32) {
     // CHECK: %[[C2:.*]] = arith.constant 2 : i32
     %pow2 = arith.constant 2 : i32
-    // CHECK: %[[RED_PVT_VAL:.*]] = llvm.load %[[RED_PVT_VAR]] : !llvm.ptr -> i32
+    // CHECK: %[[RED_PVT_VAL:.*]] = ptr.load %[[RED_PVT_VAR]] : !llvm.ptr -> i32
     // CHECK: %[[MUL_RESULT:.*]] = arith.muli %[[RED_PVT_VAL]], %[[C2]] : i32
-    // CHECK: llvm.store %[[MUL_RESULT]], %[[RED_PVT_VAR]] : i32, !llvm.ptr
+    // CHECK: ptr.store %[[MUL_RESULT]], %[[RED_PVT_VAR]] : i32, !llvm.ptr
     scf.reduce(%pow2 : i32) {
     ^bb0(%lhs : i32, %rhs: i32):
       %res = arith.muli %lhs, %rhs : i32
@@ -188,8 +188,8 @@ func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // CHECK: atomic
 // CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> i64
-// CHECK: llvm.atomicrmw max %[[ARG0]], %[[RHS]] monotonic
+// CHECK: %[[RHS:.*]] = ptr.load %[[ARG1]] : !llvm.ptr -> i64
+// CHECK: ptr.atomicrmw max %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction4
 func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
@@ -200,9 +200,9 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
   // CHECK: %[[IONE:.*]] = arith.constant 1
   %ione = arith.constant 1 : i64
   // CHECK: %[[BUF1:.*]] = llvm.alloca %{{.*}} x f32
-  // CHECK: llvm.store %[[ZERO]], %[[BUF1]]
+  // CHECK: ptr.store %[[ZERO]], %[[BUF1]]
   // CHECK: %[[BUF2:.*]] = llvm.alloca %{{.*}} x i64
-  // CHECK: llvm.store %[[IONE]], %[[BUF2]]
+  // CHECK: ptr.store %[[IONE]], %[[BUF2]]
 
   // CHECK: omp.parallel
   // CHECK: omp.wsloop
@@ -215,14 +215,14 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     %one = arith.constant 1.0 : f32
     // CHECK: %[[CST_INT_ONE:.*]] = arith.fptosi
     %1 = arith.fptosi %one : f32 to i64
-    // CHECK: %[[PVT_VAL1:.*]] = llvm.load %[[PVT_BUF1]] : !llvm.ptr -> f32
+    // CHECK: %[[PVT_VAL1:.*]] = ptr.load %[[PVT_BUF1]] : !llvm.ptr -> f32
     // CHECK: %[[TEMP1:.*]] = arith.cmpf oge, %[[PVT_VAL1]], %[[CST_ONE]] : f32
     // CHECK: %[[CMP_VAL1:.*]] = arith.select %[[TEMP1]], %[[PVT_VAL1]], %[[CST_ONE]] : f32
-    // CHECK: llvm.store %[[CMP_VAL1]], %[[PVT_BUF1]] : f32, !llvm.ptr
-    // CHECK: %[[PVT_VAL2:.*]] = llvm.load %[[PVT_BUF2]] : !llvm.ptr -> i64
+    // CHECK: ptr.store %[[CMP_VAL1]], %[[PVT_BUF1]] : f32, !llvm.ptr
+    // CHECK: %[[PVT_VAL2:.*]] = ptr.load %[[PVT_BUF2]] : !llvm.ptr -> i64
     // CHECK: %[[TEMP2:.*]] = arith.cmpi slt, %[[PVT_VAL2]], %[[CST_INT_ONE]] : i64
     // CHECK: %[[CMP_VAL2:.*]] = arith.select %[[TEMP2]], %[[CST_INT_ONE]], %[[PVT_VAL2]] : i64
-    // CHECK: llvm.store %[[CMP_VAL2]], %[[PVT_BUF2]] : i64, !llvm.ptr
+    // CHECK: ptr.store %[[CMP_VAL2]], %[[PVT_BUF2]] : i64, !llvm.ptr
     scf.reduce(%one, %1 : f32, i64) {
     ^bb0(%lhs : f32, %rhs: f32):
       %cmp = arith.cmpf oge, %lhs, %rhs : f32
@@ -237,8 +237,8 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     // CHECK: omp.yield
   }
   // CHECK: omp.terminator
-  // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]] : !llvm.ptr -> f32
-  // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]] : !llvm.ptr -> i64
+  // CHECK: %[[RES1:.*]] = ptr.load %[[BUF1]] : !llvm.ptr -> f32
+  // CHECK: %[[RES2:.*]] = ptr.load %[[BUF2]] : !llvm.ptr -> i64
   // CHECK: return %[[RES1]], %[[RES2]]
   return %res#0, %res#1 : f32, i64
 }

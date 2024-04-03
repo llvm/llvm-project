@@ -202,6 +202,7 @@ private:
   /// Contains the reaching definition at this operation. Reaching definitions
   /// are only computed for promotable memory operations with blocking uses.
   DenseMap<PromotableMemOpInterface, Value> reachingDefs;
+  DenseMap<PromotableMemOpInterface, Value> mutatedValues;
   DominanceInfo &dominance;
   MemorySlotPromotionInfo info;
   const Mem2RegStatistics &statistics;
@@ -438,6 +439,7 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
         reachingDef = stored;
+        mutatedValues[memOp] = stored;
       }
     }
   }
@@ -552,6 +554,8 @@ void MemorySlotPromoter::removeBlockingUses() {
   dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
 
   llvm::SmallVector<Operation *> toErase;
+  llvm::SmallVector<std::pair<Operation *, Value>> mutatedDefinitions;
+  llvm::SmallVector<PromotableOpInterface> visitMutatedDefinitions;
   for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
@@ -565,7 +569,9 @@ void MemorySlotPromoter::removeBlockingUses() {
               slot, info.userToBlockingUses[toPromote], rewriter,
               reachingDef) == DeletionKind::Delete)
         toErase.push_back(toPromote);
-
+      if (toPromoteMemOp.storesTo(slot))
+        if (Value mutatedValue = mutatedValues[toPromoteMemOp])
+          mutatedDefinitions.push_back({toPromoteMemOp, mutatedValue});
       continue;
     }
 
@@ -574,6 +580,12 @@ void MemorySlotPromoter::removeBlockingUses() {
     if (toPromoteBasic.removeBlockingUses(info.userToBlockingUses[toPromote],
                                           rewriter) == DeletionKind::Delete)
       toErase.push_back(toPromote);
+    if (toPromoteBasic.requiresVisitingMutatedDefs())
+      visitMutatedDefinitions.push_back(toPromoteBasic);
+  }
+  for (PromotableOpInterface op : visitMutatedDefinitions) {
+    rewriter.setInsertionPointAfter(op);
+    op.visitMutatedDefs(mutatedDefinitions, rewriter);
   }
 
   for (Operation *toEraseOp : toErase)

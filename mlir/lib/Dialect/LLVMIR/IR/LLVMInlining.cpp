@@ -13,6 +13,7 @@
 
 #include "LLVMInlining.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Ptr/IR/PtrInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -188,7 +189,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
 
   for (Block &block : inlinedBlocks) {
     for (Operation &op : block) {
-      if (auto aliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
+      if (auto aliasInterface = dyn_cast<ptr::AliasAnalysisOpInterface>(op)) {
         aliasInterface.setAliasScopes(
             convertScopeList(aliasInterface.getAliasScopesOrNull()));
         aliasInterface.setNoAliasScopes(
@@ -358,7 +359,7 @@ static void createNewAliasScopesFromNoAliasParameter(
   // it is definitely based on and definitely not based on.
   for (Block &inlinedBlock : inlinedBlocks) {
     for (auto aliasInterface :
-         inlinedBlock.getOps<LLVM::AliasAnalysisOpInterface>()) {
+         inlinedBlock.getOps<ptr::AliasAnalysisOpInterface>()) {
 
       // Collect the pointer arguments affected by the alias scopes.
       SmallVector<Value> pointerArgs = aliasInterface.getAccessedOperands();
@@ -458,7 +459,7 @@ static void createNewAliasScopesFromNoAliasParameter(
 static void
 appendCallOpAliasScopes(Operation *call,
                         iterator_range<Region::iterator> inlinedBlocks) {
-  auto callAliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(call);
+  auto callAliasInterface = dyn_cast<ptr::AliasAnalysisOpInterface>(call);
   if (!callAliasInterface)
     return;
 
@@ -472,7 +473,7 @@ appendCallOpAliasScopes(Operation *call,
   // Simply append the call op's alias and noalias scopes to any operation
   // implementing AliasAnalysisOpInterface.
   for (Block &block : inlinedBlocks) {
-    for (auto aliasInterface : block.getOps<LLVM::AliasAnalysisOpInterface>()) {
+    for (auto aliasInterface : block.getOps<ptr::AliasAnalysisOpInterface>()) {
       if (aliasScopes)
         aliasInterface.setAliasScopes(concatArrayAttr(
             aliasInterface.getAliasScopesOrNull(), aliasScopes));
@@ -496,7 +497,7 @@ static void handleAliasScopes(Operation *call,
 /// operation.
 static void handleAccessGroups(Operation *call,
                                iterator_range<Region::iterator> inlinedBlocks) {
-  auto callAccessGroupInterface = dyn_cast<LLVM::AccessGroupOpInterface>(call);
+  auto callAccessGroupInterface = dyn_cast<ptr::AccessGroupOpInterface>(call);
   if (!callAccessGroupInterface)
     return;
 
@@ -508,7 +509,7 @@ static void handleAccessGroups(Operation *call,
   // AccessGroupOpInterface.
   for (Block &block : inlinedBlocks)
     for (auto accessGroupOpInterface :
-         block.getOps<LLVM::AccessGroupOpInterface>())
+         block.getOps<ptr::AccessGroupOpInterface>())
       accessGroupOpInterface.setAccessGroups(concatArrayAttr(
           accessGroupOpInterface.getAccessGroupsOrNull(), accessGroups));
 }

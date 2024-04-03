@@ -33,6 +33,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Ptr/PtrToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -213,6 +214,7 @@ int dumpLLVMIR(mlir::ModuleOp module) {
   // Register the translation to LLVM IR with the MLIR context.
   mlir::registerBuiltinDialectTranslation(*module->getContext());
   mlir::registerLLVMDialectTranslation(*module->getContext());
+  mlir::registerPtrDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR context.
   llvm::LLVMContext llvmContext;
@@ -262,6 +264,7 @@ int runJit(mlir::ModuleOp module) {
   // can JIT-compile.
   mlir::registerBuiltinDialectTranslation(*module->getContext());
   mlir::registerLLVMDialectTranslation(*module->getContext());
+  mlir::registerPtrDialectTranslation(*module->getContext());
 
   // An optimization pipeline to use within the execution engine.
   auto optPipeline = mlir::makeOptimizingTransformer(

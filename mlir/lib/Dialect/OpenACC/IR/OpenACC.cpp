@@ -38,7 +38,7 @@ struct MemRefPointerLikeModel
 
 struct LLVMPointerPointerLikeModel
     : public PointerLikeType::ExternalModel<LLVMPointerPointerLikeModel,
-                                            LLVM::LLVMPointerType> {
+                                            ptr::PtrType> {
   Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
@@ -65,8 +65,7 @@ void OpenACCDialect::initialize() {
   // the other dialects. This is probably better than having dialects like LLVM
   // and memref be dependent on OpenACC.
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
-  LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
-      *getContext());
+  ptr::PtrType::attachInterface<LLVMPointerPointerLikeModel>(*getContext());
 }
 
 //===----------------------------------------------------------------------===//

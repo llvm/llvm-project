@@ -47,6 +47,27 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
+LLVM_ATTRIBUTE_UNUSED static ptr::AtomicOrdering
+convertAtomicOrderingFromLLVM(::llvm::AtomicOrdering value) {
+  switch (value) {
+  case ::llvm::AtomicOrdering::NotAtomic:
+    return AtomicOrdering::not_atomic;
+  case ::llvm::AtomicOrdering::Unordered:
+    return AtomicOrdering::unordered;
+  case ::llvm::AtomicOrdering::Monotonic:
+    return AtomicOrdering::monotonic;
+  case ::llvm::AtomicOrdering::Acquire:
+    return AtomicOrdering::acquire;
+  case ::llvm::AtomicOrdering::Release:
+    return AtomicOrdering::release;
+  case ::llvm::AtomicOrdering::AcquireRelease:
+    return AtomicOrdering::acq_rel;
+  case ::llvm::AtomicOrdering::SequentiallyConsistent:
+    return AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("unknown ::llvm::AtomicOrdering type");
+}
+
 // Utility to print an LLVM value as a string for passing to emitError().
 // FIXME: Diagnostic should be able to natively handle types that have
 // operator << (raw_ostream&) defined.
@@ -123,13 +144,17 @@ static SmallVector<int64_t> getPositionFromIndices(ArrayRef<unsigned> indices) {
 /// access to the private module import methods.
 static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
                                             llvm::Instruction *inst,
-                                            ModuleImport &moduleImport) {
+                                            ModuleImport &moduleImport,
+                                            LLVMImportInterface &importIface) {
   // Copy the operands to an LLVM operands array reference for conversion.
   SmallVector<llvm::Value *> operands(inst->operands());
   ArrayRef<llvm::Value *> llvmOperands(operands);
 
   // Convert all instructions that provide an MLIR builder.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
+  if (importIface.isConvertibleInstruction(inst->getOpcode()))
+    return importIface.convertInstruction(odsBuilder, inst, llvmOperands,
+                                          moduleImport);
   return failure();
 }
 
@@ -1177,7 +1202,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
   if (it != valueMapping.end())
-    return it->getSecond();
+    return it->getSecond().first;
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -1203,7 +1228,7 @@ FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
   if (it != valueMapping.end())
-    return it->getSecond();
+    return it->getSecond().first;
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -1596,7 +1621,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   }
 
   // Convert all instructions that have an mlirBuilder.
-  if (succeeded(convertInstructionImpl(builder, inst, *this)))
+  if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
   return emitError(loc) << "unhandled instruction: " << diag(*inst);
@@ -2061,7 +2086,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     // Set the non-debug metadata attributes on the imported operation and emit
     // a warning if an instruction other than a phi instruction is dropped
     // during the import.
-    if (Operation *op = lookupOperation(&inst)) {
+    if (Operation *op = lookupOperation(&inst, true)) {
       setNonDebugMetadataAttrs(&inst, op);
     } else if (inst.getOpcode() != llvm::Instruction::PHI) {
       if (emitExpensiveWarnings) {

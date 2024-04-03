@@ -75,14 +75,22 @@ public:
   /// Provides write-once access to store the MLIR value corresponding to the
   /// given LLVM value.
   Value &mapValue(llvm::Value *value) {
-    Value &mlir = valueMapping[value];
+    Value &mlir = valueMapping[value].first;
     assert(mlir == nullptr &&
+           "attempting to map a value that is already mapped");
+    return mlir;
+  }
+  std::pair<Value, Operation *> &mapOp(llvm::Value *value) {
+    auto &mlir = valueMapping[value];
+    assert(mlir.first == nullptr &&
            "attempting to map a value that is already mapped");
     return mlir;
   }
 
   /// Returns the MLIR value mapped to the given LLVM value.
-  Value lookupValue(llvm::Value *value) { return valueMapping.lookup(value); }
+  Value lookupValue(llvm::Value *value) {
+    return valueMapping.lookup(value).first;
+  }
 
   /// Stores a mapping between an LLVM instruction and the imported MLIR
   /// operation if the operation returns no result. Asserts if the operation
@@ -107,9 +115,10 @@ public:
   /// Returns the MLIR operation mapped to the given LLVM instruction. Queries
   /// valueMapping and noResultOpMapping to support operations with and without
   /// result.
-  Operation *lookupOperation(llvm::Instruction *inst) {
-    if (Value value = lookupValue(inst))
-      return value.getDefiningOp();
+  Operation *lookupOperation(llvm::Instruction *inst, bool getOp = false) {
+    if (std::pair<Value, Operation *> value = valueMapping.lookup(inst);
+        value.first)
+      return getOp && value.second ? value.second : value.first.getDefiningOp();
     return noResultOpMapping.lookup(inst);
   }
 
@@ -376,7 +385,7 @@ private:
   /// Function-local mapping between original and imported block.
   DenseMap<llvm::BasicBlock *, Block *> blockMapping;
   /// Function-local mapping between original and imported values.
-  DenseMap<llvm::Value *, Value> valueMapping;
+  DenseMap<llvm::Value *, std::pair<Value, Operation *>> valueMapping;
   /// Function-local mapping between original instructions and imported
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.

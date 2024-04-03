@@ -24,7 +24,7 @@ func.func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
   // Allocate on stack and store to comply with C calling convention.
   // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : index)
   // CHECK: %[[DESC0_ALLOCA:.*]] = llvm.alloca %[[C1]] x !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-  // CHECK: llvm.store %[[DESC07]], %[[DESC0_ALLOCA]]
+  // CHECK: ptr.store %[[DESC07]], %[[DESC0_ALLOCA]]
 
   // Populate the descriptor for arg1.
   // CHECK: %[[DESC10:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64)>
@@ -35,7 +35,7 @@ func.func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
   // Allocate on stack and store to comply with C calling convention.
   // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : index)
   // CHECK: %[[DESC1_ALLOCA:.*]] = llvm.alloca %[[C1]] x !llvm.struct<(ptr, ptr, i64)>
-  // CHECK: llvm.store %[[DESC13]], %[[DESC1_ALLOCA]]
+  // CHECK: ptr.store %[[DESC13]], %[[DESC1_ALLOCA]]
 
   // Call the interface function.
   // CHECK: llvm.call @_mlir_ciface_external
@@ -83,7 +83,7 @@ func.func @callee(%arg0: memref<?xf32>, %arg1: index) {
 // CHECK-LABEL: @_mlir_ciface_callee
 // CHECK: %[[ARG0:.*]]: !llvm.ptr
   // Load the memref descriptor pointer.
-  // CHECK: %[[DESC:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[DESC:.*]] = ptr.load %[[ARG0]] : !llvm.ptr -> !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 
   // Extract individual components of the descriptor.
   // CHECK: %[[ALLOC:.*]] = llvm.extractvalue %[[DESC]][0]
@@ -262,7 +262,7 @@ func.func @bare_ptr_calling_conv(%arg0: memref<4x3xf32>, %arg1 : index, %arg2 : 
 
   // CHECK: %[[ALIGNEDPTR:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
   // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR]]
-  // CHECK: llvm.store %{{.*}}, %[[STOREPTR]]
+  // CHECK: ptr.store %{{.*}}, %[[STOREPTR]]
   memref.store %arg3, %arg0[%arg1, %arg2] : memref<4x3xf32>
 
   // CHECK: llvm.return %[[ARG0]]
@@ -290,12 +290,12 @@ func.func @bare_ptr_calling_conv_multiresult(%arg0: memref<4x3xf32>, %arg1 : ind
 
   // CHECK: %[[ALIGNEDPTR:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
   // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR]]
-  // CHECK: llvm.store %{{.*}}, %[[STOREPTR]]
+  // CHECK: ptr.store %{{.*}}, %[[STOREPTR]]
   memref.store %arg3, %arg0[%arg1, %arg2] : memref<4x3xf32>
 
   // CHECK: %[[ALIGNEDPTR0:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
   // CHECK: %[[LOADPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR0]]
-  // CHECK: %[[RETURN0:.*]] = llvm.load %[[LOADPTR]]
+  // CHECK: %[[RETURN0:.*]] = ptr.load %[[LOADPTR]]
   %0 = memref.load %arg0[%arg1, %arg2] : memref<4x3xf32>
 
   // CHECK: %[[RETURN_DESC:.*]] = llvm.mlir.undef : !llvm.struct<(f32, ptr)>

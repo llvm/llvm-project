@@ -594,9 +594,9 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr
     // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
-    // CHECK-NEXT: llvm.store %[[ARG0]], %[[EL0]] : i32, !llvm.ptr
+    // CHECK-NEXT: ptr.store %[[ARG0]], %[[EL0]] : i32, !llvm.ptr
     // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
-    // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : f64, !llvm.ptr
+    // CHECK-NEXT: ptr.store %[[EXT]], %[[EL1]] : f64, !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
     gpu.return
@@ -705,7 +705,7 @@ module attributes {transform.with_named_sequence} {
         use_bare_ptr_memref_call_conv = true,
         use_opaque_pointers = true}
     } {
-      legal_dialects = ["llvm", "memref", "nvvm", "test"],
+      legal_dialects = ["ptr", "llvm", "memref", "nvvm", "test"],
       legal_ops = ["func.func", "gpu.module", "gpu.module_end", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",

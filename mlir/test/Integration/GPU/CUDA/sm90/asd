@@ -29,11 +29,11 @@ module attributes {gpu.container_module} {
     %16 = llvm.mlir.constant(128 : index) : i64
     %17 = llvm.mlir.zero : !llvm.ptr
     %18 = llvm.getelementptr %17[16384] : (!llvm.ptr) -> !llvm.ptr, f16
-    %19 = llvm.ptrtoint %18 : !llvm.ptr to i64
+    %19 = ptr.ptrtoint %18 : !llvm.ptr to i64
     %20 = llvm.call @malloc(%19) : (i64) -> !llvm.ptr
     %21 = llvm.call @malloc(%19) : (i64) -> !llvm.ptr
     %22 = llvm.getelementptr %17[16384] : (!llvm.ptr) -> !llvm.ptr, f32
-    %23 = llvm.ptrtoint %22 : !llvm.ptr to i64
+    %23 = ptr.ptrtoint %22 : !llvm.ptr to i64
     %24 = llvm.call @malloc(%23) : (i64) -> !llvm.ptr
     %25 = llvm.call @malloc(%23) : (i64) -> !llvm.ptr
     llvm.br ^bb1(%15 : i64)
@@ -53,7 +53,7 @@ module attributes {gpu.container_module} {
     %34 = llvm.trunc %33 : i64 to i32
     %35 = llvm.sitofp %34 : i32 to f16
     %36 = llvm.getelementptr %21[%31] : (!llvm.ptr, i64) -> !llvm.ptr, f16
-    llvm.store %35, %36 : f16, !llvm.ptr
+    ptr.store %35, %36 : f16, !llvm.ptr
     %37 = llvm.mul %28, %2  : i64
     %38 = llvm.add %37, %26  : i64
     %39 = llvm.udiv %38, %5  : i64
@@ -63,11 +63,11 @@ module attributes {gpu.container_module} {
     %43 = llvm.mul %28, %16  : i64
     %44 = llvm.add %43, %26  : i64
     %45 = llvm.getelementptr %20[%44] : (!llvm.ptr, i64) -> !llvm.ptr, f16
-    llvm.store %42, %45 : f16, !llvm.ptr
+    ptr.store %42, %45 : f16, !llvm.ptr
     %46 = llvm.getelementptr %24[%31] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %6, %46 : f32, !llvm.ptr
+    ptr.store %6, %46 : f32, !llvm.ptr
     %47 = llvm.getelementptr %25[%31] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %6, %47 : f32, !llvm.ptr
+    ptr.store %6, %47 : f32, !llvm.ptr
     %48 = llvm.add %28, %14  : i64
     llvm.br ^bb3(%48 : i64)
   ^bb5:  // pred: ^bb3
@@ -96,18 +96,18 @@ module attributes {gpu.container_module} {
     llvm.call @mgpuMemcpy(%51, %20, %19, %50) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr) -> ()
     llvm.call @mgpuMemcpy(%60, %21, %19, %50) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr) -> ()
     %69 = llvm.alloca %14 x !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> : (i64) -> !llvm.ptr
-    llvm.store %59, %69 : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>, !llvm.ptr
+    ptr.store %59, %69 : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>, !llvm.ptr
     %70 = llvm.alloca %14 x !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> : (i64) -> !llvm.ptr
-    llvm.store %67, %70 : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>, !llvm.ptr
+    ptr.store %67, %70 : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>, !llvm.ptr
     %71 = llvm.alloca %8 x i64 : (i64) -> !llvm.ptr
-    llvm.store %16, %71 : i64, !llvm.ptr
+    ptr.store %16, %71 : i64, !llvm.ptr
     %72 = llvm.getelementptr %71[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %2, %72 : i64, !llvm.ptr
+    ptr.store %2, %72 : i64, !llvm.ptr
     %73 = llvm.call @mgpuTensorMapEncodeTiledMemref(%0, %69, %7, %9, %10, %9, %9, %71) : (i64, !llvm.ptr, i64, i64, i64, i64, i64, !llvm.ptr) -> !llvm.ptr
     %74 = llvm.alloca %8 x i64 : (i64) -> !llvm.ptr
-    llvm.store %2, %74 : i64, !llvm.ptr
+    ptr.store %2, %74 : i64, !llvm.ptr
     %75 = llvm.getelementptr %74[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
-    llvm.store %2, %75 : i64, !llvm.ptr
+    ptr.store %2, %75 : i64, !llvm.ptr
     %76 = llvm.call @mgpuTensorMapEncodeTiledMemref(%0, %70, %7, %9, %10, %9, %9, %74) : (i64, !llvm.ptr, i64, i64, i64, i64, i64, !llvm.ptr) -> !llvm.ptr
     gpu.launch_func  @main_kernel::@main_kernel blocks in (%14, %14, %14) threads in (%16, %14, %14) : i64 dynamic_shared_memory_size %3 args(%68 : !llvm.ptr, %68 : !llvm.ptr, %15 : i64, %16 : i64, %16 : i64, %16 : i64, %14 : i64, %73 : !llvm.ptr, %76 : !llvm.ptr)
     llvm.call @mgpuMemcpy(%24, %68, %23, %50) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr) -> ()
@@ -129,19 +129,19 @@ module attributes {gpu.container_module} {
     %83 = llvm.mul %77, %16  : i64
     %84 = llvm.add %83, %81  : i64
     %85 = llvm.getelementptr %20[%84] : (!llvm.ptr, i64) -> !llvm.ptr, f16
-    %86 = llvm.load %85 : !llvm.ptr -> f16
+    %86 = ptr.load %85 : !llvm.ptr -> f16
     %87 = llvm.mul %81, %16  : i64
     %88 = llvm.add %87, %79  : i64
     %89 = llvm.getelementptr %21[%88] : (!llvm.ptr, i64) -> !llvm.ptr, f16
-    %90 = llvm.load %89 : !llvm.ptr -> f16
+    %90 = ptr.load %89 : !llvm.ptr -> f16
     %91 = llvm.add %83, %79  : i64
     %92 = llvm.getelementptr %25[%91] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %93 = llvm.load %92 : !llvm.ptr -> f32
+    %93 = ptr.load %92 : !llvm.ptr -> f32
     %94 = llvm.fpext %86 : f16 to f32
     %95 = llvm.fpext %90 : f16 to f32
     %96 = llvm.fmul %94, %95  : f32
     %97 = llvm.fadd %93, %96  : f32
-    llvm.store %97, %92 : f32, !llvm.ptr
+    ptr.store %97, %92 : f32, !llvm.ptr
     %98 = llvm.add %81, %14  : i64
     llvm.br ^bb11(%98 : i64)
   ^bb13:  // pred: ^bb11
@@ -164,9 +164,9 @@ module attributes {gpu.container_module} {
     %109 = llvm.mul %101, %16  : i64
     %110 = llvm.add %109, %105  : i64
     %111 = llvm.getelementptr %25[%110] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %112 = llvm.load %111 : !llvm.ptr -> f32
+    %112 = ptr.load %111 : !llvm.ptr -> f32
     %113 = llvm.getelementptr %24[%110] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %114 = llvm.load %113 : !llvm.ptr -> f32
+    %114 = ptr.load %113 : !llvm.ptr -> f32
     %115 = llvm.fsub %112, %114  : f32
     %116 = llvm.intr.fabs(%115)  : (f32) -> f32
     %117 = llvm.fcmp "ult" %13, %116 : f32

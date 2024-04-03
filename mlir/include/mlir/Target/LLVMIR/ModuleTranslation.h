@@ -36,6 +36,10 @@ namespace mlir {
 class Attribute;
 class Block;
 class Location;
+namespace ptr {
+class AliasScopeAttr;
+class AliasScopeDomainAttr;
+} // namespace ptr
 
 namespace LLVM {
 
@@ -43,9 +47,8 @@ namespace detail {
 class DebugTranslation;
 class LoopAnnotationTranslation;
 } // namespace detail
-
-class AliasScopeAttr;
-class AliasScopeDomainAttr;
+using AliasScopeAttr = ::mlir::ptr::AliasScopeAttr;
+using AliasScopeDomainAttr = ::mlir::ptr::AliasScopeDomainAttr;
 class DINodeAttr;
 class LLVMFuncOp;
 class ComdatSelectorOp;

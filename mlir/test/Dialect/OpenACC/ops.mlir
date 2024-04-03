@@ -1407,7 +1407,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr init {
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  llvm.store %c0, %0 : i32, !llvm.ptr
+  ptr.store %c0, %0 : i32, !llvm.ptr
   acc.yield %0 : !llvm.ptr
 }
 
@@ -1415,7 +1415,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr init {
 // CHECK: %[[C1:.*]] = arith.constant 1 : i32
 // CHECK: %[[C0:.*]] = arith.constant 0 : i32
 // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[C1]] x i32 : (i32) -> !llvm.ptr
-// CHECK: llvm.store %[[C0]], %[[ALLOCA]] : i32, !llvm.ptr
+// CHECK: ptr.store %[[C0]], %[[ALLOCA]] : i32, !llvm.ptr
 // CHECK: acc.yield %[[ALLOCA]] : !llvm.ptr
 
 // -----

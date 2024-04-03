@@ -9,7 +9,7 @@ func.func @gpu_gcn_raw_buffer_load_scalar_i32(%buf: memref<i32>) -> i32 {
   // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(4 : i32)
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)
-  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr to <8>
+  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr to !llvm.ptr<8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : i32
   // CHECK: return %[[ret]]
   %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[] : memref<i32> -> i32
@@ -22,7 +22,7 @@ func.func @gpu_gcn_raw_buffer_load_i32(%buf: memref<64xi32>, %idx: i32) -> i32 {
   // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)
-  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr to <8>
+  // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %[[numRecords]], %[[flags]] : !llvm.ptr to !llvm.ptr<8>
   // CHECK: %[[ret:.*]] = rocdl.raw.ptr.buffer.load %[[resource]], %{{.*}}, %{{.*}}, %{{.*}} : i32
   // CHECK: return %[[ret]]
   %0 = amdgpu.raw_buffer_load {boundsCheck = true} %buf[%idx] : memref<64xi32>, i32 -> i32

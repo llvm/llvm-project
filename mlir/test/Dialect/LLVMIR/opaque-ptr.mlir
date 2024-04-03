@@ -2,22 +2,22 @@
 
 // CHECK-LABEL: @opaque_ptr_load
 llvm.func @opaque_ptr_load(%arg0: !llvm.ptr) -> i32 {
-  // CHECK: = llvm.load %{{.*}} : !llvm.ptr -> i32
-  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  // CHECK: = ptr.load %{{.*}} : !llvm.ptr -> i32
+  %0 = ptr.load %arg0 : !llvm.ptr -> i32
   llvm.return %0 : i32
 }
 
 // CHECK-LABEL: @opaque_ptr_store
 llvm.func @opaque_ptr_store(%arg0: i32, %arg1: !llvm.ptr){
-  // CHECK: llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
-  llvm.store %arg0, %arg1 : i32, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
+  ptr.store %arg0, %arg1 : i32, !llvm.ptr
   llvm.return
 }
 
 // CHECK-LABEL: @opaque_ptr_ptr_store
 llvm.func @opaque_ptr_ptr_store(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr
-  llvm.store %arg0, %arg1 : !llvm.ptr, !llvm.ptr
+  // CHECK: ptr.store %{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr
+  ptr.store %arg0, %arg1 : !llvm.ptr, !llvm.ptr
   llvm.return
 }
 

@@ -5,7 +5,7 @@
 
 llvm.func @parallel_op_firstprivate(%arg0: !llvm.ptr) {
   omp.parallel private(@x.privatizer %arg0 -> %arg2 : !llvm.ptr) {
-    %0 = llvm.load %arg2 : !llvm.ptr -> f32
+    %0 = ptr.load %arg2 : !llvm.ptr -> f32
     omp.terminator
   }
   llvm.return
@@ -18,8 +18,8 @@ omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
   omp.yield(%0 : !llvm.ptr)
 } copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-  %0 = llvm.load %arg0 : !llvm.ptr -> f32
-  llvm.store %0, %arg1 : f32, !llvm.ptr
+  %0 = ptr.load %arg0 : !llvm.ptr -> f32
+  ptr.store %0, %arg1 : f32, !llvm.ptr
   omp.yield(%arg1 : !llvm.ptr)
 }
 
@@ -53,7 +53,7 @@ omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
 
 llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
   omp.parallel private(@multi_block.privatizer %arg0 -> %arg2 : !llvm.ptr) {
-    %0 = llvm.load %arg2 : !llvm.ptr -> f32
+    %0 = ptr.load %arg2 : !llvm.ptr -> f32
     omp.terminator
   }
   llvm.return
@@ -107,10 +107,10 @@ omp.private {type = firstprivate} @multi_block.privatizer : !llvm.ptr alloc {
 
 } copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  %0 = ptr.load %arg0 : !llvm.ptr -> f32
   llvm.br ^bb1(%0, %arg1 : f32, !llvm.ptr)
 
 ^bb1(%arg2: f32, %arg3: !llvm.ptr):
-  llvm.store %arg2, %arg3 : f32, !llvm.ptr
+  ptr.store %arg2, %arg3 : f32, !llvm.ptr
   omp.yield(%arg3 : !llvm.ptr)
 }

@@ -24,6 +24,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Ptr/PtrToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
@@ -71,6 +72,7 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   OwningOpRef<ModuleOp> module =
       parseSourceString<ModuleOp>(moduleStr, &context);
@@ -98,6 +100,7 @@ TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(SubtractFloat)) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   OwningOpRef<ModuleOp> module =
       parseSourceString<ModuleOp>(moduleStr, &context);
@@ -130,6 +133,7 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(ZeroRankMemref)) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
@@ -166,6 +170,7 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(RankOneMemref)) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);
@@ -221,6 +226,7 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   OwningOpRef<ModuleOp> module =
       parseSourceString<ModuleOp>(moduleStr, &context);
@@ -271,6 +277,7 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerPtrDialectTranslation(registry);
   MLIRContext context(registry);
   auto module = parseSourceString<ModuleOp>(moduleStr, &context);
   ASSERT_TRUE(!!module);

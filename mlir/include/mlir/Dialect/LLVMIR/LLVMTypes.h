@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 #define MLIR_DIALECT_LLVMIR_LLVMTYPES_H_
 
+#include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
@@ -31,6 +32,7 @@ class AsmPrinter;
 
 namespace LLVM {
 class LLVMDialect;
+class LLVMPointerType;
 
 namespace detail {
 struct LLVMFunctionTypeStorage;
@@ -283,18 +285,35 @@ Type getScalableVectorType(Type elementType, unsigned numElements);
 /// (aggregates such as struct) or types that don't have a size (such as void).
 llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);
 
-/// The positions of different values in the data layout entry for pointers.
-enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
+/// Returns whether a pointer type is an LLVM pointer.
+bool isLLVMPointerType(Type type);
 
-/// Returns the value that corresponds to named position `pos` from the
-/// data layout entry `attr` assuming it's a dense integer elements attribute.
-/// Returns `std::nullopt` if `pos` is not present in the entry.
-/// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
-/// may be assumed to be present.
-std::optional<uint64_t> extractPointerSpecValue(Attribute attr,
-                                                PtrDLEntryPos pos);
-
+/// Utility class for creating pointer types of the form
+/// `ptr.ptr<#llvm.address_space<#int_attr>>`
+class LLVMPointerType : public ptr::PtrType {
+public:
+  LLVMPointerType() : ptr::PtrType() {}
+  LLVMPointerType(const ptr::PtrType &ty) : ptr::PtrType(ty) {}
+  template <typename T>
+  static bool classof(T val) {
+    static_assert(std::is_convertible<Type, T>::value,
+                  "casting from a non-convertible type");
+    return isLLVMPointerType(val);
+  }
+  static PtrType get(::mlir::MLIRContext *context, unsigned addressSpace = 0);
+  static ::mlir::Type parse(::mlir::AsmParser &odsParser);
+  void print(::mlir::AsmPrinter &odsPrinter) const;
+};
 } // namespace LLVM
 } // namespace mlir
 
+namespace mlir {
+namespace detail {
+template <>
+class TypeIDResolver<LLVM::LLVMPointerType> {
+public:
+  static TypeID resolveTypeID() { return TypeID::get<ptr::PtrType>(); }
+};
+} /* namespace detail */
+} // namespace mlir
 #endif // MLIR_DIALECT_LLVMIR_LLVMTYPES_H_

@@ -26,58 +26,6 @@ static LogicalResult isArrayOf(Operation *op, ArrayAttr array) {
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// AccessGroupOpInterface
-//===----------------------------------------------------------------------===//
-
-LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
-  auto iface = cast<AccessGroupOpInterface>(op);
-  ArrayAttr accessGroups = iface.getAccessGroupsOrNull();
-  if (!accessGroups)
-    return success();
-
-  return isArrayOf<AccessGroupAttr>(op, accessGroups);
-}
-
-//===----------------------------------------------------------------------===//
-// AliasAnalysisOpInterface
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
-  auto iface = cast<AliasAnalysisOpInterface>(op);
-
-  if (auto aliasScopes = iface.getAliasScopesOrNull())
-    if (failed(isArrayOf<AliasScopeAttr>(op, aliasScopes)))
-      return failure();
-
-  if (auto noAliasScopes = iface.getNoAliasScopesOrNull())
-    if (failed(isArrayOf<AliasScopeAttr>(op, noAliasScopes)))
-      return failure();
-
-  ArrayAttr tags = iface.getTBAATagsOrNull();
-  if (!tags)
-    return success();
-
-  return isArrayOf<TBAATagAttr>(op, tags);
-}
-
-SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
-  return {getPtr()};
-}
-
-SmallVector<Value> mlir::LLVM::AtomicRMWOp::getAccessedOperands() {
-  return {getPtr()};
-}
-
-SmallVector<Value> mlir::LLVM::LoadOp::getAccessedOperands() {
-  return {getAddr()};
-}
-
-SmallVector<Value> mlir::LLVM::StoreOp::getAccessedOperands() {
-  return {getAddr()};
-}
-
 SmallVector<Value> mlir::LLVM::MemcpyOp::getAccessedOperands() {
   return {getDst(), getSrc()};
 }

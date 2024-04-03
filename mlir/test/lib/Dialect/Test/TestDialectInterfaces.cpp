@@ -193,11 +193,45 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
                   StringRef("test_alias_conflict0_"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
             .Default(std::nullopt);
+
+    // Create a dialect alias for strings starting with "test_dialect_alias:"
+    if (strAttr.getValue().starts_with("test_dialect_alias:"))
+      return AliasResult::DialectAlias;
+
     if (!aliasName)
       return AliasResult::NoAlias;
 
     os << *aliasName;
     return AliasResult::FinalAlias;
+  }
+
+  LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                  Attribute attr) const override {
+    if (StringAttr strAttr = dyn_cast<StringAttr>(attr)) {
+      // Drop "test_dialect_alias:" from the front of the string
+      StringRef value = strAttr.getValue();
+      value.consume_front("test_dialect_alias:");
+      printer << "test_string<\"" << value << "\">";
+      return success();
+    }
+    return failure();
+  }
+
+  LogicalResult parseDialectAlias(DialectAsmParser &parser, Attribute &attr,
+                                  Type type) const override {
+    return AsmParser::KeywordSwitch<LogicalResult>(parser)
+        // Alias !test.test_string<"..."> to StringAttr
+        .Case("test_string",
+              [&](llvm::StringRef, llvm::SMLoc) {
+                std::string str;
+                if (parser.parseLess() || parser.parseString(&str) ||
+                    parser.parseGreater())
+                  return success();
+                attr = parser.getBuilder().getStringAttr("test_dialect_alias:" +
+                                                         str);
+                return success();
+              })
+        .Default([&](StringRef keyword, SMLoc) { return failure(); });
   }
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
@@ -229,7 +263,45 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
       os << recAliasType.getName();
       return AliasResult::FinalAlias;
     }
+    // Create a dialect alias for tensor<3x!test.int<...>>
+    if (auto tensorTy = dyn_cast<TensorType>(type);
+        tensorTy && isa<TestIntegerType>(tensorTy.getElementType()) &&
+        tensorTy.hasRank()) {
+      ArrayRef<int64_t> shape = tensorTy.getShape();
+      if (shape.size() == 1 && shape[0] == 3)
+        return AliasResult::DialectAlias;
+    }
     return AliasResult::NoAlias;
+  }
+
+  LogicalResult printDialectAlias(DialectAsmPrinter &printer,
+                                  Type type) const override {
+    if (auto tensorTy = dyn_cast<TensorType>(type);
+        tensorTy && isa<TestIntegerType>(tensorTy.getElementType()) &&
+        tensorTy.hasRank()) {
+      // Alias tensor<3x!test.int<...>> to !test.tensor_int3<!test.int<...>>
+      ArrayRef<int64_t> shape = tensorTy.getShape();
+      if (shape.size() == 1 && shape[0] == 3)
+        printer << "tensor_int3" << "<" << tensorTy.getElementType() << ">";
+      return success();
+    }
+    return failure();
+  }
+
+  LogicalResult parseDialectAlias(DialectAsmParser &parser,
+                                  Type &type) const override {
+    return AsmParser::KeywordSwitch<LogicalResult>(parser)
+        // Alias !test.tensor_int3<IntType> to tensor<3xIntType>
+        .Case("tensor_int3",
+              [&](llvm::StringRef, llvm::SMLoc) {
+                if (parser.parseLess() || parser.parseType(type) ||
+                    parser.parseGreater())
+                  type = nullptr;
+                if (isa<TestIntegerType>(type) || isa<IntegerType>(type))
+                  type = RankedTensorType::get({3}, type);
+                return success();
+              })
+        .Default([&](StringRef keyword, SMLoc) { return failure(); });
   }
 
   //===------------------------------------------------------------------===//

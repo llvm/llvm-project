@@ -494,8 +494,8 @@ combiner {
 }
 atomic {
 ^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  %2 = ptr.load %arg3 : !llvm.ptr -> f32
+  ptr.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
 
@@ -1376,8 +1376,8 @@ combiner {
 }
 atomic {
 ^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> i32
-  llvm.atomicrmw add %arg2, %2 monotonic : !llvm.ptr, i32
+  %2 = ptr.load %arg3 : !llvm.ptr -> i32
+  ptr.atomicrmw add %arg2, %2 monotonic : !llvm.ptr, i32
   omp.yield
 }
 
