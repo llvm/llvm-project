@@ -17,6 +17,33 @@ define <16 x i32> @concat_zext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
   ret <16 x i32> %r
 }
 
+define <16 x i32> @concat_zext_nneg_v8i8_v16i32(<8 x i8> %a0, <8 x i8> %a1) {
+; CHECK-LABEL: @concat_zext_nneg_v8i8_v16i32(
+; CHECK-NEXT:    [[X0:%.*]] = zext nneg <8 x i8> [[A0:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[X1:%.*]] = zext nneg <8 x i8> [[A1:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i32> [[X0]], <8 x i32> [[X1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <16 x i32> [[R]]
+;
+  %x0 = zext nneg <8 x i8> %a0 to <8 x i32>
+  %x1 = zext nneg <8 x i8> %a1 to <8 x i32>
+  %r = shufflevector <8 x i32> %x0, <8 x i32> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i32> %r
+}
+
+; TODO - sext + zext nneg -> sext
+define <8 x i32> @concat_sext_zext_nneg_v4i8_v8i32(<4 x i8> %a0, <4 x i8> %a1) {
+; CHECK-LABEL: @concat_sext_zext_nneg_v4i8_v8i32(
+; CHECK-NEXT:    [[X0:%.*]] = sext <4 x i8> [[A0:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[X1:%.*]] = zext nneg <4 x i8> [[A1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[X0]], <4 x i32> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x0 = sext <4 x i8> %a0 to <4 x i32>
+  %x1 = zext nneg <4 x i8> %a1 to <4 x i32>
+  %r = shufflevector <4 x i32> %x0, <4 x i32> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %r
+}
+
 define <16 x i32> @concat_sext_v8i16_v16i32(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: @concat_sext_v8i16_v16i32(
 ; CHECK-NEXT:    [[X0:%.*]] = sext <8 x i16> [[A0:%.*]] to <8 x i32>
@@ -168,6 +195,21 @@ define <8 x float> @concat_bitcast_v4i32_v8f32(<4 x i32> %a0, <4 x i32> %a1) {
   %x1 = bitcast <4 x i32> %a1 to <4 x float>
   %r = shufflevector <4 x float> %x0, <4 x float> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %r
+}
+
+; negative - src type mismatch
+
+define <8 x i32> @concat_sext_v4i8_v4i16_v8i32(<4 x i8> %a0, <4 x i16> %a1) {
+; CHECK-LABEL: @concat_sext_v4i8_v4i16_v8i32(
+; CHECK-NEXT:    [[X0:%.*]] = sext <4 x i8> [[A0:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[X1:%.*]] = sext <4 x i16> [[A1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[X0]], <4 x i32> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x0 = sext <4 x i8> %a0 to <4 x i32>
+  %x1 = sext <4 x i16> %a1 to <4 x i32>
+  %r = shufflevector <4 x i32> %x0, <4 x i32> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %r
 }
 
 ; negative - castop mismatch
