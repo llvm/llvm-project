@@ -1592,6 +1592,105 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     *StackUsageStream << "static\n";
 }
 
+/// Extracts a generalized numeric type identifier of a Function's type from
+/// type metadata. Returns null if metadata cannot be found.
+static ConstantInt *extractNumericCGTypeId(const Function &F) {
+  SmallVector<MDNode *, 2> Types;
+  F.getMetadata(LLVMContext::MD_type, Types);
+  MDString *MDGeneralizedTypeId = nullptr;
+  for (const auto &Type : Types) {
+    if (Type->getNumOperands() == 2 && isa<MDString>(Type->getOperand(1))) {
+      auto *TMDS = cast<MDString>(Type->getOperand(1));
+      if (TMDS->getString().ends_with("generalized")) {
+        MDGeneralizedTypeId = TMDS;
+        break;
+      }
+    }
+  }
+
+  if (!MDGeneralizedTypeId) {
+    errs() << "warning: can't find indirect target type id metadata "
+           << "for " << F.getName() << "\n";
+    return nullptr;
+  }
+
+  uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
+  Type *Int64Ty = Type::getInt64Ty(F.getContext());
+  return cast<ConstantInt>(ConstantInt::get(Int64Ty, TypeIdVal));
+}
+
+/// Emits call graph section.
+void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
+                                      FunctionInfo &FuncInfo) {
+  if (!MF.getTarget().Options.EmitCallGraphSection)
+    return;
+
+  // Switch to the call graph section for the function
+  MCSection *FuncCGSection =
+      getObjFileLowering().getCallGraphSection(*getCurrentSection());
+  assert(FuncCGSection && "null call graph section");
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncCGSection);
+
+  // Emit format version number.
+  OutStreamer->emitInt64(0);
+
+  // Emit function's self information, which is composed of:
+  //  1) FunctionEntryPc
+  //  2) FunctionKind: Whether the function is indirect target, and if so,
+  //     whether its type id is known.
+  //  3) FunctionTypeId: Emit only when the function is an indirect target
+  //     and its type id is known.
+
+  // Emit function entry pc.
+  const MCSymbol *FunctionSymbol = getFunctionBegin();
+  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+
+  // If this function has external linkage or has its address taken and
+  // it is not a callback, then anything could call it.
+  const Function &F = MF.getFunction();
+  bool IsIndirectTarget =
+      !F.hasLocalLinkage() || F.hasAddressTaken(nullptr,
+                                                /*IgnoreCallbackUses=*/true,
+                                                /*IgnoreAssumeLikeCalls=*/true,
+                                                /*IgnoreLLVMUsed=*/false);
+
+  // FIXME: FunctionKind takes a few values but emitted as a 64-bit value.
+  // Can be optimized to occupy 2 bits instead.
+  // Emit function kind, and type id if available.
+  if (!IsIndirectTarget) {
+    OutStreamer->emitInt64(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET);
+  } else {
+    const auto *TypeId = extractNumericCGTypeId(F);
+    if (TypeId) {
+      OutStreamer->emitInt64(
+          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID);
+      OutStreamer->emitInt64(TypeId->getZExtValue());
+    } else {
+      OutStreamer->emitInt64(
+          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID);
+    }
+  }
+
+  // Emit callsite labels, where each element is a pair of type id and
+  // indirect callsite pc.
+  const auto &CallSiteLabels = FuncInfo.CallSiteLabels;
+
+  // Emit the count of pairs.
+  OutStreamer->emitInt64(CallSiteLabels.size());
+
+  // Emit the type id and call site label pairs.
+  for (const std::pair<uint64_t, MCSymbol *> &El : CallSiteLabels) {
+    auto TypeId = El.first;
+    const auto &Label = El.second;
+    OutStreamer->emitInt64(TypeId);
+    OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
+  }
+  FuncInfo.CallSiteLabels.clear();
+
+  OutStreamer->popSection();
+}
+
 void AsmPrinter::emitPCSectionsLabel(const MachineFunction &MF,
                                      const MDNode &MD) {
   MCSymbol *S = MF.getContext().createTempSymbol("pcsection");
@@ -1741,6 +1840,8 @@ void AsmPrinter::emitFunctionBody() {
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  FunctionInfo FuncInfo;
+  const auto &CallSitesInfoMap = MF->getCallSitesInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
@@ -1854,6 +1955,26 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
+      // FIXME: Some indirect calls can get lowered to jump instructions,
+      // resulting in emitting labels for them. The extra information can
+      // be neglected while disassembling but still takes space in the binary.
+      if (TM.Options.EmitCallGraphSection && MI.isCall()) {
+        // Only indirect calls have type identifiers set.
+        const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+        if (CallSiteInfo != CallSitesInfoMap.end()) {
+          if (auto *TypeId = CallSiteInfo->second.TypeId) {
+            // Emit label.
+            MCSymbol *S = MF->getContext().createTempSymbol();
+            OutStreamer->emitLabel(S);
+
+            // Get type id value.
+            uint64_t TypeIdVal = TypeId->getZExtValue();
+
+            // Add to function's callsite labels.
+            FuncInfo.CallSiteLabels.emplace_back(TypeIdVal, S);
+          }
+        }
+      }
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
         OutStreamer->emitLabel(S);
@@ -2034,6 +2155,9 @@ void AsmPrinter::emitFunctionBody() {
 
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
+
+  // Emit section containing call graph metadata.
+  emitCallGraphSection(*MF, FuncInfo);
 
   // Emit .su file containing function stack size information.
   emitStackUsage(*MF);
@@ -2617,6 +2741,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") || needFuncLabels(MF) ||
       NeedsLocalForSize || MF.getTarget().Options.EmitStackSizeSection ||
+      MF.getTarget().Options.EmitCallGraphSection ||
       MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)

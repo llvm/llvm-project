@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -187,6 +188,32 @@ private:
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
+
+  /// Store symbols and type identifiers used to create call graph section
+  /// entries related to a function.
+  struct FunctionInfo {
+    /// Numeric type identifier used in call graph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Enumeration of function kinds, and their mapping to function kind values
+    /// stored in call graph section entries.
+    /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
+    enum FunctionKind {
+      /// Function cannot be target to indirect calls.
+      NOT_INDIRECT_TARGET = 0,
+
+      /// Function may be target to indirect calls but its type id is unknown.
+      INDIRECT_TARGET_UNKNOWN_TID = 1,
+
+      /// Function may be target to indirect calls and its type id is known.
+      INDIRECT_TARGET_KNOWN_TID = 2,
+    };
+
+    /// Map type identifiers to callsite labels. Labels are only for indirect
+    /// calls and inclusive of all indirect calls of the function.
+    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+  };
 
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
@@ -421,6 +448,8 @@ public:
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
+
+  void emitCallGraphSection(const MachineFunction &MF, FunctionInfo &FuncInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 
