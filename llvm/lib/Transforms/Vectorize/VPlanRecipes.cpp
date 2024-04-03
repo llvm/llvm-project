@@ -299,14 +299,14 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
   assert(getOpcode() == VPInstruction::PtrAdd &&
          "only PtrAdd opcodes are supported for now");
 
-std::string Name = getName();
+  std::string Name = getName();
   return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
                               State.get(getOperand(1), Lane), Name);
 }
 
 Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   IRBuilderBase &Builder = State.Builder;
-std::string Name = getName();
+  std::string Name = getName();
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
