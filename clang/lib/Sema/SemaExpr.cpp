@@ -2751,7 +2751,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
         QualType type = VD->getType().getNonReferenceType();
         // This will eventually be translated into MemberExpr upon
         // the use of instantiated struct fields.
-        return BuildDeclRefExpr(VD, type, VK_PRValue, NameLoc);
+        return BuildDeclRefExpr(VD, type, VK_LValue, NameLoc);
       }
     }
   }
