@@ -55,15 +55,12 @@
 #include <ptrauth.h>
 #endif
 
-
-template<typename T>
-static inline
-T *
-get_vtable(T *vtable) {
+template <typename T>
+static inline T* strip_vtable(T* vtable) {
 #if __has_feature(ptrauth_calls)
-    vtable = ptrauth_strip(vtable, ptrauth_key_cxx_vtable_pointer);
+  vtable = ptrauth_strip(vtable, ptrauth_key_cxx_vtable_pointer);
 #endif
-    return vtable;
+  return vtable;
 }
 
 static inline
@@ -117,8 +114,7 @@ void dyn_cast_get_derived_info(derived_object_info* info, const void* static_ptr
         reinterpret_cast<const uint8_t*>(vtable) + offset_to_ti_proxy;
     info->dynamic_type = *(reinterpret_cast<const __class_type_info* const*>(ptr_to_ti_proxy));
 #else
-    void **vtable = *static_cast<void ** const *>(static_ptr);
-    vtable = get_vtable(vtable);
+    void **vtable = strip_vtable(*static_cast<void ** const *>(static_ptr));
     info->offset_to_derived = reinterpret_cast<ptrdiff_t>(vtable[-2]);
     info->dynamic_ptr = static_cast<const char*>(static_ptr) + info->offset_to_derived;
     info->dynamic_type = static_cast<const __class_type_info*>(vtable[-1]);
@@ -576,8 +572,7 @@ __base_class_type_info::has_unambiguous_public_base(__dynamic_cast_info* info,
        find the layout.  */
     offset_to_base = __offset_flags >> __offset_shift;
     if (is_virtual) {
-      const char* vtable = *static_cast<const char* const*>(adjustedPtr);
-      vtable = get_vtable(vtable);
+      const char* vtable = strip_vtable(*static_cast<const char* const*>(adjustedPtr));
       offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
   } else if (!is_virtual) {
@@ -1517,8 +1512,7 @@ __base_class_type_info::search_above_dst(__dynamic_cast_info* info,
     ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
     if (__offset_flags & __virtual_mask)
     {
-        const char* vtable = *static_cast<const char*const*>(current_ptr);
-        vtable = get_vtable(vtable);
+        const char* vtable = strip_vtable(*static_cast<const char*const*>(current_ptr));
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_above_dst(info, dst_ptr,
@@ -1538,8 +1532,7 @@ __base_class_type_info::search_below_dst(__dynamic_cast_info* info,
     ptrdiff_t offset_to_base = __offset_flags >> __offset_shift;
     if (__offset_flags & __virtual_mask)
     {
-        const char* vtable = *static_cast<const char*const*>(current_ptr);
-        vtable = get_vtable(vtable);
+        const char* vtable = strip_vtable(*static_cast<const char*const*>(current_ptr));
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_below_dst(info,
