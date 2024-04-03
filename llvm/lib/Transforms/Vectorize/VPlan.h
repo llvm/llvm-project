@@ -1223,8 +1223,7 @@ public:
         Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DisjointFlagsTy DisjointFlag, DebugLoc DL = {}
-                )
+                DisjointFlagsTy DisjointFlag, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
         Opcode(Opcode) {
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
