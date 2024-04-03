@@ -19,6 +19,7 @@
 #include <unordered_map>
 
 namespace llvm {
+class MCSymbol;
 class raw_ostream;
 
 namespace object {
@@ -123,6 +124,11 @@ public:
   std::unordered_map<uint32_t, std::vector<uint32_t>>
   getBFBranches(uint64_t FuncOutputAddress) const;
 
+  /// For a given \p Symbol in the output binary, returns a corresponding pair
+  /// of parent BinaryFunction and secondary entry point in it.
+  std::pair<const BinaryFunction *, unsigned>
+  translateSymbol(const BinaryContext &BC, const MCSymbol &Symbol) const;
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
@@ -157,6 +163,9 @@ private:
 
   /// Map a function to its secondary entry points vector
   std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
+
+  /// Returns a secondary entry point id for a given \p Address and \p Offset.
+  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;

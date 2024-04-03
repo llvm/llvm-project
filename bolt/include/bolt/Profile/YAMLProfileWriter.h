@@ -15,6 +15,7 @@
 
 namespace llvm {
 namespace bolt {
+class BoltAddressTranslation;
 class RewriteInstance;
 
 class YAMLProfileWriter {
@@ -31,8 +32,9 @@ public:
   /// Save execution profile for that instance.
   std::error_code writeProfile(const RewriteInstance &RI);
 
-  static yaml::bolt::BinaryFunctionProfile convert(const BinaryFunction &BF,
-                                                   bool UseDFS);
+  static yaml::bolt::BinaryFunctionProfile
+  convert(const BinaryFunction &BF, bool UseDFS,
+          const BoltAddressTranslation *BAT = nullptr);
 };
 
 } // namespace bolt
