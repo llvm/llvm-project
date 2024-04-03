@@ -11,6 +11,10 @@ if(ROCM_FOUND)
   rocm_setup_version(VERSION "${hipcc_VERSION}")
 endif()
 
+# Generate static package, when BUILD_SHARED_LIBS is set to OFF.
+# Default to ON
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -184,7 +188,23 @@ endif()
 
 if(NOT ROCM_DEP_ROCMCORE)
   string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_AMD_PACKAGE_DEPENDS ${CPACK_DEBIAN_AMD_PACKAGE_DEPENDS})
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS ${CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS})
   string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_AMD_PACKAGE_REQUIRES ${CPACK_RPM_AMD_PACKAGE_REQUIRES})
+  string(REGEX REPLACE ",? ?rocm-core" "" CPACK_RPM_NVIDIA_PACKAGE_REQUIRES ${CPACK_RPM_NVIDIA_PACKAGE_REQUIRES})
+endif()
+
+# Static packaging
+if(NOT BUILD_SHARED_LIBS)
+  # For static builds change the pakage name
+  set(CPACK_DEBIAN_AMD_PACKAGE_NAME "hipcc-static-dev")
+  set(CPACK_RPM_AMD_PACKAGE_NAME "hipcc-static-devel")
+  # hip-dev/devel dependency not applicable fot static package
+  string(REPLACE "hip-dev," "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
+  string(REPLACE "hip-dev," "" CPACK_DEBIAN_AMD_PACKAGE_DEPENDS ${CPACK_DEBIAN_AMD_PACKAGE_DEPENDS})
+  string(REPLACE "hip-devel," "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
+  string(REPLACE "hip-devel," "" CPACK_RPM_AMD_PACKAGE_REQUIRES ${CPACK_RPM_AMD_PACKAGE_REQUIRES})
 endif()
 
 include(CPack)
