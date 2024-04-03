@@ -3465,7 +3465,7 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
 
 ``__builtin_allow_runtime_check``
-------------------
+---------------------------------
 
 ``__builtin_allow_runtime_check`` return true if the check at the current program location should be executed.
 
