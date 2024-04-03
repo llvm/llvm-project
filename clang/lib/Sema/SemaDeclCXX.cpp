@@ -7962,7 +7962,7 @@ public:
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
-    if (auto *Info = FD->getExtraFunctionInfo()) {
+    if (auto *Info = FD->getDefalutedOrDeletedInfo()) {
       // FIXME: Change CreateOverloadedBinOp to take an ArrayRef instead of an
       // UnresolvedSet to avoid this copy.
       Fns.assign(Info->getUnqualifiedLookups().begin(),
@@ -8830,8 +8830,9 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
                                           FD->getOverloadedOperator());
-    FD->setExtraFunctionInfo(
-        FunctionDecl::ExtraFunctionInfo::Create(Context, Operators.pairs()));
+    FD->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Context, Operators.pairs()));
   }
 
   // C++2a [class.compare.default]p1:

@@ -3203,7 +3203,7 @@ public:
   void ActOnDocumentableDecls(ArrayRef<Decl *> Group);
 
   enum class FnBodyKind {
-    /// C++ [dcl.fct.def.general]p1
+    /// C++26 [dcl.fct.def.general]p1
     /// function-body:
     ///   ctor-initializer[opt] compound-statement
     ///   function-try-block

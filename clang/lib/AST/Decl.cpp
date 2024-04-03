@@ -3058,7 +3058,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsTrivialForCall = false;
   FunctionDeclBits.IsDefaulted = false;
   FunctionDeclBits.IsExplicitlyDefaulted = false;
-  FunctionDeclBits.HasExtraFunctionInfo = false;
+  FunctionDeclBits.HasDefaultedOrDeletedInfo = false;
   FunctionDeclBits.IsIneligibleOrNotSelected = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
@@ -3092,18 +3092,18 @@ bool FunctionDecl::isVariadic() const {
   return false;
 }
 
-FunctionDecl::ExtraFunctionInfo *
-FunctionDecl::ExtraFunctionInfo::Create(ASTContext &Context,
-                                        ArrayRef<DeclAccessPair> Lookups,
-                                        StringLiteral *DeletedMessage) {
+FunctionDecl::DefaultedOrDeletedFunctionInfo *
+FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+    ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+    StringLiteral *DeletedMessage) {
   static constexpr size_t Alignment =
-      std::max({alignof(ExtraFunctionInfo), alignof(DeclAccessPair),
-                alignof(StringLiteral *)});
+      std::max({alignof(DefaultedOrDeletedFunctionInfo),
+                alignof(DeclAccessPair), alignof(StringLiteral *)});
   size_t Size = totalSizeToAlloc<DeclAccessPair, StringLiteral *>(
       Lookups.size(), !!DeletedMessage);
 
-  ExtraFunctionInfo *Info =
-      new (Context.Allocate(Size, Alignment)) ExtraFunctionInfo;
+  DefaultedOrDeletedFunctionInfo *Info =
+      new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = !!DeletedMessage;
 
@@ -3114,36 +3114,40 @@ FunctionDecl::ExtraFunctionInfo::Create(ASTContext &Context,
   return Info;
 }
 
-void FunctionDecl::setExtraFunctionInfo(ExtraFunctionInfo *Info) {
-  assert(!FunctionDeclBits.HasExtraFunctionInfo && "already have this");
+void FunctionDecl::setDefaultedOrDeletedInfo(
+    DefaultedOrDeletedFunctionInfo *Info) {
+  assert(!FunctionDeclBits.HasDefaultedOrDeletedInfo && "already have this");
   assert(!Body && "can't replace function body with defaulted function info");
 
-  FunctionDeclBits.HasExtraFunctionInfo = true;
-  ExtraInfo = Info;
+  FunctionDeclBits.HasDefaultedOrDeletedInfo = true;
+  DefaultedOrDeletedInfo = Info;
 }
 
-void FunctionDecl::ExtraFunctionInfo::setDeletedMessage(
+void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
     StringLiteral *Message) {
-  // We should never get here with the ExtraInfo populated, but no space
-  // allocated for the deleted message, since that would require recreating
-  // this, but setExtraFunctionInfo() disallows overwriting an already existing
-  // ExtraFunctionInfo.
-  assert(HasDeletedMessage && "Explicitly deleting defaulted function?");
+  // We should never get here with the DefaultedOrDeletedInfo populated, but
+  // no space allocated for the deleted message, since that would require
+  // recreating this, but setDefaultedOrDeletedInfo() disallows overwriting
+  // an already existing DefaultedOrDeletedFunctionInfo.
+  assert(HasDeletedMessage &&
+         "No space to store a delete message in this DefaultedOrDeletedInfo");
   *getTrailingObjects<StringLiteral *>() = Message;
 }
 
-FunctionDecl::ExtraFunctionInfo *FunctionDecl::getExtraFunctionInfo() const {
-  return FunctionDeclBits.HasExtraFunctionInfo ? ExtraInfo : nullptr;
+FunctionDecl::DefaultedOrDeletedFunctionInfo *
+FunctionDecl::getDefalutedOrDeletedInfo() const {
+  return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
+                                                    : nullptr;
 }
 
 void FunctionDecl::setDeletedMessage(StringLiteral *Message) {
   assert(Message && "Should not be called with nullptr");
   assert(isDeletedAsWritten() && "Function must be deleted");
-  if (FunctionDeclBits.HasExtraFunctionInfo)
-    ExtraInfo->setDeletedMessage(Message);
+  if (FunctionDeclBits.HasDefaultedOrDeletedInfo)
+    DefaultedOrDeletedInfo->setDeletedMessage(Message);
   else
-    setExtraFunctionInfo(
-        ExtraFunctionInfo::Create(getASTContext(), {}, Message));
+    setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
+        getASTContext(), /*Lookups=*/{}, Message));
 }
 
 bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
@@ -3230,7 +3234,7 @@ Stmt *FunctionDecl::getBody(const FunctionDecl *&Definition) const {
   if (!hasBody(Definition))
     return nullptr;
 
-  assert(!Definition->FunctionDeclBits.HasExtraFunctionInfo &&
+  assert(!Definition->FunctionDeclBits.HasDefaultedOrDeletedInfo &&
          "definition should not have a body");
   if (Definition->Body)
     return Definition->Body.get(getASTContext().getExternalSource());
@@ -3239,7 +3243,7 @@ Stmt *FunctionDecl::getBody(const FunctionDecl *&Definition) const {
 }
 
 void FunctionDecl::setBody(Stmt *B) {
-  FunctionDeclBits.HasExtraFunctionInfo = false;
+  FunctionDeclBits.HasDefaultedOrDeletedInfo = false;
   Body = LazyDeclStmtPtr(B);
   if (B)
     EndRangeLoc = B->getEndLoc();

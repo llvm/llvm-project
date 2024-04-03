@@ -3961,8 +3961,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setDefaultLoc(ToDefaultLoc);
 
   if (Msg)
-    ToFunction->setExtraFunctionInfo(FunctionDecl::ExtraFunctionInfo::Create(
-        Importer.getToContext(), {}, Msg));
+    ToFunction->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Importer.getToContext(), {}, Msg));
 
   // Set the parameters.
   for (auto *Param : Parameters) {

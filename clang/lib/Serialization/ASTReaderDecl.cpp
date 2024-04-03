@@ -1110,9 +1110,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   }
 
   if (FD->isDefaulted() || FD->isDeletedAsWritten()) {
-    // If 'Info' is nonzero, we need to read an ExtraFunctionInfo; if,
+    // If 'Info' is nonzero, we need to read an DefaultedOrDeletedInfo; if,
     // additionally, the second bit is also set, we also need to read
-    // a DeletedMessage for the ExtraFunctionInfo.
+    // a DeletedMessage for the DefaultedOrDeletedInfo.
     if (auto Info = Record.readInt()) {
       bool HasMessage = Info & 2;
       StringLiteral *DeletedMessage =
@@ -1126,8 +1126,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
         Lookups.push_back(DeclAccessPair::make(ND, AS));
       }
 
-      FD->setExtraFunctionInfo(FunctionDecl::ExtraFunctionInfo::Create(
-          Reader.getContext(), Lookups, DeletedMessage));
+      FD->setDefaultedOrDeletedInfo(
+          FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+              Reader.getContext(), Lookups, DeletedMessage));
     }
   }
 

@@ -4856,7 +4856,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
 bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                                                       FunctionDecl *Tmpl) {
   // Transfer across any unqualified lookups.
-  if (auto *DFI = Tmpl->getExtraFunctionInfo()) {
+  if (auto *DFI = Tmpl->getDefalutedOrDeletedInfo()) {
     SmallVector<DeclAccessPair, 32> Lookups;
     Lookups.reserve(DFI->getUnqualifiedLookups().size());
     bool AnyChanged = false;
@@ -4871,10 +4871,10 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 
     // It's unlikely that substitution will change any declarations. Don't
     // store an unnecessary copy in that case.
-    New->setExtraFunctionInfo(
-        AnyChanged
-            ? FunctionDecl::ExtraFunctionInfo::Create(SemaRef.Context, Lookups)
-            : DFI);
+    New->setDefaultedOrDeletedInfo(
+        AnyChanged ? FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+                         SemaRef.Context, Lookups)
+                   : DFI);
   }
 
   SemaRef.SetDeclDefaulted(New, Tmpl->getLocation());
