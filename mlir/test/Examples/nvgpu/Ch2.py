@@ -37,8 +37,9 @@ def saxpy_tma(x, y, alpha):
     y_tma = TMA((M, N), y.type)
     x_tma.create_descriptor(x_dev)
     y_tma.create_descriptor(y_dev)
+    smem_size_in_bytes = get_type_size(x.type) + get_type_size(y.type)
 
-    @NVDSL.mlir_gpu_launch(grid=(M, 1, 1), block=(N, 1, 1), smem=65536)
+    @NVDSL.mlir_gpu_launch(grid=(M, 1, 1), block=(N, 1, 1), smem=smem_size_in_bytes)
     def saxpy_tma_kernel():
         bidx = gpu.block_id(gpu.Dimension.x)
         tidx = gpu.thread_id(gpu.Dimension.x)
