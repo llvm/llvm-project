@@ -6277,7 +6277,7 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip if LHS is not a constant. But, LHS may be a
+    // Skip commuting if LHS is not a constant. But, LHS may be a
     // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
     // have a constant on the RHS.
     if (MRI.getVRegDef(LHS)->getOpcode() !=
