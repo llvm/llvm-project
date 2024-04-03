@@ -119,8 +119,10 @@ struct BuiltinTypeDeclBuilder {
                                                 ResourceKind RK, bool IsROV) {
     if (Record->isCompleteDefinition())
       return *this;
-    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
-                                                     RC, RK, IsROV));
+    HLSLResourceAttr *attr = HLSLResourceAttr::CreateImplicit(
+        Record->getASTContext(), RC, RK, IsROV);
+
+    Record->addAttr(attr);
     return *this;
   }
 
@@ -482,15 +484,18 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
-      .addDefaultHandleConstructor(S, RC)
-      .annotateResourceClass(RC, RK, IsROV);
+      .addDefaultHandleConstructor(S, RC);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
-  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams({"element_type"})
-             .Record;
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
+          .addSimpleTemplateParams({"element_type"})
+          .annotateResourceClass(ResourceClass::UAV, ResourceKind::TypedBuffer,
+                                 /*IsROV=*/false)
+          .Record;
+
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
                     ResourceKind::TypedBuffer, /*IsROV=*/false)
