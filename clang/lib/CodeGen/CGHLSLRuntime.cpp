@@ -115,6 +115,10 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
 
 } // namespace
 
+llvm::Triple::ArchType CGHLSLRuntime::getArch() {
+  return CGM.getTarget().getTriple().getArch();
+}
+
 void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   if (D->getStorageClass() == SC_Static) {
     // For static inside cbuffer, take as global static.
@@ -342,8 +346,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(CGHLSLRuntime::get_hlsl_thread_id_intrinsic(
-            CGM.getTarget().getTriple().getArch()));
+        CGM.getIntrinsic(get_hlsl_thread_id_intrinsic());
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   assert(false && "Unhandled parameter attribute");

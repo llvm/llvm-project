@@ -31,8 +31,8 @@
 
 // Define the function generator macro
 #define GENERATE_HLSL_INTRINSIC_FUNCTION(name)                                 \
-  static llvm::Intrinsic::ID get_hlsl_##name##_intrinsic(                      \
-      const llvm::Triple::ArchType Arch) {                                     \
+  llvm::Intrinsic::ID get_hlsl_##name##_intrinsic() {                          \
+    llvm::Triple::ArchType Arch = getArch();                                   \
     switch (Arch) {                                                            \
     case llvm::Triple::dxil:                                                   \
       return llvm::Intrinsic::dx_##name;                                       \
@@ -125,6 +125,7 @@ private:
                                    BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
+  llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
 };
 
