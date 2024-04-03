@@ -15,6 +15,9 @@ on:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
       - 'libunwind/docs/**'
@@ -24,10 +27,15 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
       - 'libunwind/docs/**'
@@ -37,6 +45,8 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
+      - '.github/workflows/docs.yml'
 
 jobs:
   check-docs-build:
@@ -62,6 +72,9 @@ jobs:
               - 'llvm/docs/**'
             clang:
               - 'clang/docs/**'
+              - 'clang/include/clang/Basic/AttrDocs.td'
+              - 'clang/include/clang/Driver/ClangOptionDocs.td'
+              - 'clang/include/clang/Basic/DiagnosticDocs.td'
             clang-tools-extra:
               - 'clang-tools-extra/docs/**'
             lldb:
@@ -80,6 +93,7 @@ jobs:
               - 'polly/docs/**'
             flang:
               - 'flang/docs/**'
+              - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
@@ -126,7 +140,7 @@ jobs:
       - name: Build libcxx docs
         if: steps.docs-changed-subprojects.outputs.libcxx_any_changed == 'true'
         run: |
-          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx" -DLLVM_ENABLE_SPHINX=ON ./runtimes
+          cmake -B libcxx-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libcxxabi;libcxx;libunwind" -DLLVM_ENABLE_SPHINX=ON ./runtimes
           TZ=UTC ninja -C libcxx-build docs-libcxx-html
       - name: Build libc docs
         if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'
@@ -150,9 +164,6 @@ jobs:
           TZ=UTC ninja -C polly-build docs-polly-html docs-polly-man
       - name: Build Flang docs
         if: steps.docs-changed-subprojects.outputs.flang_any_changed == 'true'
-        # TODO(boomanaiden154): Remove the SPHINX_WARNINGS_AS_ERRORS from the
-        # CMake invocation once the warnings in the flang docs build are fixed.
         run: |
-          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ./llvm
-          TZ=UTC ninja -C flang-build docs-flang-html docs-flang-man
-
+          cmake -B flang-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C flang-build docs-flang-html

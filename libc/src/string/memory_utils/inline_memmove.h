@@ -49,14 +49,14 @@ LIBC_INLINE constexpr bool inline_memmove_no_small_size(void *, const void *,
   return false;
 }
 
-LIBC_INLINE bool inline_memmove_small_size(void *dst, const void *src,
-                                           size_t count) {
+[[gnu::flatten]] LIBC_INLINE bool
+inline_memmove_small_size(void *dst, const void *src, size_t count) {
   return LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE(
       reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }
 
-LIBC_INLINE void inline_memmove_follow_up(void *dst, const void *src,
-                                          size_t count) {
+[[gnu::flatten]] LIBC_INLINE void
+inline_memmove_follow_up(void *dst, const void *src, size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP(
       reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }

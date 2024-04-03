@@ -32,13 +32,13 @@ define <32 x i1> @bitcast_v4i8_v32i1(<4 x i8> %a, <32 x i1> %b) {
 define i8 @bitcast_v1i8_i8(<1 x i8> %a) {
 ; CHECK-LABEL: bitcast_v1i8_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v1i8_i8:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; ELEN32-NEXT:    vmv.x.s a0, v8
 ; ELEN32-NEXT:    ret
   %b = bitcast <1 x i8> %a to i8
@@ -48,13 +48,13 @@ define i8 @bitcast_v1i8_i8(<1 x i8> %a) {
 define i16 @bitcast_v2i8_i16(<2 x i8> %a) {
 ; CHECK-LABEL: bitcast_v2i8_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v2i8_i16:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ELEN32-NEXT:    vmv.x.s a0, v8
 ; ELEN32-NEXT:    ret
   %b = bitcast <2 x i8> %a to i16
@@ -64,13 +64,13 @@ define i16 @bitcast_v2i8_i16(<2 x i8> %a) {
 define i16 @bitcast_v1i16_i16(<1 x i16> %a) {
 ; CHECK-LABEL: bitcast_v1i16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_v1i16_i16:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ELEN32-NEXT:    vmv.x.s a0, v8
 ; ELEN32-NEXT:    ret
   %b = bitcast <1 x i16> %a to i16
@@ -80,7 +80,7 @@ define i16 @bitcast_v1i16_i16(<1 x i16> %a) {
 define i32 @bitcast_v4i8_i32(<4 x i8> %a) {
 ; CHECK-LABEL: bitcast_v4i8_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -96,7 +96,7 @@ define i32 @bitcast_v4i8_i32(<4 x i8> %a) {
 define i32 @bitcast_v2i16_i32(<2 x i16> %a) {
 ; CHECK-LABEL: bitcast_v2i16_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -112,7 +112,7 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a) {
 define i32 @bitcast_v1i32_i32(<1 x i32> %a) {
 ; CHECK-LABEL: bitcast_v1i32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 ;
@@ -416,8 +416,8 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    addi sp, sp, -16
 ; RV32ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    sw a0, 8(sp)
+; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    fld fa0, 8(sp)
 ; RV32ELEN32-NEXT:    addi sp, sp, 16
 ; RV32ELEN32-NEXT:    ret
@@ -433,13 +433,13 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 define <1 x i16> @bitcast_i16_v1i16(i16 %a) {
 ; CHECK-LABEL: bitcast_i16_v1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 ;
 ; ELEN32-LABEL: bitcast_i16_v1i16:
 ; ELEN32:       # %bb.0:
-; ELEN32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; ELEN32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; ELEN32-NEXT:    vmv.s.x v8, a0
 ; ELEN32-NEXT:    ret
   %b = bitcast i16 %a to <1 x i16>
@@ -449,7 +449,7 @@ define <1 x i16> @bitcast_i16_v1i16(i16 %a) {
 define <2 x i16> @bitcast_i32_v2i16(i32 %a) {
 ; CHECK-LABEL: bitcast_i32_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 ;
@@ -465,7 +465,7 @@ define <2 x i16> @bitcast_i32_v2i16(i32 %a) {
 define <1 x i32> @bitcast_i32_v1i32(i32 %a) {
 ; CHECK-LABEL: bitcast_i32_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 ;
@@ -495,7 +495,7 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a) {
 ; RV32ELEN32-LABEL: bitcast_i64_v4i16:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32ELEN32-NEXT:    vmv.v.x v8, a0
 ; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32ELEN32-NEXT:    ret
 ;
@@ -530,7 +530,7 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a) {
 ; RV32ELEN32-LABEL: bitcast_i64_v2i32:
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32ELEN32-NEXT:    vmv.v.x v8, a0
 ; RV32ELEN32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32ELEN32-NEXT:    ret
 ;

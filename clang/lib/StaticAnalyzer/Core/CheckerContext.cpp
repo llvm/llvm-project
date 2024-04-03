@@ -87,9 +87,11 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (!II)
     return false;
 
-  // Look through 'extern "C"' and anything similar invented in the future.
-  // If this function is not in TU directly, it is not a C library function.
-  if (!FD->getDeclContext()->getRedeclContext()->isTranslationUnit())
+  // C library functions are either declared directly within a TU (the common
+  // case) or they are accessed through the namespace `std` (when they are used
+  // in C++ via headers like <cstdlib>).
+  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
+  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
     return false;
 
   // If this function is not externally visible, it is not a C library function.
@@ -105,10 +107,11 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (FName.equals(Name))
     return true;
 
-  if (FName.startswith("__inline") && FName.contains(Name))
+  if (FName.starts_with("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.startswith("__") && FName.endswith("_chk") && FName.contains(Name))
+  if (FName.starts_with("__") && FName.ends_with("_chk") &&
+      FName.contains(Name))
     return true;
 
   return false;

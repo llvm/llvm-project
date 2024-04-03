@@ -14,9 +14,9 @@
 ! RUN:     -fno-signed-zeros \
 ! RUN:     -fassociative-math \
 ! RUN:     -freciprocal-math \
+! RUN:     -fomit-frame-pointer \
 ! RUN:     -fpass-plugin=Bye%pluginext \
 ! RUN:     -fversion-loops-for-stride \
-! RUN:     -flang-experimental-polymorphism \
 ! RUN:     -flang-experimental-hlfir \
 ! RUN:     -flang-deprecated-no-hlfir \
 ! RUN:     -fno-ppc-native-vector-element-order \
@@ -48,7 +48,6 @@
 ! CHECK: "-fconvert=little-endian"
 ! CHECK: "-fpass-plugin=Bye
 ! CHECK: "-fversion-loops-for-stride"
-! CHECK: "-flang-experimental-polymorphism"
 ! CHECK: "-flang-experimental-hlfir"
 ! CHECK: "-flang-deprecated-no-hlfir"
 ! CHECK: "-fno-ppc-native-vector-element-order"
@@ -60,5 +59,6 @@
 ! CHECK: "-Reverything"
 ! CHECK: "-Rno-everything"
 ! CHECK: "-Rpass=inline"
+! CHECK: "-mframe-pointer=none"
 ! CHECK: "-mllvm" "-print-before-all"
 ! CHECK: "-save-temps=obj"

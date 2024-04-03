@@ -54,8 +54,8 @@ end subroutine test
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_2]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.5xi4.0"} : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[VAL_5:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<5xi32>>) -> !hlfir.expr<5xi32>
-! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_5]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<5xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>, i1)
-! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_4]] {uniq_name = "adapt.valuebyref"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:           %[[VAL_6:.*]]:3 = hlfir.associate %[[VAL_5]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<5xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<5xi32>>, !fir.ref<!fir.array<5xi32>>, i1)
+! CHECK:           %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_4]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           fir.call @_QPsub(%[[VAL_8]], %[[VAL_7]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<!fir.array<5xi32>>, i1

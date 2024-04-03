@@ -112,6 +112,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
     ARMSubArch_v9_3a,
     ARMSubArch_v9_2a,
@@ -163,6 +164,7 @@ public:
     SPIRVSubArch_v13,
     SPIRVSubArch_v14,
     SPIRVSubArch_v15,
+    SPIRVSubArch_v16,
   };
   enum VendorType {
     UnknownVendor,
@@ -192,7 +194,7 @@ public:
     IOS,
     KFreeBSD,
     Linux,
-    Lv2,        // PS3
+    Lv2, // PS3
     MacOSX,
     NetBSD,
     OpenBSD,
@@ -202,17 +204,19 @@ public:
     ZOS,
     Haiku,
     RTEMS,
-    NaCl,       // Native Client
+    NaCl, // Native Client
     AIX,
-    CUDA,       // NVIDIA CUDA
-    NVCL,       // NVIDIA OpenCL
-    AMDHSA,     // AMD HSA Runtime
+    CUDA,   // NVIDIA CUDA
+    NVCL,   // NVIDIA OpenCL
+    AMDHSA, // AMD HSA Runtime
     PS4,
     PS5,
     ELFIAMCU,
-    TvOS,       // Apple tvOS
-    WatchOS,    // Apple watchOS
-    DriverKit,  // Apple DriverKit
+    TvOS,      // Apple tvOS
+    WatchOS,   // Apple watchOS
+    BridgeOS,  // Apple bridgeOS
+    DriverKit, // Apple DriverKit
+    XROS,      // Apple XROS
     Mesa3D,
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
@@ -222,7 +226,8 @@ public:
     ShaderModel, // DirectX ShaderModel
     LiteOS,
     Serenity,
-    LastOSType = Serenity
+    Vulkan, // Vulkan SPIR-V
+    LastOSType = Vulkan
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -272,7 +277,7 @@ public:
     Callable,
     Mesh,
     Amplification,
-
+    OpenCL,
     OpenHOS,
 
     LastEnvironmentType = OpenHOS
@@ -408,6 +413,10 @@ public:
   /// Parse the version number as with getOSVersion.
   VersionTuple getDriverKitVersion() const;
 
+  /// Parse the Vulkan version number from the OSVersion and SPIR-V version
+  /// (SubArch).  This should only be called with Vulkan SPIR-V triples.
+  VersionTuple getVulkanVersion() const;
+
   /// @}
   /// @name Direct Component Access
   /// @{
@@ -433,9 +442,23 @@ public:
   /// string (separated by a '-' if the environment component is present).
   StringRef getOSAndEnvironmentName() const;
 
+  /// Get the version component of the environment component as a single
+  /// string (the version after the environment).
+  ///
+  /// For example, "fooos1.2.3" would return "1.2.3".
+  StringRef getEnvironmentVersionString() const;
+
   /// @}
   /// @name Convenience Predicates
   /// @{
+
+  /// Returns the pointer width of this architecture.
+  static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch);
+
+  /// Returns the pointer width of this architecture.
+  unsigned getArchPointerBitWidth() const {
+    return getArchPointerBitWidth(getArch());
+  }
 
   /// Test whether the architecture is 64-bit
   ///
@@ -507,14 +530,17 @@ public:
     return getSubArch() == Triple::ARMSubArch_v7k;
   }
 
+  /// Is this an Apple XROS triple.
+  bool isXROS() const { return getOS() == Triple::XROS; }
+
   /// Is this an Apple DriverKit triple.
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
 
   bool isOSzOS() const { return getOS() == Triple::ZOS; }
 
-  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, or DriverKit).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
   bool isOSDarwin() const {
-    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit();
+    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS();
   }
 
   bool isSimulatorEnvironment() const {
@@ -763,6 +789,8 @@ public:
   bool isShaderModelOS() const {
     return getOS() == Triple::ShaderModel;
   }
+
+  bool isVulkanOS() const { return getOS() == Triple::Vulkan; }
 
   bool isShaderStageEnvironment() const {
     EnvironmentType Env = getEnvironment();
@@ -1013,6 +1041,10 @@ public:
     return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
            isWindowsCygwinEnvironment() || isOHOSFamily();
   }
+
+  /// True if the target supports both general-dynamic and TLSDESC, and TLSDESC
+  /// is enabled by default.
+  bool hasDefaultTLSDESC() const { return isAndroid() && isRISCV64(); }
 
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {

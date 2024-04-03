@@ -39,7 +39,7 @@ Error enableDebuggerSupport(LLJIT &J) {
     if (!Registrar)
       return Registrar.takeError();
     ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, std::move(*Registrar), true, true));
+        ES, std::move(*Registrar), false, true));
     return Error::success();
   }
   case Triple::MachO: {

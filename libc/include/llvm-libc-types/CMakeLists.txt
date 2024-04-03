@@ -39,6 +39,7 @@ add_header(uid_t HDR uid_t.h)
 add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(ino_t HDR ino_t.h)
 add_header(jmp_buf HDR jmp_buf.h)
+add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nlink_t HDR nlink_t.h)
@@ -89,5 +90,29 @@ add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(wint_t HDR wint_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
+add_header(socklen_t HDR socklen_t.h)
+add_header(struct_sockaddr_un HDR struct_sockaddr_un.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h)
 add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
+add_header(ACTION HDR ACTION.h)
+add_header(ENTRY HDR ENTRY.h)
+add_header(struct_hsearch_data HDR struct_hsearch_data.h)
+add_header(struct_epoll_event HDR struct_epoll_event.h)
+add_header(struct_epoll_data HDR struct_epoll_data.h)
+add_header(
+  float128
+  HDR
+    float128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)
+add_header(fsblkcnt_t HDR fsblkcnt_t.h)
+add_header(fsfilcnt_t HDR fsfilcnt_t.h)
+add_header(
+  struct_statvfs 
+HDR 
+  struct_statvfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
+)

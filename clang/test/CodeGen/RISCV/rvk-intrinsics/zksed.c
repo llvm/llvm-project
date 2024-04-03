@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKSED
 
-#include <stdint.h>
+#include <riscv_crypto.h>
 
 // RV32ZKSED-LABEL: @sm4ks(
 // RV32ZKSED-NEXT:  entry:
@@ -19,7 +19,7 @@
 // RV64ZKSED-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sm4ks(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sm4ks(rs1, rs2, 0);
+  return __riscv_sm4ks(rs1, rs2, 0);
 }
 
 // RV32ZKSED-LABEL: @sm4ed(
@@ -33,5 +33,5 @@ uint32_t sm4ks(uint32_t rs1, uint32_t rs2) {
 // RV64ZKSED-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sm4ed(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sm4ed(rs1, rs2, 0);
+  return __riscv_sm4ed(rs1, rs2, 0);
 }

@@ -96,7 +96,7 @@ void testCallStrongWeak(StrongWeak *a) {
   testParamStrongWeak(*a);
 }
 
-// CHECK: define{{.*}} void @_Z20testReturnStrongWeakP10StrongWeak(ptr noalias sret(%[[STRUCT_STRONGWEAK:.*]]) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z20testReturnStrongWeakP10StrongWeak(ptr dead_on_unwind noalias writable sret(%[[STRUCT_STRONGWEAK:.*]]) align 8 %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:a.addr]] = alloca ptr, align 8
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8

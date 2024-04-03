@@ -53,16 +53,16 @@
 # GD32-REL-NEXT: }
 
 ## &DTPMOD(a) - . = 0x2314 - 0x1250 = 4096*1+196
-# GD32:      1250: auipc a0, 1
-# GD32-NEXT:       addi a0, a0, 196
-# GD32-NEXT:       auipc ra, 0
-# GD32-NEXT:       jalr 56(ra)
+# GD32:      1250: auipc a0, 0x1
+# GD32-NEXT:       addi a0, a0, 0xc4
+# GD32-NEXT:       auipc ra, 0x0
+# GD32-NEXT:       jalr 0x38(ra)
 
 ## &DTPMOD(b) - . = 0x231C - 0x1260 = 4096*1+188
-# GD32:      1260: auipc a0, 1
-# GD32-NEXT:       addi a0, a0, 188
-# GD32-NEXT:       auipc ra, 0
-# GD32-NEXT:       jalr 40(ra)
+# GD32:      1260: auipc a0, 0x1
+# GD32-NEXT:       addi a0, a0, 0xbc
+# GD32-NEXT:       auipc ra, 0x0
+# GD32-NEXT:       jalr 0x28(ra)
 
 # GD64-REL:      .rela.dyn {
 # GD64-REL-NEXT:   0x24D8 R_RISCV_TLS_DTPMOD64 a 0x0
@@ -72,16 +72,16 @@
 # GD64-REL-NEXT: }
 
 ## &DTPMOD(a) - . = 0x24d8 - 0x1398 = 4096*1+320
-# GD64:      1398: auipc a0, 1
-# GD64-NEXT:       addi a0, a0, 320
-# GD64-NEXT:       auipc ra, 0
-# GD64-NEXT:       jalr 64(ra)
+# GD64:      1398: auipc a0, 0x1
+# GD64-NEXT:       addi a0, a0, 0x140
+# GD64-NEXT:       auipc ra, 0x0
+# GD64-NEXT:       jalr 0x40(ra)
 
 ## &DTPMOD(b) - . = 0x24e8 - 0x13a8 = 4096*1+320
-# GD64:      13a8: auipc a0, 1
-# GD64-NEXT:       addi a0, a0, 320
-# GD64-NEXT:       auipc ra, 0
-# GD64-NEXT:       jalr 48(ra)
+# GD64:      13a8: auipc a0, 0x1
+# GD64-NEXT:       addi a0, a0, 0x140
+# GD64-NEXT:       auipc ra, 0x0
+# GD64-NEXT:       jalr 0x30(ra)
 
 # NOREL: no relocations
 

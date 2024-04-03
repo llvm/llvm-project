@@ -12,12 +12,15 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 namespace llvm {
@@ -64,19 +67,17 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     // sure that the return is covered. Otherwise, we can check whether there
     // is a way to reach the RI from the start of the lifetime without passing
     // through an end.
-    if (EndBlocks.count(RI->getParent()) > 0 ||
+    if (EndBlocks.contains(RI->getParent()) ||
         !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
       ++NumCoveredExits;
     }
   }
-  // If there's a mix of covered and non-covered exits, just put the untag
-  // on exits, so we avoid the redundancy of untagging twice.
   if (NumCoveredExits == ReachableRetVec.size()) {
-    for (auto *End : Ends)
-      Callback(End);
+    for_each(Ends, Callback);
   } else {
-    for (auto *RI : ReachableRetVec)
-      Callback(RI);
+    // If there's a mix of covered and non-covered exits, just put the untag
+    // on exits, so we avoid the redundancy of untagging twice.
+    for_each(ReachableRetVec, Callback);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.
     return false;
@@ -110,6 +111,24 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
 }
 
 void StackInfoBuilder::visit(Instruction &Inst) {
+  // Visit non-intrinsic debug-info records attached to Inst.
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst.getDbgRecordRange())) {
+    auto AddIfInteresting = [&](Value *V) {
+      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+        if (!isInterestingAlloca(*AI))
+          return;
+        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
+        auto &DVRVec = AInfo.DbgVariableRecords;
+        if (DVRVec.empty() || DVRVec.back() != &DVR)
+          DVRVec.push_back(&DVR);
+      }
+    };
+
+    for_each(DVR.location_ops(), AddIfInteresting);
+    if (DVR.isDbgAssign())
+      AddIfInteresting(DVR.getAddress());
+  }
+
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
@@ -138,17 +157,21 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     return;
   }
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    for (Value *V : DVI->location_ops()) {
+    auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
         if (!isInterestingAlloca(*AI))
-          continue;
+          return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
         if (DVIVec.empty() || DVIVec.back() != DVI)
           DVIVec.push_back(DVI);
       }
-    }
+    };
+    for_each(DVI->location_ops(), AddIfInteresting);
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
+      AddIfInteresting(DAI->getAddress());
   }
+
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
   if (ExitUntag)
     Info.RetVec.push_back(ExitUntag);
@@ -197,7 +220,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Type *PaddingType = ArrayType::get(Type::getInt8Ty(Ctx), AlignedSize - Size);
   Type *TypeWithPadding = StructType::get(AllocatedType, PaddingType);
   auto *NewAI = new AllocaInst(TypeWithPadding, Info.AI->getAddressSpace(),
-                               nullptr, "", Info.AI);
+                               nullptr, "", Info.AI->getIterator());
   NewAI->takeName(Info.AI);
   NewAI->setAlignment(Info.AI->getAlign());
   NewAI->setUsedWithInAlloca(Info.AI->isUsedWithInAlloca());
@@ -208,11 +231,56 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
 
   // TODO: Remove when typed pointers dropped
   if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI);
+    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
 
   Info.AI->replaceAllUsesWith(NewPtr);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
+}
+
+bool isLifetimeIntrinsic(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  return II && II->isLifetimeStartOrEnd();
+}
+
+Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Function *ReadRegister = Intrinsic::getDeclaration(
+      M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
+  MDNode *MD =
+      MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateCall(ReadRegister, Args);
+}
+
+Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  if (TargetTriple.getArch() == Triple::aarch64)
+    return memtag::readRegister(IRB, "pc");
+  return IRB.CreatePtrToInt(IRB.GetInsertBlock()->getParent(),
+                            IRB.getIntPtrTy(M->getDataLayout()));
+}
+
+Value *getFP(IRBuilder<> &IRB) {
+  Function *F = IRB.GetInsertBlock()->getParent();
+  Module *M = F->getParent();
+  auto *GetStackPointerFn = Intrinsic::getDeclaration(
+      M, Intrinsic::frameaddress,
+      IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
+  return IRB.CreatePtrToInt(
+      IRB.CreateCall(GetStackPointerFn,
+                     {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.getIntPtrTy(M->getDataLayout()));
+}
+
+Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
+  // in Bionic's libc/private/bionic_tls.h.
+  Function *ThreadPointerFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+  return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
+                                IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
 }
 
 } // namespace memtag

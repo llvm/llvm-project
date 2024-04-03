@@ -13806,6 +13806,64 @@ double dxevd() {
   return dv;
 }
 
+
+double fail_dxevd() {
+  double dx, dv, de, dd;
+
+#pragma omp atomic compare capture relaxed fail(relaxed)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acquire fail(relaxed)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture release fail(relaxed)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acq_rel fail(relaxed)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture seq_cst fail(relaxed)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture relaxed fail(acquire)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acquire fail(acquire)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture release fail(acquire)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acq_rel fail(acquire)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture seq_cst fail(acquire)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture relaxed fail(seq_cst)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acquire fail(seq_cst)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture release fail(seq_cst)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture acq_rel fail(seq_cst)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare capture seq_cst fail(seq_cst)
+  {if(dx == de) { dx = dv; } else { dd = dx; }}
+
+#pragma omp atomic compare seq_cst fail(acquire)
+  dx = dx < de ? de : dx;
+
+#pragma omp atomic compare relaxed fail(seq_cst)
+  dx = dx > de ? de : dx;
+
+  return dx;
+}
+
 #endif
 // CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
@@ -61966,3 +62024,89 @@ double dxevd() {
 // SIMD-ONLY0-NEXT:    [[TMP180:%.*]] = load double, ptr [[DV]], align 8
 // SIMD-ONLY0-NEXT:    ret double [[TMP180]]
 //
+// CHECK-LABEL: {{.+}}fail_dxevd{{.+}}
+// CHECK-NEXT:  entry:
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:    {{.+}}cmpxchg ptr {{.+}} monotonic monotonic{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire monotonic{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} release monotonic{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel monotonic{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}}cmpxchg ptr {{.+}} seq_cst monotonic{{.+}}
+// CHECK:    {{.+}}__kmpc_flush{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} monotonic acquire{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire acquire{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} release acquire{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel acquire{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} seq_cst acquire{{.+}}
+// CHECK:    {{.+}}__kmpc_flush{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} monotonic seq_cst{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acquire seq_cst{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} release seq_cst{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} acq_rel seq_cst{{.+}}
+// CHECK:       {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK-NEXT:  {{.+}} bitcast double{{.+}}
+// CHECK:    {{.+}}cmpxchg ptr {{.+}} seq_cst seq_cst{{.+}}
+// CHECK:    call void {{.+}}__kmpc_flush{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} atomicrmw fmax {{.+}} seq_cst{{.+}}
+// CHECK-NEXT:  call void {{.+}}__kmpc_flush{{.+}}
+// CHECK-NEXT:  {{.+}} load double,{{.+}}
+// CHECK-NEXT:  {{.+}} atomicrmw fmin {{.+}} monotonic{{.+}}
+// CHECK:    ret double {{.+}}

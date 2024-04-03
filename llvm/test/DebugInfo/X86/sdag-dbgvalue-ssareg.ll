@@ -5,6 +5,10 @@
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:    -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+
 ; Test that dbg.values of an SSA variable that's not used in a basic block,
 ; is converted to a DBG_VALUE in that same basic block. We know that %1 is
 ; live from the entry bb to the exit bb, is allocated a vreg because it's

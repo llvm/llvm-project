@@ -3,6 +3,7 @@
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple i686-unknown-linux \
 // RUN:   -verify
 
@@ -11,6 +12,7 @@
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple x86_64-unknown-linux \
 // RUN:   -verify
 
@@ -19,6 +21,7 @@
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple armv7-a15-linux \
 // RUN:   -verify
 
@@ -27,6 +30,7 @@
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple thumbv7-a15-linux \
 // RUN:   -verify
 
@@ -36,6 +40,7 @@
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 //      CHECK: Loaded summary for: int isalnum(int)
@@ -53,8 +58,6 @@
 // CHECK-NEXT: Loaded summary for: int toupper(int)
 // CHECK-NEXT: Loaded summary for: int tolower(int)
 // CHECK-NEXT: Loaded summary for: int toascii(int)
-// CHECK-NEXT: Loaded summary for: int getc(FILE *)
-// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 // CHECK-NEXT: Loaded summary for: int getchar(void)
 // CHECK-NEXT: Loaded summary for: unsigned int fread(void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
@@ -63,6 +66,8 @@
 // CHECK-NEXT: Loaded summary for: ssize_t getline(char **restrict, size_t *restrict, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: char *getenv(const char *)
+// CHECK-NEXT: Loaded summary for: int getc(FILE *)
+// CHECK-NEXT: Loaded summary for: int fgetc(FILE *)
 
 #include "Inputs/std-c-library-functions.h"
 

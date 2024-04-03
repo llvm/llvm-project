@@ -138,12 +138,6 @@ module m
     end block
   end
 
-  subroutine t21(x)
-!dir$ ignore_tkr(c) x
-!ERROR: !DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array
-    real x(1)
-  end
-
   subroutine t22(x)
 !dir$ ignore_tkr(r) x
 !WARNING: !DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array

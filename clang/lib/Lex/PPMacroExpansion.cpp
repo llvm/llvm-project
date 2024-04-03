@@ -993,11 +993,20 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
       // If the macro contains the comma pasting extension, the diagnostic
       // is suppressed; we know we'll get another diagnostic later.
       if (!MI->hasCommaPasting()) {
-        // C++20 allows this construct, but standards before C++20 and all C
-        // standards do not allow the construct (we allow it as an extension).
-        Diag(Tok, getLangOpts().CPlusPlus20
-                      ? diag::warn_cxx17_compat_missing_varargs_arg
-                      : diag::ext_missing_varargs_arg);
+        // C++20 [cpp.replace]p15, C23 6.10.5p12
+        //
+        // C++20 and C23 allow this construct, but standards before that
+        // do not (we allow it as an extension).
+        unsigned ID;
+        if (getLangOpts().CPlusPlus20)
+          ID = diag::warn_cxx17_compat_missing_varargs_arg;
+        else if (getLangOpts().CPlusPlus)
+          ID = diag::ext_cxx_missing_varargs_arg;
+        else if (getLangOpts().C23)
+          ID = diag::warn_c17_compat_missing_varargs_arg;
+        else
+          ID = diag::ext_c_missing_varargs_arg;
+        Diag(Tok, ID);
         Diag(MI->getDefinitionLoc(), diag::note_macro_here)
           << MacroName.getIdentifierInfo();
       }
@@ -1136,7 +1145,8 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the feature name, __foo__ becomes foo.
-  if (Feature.startswith("__") && Feature.endswith("__") && Feature.size() >= 4)
+  if (Feature.starts_with("__") && Feature.ends_with("__") &&
+      Feature.size() >= 4)
     Feature = Feature.substr(2, Feature.size() - 4);
 
 #define FEATURE(Name, Predicate) .Case(#Name, Predicate)
@@ -1162,7 +1172,7 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
   const LangOptions &LangOpts = PP.getLangOpts();
 
   // Normalize the extension name, __foo__ becomes foo.
-  if (Extension.startswith("__") && Extension.endswith("__") &&
+  if (Extension.starts_with("__") && Extension.ends_with("__") &&
       Extension.size() >= 4)
     Extension = Extension.substr(2, Extension.size() - 4);
 
@@ -1671,6 +1681,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           return false;
         else if (II->getBuiltinID() != 0) {
           switch (II->getBuiltinID()) {
+          case Builtin::BI__builtin_cpu_is:
+            return getTargetInfo().supportsCpuIs();
+          case Builtin::BI__builtin_cpu_init:
+            return getTargetInfo().supportsCpuInit();
+          case Builtin::BI__builtin_cpu_supports:
+            return getTargetInfo().supportsCpuSupports();
           case Builtin::BI__builtin_operator_new:
           case Builtin::BI__builtin_operator_delete:
             // denotes date of behavior change to support calling arbitrary
@@ -1691,9 +1707,9 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           // as being "builtin functions", even if the syntax isn't a valid
           // function call (for example, because the builtin takes a type
           // argument).
-          if (II->getName().startswith("__builtin_") ||
-              II->getName().startswith("__is_") ||
-              II->getName().startswith("__has_"))
+          if (II->getName().starts_with("__builtin_") ||
+              II->getName().starts_with("__is_") ||
+              II->getName().starts_with("__has_"))
             return true;
           return llvm::StringSwitch<bool>(II->getName())
               .Case("__array_rank", true)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Transport.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
@@ -345,9 +346,9 @@ LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
   llvm::SmallString<128> line;
   while (succeeded(readLine(in, line))) {
     StringRef lineRef = line.str().trim();
-    if (lineRef.startswith("//")) {
+    if (lineRef.starts_with("//")) {
       // Found a delimiter for the message.
-      if (lineRef == "// -----")
+      if (lineRef == kDefaultSplitMarker)
         break;
       continue;
     }

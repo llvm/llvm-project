@@ -41,6 +41,7 @@ cc_test(
         allow_empty = False,
         exclude = [
             # TODO: Add this file to the build.
+            "Analysis/ConstraintSystemTest.cpp",
             "Analysis/TFUtilsTest.cpp",
             "Analysis/TrainingLoggerTest.cpp",
             "Analysis/MLModelRunnerTest.cpp",
@@ -49,6 +50,7 @@ cc_test(
     deps = [
         "//llvm:Analysis",
         "//llvm:AsmParser",
+        "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:Passes",
         "//llvm:Support",
@@ -299,16 +301,25 @@ cc_test(
         # keep one-per-line
         "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
     ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+        ],
+    }),
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IRReader",
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
@@ -346,10 +357,11 @@ cc_test(
         [
             "IR/*.cpp",
             "IR/*.h",
-            "Support/KnownBitsTest.h",
         ],
         allow_empty = False,
-    ),
+    ) + [
+        "Support/KnownBitsTest.h",
+    ],
     shard_count = 20,
     deps = [
         "//llvm:Analysis",

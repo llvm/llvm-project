@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Support
   TargetParser
+  FrontendOpenMP
   )
 
 find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
@@ -85,6 +86,7 @@ add_clang_library(clangBasic
   Sarif.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   Stack.cpp
   TargetID.cpp
   TargetInfo.cpp

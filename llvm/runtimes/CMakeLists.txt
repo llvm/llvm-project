@@ -3,7 +3,7 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
-set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON")
+set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR}")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
   if(IS_DIRECTORY ${proj_dir} AND EXISTS ${proj_dir}/CMakeLists.txt)
@@ -199,7 +199,7 @@ foreach(entry ${runtimes})
     list(APPEND prefixes "LLVM_LIBC")
     list(APPEND prefixes "LIBC_")
     # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
-    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    if(LLVM_LIBC_GPU_BUILD)
       list(APPEND prefixes "CUDA")
     endif()
   endif()
@@ -358,6 +358,14 @@ function(runtime_register_target name)
         endif()
       endif()
     endforeach()
+    foreach(variable_name ${${name}_extra_args})
+      string(FIND "${variable_name}" "-DRUNTIMES_${extra_name}_" out)
+      if("${out}" EQUAL 0)
+        string(REPLACE "-DRUNTIMES_${extra_name}_" "" new_name ${variable_name})
+        string(REPLACE ";" "|" new_value "${new_name}")
+        list(APPEND ${name}_extra_args "-D${new_value}")
+      endif()
+    endforeach()
   endforeach()
 
   set_enable_per_target_runtime_dir()
@@ -391,8 +399,17 @@ function(runtime_register_target name)
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
   endif()
   foreach(runtime_name ${runtime_names})
+    if(NOT TARGET ${runtime_name})
+      add_custom_target(${runtime_name})
+    endif()
     add_dependencies(${runtime_name} ${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name})
+      add_custom_target(install-${runtime_name})
+    endif()
     add_dependencies(install-${runtime_name} install-${runtime_name}-${name})
+    if(NOT TARGET install-${runtime_name}-stripped)
+      add_custom_target(install-${runtime_name}-stripped)
+    endif()
     add_dependencies(install-${runtime_name}-stripped install-${runtime_name}-${name}-stripped)
   endforeach()
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
@@ -408,33 +425,67 @@ if(runtimes)
   # together in a single CMake invocation.
   set(extra_deps "")
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    if (${LLVM_TOOL_FLANG_BUILD})
+      message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang-new")
+      set(LIBOMP_FORTRAN_MODULES_COMPILER "${CMAKE_BINARY_DIR}/bin/flang-new")
+      set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+      # TODO: This is a workaround until flang becomes a first-class project
+      # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
+      # built before "openmp" is built as a runtime project.
+      list(APPEND extra_deps "flang-new")
+    endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
-      if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
+      if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
   endif()
-  if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND 
-      (LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES))
-    if(TARGET libc-hdrgen)
-      set(libc_tools libc-hdrgen)
-      set(libc_cmake_args "-DLIBC_HDRGEN_EXE=$<TARGET_FILE:libc-hdrgen>"
-                          "-DLLVM_LIBC_FULL_BUILD=ON")
-      list(APPEND extra_deps ${libc_tools})
+  if("libc" IN_LIST LLVM_ENABLE_PROJECTS AND
+      (LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD))
+    if(LIBC_HDRGEN_EXE)
+      set(hdrgen_exe ${LIBC_HDRGEN_EXE})
     else()
-      # We want to build the libc build tools before we can build the libc
-      # itself. So, the libc project should be included in LLVM_ENABLE_PROJECTS.
-      # This should have been done in llvm/CMakeLists.txt automatically when
-      # "libc" is detected in LLVM_ENABLE_RUNTIMES.
-      message(FATAL_ERROR "libc-hdrgen target missing unexpectedly")
+      if(TARGET ${LIBC_TABLEGEN_EXE})
+        set(hdrgen_exe $<TARGET_FILE:${LIBC_TABLEGEN_EXE}>)
+      else()
+        set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
+      endif()
+      set(hdrgen_deps ${LIBC_TABLEGEN_TARGET})
     endif()
-    if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
-      foreach(dep clang-offload-packager nvptx-arch amdgpu-arch)
-        if(TARGET ${dep})
-          list(APPEND extra_deps ${dep})
-        endif()
-      endforeach()
+    if(NOT hdrgen_exe)
+      message(FATAL_ERROR "libc-hdrgen executable missing")
     endif()
+    list(APPEND libc_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
+    list(APPEND extra_deps ${hdrgen_deps})
+  endif()
+  if(LLVM_LIBC_GPU_BUILD)
+    list(APPEND libc_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
+    if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
+      if(TARGET amdhsa-loader)
+        list(APPEND libc_cmake_args
+             "-DRUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:amdhsa-loader>")
+        list(APPEND extra_deps amdhsa-loader amdgpu-arch)
+      endif()
+      list(APPEND libc_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
+    endif()
+    if("libc" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
+      if(TARGET nvptx-loader)
+        list(APPEND libc_cmake_args
+             "-DRUNTIMES_nvptx64-nvidia-cuda_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:nvptx-loader>")
+        list(APPEND extra_deps nvptx-loader nvptx-arch)
+      endif()
+      list(APPEND libc_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
+    endif()
+    # The `libc` project may require '-DCUDAToolkit_ROOT' in GPU mode.
+    if(CUDAToolkit_ROOT)
+      list(APPEND libc_cmake_args "-DCUDAToolkit_ROOT=${CUDAToolkit_ROOT}")
+    endif()
+    if(TARGET clang-offload-packager)
+      list(APPEND extra_deps clang-offload-packager)
+    endif()
+  endif()
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND libc_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
@@ -459,11 +510,6 @@ if(runtimes)
         add_custom_target(runtimes-test-depends)
         set(test_targets "")
       endif()
-      foreach(runtime_name ${RUNTIME_NAMES})
-        add_custom_target(${runtime_name})
-        add_custom_target(install-${runtime_name})
-        add_custom_target(install-${runtime_name}-stripped)
-      endforeach()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
           add_custom_target(${component})
@@ -485,7 +531,7 @@ if(runtimes)
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${libc_tools}
+        DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
@@ -522,6 +568,7 @@ if(runtimes)
         FileCheck
         count
         llvm-cov
+        llvm-lto
         llvm-nm
         llvm-objdump
         llvm-profdata
@@ -529,6 +576,7 @@ if(runtimes)
         llvm-xray
         not
         obj2yaml
+        opt
         sancov
         sanstats
         llvm_gtest_main

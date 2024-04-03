@@ -435,7 +435,7 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; XOP-LABEL: combine_vec_udiv_by_shl_pow2b:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,4294967294,4294967293,4294967292]
+; XOP-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,4294967294,4294967293,4294967292]
 ; XOP-NEXT:    vpsubd %xmm1, %xmm2, %xmm1
 ; XOP-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
@@ -519,7 +519,7 @@ define <8 x i16> @combine_vec_udiv_nonuniform(<8 x i16> %x) {
 ; SSE41-NEXT:    psubw %xmm1, %xmm0
 ; SSE41-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    paddw %xmm1, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <4096,2048,8,u,u,2,2,u>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [4096,2048,8,u,u,2,2,u]
 ; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[3,4],xmm1[5,6],xmm0[7]
 ; SSE41-NEXT:    retq
@@ -659,7 +659,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsrlw $7, %xmm1, %xmm1
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -673,7 +673,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; XOP-NEXT:    movl $249, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm2
 ; XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm1
-; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; XOP-NEXT:    vpmovsxwq {{.*#+}} xmm2 = [18446744073709551360,18446744073709551615]
 ; XOP-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
   %div = udiv <16 x i8> %x, <i8 -64, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -683,7 +683,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; SSE2-LABEL: pr38477:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [u,4957,57457,4103,16385,35545,2048,2115]
 ; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psubw %xmm1, %xmm2
@@ -702,13 +702,13 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ;
 ; SSE41-LABEL: pr38477:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,4957,57457,4103,16385,35545,2048,2115>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [u,4957,57457,4103,16385,35545,2048,2115]
 ; SSE41-NEXT:    pmulhuw %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psubw %xmm1, %xmm2
 ; SSE41-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    paddw %xmm1, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = <u,1024,1024,16,4,1024,u,4096>
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [u,1024,1024,16,4,1024,u,4096]
 ; SSE41-NEXT:    pmulhuw %xmm2, %xmm1
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5],xmm2[6],xmm1[7]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]

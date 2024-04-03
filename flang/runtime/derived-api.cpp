@@ -10,14 +10,16 @@
 #include "flang/Runtime/derived-api.h"
 #include "derived.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
-void RTNAME(Initialize)(
+void RTDEF(Initialize)(
     const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -29,7 +31,7 @@ void RTNAME(Initialize)(
   }
 }
 
-void RTNAME(Destroy)(const Descriptor &descriptor) {
+void RTDEF(Destroy)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
@@ -41,7 +43,7 @@ void RTNAME(Destroy)(const Descriptor &descriptor) {
   }
 }
 
-void RTNAME(Finalize)(
+void RTDEF(Finalize)(
     const Descriptor &descriptor, const char *sourceFile, int sourceLine) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -53,7 +55,7 @@ void RTNAME(Finalize)(
   }
 }
 
-bool RTNAME(ClassIs)(
+bool RTDEF(ClassIs)(
     const Descriptor &descriptor, const typeInfo::DerivedType &derivedType) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
@@ -72,7 +74,8 @@ bool RTNAME(ClassIs)(
   return false;
 }
 
-static bool CompareDerivedTypeNames(const Descriptor &a, const Descriptor &b) {
+static RT_API_ATTRS bool CompareDerivedTypeNames(
+    const Descriptor &a, const Descriptor &b) {
   if (a.raw().version == CFI_VERSION &&
       a.type() == TypeCode{TypeCategory::Character, 1} &&
       a.ElementBytes() > 0 && a.rank() == 0 && a.OffsetElement() != nullptr &&
@@ -80,18 +83,20 @@ static bool CompareDerivedTypeNames(const Descriptor &a, const Descriptor &b) {
       b.type() == TypeCode{TypeCategory::Character, 1} &&
       b.ElementBytes() > 0 && b.rank() == 0 && b.OffsetElement() != nullptr &&
       a.ElementBytes() == b.ElementBytes() &&
-      memcmp(a.OffsetElement(), b.OffsetElement(), a.ElementBytes()) == 0) {
+      Fortran::runtime::memcmp(
+          a.OffsetElement(), b.OffsetElement(), a.ElementBytes()) == 0) {
     return true;
   }
   return false;
 }
 
-inline bool CompareDerivedType(
+inline RT_API_ATTRS bool CompareDerivedType(
     const typeInfo::DerivedType *a, const typeInfo::DerivedType *b) {
   return a == b || CompareDerivedTypeNames(a->name(), b->name());
 }
 
-static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
+static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
+    const Descriptor &desc) {
   if (const DescriptorAddendum * addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       return derived;
@@ -100,7 +105,7 @@ static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
   return nullptr;
 }
 
-bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
+bool RTDEF(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
   auto aType{a.raw().type};
   auto bType{b.raw().type};
   if ((aType != CFI_type_struct && aType != CFI_type_other) ||
@@ -125,7 +130,7 @@ bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
   }
 }
 
-bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
+bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   auto aType{a.raw().type};
   auto moldType{mold.raw().type};
   if ((aType != CFI_type_struct && aType != CFI_type_other) ||
@@ -152,7 +157,7 @@ bool RTNAME(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
   }
 }
 
-void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
+void RTDEF(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       if (!derived->noDestructionNeeded()) {
@@ -162,5 +167,6 @@ void RTNAME(DestroyWithoutFinalization)(const Descriptor &descriptor) {
   }
 }
 
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

@@ -29,13 +29,13 @@ TEST(TypeNameTest, Names) {
 
 #if defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER) ||    \
     defined(_MSC_VER)
-  EXPECT_TRUE(S1Name.endswith("::N1::S1")) << S1Name.str();
-  EXPECT_TRUE(C1Name.endswith("::N1::C1")) << C1Name.str();
-  EXPECT_TRUE(U1Name.endswith("::N1::U1")) << U1Name.str();
+  EXPECT_TRUE(S1Name.ends_with("::N1::S1")) << S1Name.str();
+  EXPECT_TRUE(C1Name.ends_with("::N1::C1")) << C1Name.str();
+  EXPECT_TRUE(U1Name.ends_with("::N1::U1")) << U1Name.str();
 #ifdef __clang__
-  EXPECT_TRUE(S2Name.endswith("S2")) << S2Name.str();
+  EXPECT_TRUE(S2Name.ends_with("S2")) << S2Name.str();
 #else
-  EXPECT_TRUE(S2Name.endswith("::S2")) << S2Name.str();
+  EXPECT_TRUE(S2Name.ends_with("::S2")) << S2Name.str();
 #endif
 #else
   EXPECT_EQ("UNKNOWN_TYPE", S1Name);

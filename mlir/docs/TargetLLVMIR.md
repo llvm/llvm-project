@@ -290,6 +290,21 @@ memref<2 x vector<4x8 x f32>
 Tensor types cannot be converted to the LLVM dialect. Operations on tensors must
 be [bufferized](Bufferization.md) before being converted.
 
+### Conversion of LLVM Container Types with Non-Compatible Element Types
+
+Progressive lowering may result in there LLVM container types, such
+as LLVM dialect structures, containing non-compatible types:
+`!llvm.struct<(index)>`. Such types are converted recursively using the rules
+described above.
+
+Identified structures are converted to _new_ structures that have their
+identifiers prefixed with `_Converted.` since the bodies of identified types
+cannot be updated once initialized. Such names are considered _reserved_ and
+must not appear in the input code (in practice, C reserves names starting with
+`_` and a capital, and `.` cannot appear in valid C types anyway). If they do
+and have a different body than the result of the conversion, the type conversion
+will stop.
+
 ### Calling Conventions
 
 Calling conventions provides a mechanism to customize the conversion of function
@@ -321,7 +336,7 @@ func.func @bar() {
 // is transformed into
 
 llvm.func @foo(%arg0: i32, %arg1: i64) -> !llvm.struct<(i32, i64)> {
-  // insert the vales into a structure
+  // insert the values into a structure
   %0 = llvm.mlir.undef : !llvm.struct<(i32, i64)>
   %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(i32, i64)>
   %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(i32, i64)>
@@ -334,8 +349,8 @@ llvm.func @bar() {
   %1 = llvm.mlir.constant(17 : i64) : i64
 
   // call and extract the values from the structure
-  %2 = llvm.call @bar(%0, %1)
-     : (i32, i32) -> !llvm.struct<(i32, i64)>
+  %2 = llvm.call @foo(%0, %1)
+     : (i32, i64) -> !llvm.struct<(i32, i64)>
   %3 = llvm.extractvalue %2[0] : !llvm.struct<(i32, i64)>
   %4 = llvm.extractvalue %2[1] : !llvm.struct<(i32, i64)>
 

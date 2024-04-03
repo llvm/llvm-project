@@ -14,7 +14,6 @@
 #define BOLT_PROFILE_PROFILEYAMLMAPPING_H
 
 #include "bolt/Core/BinaryFunction.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
@@ -178,6 +177,14 @@ template <> struct ScalarBitSetTraits<PROFILE_PF> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<llvm::bolt::HashFunction> {
+  using HashFunction = llvm::bolt::HashFunction;
+  static void enumeration(IO &io, HashFunction &value) {
+    io.enumCase(value, "std-hash", HashFunction::StdHash);
+    io.enumCase(value, "xxh3", HashFunction::XXH3);
+  }
+};
+
 namespace bolt {
 struct BinaryProfileHeader {
   uint32_t Version{1};
@@ -188,6 +195,7 @@ struct BinaryProfileHeader {
   std::string Origin;     // How the profile was obtained.
   std::string EventNames; // Events used for sample profile.
   bool IsDFSOrder{true};  // Whether using DFS block order in function profile
+  llvm::bolt::HashFunction HashFunction; // Hash used for BB/BF hashing
 };
 } // end namespace bolt
 
@@ -200,6 +208,8 @@ template <> struct MappingTraits<bolt::BinaryProfileHeader> {
     YamlIO.mapOptional("profile-origin", Header.Origin);
     YamlIO.mapOptional("profile-events", Header.EventNames);
     YamlIO.mapOptional("dfs-order", Header.IsDFSOrder);
+    YamlIO.mapOptional("hash-func", Header.HashFunction,
+                       llvm::bolt::HashFunction::StdHash);
   }
 };
 

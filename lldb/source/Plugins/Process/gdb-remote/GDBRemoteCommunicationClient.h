@@ -199,6 +199,8 @@ public:
 
   std::optional<bool> GetWatchpointReportedAfter();
 
+  WatchpointHardwareFeature GetSupportedWatchpointTypes();
+
   const ArchSpec &GetHostArchitecture();
 
   std::chrono::seconds GetHostDefaultPacketTimeout();
@@ -581,6 +583,8 @@ protected:
   lldb::tid_t m_curr_tid_run = LLDB_INVALID_THREAD_ID;
 
   uint32_t m_num_supported_hardware_watchpoints = 0;
+  WatchpointHardwareFeature m_watchpoint_types =
+      eWatchpointHardwareFeatureUnknown;
   uint32_t m_low_mem_addressing_bits = 0;
   uint32_t m_high_mem_addressing_bits = 0;
 

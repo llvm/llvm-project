@@ -157,10 +157,34 @@ define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
 
 define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {
 ; CHECK-LABEL: @udiv_demanded3(
-; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i64 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[U]]
 ;
-  %o = or <vscale x 1 x i32> %a, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-  %u = udiv <vscale x 1 x i32> %o, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %o = or <vscale x 1 x i32> %a, splat (i32 3)
+  %u = udiv <vscale x 1 x i32> %o, splat (i32 12)
   ret <vscale x 1 x i32> %u
+}
+
+; PR74242
+define i32 @div_by_zero_or_one_from_dom_cond(i32 %a, i32 %b) {
+; CHECK-LABEL: @div_by_zero_or_one_from_dom_cond(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[JOIN:%.*]], label [[ZERO_OR_ONE:%.*]]
+; CHECK:       zero_or_one:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+entry:
+  %cmp = icmp ugt i32 %a, 1
+  br i1 %cmp, label %join, label %zero_or_one
+
+zero_or_one:
+  %div = udiv i32 %b, %a
+  br label %join
+
+join:
+  %res = phi i32 [ %div, %zero_or_one ], [ %b, %entry ]
+  ret i32 %res
 }

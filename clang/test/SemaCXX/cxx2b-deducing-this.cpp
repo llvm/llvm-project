@@ -16,6 +16,10 @@ struct S {
     static void f(this auto); // expected-error{{an explicit object parameter cannot appear in a static function}}
     virtual void f(this S); // expected-error{{an explicit object parameter cannot appear in a virtual function}}
 
+    // new and delete are implicitly static
+    void *operator new(this unsigned long); // expected-error{{an explicit object parameter cannot appear in a static function}}
+    void operator delete(this void*); // expected-error{{an explicit object parameter cannot appear in a static function}}
+    
     void g(this auto) const; // expected-error{{explicit object member function cannot have 'const' qualifier}}
     void h(this auto) &; // expected-error{{explicit object member function cannot have '&' qualifier}}
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
@@ -625,4 +629,24 @@ void test() {
     m = Move{}; // expected-error {{object of type 'Move' cannot be assigned because its copy assignment operator is implicitly deleted}}
 }
 
+}
+
+
+namespace GH75732 {
+auto serialize(auto&& archive, auto&& c){ }
+struct D {
+    auto serialize(this auto&& self, auto&& archive) {
+        serialize(archive, self); // expected-error {{call to explicit member function without an object argument}}
+    }
+};
+}
+
+namespace GH80971 {
+struct S {
+  auto f(this auto self...) {  }
+};
+
+int bug() {
+  S{}.f(0);
+}
 }

@@ -413,18 +413,18 @@ struct MappingRiscv64_39 {
 
 /*
 C/C++ on linux/riscv64 (48-bit VMA)
-0000 0000 1000 - 0500 0000 0000: main binary                      ( 5 TB)
+0000 0000 1000 - 0400 0000 0000: main binary                      ( 4 TB)
 0500 0000 0000 - 2000 0000 0000: -
 2000 0000 0000 - 4000 0000 0000: shadow memory                    (32 TB)
 4000 0000 0000 - 4800 0000 0000: metainfo                         ( 8 TB)
 4800 0000 0000 - 5555 5555 5000: -
 5555 5555 5000 - 5a00 0000 0000: main binary (PIE)                (~5 TB)
 5a00 0000 0000 - 7a00 0000 0000: -
-7a00 0000 0000 - 7fff ffff ffff: libraries and main thread stack  ( 5 TB)
+7a00 0000 0000 - 7fff ffff ffff: libraries and main thread stack  ( 6 TB)
 */
 struct MappingRiscv64_48 {
   static const uptr kLoAppMemBeg = 0x000000001000ull;
-  static const uptr kLoAppMemEnd = 0x050000000000ull;
+  static const uptr kLoAppMemEnd = 0x040000000000ull;
   static const uptr kShadowBeg = 0x200000000000ull;
   static const uptr kShadowEnd = 0x400000000000ull;
   static const uptr kMetaShadowBeg = 0x400000000000ull;
@@ -622,6 +622,35 @@ struct MappingGoAarch64 {
   static const uptr kShadowAdd = 0x200000000000ull;
 };
 
+/* Go on linux/loongarch64 (47-bit VMA)
+0000 0000 1000 - 0000 1000 0000: executable
+0000 1000 0000 - 00c0 0000 0000: -
+00c0 0000 0000 - 00e0 0000 0000: heap
+00e0 0000 0000 - 2000 0000 0000: -
+2000 0000 0000 - 2800 0000 0000: shadow
+2800 0000 0000 - 3000 0000 0000: -
+3000 0000 0000 - 3200 0000 0000: metainfo (memory blocks and sync objects)
+3200 0000 0000 - 8000 0000 0000: -
+*/
+struct MappingGoLoongArch64_47 {
+  static const uptr kMetaShadowBeg = 0x300000000000ull;
+  static const uptr kMetaShadowEnd = 0x320000000000ull;
+  static const uptr kShadowBeg = 0x200000000000ull;
+  static const uptr kShadowEnd = 0x280000000000ull;
+  static const uptr kLoAppMemBeg = 0x000000001000ull;
+  static const uptr kLoAppMemEnd = 0x00e000000000ull;
+  static const uptr kMidAppMemBeg = 0;
+  static const uptr kMidAppMemEnd = 0;
+  static const uptr kHiAppMemBeg = 0;
+  static const uptr kHiAppMemEnd = 0;
+  static const uptr kHeapMemBeg = 0;
+  static const uptr kHeapMemEnd = 0;
+  static const uptr kVdsoBeg = 0;
+  static const uptr kShadowMsk = 0;
+  static const uptr kShadowXor = 0;
+  static const uptr kShadowAdd = 0x200000000000ull;
+};
+
 /*
 Go on linux/mips64 (47-bit VMA)
 0000 0000 1000 - 0000 1000 0000: executable
@@ -697,6 +726,8 @@ ALWAYS_INLINE auto SelectMapping(Arg arg) {
   return Func::template Apply<MappingGoS390x>(arg);
 #  elif defined(__aarch64__)
   return Func::template Apply<MappingGoAarch64>(arg);
+#  elif defined(__loongarch_lp64)
+  return Func::template Apply<MappingGoLoongArch64_47>(arg);
 #  elif SANITIZER_WINDOWS
   return Func::template Apply<MappingGoWindows>(arg);
 #  else
@@ -765,6 +796,7 @@ void ForEachMapping() {
   Func::template Apply<MappingGoPPC64_46>();
   Func::template Apply<MappingGoPPC64_47>();
   Func::template Apply<MappingGoAarch64>();
+  Func::template Apply<MappingGoLoongArch64_47>();
   Func::template Apply<MappingGoMips64_47>();
   Func::template Apply<MappingGoS390x>();
 }
@@ -967,7 +999,7 @@ struct RestoreAddrImpl {
         Mapping::kMidAppMemEnd, Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd,
         Mapping::kHeapMemBeg,   Mapping::kHeapMemEnd,
     };
-    const uptr indicator = 0x0f0000000000ull;
+    const uptr indicator = 0x0e0000000000ull;
     const uptr ind_lsb = 1ull << LeastSignificantSetBitIndex(indicator);
     for (uptr i = 0; i < ARRAY_SIZE(ranges); i += 2) {
       uptr beg = ranges[i];
@@ -992,7 +1024,7 @@ inline uptr RestoreAddr(uptr addr) {
 
 void InitializePlatform();
 void InitializePlatformEarly();
-void CheckAndProtect();
+bool CheckAndProtect(bool protect, bool ignore_heap, bool print_warnings);
 void InitializeShadowMemoryPlatform();
 void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns);
 int ExtractResolvFDs(void *state, int *fds, int nfd);

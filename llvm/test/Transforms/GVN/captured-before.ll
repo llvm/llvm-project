@@ -83,8 +83,7 @@ define i32 @test_capture_readonly() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @capture(ptr readonly [[A]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 123
 ;
   %a = alloca i32
   store i32 123, ptr %a
@@ -132,4 +131,22 @@ loop:
   %v = load i32, ptr %a
   call void @use(i32 %v) memory(none)
   br label %loop
+}
+
+define i32 @test_splat_gep_capture(<1 x i32> %index) {
+; CHECK-LABEL: define i32 @test_splat_gep_capture(
+; CHECK-SAME: <1 x i32> [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i32, ptr [[A]], <1 x i32> [[INDEX]]
+; CHECK-NEXT:    call void @some_call(<1 x ptr> [[PTRS]])
+; CHECK-NEXT:    [[RELOAD:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[RELOAD]]
+;
+  %a = alloca i32
+  store i32 123, ptr %a
+  %ptrs = getelementptr inbounds i32, ptr %a, <1 x i32> %index
+  call void @some_call(<1 x ptr> %ptrs)
+  %reload = load i32, ptr %a
+  ret i32 %reload
 }

@@ -10,6 +10,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace llvm;
 using namespace llvm::objcopy::macho;

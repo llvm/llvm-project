@@ -1,12 +1,17 @@
+//===- bolt/Core/FunctionLayout.cpp - Fragmented Function Layout -*- C++ -*-==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "bolt/Core/FunctionLayout.h"
-#include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include <algorithm>
-#include <cstddef>
-#include <functional>
 #include <iterator>
-#include <memory>
 
 using namespace llvm;
 using namespace bolt;
@@ -187,10 +192,6 @@ bool FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {
   // Generate fragments
   for (BinaryBasicBlock *const BB : NewLayout) {
     FragmentNum Num = BB->getFragmentNum();
-
-    assert(Num >= Fragments.back()->getFragmentNum() &&
-           "Blocks must be arranged such that fragments are monotonically "
-           "increasing.");
 
     // Add empty fragments if necessary
     while (Fragments.back()->getFragmentNum() < Num)

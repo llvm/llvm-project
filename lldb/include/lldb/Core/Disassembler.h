@@ -538,7 +538,7 @@ protected:
   ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
                                      const SymbolContext &sc, LineEntry &line) {
     SourceLine sl;
-    sl.file = line.file;
+    sl.file = line.GetFile();
     sl.line = line.line;
     sl.column = line.column;
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);

@@ -30,8 +30,9 @@
 
 using namespace llvm;
 
-char BasicBlockSectionsProfileReader::ID = 0;
-INITIALIZE_PASS(BasicBlockSectionsProfileReader, "bbsections-profile-reader",
+char BasicBlockSectionsProfileReaderWrapperPass::ID = 0;
+INITIALIZE_PASS(BasicBlockSectionsProfileReaderWrapperPass,
+                "bbsections-profile-reader",
                 "Reads and parses a basic block sections profile.", false,
                 false)
 
@@ -213,10 +214,6 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
               Twine("duplicate basic block id found '") + BasicBlockIDStr +
               "'");
 
-        if (!BasicBlockID->BaseID && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster.");
-
         FI->second.ClusterInfo.emplace_back(BBClusterInfo{
             *std::move(BasicBlockID), CurrentCluster, CurrentPosition++});
       }
@@ -287,9 +284,6 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
         if (!FuncBBIDs.insert(BBID).second)
           return createProfileParseError(
               Twine("duplicate basic block id found '") + BBIDStr + "'");
-        if (BBID == 0 && CurrentPosition)
-          return createProfileParseError(
-              "entry BB (0) does not begin a cluster");
 
         FI->second.ClusterInfo.emplace_back(
             BBClusterInfo({{static_cast<unsigned>(BBID), 0},
@@ -302,7 +296,7 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
       // specifier starting with `M=`.
       auto [AliasesStr, DIFilenameStr] = S.split(' ');
       SmallString<128> DIFilename;
-      if (DIFilenameStr.startswith("M=")) {
+      if (DIFilenameStr.starts_with("M=")) {
         DIFilename =
             sys::path::remove_leading_dotslash(DIFilenameStr.substr(2));
         if (DIFilename.empty())
@@ -395,11 +389,11 @@ Error BasicBlockSectionsProfileReader::ReadProfile() {
   }
 }
 
-bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {
-  if (!MBuf)
+bool BasicBlockSectionsProfileReaderWrapperPass::doInitialization(Module &M) {
+  if (!BBSPR.MBuf)
     return false;
   // Get the function name to debug info filename mapping.
-  FunctionNameToDIFilename.clear();
+  BBSPR.FunctionNameToDIFilename.clear();
   for (const Function &F : M) {
     SmallString<128> DIFilename;
     if (F.isDeclaration())
@@ -411,15 +405,46 @@ bool BasicBlockSectionsProfileReader::doInitialization(Module &M) {
         DIFilename = sys::path::remove_leading_dotslash(CU->getFilename());
     }
     [[maybe_unused]] bool inserted =
-        FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename).second;
+        BBSPR.FunctionNameToDIFilename.try_emplace(F.getName(), DIFilename)
+            .second;
     assert(inserted);
   }
-  if (auto Err = ReadProfile())
+  if (auto Err = BBSPR.ReadProfile())
     report_fatal_error(std::move(Err));
   return false;
 }
 
-ImmutablePass *
-llvm::createBasicBlockSectionsProfileReaderPass(const MemoryBuffer *Buf) {
-  return new BasicBlockSectionsProfileReader(Buf);
+AnalysisKey BasicBlockSectionsProfileReaderAnalysis::Key;
+
+BasicBlockSectionsProfileReader
+BasicBlockSectionsProfileReaderAnalysis::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  return BasicBlockSectionsProfileReader(TM->getBBSectionsFuncListBuf());
+}
+
+bool BasicBlockSectionsProfileReaderWrapperPass::isFunctionHot(
+    StringRef FuncName) const {
+  return BBSPR.isFunctionHot(FuncName);
+}
+
+std::pair<bool, SmallVector<BBClusterInfo>>
+BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getClusterInfoForFunction(FuncName);
+}
+
+SmallVector<SmallVector<unsigned>>
+BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getClonePathsForFunction(FuncName);
+}
+
+BasicBlockSectionsProfileReader &
+BasicBlockSectionsProfileReaderWrapperPass::getBBSPR() {
+  return BBSPR;
+}
+
+ImmutablePass *llvm::createBasicBlockSectionsProfileReaderWrapperPass(
+    const MemoryBuffer *Buf) {
+  return new BasicBlockSectionsProfileReaderWrapperPass(Buf);
 }

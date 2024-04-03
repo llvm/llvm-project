@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zkne -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zkne < %s \
-# RUN:     | llvm-objdump --mattr=+zkne -d -r - \
+# RUN:     | llvm-objdump --mattr=+zkne --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: aes64es a0, a1, a2

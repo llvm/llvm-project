@@ -9,8 +9,7 @@ define i1 @test_mul_const_nuw_unsigned_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_MUL_4:%.*]] = mul nuw i8 [[START:%.*]], 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_MUL_4]], [[HIGH:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -28,8 +27,7 @@ define i1 @test_mul_const_nuw_unsigned_2(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_MUL_4]], [[HIGH:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_MUL_2:%.*]] = mul nuw i8 [[START]], 2
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i8 [[START_MUL_2]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -163,8 +161,7 @@ define i1 @test_mul_const_nuw_unsigned_8(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[START_ADD_2_1:%.*]] = add nuw i8 [[START_ADD_2]], 1
 ; CHECK-NEXT:    [[START_MUL_3:%.*]] = mul nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i8 [[START_ADD_1]], [[START_MUL_3]]
-; CHECK-NEXT:    ret i1 [[T_5]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -191,8 +188,7 @@ define i1 @test_mul_const_nuw_unsigned_9(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[START_ADD_2_1:%.*]] = add nuw i8 [[START_ADD_2]], 1
 ; CHECK-NEXT:    [[START_MUL_3:%.*]] = mul nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_5:%.*]] = icmp ult i8 [[START_ADD_2]], [[START_MUL_3]]
-; CHECK-NEXT:    ret i1 [[F_5]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -371,8 +367,7 @@ define i1 @test_mul_add_const_nuw_unsigned_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_MUL_4:%.*]] = mul nuw i8 [[ADD]], 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_MUL_4]], [[HIGH:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nuw i8 %start, 3
@@ -392,8 +387,7 @@ define i1 @test_mul_add_const_nuw_unsigned_2(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START_MUL_4]], [[HIGH:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_MUL_2:%.*]] = mul nuw i8 [[START]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[START_MUL_2]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[T_2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nuw i8 %start, 3

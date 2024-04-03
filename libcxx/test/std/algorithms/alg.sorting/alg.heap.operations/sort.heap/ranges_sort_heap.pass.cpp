@@ -238,6 +238,7 @@ void test_complexity() {
     const int debug_elements = std::min(100, n);
     // Multiplier 2 because of comp(a,b) comp(b, a) checks.
     const int debug_comparisons = 2 * (debug_elements + 1) * debug_elements;
+    (void)debug_comparisons;
     std::shuffle(first, last, g);
     std::make_heap(first, last, &MyInt::Comp);
     // The exact stats of our current implementation are recorded here.
@@ -247,7 +248,6 @@ void test_complexity() {
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
 #if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     LIBCPP_ASSERT(stats.compared <= n * logn);
-    (void)debug_comparisons;
 #else
     LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
 #endif

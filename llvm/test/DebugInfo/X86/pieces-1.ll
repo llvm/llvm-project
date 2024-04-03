@@ -1,4 +1,5 @@
 ; RUN: llc -O0 %s -filetype=obj -o - | llvm-dwarfdump -debug-loc - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 %s -filetype=obj -o - | llvm-dwarfdump -debug-loc - | FileCheck %s
 ;
 ; rdar://problem/15928306
 ;

@@ -12,127 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-//===----------------------------------------------------------------------===//
-// FPStack specific DAG Nodes.
-//===----------------------------------------------------------------------===//
-
-def SDTX86Fld       : SDTypeProfile<1, 1, [SDTCisFP<0>,
-                                           SDTCisPtrTy<1>]>;
-def SDTX86Fst       : SDTypeProfile<0, 2, [SDTCisFP<0>,
-                                           SDTCisPtrTy<1>]>;
-def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
-def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
-
-def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-def SDTX86FPEnv     : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-
-def X86fp80_add     : SDNode<"X86ISD::FP80_ADD", SDTFPBinOp, [SDNPCommutative]>;
-def X86strict_fp80_add : SDNode<"X86ISD::STRICT_FP80_ADD", SDTFPBinOp,
-                        [SDNPHasChain,SDNPCommutative]>;
-def any_X86fp80_add : PatFrags<(ops node:$lhs, node:$rhs),
-                               [(X86strict_fp80_add node:$lhs, node:$rhs),
-                                (X86fp80_add node:$lhs, node:$rhs)]>;
-
-def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
-                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def X86fst          : SDNode<"X86ISD::FST", SDTX86Fst,
-                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fild         : SDNode<"X86ISD::FILD", SDTX86Fild,
-                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def X86fist         : SDNode<"X86ISD::FIST", SDTX86Fist,
-                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
-                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
-                             [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
-                              SDNPMemOperand]>;
-def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
-                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
-                              SDNPMemOperand]>;
-def X86fpenv_get    : SDNode<"X86ISD::FNSTENVm",           SDTX86FPEnv,
-                             [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
-                              SDNPMemOperand]>;
-def X86fpenv_set    : SDNode<"X86ISD::FLDENVm",            SDTX86FPEnv,
-                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
-                              SDNPMemOperand]>;
-
-def X86fstf32 : PatFrag<(ops node:$val, node:$ptr),
-                        (X86fst node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f32;
-}]>;
-def X86fstf64 : PatFrag<(ops node:$val, node:$ptr),
-                        (X86fst node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f64;
-}]>;
-def X86fstf80 : PatFrag<(ops node:$val, node:$ptr),
-                        (X86fst node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
-}]>;
-
-def X86fldf32 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f32;
-}]>;
-def X86fldf64 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f64;
-}]>;
-def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
-}]>;
-
-def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
-
-def X86fist32 : PatFrag<(ops node:$val, node:$ptr),
-                        (X86fist node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-
-def X86fist64 : PatFrag<(ops node:$val, node:$ptr),
-                        (X86fist node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
-
-def X86fp_to_i16mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fp_to_i32mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fp_to_i64mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
-
-//===----------------------------------------------------------------------===//
-// FPStack pattern fragments
-//===----------------------------------------------------------------------===//
-
-def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
-}]>;
-
-def fpimmneg0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-0.0);
-}]>;
-
-def fpimm1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
-}]>;
-
-def fpimmneg1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-1.0);
-}]>;
-
 // Some 'special' instructions - expanded after instruction selection.
 // Clobbers EFLAGS due to OR instruction used internally.
 // FIXME: Can we model this in SelectionDAG?
@@ -645,7 +524,7 @@ def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RSTi:$op), "fxch\t$op">;
 }
 
 // Floating point constant loads.
-let SchedRW = [WriteZero], Uses = [FPCW] in {
+let SchedRW = [WriteZero], Uses = [FPCW], isReMaterializable = 1 in {
 def LD_Fp032 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
                 [(set RFP32:$dst, fpimm0)]>;
 def LD_Fp132 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
@@ -787,20 +666,20 @@ def FCOMPP : I<0xDE, MRM_D9, (outs), (ins), "fcompp", []>;
 
 let Uses = [FPSW, FPCW] in {
 def FXSAVE : I<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
-             "fxsave\t$dst", [(int_x86_fxsave addr:$dst)]>, PS,
+             "fxsave\t$dst", [(int_x86_fxsave addr:$dst)]>, TB,
              Requires<[HasFXSR]>;
 def FXSAVE64 : RI<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
                "fxsave64\t$dst", [(int_x86_fxsave64 addr:$dst)]>,
-               PS, Requires<[HasFXSR, In64BitMode]>;
+               TB, Requires<[HasFXSR, In64BitMode]>;
 } // Uses = [FPSW, FPCW]
 
 let Defs = [FPSW, FPCW] in {
 def FXRSTOR : I<0xAE, MRM1m, (outs), (ins opaquemem:$src),
               "fxrstor\t$src", [(int_x86_fxrstor addr:$src)]>,
-              PS, Requires<[HasFXSR]>;
+              TB, Requires<[HasFXSR]>;
 def FXRSTOR64 : RI<0xAE, MRM1m, (outs), (ins opaquemem:$src),
                 "fxrstor64\t$src", [(int_x86_fxrstor64 addr:$src)]>,
-                PS, Requires<[HasFXSR, In64BitMode]>;
+                TB, Requires<[HasFXSR, In64BitMode]>;
 } // Defs = [FPSW, FPCW]
 } // SchedRW
 

@@ -1,5 +1,5 @@
 ; REQUIRES: aarch64-registered-target
-; RUN: opt -codegenprepare  < %s  -mtriple=aarch64-none-linux-gnu -S  | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)'  < %s  -mtriple=aarch64-none-linux-gnu -S  | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

@@ -14,6 +14,7 @@
 #ifndef MLIR_IR_AFFINEEXPR_H
 #define MLIR_IR_AFFINEEXPR_H
 
+#include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
@@ -123,8 +124,13 @@ public:
   /// Return true if the affine expression involves AffineSymbolExpr `position`.
   bool isFunctionOfSymbol(unsigned position) const;
 
-  /// Walk all of the AffineExpr's in this expression in postorder.
-  void walk(std::function<void(AffineExpr)> callback) const;
+  /// Walk all of the AffineExpr's in this expression in postorder. This allows
+  /// a lambda walk function that can either return `void` or a WalkResult. With
+  /// a WalkResult, interrupting is supported.
+  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  RetT walk(FnT &&callback) const {
+    return walk<RetT>(*this, callback);
+  }
 
   /// This method substitutes any uses of dimensions and symbols (e.g.
   /// dim#0 with dimReplacements[0]) and returns the modified expression tree.
@@ -202,6 +208,15 @@ public:
 
 protected:
   ImplType *expr{nullptr};
+
+private:
+  /// A trampoline for the templated non-static AffineExpr::walk method to
+  /// dispatch lambda `callback`'s of either a void result type or a
+  /// WalkResult type. Walk all of the AffineExprs in `e` in postorder. Users
+  /// should use the regular (non-static) `walk` method.
+  template <typename WalkRetTy>
+  static WalkRetTy walk(AffineExpr e,
+                        function_ref<WalkRetTy(AffineExpr)> callback);
 };
 
 /// Affine binary operation expression. An affine binary operation could be an

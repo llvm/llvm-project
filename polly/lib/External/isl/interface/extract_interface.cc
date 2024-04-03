@@ -47,8 +47,8 @@
 #endif
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/CommandLine.h>
-#include <llvm/Support/Host.h>
 #include <llvm/Support/ManagedStatic.h>
+#include <llvm/TargetParser/Host.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/ASTConsumer.h>
 #include <clang/Basic/Builtins.h>

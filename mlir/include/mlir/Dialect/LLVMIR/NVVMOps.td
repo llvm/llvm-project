@@ -59,6 +59,19 @@ def NVVM_Dialect : Dialect {
     /// Get the name of the attribute used to annotate max number of
     /// registers that can be allocated per thread.
     static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
+
+    /// Get the name of the attribute used to annotate kernel arguments that
+    /// are grid constants.
+    static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
+
+    /// Verify an attribute from this dialect on the argument at 'argIndex' for
+    /// the region at 'regionIndex' on the given operation. Returns failure if
+    /// the verification failed, success otherwise. This hook may optionally be
+    /// invoked from any operation containing a region.
+    LogicalResult verifyRegionArgAttribute(Operation *op,
+                                           unsigned regionIndex,
+                                           unsigned argIndex,
+                                           NamedAttribute argAttr) override;
   }];
 
   let useDefaultAttributePrinterParser = 1;
@@ -155,6 +168,11 @@ def NVVM_GridInClusterDimZOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.nct
 // CTA index and across Cluster dimensions
 def NVVM_ClusterId : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.ctarank">;
 def NVVM_ClusterDim : NVVM_SpecialRegisterOp<"read.ptx.sreg.cluster.nctarank">;
+
+//===----------------------------------------------------------------------===//
+// Clock registers
+def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
+def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
 
 //===----------------------------------------------------------------------===//
 // NVVM approximate op definitions
@@ -372,23 +390,121 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+}
+
+def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+{
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+
+  let description = [{
+    Thread that executes this op announces their arrival at the barrier with 
+    given id and continue their execution.
+
+    The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
+    `barrierId` is not present, the default barrier id is used. 
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+  
+  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "bar.arrive ";
+      if (getBarrierId()) { ptx += "%0, %1'"; } 
+      else { ptx += "0, %0;"; }
+      return ptx;
+    }
+  }];
+}
+
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
+  string llvmBuilder = [{
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Relaxed Arrive Op";
+  let description = [{
+    The `cluster.arrive` can be used by the threads within the cluster for synchronization and
+    communication. The `cluster.arrive` instruction marks the warps' arrival at the barrier
+    without causing the executing thread to wait for other participating threads.
+
+    The `aligned` attribute, when provided, generates the .aligned version of the PTX instruction.
+    The .relaxed qualifier on `cluster.arrive` specifies that there are no memory
+    ordering and visibility guarantees provided for the memory accesses performed prior to
+    `cluster.arrive`.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
   }];
   let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait"> {
+  let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
+
+  let summary = "Cluster Barrier Wait Op";
+  let description = [{
+    The `cluster.wait` causes the executing thread to wait for all non-exited threads
+    of the cluster to perform `cluster.arrive`. The `aligned` attribute, when provided,
+    generates the .aligned version of the PTX instruction.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-barrier-cluster)
+  }];
+
   string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
+      if ($aligned)
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait_aligned);
+      else
+        createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
   }];
   let assemblyFormat = "attr-dict";
 }
@@ -398,6 +514,93 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_sc_cluster);
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
+def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
+def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
+  [SharedSpaceCTA, SharedSpaceCluster]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SharedSpaceAttr : EnumAttr<NVVM_Dialect, SharedSpace, "shared_space"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
+def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
+def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
+def ProxyAsyncShared   : I32EnumAttrCase<"async_shared", 3, "async.shared">;
+def ProxyKind : I32EnumAttr<"ProxyKind", "Proxy kind",
+  [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
+  Arguments<(ins ProxyKindAttr:$kind,
+                 OptionalAttr<SharedSpaceAttr>:$space)> {
+  let description = [{
+    Fence operation with proxy to establish an ordering between memory accesses
+    that may happen through different proxies.
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+  
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "fence.proxy.";
+      ptx += stringifyProxyKind(getKind());
+      if(getKind() == NVVM::ProxyKind::async_shared)
+        { ptx += "::"; ptx += stringifySharedSpace(getSpace().value()); }
+      ptx += ";";
+      return ptx;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
+def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
+def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
+def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
+  [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
+
+def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
+  let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
+  let assemblyFormat = "$action $regCount attr-dict";
+  let hasVerifier = 1;
+  string llvmBuilder = [{
+    auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
+      llvm::Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32 :
+      llvm::Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32;
+
+    createIntrinsicCall(builder, intId, builder.getInt32($regCount));
+  }];
+}
+
+def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
+  let arguments = (ins );
+    let description = [{
+    Fence operation that applies on the prior nvvm.mbarrier.init
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+  
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{        
+    std::string $cppClass::getPtx() {
+      return std::string("fence.mbarrier_init.release.cluster;");
+    }
+  }];
 }
 
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
@@ -568,6 +771,55 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
           $n));
   }];
   let assemblyFormat = "$n attr-dict";
+}
+
+def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
+  let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
+  let description = [{
+    The `cp.async.mbarrier.arrive` Op makes the mbarrier object track
+    all prior cp.async operations initiated by the executing thread.
+    The `addr` operand specifies the address of the mbarrier object
+    in generic address space. The `noinc` attr impacts how the
+    mbarrier's state is updated.
+    [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let arguments = (ins
+    LLVM_AnyPointer:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
+
+  string llvmBuilder = [{
+    auto intId = $noinc ?
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc :
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
+
+    createIntrinsicCall(builder, intId, {$addr});
+  }];
+}
+
+def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared"> {
+  let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive.shared";
+  let description = [{
+    The `cp.async.mbarrier.arrive.shared` Op makes the mbarrier object
+    track all prior cp.async operations initiated by the executing thread.
+    The `addr` operand specifies the address of the mbarrier object in
+    shared memory. The `noinc` attr impacts how the mbarrier's state
+    is updated. [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let arguments = (ins
+    LLVM_PointerShared:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
+
+  string llvmBuilder = [{
+    auto intId = $noinc ?
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared :
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared;
+
+    createIntrinsicCall(builder, intId, {$addr});
+  }];
 }
 
 /// Helpers to instantiate different version of wmma intrinsics.
@@ -1204,8 +1456,8 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
       ptx += ".x" + std::to_string(d);
       if (getLayout() == NVVM::MMALayout::col)
         ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1}";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2}";
+      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
+      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
       if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
       return ptx;
     }
@@ -1398,35 +1650,128 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
 
+def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
+  Arguments<(ins )> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    This Op commits all prior initiated but uncommitted cp.async.bulk
+    instructions into a cp.async.bulk-group.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-commit-group)
+  }];
+
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_cp_async_bulk_commit_group);
+  }];
+}
+
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group">,
+  Arguments<(ins 
+    ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
+    OptionalAttr<UnitAttr>:$read)> {
+  let assemblyFormat = "$group attr-dict";
+  let description = [{
+    Op waits for completion of the most recent bulk async-groups.
+
+    The `$group` operand tells waiting has to be done until for $group or fewer
+    of the most recent bulk async-groups. If `$group` is 0, the op wait until 
+    all the most recent bulk async-groups have completed.
+
+    The `$read` indicates that the waiting has to be done until all the bulk 
+    async operations in the specified bulk async-group have completed reading 
+    from their source locations.
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-wait-group)
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getRead() ?
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group_read :
+      llvm::Intrinsic::nvvm_cp_async_bulk_wait_group;
+    createIntrinsicCall(builder, intId, builder.getInt32($group));
+  }];
+}
+
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments]>,
   Arguments<(ins  LLVM_PointerShared:$dstMem,
                   LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_PointerShared:$mbar,
                   Variadic<I32>:$coordinates,
+                  LLVM_PointerShared:$mbar,                  
+                  Variadic<I16>:$im2colOffsets,
+                  Optional<I16>:$multicastMask,
+                  Optional<I64>:$l2CacheHint,
                   PtxPredicate:$predicate)> {
+  let description = [{
+    Initiates an asynchronous copy operation on the tensor data from global 
+    memory to shared memory. 
+
+    The Op operates has two load modes:
+    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor 
+    layout is preserved at the destination. 
+
+    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
+    the elements in the Bounding Box of the source tensor are rearranged into
+    columns at the destination. In this mode, the tensor has to be at least 
+    3-dimensional. 
+
+    The `multicastMask` operand is optional. When it is present, the Op copies
+    data from global memory to shared memory of multiple CTAs in the cluster.
+    Operand `multicastMask` specifies the destination CTAs in the cluster such 
+    that each bit position in the 16-bit `multicastMask` operand corresponds to
+    the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.     
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache 
+    eviction policy that may be used during the memory access.
+    
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+  }];
+
   let assemblyFormat = [{ 
     $dstMem `,` 
     $tmaDescriptor `,` 
     $mbar `,` 
     `box` `[`$coordinates `]` 
-    (`,` `predicate` `=` $predicate^)? 
-    attr-dict  `:` type(operands)
+    (`im2col` `[` $im2colOffsets^ `]` )?
+    (`multicast_mask` `=` $multicastMask^ )?
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    (`predicate` `=` $predicate^)? 
+    attr-dict  `:` type($dstMem) `,` type($tmaDescriptor)
   }];
 
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
+      int im2colDim = getIm2colOffsets().size();
       int dim = getCoordinates().size();
       std::string ptx = "cp.async.bulk.tensor.";
       ptx += std::to_string(dim) + "d.";
-      ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";
-      if(dim == 1) ptx += " [%0], [%1, {%3} ], [%2];";
-      if(dim == 2) ptx += " [%0], [%1, {%3, %4} ], [%2];";
-      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5} ], [%2];";
-      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6} ], [%2];";
-      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7} ], [%2];";
+      ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";      
+      if(im2colDim) ptx += ".im2col";
+      if(getMulticastMask()) ptx += ".multicast::cluster";      
+      if(getL2CacheHint()) ptx += ".L2::cache_hint";
+      
+      auto preg = [](int r) { return "%" + std::to_string(r); };
+
+      // Build Registers
+      ptx += " [%0], [%1, {";
+      int r = 2;      
+      for(int i = 0; i < dim; i++) ptx += preg(r+i) + ",";
+      ptx.pop_back(); r += dim;
+      ptx += "} ], [%" + std::to_string(r++) + "]";
+      if(im2colDim) {
+        ptx += ",{";
+        for(int i = 0; i < im2colDim; i++) ptx += preg(r+i) + ",";
+        ptx.pop_back(); r += im2colDim;
+        ptx += "}";
+      }
+      if(getMulticastMask()) ptx += ", " + preg(r++);
+      if(getL2CacheHint()) ptx += ", " + preg(r++);
+      ptx += ";";
       return ptx;
     }
   }];
@@ -1553,11 +1898,14 @@ def WGMMATypeB1 : I32EnumAttrCase<"b1", 4>;
 def WGMMATypeBF16 : I32EnumAttrCase<"bf16", 5>;
 def WGMMATypeF8E4M3 : I32EnumAttrCase<"e4m3", 6>;
 def WGMMATypeF8E5M2 : I32EnumAttrCase<"e5m2", 7>;
+def WGMMATypeF32 : I32EnumAttrCase<"f32", 8>;
+def WGMMATypeS32 : I32EnumAttrCase<"s32", 9>;
+
 def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
   [WGMMATypeF16, WGMMATypeTF32,
     WGMMATypeU8, WGMMATypeS8,
     WGMMATypeB1, WGMMATypeBF16, WGMMATypeF8E4M3, 
-    WGMMATypeF8E5M2]> {
+    WGMMATypeF8E5M2, WGMMATypeF32, WGMMATypeS32]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -1579,6 +1927,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     NVVM_MMAShapeAttr:$shape,
     WGMMATypesAttr:$typeA,
     WGMMATypesAttr:$typeB,
+    WGMMATypesAttr:$typeD,
     WGMMAScaleOutAttr:$scaleD,
     WGMMAScaleInAttr:$scaleA,
     WGMMAScaleInAttr:$scaleB, 
@@ -1588,8 +1937,8 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
   );  
   
    let assemblyFormat = [{ 
-      $descriptorA `,` $descriptorB `,` $shape `,` 
-      `D` `[` $inouts `,` $scaleD (`,` $satfinite^)? `]` `,`
+      $descriptorA `,` $descriptorB `,` $inouts `,` $shape `,`
+      `D` `[` $typeD `,` $scaleD (`,` $satfinite^)? `]` `,`
       `A` `[` $typeA `,` $scaleA `,` $layoutA `]` `,` 
       `B` `[` $typeB `,` $scaleB `,` $layoutB `]`
       attr-dict `:` 

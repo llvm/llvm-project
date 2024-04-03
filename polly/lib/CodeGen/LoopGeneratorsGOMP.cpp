@@ -30,8 +30,8 @@ void ParallelLoopGeneratorGOMP::createCallSpawnThreads(Value *SubFn,
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
     Type *Params[] = {PointerType::getUnqual(FunctionType::get(
-                          Builder.getVoidTy(), Builder.getInt8PtrTy(), false)),
-                      Builder.getInt8PtrTy(),
+                          Builder.getVoidTy(), Builder.getPtrTy(), false)),
+                      Builder.getPtrTy(),
                       Builder.getInt32Ty(),
                       LongType,
                       LongType,
@@ -61,7 +61,7 @@ void ParallelLoopGeneratorGOMP::deployParallelExecution(Function *SubFn,
 
 Function *ParallelLoopGeneratorGOMP::prepareSubFnDefinition(Function *F) const {
   FunctionType *FT =
-      FunctionType::get(Builder.getVoidTy(), {Builder.getInt8PtrTy()}, false);
+      FunctionType::get(Builder.getVoidTy(), {Builder.getPtrTy()}, false);
   Function *SubFn = Function::Create(FT, Function::InternalLinkage,
                                      F->getName() + "_polly_subfn", M);
   // Name the function's arguments

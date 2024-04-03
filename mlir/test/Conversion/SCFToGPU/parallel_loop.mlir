@@ -232,9 +232,9 @@ module {
         %19 = memref.load %16[%arg5, %arg6] : memref<?x?xf32, strided<[?, ?], offset: ?>>
         %20 = arith.addf %17, %18 : f32
         memref.store %20, %16[%arg5, %arg6] : memref<?x?xf32, strided<[?, ?], offset: ?>>
-        scf.yield
+        scf.reduce
       } {mapping = [#gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = thread_x>, #gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = thread_y>]}
-      scf.yield
+      scf.reduce
     } {mapping = [#gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = block_x>, #gpu.loop_dim_map<bound = (d0) -> (d0), map = (d0) -> (d0), processor = block_y>]}
     return
   }
@@ -384,3 +384,47 @@ func.func @parallel_no_annotations(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // CHECK-LABEL: @parallel_no_annotations
 // CHECK: scf.parallel
+
+// -----
+
+// CHECK-LABEL: @step_invariant
+func.func @step_invariant() {
+  %alloc = memref.alloc() : memref<1x1xf64>
+  %alloc_0 = memref.alloc() : memref<1x1xf64>
+  %alloc_1 = memref.alloc() : memref<1x1xf64>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c1_2 = arith.constant 1 : index
+  scf.parallel (%arg0) = (%c0) to (%c1) step (%c1_2) {
+    %c0_3 = arith.constant 0 : index
+    %c1_4 = arith.constant 1 : index
+    %c1_5 = arith.constant 1 : index
+    scf.parallel (%arg1) = (%c0_3) to (%c1_4) step (%c1_5) {
+      %0 = memref.load %alloc_1[%arg0, %arg1] : memref<1x1xf64>
+      %1 = memref.load %alloc_0[%arg0, %arg1] : memref<1x1xf64>
+      %2 = arith.addf %0, %1 : f64
+      memref.store %2, %alloc[%arg0, %arg1] : memref<1x1xf64>
+      scf.reduce
+    } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+    scf.reduce
+  } {mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+  memref.dealloc %alloc_1 : memref<1x1xf64>
+  memref.dealloc %alloc_0 : memref<1x1xf64>
+  memref.dealloc %alloc : memref<1x1xf64>
+  return
+}
+
+// CHECK: %[[alloc_0:.*]] = memref.alloc() : memref<1x1xf64>
+// CHECK: %[[alloc_1:.*]] = memref.alloc() : memref<1x1xf64>
+// CHECK: %[[alloc_2:.*]] = memref.alloc() : memref<1x1xf64>
+// CHECK: %[[map_0:.*]] = affine.apply #map({{.*}})[{{.*}}, {{.*}}]
+// CHECK: %[[map_1:.*]] = affine.apply #map({{.*}})[{{.*}}, {{.*}}]
+// CHECK: gpu.launch
+// CHECK-SAME: blocks(%[[arg_0:.*]], %{{[^)]*}}, %{{[^)]*}}) in (%{{[^)]*}} = %[[map_0]], %{{[^)]*}} = %{{[^)]*}}, %{{[^)]*}} = %{{[^)]*}})
+// CHECK-SAME: threads(%[[arg_3:.*]], %{{[^)]*}}, %{{[^)]*}}) in (%{{[^)]*}} = %[[map_1]], %{{[^)]*}} = %{{[^)]*}}, %{{[^)]*}} = %{{[^)]*}})
+// CHECK: %[[dim0:.*]] = affine.apply #map1(%[[arg_0]])[{{.*}}, {{.*}}]
+// CHECK: %[[dim1:.*]] = affine.apply #map1(%[[arg_3]])[{{.*}}, {{.*}}]
+// CHECK: %[[lhs:.*]] = memref.load %[[alloc_2]][%[[dim0]], %[[dim1]]] : memref<1x1xf64>
+// CHECK: %[[rhs:.*]] = memref.load %[[alloc_1]][%[[dim0]], %[[dim1]]] : memref<1x1xf64>
+// CHECK: %[[sum:.*]] = arith.addf %[[lhs]], %[[rhs]] : f64
+// CHECK: memref.store %[[sum]], %[[alloc_0]][%[[dim0]], %[[dim1]]] : memref<1x1xf64>

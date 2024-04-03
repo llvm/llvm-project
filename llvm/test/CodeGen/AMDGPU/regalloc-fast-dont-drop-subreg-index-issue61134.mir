@@ -19,14 +19,14 @@ body:             |
     ; CHECK-LABEL: name: func
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef %0.sub0:vreg_64 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: undef %2.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: undef %0.sub0:vreg_64, renamable $sgpr0_sgpr1 = V_ADD_CO_U32_e64 1, %0.sub0, 0, implicit $exec
-    ; CHECK-NEXT: undef %2.sub1:vreg_64, dead renamable $sgpr0_sgpr1 = V_ADDC_U32_e64 0, %2.sub1, killed $sgpr0_sgpr1, 0, implicit $exec
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec
+    ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_64 = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: undef [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: undef [[COPY]].sub0:vreg_64, renamable $sgpr0_sgpr1 = V_ADD_CO_U32_e64 1, [[COPY]].sub0, 0, implicit $exec
+    ; CHECK-NEXT: undef [[V_MOV_B32_e32_]].sub1:vreg_64, dead renamable $sgpr0_sgpr1 = V_ADDC_U32_e64 0, [[V_MOV_B32_e32_]].sub1, killed $sgpr0_sgpr1, 0, implicit $exec
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY1]], 0, 0, implicit $exec
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 [[GLOBAL_LOAD_DWORDX2_]].sub0, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %0, implicit %2, implicit $vgpr0
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[V_MOV_B32_e32_]], implicit $vgpr0
     undef %0.sub0:vreg_64 = COPY $vgpr0
     %2:vreg_64 = COPY $vgpr1_vgpr2
     undef %1.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec

@@ -488,7 +488,7 @@ define double @ogt_no_zero(double %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
 ; CHECK-NEXT:    andpd %xmm2, %xmm0
 ; CHECK-NEXT:    andnpd %xmm1, %xmm2

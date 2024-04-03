@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
-#define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
+#ifndef FORTRAN_FRONTEND_CODEGENOPTIONS_H
+#define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -70,6 +70,9 @@ public:
   /// The format used for serializing remarks (default: YAML)
   std::string OptRecordFormat;
 
+  /// Options to add to the linker for the object file
+  std::vector<std::string> DependentLibs;
+
   // The RemarkKind enum class and OptRemark struct are identical to what Clang
   // has
   // TODO: Share with clang instead of re-implementing here
@@ -81,6 +84,10 @@ public:
                     // -Rno-pass-missed, -Rno-pass-analysis.
     RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
+
+  /// \brief Code object version for AMDGPU.
+  llvm::CodeObjectVersionKind CodeObjectVersion =
+      llvm::CodeObjectVersionKind::COV_5;
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
@@ -134,4 +141,4 @@ public:
 
 } // end namespace Fortran::frontend
 
-#endif
+#endif // FORTRAN_FRONTEND_CODEGENOPTIONS_H

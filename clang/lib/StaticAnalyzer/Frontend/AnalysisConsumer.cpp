@@ -308,7 +308,7 @@ public:
 
   bool VisitFunctionDecl(FunctionDecl *FD) {
     IdentifierInfo *II = FD->getIdentifier();
-    if (II && II->getName().startswith("__inline"))
+    if (II && II->getName().starts_with("__inline"))
       return true;
 
     // We skip function template definitions, as their semantics is
@@ -527,7 +527,8 @@ static void reportAnalyzerFunctionMisuse(const AnalyzerOptions &Opts,
 
 void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   BugReporter BR(*Mgr);
-  TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  const TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  BR.setAnalysisEntryPoint(TU);
   if (SyntaxCheckTimer)
     SyntaxCheckTimer->startTimer();
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
@@ -675,6 +676,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   DisplayFunction(D, Mode, IMode);
   BugReporter BR(*Mgr);
+  BR.setAnalysisEntryPoint(D);
 
   if (Mode & AM_Syntax) {
     llvm::TimeRecord CheckerStartTime;

@@ -4,11 +4,11 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-none-linux-gnu"
 
-  @addr = dso_local global i8* null
+  @addr = dso_local global ptr null
 
   define dso_local void @test_blockaddress() {
-    store i8* blockaddress(@test_blockaddress, %block), i8** @addr
-    indirectbr i8* blockaddress(@test_blockaddress, %block), [label %block]
+    store ptr blockaddress(@test_blockaddress, %block), ptr @addr
+    indirectbr ptr blockaddress(@test_blockaddress, %block), [label %block]
 
   block:                                            ; preds = %0
     ret void

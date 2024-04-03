@@ -24,14 +24,17 @@ void test(From value) {
   auto store = std::make_format_args<Context>(value);
   const std::basic_format_args<Context> format_args{store};
 
-  std::visit_format_arg(
-      [v = To(value)](auto a) {
-        if constexpr (std::is_same_v<To, decltype(a)>)
-          assert(v == a);
-        else
-          assert(false);
-      },
-      format_args.get(0));
+  auto visitor = [v = To(value)](auto a) {
+    if constexpr (std::is_same_v<To, decltype(a)>)
+      assert(v == a);
+    else
+      assert(false);
+  };
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+  format_args.get(0).visit(visitor);
+#else
+  std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 // Some types, as an extension, are stored in the variant. The Standard
@@ -41,9 +44,12 @@ void test_handle(T value) {
   auto store = std::make_format_args<Context>(value);
   std::basic_format_args<Context> format_args{store};
 
-  std::visit_format_arg(
-      [](auto a) { assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>)); },
-      format_args.get(0));
+  auto visitor = [](auto a) { assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>)); };
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+  format_args.get(0).visit(visitor);
+#else
+  std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 // Test specific for string and string_view.
@@ -58,14 +64,18 @@ void test_string_view(From value) {
   using CharT = typename Context::char_type;
   using To = std::basic_string_view<CharT>;
   using V = std::basic_string<CharT>;
-  std::visit_format_arg(
-      [v = V(value.begin(), value.end())](auto a) {
-        if constexpr (std::is_same_v<To, decltype(a)>)
-          assert(v == a);
-        else
-          assert(false);
-      },
-      format_args.get(0));
+
+  auto visitor = [v = V(value.begin(), value.end())](auto a) {
+    if constexpr (std::is_same_v<To, decltype(a)>)
+      assert(v == a);
+    else
+      assert(false);
+  };
+#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
+  format_args.get(0).visit(visitor);
+#else
+  std::visit_format_arg(visitor, format_args.get(0));
+#endif
 }
 
 template <class CharT>

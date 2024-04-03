@@ -399,8 +399,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    # xmm8 = mem[0,0]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -458,8 +457,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; XOP-NEXT:    # xmm8 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -571,8 +569,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpsrlq $1, %xmm3, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    # xmm8 = mem[0,0]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; AVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmuludq %xmm4, %xmm1, %xmm1
@@ -634,8 +631,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; XOP-NEXT:    # xmm8 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -745,8 +741,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    # xmm8 = mem[0,0]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -806,8 +801,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(ptr %a1_addr, <4 x i64> %a2) nounwin
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; XOP-NEXT:    # xmm8 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -917,8 +911,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    # xmm8 = mem[0,0]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -978,8 +971,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, ptr %a2_addr) nounwin
 ; XOP-NEXT:    vpsrlq $1, %xmm2, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; XOP-NEXT:    # xmm8 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -1090,8 +1082,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; AVX1-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; AVX1-NEXT:    # xmm8 = mem[0,0]
+; AVX1-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; AVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlq $32, %xmm5, %xmm9
@@ -1153,8 +1144,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind
 ; XOP-NEXT:    vpsrlq $1, %xmm1, %xmm6
 ; XOP-NEXT:    vpsrlq $1, %xmm0, %xmm7
 ; XOP-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; XOP-NEXT:    vmovddup {{.*#+}} xmm8 = [1,1]
-; XOP-NEXT:    # xmm8 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm8 = [1,1]
 ; XOP-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
 ; XOP-NEXT:    vpsrlq $32, %xmm5, %xmm9

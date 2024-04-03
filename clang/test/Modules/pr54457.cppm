@@ -9,6 +9,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/C.cppm -emit-module-interface -o %t/C.pcm
 // RUN: %clang_cc1 -std=c++20 %t/UseC.cppm -fprebuilt-module-path=%t -verify -S -o -
 
+// RUN: %clang_cc1 -std=c++20 %t/C.cppm -emit-reduced-module-interface -o %t/C.pcm
+// RUN: %clang_cc1 -std=c++20 %t/UseC.cppm -fprebuilt-module-path=%t -verify -S -o -
+
 //--- A.cppm
 // expected-no-diagnostics
 export module A;

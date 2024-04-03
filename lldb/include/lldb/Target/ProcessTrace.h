@@ -27,7 +27,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
-  ProcessTrace(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+  ProcessTrace(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+               const FileSpec &core_file);
 
   ~ProcessTrace() override;
 

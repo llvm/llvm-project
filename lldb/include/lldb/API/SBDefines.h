@@ -99,6 +99,7 @@ class LLDB_API SBReproducer;
 class LLDB_API SBScriptObject;
 class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
+class LLDB_API SBStatisticsOptions;
 class LLDB_API SBStream;
 class LLDB_API SBStringList;
 class LLDB_API SBStructuredData;
@@ -128,6 +129,7 @@ class LLDB_API SBValue;
 class LLDB_API SBValueList;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
+class LLDB_API SBWatchpointOptions;
 class LLDB_API SBUnixSignals;
 
 typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,

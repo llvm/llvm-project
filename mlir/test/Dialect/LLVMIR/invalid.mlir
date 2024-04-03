@@ -1218,6 +1218,44 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
   %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
 }
 
+
+// -----
+
+func.func @experimental_vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
+  // expected-error@+1 {{op failed to verify that all of {vec1, vec2} have same type}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  return
+}
+
+// -----
+
+func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
+  return
+}
+
+// -----
+
+/// result vector type is not scalable.
+
+func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
+  return
+}
+
+// -----
+
+
+/// element type doesn't match.
+
+func.func @experimental_vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+  // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
+  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
+  return
+}
+
 // -----
 
 func.func @invalid_bitcast_ptr_to_i64(%arg : !llvm.ptr) {
@@ -1387,4 +1425,36 @@ llvm.func @foo(%arg: !llvm.ptr) {
   // expected-error@+1 {{type '!llvm.ptr' cannot be indexed (index #1)}}
   %0 = llvm.getelementptr %arg[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
   llvm.return
+}
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
+  return
 }

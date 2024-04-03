@@ -10,7 +10,7 @@ foo:
 	movl	$zed, %eax
 
 
-	.section	.data.bar,"aGw",@progbits,zed,comdat
+	.section	.data.bar,"awG",@progbits,zed,comdat
 bar:
 	.byte	42
 

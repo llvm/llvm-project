@@ -68,7 +68,7 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected single output of linalg op");
     }
 
-    if (!linalgOp.hasTensorSemantics()) {
+    if (!linalgOp.hasPureTensorSemantics()) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "expected tensor of linalg op");
     }

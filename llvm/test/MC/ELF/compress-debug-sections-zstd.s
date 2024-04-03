@@ -10,7 +10,8 @@
 # SEC: .debug_line   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00   C 0 0  8
 # SEC: .debug_abbrev PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00     0 0  1
 # SEC: .debug_info   PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00     0 0  1
-# SEC: .debug_str    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 01 MSC 0 0  8
+## .debug_str is uncompressed becuase sizeof(Elf64_Chdr)+len(compressed) >= len(uncompressed).
+# SEC: .debug_str    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 01 MS  0 0  1
 # SEC: .debug_frame  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 00   C 0 0  8
 
 # CHECK:      Contents of section .debug_line
@@ -22,6 +23,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.uncom
 # RUN: llvm-objcopy --decompress-debug-sections %t %t.decom
 # RUN: cmp %t.uncom %t.decom
+
+## .debug_str is compressed becuase sizeof(Elf32_Chdr)+len(compressed) < len(uncompressed).
+# RUN: llvm-mc -filetype=obj -triple=i386 --defsym I386=1 -compress-debug-sections=zstd --defsym LONG=1 %s -o %t1
+# RUN: llvm-readelf -S %t1 | FileCheck %s --check-prefix=SEC1
+
+# SEC1: .debug_str    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 01 MSC 0 0  4
 
 ## Don't compress a section not named .debug_*.
 	.section .nonalloc,"",@progbits

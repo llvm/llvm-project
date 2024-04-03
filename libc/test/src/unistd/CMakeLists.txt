@@ -159,6 +159,7 @@ add_libc_unittest(
     libc.src.unistd.fsync
     libc.src.unistd.read
     libc.src.unistd.write
+    libc.src.stdio.remove
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -443,3 +444,17 @@ add_libc_test(
     libc.src.stdio.fopencookie
     libc.src.stdio.fflush
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_libc_test(
+    _exit_test
+    UNIT_TEST_ONLY
+    SUITE
+      libc_unistd_unittests
+    SRCS
+      _exit_test.cpp
+    DEPENDS
+      libc.include.unistd
+      libc.src.unistd._exit
+  )
+endif()

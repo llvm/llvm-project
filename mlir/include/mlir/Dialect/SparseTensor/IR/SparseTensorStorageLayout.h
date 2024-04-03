@@ -30,19 +30,22 @@ namespace sparse_tensor {
 ///   ;  if dense:
 ///        <nothing>
 ///   ;  if compressed:
-///        memref<? x pos>  positions   ; positions for level l
-///        memref<? x crd>  coordinates ; coordinates for level l
-///   ;  if loose-compressed:
-///        memref<? x pos>  positions   ; lo/hi position pairs for level l
-///        memref<? x crd>  coordinates ; coordinates for level l
+///        memref<[batch] x ? x pos>  positions   ; positions for level l
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
+///   ;  if loose-[batch] x compressed:
+///        memref<[batch] x ? x pos>  positions   ; lo/hi pos pairs for level l
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
 ///   ;  if singleton/2-out-of-4:
-///        memref<? x crd>  coordinates ; coordinates for level l
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
 ///
-///   memref<? x eltType> values        ; values
+///   memref<[batch] x ? x eltType> values        ; values
 ///
 ///   struct sparse_tensor.storage_specifier {
 ///     array<rank x int> lvlSizes    ; sizes/cardinalities for each level
-///     array<n x int> memSizes;      ; sizes/lengths for each data memref
+///     // TODO: memSizes need to be expanded to array<[batch] x n x int> to
+///     // support different sizes for different batches. At the moment, we
+///     // assume that every batch occupies the same memory size.
+///     array<n x int> memSizes       ; sizes/lengths for each data memref
 ///   }
 /// };
 ///
@@ -126,7 +129,7 @@ public:
   void foreachField(
       llvm::function_ref<bool(
           FieldIndex /*fieldIdx*/, SparseTensorFieldKind /*fieldKind*/,
-          Level /*lvl (if applicable)*/, DimLevelType /*DLT (if applicable)*/)>)
+          Level /*lvl (if applicable)*/, LevelType /*LT (if applicable)*/)>)
       const;
 
   /// Gets the field index for required field.
@@ -165,7 +168,7 @@ inline unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
 inline void foreachFieldInSparseTensor(
     SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>
+                            LevelType)>
         callback) {
   return StorageLayout(enc).foreachField(callback);
 }
@@ -173,7 +176,7 @@ inline void foreachFieldInSparseTensor(
 void foreachFieldAndTypeInSparseTensor(
     SparseTensorType,
     llvm::function_ref<bool(Type, FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>);
+                            LevelType)>);
 
 } // namespace sparse_tensor
 } // namespace mlir

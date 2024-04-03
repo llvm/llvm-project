@@ -618,7 +618,7 @@ extern const char NullPointerContent[PointerSize];
 extern const char PointerJumpStubContent[12];
 
 /// Creates a new pointer block in the given section and returns an
-/// Anonymous symobl pointing to it.
+/// Anonymous symbol pointing to it.
 ///
 /// If InitialTarget is given then an Pointer64 relocation will be added to the
 /// block pointing at InitialTarget.
@@ -646,7 +646,7 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
 inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
-                                 orc::ExecutorAddr(~uint64_t(11)), 1, 0);
+                                 orc::ExecutorAddr(~uint64_t(11)), 4, 0);
   B.addEdge(Page21, 0, PointerSymbol, 0);
   B.addEdge(PageOffset12, 4, PointerSymbol, 0);
   return B;

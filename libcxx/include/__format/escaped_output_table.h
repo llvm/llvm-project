@@ -75,6 +75,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace __escaped_output_table {
+// clang-format off
 
 /// The entries of the characters to escape in format's debug string.
 ///
@@ -109,7 +110,7 @@ namespace __escaped_output_table {
 /// - bits [0, 10] The size of the range, allowing 2048 elements.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[893] = {
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[893] = {
     0x00000020,
     0x0003f821,
     0x00056800,
@@ -1029,6 +1030,7 @@ inline constexpr uint32_t __unallocated_region_lower_bound = 0x000323b0;
   return __code_point <= __upper_bound;
 }
 
+// clang-format on
 } // namespace __escaped_output_table
 
 #endif //_LIBCPP_STD_VER >= 23

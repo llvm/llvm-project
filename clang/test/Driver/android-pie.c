@@ -36,8 +36,6 @@
 
 // RUN: %clang %s -### -o %t.o 2>&1 -no-pie --target=arm-linux-androideabi24 \
 // RUN:   | FileCheck --check-prefix=NO-PIE %s
-// RUN: %clang %s -### -o %t.o 2>&1 -nopie --target=arm-linux-androideabi24 \
-// RUN:   | FileCheck --check-prefix=NO-PIE %s
 // RUN: %clang %s -### -o %t.o 2>&1 -pie -no-pie --target=arm-linux-androideabi24 \
 // RUN:   | FileCheck --check-prefix=NO-PIE %s
 

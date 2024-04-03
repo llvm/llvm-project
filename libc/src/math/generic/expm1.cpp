@@ -22,6 +22,7 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
+#include "src/__support/integer_literals.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
@@ -38,6 +39,8 @@ namespace LIBC_NAMESPACE {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
+
+using LIBC_NAMESPACE::operator""_u128;
 
 // log2(e)
 constexpr double LOG2_E = 0x1.71547652b82fep+0;
@@ -60,6 +63,8 @@ constexpr double MLOG_2_EXP2_M12_HI = -0x1.62e42ffp-13;
 constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
 constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
+
+namespace {
 
 // Polynomial approximations with double precision:
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
@@ -104,16 +109,14 @@ DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 Float128 poly_approx_f128(const Float128 &dx) {
-  using MType = typename Float128::MantissaType;
-
   constexpr Float128 COEFFS_128[]{
-      {false, -127, MType({0, 0x8000000000000000})},                  // 1.0
-      {false, -128, MType({0, 0x8000000000000000})},                  // 0.5
-      {false, -130, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/6
-      {false, -132, MType({0xaaaaaaaaaaaaaaab, 0xaaaaaaaaaaaaaaaa})}, // 1/24
-      {false, -134, MType({0x8888888888888889, 0x8888888888888888})}, // 1/120
-      {false, -137, MType({0x60b60b60b60b60b6, 0xb60b60b60b60b60b})}, // 1/720
-      {false, -140, MType({0x00d00d00d00d00d0, 0xd00d00d00d00d00d})}, // 1/5040
+      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+      {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
+      {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
+      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
+      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
+      {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
+      {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
   Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
@@ -139,7 +142,6 @@ std::ostream &operator<<(std::ostream &OS, const DoubleDouble &r) {
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
 Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
-  using MType = typename Float128::MantissaType;
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
@@ -163,7 +165,8 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
   Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
   int hi = static_cast<int>(kd) >> 12;
-  Float128 minus_one{true, -127 - hi, MType({0, 0x8000000000000000})};
+  Float128 minus_one{Sign::NEG, -127 - hi,
+                     0x80000000'00000000'00000000'00000000_u128};
 
   Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
 
@@ -219,11 +222,10 @@ DoubleDouble exp_double_double(double x, double kd, const DoubleDouble &exp_mid,
 // |x| <= 2^-53 or x < log(2^-54) or x >= 0x1.6232bdd7abcd3p+9
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
-  uint64_t x_abs = x_u & FloatProp::EXP_MANT_MASK;
+  uint64_t x_abs = xbits.abs().uintval();
 
   // |x| <= 2^-53.
   if (x_abs <= 0x3ca0'0000'0000'0000ULL) {
@@ -261,21 +263,23 @@ double set_exceptional(double x) {
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return static_cast<double>(FPBits(FPBits::MAX_NORMAL));
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
   }
   // x is +inf or nan
-  return x + static_cast<double>(FPBits::inf());
+  return x + FPBits::inf().get_val();
 }
+
+} // namespace
 
 LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
-  using FloatProp = typename fputil::FloatProperties<double>;
+
   FPBits xbits(x);
 
-  bool x_sign = xbits.get_sign();
+  bool x_is_neg = xbits.is_neg();
   uint64_t x_u = xbits.uintval();
 
   // Upper bound: max normal number = 2^1023 * (2 - 2^-52)
@@ -390,11 +394,11 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   // -2^(-hi)
   double one_scaled =
-      FPBits::create_value(true, FPBits::EXPONENT_BIAS - hi, 0).get_val();
+      FPBits::create_value(Sign::NEG, FPBits::EXP_BIAS - hi, 0).get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
-  DoubleDouble hi_part = x_sign ? fputil::exact_add(one_scaled, exp_mid.hi)
-                                : fputil::exact_add(exp_mid.hi, one_scaled);
+  DoubleDouble hi_part = x_is_neg ? fputil::exact_add(one_scaled, exp_mid.hi)
+                                  : fputil::exact_add(exp_mid.hi, one_scaled);
 
   hi_part.lo += exp_mid.lo;
 
@@ -435,7 +439,9 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
 
   double lo = fputil::multiply_add(p, mid_lo, hi_part.lo);
 
-  uint64_t err = x_sign ? (static_cast<uint64_t>(-hi) << 52) : 0;
+  // TODO: The following line leaks encoding abstraction. Use FPBits methods
+  // instead.
+  uint64_t err = x_is_neg ? (static_cast<uint64_t>(-hi) << 52) : 0;
 
   double err_d = cpp::bit_cast<double>(ERR_D + err);
 
@@ -465,7 +471,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   if (LIBC_LIKELY(upper == lower)) {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
     return r;
   }
@@ -479,7 +485,7 @@ LLVM_LIBC_FUNCTION(double, expm1, (double x)) {
   double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
-    int64_t exp_hi = static_cast<int64_t>(hi) << FloatProp::MANTISSA_WIDTH;
+    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
     double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
     return r;
   }

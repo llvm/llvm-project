@@ -55,7 +55,7 @@ TEST(CompilerInstance, SanityCheckForFileManager) {
   llvm::ArrayRef<char> fileContent = sf->content();
   EXPECT_FALSE(fileContent.size() == 0);
   EXPECT_TRUE(
-      llvm::StringRef(fileContent.data()).startswith("InputSourceFile"));
+      llvm::StringRef(fileContent.data()).starts_with("InputSourceFile"));
 
   // 4. Delete the test file
   ec = llvm::sys::fs::remove(inputFile);

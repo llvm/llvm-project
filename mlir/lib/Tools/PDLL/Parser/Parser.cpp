@@ -31,8 +31,8 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
-#include <string>
 #include <optional>
+#include <string>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -792,7 +792,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
 
   // Check the type of include. If ending with `.pdll`, this is another pdl file
   // to be parsed along with the current module.
-  if (filename.endswith(".pdll")) {
+  if (filename.ends_with(".pdll")) {
     if (failed(lexer.pushInclude(filename, fileLoc)))
       return emitError(fileLoc,
                        "unable to open include file `" + filename + "`");
@@ -807,7 +807,7 @@ LogicalResult Parser::parseInclude(SmallVectorImpl<ast::Decl *> &decls) {
   }
 
   // Otherwise, this must be a `.td` include.
-  if (filename.endswith(".td"))
+  if (filename.ends_with(".td"))
     return parseTdInclude(filename, fileLoc, decls);
 
   return emitError(fileLoc,
@@ -1362,12 +1362,6 @@ FailureOr<T *> Parser::parseUserNativeConstraintOrRewriteDecl(
   if (failed(parseToken(Token::semicolon,
                         "expected `;` after native declaration")))
     return failure();
-  // TODO: PDL should be able to support constraint results in certain
-  // situations, we should revise this.
-  if (std::is_same<ast::UserConstraintDecl, T>::value && !results.empty()) {
-    return emitError(
-        "native Constraints currently do not support returning results");
-  }
   return T::createNative(ctx, name, arguments, results, optCodeStr, resultType);
 }
 
@@ -1974,6 +1968,8 @@ FailureOr<ast::Expr *> Parser::parseNegatedExpr() {
   FailureOr<ast::Expr *> identifierExpr = parseIdentifierExpr();
   if (failed(identifierExpr))
     return failure();
+  if (!curToken.is(Token::l_paren))
+    return emitError("expected `(` after function name");
   return parseCallExpr(*identifierExpr, /*isNegated = */ true);
 }
 

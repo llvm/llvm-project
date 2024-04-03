@@ -15,13 +15,13 @@ vsub.vv v12, v12, v12
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      8
-# CHECK-NEXT: Total Cycles:      28
+# CHECK-NEXT: Total Cycles:      29
 # CHECK-NEXT: Total uOps:        8
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.29
-# CHECK-NEXT: IPC:               0.29
-# CHECK-NEXT: Block RThroughput: 22.0
+# CHECK-NEXT: uOps Per Cycle:    0.28
+# CHECK-NEXT: IPC:               0.28
+# CHECK-NEXT: Block RThroughput: 27.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -33,51 +33,51 @@ vsub.vv v12, v12, v12
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                        vadd.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     3.00                        vadd.vv	v12, v12, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                        vadd.vv	v12, v12, v12
-# CHECK-NEXT:  1      4     2.00                        vsub.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     3.00                        vadd.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     3.00                        vsub.vv	v12, v12, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     8.00                        vadd.vv	v12, v12, v12
-# CHECK-NEXT:  1      4     8.00                        vsub.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     9.00                        vadd.vv	v12, v12, v12
+# CHECK-NEXT:  1      4     9.00                        vsub.vv	v12, v12, v12
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv
 # CHECK-NEXT: [1]   - SiFive7IDiv
 # CHECK-NEXT: [2]   - SiFive7PipeA
 # CHECK-NEXT: [3]   - SiFive7PipeB
-# CHECK-NEXT: [4]   - SiFive7PipeV
-# CHECK-NEXT: [5]   - SiFive7VA
+# CHECK-NEXT: [4]   - SiFive7VA
+# CHECK-NEXT: [5]   - SiFive7VCQ
 # CHECK-NEXT: [6]   - SiFive7VL
 # CHECK-NEXT: [7]   - SiFive7VS
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -     3.00    -     22.00  22.00   -      -
+# CHECK-NEXT:  -      -     3.00    -     27.00  5.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   2.00    -      -     vadd.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vadd.vv	v12, v12, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -     2.00   2.00    -      -     vadd.vv	v12, v12, v12
-# CHECK-NEXT:  -      -      -      -     2.00   2.00    -      -     vsub.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vadd.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     3.00   1.00    -      -     vsub.vv	v12, v12, v12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -     8.00   8.00    -      -     vadd.vv	v12, v12, v12
-# CHECK-NEXT:  -      -      -      -     8.00   8.00    -      -     vsub.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     9.00   1.00    -      -     vadd.vv	v12, v12, v12
+# CHECK-NEXT:  -      -      -      -     9.00   1.00    -      -     vsub.vv	v12, v12, v12
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          01234567
+# CHECK-NEXT: Index     0123456789          012345678
 
-# CHECK:      [0,0]     DeeE .    .    .    .    . .   vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT: [0,1]     .  DeeeE  .    .    .    . .   vadd.vv	v12, v12, v12
-# CHECK-NEXT: [0,2]     .   DeeE  .    .    .    . .   vsetvli	zero, a0, e8, m1, tu, mu
-# CHECK-NEXT: [0,3]     .    . DeeeE   .    .    . .   vadd.vv	v12, v12, v12
-# CHECK-NEXT: [0,4]     .    .    .DeeeE    .    . .   vsub.vv	v12, v12, v12
-# CHECK-NEXT: [0,5]     .    .    . DeeE    .    . .   vsetvli	zero, a0, e8, m4, tu, mu
-# CHECK-NEXT: [0,6]     .    .    .    DeeeE.    . .   vadd.vv	v12, v12, v12
-# CHECK-NEXT: [0,7]     .    .    .    .    .  DeeeE   vsub.vv	v12, v12, v12
+# CHECK:      [0,0]     DeeE .    .    .    .    .  .   vsetvli	zero, a0, e8, m1, tu, mu
+# CHECK-NEXT: [0,1]     .  DeeeE  .    .    .    .  .   vadd.vv	v12, v12, v12
+# CHECK-NEXT: [0,2]     .   DeeE  .    .    .    .  .   vsetvli	zero, a0, e8, m1, tu, mu
+# CHECK-NEXT: [0,3]     .    . DeeeE   .    .    .  .   vadd.vv	v12, v12, v12
+# CHECK-NEXT: [0,4]     .    .    .DeeeE    .    .  .   vsub.vv	v12, v12, v12
+# CHECK-NEXT: [0,5]     .    .    . DeeE    .    .  .   vsetvli	zero, a0, e8, m4, tu, mu
+# CHECK-NEXT: [0,6]     .    .    .    DeeeE.    .  .   vadd.vv	v12, v12, v12
+# CHECK-NEXT: [0,7]     .    .    .    .    .   DeeeE   vsub.vv	v12, v12, v12
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

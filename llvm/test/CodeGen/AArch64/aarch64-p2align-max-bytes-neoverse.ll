@@ -12,7 +12,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a75  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a710 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
 
-define i32 @a(i32 %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
+define i32 @a(i32 %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
 ; CHECK-DEFAULT:    .p2align 5
 ; CHECK-8:          .p2align 4, , 8
 ; CHECK-16:         .p2align 5, , 16
@@ -38,18 +38,18 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %10, %vector.body ]
   %vec.phi13 = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %11, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %y, i64 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = getelementptr inbounds i32, i32* %0, i64 4
-  %3 = bitcast i32* %2 to <4 x i32>*
-  %wide.load14 = load <4 x i32>, <4 x i32>* %3, align 4
-  %4 = getelementptr inbounds i32, i32* %z, i64 %index
-  %5 = bitcast i32* %4 to <4 x i32>*
-  %wide.load15 = load <4 x i32>, <4 x i32>* %5, align 4
-  %6 = getelementptr inbounds i32, i32* %4, i64 4
-  %7 = bitcast i32* %6 to <4 x i32>*
-  %wide.load16 = load <4 x i32>, <4 x i32>* %7, align 4
+  %0 = getelementptr inbounds i32, ptr %y, i64 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <4 x i32>, ptr %1, align 4
+  %2 = getelementptr inbounds i32, ptr %0, i64 4
+  %3 = bitcast ptr %2 to ptr
+  %wide.load14 = load <4 x i32>, ptr %3, align 4
+  %4 = getelementptr inbounds i32, ptr %z, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load15 = load <4 x i32>, ptr %5, align 4
+  %6 = getelementptr inbounds i32, ptr %4, i64 4
+  %7 = bitcast ptr %6 to ptr
+  %wide.load16 = load <4 x i32>, ptr %7, align 4
   %8 = add <4 x i32> %wide.load, %vec.phi
   %9 = add <4 x i32> %wide.load14, %vec.phi13
   %10 = add <4 x i32> %8, %wide.load15
@@ -76,10 +76,10 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 for.body:                                         ; preds = %for.body.preheader17, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ %indvars.iv.ph, %for.body.preheader17 ]
   %b.011 = phi i32 [ %add3, %for.body ], [ %b.011.ph, %for.body.preheader17 ]
-  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %indvars.iv
-  %14 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %z, i64 %indvars.iv
-  %15 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %y, i64 %indvars.iv
+  %14 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %z, i64 %indvars.iv
+  %15 = load i32, ptr %arrayidx2, align 4
   %add = add i32 %14, %b.011
   %add3 = add i32 %add, %15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1

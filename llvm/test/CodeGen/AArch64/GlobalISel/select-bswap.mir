@@ -16,9 +16,11 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: bswap_s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[REVWr:%[0-9]+]]:gpr32 = REVWr [[COPY]]
-    ; CHECK: $w0 = COPY [[REVWr]]
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[REVWr:%[0-9]+]]:gpr32 = REVWr [[COPY]]
+    ; CHECK-NEXT: $w0 = COPY [[REVWr]]
     %0(s32) = COPY $w0
     %1(s32) = G_BSWAP %0
     $w0 = COPY %1
@@ -38,12 +40,61 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: bswap_s64
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[REVXr:%[0-9]+]]:gpr64 = REVXr [[COPY]]
-    ; CHECK: $x0 = COPY [[REVXr]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[REVXr:%[0-9]+]]:gpr64 = REVXr [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[REVXr]]
     %0(s64) = COPY $x0
     %1(s64) = G_BSWAP %0
     $x0 = COPY %1
+
+...
+---
+name:            bswap_v4s16
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: bswap_v4s16
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[REV16v8i8_:%[0-9]+]]:fpr64 = REV16v8i8 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[REV16v8i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = G_BSWAP %0
+    $d0 = COPY %1(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            bswap_v8s16
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: bswap_v8s16
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[REV16v16i8_:%[0-9]+]]:fpr128 = REV16v16i8 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[REV16v16i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = G_BSWAP %0
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
 
 ...
 ---
@@ -59,10 +110,11 @@ body:             |
 
     ; CHECK-LABEL: name: bswap_v4s32
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[REV32v16i8_:%[0-9]+]]:fpr128 = REV32v16i8 [[COPY]]
-    ; CHECK: $q0 = COPY [[REV32v16i8_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[REV32v16i8_:%[0-9]+]]:fpr128 = REV32v16i8 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[REV32v16i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<4 x s32>) = COPY $q0
     %1:fpr(<4 x s32>) = G_BSWAP %0
     $q0 = COPY %1(<4 x s32>)
@@ -82,10 +134,11 @@ body:             |
 
     ; CHECK-LABEL: name: bswap_v2s32
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[REV32v8i8_:%[0-9]+]]:fpr64 = REV32v8i8 [[COPY]]
-    ; CHECK: $d0 = COPY [[REV32v8i8_]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[REV32v8i8_:%[0-9]+]]:fpr64 = REV32v8i8 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[REV32v8i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0
     %1:fpr(<2 x s32>) = G_BSWAP %0
     $d0 = COPY %1(<2 x s32>)
@@ -105,10 +158,11 @@ body:             |
 
     ; CHECK-LABEL: name: bswap_v2s64
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[REV64v16i8_:%[0-9]+]]:fpr128 = REV64v16i8 [[COPY]]
-    ; CHECK: $q0 = COPY [[REV64v16i8_]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK-NEXT: [[REV64v16i8_:%[0-9]+]]:fpr128 = REV64v16i8 [[COPY]]
+    ; CHECK-NEXT: $q0 = COPY [[REV64v16i8_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s64>) = COPY $q0
     %1:fpr(<2 x s64>) = G_BSWAP %0
     $q0 = COPY %1(<2 x s64>)

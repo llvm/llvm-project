@@ -50,7 +50,7 @@ void test_log(const char* condition, const char* file, int line, const F& functo
 }
 
 template <class Arg>
-[[noreturn]] void test_fail(const char* file, int line, const Arg& arg) {
+TEST_NORETURN void test_fail(const char* file, int line, const Arg& arg) {
   test_log("", file, line, arg);
   std::abort();
 }
@@ -66,7 +66,7 @@ void test_require(bool condition, const char* condition_str, const char* file, i
 
 // assert(false) replacement
 // The ARG is either a
-// - c-ctring or std::string, in which case the string is printed to stderr,
+// - c-string or std::string, in which case the string is printed to stderr,
 // - an invocable object, which will be invoked.
 #define TEST_FAIL(ARG) ::test_fail(__FILE__, __LINE__, ARG)
 

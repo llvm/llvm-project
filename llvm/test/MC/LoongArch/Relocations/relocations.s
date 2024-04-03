@@ -218,3 +218,8 @@ lu12i.w $t1, %gd_hi20(foo)
 # RELOC: R_LARCH_TLS_GD_HI20 foo 0x0
 # INSTR: lu12i.w $t1, %gd_hi20(foo)
 # FIXUP: fixup A - offset: 0, value: %gd_hi20(foo), kind: FK_NONE
+
+pcaddu18i $t1, %call36(foo)
+# RELOC: R_LARCH_CALL36 foo 0x0
+# INSTR: pcaddu18i $t1, %call36(foo)
+# FIXUP: fixup A - offset: 0, value: %call36(foo), kind: FK_NONE

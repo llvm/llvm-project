@@ -421,7 +421,7 @@ TEST(InterfaceAttachmentTest, PromisedInterfaces) {
   // Attribute interfaces use the exact same mechanism as types, so just check
   // that the promise mechanism works for attributes.
   MLIRContext context;
-  auto testDialect = context.getOrLoadDialect<test::TestDialect>();
+  auto *testDialect = context.getOrLoadDialect<test::TestDialect>();
   auto attr = test::SimpleAAttr::get(&context);
 
   // `SimpleAAttr` doesn't implement nor promises the
@@ -431,8 +431,8 @@ TEST(InterfaceAttachmentTest, PromisedInterfaces) {
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 
   // Add a promise `TestExternalAttrInterface`.
-  testDialect->declarePromisedInterface<test::SimpleAAttr,
-                                        TestExternalAttrInterface>();
+  testDialect->declarePromisedInterface<TestExternalAttrInterface,
+                                        test::SimpleAAttr>();
   EXPECT_TRUE(
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 

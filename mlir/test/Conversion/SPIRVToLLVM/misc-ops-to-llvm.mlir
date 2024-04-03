@@ -43,18 +43,18 @@ spirv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @select_scalar
-spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: f32) "None" {
+spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: vector<3xi32>, %arg3: f32, %arg4: f32) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, vector<3xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : i1, vector<3xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, vector<3xi32>
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, f32
-  %1 = spirv.Select %arg0, %arg2, %arg2 : i1, f32
+  %1 = spirv.Select %arg0, %arg3, %arg4 : i1, f32
   spirv.Return
 }
 
 // CHECK-LABEL: @select_vector
-spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
+spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>, %arg2: vector<2xi32>) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<2xi1>, vector<2xi32>
-  %0 = spirv.Select %arg0, %arg1, %arg1 : vector<2xi1>, vector<2xi32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : vector<2xi1>, vector<2xi32>
   spirv.Return
 }
 
@@ -65,7 +65,7 @@ spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
 spirv.func @vector_shuffle_same_size(%vector1: vector<2xf32>, %vector2: vector<2xf32>) -> vector<3xf32> "None" {
   //      CHECK: %[[res:.*]] = llvm.shufflevector {{.*}} [0, 2, -1] : vector<2xf32>
   // CHECK-NEXT: return %[[res]] : vector<3xf32>
-  %0 = spirv.VectorShuffle [0: i32, 2: i32, 0xffffffff: i32] %vector1: vector<2xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [0: i32, 2: i32, 0xffffffff: i32] %vector1, %vector2 : vector<2xf32>, vector<2xf32> -> vector<3xf32>
   spirv.ReturnValue %0: vector<3xf32>
 }
 
@@ -80,7 +80,7 @@ spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vec
   // CHECK-NEXT: %[[EXT1:.*]] = llvm.extractelement {{.*}}[%[[C1_1]] : i32] : vector<2xf32>
   // CHECK-NEXT: %[[RES:.*]] = llvm.insertelement %[[EXT1]], %[[INSERT0]][%[[C1_0]] : i32] : vector<3xf32>
   // CHECK-NEXT: llvm.return %[[RES]] : vector<3xf32>
-  %0 = spirv.VectorShuffle [0: i32, 4: i32, 0xffffffff: i32] %vector1: vector<3xf32>, %vector2: vector<2xf32> -> vector<3xf32>
+  %0 = spirv.VectorShuffle [0: i32, 4: i32, 0xffffffff: i32] %vector1, %vector2 : vector<3xf32>, vector<2xf32> -> vector<3xf32>
   spirv.ReturnValue %0: vector<3xf32>
 }
 

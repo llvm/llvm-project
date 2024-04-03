@@ -452,6 +452,8 @@ TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
   auto &FM = Processed.fileManager();
   EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named("<string>"), FM),
               testing::UnorderedElementsAre(FileNamed("export.h")));
+  EXPECT_THAT(PI.getExporters(llvm::cantFail(FM.getFileRef("string")), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 
 TEST_F(PragmaIncludeTest, IWYUExportBlock) {
@@ -555,6 +557,61 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
   EXPECT_THAT(
       PI.getExporters(llvm::cantFail(FM->getFileRef("foo.h")), *FM),
       testing::ElementsAre(llvm::cantFail(FM->getFileRef("exporter.h"))));
+}
+
+TEST_F(PragmaIncludeTest, OutlivesFMAndSM) {
+  Inputs.Code = R"cpp(
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = R"cpp(
+    #include "private.h"
+    #include "private2.h" // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = R"cpp(
+    // IWYU pragma: private, include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["private2.h"] = R"cpp(
+    // IWYU pragma: private
+  )cpp";
+  build(); // Fills up PI, file/source manager used is destroyed afterwards.
+  Inputs.MakeAction = nullptr; // Don't populate PI anymore.
+
+  // Now this build gives us a new File&Source Manager.
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  auto PrivateFE = FM.getFile("private.h");
+  assert(PrivateFE);
+  EXPECT_EQ(PI.getPublic(PrivateFE.get()), "\"public.h\"");
+
+  auto Private2FE = FM.getFile("private2.h");
+  assert(Private2FE);
+  EXPECT_THAT(PI.getExporters(Private2FE.get(), FM),
+              testing::ElementsAre(llvm::cantFail(FM.getFileRef("public.h"))));
+}
+
+TEST_F(PragmaIncludeTest, CanRecordManyTimes) {
+  Inputs.Code = R"cpp(
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = R"cpp(
+    #include "private.h"
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = R"cpp(
+    // IWYU pragma: private, include "public.h"
+  )cpp";
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  auto PrivateFE = FM.getFile("private.h");
+  llvm::StringRef Public = PI.getPublic(PrivateFE.get());
+  EXPECT_EQ(Public, "\"public.h\"");
+
+  // This build populates same PI during build, but this time we don't have
+  // any IWYU pragmas. Make sure strings from previous recordings are still
+  // alive.
+  Inputs.Code = "";
+  build();
+  EXPECT_EQ(Public, "\"public.h\"");
 }
 } // namespace
 } // namespace clang::include_cleaner

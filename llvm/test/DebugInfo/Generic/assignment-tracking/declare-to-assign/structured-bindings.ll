@@ -1,4 +1,5 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - | FileCheck %s
 
 ;; Check assignment tracking debug info for structured bindings. FIXME only
 ;; variables at offset 0 in the backing alloca are currently tracked with the

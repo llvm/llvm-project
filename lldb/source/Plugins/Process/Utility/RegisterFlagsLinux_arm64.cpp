@@ -53,7 +53,7 @@ LinuxArm64RegisterFlags::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2) {
 LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2) {
   std::vector<RegisterFlags::Field> fpcr_fields{
-      {"AHP", 26}, {"DN", 25}, {"FZ", 24}, {"RMMode", 22, 23},
+      {"AHP", 26}, {"DN", 25}, {"FZ", 24}, {"RMode", 22, 23},
       // Bits 21-20 are "Stride" which is unused in AArch64 state.
   };
 

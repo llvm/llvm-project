@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope %s
 
 ; creating v4i16->v4f16 and v4f16->v4i16 bitcasts in the selection DAG is rather
 ; difficult, so this test has to throw in some llvm.amdgcn.wqm to get them

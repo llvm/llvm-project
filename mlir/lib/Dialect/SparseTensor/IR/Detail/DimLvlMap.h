@@ -77,40 +77,19 @@ public:
   //
   // Getters for handling `AffineExpr` subclasses.
   //
-  Var castAnyVar() const;
-  std::optional<Var> dyn_castAnyVar() const;
   SymVar castSymVar() const;
   std::optional<SymVar> dyn_castSymVar() const;
   Var castDimLvlVar() const;
   std::optional<Var> dyn_castDimLvlVar() const;
-  int64_t castConstantValue() const;
-  std::optional<int64_t> dyn_castConstantValue() const;
-  bool hasConstantValue(int64_t val) const;
-  DimLvlExpr getLHS() const;
-  DimLvlExpr getRHS() const;
   std::tuple<DimLvlExpr, AffineExprKind, DimLvlExpr> unpackBinop() const;
 
   /// Checks whether the variables bound/used by this spec are valid
   /// with respect to the given ranks.
   [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
-  std::string str() const;
-  void print(llvm::raw_ostream &os) const;
-  void print(AsmPrinter &printer) const;
-  void dump() const;
-
 protected:
   // Variant of `mlir::AsmPrinter::Impl::BindingStrength`
   enum class BindingStrength : bool { Weak = false, Strong = true };
-
-  void printAffineExprInternal(llvm::raw_ostream &os,
-                               BindingStrength enclosingTightness) const;
-  void printStrong(llvm::raw_ostream &os) const {
-    printAffineExprInternal(os, BindingStrength::Strong);
-  }
-  void printWeak(llvm::raw_ostream &os) const {
-    printAffineExprInternal(os, BindingStrength::Weak);
-  }
 };
 static_assert(IsZeroCostAbstraction<DimLvlExpr>);
 
@@ -208,11 +187,6 @@ public:
   /// to be vacuously valid, and therefore calling `setExpr` invalidates
   /// the result of this predicate.
   [[nodiscard]] bool isValid(Ranks const &ranks) const;
-
-  std::string str(bool wantElision = true) const;
-  void print(llvm::raw_ostream &os, bool wantElision = true) const;
-  void print(AsmPrinter &printer, bool wantElision = true) const;
-  void dump() const;
 };
 
 static_assert(IsZeroCostAbstraction<DimSpec>);
@@ -228,10 +202,10 @@ class LvlSpec final {
   /// The level-expression.
   LvlExpr expr;
   /// The level-type (== level-format + lvl-properties).
-  DimLevelType type;
+  LevelType type;
 
 public:
-  LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type);
+  LvlSpec(LvlVar var, LvlExpr expr, LevelType type);
 
   MLIRContext *getContext() const {
     MLIRContext *ctx = expr.tryGetContext();
@@ -243,16 +217,11 @@ public:
   constexpr bool canElideVar() const { return elideVar; }
   void setElideVar(bool b) { elideVar = b; }
   constexpr LvlExpr getExpr() const { return expr; }
-  constexpr DimLevelType getType() const { return type; }
+  constexpr LevelType getType() const { return type; }
 
   /// Checks whether the variables bound/used by this spec are valid
   /// with respect to the given ranks.
   [[nodiscard]] bool isValid(Ranks const &ranks) const;
-
-  std::string str(bool wantElision = true) const;
-  void print(llvm::raw_ostream &os, bool wantElision = true) const;
-  void print(AsmPrinter &printer, bool wantElision = true) const;
-  void dump() const;
 };
 
 static_assert(IsZeroCostAbstraction<LvlSpec>);
@@ -277,15 +246,10 @@ public:
 
   ArrayRef<LvlSpec> getLvls() const { return lvlSpecs; }
   const LvlSpec &getLvl(Level lvl) const { return lvlSpecs[lvl]; }
-  DimLevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
+  LevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
 
   AffineMap getDimToLvlMap(MLIRContext *context) const;
   AffineMap getLvlToDimMap(MLIRContext *context) const;
-
-  std::string str(bool wantElision = true) const;
-  void print(llvm::raw_ostream &os, bool wantElision = true) const;
-  void print(AsmPrinter &printer, bool wantElision = true) const;
-  void dump() const;
 
 private:
   /// Checks for integrity of variable-binding structure.

@@ -24,6 +24,8 @@ public:
       : OS(OS), EnableDetailedStructuralHash(Detailed) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

@@ -39,7 +39,7 @@ define i1 @p1_scalar_urem_by_nonconst(i32 %x, i32 %y) {
 define i1 @p2_scalar_shifted_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p2_scalar_shifted_urem_by_const(
 ; CHECK-NEXT:    [[T0:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[T0]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = urem i32 [[T1]], 3
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    ret i1 [[T3]]

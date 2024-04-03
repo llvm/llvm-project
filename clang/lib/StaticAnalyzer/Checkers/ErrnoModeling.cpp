@@ -312,18 +312,6 @@ ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
   return setErrnoState(State, MustBeChecked);
 }
 
-const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
-  return getErrnoNoteTag(
-      C, llvm::formatv(
-             "'errno' may be undefined after successful call to '{0}'", Fn));
-}
-
-const NoteTag *getNoteTagForStdMustBeChecked(CheckerContext &C,
-                                             llvm::StringRef Fn) {
-  return getErrnoNoteTag(
-      C, llvm::formatv("'{0}' indicates failure only by setting 'errno'", Fn));
-}
-
 } // namespace errno_modeling
 } // namespace ento
 } // namespace clang

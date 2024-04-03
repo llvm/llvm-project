@@ -15,6 +15,7 @@ namespace objcopy {
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
       !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
@@ -23,7 +24,8 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       Common.ExtractDWO || Common.PreserveDates || Common.StripDWO ||
       Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
       Common.DecompressDebugSections ||
-      Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
+      Common.DiscardMode == DiscardType::Locals ||
+      !Common.SymbolsToAdd.empty() || Common.GapFill != 0 || Common.PadTo != 0)
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for COFF");
 
@@ -32,6 +34,7 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
 
 Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
       !Common.SymbolsToLocalize.empty() ||
@@ -42,7 +45,8 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
       Common.PreserveDates || Common.StripAllGNU || Common.StripDWO ||
       Common.StripNonAlloc || Common.StripSections ||
       Common.DecompressDebugSections || Common.StripUnneeded ||
-      Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
+      Common.DiscardMode == DiscardType::Locals ||
+      !Common.SymbolsToAdd.empty() || Common.GapFill != 0 || Common.PadTo != 0)
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for MachO");
 
@@ -52,6 +56,7 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
 Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.SymbolsToAdd.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToLocalize.empty() ||
@@ -60,7 +65,8 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
       !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
       !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
-      !Common.SymbolsToRename.empty())
+      !Common.SymbolsToRename.empty() || Common.GapFill != 0 ||
+      Common.PadTo != 0)
     return createStringError(llvm::errc::invalid_argument,
                              "only flags for section dumping, removal, and "
                              "addition are supported");
@@ -71,6 +77,7 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
 Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
       !Common.DumpSection.empty() || !Common.SymbolsToAdd.empty() ||
@@ -86,7 +93,8 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
       Common.ExtractMainPartition || Common.OnlyKeepDebug ||
       Common.PreserveDates || Common.StripAllGNU || Common.StripDWO ||
       Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
-      Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections) {
+      Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
+      Common.GapFill != 0 || Common.PadTo != 0) {
     return createStringError(
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");

@@ -33,31 +33,31 @@
 
 ## .LANCHOR0@tprel = 8
 ## a@tprel = 12
-# LE:      lui a1, 0
+# LE:      lui a1, 0x0
 # LE-NEXT: add a1, a1, tp
-# LE-NEXT: addi a1, a1, 8
-# LE-NEXT: lui a2, 0
+# LE-NEXT: addi a1, a1, 0x8
+# LE-NEXT: lui a2, 0x0
 # LE-NEXT: add a2, a2, tp
-# LE-NEXT: addi a2, a2, 2044
-# LE-NEXT: lui a3, 0
-# LE-NEXT: addi a0, a0, 1
+# LE-NEXT: addi a2, a2, 0x7fc
+# LE-NEXT: lui a3, 0x0
+# LE-NEXT: addi a0, a0, 0x1
 # LE-NEXT: add a3, a3, tp
-# LE-NEXT: addi a0, a0, 2
-# LE-NEXT: sw a0, 2044(a3)
-# LE-NEXT: lui a4, 1
+# LE-NEXT: addi a0, a0, 0x2
+# LE-NEXT: sw a0, 0x7fc(a3)
+# LE-NEXT: lui a4, 0x1
 # LE-NEXT: add a4, a4, tp
-# LE-NEXT: sw a0, -2048(a4)
+# LE-NEXT: sw a0, -0x800(a4)
 # LE-EMPTY:
 
 # LE-RELAX:      <.text>:
-# LE-RELAX-NEXT:   addi a1, tp, 8
-# LE-RELAX-NEXT:   addi a2, tp, 2044
-# LE-RELAX-NEXT:   addi a0, a0, 1
-# LE-RELAX-NEXT:   addi a0, a0, 2
-# LE-RELAX-NEXT:   sw a0, 2044(tp)
-# LE-RELAX-NEXT:   lui a4, 1
+# LE-RELAX-NEXT:   addi a1, tp, 0x8
+# LE-RELAX-NEXT:   addi a2, tp, 0x7fc
+# LE-RELAX-NEXT:   addi a0, a0, 0x1
+# LE-RELAX-NEXT:   addi a0, a0, 0x2
+# LE-RELAX-NEXT:   sw a0, 0x7fc(tp)
+# LE-RELAX-NEXT:   lui a4, 0x1
 # LE-RELAX-NEXT:   add a4, a4, tp
-# LE-RELAX-NEXT:   sw a0, -2048(a4)
+# LE-RELAX-NEXT:   sw a0, -0x800(a4)
 # LE-RELAX-EMPTY:
 
 lui a1, %tprel_hi(.LANCHOR0)
@@ -72,9 +72,9 @@ addi a2, a2, %tprel_lo(a-4)
 ## hi20(a-4) = hi20(0x7fc) = 0. relaxable
 ## Test non-adjacent instructions.
 lui a3, %tprel_hi(a-4)
-addi a0, a0, 1
+addi a0, a0, 0x1
 add a3, a3, tp, %tprel_add(a-4)
-addi a0, a0, 2
+addi a0, a0, 0x2
 sw a0, %tprel_lo(a-4)(a3)
 
 ## hi20(a) = hi20(0x800) = 1. not relaxable

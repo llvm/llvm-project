@@ -602,7 +602,7 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_const(i64 %x, i64 %y) {
 ; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[X]], 3
 ; INSTCOMBINE-NEXT:    [[PTR_IDX1:%.*]] = shl i64 [[Y]], 2
 ; INSTCOMBINE-NEXT:    [[PTR_OFFS:%.*]] = add i64 [[PTR_IDX]], [[PTR_IDX1]]
-; INSTCOMBINE-NEXT:    [[PTR_OFFS2:%.*]] = or i64 [[PTR_OFFS]], 2
+; INSTCOMBINE-NEXT:    [[PTR_OFFS2:%.*]] = or disjoint i64 [[PTR_OFFS]], 2
 ; INSTCOMBINE-NEXT:    ret i64 [[PTR_OFFS2]]
 ;
   %ptr = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 %x, i64 %y, i64 1

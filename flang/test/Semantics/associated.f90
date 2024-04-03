@@ -92,6 +92,7 @@ subroutine assoc()
     integer, target :: targetIntArr(2)
     integer, target :: targetIntCoarray[*]
     integer, pointer :: intPointerArr(:)
+    procedure(objPtrFunc), pointer :: objPtrFuncPointer
 
     !ERROR: Assumed-rank array cannot be forwarded to 'target=' argument
     lvar = associated(assumedRank, assumedRank)
@@ -204,6 +205,8 @@ subroutine assoc()
     lvar = associated(intProcPointer1, elementalProc)
     !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is not a variable
     lvar = associated (intPointerVar1, intFunc)
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'objptrfuncpointer' is not a variable
+    lvar = associated (intPointerVar1, objPtrFuncPointer)
     !ERROR: In assignment to object pointer 'intpointervar1', the target 'intfunc' is a procedure designator
     intPointerVar1 => intFunc
     !ERROR: In assignment to procedure pointer 'intprocpointer1', the target is not a procedure or procedure pointer

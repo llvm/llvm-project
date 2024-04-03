@@ -15,6 +15,7 @@ Checks: >
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
+  modernize-use-nullptr,
   modernize-use-override,
 
   readability-duplicate-include,
@@ -68,7 +69,6 @@ CheckOptions:
 # modernize-use-default-member-init,
 # modernize-use-equals-default,
 # modernize-use-equals-delete,
-# modernize-use-nullptr,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,

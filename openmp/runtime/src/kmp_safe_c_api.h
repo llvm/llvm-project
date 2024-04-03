@@ -56,7 +56,11 @@ template <typename T> struct kmp_get_rmax_t<T, true> {
 
 // For now, these macros use the existing API.
 
+#if KMP_OS_NETBSD
+#define KMP_ALLOCA __builtin_alloca
+#else
 #define KMP_ALLOCA alloca
+#endif
 #define KMP_MEMCPY_S(dst, bsz, src, cnt) memcpy(dst, src, cnt)
 #define KMP_SNPRINTF snprintf
 #define KMP_SSCANF sscanf

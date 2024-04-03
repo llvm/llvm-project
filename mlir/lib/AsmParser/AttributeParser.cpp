@@ -660,7 +660,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
     const Token &token = signAndToken.second;
 
     // Handle hexadecimal float literals.
-    if (token.is(Token::integer) && token.getSpelling().startswith("0x")) {
+    if (token.is(Token::integer) && token.getSpelling().starts_with("0x")) {
       std::optional<APFloat> result;
       if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
                                                 eltTy.getFloatSemantics(),

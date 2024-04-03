@@ -176,7 +176,7 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   auto AST = File.build();
   M.updatePreamble(testPath(File.Filename), /*Version=*/"null",
                    AST.getASTContext(), AST.getPreprocessor(),
-                   *AST.getPragmaIncludes());
+                   AST.getPragmaIncludes());
 }
 
 TEST(FileIndexTest, CustomizedURIScheme) {
@@ -254,7 +254,7 @@ TEST(FileIndexTest, IWYUPragmaExport) {
   auto AST = File.build();
   M.updatePreamble(testPath(File.Filename), /*Version=*/"null",
                    AST.getASTContext(), AST.getPreprocessor(),
-                   *AST.getPragmaIncludes());
+                   AST.getPragmaIncludes());
 
   auto Symbols = runFuzzyFind(M, "");
   EXPECT_THAT(
@@ -446,7 +446,7 @@ TEST(FileIndexTest, Relations) {
   FileIndex Index;
   Index.updatePreamble(testPath(TU.Filename), /*Version=*/"null",
                        AST.getASTContext(), AST.getPreprocessor(),
-                       *AST.getPragmaIncludes());
+                       AST.getPragmaIncludes());
   SymbolID A = findSymbol(TU.headerSymbols(), "A").ID;
   uint32_t Results = 0;
   RelationsRequest Req;
@@ -567,7 +567,7 @@ TEST(FileIndexTest, StalePreambleSymbolsDeleted) {
   auto AST = File.build();
   M.updatePreamble(testPath(File.Filename), /*Version=*/"null",
                    AST.getASTContext(), AST.getPreprocessor(),
-                   *AST.getPragmaIncludes());
+                   AST.getPragmaIncludes());
   EXPECT_THAT(runFuzzyFind(M, ""), UnorderedElementsAre(qName("a")));
 
   File.Filename = "f2.cpp";
@@ -575,7 +575,7 @@ TEST(FileIndexTest, StalePreambleSymbolsDeleted) {
   AST = File.build();
   M.updatePreamble(testPath(File.Filename), /*Version=*/"null",
                    AST.getASTContext(), AST.getPreprocessor(),
-                   *AST.getPragmaIncludes());
+                   AST.getPragmaIncludes());
   EXPECT_THAT(runFuzzyFind(M, ""), UnorderedElementsAre(qName("b")));
 }
 
@@ -720,7 +720,7 @@ TEST(FileIndexTest, Profile) {
   auto AST = TestTU::withHeaderCode("int a;").build();
   FI.updateMain(FileName, AST);
   FI.updatePreamble(FileName, "v1", AST.getASTContext(), AST.getPreprocessor(),
-                    *AST.getPragmaIncludes());
+                    AST.getPragmaIncludes());
 
   llvm::BumpPtrAllocator Alloc;
   MemoryTree MT(&Alloc);

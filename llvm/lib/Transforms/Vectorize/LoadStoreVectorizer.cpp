@@ -108,7 +108,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
-#include <limits>
 #include <numeric>
 #include <optional>
 #include <tuple>
@@ -893,7 +892,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // Loads get hoisted to the location of the first load in the chain.  We may
     // also need to hoist the (transitive) operands of the loads.
     Builder.SetInsertPoint(
-        std::min_element(C.begin(), C.end(), [](const auto &A, const auto &B) {
+        llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
 
@@ -945,10 +944,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     reorder(VecInst);
   } else {
     // Stores get sunk to the location of the last store in the chain.
-    Builder.SetInsertPoint(
-        std::max_element(C.begin(), C.end(), [](auto &A, auto &B) {
-          return A.Inst->comesBefore(B.Inst);
-        })->Inst);
+    Builder.SetInsertPoint(llvm::max_element(C, [](auto &A, auto &B) {
+                             return A.Inst->comesBefore(B.Inst);
+                           })->Inst);
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);
@@ -1194,7 +1192,7 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
       OpA->getType() != OpB->getType())
     return std::nullopt;
 
-  uint64_t Stride = DL.getTypeAllocSize(GTIA.getIndexedType());
+  uint64_t Stride = GTIA.getSequentialElementStride(DL);
 
   // Only look through a ZExt/SExt.
   if (!isa<SExtInst>(OpA) && !isa<ZExtInst>(OpA))

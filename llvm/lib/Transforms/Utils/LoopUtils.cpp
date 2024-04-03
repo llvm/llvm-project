@@ -468,6 +468,7 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   int LatchIdx = PN->getBasicBlockIndex(LatchBlock);
+  assert(LatchIdx != -1 && "LatchBlock is not a case in this PHINode");
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
@@ -604,6 +605,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   // Use a map to unique and a vector to guarantee deterministic ordering.
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
   llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
+  llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
   if (ExitBlock) {
     // Given LCSSA form is satisfied, we should not have users of instructions
@@ -628,6 +630,24 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                    "Unexpected user in reachable block");
           U.set(Poison);
         }
+
+        // RemoveDIs: do the same as below for DbgVariableRecords.
+        if (Block->IsNewDbgInfoFormat) {
+          for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
+                   filterDbgVars(I.getDbgRecordRange()))) {
+            DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                              DVR.getDebugLoc().get());
+            if (!DeadDebugSet.insert(Key).second)
+              continue;
+            // Unlinks the DVR from it's container, for later insertion.
+            DVR.removeFromParent();
+            DeadDbgVariableRecords.push_back(&DVR);
+          }
+        }
+
+        // For one of each variable encountered, preserve a debug intrinsic (set
+        // to Poison) and transfer it to the loop exit. This terminates any
+        // variable locations that were set during the loop.
         auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
         if (!DVI)
           continue;
@@ -642,12 +662,22 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // be be replaced with undef. Loop invariant values will still be available.
     // Move dbg.values out the loop so that earlier location ranges are still
     // terminated and loop invariant assignments are preserved.
-    Instruction *InsertDbgValueBefore = ExitBlock->getFirstNonPHI();
-    assert(InsertDbgValueBefore &&
+    DIBuilder DIB(*ExitBlock->getModule());
+    BasicBlock::iterator InsertDbgValueBefore =
+        ExitBlock->getFirstInsertionPt();
+    assert(InsertDbgValueBefore != ExitBlock->end() &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
+
     for (auto *DVI : DeadDebugInst)
-      DVI->moveBefore(InsertDbgValueBefore);
+      DVI->moveBefore(*ExitBlock, InsertDbgValueBefore);
+
+    // Due to the "head" bit in BasicBlock::iterator, we're going to insert
+    // each DbgVariableRecord right at the start of the block, wheras dbg.values
+    // would be repeatedly inserted before the first instruction. To replicate
+    // this behaviour, do it backwards.
+    for (DbgVariableRecord *DVR : llvm::reverse(DeadDbgVariableRecords))
+      ExitBlock->insertDbgRecordBefore(DVR, InsertDbgValueBefore);
   }
 
   // Remove the block from the reference counting scheme, so that we can
@@ -888,6 +918,58 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
+unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  case Intrinsic::vector_reduce_fadd:
+    return Instruction::FAdd;
+  case Intrinsic::vector_reduce_fmul:
+    return Instruction::FMul;
+  case Intrinsic::vector_reduce_add:
+    return Instruction::Add;
+  case Intrinsic::vector_reduce_mul:
+    return Instruction::Mul;
+  case Intrinsic::vector_reduce_and:
+    return Instruction::And;
+  case Intrinsic::vector_reduce_or:
+    return Instruction::Or;
+  case Intrinsic::vector_reduce_xor:
+    return Instruction::Xor;
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+    return Instruction::ICmp;
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
+    return Instruction::FCmp;
+  default:
+    llvm_unreachable("Unexpected ID");
+  }
+}
+
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  default:
+    llvm_unreachable("Unknown min/max recurrence kind");
+  case Intrinsic::vector_reduce_umin:
+    return Intrinsic::umin;
+  case Intrinsic::vector_reduce_umax:
+    return Intrinsic::umax;
+  case Intrinsic::vector_reduce_smin:
+    return Intrinsic::smin;
+  case Intrinsic::vector_reduce_smax:
+    return Intrinsic::smax;
+  case Intrinsic::vector_reduce_fmin:
+    return Intrinsic::minnum;
+  case Intrinsic::vector_reduce_fmax:
+    return Intrinsic::maxnum;
+  case Intrinsic::vector_reduce_fminimum:
+    return Intrinsic::minimum;
+  case Intrinsic::vector_reduce_fmaximum:
+    return Intrinsic::maximum;
+  }
+}
+
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
   switch (RK) {
   default:
@@ -908,6 +990,25 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::minimum;
   case RecurKind::FMaximum:
     return Intrinsic::maximum;
+  }
+}
+
+RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
+  switch (RdxID) {
+  case Intrinsic::vector_reduce_smax:
+    return RecurKind::SMax;
+  case Intrinsic::vector_reduce_smin:
+    return RecurKind::SMin;
+  case Intrinsic::vector_reduce_umax:
+    return RecurKind::UMax;
+  case Intrinsic::vector_reduce_umin:
+    return RecurKind::UMin;
+  case Intrinsic::vector_reduce_fmax:
+    return RecurKind::FMax;
+  case Intrinsic::vector_reduce_fmin:
+    return RecurKind::FMin;
+  default:
+    return RecurKind::None;
   }
 }
 
@@ -1787,23 +1888,31 @@ Value *llvm::addDiffRuntimeChecks(
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
+  auto &SE = *Expander.getSE();
+  // Map to keep track of created compares, The key is the pair of operands for
+  // the compare, to allow detecting and re-using redundant compares.
+  DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
   for (const auto &C : Checks) {
     Type *Ty = C.SinkStart->getType();
     // Compute VF * IC * AccessSize.
     auto *VFTimesUFTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * C.AccessSize));
-    Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
-    Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
-    if (C.NeedsFreeze) {
-      IRBuilder<> Builder(Loc);
-      Sink = Builder.CreateFreeze(Sink, Sink->getName() + ".fr");
-      Src = Builder.CreateFreeze(Src, Src->getName() + ".fr");
-    }
-    Value *Diff = ChkBuilder.CreateSub(Sink, Src);
-    Value *IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+    Value *Diff = Expander.expandCodeFor(
+        SE.getMinusSCEV(C.SinkStart, C.SrcStart), Ty, Loc);
 
+    // Check if the same compare has already been created earlier. In that case,
+    // there is no need to check it again.
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    if (IsConflict)
+      continue;
+
+    IsConflict =
+        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
+    if (C.NeedsFreeze)
+      IsConflict =
+          ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");

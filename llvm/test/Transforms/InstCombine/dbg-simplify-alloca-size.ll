@@ -1,4 +1,5 @@
 ; RUN: opt -S --passes=instcombine %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S --passes=instcombine %s | FileCheck %s
 
 ; https://github.com/llvm/llvm-project/issues/56807
 declare void @foo(ptr %pixels)

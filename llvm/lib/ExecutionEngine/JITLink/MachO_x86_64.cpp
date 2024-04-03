@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
+#include "DefineExternalSectionStartAndEndSymbols.h"
 #include "MachOLinkGraphBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -179,21 +180,41 @@ private:
     Edge::Kind DeltaKind;
     Symbol *TargetSymbol;
     uint64_t Addend;
+
+    bool FixingFromSymbol = true;
     if (&BlockToFix == &FromSymbol->getAddressable()) {
+      if (LLVM_UNLIKELY(&BlockToFix == &ToSymbol->getAddressable())) {
+        // From and To are symbols in the same block. Decide direction by offset
+        // instead.
+        if (ToSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = true;
+        else if (FromSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = false;
+        else
+          FixingFromSymbol = FromSymbol->getAddress() >= ToSymbol->getAddress();
+      } else
+        FixingFromSymbol = true;
+    } else {
+      if (&BlockToFix == &ToSymbol->getAddressable())
+        FixingFromSymbol = false;
+      else {
+        // BlockToFix was neither FromSymbol nor ToSymbol.
+        return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
+                                        "either 'A' or 'B' (or a symbol in one "
+                                        "of their alt-entry groups)");
+      }
+    }
+
+    if (FixingFromSymbol) {
       TargetSymbol = ToSymbol;
       DeltaKind = (SubRI.r_length == 3) ? x86_64::Delta64 : x86_64::Delta32;
       Addend = FixupValue + (FixupAddress - FromSymbol->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (&BlockToFix == &ToSymbol->getAddressable()) {
+    } else {
       TargetSymbol = FromSymbol;
       DeltaKind =
           (SubRI.r_length == 3) ? x86_64::NegDelta64 : x86_64::NegDelta32;
       Addend = FixupValue - (FixupAddress - ToSymbol->getAddress());
-    } else {
-      // BlockToFix was neither FromSymbol nor ToSymbol.
-      return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B' (or a symbol in one "
-                                      "of their alt-entry chains)");
     }
 
     return PairRelocInfo(DeltaKind, TargetSymbol, Addend);
@@ -495,6 +516,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyMachOSectionStartAndEndSymbols));
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildGOTAndStubs_MachO_x86_64);

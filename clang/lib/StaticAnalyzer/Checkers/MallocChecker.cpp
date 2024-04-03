@@ -382,6 +382,8 @@ private:
   CHECK_FN(checkGMemdup)
   CHECK_FN(checkGMallocN)
   CHECK_FN(checkGMallocN0)
+  CHECK_FN(preGetdelim)
+  CHECK_FN(checkGetdelim)
   CHECK_FN(checkReallocN)
   CHECK_FN(checkOwnershipAttr)
 
@@ -390,6 +392,13 @@ private:
 
   using CheckFn = std::function<void(const MallocChecker *,
                                      const CallEvent &Call, CheckerContext &C)>;
+
+  const CallDescriptionMap<CheckFn> PreFnMap{
+      // NOTE: the following CallDescription also matches the C++ standard
+      // library function std::getline(); the callback will filter it out.
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::preGetdelim},
+      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::preGetdelim},
+  };
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
       {{{"free"}, 1}, &MallocChecker::checkFree},
@@ -410,13 +419,13 @@ private:
       {{{"malloc"}, 3}, &MallocChecker::checkKernelMalloc},
       {{{"calloc"}, 2}, &MallocChecker::checkCalloc},
       {{{"valloc"}, 1}, &MallocChecker::checkBasicAlloc},
-      {{CDF_MaybeBuiltin, {"strndup"}, 2}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"strdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"strndup"}, 2}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"strdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"_strdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"kmalloc"}, 2}, &MallocChecker::checkKernelMalloc},
       {{{"if_nameindex"}, 1}, &MallocChecker::checkIfNameIndex},
-      {{CDF_MaybeBuiltin, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
-      {{CDF_MaybeBuiltin, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"wcsdup"}, 1}, &MallocChecker::checkStrdup},
+      {{CDM::CLibrary, {"_wcsdup"}, 1}, &MallocChecker::checkStrdup},
       {{{"g_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
       {{{"g_malloc0"}, 1}, &MallocChecker::checkGMalloc0},
       {{{"g_try_malloc"}, 1}, &MallocChecker::checkBasicAlloc},
@@ -439,6 +448,11 @@ private:
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
       {{{"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
       {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
+
+      // NOTE: the following CallDescription also matches the C++ standard
+      // library function std::getline(); the callback will filter it out.
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::checkGetdelim},
+      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::checkGetdelim},
   };
 
   bool isMemCall(const CallEvent &Call) const;
@@ -588,11 +602,14 @@ private:
   ///      }
   /// \param [in] ReturnsNullOnFailure Whether the memory deallocation function
   ///   we're modeling returns with Null on failure.
+  /// \param [in] ArgValOpt Optional value to use for the argument instead of
+  /// the one obtained from ArgExpr.
   /// \returns The ProgramState right after deallocation.
   [[nodiscard]] ProgramStateRef
   FreeMemAux(CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
              ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
-             AllocationFamily Family, bool ReturnsNullOnFailure = false) const;
+             AllocationFamily Family, bool ReturnsNullOnFailure = false,
+             std::optional<SVal> ArgValOpt = {}) const;
 
   // TODO: Needs some refactoring, as all other deallocation modeling
   // functions are suffering from out parameters and messy code due to how
@@ -1423,6 +1440,62 @@ void MallocChecker::checkGMallocN0(const CallEvent &Call,
   C.addTransition(State);
 }
 
+static bool isFromStdNamespace(const CallEvent &Call) {
+  const Decl *FD = Call.getDecl();
+  assert(FD && "a CallDescription cannot match a call without a Decl");
+  return FD->isInStdNamespace();
+}
+
+void MallocChecker::preGetdelim(const CallEvent &Call,
+                                CheckerContext &C) const {
+  // Discard calls to the C++ standard library function std::getline(), which
+  // is completely unrelated to the POSIX getline() that we're checking.
+  if (isFromStdNamespace(Call))
+    return;
+
+  ProgramStateRef State = C.getState();
+  const auto LinePtr = getPointeeVal(Call.getArgSVal(0), State);
+  if (!LinePtr)
+    return;
+
+  // FreeMemAux takes IsKnownToBeAllocated as an output parameter, and it will
+  // be true after the call if the symbol was registered by this checker.
+  // We do not need this value here, as FreeMemAux will take care
+  // of reporting any violation of the preconditions.
+  bool IsKnownToBeAllocated = false;
+  State = FreeMemAux(C, Call.getArgExpr(0), Call, State, false,
+                     IsKnownToBeAllocated, AF_Malloc, false, LinePtr);
+  if (State)
+    C.addTransition(State);
+}
+
+void MallocChecker::checkGetdelim(const CallEvent &Call,
+                                  CheckerContext &C) const {
+  // Discard calls to the C++ standard library function std::getline(), which
+  // is completely unrelated to the POSIX getline() that we're checking.
+  if (isFromStdNamespace(Call))
+    return;
+
+  ProgramStateRef State = C.getState();
+  // Handle the post-conditions of getline and getdelim:
+  // Register the new conjured value as an allocated buffer.
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  SValBuilder &SVB = C.getSValBuilder();
+
+  const auto LinePtr =
+      getPointeeVal(Call.getArgSVal(0), State)->getAs<DefinedSVal>();
+  const auto Size =
+      getPointeeVal(Call.getArgSVal(1), State)->getAs<DefinedSVal>();
+  if (!LinePtr || !Size || !LinePtr->getAsRegion())
+    return;
+
+  State = setDynamicExtent(State, LinePtr->getAsRegion(), *Size, SVB);
+  C.addTransition(MallocUpdateRefState(C, CE, State, AF_Malloc, *LinePtr));
+}
+
 void MallocChecker::checkReallocN(const CallEvent &Call,
                                   CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -1728,13 +1801,15 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
     return nullptr;
 
   // Bind the return value to the symbolic value from the heap region.
-  // TODO: We could rewrite post visit to eval call; 'malloc' does not have
-  // side effects other than what we model here.
+  // TODO: move use of this functions to an EvalCall callback, becasue
+  // BindExpr() should'nt be used elsewhere.
   unsigned Count = C.blockCount();
-  SValBuilder &svalBuilder = C.getSValBuilder();
+  SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  DefinedSVal RetVal = svalBuilder.getConjuredHeapSymbolVal(CE, LCtx, Count)
-      .castAs<DefinedSVal>();
+  DefinedSVal RetVal =
+      ((Family == AF_Alloca) ? SVB.getAllocaRegionVal(CE, LCtx, Count)
+                             : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count)
+                                   .castAs<DefinedSVal>());
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
 
   // Fill the region with the initialization value.
@@ -1746,7 +1821,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
 
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
-                           Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
+                           Size.castAs<DefinedOrUnknownSVal>(), SVB);
 
   return MallocUpdateRefState(C, CE, State, Family);
 }
@@ -1893,15 +1968,17 @@ static void printExpectedDeallocName(raw_ostream &os, AllocationFamily Family) {
   }
 }
 
-ProgramStateRef MallocChecker::FreeMemAux(
-    CheckerContext &C, const Expr *ArgExpr, const CallEvent &Call,
-    ProgramStateRef State, bool Hold, bool &IsKnownToBeAllocated,
-    AllocationFamily Family, bool ReturnsNullOnFailure) const {
+ProgramStateRef
+MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
+                          const CallEvent &Call, ProgramStateRef State,
+                          bool Hold, bool &IsKnownToBeAllocated,
+                          AllocationFamily Family, bool ReturnsNullOnFailure,
+                          std::optional<SVal> ArgValOpt) const {
 
   if (!State)
     return nullptr;
 
-  SVal ArgVal = C.getSVal(ArgExpr);
+  SVal ArgVal = ArgValOpt.value_or(C.getSVal(ArgExpr));
   if (!isa<DefinedOrUnknownSVal>(ArgVal))
     return nullptr;
   DefinedOrUnknownSVal location = ArgVal.castAs<DefinedOrUnknownSVal>();
@@ -2879,6 +2956,13 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
       return;
   }
 
+  // We need to handle getline pre-conditions here before the pointed region
+  // gets invalidated by StreamChecker
+  if (const auto *PreFN = PreFnMap.lookup(Call)) {
+    (*PreFN)(this, Call, C);
+    return;
+  }
+
   // We will check for double free in the post visit.
   if (const AnyFunctionCall *FC = dyn_cast<AnyFunctionCall>(&Call)) {
     const FunctionDecl *FD = FC->getDecl();
@@ -3148,16 +3232,16 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     // transferred. Again, though, we can't be sure that the object will use
     // free() to deallocate the memory, so we can't model it explicitly.
     StringRef FirstSlot = Msg->getSelector().getNameForSlot(0);
-    if (FirstSlot.endswith("NoCopy"))
+    if (FirstSlot.ends_with("NoCopy"))
       return true;
 
     // If the first selector starts with addPointer, insertPointer,
     // or replacePointer, assume we are dealing with NSPointerArray or similar.
     // This is similar to C++ containers (vector); we still might want to check
     // that the pointers get freed by following the container itself.
-    if (FirstSlot.startswith("addPointer") ||
-        FirstSlot.startswith("insertPointer") ||
-        FirstSlot.startswith("replacePointer") ||
+    if (FirstSlot.starts_with("addPointer") ||
+        FirstSlot.starts_with("insertPointer") ||
+        FirstSlot.starts_with("replacePointer") ||
         FirstSlot.equals("valueWithPointer")) {
       return true;
     }
@@ -3197,7 +3281,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
 
   // White list the 'XXXNoCopy' CoreFoundation functions.
   // We specifically check these before
-  if (FName.endswith("NoCopy")) {
+  if (FName.ends_with("NoCopy")) {
     // Look for the deallocator argument. We know that the memory ownership
     // is not transferred only if the deallocator argument is
     // 'kCFAllocatorNull'.

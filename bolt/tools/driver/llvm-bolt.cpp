@@ -63,6 +63,11 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
+cl::opt<std::string>
+    LogFile("log-file",
+            cl::desc("redirect journaling to a file instead of stdout/stderr"),
+            cl::Hidden, cl::cat(BoltCategory));
+
 static cl::opt<std::string>
 InputDataFilename2("data2",
   cl::desc("<data file>"),
@@ -174,7 +179,7 @@ static std::string GetExecutablePath(const char *Argv0) {
     if (llvm::ErrorOr<std::string> P =
             llvm::sys::findProgramByName(ExecutablePath))
       ExecutablePath = *P;
-  return std::string(ExecutablePath.str());
+  return std::string(ExecutablePath);
 }
 
 int main(int argc, char **argv) {
@@ -207,6 +212,24 @@ int main(int argc, char **argv) {
   if (!sys::fs::exists(opts::InputFilename))
     report_error(opts::InputFilename, errc::no_such_file_or_directory);
 
+  // Initialize journaling streams
+  raw_ostream *BOLTJournalOut = &outs();
+  raw_ostream *BOLTJournalErr = &errs();
+  // RAII obj to keep log file open throughout execution
+  std::unique_ptr<raw_fd_ostream> LogFileStream;
+  if (!opts::LogFile.empty()) {
+    std::error_code LogEC;
+    LogFileStream = std::make_unique<raw_fd_ostream>(
+        opts::LogFile, LogEC, sys::fs::OpenFlags::OF_None);
+    if (LogEC) {
+      errs() << "BOLT-ERROR: cannot open requested log file for writing: "
+             << LogEC.message() << "\n";
+      exit(1);
+    }
+    BOLTJournalOut = LogFileStream.get();
+    BOLTJournalErr = LogFileStream.get();
+  }
+
   // Attempt to open the binary.
   if (!opts::DiffOnly) {
     Expected<OwningBinary<Binary>> BinaryOrErr =
@@ -216,7 +239,8 @@ int main(int argc, char **argv) {
     Binary &Binary = *BinaryOrErr.get().getBinary();
 
     if (auto *e = dyn_cast<ELFObjectFileBase>(&Binary)) {
-      auto RIOrErr = RewriteInstance::create(e, argc, argv, ToolPath);
+      auto RIOrErr = RewriteInstance::create(e, argc, argv, ToolPath,
+                                             *BOLTJournalOut, *BOLTJournalErr);
       if (Error E = RIOrErr.takeError())
         report_error(opts::InputFilename, std::move(E));
       RewriteInstance &RI = *RIOrErr.get();

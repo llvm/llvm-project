@@ -99,7 +99,7 @@ define <2 x i64> @test2_vec_nonuniform(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_nonuniform(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 37>
-; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 37>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 37>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -115,7 +115,7 @@ define <2 x i64> @test2_vec_undef(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_undef(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 undef>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 undef>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -257,7 +257,7 @@ define i64 @test8(i32 %A, i32 %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = zext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[E:%.*]] = shl nuw i64 [[D]], 32
-; CHECK-NEXT:    [[F:%.*]] = or i64 [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint i64 [[E]], [[C]]
 ; CHECK-NEXT:    ret i64 [[F]]
 ;
   %C = zext i32 %A to i128
@@ -273,7 +273,7 @@ define <2 x i64> @test8_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[E:%.*]] = shl nuw <2 x i64> [[D]], <i64 32, i64 32>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], [[C]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -289,7 +289,7 @@ define <2 x i64> @test8_vec_nonuniform(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[C:%.*]] = zext <2 x i32> [[A:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[E:%.*]] = shl <2 x i64> [[D]], <i64 32, i64 48>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], [[C]]
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -950,7 +950,7 @@ define <3 x i31> @wide_splat2(<3 x i33> %x) {
 
 define <3 x i31> @wide_splat3(<3 x i33> %x) {
 ; CHECK-LABEL: @wide_splat3(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> [[X:%.*]], <3 x i33> undef, <3 x i32> <i32 poison, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <3 x i33> [[X:%.*]], <3 x i33> poison, <3 x i32> <i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i33> [[SHUF]] to <3 x i31>
 ; CHECK-NEXT:    ret <3 x i31> [[TRUNC]]
 ;
@@ -1020,4 +1020,41 @@ define i16 @PR44545(i32 %t0, i32 %data) {
   %cast = trunc i32 %ffs to i16
   %sub = add nsw i16 %cast, -1
   ret i16 %sub
+}
+
+; Make sure that SimplifyDemandedBits drops the nowrap flags
+define i8 @drop_nsw_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_nsw_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nsw i16 %and2 to i8
+  ret i8 %res
+}
+
+define i8 @drop_nuw_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_nuw_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw i16 %and2 to i8
+  ret i8 %res
+}
+
+define i8 @drop_both_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_both_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw nsw i16 %and2 to i8
+  ret i8 %res
 }

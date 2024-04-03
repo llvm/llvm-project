@@ -24,10 +24,9 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang {
@@ -181,6 +180,18 @@ public:
   /// appending to chain up consecutive appends.
   DeclarationFragments &appendSpace();
 
+  /// Append a text Fragment of a semicolon character.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive appends.
+  DeclarationFragments &appendSemicolon();
+
+  /// Removes a trailing semicolon character if present.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// removing to chain up consecutive operations.
+  DeclarationFragments &removeTrailingSemicolon();
+
   /// Get the string description of a FragmentKind \p Kind.
   static StringRef getFragmentKindString(FragmentKind Kind);
 
@@ -193,12 +204,14 @@ public:
   static DeclarationFragments getStructureTypeFragment(const RecordDecl *Decl);
 
 private:
+  DeclarationFragments &appendUnduplicatedTextCharacter(char Character);
   std::vector<Fragment> Fragments;
 };
 
 class AccessControl {
 public:
   AccessControl(std::string Access) : Access(Access) {}
+  AccessControl() : Access("public") {}
 
   const std::string &getAccess() const { return Access; }
 
@@ -294,8 +307,9 @@ public:
   /// Build DeclarationFragments for a field declaration FieldDecl.
   static DeclarationFragments getFragmentsForField(const FieldDecl *);
 
-  /// Build DeclarationFragments for a struct record declaration RecordDecl.
-  static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
+  /// Build DeclarationFragments for a struct/union record declaration
+  /// RecordDecl.
+  static DeclarationFragments getFragmentsForRecordDecl(const RecordDecl *);
 
   static DeclarationFragments getFragmentsForCXXClass(const CXXRecordDecl *);
 
@@ -313,13 +327,9 @@ public:
   static DeclarationFragments
       getFragmentsForTemplateParameters(ArrayRef<NamedDecl *>);
 
-  static std::string
-  getNameForTemplateArgument(const ArrayRef<NamedDecl *>, std::string);
-
-  static DeclarationFragments
-  getFragmentsForTemplateArguments(const ArrayRef<TemplateArgument>,
-                                   ASTContext &,
-                                   const std::optional<ArrayRef<NamedDecl *>>);
+  static DeclarationFragments getFragmentsForTemplateArguments(
+      const ArrayRef<TemplateArgument>, ASTContext &,
+      const std::optional<ArrayRef<TemplateArgumentLoc>>);
 
   static DeclarationFragments getFragmentsForConcept(const ConceptDecl *);
 
@@ -410,6 +420,11 @@ private:
   /// Build DeclarationFragments for a parameter variable declaration
   /// ParmVarDecl.
   static DeclarationFragments getFragmentsForParam(const ParmVarDecl *);
+
+  static DeclarationFragments
+  getFragmentsForBlock(const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+                       FunctionProtoTypeLoc &BlockProto,
+                       DeclarationFragments &After);
 };
 
 template <typename FunctionT>
@@ -422,14 +437,8 @@ DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
                                    Function->getASTContext(), After);
   if (isa<FunctionDecl>(Function) &&
       dyn_cast<FunctionDecl>(Function)->getDescribedFunctionTemplate() &&
-      ReturnType.begin()->Spelling.substr(0, 14).compare("type-parameter") ==
-          0) {
-    std::string ProperArgName =
-        getNameForTemplateArgument(dyn_cast<FunctionDecl>(Function)
-                                       ->getDescribedFunctionTemplate()
-                                       ->getTemplateParameters()
-                                       ->asArray(),
-                                   ReturnType.begin()->Spelling);
+      StringRef(ReturnType.begin()->Spelling).starts_with("type-parameter")) {
+    std::string ProperArgName = Function->getReturnType().getAsString();
     ReturnType.begin()->Spelling.swap(ProperArgName);
   }
   ReturnType.append(std::move(After));

@@ -10,7 +10,7 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK:      template <> void do_loop(const auto &v) {
+// CHECK:      void do_loop(const auto &v) {
 // CHECK-NEXT: #pragma omp parallel for
 // CHECK-NEXT:    for (const auto &i : v)
 // CHECK-NEXT:      ;

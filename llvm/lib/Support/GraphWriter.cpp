@@ -128,7 +128,7 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
   }
 
   errs() << "Writing '" << Filename << "'... ";
-  return std::string(Filename.str());
+  return std::string(Filename);
 }
 
 // Execute the graph viewer. Return true if there were errors.

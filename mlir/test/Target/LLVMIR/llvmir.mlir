@@ -66,7 +66,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
 // CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
-  %_c0 = llvm.mlir.constant(2: i32) :i32
+  %_c0 = llvm.mlir.constant(2: i32) : i32
   %gepinit = llvm.getelementptr %addr[%_c0] : (!llvm.ptr, i32) -> !llvm.ptr, i32
   llvm.return %gepinit : !llvm.ptr
 }
@@ -179,7 +179,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // CHECK: declare ptr @malloc(i64)
 llvm.func @malloc(i64) -> !llvm.ptr
 // CHECK: declare void @free(ptr)
-
+llvm.func @free(!llvm.ptr)
 
 //
 // Basic functionality: function and block conversion, function calls,
@@ -1223,19 +1223,23 @@ llvm.func @dereferenceableornullattr_ret_decl() -> (!llvm.ptr {llvm.dereferencea
 llvm.func @inregattr_ret_decl() -> (!llvm.ptr {llvm.inreg})
 
 // CHECK-LABEL: @varargs(...)
-llvm.func @varargs(...)
+llvm.func @varargs(...) -> f32
 
 // CHECK-LABEL: define void @varargs_call
 llvm.func @varargs_call(%arg0 : i32) {
-// CHECK:  call void (...) @varargs(i32 %{{.*}})
-  llvm.call @varargs(%arg0) vararg(!llvm.func<void (...)>) : (i32) -> ()
+// CHECK:  call float (...) @varargs(i32 %{{.*}})
+// CHECK:  call nnan float (...) @varargs(i32 %{{.*}})
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) : (i32) -> (f32)
+  llvm.call @varargs(%arg0) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : (i32) -> (f32)
   llvm.return
 }
 
 // CHECK-LABEL: define void @indirect_varargs_call(ptr %0, i32 %1)
 llvm.func @indirect_varargs_call(%arg0 : !llvm.ptr, %arg1 : i32) {
-// CHECK:  call void (...) %0(i32 %1)
-  llvm.call %arg0(%arg1) vararg(!llvm.func<void (...)>) : !llvm.ptr, (i32) -> ()
+// CHECK:  call float (...) %0(i32 %1)
+// CHECK:  call nnan float (...) %0(i32 %1)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) : !llvm.ptr, (i32) -> (f32)
+  llvm.call %arg0(%arg1) vararg(!llvm.func<f32 (...)>) {fastmathFlags = #llvm.fastmath<nnan>} : !llvm.ptr, (i32) -> (f32)
   llvm.return
 }
 
@@ -1907,6 +1911,17 @@ llvm.func @nontemporal_store_and_load() {
 
 // -----
 
+// Check that invariantLoad attribute is exported as metadata node.
+llvm.func @nontemporal_store_and_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: !invariant.load ![[NODE:[0-9]+]]
+  %1 = llvm.load %ptr invariant : !llvm.ptr -> i32
+  llvm.return %1 : i32
+}
+
+// CHECK: ![[NODE]] = !{}
+
+// -----
+
 llvm.func @atomic_store_and_load(%ptr : !llvm.ptr) {
   // CHECK: load atomic
   // CHECK-SAME:  acquire, align 4
@@ -2236,14 +2251,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
   %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_start.p0(ptr %[[ALLOCA0]])
   llvm.intr.vastart %2 : !llvm.ptr
   // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
   // CHECK: ret void
@@ -2298,6 +2313,57 @@ llvm.func @locally_streaming_func() attributes {arm_locally_streaming} {
 }
 
 // CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_body" }
+
+// -----
+
+//
+// arm_streaming_compatible attribute.
+//
+
+// CHECK-LABEL: @streaming_compatible_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTR]] = { "aarch64_pstate_sm_compatible" }
+
+// -----
+
+// CHECK-LABEL: @new_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @new_za_func() attributes {arm_new_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_new_za" }
+
+// CHECK-LABEL: @in_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @in_za_func() attributes {arm_in_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_in_za" }
+
+// CHECK-LABEL: @out_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @out_za_func() attributes {arm_out_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_out_za" }
+
+// CHECK-LABEL: @inout_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @inout_za_func() attributes {arm_inout_za } {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_inout_za" }
+
+// CHECK-LABEL: @preserves_za_func
+// CHECK: #[[ATTR:[0-9]*]]
+llvm.func @preserves_za_func() attributes {arm_preserves_za} {
+  llvm.return
+}
+// CHECK #[[ATTR]] = { "aarch64_preserves_za" }
 
 // -----
 

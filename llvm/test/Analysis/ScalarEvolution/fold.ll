@@ -77,12 +77,10 @@ define void @test4(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %I = add i32 %A, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,22) S: [1,22) Exits: 21 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 20
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 20
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 20
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 20
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 21
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 20
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 20
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 20
+; CHECK-NEXT:  Loop %loop: Trip multiple is 21
 ;
 entry:
   %Y = and i32 %y, 3

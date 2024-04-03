@@ -87,14 +87,14 @@ bool IsPassedViaDescriptor(const Symbol &symbol) {
   if (IsAllocatableOrPointer(symbol)) {
     return true;
   }
+  if (semantics::IsAssumedSizeArray(symbol)) {
+    return false;
+  }
   if (const auto *object{
           symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
     if (object->isDummy()) {
       if (object->type() &&
           object->type()->category() == DeclTypeSpec::Character) {
-        return false;
-      }
-      if (object->IsAssumedSize()) {
         return false;
       }
       bool isExplicitShape{true};

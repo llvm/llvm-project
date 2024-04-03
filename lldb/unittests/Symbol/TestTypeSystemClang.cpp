@@ -941,8 +941,7 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   bool artificial = false;
   bool objc_direct = false;
   clang::ObjCMethodDecl *method = TypeSystemClang::AddMethodToObjCObjectType(
-      c, "-[A foo]", func_type, lldb::eAccessPublic, artificial, variadic,
-      objc_direct);
+      c, "-[A foo]", func_type, artificial, variadic, objc_direct);
   ASSERT_NE(method, nullptr);
 
   // The interface decl should still have external lexical storage.

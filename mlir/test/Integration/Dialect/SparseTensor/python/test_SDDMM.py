@@ -16,7 +16,7 @@ from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 @dsl.linalg_structured_op
@@ -139,12 +139,15 @@ def main():
         # search the full state space to reduce runtime of the test. It is
         # straightforward to adapt the code below to explore more combinations.
         # For these simple orderings, dim2lvl and lvl2dim are the same.
+        builder = st.EncodingAttr.build_level_type
+        fmt = st.LevelFormat
+        prop = st.LevelProperty
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.dense],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.dense],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [builder(fmt.compressed, [prop.non_unique]), builder(fmt.singleton)],
+            [builder(fmt.dense), builder(fmt.dense)],
+            [builder(fmt.dense), builder(fmt.compressed)],
+            [builder(fmt.compressed), builder(fmt.dense)],
+            [builder(fmt.compressed), builder(fmt.compressed)],
         ]
         orderings = [
             ir.AffineMap.get_permutation([0, 1]),
@@ -159,7 +162,7 @@ def main():
                                 level, ordering, ordering, pwidth, iwidth
                             )
                             opt = f"parallelization-strategy=none"
-                            compiler = sparse_compiler.SparseCompiler(
+                            compiler = sparsifier.Sparsifier(
                                 options=opt, opt_level=0, shared_libs=[support_lib]
                             )
                             build_compile_and_run_SDDMMM(attr, compiler)

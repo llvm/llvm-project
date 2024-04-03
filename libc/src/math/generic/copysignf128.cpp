@@ -9,7 +9,6 @@
 #include "src/math/copysignf128.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/properties/compiler.h"
 
 namespace LIBC_NAMESPACE {
 

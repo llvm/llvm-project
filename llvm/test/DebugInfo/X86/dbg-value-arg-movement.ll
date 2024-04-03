@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=COMMON,CHECK
 ; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=COMMON,INSTRREF
 
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=COMMON,CHECK
+; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare -stop-before=finalize-isel %s -o - -experimental-debug-variable-locations=true --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=COMMON,INSTRREF
+
 ; Test the movement of dbg.values of arguments. SelectionDAG tries to be
 ; helpful and places DBG_VALUEs of Arguments at the start of functions.
 ; Unfortunately, this doesn't necessarily make sense, as one can specify an

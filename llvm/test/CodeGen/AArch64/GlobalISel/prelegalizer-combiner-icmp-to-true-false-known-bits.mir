@@ -3,33 +3,33 @@
 # REQUIRES: asserts
 
 --- |
-  define i1 @eq_true(i32* %ptr) { unreachable }
-  define i1 @ne_true(i32* %ptr) { unreachable }
-  define i1 @sge_true(i32* %ptr) { unreachable }
-  define i1 @sgt_true(i32* %ptr) { unreachable }
-  define i1 @sle_true(i32* %ptr) { unreachable }
-  define i1 @slt_true(i32* %ptr) { unreachable }
-  define i1 @uge_true(i32* %ptr) { unreachable }
-  define i1 @ugt_true(i32* %ptr) { unreachable }
-  define i1 @ule_true(i32* %ptr) { unreachable }
-  define i1 @ult_true(i32* %ptr) { unreachable }
+  define i1 @eq_true(ptr %ptr) { unreachable }
+  define i1 @ne_true(ptr %ptr) { unreachable }
+  define i1 @sge_true(ptr %ptr) { unreachable }
+  define i1 @sgt_true(ptr %ptr) { unreachable }
+  define i1 @sle_true(ptr %ptr) { unreachable }
+  define i1 @slt_true(ptr %ptr) { unreachable }
+  define i1 @uge_true(ptr %ptr) { unreachable }
+  define i1 @ugt_true(ptr %ptr) { unreachable }
+  define i1 @ule_true(ptr %ptr) { unreachable }
+  define i1 @ult_true(ptr %ptr) { unreachable }
 
-  define i1 @eq_false(i32* %ptr) { unreachable }
-  define i1 @ne_false(i32* %ptr) { unreachable }
-  define i1 @sge_false(i32* %ptr) { unreachable }
-  define i1 @sgt_false(i32* %ptr) { unreachable }
-  define i1 @sle_false(i32* %ptr) { unreachable }
-  define i1 @slt_false(i32* %ptr) { unreachable }
-  define i1 @uge_false(i32* %ptr) { unreachable }
-  define i1 @ugt_false(i32* %ptr) { unreachable }
-  define i1 @ule_false(i32* %ptr) { unreachable }
-  define i1 @ult_false(i32* %ptr) { unreachable }
+  define i1 @eq_false(ptr %ptr) { unreachable }
+  define i1 @ne_false(ptr %ptr) { unreachable }
+  define i1 @sge_false(ptr %ptr) { unreachable }
+  define i1 @sgt_false(ptr %ptr) { unreachable }
+  define i1 @sle_false(ptr %ptr) { unreachable }
+  define i1 @slt_false(ptr %ptr) { unreachable }
+  define i1 @uge_false(ptr %ptr) { unreachable }
+  define i1 @ugt_false(ptr %ptr) { unreachable }
+  define i1 @ule_false(ptr %ptr) { unreachable }
+  define i1 @ult_false(ptr %ptr) { unreachable }
 
-  define i1 @eq_unknown(i32* %ptr) { unreachable }
-  define i1 @ne_unknown(i32* %ptr) { unreachable }
+  define i1 @eq_unknown(ptr %ptr) { unreachable }
+  define i1 @ne_unknown(ptr %ptr) { unreachable }
 
-  define i1 @vector_true(i32* %ptr) { unreachable }
-  define i1 @vector_false(i32* %ptr) { unreachable }
+  define i1 @vector_true(ptr %ptr) { unreachable }
+  define i1 @vector_false(ptr %ptr) { unreachable }
 
   !0 = !{i32 1, i32 2}
   !1 = !{i32 1, i32 3}

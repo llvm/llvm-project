@@ -53,6 +53,48 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strfromf
+  SRCS
+    strfromf.cpp
+  HDRS
+    strfromf.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+  DEPENDS
+    .str_from_util
+)
+
+add_header_library(
+  str_from_util
+  HDRS
+    str_from_util.h
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.type_traits
+)
+
+add_entrypoint_object(
   strtof
   SRCS
     strtof.cpp
@@ -268,20 +310,29 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
   include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
-  if(NOT (LIBC_TARGET_ARCHITECTURE IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
-    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE} is not supported by SCUDO. 
+
+  # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
+  set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
+  if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
+    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv64)
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_RISCV32)
+    set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO riscv32)
+  endif()
+
+  if(NOT (LIBC_TARGET_ARCHITECTURE_FOR_SCUDO IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
+    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO.
       Either disable LLVM_LIBC_INCLUDE_SCUDO or change your target architecture.")
   endif()
 
-  list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE}
-      RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE})
+  list(APPEND SCUDO_DEPS RTScudoStandalone.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+      RTScudoStandaloneCWrappers.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO})
 
   list(APPEND SCUDO_DEPS
-    RTGwpAsan.${LIBC_TARGET_ARCHITECTURE}
-    RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE}
-    RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE}
+    RTGwpAsan.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+    RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
+    RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     )
-  
+
   add_entrypoint_external(
     malloc
     DEPENDS
@@ -307,7 +358,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
-elseif(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+elseif(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_external(
     calloc
   )
@@ -363,10 +414,11 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.fixedvector
-    libc.src.__support.blockstore
-    libc.src.__support.threads.mutex
     libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.blockstore
+    libc.src.__support.fixedvector
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
@@ -388,7 +440,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.abort
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
     ALIAS

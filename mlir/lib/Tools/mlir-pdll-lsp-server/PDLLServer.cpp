@@ -10,6 +10,7 @@
 
 #include "Protocol.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -946,7 +947,7 @@ public:
           break;
         case llvm::sys::fs::file_type::regular_file: {
           // Only consider concrete files that can actually be included by PDLL.
-          if (filename.endswith(".pdll") || filename.endswith(".td"))
+          if (filename.ends_with(".pdll") || filename.ends_with(".td"))
             addIncludeCompletion(filename, /*isDirectory=*/false);
           break;
         }
@@ -1621,7 +1622,8 @@ PDLTextFile::getPDLLViewOutput(lsp::PDLLViewOutputKind kind) {
         [&](PDLTextFileChunk &chunk) {
           chunk.document.getPDLLViewOutput(outputOS, kind);
         },
-        [&] { outputOS << "\n// -----\n\n"; });
+        [&] { outputOS << "\n"
+                       << kDefaultSplitMarker << "\n\n"; });
   }
   return result;
 }
@@ -1632,11 +1634,8 @@ void PDLTextFile::initialize(const lsp::URIForFile &uri, int64_t newVersion,
   chunks.clear();
 
   // Split the file into separate PDL documents.
-  // TODO: Find a way to share the split file marker with other tools. We don't
-  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
-  // marker doesn't go out of sync.
   SmallVector<StringRef, 8> subContents;
-  StringRef(contents).split(subContents, "// -----");
+  StringRef(contents).split(subContents, kDefaultSplitMarker);
   chunks.emplace_back(std::make_unique<PDLTextFileChunk>(
       /*lineOffset=*/0, uri, subContents.front(), extraIncludeDirs,
       diagnostics));

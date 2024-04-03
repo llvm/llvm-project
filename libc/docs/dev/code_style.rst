@@ -45,13 +45,17 @@ We define two kinds of macros:
        e.g., ``LIBC_TARGET_ARCH_IS_ARM``.
      * ``compiler.h`` - Host compiler properties.
        e.g., ``LIBC_COMPILER_IS_CLANG``.
-     * ``cpu_features.h`` - Target cpu apu feature availability.
+     * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
+     * ``types.h`` - Type properties and availability.
+       e.g., ``LIBC_TYPES_HAS_FLOAT128``.
+     * ``os.h`` - Target os properties.
+       e.g., ``LIBC_TARGET_OS_IS_LINUX``.
 
    * ``src/__support/macros/config.h`` - Important compiler and platform
      features. Such macros can be used to produce portable code by
      parameterizing compilation based on the presence or lack of a given
-     feature. e.g., ``LIBC_HAS_BUILTIN``
+     feature. e.g., ``LIBC_HAS_FEATURE``
    * ``src/__support/macros/attributes.h`` - Attributes for functions, types,
      and variables. e.g., ``LIBC_UNUSED``
    * ``src/__support/macros/optimization.h`` - Portable macros for performance
@@ -174,3 +178,11 @@ these functions do not call the constructors and destructors of the
 allocated/deallocated objects. So, use these functions carefully and only
 when it is absolutely clear that constructor and destructor invocation is
 not required.
+
+Warnings in sources
+===================
+
+We expect contributions to be free of warnings from the `minimum supported
+compiler versions`__ (and newer).
+
+.. __: https://libc.llvm.org/compiler_support.html#minimum-supported-versions

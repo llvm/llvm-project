@@ -27,7 +27,6 @@ BreakpointResolverFileRegex::BreakpointResolverFileRegex(
       m_function_names(func_names) {}
 
 BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
-    const lldb::BreakpointSP &bkpt,
     const StructuredData::Dictionary &options_dict, Status &error) {
   bool success;
 
@@ -67,8 +66,8 @@ BreakpointResolverSP BreakpointResolverFileRegex::CreateFromStructuredData(
     }
   }
 
-  return std::make_shared<BreakpointResolverFileRegex>(bkpt, std::move(regex),
-                                                       names_set, exact_match);
+  return std::make_shared<BreakpointResolverFileRegex>(
+      nullptr, std::move(regex), names_set, exact_match);
 }
 
 StructuredData::ObjectSP

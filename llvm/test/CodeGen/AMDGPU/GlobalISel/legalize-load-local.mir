@@ -9,6 +9,8 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -O0 -run-pass=legalizer -mattr=+unaligned-access-mode -global-isel-abort=0 %s -o - | FileCheck -check-prefix=GFX10-UNALIGNED %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -O0 -run-pass=legalizer -mattr=-unaligned-access-mode -global-isel-abort=0 %s -o - | FileCheck -check-prefix=GFX11 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -O0 -run-pass=legalizer -mattr=+unaligned-access-mode -global-isel-abort=0 %s -o - | FileCheck -check-prefix=GFX11-UNALIGNED %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -O0 -run-pass=legalizer -mattr=-unaligned-access-mode -global-isel-abort=0 %s -o - | FileCheck -check-prefix=GFX11 %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -O0 -run-pass=legalizer -mattr=+unaligned-access-mode -global-isel-abort=0 %s -o - | FileCheck -check-prefix=GFX11-UNALIGNED %s
 
 ---
 name: test_load_local_s1_align1

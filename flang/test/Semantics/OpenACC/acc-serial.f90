@@ -166,4 +166,17 @@ program openacc_serial_validity
   end do
   !$acc end serial
 
+  do i = 1, 100
+    !$acc serial
+    !ERROR: CYCLE to construct outside of SERIAL construct is not allowed
+    if (i == 10) cycle
+    !$acc end serial
+  end do
+
+  !$acc serial
+  do i = 1, 100
+    if (i == 10) cycle
+  end do
+  !$acc end serial
+
 end program openacc_serial_validity

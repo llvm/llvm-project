@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass liveintervals -debug-only=regalloc -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass liveintervals -debug-only=regalloc -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK: INTERVALS

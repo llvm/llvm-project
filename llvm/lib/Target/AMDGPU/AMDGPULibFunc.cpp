@@ -478,7 +478,7 @@ static bool eatTerm(StringRef& mangledName, const char c) {
 
 template <size_t N>
 static bool eatTerm(StringRef& mangledName, const char (&str)[N]) {
-  if (mangledName.startswith(StringRef(str, N-1))) {
+  if (mangledName.starts_with(StringRef(str, N - 1))) {
     drop_front(mangledName, N-1);
     return true;
   }

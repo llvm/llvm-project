@@ -16,6 +16,7 @@
 #include "RecordStreamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -68,6 +69,11 @@ void ModuleSymbolTable::addModule(Module *M) {
 static void
 initializeRecordStreamer(const Module &M,
                          function_ref<void(RecordStreamer &)> Init) {
+  // This function may be called twice, once for ModuleSummaryIndexAnalysis and
+  // the other when writing the IR symbol table. If parsing inline assembly has
+  // caused errors in the first run, suppress the second run.
+  if (M.getContext().getDiagHandlerPtr()->HasErrors)
+    return;
   StringRef InlineAsm = M.getModuleInlineAsm();
   if (InlineAsm.empty())
     return;
@@ -95,7 +101,8 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
+  std::unique_ptr<MemoryBuffer> Buffer(
+      MemoryBuffer::getMemBuffer(InlineAsm, "<inline asm>"));
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
@@ -114,6 +121,13 @@ initializeRecordStreamer(const Module &M,
       T->createMCAsmParser(*STI, *Parser, *MCII, MCOptions));
   if (!TAP)
     return;
+
+  MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                 const SourceMgr &SrcMgr,
+                                 std::vector<const MDNode *> &LocInfos) {
+    M.getContext().diagnose(
+        DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
+  });
 
   // Module-level inline asm is assumed to use At&t syntax (see
   // AsmPrinter::doInitialization()).
@@ -215,7 +229,7 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
       GV->hasExternalWeakLinkage())
     Res |= BasicSymbolRef::SF_Weak;
 
-  if (GV->getName().startswith("llvm."))
+  if (GV->getName().starts_with("llvm."))
     Res |= BasicSymbolRef::SF_FormatSpecific;
   else if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
     if (Var->getSection() == "llvm.metadata")

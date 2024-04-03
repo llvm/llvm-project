@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -124,7 +124,7 @@ DATA_ARRAY_TEMPLATE = """
 /// - bits [0, 10] The size of the range, allowing 2048 elements.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 
 /// At the end of the valid Unicode code points space a lot of code points are
@@ -231,7 +231,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 namespace __escaped_output_table {{
+// clang-format off
 {content}
+// clang-format on
 }} // namespace __escaped_output_table
 
 #endif //_LIBCPP_STD_VER >= 23

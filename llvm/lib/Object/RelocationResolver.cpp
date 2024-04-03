@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
-#include <vector>
 
 namespace llvm {
 namespace object {
@@ -539,6 +538,8 @@ static bool supportsLoongArch(uint64_t Type) {
   case ELF::R_LARCH_32:
   case ELF::R_LARCH_32_PCREL:
   case ELF::R_LARCH_64:
+  case ELF::R_LARCH_ADD6:
+  case ELF::R_LARCH_SUB6:
   case ELF::R_LARCH_ADD8:
   case ELF::R_LARCH_SUB8:
   case ELF::R_LARCH_ADD16:
@@ -564,6 +565,10 @@ static uint64_t resolveLoongArch(uint64_t Type, uint64_t Offset, uint64_t S,
     return (S + Addend - Offset) & 0xFFFFFFFF;
   case ELF::R_LARCH_64:
     return S + Addend;
+  case ELF::R_LARCH_ADD6:
+    return (LocData & 0xC0) | ((LocData + S + Addend) & 0x3F);
+  case ELF::R_LARCH_SUB6:
+    return (LocData & 0xC0) | ((LocData - (S + Addend)) & 0x3F);
   case ELF::R_LARCH_ADD8:
     return (LocData + (S + Addend)) & 0xFF;
   case ELF::R_LARCH_SUB8:
@@ -880,8 +885,10 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
 
       if (GetRelSectionType() == ELF::SHT_RELA) {
         Addend = getELFAddend(R);
-        // RISCV relocations use both LocData and Addend.
-        if (Obj->getArch() != Triple::riscv32 &&
+        // LoongArch and RISCV relocations use both LocData and Addend.
+        if (Obj->getArch() != Triple::loongarch32 &&
+            Obj->getArch() != Triple::loongarch64 &&
+            Obj->getArch() != Triple::riscv32 &&
             Obj->getArch() != Triple::riscv64)
           LocData = 0;
       }

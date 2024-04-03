@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: no-filesystem
@@ -36,15 +36,16 @@
 // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx12.{{0|1|2}}
 
 // Windows doesn't support the necessary APIs to mitigate this issue.
-// UNSUPPORTED: target={{.+}}-windows-{{.+}}
+// XFAIL: target={{.+}}-windows-{{.+}}
 
 #include <cstdio>
 #include <filesystem>
 #include <system_error>
 #include <thread>
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include "filesystem_test_helper.h"
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   scoped_test_env env;

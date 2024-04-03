@@ -1,7 +1,12 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: opt -S -debugger-tune=lldb %s | FileCheck -check-prefix=OPT %s
-;
+
+; Do the same for experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=ASM
+; RUN: opt --try-experimental-debuginfo-iterators -S -debugger-tune=lldb %s | FileCheck -check-prefix=OPT %s
+
 ; -- "thunk.cpp" begin --------------------------------------------------------
 ; class A { public: virtual bool MyMethod() { return true; } }; 
 ; class B { public: virtual bool MyMethod() { return true; } }; 
@@ -102,13 +107,13 @@ source_filename = "thunk.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc19.0.24210"
 
-%rtti.CompleteObjectLocator = type { i32, i32, i32, i8*, %rtti.ClassHierarchyDescriptor* }
-%rtti.ClassHierarchyDescriptor = type { i32, i32, i32, %rtti.BaseClassDescriptor** }
-%rtti.BaseClassDescriptor = type { i8*, i32, i32, i32, i32, i32, %rtti.ClassHierarchyDescriptor* }
-%rtti.TypeDescriptor7 = type { i8**, i8*, [8 x i8] }
-%class.A = type { i32 (...)** }
-%class.B = type { i32 (...)** }
-%class.C = type { i32*, %class.A, %class.B }
+%rtti.CompleteObjectLocator = type { i32, i32, i32, ptr, ptr }
+%rtti.ClassHierarchyDescriptor = type { i32, i32, i32, ptr }
+%rtti.BaseClassDescriptor = type { ptr, i32, i32, i32, i32, i32, ptr }
+%rtti.TypeDescriptor7 = type { ptr, ptr, [8 x i8] }
+%class.A = type { ptr }
+%class.B = type { ptr }
+%class.C = type { ptr, %class.A, %class.B }
 
 $"\01??0C@@QAE@XZ" = comdat any
 
@@ -173,137 +178,137 @@ $"\01??_7B@@6B@" = comdat largest
 $"\01??_R4B@@6B@" = comdat any
 
 @"\01??_8C@@7B@" = linkonce_odr unnamed_addr constant [3 x i32] [i32 0, i32 4, i32 8], comdat
-@0 = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4C@@6BA@@@" to i8*), i8* bitcast (i1 (i8*)* @"\01?MyMethod@C@@UAE_NXZ" to i8*)] }, comdat($"\01??_7C@@6BA@@@")
-@1 = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4C@@6BB@@@" to i8*), i8* bitcast (i1 (i8*)* @"\01?MyMethod@C@@W3AE_NXZ" to i8*)] }, comdat($"\01??_7C@@6BB@@@")
-@"\01??_R4C@@6BA@@@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 4, i32 0, i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVC@@@8" to i8*), %rtti.ClassHierarchyDescriptor* @"\01??_R3C@@8" }, comdat
-@"\01??_7type_info@@6B@" = external constant i8*
-@"\01??_R0?AVC@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"\01??_7type_info@@6B@", i8* null, [8 x i8] c".?AVC@@\00" }, comdat
-@"\01??_R3C@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 3, i32 3, %rtti.BaseClassDescriptor** getelementptr inbounds ([4 x %rtti.BaseClassDescriptor*], [4 x %rtti.BaseClassDescriptor*]* @"\01??_R2C@@8", i32 0, i32 0) }, comdat
-@"\01??_R2C@@8" = linkonce_odr constant [4 x %rtti.BaseClassDescriptor*] [%rtti.BaseClassDescriptor* @"\01??_R1A@?0A@EA@C@@8", %rtti.BaseClassDescriptor* @"\01??_R1A@A@3FA@A@@8", %rtti.BaseClassDescriptor* @"\01??_R1A@A@7FA@B@@8", %rtti.BaseClassDescriptor* null], comdat
-@"\01??_R1A@?0A@EA@C@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVC@@@8" to i8*), i32 2, i32 0, i32 -1, i32 0, i32 64, %rtti.ClassHierarchyDescriptor* @"\01??_R3C@@8" }, comdat
-@"\01??_R1A@A@3FA@A@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVA@@@8" to i8*), i32 0, i32 0, i32 0, i32 4, i32 80, %rtti.ClassHierarchyDescriptor* @"\01??_R3A@@8" }, comdat
-@"\01??_R0?AVA@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"\01??_7type_info@@6B@", i8* null, [8 x i8] c".?AVA@@\00" }, comdat
-@"\01??_R3A@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, %rtti.BaseClassDescriptor** getelementptr inbounds ([2 x %rtti.BaseClassDescriptor*], [2 x %rtti.BaseClassDescriptor*]* @"\01??_R2A@@8", i32 0, i32 0) }, comdat
-@"\01??_R2A@@8" = linkonce_odr constant [2 x %rtti.BaseClassDescriptor*] [%rtti.BaseClassDescriptor* @"\01??_R1A@?0A@EA@A@@8", %rtti.BaseClassDescriptor* null], comdat
-@"\01??_R1A@?0A@EA@A@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVA@@@8" to i8*), i32 0, i32 0, i32 -1, i32 0, i32 64, %rtti.ClassHierarchyDescriptor* @"\01??_R3A@@8" }, comdat
-@"\01??_R1A@A@7FA@B@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVB@@@8" to i8*), i32 0, i32 0, i32 0, i32 8, i32 80, %rtti.ClassHierarchyDescriptor* @"\01??_R3B@@8" }, comdat
-@"\01??_R0?AVB@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"\01??_7type_info@@6B@", i8* null, [8 x i8] c".?AVB@@\00" }, comdat
-@"\01??_R3B@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, %rtti.BaseClassDescriptor** getelementptr inbounds ([2 x %rtti.BaseClassDescriptor*], [2 x %rtti.BaseClassDescriptor*]* @"\01??_R2B@@8", i32 0, i32 0) }, comdat
-@"\01??_R2B@@8" = linkonce_odr constant [2 x %rtti.BaseClassDescriptor*] [%rtti.BaseClassDescriptor* @"\01??_R1A@?0A@EA@B@@8", %rtti.BaseClassDescriptor* null], comdat
-@"\01??_R1A@?0A@EA@B@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVB@@@8" to i8*), i32 0, i32 0, i32 -1, i32 0, i32 64, %rtti.ClassHierarchyDescriptor* @"\01??_R3B@@8" }, comdat
-@"\01??_R4C@@6BB@@@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 8, i32 0, i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVC@@@8" to i8*), %rtti.ClassHierarchyDescriptor* @"\01??_R3C@@8" }, comdat
-@2 = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4A@@6B@" to i8*), i8* bitcast (i1 (%class.A*)* @"\01?MyMethod@A@@UAE_NXZ" to i8*)] }, comdat($"\01??_7A@@6B@")
-@"\01??_R4A@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 0, i32 0, i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVA@@@8" to i8*), %rtti.ClassHierarchyDescriptor* @"\01??_R3A@@8" }, comdat
-@3 = private unnamed_addr constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4B@@6B@" to i8*), i8* bitcast (i1 (%class.B*)* @"\01?MyMethod@B@@UAE_NXZ" to i8*)] }, comdat($"\01??_7B@@6B@")
-@"\01??_R4B@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 0, i32 0, i8* bitcast (%rtti.TypeDescriptor7* @"\01??_R0?AVB@@@8" to i8*), %rtti.ClassHierarchyDescriptor* @"\01??_R3B@@8" }, comdat
+@0 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"\01??_R4C@@6BA@@@", ptr @"\01?MyMethod@C@@UAE_NXZ"] }, comdat($"\01??_7C@@6BA@@@")
+@1 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"\01??_R4C@@6BB@@@", ptr @"\01?MyMethod@C@@W3AE_NXZ"] }, comdat($"\01??_7C@@6BB@@@")
+@"\01??_R4C@@6BA@@@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 4, i32 0, ptr @"\01??_R0?AVC@@@8", ptr @"\01??_R3C@@8" }, comdat
+@"\01??_7type_info@@6B@" = external constant ptr
+@"\01??_R0?AVC@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"\01??_7type_info@@6B@", ptr null, [8 x i8] c".?AVC@@\00" }, comdat
+@"\01??_R3C@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 3, i32 3, ptr @"\01??_R2C@@8" }, comdat
+@"\01??_R2C@@8" = linkonce_odr constant [4 x ptr] [ptr @"\01??_R1A@?0A@EA@C@@8", ptr @"\01??_R1A@A@3FA@A@@8", ptr @"\01??_R1A@A@7FA@B@@8", ptr null], comdat
+@"\01??_R1A@?0A@EA@C@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { ptr @"\01??_R0?AVC@@@8", i32 2, i32 0, i32 -1, i32 0, i32 64, ptr @"\01??_R3C@@8" }, comdat
+@"\01??_R1A@A@3FA@A@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { ptr @"\01??_R0?AVA@@@8", i32 0, i32 0, i32 0, i32 4, i32 80, ptr @"\01??_R3A@@8" }, comdat
+@"\01??_R0?AVA@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"\01??_7type_info@@6B@", ptr null, [8 x i8] c".?AVA@@\00" }, comdat
+@"\01??_R3A@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, ptr @"\01??_R2A@@8" }, comdat
+@"\01??_R2A@@8" = linkonce_odr constant [2 x ptr] [ptr @"\01??_R1A@?0A@EA@A@@8", ptr null], comdat
+@"\01??_R1A@?0A@EA@A@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { ptr @"\01??_R0?AVA@@@8", i32 0, i32 0, i32 -1, i32 0, i32 64, ptr @"\01??_R3A@@8" }, comdat
+@"\01??_R1A@A@7FA@B@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { ptr @"\01??_R0?AVB@@@8", i32 0, i32 0, i32 0, i32 8, i32 80, ptr @"\01??_R3B@@8" }, comdat
+@"\01??_R0?AVB@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"\01??_7type_info@@6B@", ptr null, [8 x i8] c".?AVB@@\00" }, comdat
+@"\01??_R3B@@8" = linkonce_odr constant %rtti.ClassHierarchyDescriptor { i32 0, i32 0, i32 1, ptr @"\01??_R2B@@8" }, comdat
+@"\01??_R2B@@8" = linkonce_odr constant [2 x ptr] [ptr @"\01??_R1A@?0A@EA@B@@8", ptr null], comdat
+@"\01??_R1A@?0A@EA@B@@8" = linkonce_odr constant %rtti.BaseClassDescriptor { ptr @"\01??_R0?AVB@@@8", i32 0, i32 0, i32 -1, i32 0, i32 64, ptr @"\01??_R3B@@8" }, comdat
+@"\01??_R4C@@6BB@@@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 8, i32 0, ptr @"\01??_R0?AVC@@@8", ptr @"\01??_R3C@@8" }, comdat
+@2 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"\01??_R4A@@6B@", ptr @"\01?MyMethod@A@@UAE_NXZ"] }, comdat($"\01??_7A@@6B@")
+@"\01??_R4A@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 0, i32 0, ptr @"\01??_R0?AVA@@@8", ptr @"\01??_R3A@@8" }, comdat
+@3 = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"\01??_R4B@@6B@", ptr @"\01?MyMethod@B@@UAE_NXZ"] }, comdat($"\01??_7B@@6B@")
+@"\01??_R4B@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 0, i32 0, i32 0, ptr @"\01??_R0?AVB@@@8", ptr @"\01??_R3B@@8" }, comdat
 
-@"\01??_7C@@6BA@@@" = unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @0, i32 0, i32 0, i32 1)
-@"\01??_7C@@6BB@@@" = unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @1, i32 0, i32 0, i32 1)
-@"\01??_7A@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @2, i32 0, i32 0, i32 1)
-@"\01??_7B@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @3, i32 0, i32 0, i32 1)
+@"\01??_7C@@6BA@@@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
+@"\01??_7C@@6BB@@@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
+@"\01??_7A@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @2, i32 0, i32 0, i32 1)
+@"\01??_7B@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr @3, i32 0, i32 0, i32 1)
 
 ; Function Attrs: noinline norecurse optnone
 define i32 @main() #0 !dbg !8 {
 entry:
   %retval = alloca i32, align 4
-  %a = alloca %class.A*, align 4
-  %b = alloca %class.B*, align 4
-  %c = alloca %class.C*, align 4
-  %mp = alloca i8*, align 4
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata %class.A** %a, metadata !12, metadata !DIExpression()), !dbg !24
-  %call = call i8* @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !25
-  %0 = bitcast i8* %call to %class.C*, !dbg !25
-  %1 = bitcast %class.C* %0 to i8*, !dbg !26
-  call void @llvm.memset.p0i8.i32(i8* align 8 %1, i8 0, i32 12, i1 false), !dbg !26
-  %call1 = call x86_thiscallcc %class.C* @"\01??0C@@QAE@XZ"(%class.C* %0, i32 1) #8, !dbg !26
-  %2 = icmp eq %class.C* %0, null, !dbg !25
+  %a = alloca ptr, align 4
+  %b = alloca ptr, align 4
+  %c = alloca ptr, align 4
+  %mp = alloca ptr, align 4
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !24
+  %call = call ptr @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !25
+  %0 = bitcast ptr %call to ptr, !dbg !25
+  %1 = bitcast ptr %0 to ptr, !dbg !26
+  call void @llvm.memset.p0.i32(ptr align 8 %1, i8 0, i32 12, i1 false), !dbg !26
+  %call1 = call x86_thiscallcc ptr @"\01??0C@@QAE@XZ"(ptr %0, i32 1) #8, !dbg !26
+  %2 = icmp eq ptr %0, null, !dbg !25
   br i1 %2, label %cast.end, label %cast.notnull, !dbg !25
 
 cast.notnull:                                     ; preds = %entry
-  %3 = bitcast %class.C* %0 to i8*, !dbg !25
-  %vbptr = getelementptr inbounds i8, i8* %3, i32 0, !dbg !25
-  %4 = bitcast i8* %vbptr to i32**, !dbg !25
-  %vbtable = load i32*, i32** %4, align 4, !dbg !25
-  %5 = getelementptr inbounds i32, i32* %vbtable, i32 1, !dbg !25
-  %vbase_offs = load i32, i32* %5, align 4, !dbg !25
+  %3 = bitcast ptr %0 to ptr, !dbg !25
+  %vbptr = getelementptr inbounds i8, ptr %3, i32 0, !dbg !25
+  %4 = bitcast ptr %vbptr to ptr, !dbg !25
+  %vbtable = load ptr, ptr %4, align 4, !dbg !25
+  %5 = getelementptr inbounds i32, ptr %vbtable, i32 1, !dbg !25
+  %vbase_offs = load i32, ptr %5, align 4, !dbg !25
   %6 = add nsw i32 0, %vbase_offs, !dbg !25
-  %7 = bitcast %class.C* %0 to i8*, !dbg !25
-  %add.ptr = getelementptr inbounds i8, i8* %7, i32 %6, !dbg !25
-  %8 = bitcast i8* %add.ptr to %class.A*, !dbg !25
+  %7 = bitcast ptr %0 to ptr, !dbg !25
+  %add.ptr = getelementptr inbounds i8, ptr %7, i32 %6, !dbg !25
+  %8 = bitcast ptr %add.ptr to ptr, !dbg !25
   br label %cast.end, !dbg !25
 
 cast.end:                                         ; preds = %cast.notnull, %entry
-  %cast.result = phi %class.A* [ %8, %cast.notnull ], [ null, %entry ], !dbg !25
-  store %class.A* %cast.result, %class.A** %a, align 4, !dbg !24
-  call void @llvm.dbg.declare(metadata %class.B** %b, metadata !27, metadata !DIExpression()), !dbg !36
-  %call2 = call i8* @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !37
-  %9 = bitcast i8* %call2 to %class.C*, !dbg !37
-  %10 = bitcast %class.C* %9 to i8*, !dbg !38
-  call void @llvm.memset.p0i8.i32(i8* align 8 %10, i8 0, i32 12, i1 false), !dbg !38
-  %call3 = call x86_thiscallcc %class.C* @"\01??0C@@QAE@XZ"(%class.C* %9, i32 1) #8, !dbg !38
-  %11 = icmp eq %class.C* %9, null, !dbg !37
+  %cast.result = phi ptr [ %8, %cast.notnull ], [ null, %entry ], !dbg !25
+  store ptr %cast.result, ptr %a, align 4, !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !27, metadata !DIExpression()), !dbg !36
+  %call2 = call ptr @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !37
+  %9 = bitcast ptr %call2 to ptr, !dbg !37
+  %10 = bitcast ptr %9 to ptr, !dbg !38
+  call void @llvm.memset.p0.i32(ptr align 8 %10, i8 0, i32 12, i1 false), !dbg !38
+  %call3 = call x86_thiscallcc ptr @"\01??0C@@QAE@XZ"(ptr %9, i32 1) #8, !dbg !38
+  %11 = icmp eq ptr %9, null, !dbg !37
   br i1 %11, label %cast.end9, label %cast.notnull4, !dbg !37
 
 cast.notnull4:                                    ; preds = %cast.end
-  %12 = bitcast %class.C* %9 to i8*, !dbg !37
-  %vbptr5 = getelementptr inbounds i8, i8* %12, i32 0, !dbg !37
-  %13 = bitcast i8* %vbptr5 to i32**, !dbg !37
-  %vbtable6 = load i32*, i32** %13, align 4, !dbg !37
-  %14 = getelementptr inbounds i32, i32* %vbtable6, i32 2, !dbg !37
-  %vbase_offs7 = load i32, i32* %14, align 4, !dbg !37
+  %12 = bitcast ptr %9 to ptr, !dbg !37
+  %vbptr5 = getelementptr inbounds i8, ptr %12, i32 0, !dbg !37
+  %13 = bitcast ptr %vbptr5 to ptr, !dbg !37
+  %vbtable6 = load ptr, ptr %13, align 4, !dbg !37
+  %14 = getelementptr inbounds i32, ptr %vbtable6, i32 2, !dbg !37
+  %vbase_offs7 = load i32, ptr %14, align 4, !dbg !37
   %15 = add nsw i32 0, %vbase_offs7, !dbg !37
-  %16 = bitcast %class.C* %9 to i8*, !dbg !37
-  %add.ptr8 = getelementptr inbounds i8, i8* %16, i32 %15, !dbg !37
-  %17 = bitcast i8* %add.ptr8 to %class.B*, !dbg !37
+  %16 = bitcast ptr %9 to ptr, !dbg !37
+  %add.ptr8 = getelementptr inbounds i8, ptr %16, i32 %15, !dbg !37
+  %17 = bitcast ptr %add.ptr8 to ptr, !dbg !37
   br label %cast.end9, !dbg !37
 
 cast.end9:                                        ; preds = %cast.notnull4, %cast.end
-  %cast.result10 = phi %class.B* [ %17, %cast.notnull4 ], [ null, %cast.end ], !dbg !37
-  store %class.B* %cast.result10, %class.B** %b, align 4, !dbg !36
-  call void @llvm.dbg.declare(metadata %class.C** %c, metadata !39, metadata !DIExpression()), !dbg !49
-  %call11 = call i8* @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !50
-  %18 = bitcast i8* %call11 to %class.C*, !dbg !50
-  %19 = bitcast %class.C* %18 to i8*, !dbg !51
-  call void @llvm.memset.p0i8.i32(i8* align 8 %19, i8 0, i32 12, i1 false), !dbg !51
-  %call12 = call x86_thiscallcc %class.C* @"\01??0C@@QAE@XZ"(%class.C* %18, i32 1) #8, !dbg !51
-  store %class.C* %18, %class.C** %c, align 4, !dbg !49
-  %20 = load %class.A*, %class.A** %a, align 4, !dbg !52
-  %21 = bitcast %class.A* %20 to i1 (%class.A*)***, !dbg !53
-  %vtable = load i1 (%class.A*)**, i1 (%class.A*)*** %21, align 4, !dbg !53
-  %vfn = getelementptr inbounds i1 (%class.A*)*, i1 (%class.A*)** %vtable, i64 0, !dbg !53
-  %22 = load i1 (%class.A*)*, i1 (%class.A*)** %vfn, align 4, !dbg !53
-  %call13 = call x86_thiscallcc zeroext i1 %22(%class.A* %20), !dbg !53
-  %23 = load %class.B*, %class.B** %b, align 4, !dbg !54
-  %24 = bitcast %class.B* %23 to i1 (%class.B*)***, !dbg !55
-  %vtable14 = load i1 (%class.B*)**, i1 (%class.B*)*** %24, align 4, !dbg !55
-  %vfn15 = getelementptr inbounds i1 (%class.B*)*, i1 (%class.B*)** %vtable14, i64 0, !dbg !55
-  %25 = load i1 (%class.B*)*, i1 (%class.B*)** %vfn15, align 4, !dbg !55
-  %call16 = call x86_thiscallcc zeroext i1 %25(%class.B* %23), !dbg !55
-  %26 = load %class.C*, %class.C** %c, align 4, !dbg !56
-  %27 = bitcast %class.C* %26 to i8*, !dbg !57
-  %vbptr17 = getelementptr inbounds i8, i8* %27, i32 0, !dbg !57
-  %28 = bitcast i8* %vbptr17 to i32**, !dbg !57
-  %vbtable18 = load i32*, i32** %28, align 4, !dbg !57
-  %29 = getelementptr inbounds i32, i32* %vbtable18, i32 1, !dbg !57
-  %vbase_offs19 = load i32, i32* %29, align 4, !dbg !57
+  %cast.result10 = phi ptr [ %17, %cast.notnull4 ], [ null, %cast.end ], !dbg !37
+  store ptr %cast.result10, ptr %b, align 4, !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !39, metadata !DIExpression()), !dbg !49
+  %call11 = call ptr @"\01??2@YAPAXI@Z"(i32 12) #7, !dbg !50
+  %18 = bitcast ptr %call11 to ptr, !dbg !50
+  %19 = bitcast ptr %18 to ptr, !dbg !51
+  call void @llvm.memset.p0.i32(ptr align 8 %19, i8 0, i32 12, i1 false), !dbg !51
+  %call12 = call x86_thiscallcc ptr @"\01??0C@@QAE@XZ"(ptr %18, i32 1) #8, !dbg !51
+  store ptr %18, ptr %c, align 4, !dbg !49
+  %20 = load ptr, ptr %a, align 4, !dbg !52
+  %21 = bitcast ptr %20 to ptr, !dbg !53
+  %vtable = load ptr, ptr %21, align 4, !dbg !53
+  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 0, !dbg !53
+  %22 = load ptr, ptr %vfn, align 4, !dbg !53
+  %call13 = call x86_thiscallcc zeroext i1 %22(ptr %20), !dbg !53
+  %23 = load ptr, ptr %b, align 4, !dbg !54
+  %24 = bitcast ptr %23 to ptr, !dbg !55
+  %vtable14 = load ptr, ptr %24, align 4, !dbg !55
+  %vfn15 = getelementptr inbounds ptr, ptr %vtable14, i64 0, !dbg !55
+  %25 = load ptr, ptr %vfn15, align 4, !dbg !55
+  %call16 = call x86_thiscallcc zeroext i1 %25(ptr %23), !dbg !55
+  %26 = load ptr, ptr %c, align 4, !dbg !56
+  %27 = bitcast ptr %26 to ptr, !dbg !57
+  %vbptr17 = getelementptr inbounds i8, ptr %27, i32 0, !dbg !57
+  %28 = bitcast ptr %vbptr17 to ptr, !dbg !57
+  %vbtable18 = load ptr, ptr %28, align 4, !dbg !57
+  %29 = getelementptr inbounds i32, ptr %vbtable18, i32 1, !dbg !57
+  %vbase_offs19 = load i32, ptr %29, align 4, !dbg !57
   %30 = add nsw i32 0, %vbase_offs19, !dbg !57
-  %31 = getelementptr inbounds i8, i8* %27, i32 %30, !dbg !57
-  %32 = bitcast %class.C* %26 to i8*, !dbg !57
-  %vbptr20 = getelementptr inbounds i8, i8* %32, i32 0, !dbg !57
-  %33 = bitcast i8* %vbptr20 to i32**, !dbg !57
-  %vbtable21 = load i32*, i32** %33, align 4, !dbg !57
-  %34 = getelementptr inbounds i32, i32* %vbtable21, i32 1, !dbg !57
-  %vbase_offs22 = load i32, i32* %34, align 4, !dbg !57
+  %31 = getelementptr inbounds i8, ptr %27, i32 %30, !dbg !57
+  %32 = bitcast ptr %26 to ptr, !dbg !57
+  %vbptr20 = getelementptr inbounds i8, ptr %32, i32 0, !dbg !57
+  %33 = bitcast ptr %vbptr20 to ptr, !dbg !57
+  %vbtable21 = load ptr, ptr %33, align 4, !dbg !57
+  %34 = getelementptr inbounds i32, ptr %vbtable21, i32 1, !dbg !57
+  %vbase_offs22 = load i32, ptr %34, align 4, !dbg !57
   %35 = add nsw i32 0, %vbase_offs22, !dbg !57
-  %36 = getelementptr inbounds i8, i8* %32, i32 %35, !dbg !57
-  %37 = bitcast i8* %36 to i1 (i8*)***, !dbg !57
-  %vtable23 = load i1 (i8*)**, i1 (i8*)*** %37, align 4, !dbg !57
-  %vfn24 = getelementptr inbounds i1 (i8*)*, i1 (i8*)** %vtable23, i64 0, !dbg !57
-  %38 = load i1 (i8*)*, i1 (i8*)** %vfn24, align 4, !dbg !57
-  %call25 = call x86_thiscallcc zeroext i1 %38(i8* %31), !dbg !57
-  call void @llvm.dbg.declare(metadata i8** %mp, metadata !58, metadata !DIExpression()), !dbg !60
-  store i8* bitcast (void (%class.A*, ...)* @"\01??_9A@@$BA@AE" to i8*), i8** %mp, align 4, !dbg !60
+  %36 = getelementptr inbounds i8, ptr %32, i32 %35, !dbg !57
+  %37 = bitcast ptr %36 to ptr, !dbg !57
+  %vtable23 = load ptr, ptr %37, align 4, !dbg !57
+  %vfn24 = getelementptr inbounds ptr, ptr %vtable23, i64 0, !dbg !57
+  %38 = load ptr, ptr %vfn24, align 4, !dbg !57
+  %call25 = call x86_thiscallcc zeroext i1 %38(ptr %31), !dbg !57
+  call void @llvm.dbg.declare(metadata ptr %mp, metadata !58, metadata !DIExpression()), !dbg !60
+  store ptr @"\01??_9A@@$BA@AE", ptr %mp, align 4, !dbg !60
   ret i32 0, !dbg !61
 }
 
@@ -311,161 +316,161 @@ cast.end9:                                        ; preds = %cast.notnull4, %cas
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nobuiltin
-declare noalias i8* @"\01??2@YAPAXI@Z"(i32) #2
+declare noalias ptr @"\01??2@YAPAXI@Z"(i32) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) #3
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1) #3
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc %class.C* @"\01??0C@@QAE@XZ"(%class.C* returned %this, i32 %is_most_derived) unnamed_addr #4 comdat align 2 !dbg !62 {
+define linkonce_odr x86_thiscallcc ptr @"\01??0C@@QAE@XZ"(ptr returned %this, i32 %is_most_derived) unnamed_addr #4 comdat align 2 !dbg !62 {
 entry:
-  %retval = alloca %class.C*, align 4
+  %retval = alloca ptr, align 4
   %is_most_derived.addr = alloca i32, align 4
-  %this.addr = alloca %class.C*, align 4
-  store i32 %is_most_derived, i32* %is_most_derived.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %is_most_derived.addr, metadata !66, metadata !DIExpression()), !dbg !67
-  store %class.C* %this, %class.C** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.C** %this.addr, metadata !68, metadata !DIExpression()), !dbg !67
-  %this1 = load %class.C*, %class.C** %this.addr, align 4
-  store %class.C* %this1, %class.C** %retval, align 4
-  %is_most_derived2 = load i32, i32* %is_most_derived.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store i32 %is_most_derived, ptr %is_most_derived.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %is_most_derived.addr, metadata !66, metadata !DIExpression()), !dbg !67
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !68, metadata !DIExpression()), !dbg !67
+  %this1 = load ptr, ptr %this.addr, align 4
+  store ptr %this1, ptr %retval, align 4
+  %is_most_derived2 = load i32, ptr %is_most_derived.addr, align 4
   %is_complete_object = icmp ne i32 %is_most_derived2, 0, !dbg !69
   br i1 %is_complete_object, label %ctor.init_vbases, label %ctor.skip_vbases, !dbg !69
 
 ctor.init_vbases:                                 ; preds = %entry
-  %this.int8 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %0 = getelementptr inbounds i8, i8* %this.int8, i32 0, !dbg !69
-  %vbptr.C = bitcast i8* %0 to i32**, !dbg !69
-  store i32* getelementptr inbounds ([3 x i32], [3 x i32]* @"\01??_8C@@7B@", i32 0, i32 0), i32** %vbptr.C, align 4, !dbg !69
-  %1 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %2 = getelementptr inbounds i8, i8* %1, i32 4, !dbg !69
-  %3 = bitcast i8* %2 to %class.A*, !dbg !69
-  %call = call x86_thiscallcc %class.A* @"\01??0A@@QAE@XZ"(%class.A* %3) #8, !dbg !69
-  %4 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %5 = getelementptr inbounds i8, i8* %4, i32 8, !dbg !69
-  %6 = bitcast i8* %5 to %class.B*, !dbg !69
-  %call3 = call x86_thiscallcc %class.B* @"\01??0B@@QAE@XZ"(%class.B* %6) #8, !dbg !69
+  %this.int8 = bitcast ptr %this1 to ptr, !dbg !69
+  %0 = getelementptr inbounds i8, ptr %this.int8, i32 0, !dbg !69
+  %vbptr.C = bitcast ptr %0 to ptr, !dbg !69
+  store ptr @"\01??_8C@@7B@", ptr %vbptr.C, align 4, !dbg !69
+  %1 = bitcast ptr %this1 to ptr, !dbg !69
+  %2 = getelementptr inbounds i8, ptr %1, i32 4, !dbg !69
+  %3 = bitcast ptr %2 to ptr, !dbg !69
+  %call = call x86_thiscallcc ptr @"\01??0A@@QAE@XZ"(ptr %3) #8, !dbg !69
+  %4 = bitcast ptr %this1 to ptr, !dbg !69
+  %5 = getelementptr inbounds i8, ptr %4, i32 8, !dbg !69
+  %6 = bitcast ptr %5 to ptr, !dbg !69
+  %call3 = call x86_thiscallcc ptr @"\01??0B@@QAE@XZ"(ptr %6) #8, !dbg !69
   br label %ctor.skip_vbases, !dbg !69
 
 ctor.skip_vbases:                                 ; preds = %ctor.init_vbases, %entry
-  %7 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %vbptr = getelementptr inbounds i8, i8* %7, i32 0, !dbg !69
-  %8 = bitcast i8* %vbptr to i32**, !dbg !69
-  %vbtable = load i32*, i32** %8, align 4, !dbg !69
-  %9 = getelementptr inbounds i32, i32* %vbtable, i32 1, !dbg !69
-  %vbase_offs = load i32, i32* %9, align 4, !dbg !69
+  %7 = bitcast ptr %this1 to ptr, !dbg !69
+  %vbptr = getelementptr inbounds i8, ptr %7, i32 0, !dbg !69
+  %8 = bitcast ptr %vbptr to ptr, !dbg !69
+  %vbtable = load ptr, ptr %8, align 4, !dbg !69
+  %9 = getelementptr inbounds i32, ptr %vbtable, i32 1, !dbg !69
+  %vbase_offs = load i32, ptr %9, align 4, !dbg !69
   %10 = add nsw i32 0, %vbase_offs, !dbg !69
-  %11 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %add.ptr = getelementptr inbounds i8, i8* %11, i32 %10, !dbg !69
-  %12 = bitcast i8* %add.ptr to i32 (...)***, !dbg !69
-  store i32 (...)** bitcast (i8** @"\01??_7C@@6BA@@@" to i32 (...)**), i32 (...)*** %12, align 4, !dbg !69
-  %13 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %vbptr4 = getelementptr inbounds i8, i8* %13, i32 0, !dbg !69
-  %14 = bitcast i8* %vbptr4 to i32**, !dbg !69
-  %vbtable5 = load i32*, i32** %14, align 4, !dbg !69
-  %15 = getelementptr inbounds i32, i32* %vbtable5, i32 2, !dbg !69
-  %vbase_offs6 = load i32, i32* %15, align 4, !dbg !69
+  %11 = bitcast ptr %this1 to ptr, !dbg !69
+  %add.ptr = getelementptr inbounds i8, ptr %11, i32 %10, !dbg !69
+  %12 = bitcast ptr %add.ptr to ptr, !dbg !69
+  store ptr @"\01??_7C@@6BA@@@", ptr %12, align 4, !dbg !69
+  %13 = bitcast ptr %this1 to ptr, !dbg !69
+  %vbptr4 = getelementptr inbounds i8, ptr %13, i32 0, !dbg !69
+  %14 = bitcast ptr %vbptr4 to ptr, !dbg !69
+  %vbtable5 = load ptr, ptr %14, align 4, !dbg !69
+  %15 = getelementptr inbounds i32, ptr %vbtable5, i32 2, !dbg !69
+  %vbase_offs6 = load i32, ptr %15, align 4, !dbg !69
   %16 = add nsw i32 0, %vbase_offs6, !dbg !69
-  %17 = bitcast %class.C* %this1 to i8*, !dbg !69
-  %add.ptr7 = getelementptr inbounds i8, i8* %17, i32 %16, !dbg !69
-  %18 = bitcast i8* %add.ptr7 to i32 (...)***, !dbg !69
-  store i32 (...)** bitcast (i8** @"\01??_7C@@6BB@@@" to i32 (...)**), i32 (...)*** %18, align 4, !dbg !69
-  %19 = load %class.C*, %class.C** %retval, align 4, !dbg !69
-  ret %class.C* %19, !dbg !69
+  %17 = bitcast ptr %this1 to ptr, !dbg !69
+  %add.ptr7 = getelementptr inbounds i8, ptr %17, i32 %16, !dbg !69
+  %18 = bitcast ptr %add.ptr7 to ptr, !dbg !69
+  store ptr @"\01??_7C@@6BB@@@", ptr %18, align 4, !dbg !69
+  %19 = load ptr, ptr %retval, align 4, !dbg !69
+  ret ptr %19, !dbg !69
 }
 
 ; Function Attrs: noinline optnone
-define linkonce_odr x86_thiscallcc void @"\01??_9A@@$BA@AE"(%class.A* %this, ...) #5 comdat align 2 !dbg !70 {
+define linkonce_odr x86_thiscallcc void @"\01??_9A@@$BA@AE"(ptr %this, ...) #5 comdat align 2 !dbg !70 {
 entry:
-  %this.addr = alloca %class.A*, align 4
-  store %class.A* %this, %class.A** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !72, metadata !DIExpression()), !dbg !73
-  %this1 = load %class.A*, %class.A** %this.addr, align 4
-  %0 = bitcast %class.A* %this1 to void (%class.A*, ...)***
-  %vtable = load void (%class.A*, ...)**, void (%class.A*, ...)*** %0, align 4
-  %vfn = getelementptr inbounds void (%class.A*, ...)*, void (%class.A*, ...)** %vtable, i64 0
-  %1 = load void (%class.A*, ...)*, void (%class.A*, ...)** %vfn, align 4
-  musttail call x86_thiscallcc void (%class.A*, ...) %1(%class.A* %this1, ...)
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !72, metadata !DIExpression()), !dbg !73
+  %this1 = load ptr, ptr %this.addr, align 4
+  %0 = bitcast ptr %this1 to ptr
+  %vtable = load ptr, ptr %0, align 4
+  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 0
+  %1 = load ptr, ptr %vfn, align 4
+  musttail call x86_thiscallcc void (ptr, ...) %1(ptr %this1, ...)
   ret void
                                                   ; No predecessors!
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc %class.A* @"\01??0A@@QAE@XZ"(%class.A* returned %this) unnamed_addr #4 comdat align 2 !dbg !74 {
+define linkonce_odr x86_thiscallcc ptr @"\01??0A@@QAE@XZ"(ptr returned %this) unnamed_addr #4 comdat align 2 !dbg !74 {
 entry:
-  %this.addr = alloca %class.A*, align 4
-  store %class.A* %this, %class.A** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !78, metadata !DIExpression()), !dbg !79
-  %this1 = load %class.A*, %class.A** %this.addr, align 4
-  %0 = bitcast %class.A* %this1 to i32 (...)***, !dbg !80
-  store i32 (...)** bitcast (i8** @"\01??_7A@@6B@" to i32 (...)**), i32 (...)*** %0, align 4, !dbg !80
-  ret %class.A* %this1, !dbg !80
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !78, metadata !DIExpression()), !dbg !79
+  %this1 = load ptr, ptr %this.addr, align 4
+  %0 = bitcast ptr %this1 to ptr, !dbg !80
+  store ptr @"\01??_7A@@6B@", ptr %0, align 4, !dbg !80
+  ret ptr %this1, !dbg !80
 }
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc %class.B* @"\01??0B@@QAE@XZ"(%class.B* returned %this) unnamed_addr #4 comdat align 2 !dbg !81 {
+define linkonce_odr x86_thiscallcc ptr @"\01??0B@@QAE@XZ"(ptr returned %this) unnamed_addr #4 comdat align 2 !dbg !81 {
 entry:
-  %this.addr = alloca %class.B*, align 4
-  store %class.B* %this, %class.B** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !85, metadata !DIExpression()), !dbg !86
-  %this1 = load %class.B*, %class.B** %this.addr, align 4
-  %0 = bitcast %class.B* %this1 to i32 (...)***, !dbg !87
-  store i32 (...)** bitcast (i8** @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %0, align 4, !dbg !87
-  ret %class.B* %this1, !dbg !87
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !85, metadata !DIExpression()), !dbg !86
+  %this1 = load ptr, ptr %this.addr, align 4
+  %0 = bitcast ptr %this1 to ptr, !dbg !87
+  store ptr @"\01??_7B@@6B@", ptr %0, align 4, !dbg !87
+  ret ptr %this1, !dbg !87
 }
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@UAE_NXZ"(i8* %this.coerce) unnamed_addr #4 comdat align 2 !dbg !88 {
+define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@UAE_NXZ"(ptr %this.coerce) unnamed_addr #4 comdat align 2 !dbg !88 {
 entry:
-  %this = alloca %class.C*, align 4
-  %this.addr = alloca %class.C*, align 4
-  %coerce.val = bitcast i8* %this.coerce to %class.C*
-  store %class.C* %coerce.val, %class.C** %this, align 4
-  %this1 = load %class.C*, %class.C** %this, align 4
-  store %class.C* %this1, %class.C** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.C** %this.addr, metadata !89, metadata !DIExpression()), !dbg !90
-  %this2 = load %class.C*, %class.C** %this.addr, align 4
-  %0 = bitcast %class.C* %this2 to i8*
-  %1 = getelementptr inbounds i8, i8* %0, i32 -4
-  %this.adjusted = bitcast i8* %1 to %class.C*
+  %this = alloca ptr, align 4
+  %this.addr = alloca ptr, align 4
+  %coerce.val = bitcast ptr %this.coerce to ptr
+  store ptr %coerce.val, ptr %this, align 4
+  %this1 = load ptr, ptr %this, align 4
+  store ptr %this1, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !89, metadata !DIExpression()), !dbg !90
+  %this2 = load ptr, ptr %this.addr, align 4
+  %0 = bitcast ptr %this2 to ptr
+  %1 = getelementptr inbounds i8, ptr %0, i32 -4
+  %this.adjusted = bitcast ptr %1 to ptr
   ret i1 true, !dbg !91
 }
 
 ; Function Attrs: noinline optnone
-define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@W3AE_NXZ"(i8* %this.coerce) unnamed_addr #6 comdat align 2 !dbg !92 {
+define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@W3AE_NXZ"(ptr %this.coerce) unnamed_addr #6 comdat align 2 !dbg !92 {
 entry:
-  %this = alloca %class.C*, align 4
-  %this.addr = alloca %class.C*, align 4
-  %coerce.val = bitcast i8* %this.coerce to %class.C*
-  store %class.C* %coerce.val, %class.C** %this, align 4
-  %this1 = load %class.C*, %class.C** %this, align 4
-  store %class.C* %this1, %class.C** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.C** %this.addr, metadata !93, metadata !DIExpression()), !dbg !94
-  %this2 = load %class.C*, %class.C** %this.addr, align 4, !dbg !94
-  %0 = bitcast %class.C* %this2 to i8*, !dbg !94
-  %1 = getelementptr i8, i8* %0, i32 -4, !dbg !94
-  %call = tail call x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@UAE_NXZ"(i8* %1), !dbg !94
+  %this = alloca ptr, align 4
+  %this.addr = alloca ptr, align 4
+  %coerce.val = bitcast ptr %this.coerce to ptr
+  store ptr %coerce.val, ptr %this, align 4
+  %this1 = load ptr, ptr %this, align 4
+  store ptr %this1, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !93, metadata !DIExpression()), !dbg !94
+  %this2 = load ptr, ptr %this.addr, align 4, !dbg !94
+  %0 = bitcast ptr %this2 to ptr, !dbg !94
+  %1 = getelementptr i8, ptr %0, i32 -4, !dbg !94
+  %call = tail call x86_thiscallcc zeroext i1 @"\01?MyMethod@C@@UAE_NXZ"(ptr %1), !dbg !94
   ret i1 %call, !dbg !94
 }
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@A@@UAE_NXZ"(%class.A* %this) unnamed_addr #4 comdat align 2 !dbg !95 {
+define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@A@@UAE_NXZ"(ptr %this) unnamed_addr #4 comdat align 2 !dbg !95 {
 entry:
-  %this.addr = alloca %class.A*, align 4
-  store %class.A* %this, %class.A** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !96, metadata !DIExpression()), !dbg !97
-  %this1 = load %class.A*, %class.A** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !96, metadata !DIExpression()), !dbg !97
+  %this1 = load ptr, ptr %this.addr, align 4
   ret i1 true, !dbg !98
 }
 
 ; Function Attrs: noinline nounwind optnone
-define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@B@@UAE_NXZ"(%class.B* %this) unnamed_addr #4 comdat align 2 !dbg !99 {
+define linkonce_odr x86_thiscallcc zeroext i1 @"\01?MyMethod@B@@UAE_NXZ"(ptr %this) unnamed_addr #4 comdat align 2 !dbg !99 {
 entry:
-  %this.addr = alloca %class.B*, align 4
-  store %class.B* %this, %class.B** %this.addr, align 4
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !100, metadata !DIExpression()), !dbg !101
-  %this1 = load %class.B*, %class.B** %this.addr, align 4
+  %this.addr = alloca ptr, align 4
+  store ptr %this, ptr %this.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !100, metadata !DIExpression()), !dbg !101
+  %this1 = load ptr, ptr %this.addr, align 4
   ret i1 true, !dbg !102
 }
 

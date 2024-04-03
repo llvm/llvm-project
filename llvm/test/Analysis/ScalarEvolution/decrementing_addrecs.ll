@@ -47,11 +47,9 @@ define i32 @test_step_1_flags(i32 %n) {
 ; DEFAULT-NEXT:    --> {(-2 + %n),+,-1}<nw><%loop> U: full-set S: full-set Exits: -1 LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:  Determining loop execution counts for: @test_step_1_flags
 ; DEFAULT-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
-; DEFAULT-NEXT:  Loop %loop: constant max backedge-taken count is 2147483646
+; DEFAULT-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; DEFAULT-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
-; DEFAULT-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %n)
-; DEFAULT-NEXT:   Predicates:
-; DEFAULT:       Loop %loop: Trip multiple is 1
+; DEFAULT-NEXT:  Loop %loop: Trip multiple is 1
 ;
 ; EXPENSIVE_SHARPENING-LABEL: 'test_step_1_flags'
 ; EXPENSIVE_SHARPENING-NEXT:  Classifying expressions for: @test_step_1_flags
@@ -73,11 +71,9 @@ define i32 @test_step_1_flags(i32 %n) {
 ; EXPENSIVE_SHARPENING-NEXT:    --> {(-2 + %n),+,-1}<nsw><%loop> U: full-set S: [-1,2147483646) Exits: -1 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:  Determining loop execution counts for: @test_step_1_flags
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
-; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: constant max backedge-taken count is 2147483646
+; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: constant max backedge-taken count is i32 2147483646
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
-; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %n)
-; EXPENSIVE_SHARPENING-NEXT:   Predicates:
-; EXPENSIVE_SHARPENING:       Loop %loop: Trip multiple is 1
+; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.minus.1 = sub nsw i32 %n, 1

@@ -17,12 +17,10 @@ define void @f0() {
 ; CHECK-NEXT:    %v4 = and i16 %v3, 1
 ; CHECK-NEXT:    --> (zext i1 {true,+,true,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
-; CHECK-NEXT:  Loop %b1: backedge-taken count is 1
-; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 1
-; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 1
-; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 1
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %b1: Trip multiple is 2
+; CHECK-NEXT:  Loop %b1: backedge-taken count is i6 1
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i6 1
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i6 1
+; CHECK-NEXT:  Loop %b1: Trip multiple is 2
 ;
 b0:
   br label %b1
@@ -67,13 +65,10 @@ define void @f1() #0 {
 ; CHECK-NEXT:  Loop %b3: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %b3: Unpredictable predicated backedge-taken count.
-; CHECK-NEXT:  Loop %b1: backedge-taken count is 2
-; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 2
-; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 2
-; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 2
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %b1: Trip multiple is 3
+; CHECK-NEXT:  Loop %b1: backedge-taken count is i6 2
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i6 2
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i6 2
+; CHECK-NEXT:  Loop %b1: Trip multiple is 3
 ;
 b0:
   store i16 0, ptr @g0, align 2

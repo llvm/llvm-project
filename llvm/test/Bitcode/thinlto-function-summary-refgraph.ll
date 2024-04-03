@@ -41,24 +41,24 @@
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; Function main contains call to func, as well as address reference to func:
 ; op0=main op4=func op5=func
-; CHECK-DAG:    <PERMODULE {{.*}} op0=11 op1=0 {{.*}} op4=1 op5=0 op6=0 op7=2 op8=2/>
-; Function W contains a call to func3 as well as a reference to globalvar:
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=11 op1=0 {{.*}} op4=1 op5=0 op6=0 op7=2 op8=2 op9=0/>
+; Function W contains a tail call to func3 as well as a reference to globalvar:
 ; op0=W op4=globalvar op5=func3
-; CHECK-DAG:    <PERMODULE {{.*}} op0=6 op1=5 {{.*}} op4=1 op5=0 op6=0 op7=1 op8=5/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=6 op1=5 {{.*}} op4=1 op5=0 op6=0 op7=1 op8=5 op9=8/>
 ; Function X contains call to foo, as well as address reference to foo
 ; which is in the same instruction as the call:
 ; op0=X op4=foo op5=foo
-; CHECK-DAG:    <PERMODULE {{.*}} op0=7 op1=1 {{.*}} op4=1 op5=0 op6=0 op7=4 op8=4/>
-; Function Y contains call to func2, and ensures we don't incorrectly add
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=7 op1=1 {{.*}} op4=1 op5=0 op6=0 op7=4 op8=4 op9=0/>
+; Function Y contains tail call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while earlier analyzing the phi using its
 ; return value:
 ; op0=Y op4=func2
-; CHECK-DAG:    <PERMODULE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=0 op6=0 op7=3/>
-; Function Z contains call to func2, and ensures we don't incorrectly add
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
+; Function Z contains a tail call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while analyzing subsequent use of its return
 ; value:
 ; op0=Z op4=func2
-; CHECK-DAG:    <PERMODULE {{.*}} op0=9 op1=3 {{.*}} op4=0 op5=0 op6=0 op7=3/>
+; CHECK-DAG:    <PERMODULE_PROFILE {{.*}} op0=9 op1=3 {{.*}} op4=0 op5=0 op6=0 op7=3 op8=8/>
 ; Variable bar initialization contains address reference to func:
 ; op0=bar op2=func
 ; CHECK-DAG:    <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op0=0 op1=0 op2=3 op3=2/>
@@ -148,9 +148,9 @@ entry:
 ; order, which depends on GUID, and the private function Y GUID will depend
 ; on the path to the test.
 ; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
-; DIS-DAG: = gv: (name: "Z", summaries: (function: (module: ^0, flags: (linkage: linkonce_odr, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^{{.*}}))))) ; guid = 104084381700047393
+; DIS-DAG: = gv: (name: "Z", summaries: (function: (module: ^0, flags: (linkage: linkonce_odr, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^{{.*}}, tail: 1))))) ; guid = 104084381700047393
 ; DIS-DAG: = gv: (name: "X", summaries: (function: (module: ^0, flags: (linkage: available_externally, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^{{.*}})), refs: (^{{.*}})))) ; guid = 1881667236089500162
-; DIS-DAG: = gv: (name: "W", summaries: (function: (module: ^0, flags: (linkage: weak_odr, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^{{.*}})), refs: (^{{.*}})))) ; guid = 5790125716599269729
+; DIS-DAG: = gv: (name: "W", summaries: (function: (module: ^0, flags: (linkage: weak_odr, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^{{.*}}, tail: 1)), refs: (^{{.*}})))) ; guid = 5790125716599269729
 ; DIS-DAG: = gv: (name: "foo") ; guid = 6699318081062747564
 ; DIS-DAG: = gv: (name: "func") ; guid = 7289175272376759421
 ; DIS-DAG: = gv: (name: "func3") ; guid = 11517462787082255043
@@ -162,4 +162,4 @@ entry:
 ; DIS-DAG: = gv: (name: "bar", summaries: (variable: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1, constant: 0),  refs: (^{{.*}})))) ; guid = 16434608426314478903
 ; Don't try to match the exact GUID. Since it is private, the file path
 ; will get hashed, and that will be test dependent.
-; DIS-DAG: = gv: (name: "Y", summaries: (function: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 14, calls: ((callee: ^{{.*}}))))) ; guid =
+; DIS-DAG: = gv: (name: "Y", summaries: (function: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 14, calls: ((callee: ^{{.*}}, tail: 1))))) ; guid =

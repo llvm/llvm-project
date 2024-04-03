@@ -35,8 +35,8 @@ TRACE-NEXT: lib.a(obj.o): definition of bar
 TRACE-NEXT: lib.a(obj.o): reference to foo
 TRACE-NEXT: <internal>: reference to foo
 ;; The definition of "foo" is visible outside the LTO result.
-TRACE-NEXT: lto.tmp: definition of foo
-TRACE-NEXT: lto.tmp: reference to bar
+TRACE-NEXT: {{.*}}.lto.o: definition of foo
+TRACE-NEXT: {{.*}}.lto.o: reference to bar
 
 ;--- start.s
   .global _start, baz

@@ -181,7 +181,7 @@ size_t SBThread::GetStopReasonDataCount() {
               exe_ctx.GetProcessPtr()->GetBreakpointSiteList().FindByID(
                   site_id));
           if (bp_site_sp)
-            return bp_site_sp->GetNumberOfOwners() * 2;
+            return bp_site_sp->GetNumberOfConstituents() * 2;
           else
             return 0; // Breakpoint must have cleared itself...
         } break;
@@ -241,7 +241,7 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
           if (bp_site_sp) {
             uint32_t bp_index = idx / 2;
             BreakpointLocationSP bp_loc_sp(
-                bp_site_sp->GetOwnerAtIndex(bp_index));
+                bp_site_sp->GetConstituentAtIndex(bp_index));
             if (bp_loc_sp) {
               if (idx & 1) {
                 // Odd idx, return the breakpoint location ID
@@ -819,7 +819,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       step_file_spec = sb_file_spec.ref();
     } else {
       if (frame_sc.line_entry.IsValid())
-        step_file_spec = frame_sc.line_entry.file;
+        step_file_spec = frame_sc.line_entry.GetFile();
       else {
         sb_error.SetErrorString("invalid file argument or no file for frame");
         return sb_error;

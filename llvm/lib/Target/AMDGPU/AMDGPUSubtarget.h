@@ -39,7 +39,8 @@ public:
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
     GFX10 = 9,
-    GFX11 = 10
+    GFX11 = 10,
+    GFX12 = 11,
   };
 
 private:
@@ -286,6 +287,9 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
+
+  /// Return the number of work groups for the function.
+  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
 
   /// Return true if only a single workitem can be active in a wave.
   bool isSingleLaneExecution(const Function &Kernel) const;

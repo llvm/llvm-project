@@ -1558,7 +1558,6 @@ define i64 @imm_2reg_1() nounwind {
   ret i64 -1152921504301427080 ; 0xF000_0000_1234_5678
 }
 
-; FIXME: This should use a single ADDI for the immediate.
 define void @imm_store_i16_neg1(ptr %p) nounwind {
 ; RV32I-LABEL: imm_store_i16_neg1:
 ; RV32I:       # %bb.0:
@@ -1611,7 +1610,6 @@ define void @imm_store_i16_neg1(ptr %p) nounwind {
   ret void
 }
 
-; FIXME: This should use a single ADDI for the immediate.
 define void @imm_store_i32_neg1(ptr %p) nounwind {
 ; RV32I-LABEL: imm_store_i32_neg1:
 ; RV32I:       # %bb.0:

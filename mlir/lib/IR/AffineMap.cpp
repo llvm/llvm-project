@@ -59,13 +59,31 @@ private:
           expr, [](int64_t lhs, int64_t rhs) { return lhs * rhs; });
     case AffineExprKind::Mod:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return mod(lhs, rhs); });
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs < 1) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return mod(lhs, rhs);
+          });
     case AffineExprKind::FloorDiv:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return floorDiv(lhs, rhs); });
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs == 0) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return floorDiv(lhs, rhs);
+          });
     case AffineExprKind::CeilDiv:
       return constantFoldBinExpr(
-          expr, [](int64_t lhs, int64_t rhs) { return ceilDiv(lhs, rhs); });
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+            if (rhs == 0) {
+              hasPoison_ = true;
+              return std::nullopt;
+            }
+            return ceilDiv(lhs, rhs);
+          });
     case AffineExprKind::Constant:
       return cast<AffineConstantExpr>(expr).getValue();
     case AffineExprKind::DimId:
@@ -231,10 +249,16 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {
   assert(!permutation.empty() &&
          "Cannot create permutation map from empty permutation vector");
-  const auto *m = std::max_element(permutation.begin(), permutation.end());
+  const auto *m = llvm::max_element(permutation);
   auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
+}
+AffineMap AffineMap::getPermutationMap(ArrayRef<int64_t> permutation,
+                                       MLIRContext *context) {
+  SmallVector<unsigned> perm = llvm::map_to_vector(
+      permutation, [](int64_t i) { return static_cast<unsigned>(i); });
+  return AffineMap::getPermutationMap(perm, context);
 }
 
 AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
@@ -248,12 +272,16 @@ AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
   return result;
 }
 
+/// Creates an affine map each for each list of AffineExpr's in `exprsList`
+/// while inferring the right number of dimensional and symbolic inputs needed
+/// based on the maximum dimensional and symbolic identifier appearing in the
+/// expressions.
 template <typename AffineExprContainer>
 static SmallVector<AffineMap, 4>
-inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
-  assert(!exprsList.empty());
-  assert(!exprsList[0].empty());
-  auto context = exprsList[0][0].getContext();
+inferFromExprList(ArrayRef<AffineExprContainer> exprsList,
+                  MLIRContext *context) {
+  if (exprsList.empty())
+    return {};
   int64_t maxDim = -1, maxSym = -1;
   getMaxDimAndSymbol(exprsList, maxDim, maxSym);
   SmallVector<AffineMap, 4> maps;
@@ -265,13 +293,15 @@ inferFromExprList(ArrayRef<AffineExprContainer> exprsList) {
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 SmallVector<AffineMap, 4>
-AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList) {
-  return ::inferFromExprList(exprsList);
+AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList,
+                             MLIRContext *context) {
+  return ::inferFromExprList(exprsList, context);
 }
 
 uint64_t AffineMap::getLargestKnownDivisorOfMapExprs() {
@@ -329,9 +359,7 @@ bool AffineMap::isSingleConstant() const {
 }
 
 bool AffineMap::isConstant() const {
-  return llvm::all_of(getResults(), [](AffineExpr expr) {
-    return isa<AffineConstantExpr>(expr);
-  });
+  return llvm::all_of(getResults(), llvm::IsaPred<AffineConstantExpr>);
 }
 
 int64_t AffineMap::getSingleConstantResult() const {
@@ -387,12 +415,12 @@ std::optional<unsigned> AffineMap::getResultPosition(AffineExpr input) const {
 /// Folds the results of the application of an affine map on the provided
 /// operands to a constant if possible. Returns false if the folding happens,
 /// true otherwise.
-LogicalResult
-AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
-                        SmallVectorImpl<Attribute> &results) const {
+LogicalResult AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
+                                      SmallVectorImpl<Attribute> &results,
+                                      bool *hasPoison) const {
   // Attempt partial folding.
   SmallVector<int64_t, 2> integers;
-  partialConstantFold(operandConstants, &integers);
+  partialConstantFold(operandConstants, &integers, hasPoison);
 
   // If all expressions folded to a constant, populate results with attributes
   // containing those constants.
@@ -406,9 +434,9 @@ AffineMap::constantFold(ArrayRef<Attribute> operandConstants,
   return success();
 }
 
-AffineMap
-AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
-                               SmallVectorImpl<int64_t> *results) const {
+AffineMap AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
+                                         SmallVectorImpl<int64_t> *results,
+                                         bool *hasPoison) const {
   assert(getNumInputs() == operandConstants.size());
 
   // Fold each of the result expressions.
@@ -418,6 +446,10 @@ AffineMap::partialConstantFold(ArrayRef<Attribute> operandConstants,
 
   for (auto expr : getResults()) {
     auto folded = exprFolder.constantFold(expr);
+    if (exprFolder.hasPoison() && hasPoison) {
+      *hasPoison = true;
+      return {};
+    }
     // If did not fold to a constant, keep the original expression, and clear
     // the integer results vector.
     if (folded) {
@@ -493,7 +525,7 @@ AffineMap::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
   newResults.reserve(getNumResults());
   for (AffineExpr e : getResults())
     newResults.push_back(e.replace(map));
-  return AffineMap::inferFromExprList(newResults).front();
+  return AffineMap::inferFromExprList(newResults, getContext()).front();
 }
 
 AffineMap AffineMap::dropResults(const llvm::SmallBitVector &positions) const {

@@ -133,7 +133,7 @@ define i16 @reduce_blockstrided2(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-LABEL: @reduce_blockstrided2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X:%.*]], align 2
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM]]
@@ -146,7 +146,7 @@ define i16 @reduce_blockstrided2(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX8]], align 2
-; CHECK-NEXT:    [[ADD10:%.*]] = or i32 [[MUL]], 1
+; CHECK-NEXT:    [[ADD10:%.*]] = or disjoint i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[ADD10]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM11]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX12]], align 2
@@ -165,7 +165,7 @@ define i16 @reduce_blockstrided2(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX28]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 [[IDXPROM15]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX32]], align 2
-; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ARRAYIDX33]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 [[IDXPROM4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[ARRAYIDX36]], align 2
@@ -205,7 +205,7 @@ entry:
   %idxprom7 = sext i32 %mul to i64
   %arrayidx8 = getelementptr inbounds i16, ptr %x, i64 %idxprom7
   %4 = load i16, ptr %arrayidx8, align 2
-  %add10 = or i32 %mul, 1
+  %add10 = or disjoint i32 %mul, 1
   %idxprom11 = sext i32 %add10 to i64
   %arrayidx12 = getelementptr inbounds i16, ptr %x, i64 %idxprom11
   %5 = load i16, ptr %arrayidx12, align 2
@@ -254,9 +254,9 @@ define i16 @reduce_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-LABEL: @reduce_blockstrided3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L0:%.*]] = load i16, ptr [[X:%.*]], align 2
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[L1:%.*]] = load i16, ptr [[ARRAYIDX1]], align 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 4
 ; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM]]
@@ -270,9 +270,9 @@ define i16 @reduce_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM9]]
 ; CHECK-NEXT:    [[L6:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; CHECK-NEXT:    [[L8:%.*]] = load i16, ptr [[Y:%.*]], align 2
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 2
 ; CHECK-NEXT:    [[L9:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 4
 ; CHECK-NEXT:    [[L10:%.*]] = load i16, ptr [[ARRAYIDX16]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[L12:%.*]] = load i16, ptr [[ARRAYIDX20]], align 2
@@ -678,7 +678,7 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-LABEL: @store_blockstrided3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[STRIDE:%.*]], 1
 ; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[ADD4]] to i64
@@ -688,7 +688,7 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM11]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX12]], align 4
-; CHECK-NEXT:    [[ADD14:%.*]] = or i32 [[MUL]], 1
+; CHECK-NEXT:    [[ADD14:%.*]] = or disjoint i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM15:%.*]] = sext i32 [[ADD14]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM15]]
 ; CHECK-NEXT:    [[MUL21:%.*]] = mul nsw i32 [[STRIDE]], 3
@@ -699,7 +699,7 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM31]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX32]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[Y:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX35]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[ARRAYIDX41]], align 4
@@ -709,19 +709,19 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[ARRAYIDX60:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[IDXPROM23]]
 ; CHECK-NEXT:    [[ARRAYIDX68:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[IDXPROM31]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX68]], align 4
-; CHECK-NEXT:    [[ARRAYIDX72:%.*]] = getelementptr inbounds i32, ptr [[Z:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX72:%.*]] = getelementptr inbounds i8, ptr [[Z:%.*]], i64 4
 ; CHECK-NEXT:    [[MUL73:%.*]] = mul nsw i32 [[TMP6]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX76:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX76:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 24
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nsw <2 x i32> [[TMP5]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nsw <2 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> [[TMP11]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[MUL81:%.*]] = mul nsw i32 [[TMP8]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX82:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX82:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 32
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x i32>, ptr [[ARRAYIDX16]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x i32>, ptr [[ARRAYIDX52]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul nsw <2 x i32> [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i32> [[TMP15]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[ARRAYIDX90:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 10
+; CHECK-NEXT:    [[ARRAYIDX90:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 40
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x i32>, ptr [[ARRAYIDX24]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <2 x i32>, ptr [[ARRAYIDX60]], align 4
 ; CHECK-NEXT:    store i32 [[MUL73]], ptr [[Z]], align 4
@@ -732,7 +732,7 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> [[TMP19]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    store <2 x i32> [[TMP20]], ptr [[ARRAYIDX90]], align 4
 ; CHECK-NEXT:    [[MUL91:%.*]] = mul nsw i32 [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    [[ARRAYIDX92:%.*]] = getelementptr inbounds i32, ptr [[Z]], i64 9
+; CHECK-NEXT:    [[ARRAYIDX92:%.*]] = getelementptr inbounds i8, ptr [[Z]], i64 36
 ; CHECK-NEXT:    store i32 [[MUL91]], ptr [[ARRAYIDX92]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -754,7 +754,7 @@ entry:
   %idxprom11 = sext i32 %mul to i64
   %arrayidx12 = getelementptr inbounds i32, ptr %x, i64 %idxprom11
   %5 = load i32, ptr %arrayidx12, align 4
-  %add14 = or i32 %mul, 1
+  %add14 = or disjoint i32 %mul, 1
   %idxprom15 = sext i32 %add14 to i64
   %arrayidx16 = getelementptr inbounds i32, ptr %x, i64 %idxprom15
   %6 = load i32, ptr %arrayidx16, align 4
@@ -921,9 +921,9 @@ define void @store_blockstrided4x4(ptr nocapture noundef readonly %p1, i32 nound
 ; CHECK-NEXT:    [[ADD_PTR64:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[IDX_EXT63]]
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR64]], i64 4
-; CHECK-NEXT:    [[DST4:%.*]] = getelementptr inbounds i32, ptr [[DST0:%.*]], i64 4
-; CHECK-NEXT:    [[DST8:%.*]] = getelementptr inbounds i32, ptr [[DST0]], i64 8
-; CHECK-NEXT:    [[DST12:%.*]] = getelementptr inbounds i32, ptr [[DST0]], i64 12
+; CHECK-NEXT:    [[DST4:%.*]] = getelementptr inbounds i8, ptr [[DST0:%.*]], i64 16
+; CHECK-NEXT:    [[DST8:%.*]] = getelementptr inbounds i8, ptr [[DST0]], i64 32
+; CHECK-NEXT:    [[DST12:%.*]] = getelementptr inbounds i8, ptr [[DST0]], i64 48
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[ARRAYIDX3]], align 1

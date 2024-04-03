@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   DWARFLinker
+  DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
   MC
@@ -31,7 +32,6 @@ add_llvm_tool(dsymutil
   MachOUtils.cpp
   Reproducer.cpp
   RelocationMap.cpp
-  SymbolMap.cpp
 
   DEPENDS
   intrinsics_gen
@@ -44,4 +44,4 @@ if(APPLE AND NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
   target_link_libraries(dsymutil PRIVATE "-framework CoreFoundation")
 endif(APPLE AND NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
 
-# target_link_libraries(dsymutil PRIVATE ${LLVM_ATOMIC_LIB})
+target_link_libraries(dsymutil PRIVATE ${LLVM_ATOMIC_LIB})

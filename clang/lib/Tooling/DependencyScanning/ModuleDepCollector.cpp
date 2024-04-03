@@ -29,27 +29,72 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
-static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
-                                     ASTReader &Reader,
-                                     const serialization::ModuleFile &MF) {
-  // Only preserve search paths that were used during the dependency scan.
-  std::vector<HeaderSearchOptions::Entry> Entries = Opts.UserEntries;
-  Opts.UserEntries.clear();
+static void
+optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
+                         const serialization::ModuleFile &MF,
+                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
+                         ScanningOptimizations OptimizeArgs) {
+  if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
+    // Only preserve search paths that were used during the dependency scan.
+    std::vector<HeaderSearchOptions::Entry> Entries;
+    std::swap(Opts.UserEntries, Entries);
 
-  llvm::BitVector SearchPathUsage(Entries.size());
-  llvm::DenseSet<const serialization::ModuleFile *> Visited;
-  std::function<void(const serialization::ModuleFile *)> VisitMF =
-      [&](const serialization::ModuleFile *MF) {
-        SearchPathUsage |= MF->SearchPathUsage;
-        Visited.insert(MF);
-        for (const serialization::ModuleFile *Import : MF->Imports)
-          if (!Visited.contains(Import))
-            VisitMF(Import);
-      };
-  VisitMF(&MF);
+    llvm::BitVector SearchPathUsage(Entries.size());
+    llvm::DenseSet<const serialization::ModuleFile *> Visited;
+    std::function<void(const serialization::ModuleFile *)> VisitMF =
+        [&](const serialization::ModuleFile *MF) {
+          SearchPathUsage |= MF->SearchPathUsage;
+          Visited.insert(MF);
+          for (const serialization::ModuleFile *Import : MF->Imports)
+            if (!Visited.contains(Import))
+              VisitMF(Import);
+        };
+    VisitMF(&MF);
 
-  for (auto Idx : SearchPathUsage.set_bits())
-    Opts.UserEntries.push_back(Entries[Idx]);
+    if (SearchPathUsage.size() != Entries.size())
+      llvm::report_fatal_error(
+          "Inconsistent search path options between modules detected");
+
+    for (auto Idx : SearchPathUsage.set_bits())
+      Opts.UserEntries.push_back(std::move(Entries[Idx]));
+  }
+  if (any(OptimizeArgs & ScanningOptimizations::VFS)) {
+    std::vector<std::string> VFSOverlayFiles;
+    std::swap(Opts.VFSOverlayFiles, VFSOverlayFiles);
+
+    llvm::BitVector VFSUsage(VFSOverlayFiles.size());
+    llvm::DenseSet<const serialization::ModuleFile *> Visited;
+    std::function<void(const serialization::ModuleFile *)> VisitMF =
+        [&](const serialization::ModuleFile *MF) {
+          Visited.insert(MF);
+          if (MF->Kind == serialization::MK_ImplicitModule) {
+            VFSUsage |= MF->VFSUsage;
+            // We only need to recurse into implicit modules. Other module types
+            // will have the correct set of VFSs for anything they depend on.
+            for (const serialization::ModuleFile *Import : MF->Imports)
+              if (!Visited.contains(Import))
+                VisitMF(Import);
+          } else {
+            // This is not an implicitly built module, so it may have different
+            // VFS options. Fall back to a string comparison instead.
+            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
+            if (VFSMap == PrebuiltModuleVFSMap.end())
+              return;
+            for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
+              if (VFSMap->second.contains(VFSOverlayFiles[I]))
+                VFSUsage[I] = true;
+            }
+          }
+        };
+    VisitMF(&MF);
+
+    if (VFSUsage.size() != VFSOverlayFiles.size())
+      llvm::report_fatal_error(
+          "Inconsistent -ivfsoverlay options between modules detected");
+
+    for (auto Idx : VFSUsage.set_bits())
+      Opts.VFSOverlayFiles.push_back(std::move(VFSOverlayFiles[Idx]));
+  }
 }
 
 static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
@@ -119,6 +164,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  // LLVM options are not going to affect the AST
+  CI.getFrontendOpts().LLVMArgs.clear();
 
   // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
@@ -178,6 +225,10 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   auto CurrentModuleMapEntry =
       ScanInstance.getFileManager().getFile(Deps.ClangModuleMapFile);
   assert(CurrentModuleMapEntry && "module map file entry not found");
+
+  // Remove directly passed modulemap files. They will get added back if they
+  // were actually used.
+  CI.getMutFrontendOpts().ModuleMapFiles.clear();
 
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
@@ -316,7 +367,8 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules) {
+                                        bool EagerLoadModules,
+                                        llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
   SmallString<32> Scratch;
@@ -325,6 +377,9 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+  llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  if (CWD)
+    HashBuilder.add(*CWD);
 
   // Hash the BuildInvocation without any input files.
   SmallString<0> ArgVec;
@@ -356,7 +411,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(Deps, CI, EagerLoadModules);
+  Deps.ID.ContextHash = getModuleContextHash(
+      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
@@ -389,14 +445,14 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
-  if (!File && !Imported) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
+  if (!File && !ModuleImported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
     MDC.addFileDep(FileName);
   }
-  handleImport(Imported);
+  handleImport(SuggestedModule);
 }
 
 void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
@@ -516,7 +572,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
-          M->getASTFile());
+          *M->getASTFile());
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -525,7 +581,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         // this file in the proper directory and relies on the rest of Clang to
         // handle it like normal. With explicitly built modules we don't need
         // to play VFS tricks, so replace it with the correct module map.
-        if (StringRef(IFI.Filename).endswith("__inferred_module.map")) {
+        if (StringRef(IFI.Filename).ends_with("__inferred_module.map")) {
           MDC.addFileDep(MD, ModuleMap->getName());
           return;
         }
@@ -543,7 +599,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
-                .endswith("__inferred_module.map"))
+                .ends_with("__inferred_module.map"))
           return;
         MD.ModuleMapFileDeps.emplace_back(IFI.FilenameAsRequested);
       });
@@ -551,9 +607,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
           MD, [&](CowCompilerInvocation &BuildInvocation) {
-            if (any(MDC.OptimizeArgs & ScanningOptimizations::HeaderSearch))
+            if (any(MDC.OptimizeArgs & (ScanningOptimizations::HeaderSearch |
+                                        ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
-                                       *MDC.ScanInstance.getASTReader(), *MF);
+                                       *MDC.ScanInstance.getASTReader(), *MF,
+                                       MDC.PrebuiltModuleVFSMap,
+                                       MDC.OptimizeArgs);
             if (any(MDC.OptimizeArgs & ScanningOptimizations::SystemWarnings))
               optimizeDiagnosticOpts(
                   BuildInvocation.getMutDiagnosticOpts(),
@@ -654,9 +713,11 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
+    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
     bool IsStdModuleP1689Format)
     : ScanInstance(ScanInstance), Consumer(C), Controller(Controller),
+      PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
       Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))),

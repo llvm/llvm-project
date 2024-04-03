@@ -6,18 +6,17 @@
 define void @test1(ptr %s, i32 %n) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w10, #40000 // =0x9c40
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    ldr x8, [x0]
+; CHECK-NEXT:    mov w9, wzr
+; CHECK-NEXT:    add x8, x8, #9, lsl #12 // =36864
+; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.ge .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w8, [x9, #4]
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    str w8, [x9]
-; CHECK-NEXT:    cmp w8, w1
+; CHECK-NEXT:    str w9, [x8, #3140]
+; CHECK-NEXT:    add w9, w9, #1
+; CHECK-NEXT:    str w9, [x8, #3136]
+; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.lt .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: // %while_end
 ; CHECK-NEXT:    ret
@@ -47,16 +46,15 @@ define void @test2(ptr %struct, i32 %n) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x0, .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %while_cond.preheader
-; CHECK-NEXT:    mov w8, #40000 // =0x9c40
 ; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    add x8, x0, #9, lsl #12 // =36864
 ; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.ge .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    str w9, [x8, #3140]
 ; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    str w9, [x8, #3136]
 ; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.lt .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: // %while_end
@@ -89,16 +87,15 @@ define void @test3(ptr %s1, ptr %s2, i1 %cond, i32 %n) {
 ; CHECK-NEXT:    csel x8, x1, x0, ne
 ; CHECK-NEXT:    cbz x8, .LBB2_3
 ; CHECK-NEXT:  // %bb.1: // %while_cond.preheader
-; CHECK-NEXT:    mov w10, #40000 // =0x9c40
 ; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    add x8, x8, #9, lsl #12 // =36864
 ; CHECK-NEXT:    cmp w9, w3
 ; CHECK-NEXT:    b.ge .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    str w9, [x8, #3140]
 ; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    str w9, [x8, #3136]
 ; CHECK-NEXT:    cmp w9, w3
 ; CHECK-NEXT:    b.lt .LBB2_2
 ; CHECK-NEXT:  .LBB2_3: // %while_end
@@ -141,17 +138,15 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-NEXT:    .cfi_personality 156, DW.ref.__FrameHandler
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception0
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    mov w21, wzr
-; CHECK-NEXT:    mov w20, #40000 // =0x9c40
+; CHECK-NEXT:    mov w20, wzr
 ; CHECK-NEXT:  .LBB3_1: // %while_cond
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:  .Ltmp0:
@@ -159,23 +154,22 @@ define void @test4(i32 %n) uwtable personality ptr @__FrameHandler {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  // %bb.2: // %while_cond_x.split
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    add x8, x0, x20
-; CHECK-NEXT:    cmp w21, w19
-; CHECK-NEXT:    str wzr, [x8]
+; CHECK-NEXT:    add x8, x0, #9, lsl #12 // =36864
+; CHECK-NEXT:    cmp w20, w19
+; CHECK-NEXT:    str wzr, [x8, #3136]
 ; CHECK-NEXT:    b.ge .LBB3_4
 ; CHECK-NEXT:  // %bb.3: // %while_body
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    str w21, [x8, #4]
-; CHECK-NEXT:    add w21, w21, #1
-; CHECK-NEXT:    str w21, [x8]
+; CHECK-NEXT:    str w20, [x8, #3140]
+; CHECK-NEXT:    add w20, w20, #1
+; CHECK-NEXT:    str w20, [x8, #3136]
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: // %while_end
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w20
-; CHECK-NEXT:    .cfi_restore w21
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_5: // %cleanup
@@ -223,14 +217,13 @@ define void @test5(ptr %s, i32 %n) {
 ; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    mov w9, wzr
 ; CHECK-NEXT:    add x8, x8, #19, lsl #12 // =77824
-; CHECK-NEXT:    add x8, x8, #2176
 ; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #4]
+; CHECK-NEXT:    str w9, [x8, #2180]
 ; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    str w9, [x8, #2176]
 ; CHECK-NEXT:    cmp w9, w1
 ; CHECK-NEXT:    b.lt .LBB4_1
 ; CHECK-NEXT:  .LBB4_2: // %while_end

@@ -73,7 +73,8 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     VectorType oldDstType = extractOp.getType();
     VectorType newDstType =
         VectorType::get(oldDstType.getShape().drop_front(dropCount),
-                        oldDstType.getElementType());
+                        oldDstType.getElementType(),
+                        oldDstType.getScalableDims().drop_front(dropCount));
 
     Location loc = extractOp.getLoc();
 
@@ -197,6 +198,23 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
   }
 };
 
+static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
+                                  VectorType newType, AffineMap newMap,
+                                  VectorType oldMaskType) {
+  // Infer the type of the new mask from the new map.
+  VectorType newMaskType = inferTransferOpMaskType(newType, newMap);
+
+  // If the new mask is broadcastable to the old result type, we can safely
+  // use a `vector.extract` to get the new mask. Otherwise the best we can
+  // do is shape cast.
+  if (vector::isBroadcastableTo(newMaskType, oldMaskType) ==
+      BroadcastableToResult::Success) {
+    int64_t dropDim = oldMaskType.getRank() - newMaskType.getRank();
+    return b.create<vector::ExtractOp>(loc, mask, splatZero(dropDim));
+  }
+  return b.create<vector::ShapeCastOp>(loc, newMaskType, mask);
+}
+
 // Turns vector.transfer_read on vector with leading 1 dimensions into
 // vector.shape_cast followed by vector.transfer_read on vector without leading
 // 1 dimensions.
@@ -206,6 +224,9 @@ struct CastAwayTransferReadLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    // TODO(#78787): Not supported masked op yet.
+    if (cast<MaskableOpInterface>(read.getOperation()).isMasked())
+      return failure();
     // TODO: support 0-d corner case.
     if (read.getTransferRank() == 0)
       return failure();
@@ -234,11 +255,9 @@ struct CastAwayTransferReadLeadingOneDim
 
     Value mask = Value();
     if (read.getMask()) {
-      // The mask shape must always match the shape of the written vector, so we
-      // can safely use the same extraction indices.
-      int64_t dropDim = oldType.getRank() - newType.getRank();
-      mask = rewriter.create<vector::ExtractOp>(read.getLoc(), read.getMask(),
-                                                splatZero(dropDim));
+      VectorType maskType = read.getMaskType();
+      mask = dropUnitDimsFromMask(rewriter, read.getLoc(), read.getMask(),
+                                  newType, newMap, maskType);
     }
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
@@ -259,6 +278,9 @@ struct CastAwayTransferWriteLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
+    // TODO(#78787): Not supported masked op yet.
+    if (cast<MaskableOpInterface>(write.getOperation()).isMasked())
+      return failure();
     // TODO: support 0-d corner case.
     if (write.getTransferRank() == 0)
       return failure();
@@ -289,10 +311,9 @@ struct CastAwayTransferWriteLeadingOneDim
         write.getLoc(), write.getVector(), splatZero(dropDim));
 
     if (write.getMask()) {
-      // The mask shape must always match the shape of the written vector, so we
-      // can safely use the same extraction indices.
-      auto newMask = rewriter.create<vector::ExtractOp>(
-          write.getLoc(), write.getMask(), splatZero(dropDim));
+      VectorType maskType = write.getMaskType();
+      Value newMask = dropUnitDimsFromMask(
+          rewriter, write.getLoc(), write.getMask(), newType, newMap, maskType);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
           write, newVector, write.getSource(), write.getIndices(),
           AffineMapAttr::get(newMap), newMask, inBoundsAttr);
@@ -308,8 +329,9 @@ struct CastAwayTransferWriteLeadingOneDim
 
 } // namespace
 
-LogicalResult
+FailureOr<Value>
 mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                               MaskingOpInterface maskingOp,
                                                RewriterBase &rewriter) {
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
@@ -344,6 +366,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   SmallVector<Value> operands = {contractOp.getLhs(), contractOp.getRhs(),
                                  contractOp.getAcc()};
   SmallVector<Value> newOperands;
+  auto loc = contractOp.getLoc();
 
   for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
     // Check if the dim to be dropped exists as a leading dim in the operand
@@ -381,7 +404,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
         operands[it.index()] = rewriter.create<vector::TransposeOp>(
-            contractOp.getLoc(), operands[it.index()], perm);
+            loc, operands[it.index()], perm);
       }
     }
     // We have taken care to have the dim to be dropped be
@@ -405,18 +428,29 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     // Extract if its a valid extraction, otherwise use the operand
     // without extraction.
     newOperands.push_back(
-        validExtract ? rewriter.create<vector::ExtractOp>(contractOp.getLoc(),
-                                                          operands[it.index()],
-                                                          splatZero(dropDim))
+        validExtract ? rewriter.create<vector::ExtractOp>(
+                           loc, operands[it.index()], splatZero(dropDim))
                      : operands[it.index()]);
   }
-  auto newContractOp = rewriter.create<vector::ContractionOp>(
-      contractOp.getLoc(), newOperands[0], newOperands[1], newOperands[2],
+
+  // Depending on whether this vector.contract is masked, the replacing Op
+  // should either be a new vector.contract Op or vector.mask Op.
+  Operation *newOp = rewriter.create<vector::ContractionOp>(
+      loc, newOperands[0], newOperands[1], newOperands[2],
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
-  rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-      contractOp, contractOp->getResultTypes()[0], newContractOp);
-  return success();
+
+  if (maskingOp) {
+    auto newMask = rewriter.create<vector::ExtractOp>(loc, maskingOp.getMask(),
+                                                      splatZero(dropDim));
+
+    newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
+  }
+
+  return rewriter
+      .create<vector::BroadcastOp>(loc, contractOp->getResultTypes()[0],
+                                   newOp->getResults()[0])
+      .getResult();
 }
 
 namespace {
@@ -426,12 +460,14 @@ namespace {
 /// 1 dimensions. Also performs tranpose of lhs and rhs operands if required
 /// prior to extract.
 struct CastAwayContractionLeadingOneDim
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public MaskableOpRewritePattern<vector::ContractionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-    return castAwayContractionLeadingOneDim(contractOp, rewriter);
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::ContractionOp contractOp,
+                            MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
+    return castAwayContractionLeadingOneDim(contractOp, maskingOp, rewriter);
   }
 };
 

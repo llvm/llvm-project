@@ -11,5 +11,5 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -foo
 // ADDITIONAL_COMPILE_FLAGS: -bar
-// ADDITIONAL_COMPILE_FLAGS: -baz, -foom
+// ADDITIONAL_COMPILE_FLAGS: -baz -foom
 // RUN: echo "%{compile_flags}" | grep -e '-foo -bar -baz -foom'

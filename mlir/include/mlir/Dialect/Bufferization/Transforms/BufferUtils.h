@@ -73,38 +73,35 @@ private:
   AllocEntryList allocs;
 };
 
+/// Finds a common dominator for the given value while taking the positions
+/// of the values in the value set into account. It supports dominator and
+/// post-dominator analyses via template arguments. If no common dominator
+/// can be found, this function will return "nullptr".
+template <typename DominatorT>
+Block *findCommonDominator(Value value,
+                           const BufferViewFlowAnalysis::ValueSetT &values,
+                           const DominatorT &doms) {
+  // Store blocks in a set before querying `DominanceInfo` to filter out
+  // duplicate blocks (for performance reasons).
+  llvm::SmallPtrSet<Block *, 16> blocks;
+  // Start with the current block the value is defined in.
+  blocks.insert(value.getParentBlock());
+  for (Value childValue : values) {
+    for (Operation *user : childValue.getUsers()) {
+      // Find an appropriate dominator block that takes the current use into
+      // account.
+      blocks.insert(user->getBlock());
+    }
+    // Take values without any users into account.
+    blocks.insert(childValue.getParentBlock());
+  }
+  return doms.findNearestCommonDominator(blocks);
+}
+
 /// The base class for all BufferPlacement transformations.
 class BufferPlacementTransformationBase {
 public:
   using ValueSetT = BufferViewFlowAnalysis::ValueSetT;
-
-  /// Finds a common dominator for the given value while taking the positions
-  /// of the values in the value set into account. It supports dominator and
-  /// post-dominator analyses via template arguments.
-  template <typename DominatorT>
-  static Block *findCommonDominator(Value value, const ValueSetT &values,
-                                    const DominatorT &doms) {
-    // Start with the current block the value is defined in.
-    Block *dom = value.getParentBlock();
-    // Iterate over all aliases and their uses to find a safe placement block
-    // according to the given dominator information.
-    for (Value childValue : values) {
-      for (Operation *user : childValue.getUsers()) {
-        // Move upwards in the dominator tree to find an appropriate
-        // dominator block that takes the current use into account.
-        dom = doms.findNearestCommonDominator(dom, user->getBlock());
-      }
-      // Take values without any users into account.
-      dom = doms.findNearestCommonDominator(dom, childValue.getParentBlock());
-    }
-    return dom;
-  }
-
-  /// Returns true if the given operation represents a loop by testing whether
-  /// it implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`.
-  /// In the case of a `RegionBranchOpInterface`, it checks all region-based
-  /// control-flow edges for cycles.
-  static bool isLoop(Operation *op);
 
   /// Constructs a new operation base using the given root operation.
   BufferPlacementTransformationBase(Operation *op);

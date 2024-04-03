@@ -27,7 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<Trait> traits>
-  : Op<fir_Dialect, mnemonic, traits>;
+  : Op<FIROpsDialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
 class fir_SimpleOp<string mnemonic, list<Trait> traits>
@@ -2433,7 +2433,66 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
+  }];
+}
+
+def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
+    AttrSizedOperandSegments]> {
+  let summary = "call CUDA kernel";
+
+  let description = [{
+    Launch a CUDA kernel from the host.
+
+    ```
+      // launch simple kernel with no arguments. bytes and stream value are
+      // optional in the chevron notation.
+      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    I32:$grid_x,
+    I32:$grid_y,
+    I32:$grid_z,
+    I32:$block_x,
+    I32:$block_y,
+    I32:$block_z,
+    Optional<I32>:$bytes,
+    Optional<I32>:$stream,
+    Variadic<AnyType>:$args
+  );
+
+  let assemblyFormat = [{
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return getCalleeAttr();
+    }
+
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+    }
+    mlir::FunctionType getFunctionType();
+
+    unsigned getNbNoArgOperand() {
+      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
+      if (getBytes()) ++nbNoArgOperand;
+      if (getStream()) ++nbNoArgOperand;
+      return nbNoArgOperand;
+    }
+
+    operand_range getArgOperands() {
+      return {operand_begin() + getNbNoArgOperand(), operand_end()};
+    }
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return mlir::MutableOperandRange(
+          *this, getNbNoArgOperand(), getArgs().size() - 1);
+    }
   }];
 }
 
@@ -2553,14 +2612,18 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
 // Pow is a builtin call and not a primitive
 
 def fir_CmpcOp : fir_Op<"cmpc",
-    [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape]> {
+    [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "complex floating-point comparison operator";
 
   let description = [{
     A complex comparison to handle complex types found in FIR.
   }];
 
-  let arguments = (ins fir_ComplexType:$lhs, fir_ComplexType:$rhs);
+  let arguments = (ins
+      fir_ComplexType:$lhs,
+      fir_ComplexType:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let results = (outs AnyLogicalLike);
 
@@ -2733,7 +2796,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName
+    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -2764,17 +2828,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getSymbolAttrNameStr() { return "symref"; }
-    static constexpr llvm::StringRef getConstantAttrNameStr() {
-      return "constant";
-    }
-    static constexpr llvm::StringRef getLinkageAttrNameStr() {
-      return "linkName";
-    }
-    static constexpr llvm::StringRef getTargetAttrNameStr() {
-      return "target";
-    }
-
     /// The semantic type of the global
     mlir::Type resultType();
 
@@ -2928,7 +2981,6 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
 }
@@ -3023,7 +3075,8 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
     Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyRefOrBox);
@@ -3034,6 +3087,107 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
+
+  let summary = "Get the address of a field in a fir.ref<fir.box>";
+
+  let description = [{
+    Given the address of a fir.box, compute the address of a field inside
+    the fir.box.
+    This allows keeping the actual runtime descriptor layout abstract in
+    FIR while providing access to the pointer addresses in the runtime
+    descriptor for OpenMP/OpenACC target mapping.
+
+    To avoid requiring too much information about the fields that the runtime
+    descriptor implementation must have, only the base_addr and derived_type
+    descriptor fields can be addressed.
+
+    ```
+        %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+        %tdesc = fir.box_offset %box derived_type : (!fir.ref<!fir.box<!fir.type<t>>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<t>>>
+
+    ```
+  }];
+
+  let arguments = (ins
+    AnyReferenceLike:$box_ref,
+    fir_BoxFieldAttr:$field
+  );
+
+  let results = (outs RefOrLLVMPtr);
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $box_ref $field attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
+  ];
+}
+
+def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
+
+  let arguments = (ins
+    Variadic<I32>:$grid, // empty means `*`
+    Variadic<I32>:$block, // empty means `*`
+    Optional<I32>:$stream,
+    Variadic<Index>:$lowerbound,
+    Variadic<Index>:$upperbound,
+    Variadic<Index>:$step,
+    OptionalAttr<I64Attr>:$n
+  );
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
+                custom<CUFKernelValues>($block, type($block))
+        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
+            $upperbound, type($upperbound), $step, type($step))
+        attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
+  let summary = "Represent a data transfer between host and device memory";
+
+  let description = [{
+    CUDA Fortran allows data transfer to be done via intrinsic assignment
+    between a host and a device variable. This operation is used to materialized
+    the data transfer between the lhs and rhs memory references.
+    The kind of transfer is specified in the attribute. 
+
+    ```
+      adev = a ! transfer host to device
+      a = adev ! transfer device to host
+      bdev = adev ! transfer device to device
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
+                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+                       fir_CUDADataTransferKindAttr:$transfer_kind);
+
+  let assemblyFormat = [{
+    $src `to` $dst attr-dict `:` type(operands)
+  }];
 }
 
 #endif

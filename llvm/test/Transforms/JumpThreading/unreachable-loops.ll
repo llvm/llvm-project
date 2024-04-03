@@ -15,8 +15,8 @@ define void @unreachable_single_bb_loop() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP]], 1
 ; CHECK-NEXT:    switch i1 [[TMP4]], label [[BB2:%.*]] [
-; CHECK-NEXT:    i1 false, label [[BB8]]
-; CHECK-NEXT:    i1 true, label [[BB8]]
+; CHECK-NEXT:      i1 false, label [[BB8]]
+; CHECK-NEXT:      i1 true, label [[BB8]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
@@ -57,8 +57,8 @@ define void @unreachable_multi_bbs_loop() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP]], 1
 ; CHECK-NEXT:    switch i1 [[TMP4]], label [[BB3:%.*]] [
-; CHECK-NEXT:    i1 false, label [[BB8]]
-; CHECK-NEXT:    i1 true, label [[BB8]]
+; CHECK-NEXT:      i1 false, label [[BB8]]
+; CHECK-NEXT:      i1 true, label [[BB8]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void

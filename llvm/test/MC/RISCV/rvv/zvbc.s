@@ -1,11 +1,11 @@
-# RUN: llvm-mc -triple=riscv32 -show-encoding --mattr=+zve64x --mattr=+experimental-zvbc %s \
+# RUN: llvm-mc -triple=riscv32 -show-encoding --mattr=+zve64x --mattr=+zvbc %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv32 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve64x --mattr=+experimental-zvbc %s \
-# RUN:        | llvm-objdump -d --mattr=+zve64x --mattr=+experimental-zvbc  - \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve64x --mattr=+zvbc %s \
+# RUN:        | llvm-objdump -d --mattr=+zve64x --mattr=+zvbc  - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve64x --mattr=+experimental-zvbc %s \
+# RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+zve64x --mattr=+zvbc %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 vclmul.vv v10, v9, v8

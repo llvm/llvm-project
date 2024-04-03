@@ -61,8 +61,8 @@ define i64 @f6(i64 %a) {
 ; Check full bitwise negation
 define i64 @f7(i64 %a) {
 ; CHECK-LABEL: f7:
-; CHECK: xihf %r2, 4294967295
-; CHECK: xilf %r2, 4294967295
+; CHECK: lcgr %r2, %r2
+; CHECK: aghi %r2, -1
 ; CHECK: br %r14
   %xor = xor i64 %a, -1
   ret i64 %xor

@@ -36,12 +36,7 @@ void reportBug(const CheckerBase *Checker, const CallEvent &Call,
 }
 
 class CXXDeallocatorChecker : public Checker<check::PreCall> {
-  std::unique_ptr<BugType> BT_uninitField;
-
 public:
-  CXXDeallocatorChecker()
-      : BT_uninitField(new BugType(this, "CXXDeallocator")) {}
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call);
     if (!DC) {

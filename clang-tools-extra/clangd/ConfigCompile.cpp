@@ -490,7 +490,7 @@ struct FragmentCompiler {
     StringRef Str = StringRef(*Arg).trim();
     // Don't support negating here, its handled if the item is in the Add or
     // Remove list.
-    if (Str.startswith("-") || Str.contains(',')) {
+    if (Str.starts_with("-") || Str.contains(',')) {
       diag(Error, "Invalid clang-tidy check name", Arg.Range);
       return;
     }

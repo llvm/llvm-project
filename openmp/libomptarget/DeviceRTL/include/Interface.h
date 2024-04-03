@@ -12,7 +12,8 @@
 #ifndef OMPTARGET_DEVICERTL_INTERFACE_H
 #define OMPTARGET_DEVICERTL_INTERFACE_H
 
-#include "Environment.h"
+#include "Shared/Environment.h"
+
 #include "Types.h"
 
 /// External API

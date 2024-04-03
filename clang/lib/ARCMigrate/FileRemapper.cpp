@@ -43,7 +43,7 @@ std::string FileRemapper::getRemapInfoFile(StringRef outputDir) {
   assert(!outputDir.empty());
   SmallString<128> InfoFile = outputDir;
   llvm::sys::path::append(InfoFile, "remap");
-  return std::string(InfoFile.str());
+  return std::string(InfoFile);
 }
 
 bool FileRemapper::initFromDisk(StringRef outputDir, DiagnosticsEngine &Diag,

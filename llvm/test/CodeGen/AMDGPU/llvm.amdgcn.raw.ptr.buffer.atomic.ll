@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt
@@ -127,6 +127,26 @@ main_body:
   %o6 = call i64 @llvm.amdgcn.raw.ptr.buffer.atomic.cmpswap.i64(i64 %o5, i64 %cmp, ptr addrspace(8) %rsrc, i32 4, i32 8188, i32 0)
   %out = sitofp i64 %o6 to float
   ret float %out
+}
+
+;CHECK-LABEL: {{^}}test_volatile:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_atomic_add v0, v1, s[0:3], 0 offen glc{{$}}
+;CHECK-DAG: s_waitcnt vmcnt(0)
+define amdgpu_ps float @test_volatile(ptr addrspace(8) inreg %rsrc, i32 %data, i32 %voffset) {
+main_body:
+  %t1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %data, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 -2147483648)
+  %out = bitcast i32 %t1 to float
+  ret float %out
+}
+
+;CHECK-LABEL: {{^}}test_volatile_noret:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_atomic_add v0, v1, s[0:3], 0 offen{{$}}
+define amdgpu_ps void @test_volatile_noret(ptr addrspace(8) inreg %rsrc, i32 %data, i32 %voffset) {
+main_body:
+  %t1 = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add.i32(i32 %data, ptr addrspace(8) %rsrc, i32 %voffset, i32 0, i32 -2147483648)
+  ret void
 }
 
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32) #0

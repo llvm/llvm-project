@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -41,7 +42,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "dwarfehprepare"
+#define DEBUG_TYPE "dwarf-eh-prepare"
 
 STATISTIC(NumResumesLowered, "Number of resume calls lowered");
 STATISTIC(NumCleanupLandingPadsUnreachable,
@@ -110,7 +111,8 @@ Value *DwarfEHPrepare::GetExceptionObject(ResumeInst *RI) {
   }
 
   if (!ExnObj)
-    ExnObj = ExtractValueInst::Create(RI->getOperand(0), 0, "exn.obj", RI);
+    ExnObj = ExtractValueInst::Create(RI->getOperand(0), 0, "exn.obj",
+                                      RI->getIterator());
 
   RI->eraseFromParent();
 
@@ -157,7 +159,7 @@ size_t DwarfEHPrepare::pruneUnreachableResumes(
       Resumes[ResumesLeft++] = RI;
     } else {
       BasicBlock *BB = RI->getParent();
-      new UnreachableInst(Ctx, RI);
+      new UnreachableInst(Ctx, RI->getIterator());
       RI->eraseFromParent();
       simplifyCFG(BB, *TTI, DTU);
     }
@@ -364,6 +366,27 @@ public:
 };
 
 } // end anonymous namespace
+
+PreservedAnalyses DwarfEHPreparePass::run(Function &F,
+                                          FunctionAnalysisManager &FAM) {
+  const auto &TLI = *TM->getSubtargetImpl(F)->getTargetLowering();
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  const TargetTransformInfo *TTI = nullptr;
+  auto OptLevel = TM->getOptLevel();
+  if (OptLevel != CodeGenOptLevel::None) {
+    if (!DT)
+      DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+    TTI = &FAM.getResult<TargetIRAnalysis>(F);
+  }
+  bool Changed =
+      prepareDwarfEH(OptLevel, F, TLI, DT, TTI, TM->getTargetTriple());
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 char DwarfEHPrepareLegacyPass::ID = 0;
 

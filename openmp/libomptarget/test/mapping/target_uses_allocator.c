@@ -1,6 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
+// FIXME: https://github.com/llvm/llvm-project/issues/77841
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

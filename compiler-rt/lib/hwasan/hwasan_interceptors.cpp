@@ -36,16 +36,16 @@ struct HWAsanInterceptorContext {
   const char *interceptor_name;
 };
 
-#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                    \
-    do {                                                                    \
-      __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
-                                                              size);        \
+#  define ACCESS_MEMORY_RANGE(offset, size, access)                           \
+    do {                                                                      \
+      __hwasan::CheckAddressSized<ErrorAction::Recover, access>((uptr)offset, \
+                                                                size);        \
     } while (0)
 
-#  define HWASAN_READ_RANGE(ctx, offset, size) \
-    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
-#  define HWASAN_WRITE_RANGE(ctx, offset, size) \
-    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
+#  define HWASAN_READ_RANGE(offset, size) \
+    ACCESS_MEMORY_RANGE(offset, size, AccessType::Load)
+#  define HWASAN_WRITE_RANGE(offset, size) \
+    ACCESS_MEMORY_RANGE(offset, size, AccessType::Store)
 
 #  if !SANITIZER_APPLE
 #    define HWASAN_INTERCEPT_FUNC(name)                                        \
@@ -74,9 +74,8 @@ struct HWAsanInterceptorContext {
 
 #  if HWASAN_WITH_INTERCEPTORS
 
-#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) __hwasan_loadN((uptr)p, (uptr)s)
-#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
-      __hwasan_storeN((uptr)p, (uptr)s)
+#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) HWASAN_READ_RANGE(p, s)
+#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) HWASAN_WRITE_RANGE(p, s)
 #    define COMMON_SYSCALL_POST_READ_RANGE(p, s) \
       do {                                       \
         (void)(p);                               \
@@ -91,10 +90,10 @@ struct HWAsanInterceptorContext {
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #    define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-      HWASAN_WRITE_RANGE(ctx, ptr, size)
+      HWASAN_WRITE_RANGE(ptr, size)
 
 #    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-      HWASAN_READ_RANGE(ctx, ptr, size)
+      HWASAN_READ_RANGE(ptr, size)
 
 #    define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
       HWAsanInterceptorContext _ctx = {#func};       \
@@ -337,8 +336,8 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
-DEFINE_REAL(int, vfork)
-DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
+DEFINE_REAL(int, vfork,)
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork,)
 
 // Get and/or change the set of blocked signals.
 extern "C" int sigprocmask(int __how, const __hw_sigset_t *__restrict __set,
@@ -521,6 +520,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
 #  if HWASAN_WITH_INTERCEPTORS
+  __interception::DoesNotSupportStaticLinking();
   InitializeCommonInterceptors();
 
   (void)(read_iovec);

@@ -712,6 +712,13 @@ llvm.func @coro_resume(%arg0: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @coro_promise
+llvm.func @coro_promise(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : i1) {
+  // CHECK: call ptr @llvm.coro.promise
+  %0 = llvm.intr.coro.promise %arg0, %arg1, %arg2 : (!llvm.ptr, i32, i1) -> !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @eh_typeid_for
 llvm.func @eh_typeid_for(%arg0 : !llvm.ptr) {
     // CHECK: call i32 @llvm.eh.typeid.for
@@ -941,11 +948,49 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant
+llvm.func @invariant(%p: !llvm.ptr) {
+  // CHECK: call ptr @llvm.invariant.start
+  %1 = llvm.intr.invariant.start 16, %p : !llvm.ptr
+  // CHECK: call void @llvm.invariant.end
+  llvm.intr.invariant.end %1, 16, %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @ssa_copy
 llvm.func @ssa_copy(%arg: f32) -> f32 {
   // CHECK: call float @llvm.ssa.copy
   %0 = llvm.intr.ssa.copy %arg : f32
   llvm.return %0 : f32
+}
+
+// CHECK-LABEL: @experimental_constrained_fptrunc
+llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
+  // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fptrunc %s towardzero ignore : f64 to f32
+  // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
+  // CHECK: metadata !"round.tonearest"
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.fptrunc %s tonearest maytrap : f64 to f32
+  // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.fptrunc %s upward strict : f64 to f32
+  // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
+  // CHECK: metadata !"round.downward"
+  // CHECK: metadata !"fpexcept.ignore"
+  %3 = llvm.intr.experimental.constrained.fptrunc %s downward ignore : f64 to f32
+  // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
+  // CHECK: metadata !"round.tonearestaway"
+  // CHECK: metadata !"fpexcept.ignore"
+  %4 = llvm.intr.experimental.constrained.fptrunc %s tonearestaway ignore : f64 to f32
+  // CHECK: call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.fptrunc %v upward strict : vector<4xf32> to vector<4xf16>
+  llvm.return
 }
 
 // Check that intrinsics are declared with appropriate types.
@@ -1047,6 +1092,7 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
+// CHECK-DAG: declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -1101,8 +1147,13 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr nocapture)
+
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)
 // CHECK-DAG: declare void @llvm.stackrestore.p1(ptr addrspace(1))
+// CHECK-DAG: declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+// CHECK-DAG: declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)

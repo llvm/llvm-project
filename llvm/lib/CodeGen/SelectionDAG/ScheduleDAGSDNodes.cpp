@@ -659,18 +659,19 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
   if (Use->isMachineOpcode())
     // Adjust the use operand index by num of defs.
     OpIdx += TII->get(Use->getMachineOpcode()).getNumDefs();
-  int Latency = TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
-  if (Latency > 1 && Use->getOpcode() == ISD::CopyToReg &&
+  std::optional<unsigned> Latency =
+      TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
+  if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
     unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
     if (Register::isVirtualRegister(Reg))
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
-      Latency = Latency - 1;
+      Latency = *Latency - 1;
   }
-  if (Latency >= 0)
-    dep.setLatency(Latency);
+  if (Latency)
+    dep.setLatency(*Latency);
 }
 
 void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
@@ -887,8 +888,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo)
-      MF.addCallArgsForwardingRegs(MI, DAG->getCallSiteInfo(Node));
+        DAG->getTarget().Options.EmitCallSiteInfo) {
+      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    }
 
     if (DAG->getNoMergeSiteInfo(Node)) {
       MI->setFlag(MachineInstr::MIFlag::NoMerge);

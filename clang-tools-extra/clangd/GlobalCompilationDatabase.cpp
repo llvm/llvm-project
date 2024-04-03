@@ -18,6 +18,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -25,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Host.h"
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -244,7 +246,16 @@ static std::unique_ptr<tooling::CompilationDatabase>
 parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
   if (auto CDB = tooling::JSONCompilationDatabase::loadFromBuffer(
           Data, Error, tooling::JSONCommandLineSyntax::AutoDetect)) {
-    return tooling::inferMissingCompileCommands(std::move(CDB));
+    // FS used for expanding response files.
+    // FIXME: ExpandResponseFilesDatabase appears not to provide the usual
+    // thread-safety guarantees, as the access to FS is not locked!
+    // For now, use the real FS, which is known to be threadsafe (if we don't
+    // use/change working directory, which ExpandResponseFilesDatabase doesn't).
+    // NOTE: response files have to be expanded before inference because
+    // inference needs full command line to check/fix driver mode and file type.
+    auto FS = llvm::vfs::getRealFileSystem();
+    return tooling::inferMissingCompileCommands(
+        expandResponseFiles(std::move(CDB), std::move(FS)));
   }
   return nullptr;
 }
@@ -743,6 +754,22 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     auto It = Commands.find(removeDots(File));
     if (It != Commands.end())
       Cmd = It->second;
+  }
+  if (Cmd) {
+    // FS used for expanding response files.
+    // FIXME: ExpandResponseFiles appears not to provide the usual
+    // thread-safety guarantees, as the access to FS is not locked!
+    // For now, use the real FS, which is known to be threadsafe (if we don't
+    // use/change working directory, which ExpandResponseFiles doesn't).
+    auto FS = llvm::vfs::getRealFileSystem();
+    auto Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+                         ? llvm::cl::TokenizeWindowsCommandLine
+                         : llvm::cl::TokenizeGNUCommandLine;
+    // Compile command pushed via LSP protocol may have response files that need
+    // to be expanded before further processing. For CDB for files it happens in
+    // the main CDB when reading it from the JSON file.
+    tooling::addExpandedResponseFiles(Cmd->CommandLine, Cmd->Directory,
+                                      Tokenizer, *FS);
   }
   if (!Cmd)
     Cmd = DelegatingCDB::getCompileCommand(File);

@@ -100,7 +100,7 @@ public:
   bool emitDirectiveOptionArch();
 
 private:
-  void emitAttributes();
+  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
 
   void emitNTLHint(const MachineInstr *MI);
 
@@ -110,7 +110,7 @@ private:
 
 void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
 
   auto &Ctx = OutStreamer.getContext();
@@ -143,7 +143,7 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
 // [<def>], <id>, <numBytes>, <target>, <numArgs>
 void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
 
   auto &Ctx = OutStreamer.getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -165,7 +165,7 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
-  unsigned NOPBytes = STI->getFeatureBits()[RISCV::FeatureStdExtC] ? 2 : 4;
+  unsigned NOPBytes = STI->hasStdExtCOrZca() ? 2 : 4;
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -323,7 +323,8 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   // RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand).
   if (!AddrReg.isReg())
     return true;
-  if (!Offset.isImm() && !Offset.isGlobal() && !Offset.isBlockAddress())
+  if (!Offset.isImm() && !Offset.isGlobal() && !Offset.isBlockAddress() &&
+      !Offset.isMCSymbol())
     return true;
 
   MCOperand MCO;
@@ -332,7 +333,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 
   if (Offset.isImm())
     OS << MCO.getImm();
-  else if (Offset.isGlobal() || Offset.isBlockAddress())
+  else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
     OS << *MCO.getExpr();
   OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
@@ -384,8 +385,32 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+
+  MCSubtargetInfo SubtargetInfo = *TM.getMCSubtargetInfo();
+
+  // Use module flag to update feature bits.
+  if (auto *MD = dyn_cast_or_null<MDNode>(M.getModuleFlag("riscv-isa"))) {
+    for (auto &ISA : MD->operands()) {
+      if (auto *ISAString = dyn_cast_or_null<MDString>(ISA)) {
+        auto ParseResult = llvm::RISCVISAInfo::parseArchString(
+            ISAString->getString(), /*EnableExperimentalExtension=*/true,
+            /*ExperimentalExtensionVersionCheck=*/true);
+        if (!errorToBool(ParseResult.takeError())) {
+          auto &ISAInfo = *ParseResult;
+          for (const auto &Feature : RISCVFeatureKV) {
+            if (ISAInfo->hasExtension(Feature.Key) &&
+                !SubtargetInfo.hasFeature(Feature.Value))
+              SubtargetInfo.ToggleFeature(Feature.Key);
+          }
+        }
+      }
+    }
+
+    RTS.setFlagsFromFeatures(SubtargetInfo);
+  }
+
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
+    emitAttributes(SubtargetInfo);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -397,13 +422,13 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   EmitHwasanMemaccessSymbols(M);
 }
 
-void RISCVAsmPrinter::emitAttributes() {
+void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
-  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo(), /*EmitStackAlign*/ true);
+  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
@@ -747,9 +772,6 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCVMCExpr::VK_RISCV_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = RISCVMCExpr::VK_RISCV_CALL;
-    break;
-  case RISCVII::MO_PLT:
     Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
     break;
   case RISCVII::MO_LO:
@@ -781,6 +803,18 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case RISCVII::MO_TLS_GD_HI:
     Kind = RISCVMCExpr::VK_RISCV_TLS_GD_HI;
+    break;
+  case RISCVII::MO_TLSDESC_HI:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_HI;
+    break;
+  case RISCVII::MO_TLSDESC_LOAD_LO:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO;
+    break;
+  case RISCVII::MO_TLSDESC_ADD_LO:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO;
+    break;
+  case RISCVII::MO_TLSDESC_CALL:
+    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_CALL;
     break;
   }
 

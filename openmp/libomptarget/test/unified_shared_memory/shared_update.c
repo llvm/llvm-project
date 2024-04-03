@@ -3,7 +3,10 @@
 // REQUIRES: unified_shared_memory
 
 // amdgpu runtime crash
+// Fails on nvptx with error: an illegal memory access was encountered
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>

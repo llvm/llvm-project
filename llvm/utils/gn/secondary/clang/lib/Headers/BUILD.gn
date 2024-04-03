@@ -22,11 +22,11 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
-# Generate arm_sme_draft_spec_subject_to_change.h
-clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+# Generate arm_sme.h
+clang_tablegen("arm_sme") {
   args = [ "-gen-arm-sme-header" ]
   td_file = "//clang/include/clang/Basic/arm_sme.td"
-  output_name = "arm_sme_draft_spec_subject_to_change.h"
+  output_name = "arm_sme.h"
 }
 
 # Generate arm_bf16.h
@@ -50,6 +50,13 @@ clang_tablegen("arm_cde") {
   output_name = "arm_cde.h"
 }
 
+# Generate arm__vector_types.h
+clang_tablegen("arm_vector_types") {
+  args = [ "-gen-arm-vector-type" ]
+  td_file = "//clang/include/clang/Basic/arm_neon.td"
+  output_name = "arm_vector_types.h"
+}
+
 # Generate riscv_vector.h
 clang_tablegen("riscv_vector") {
   args = [ "-gen-riscv-vector-header" ]
@@ -65,8 +72,9 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
-    ":arm_sme_draft_spec_subject_to_change",
+    ":arm_sme",
     ":arm_sve",
+    ":arm_vector_types",
     ":riscv_vector",
   ]
   sources = []
@@ -112,6 +120,7 @@ copy("Headers") {
     "__stddef_wint_t.h",
     "__wmmintrin_aes.h",
     "__wmmintrin_pclmul.h",
+    "adcintrin.h",
     "adxintrin.h",
     "altivec.h",
     "ammintrin.h",
@@ -196,6 +205,7 @@ copy("Headers") {
     "ia32intrin.h",
     "immintrin.h",
     "intrin.h",
+    "intrin0.h",
     "inttypes.h",
     "invpcidintrin.h",
     "iso646.h",
@@ -247,10 +257,13 @@ copy("Headers") {
     "ppc_wrappers/xmmintrin.h",
     "prfchiintrin.h",
     "prfchwintrin.h",
+    "ptrauth.h",
     "ptwriteintrin.h",
     "raointintrin.h",
     "rdpruintrin.h",
     "rdseedintrin.h",
+    "riscv_bitmanip.h",
+    "riscv_crypto.h",
     "riscv_ntlh.h",
     "rtmintrin.h",
     "s390intrin.h",
@@ -298,6 +311,7 @@ copy("Headers") {
     "xsaveoptintrin.h",
     "xsavesintrin.h",
     "xtestintrin.h",
+    "yvals_core.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

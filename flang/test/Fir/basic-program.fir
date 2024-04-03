@@ -57,7 +57,14 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   PolymorphicOpConversion
-// PASSES-NEXT:   CFGConversion
+
+// PASSES-NEXT: AddAliasTags
+
+// PASSES-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   CFGConversionOnFunc
+// PASSES-NEXT: 'omp.declare_reduction' Pipeline
+// PASSES-NEXT:   CFGConversionOnReduction
 
 // PASSES-NEXT: SCFToControlFlow
 // PASSES-NEXT: Canonicalizer

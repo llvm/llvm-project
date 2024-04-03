@@ -66,7 +66,7 @@ public:
   bool ParseDebugMacros(CompileUnit &comp_unit) override { return false; }
 
   bool ParseSupportFiles(CompileUnit &comp_unit,
-                         FileSpecList &support_files) override {
+                         SupportFileList &support_files) override {
     return false;
   }
 
@@ -105,12 +105,8 @@ public:
                 lldb::TypeClass type_mask,
                 lldb_private::TypeList &type_list) override {}
 
-  void
-  FindTypes(lldb_private::ConstString name,
-            const lldb_private::CompilerDeclContext &parent_decl_ctx,
-            uint32_t max_matches,
-            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-            lldb_private::TypeMap &types) override;
+  void FindTypes(const lldb_private::TypeQuery &match,
+                 lldb_private::TypeResults &results) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
                         uint32_t max_matches, lldb_private::TypeMap &types);

@@ -1,5 +1,5 @@
-; RUN: not llc -march=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -march=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=GCN %s
 
 ; ERR: error: <unknown>:0:0: in function illegal_vgpr_to_sgpr_copy_i32 void (): illegal VGPR to SGPR copy
 ; GCN: ; illegal copy v1 to s9

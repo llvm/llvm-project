@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 ; CHECK-DAG: flat_load_dwordx4
 ; CHECK-DAG: flat_load_dwordx4
 ; CHECK-DAG: flat_load_dwordx4

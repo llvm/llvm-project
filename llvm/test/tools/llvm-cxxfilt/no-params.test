@@ -1,0 +1,34 @@
+RUN: llvm-cxxfilt             -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-PARAMS
+RUN: llvm-cxxfilt          -p -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
+RUN: llvm-cxxfilt --no-params -n _Z3fooILZ3BarEET_f _Z3fooIPFcfEET_d _ZN1f2baC2ERKNS_2baIT_EE _Z3foov.123 | FileCheck %s --check-prefix=CHECK-NO-PARAMS --match-full-lines
+
+# Check that -p or --no-params flag omits function parameters and the return
+# type.
+
+CHECK-PARAMS: Bar foo<Bar>(float)
+CHECK-NO-PARAMS: foo<Bar>
+
+# Check that only the top-level function is impacted by the switch, and that
+# nested function types in the encoding (e.g. where a function type is being
+# used as a template parameter) still include their parameters.
+#
+# template <typename T> T foo(double);
+# typedef char (*F)(float);
+# F foo<F>(double)
+
+CHECK-PARAMS: char (*foo<char (*)(float)>(double))(float)
+CHECK-NO-PARAMS: foo<char (*)(float)>
+
+# Use an invalid mangled name broken in the function parameters to check how -p
+# or --no-params flag works. If the option is given we should be able to
+# demangle the function name just fine. If it is not given, demangling will fail
+# because of the invalid params.
+
+CHECK-PARAMS: _ZN1f2baC2ERKNS_2baIT_EE
+CHECK-NO-PARAMS: f::ba::ba
+
+# Check that a vendor specific suffix is also omitted when --no-params is
+# specified. This matches c++filt's behaviour.
+
+CHECK-PARAMS: foo() (.123)
+CHECK-NO-PARAMS: foo

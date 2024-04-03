@@ -20,7 +20,13 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace arith {
-void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns);
+/// Add patterns for rewriting `arith.extf` and `arith.truncf` on FP8 types
+/// to wrappers around AMDGPU--specific intrinsics. If `saturateFP8TruncF`
+/// is set, values outside the range of the destination type are clamped
+/// to the largest value of that type instead of being rewritten to Inf (aka
+/// NaN).
+void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns,
+                                             bool saturateFP8TruncF);
 } // namespace arith
 } // namespace mlir
 

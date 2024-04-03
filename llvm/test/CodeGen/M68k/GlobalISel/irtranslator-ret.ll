@@ -140,7 +140,7 @@ define void @test_arg_lowering_multiple(i1 %a, i8 %b, i16 %c, i32 %d, i64 %e, i1
   ret void
 }
 
-define void @test_arg_lowering_ptr(i32* %x) {
+define void @test_arg_lowering_ptr(ptr %x) {
   ; CHECK-LABEL: name: test_arg_lowering_ptr
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   [[G_F_I1:%[0-9]+]]:_(p0) = G_FRAME_INDEX
@@ -149,7 +149,7 @@ define void @test_arg_lowering_ptr(i32* %x) {
   ret void
 }
 
-define void @test_arg_lowering_float_ptr(float* %x) {
+define void @test_arg_lowering_float_ptr(ptr %x) {
   ; CHECK-LABEL: name: test_arg_lowering_float_ptr
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   [[G_F_I1:%[0-9]+]]:_(p0) = G_FRAME_INDEX

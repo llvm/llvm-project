@@ -108,5 +108,22 @@ int main(int, char**) {
   }
 #endif
 
+  // GH issue #70506
+  // movable_box::operator= overwrites underlying view
+  {
+    auto f = [l = 0.0L, b = false](int i) {
+      (void)l;
+      (void)b;
+      return i;
+    };
+
+    auto v1 = std::vector{1, 2, 3, 4} | std::views::transform(f);
+    auto v2 = std::vector{1, 2, 3, 4} | std::views::transform(f);
+
+    v1             = std::move(v2);
+    int expected[] = {1, 2, 3, 4};
+    assert(std::equal(v1.begin(), v1.end(), expected, expected + 4));
+  }
+
   return 0;
 }

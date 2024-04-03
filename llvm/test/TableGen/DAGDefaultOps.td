@@ -76,21 +76,21 @@ def MulIRRPat : Pat<(mul i32:$x, i32:$y), (MulIRR Reg:$x, Reg:$y)>;
 // ADD: SwitchOpcode{{.*}}TARGET_VAL(ISD::ADD)
 // ADD-NEXT: OPC_RecordChild0
 // ADD-NEXT: OPC_RecordChild1
-// ADD-NEXT: OPC_EmitInteger, MVT::i32, 0
-// ADD-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::AddRRI)
+// ADD-NEXT: OPC_EmitInteger32, 0
+// ADD-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(::AddRRI)
 
 // ADDINT: SwitchOpcode{{.*}}TARGET_VAL(ISD::INTRINSIC_WO_CHAIN)
 // ADDINT-NEXT: OPC_CheckChild0Integer
 // ADDINT-NEXT: OPC_RecordChild1
 // ADDINT-NEXT: OPC_RecordChild2
-// ADDINT-NEXT: OPC_EmitInteger, MVT::i32, 2
-// ADDINT-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::AddRRI)
+// ADDINT-NEXT: OPC_EmitInteger32, 2
+// ADDINT-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(::AddRRI)
 
 // SUB: SwitchOpcode{{.*}}TARGET_VAL(ISD::SUB)
 // SUB-NEXT: OPC_RecordChild0
 // SUB-NEXT: OPC_RecordChild1
-// SUB-NEXT: OPC_EmitInteger, MVT::i32, 0
-// SUB-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::SubRRI)
+// SUB-NEXT: OPC_EmitInteger32, 0
+// SUB-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(::SubRRI)
 
 // MULINT: SwitchOpcode{{.*}}TARGET_VAL(ISD::INTRINSIC_W_CHAIN)
 // MULINT-NEXT: OPC_RecordNode
@@ -99,10 +99,10 @@ def MulIRRPat : Pat<(mul i32:$x, i32:$y), (MulIRR Reg:$x, Reg:$y)>;
 // MULINT-NEXT: OPC_RecordChild3
 // MULINT-NEXT: OPC_RecordChild4
 // MULINT-NEXT: OPC_EmitMergeInputChains
-// MULINT-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::MulRRI)
+// MULINT-NEXT: OPC_MorphNodeTo1Chain, TARGET_VAL(::MulRRI)
 
 // MUL: SwitchOpcode{{.*}}TARGET_VAL(ISD::MUL)
-// MUL-NEXT: OPC_EmitInteger, MVT::i32, 0
+// MUL-NEXT: OPC_EmitInteger32, 0
 // MUL-NEXT: OPC_RecordChild0
 // MUL-NEXT: OPC_RecordChild1
-// MUL-NEXT: OPC_MorphNodeTo1, TARGET_VAL(::MulRRI)
+// MUL-NEXT: OPC_MorphNodeTo1Chain, TARGET_VAL(::MulRRI)

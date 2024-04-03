@@ -20,7 +20,7 @@ define ptr @test1(ptr %base, i64 %idx) #0 {
 define ptr @test2(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 4 x float>, ptr [[BASE:%.*]], i64 3, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %idx.next = add nuw nsw i64 %idx, 1
@@ -57,7 +57,7 @@ define ptr @test4(ptr %base, i64 %idx) {
 define ptr @test5(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x <vscale x 4 x float>], ptr [[BASE:%.*]], i64 1, i64 3, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[GEP2]]
 ;
   %idx.next = add nuw nsw i64 %idx, 1

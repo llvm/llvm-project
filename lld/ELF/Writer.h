@@ -57,6 +57,7 @@ bool isMipsN32Abi(const InputFile *f);
 bool isMicroMips();
 bool isMipsR6();
 
+bool hasMemtag();
 bool canHaveMemtagGlobals();
 } // namespace lld::elf
 

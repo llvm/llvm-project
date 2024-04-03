@@ -23,6 +23,7 @@
 #include <pybind11/stl.h>
 
 #include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 
 #include "llvm/ADT/Twine.h"
@@ -495,6 +496,13 @@ public:
           .attr("replace")(superCls.attr("__name__"), captureTypeName);
     });
     if (getTypeIDFunction) {
+      // 'get_static_typeid' method.
+      // This is modeled as a static method instead of a static property because
+      // `def_property_readonly_static` is not available in `pure_subclass` and
+      // we do not want to introduce the complexity that pybind uses to
+      // implement it.
+      def_staticmethod("get_static_typeid",
+                       [getTypeIDFunction]() { return getTypeIDFunction(); });
       py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
           .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
               getTypeIDFunction())(pybind11::cpp_function(
@@ -562,6 +570,41 @@ public:
 };
 
 } // namespace adaptors
+
+/// RAII scope intercepting all diagnostics into a string. The message must be
+/// checked before this goes out of scope.
+class CollectDiagnosticsToStringScope {
+public:
+  explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
+    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
+                                                   /*deleteUserData=*/nullptr);
+  }
+  ~CollectDiagnosticsToStringScope() {
+    assert(errorMessage.empty() && "unchecked error message");
+    mlirContextDetachDiagnosticHandler(context, handlerID);
+  }
+
+  [[nodiscard]] std::string takeMessage() { return std::move(errorMessage); }
+
+private:
+  static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
+    auto printer = +[](MlirStringRef message, void *data) {
+      *static_cast<std::string *>(data) +=
+          llvm::StringRef(message.data, message.length);
+    };
+    MlirLocation loc = mlirDiagnosticGetLocation(diag);
+    *static_cast<std::string *>(data) += "at ";
+    mlirLocationPrint(loc, printer, data);
+    *static_cast<std::string *>(data) += ": ";
+    mlirDiagnosticPrint(diag, printer, data);
+    return mlirLogicalResultSuccess();
+  }
+
+  MlirContext context;
+  MlirDiagnosticHandlerID handlerID;
+  std::string errorMessage = "";
+};
+
 } // namespace python
 } // namespace mlir
 

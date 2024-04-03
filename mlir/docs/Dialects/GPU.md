@@ -50,6 +50,7 @@ An example of how the compilation workflow look is:
 ```
 mlir-opt example.mlir                   \
   --pass-pipeline="builtin.module(      \
+    gpu-kernel-outlining,               \ # Outline gpu.launch body to a kernel.
     nvvm-attach-target{chip=sm_90 O=3}, \ # Attach an NVVM target to a gpu.module op.
     gpu.module(convert-gpu-to-nvvm),    \ # Convert GPU to NVVM.
     gpu-to-llvm,                        \ # Convert GPU to LLVM.
@@ -58,6 +59,50 @@ mlir-opt example.mlir                   \
 mlir-translate example-nvvm.mlir        \
   --mlir-to-llvmir                      \ # Obtain the translated LLVM IR.
   -o example.ll
+```
+
+### Default NVVM Compilation Pipeline: gpu-lower-to-nvvm-pipeline
+
+The `gpu-lower-to-nvvm-pipeline` compilation pipeline serves as the default way
+for NVVM target compilation within MLIR. This pipeline operates by lowering
+primary dialects (arith, memref, scf, vector, gpu, and nvgpu) to NVVM target. It
+begins by lowering GPU code region(s) to the specified NVVM compilation target
+and subsequently handles the host code.
+
+This pipeline specifically requires explicitly parallel IR and doesn't do GPU
+parallelization. To enable parallelism, necessary transformations must be
+applied before utilizing this pipeline.
+
+It's designed to provide a generic solution for NVVM targets, generating NVVM
+and LLVM dialect code compatible with `mlir-cpu-runner` or execution engine.
+
+#### Example:
+
+Here's a snippet illustrating the use of primary dialects, including arith,
+within GPU code execution:
+
+```
+func.func @main() {
+    %c2 = arith.constant 2 : index
+    %c1 = arith.constant 1 : index
+    gpu.launch 
+        blocks(%0, %1, %2) in (%3 = %c1, %4 = %c1, %5 = %c1) 
+        threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) { 
+        gpu.printf "Hello from %d\n" %6 : index
+        gpu.terminator
+    }
+    return
+}
+```
+
+The `gpu-lower-to-nvvm` pipeline compiles this input code to NVVM format as
+below. It provides customization options like specifying SM capability, PTX
+version, and optimization level. Once compiled, the resulting IR is ready for
+execution using `mlir-cpu-runner`. Alternatively, it can be translated into
+LLVM, expanding its utility within the system.
+
+```
+mlir-opt example.mlir -gpu-lower-to-nvvm-pipeline = "cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
 ```
 
 ### Module serialization

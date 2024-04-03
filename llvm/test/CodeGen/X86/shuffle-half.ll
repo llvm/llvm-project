@@ -10,7 +10,7 @@ define <32 x half> @dump_vec() {
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.load
 ; CHECK-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
 ; CHECK-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
@@ -305,6 +305,345 @@ define <32 x half> @dump_vec() {
 ; CHECK-NEXT:  .LBB0_64: # %else92
 ; CHECK-NEXT:    retq
   %1 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr poison, i32 2, <32 x i1> poison, <32 x half> <half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0>)
+  ret <32 x half> %1
+}
+
+define <32 x half> @build_vec(ptr %p, <32 x i1> %mask) {
+; CHECK-LABEL: build_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovmskb %ymm0, %eax
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %cond.load
+; CHECK-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
+; CHECK-NEXT:    testb $2, %al
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_1:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; CHECK-NEXT:    testb $2, %al
+; CHECK-NEXT:    je .LBB1_5
+; CHECK-NEXT:  .LBB1_4: # %cond.load1
+; CHECK-NEXT:    vpbroadcastw 2(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB1_5: # %else2
+; CHECK-NEXT:    testb $4, %al
+; CHECK-NEXT:    jne .LBB1_6
+; CHECK-NEXT:  # %bb.7: # %else5
+; CHECK-NEXT:    testb $8, %al
+; CHECK-NEXT:    jne .LBB1_8
+; CHECK-NEXT:  .LBB1_9: # %else8
+; CHECK-NEXT:    testb $16, %al
+; CHECK-NEXT:    jne .LBB1_10
+; CHECK-NEXT:  .LBB1_11: # %else11
+; CHECK-NEXT:    testb $32, %al
+; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:  .LBB1_13: # %else14
+; CHECK-NEXT:    testb $64, %al
+; CHECK-NEXT:    jne .LBB1_14
+; CHECK-NEXT:  .LBB1_15: # %else17
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    js .LBB1_16
+; CHECK-NEXT:  .LBB1_17: # %else20
+; CHECK-NEXT:    testl $256, %eax # imm = 0x100
+; CHECK-NEXT:    jne .LBB1_18
+; CHECK-NEXT:  .LBB1_19: # %else23
+; CHECK-NEXT:    testl $512, %eax # imm = 0x200
+; CHECK-NEXT:    jne .LBB1_20
+; CHECK-NEXT:  .LBB1_21: # %else26
+; CHECK-NEXT:    testl $1024, %eax # imm = 0x400
+; CHECK-NEXT:    jne .LBB1_22
+; CHECK-NEXT:  .LBB1_23: # %else29
+; CHECK-NEXT:    testl $2048, %eax # imm = 0x800
+; CHECK-NEXT:    jne .LBB1_24
+; CHECK-NEXT:  .LBB1_25: # %else32
+; CHECK-NEXT:    testl $4096, %eax # imm = 0x1000
+; CHECK-NEXT:    jne .LBB1_26
+; CHECK-NEXT:  .LBB1_27: # %else35
+; CHECK-NEXT:    testl $8192, %eax # imm = 0x2000
+; CHECK-NEXT:    jne .LBB1_28
+; CHECK-NEXT:  .LBB1_29: # %else38
+; CHECK-NEXT:    testl $16384, %eax # imm = 0x4000
+; CHECK-NEXT:    jne .LBB1_30
+; CHECK-NEXT:  .LBB1_31: # %else41
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    js .LBB1_32
+; CHECK-NEXT:  .LBB1_33: # %else44
+; CHECK-NEXT:    testl $65536, %eax # imm = 0x10000
+; CHECK-NEXT:    jne .LBB1_34
+; CHECK-NEXT:  .LBB1_35: # %else47
+; CHECK-NEXT:    testl $131072, %eax # imm = 0x20000
+; CHECK-NEXT:    jne .LBB1_36
+; CHECK-NEXT:  .LBB1_37: # %else50
+; CHECK-NEXT:    testl $262144, %eax # imm = 0x40000
+; CHECK-NEXT:    jne .LBB1_38
+; CHECK-NEXT:  .LBB1_39: # %else53
+; CHECK-NEXT:    testl $524288, %eax # imm = 0x80000
+; CHECK-NEXT:    jne .LBB1_40
+; CHECK-NEXT:  .LBB1_41: # %else56
+; CHECK-NEXT:    testl $1048576, %eax # imm = 0x100000
+; CHECK-NEXT:    jne .LBB1_42
+; CHECK-NEXT:  .LBB1_43: # %else59
+; CHECK-NEXT:    testl $2097152, %eax # imm = 0x200000
+; CHECK-NEXT:    jne .LBB1_44
+; CHECK-NEXT:  .LBB1_45: # %else62
+; CHECK-NEXT:    testl $4194304, %eax # imm = 0x400000
+; CHECK-NEXT:    jne .LBB1_46
+; CHECK-NEXT:  .LBB1_47: # %else65
+; CHECK-NEXT:    testl $8388608, %eax # imm = 0x800000
+; CHECK-NEXT:    jne .LBB1_48
+; CHECK-NEXT:  .LBB1_49: # %else68
+; CHECK-NEXT:    testl $16777216, %eax # imm = 0x1000000
+; CHECK-NEXT:    jne .LBB1_50
+; CHECK-NEXT:  .LBB1_51: # %else71
+; CHECK-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; CHECK-NEXT:    jne .LBB1_52
+; CHECK-NEXT:  .LBB1_53: # %else74
+; CHECK-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; CHECK-NEXT:    jne .LBB1_54
+; CHECK-NEXT:  .LBB1_55: # %else77
+; CHECK-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; CHECK-NEXT:    jne .LBB1_56
+; CHECK-NEXT:  .LBB1_57: # %else80
+; CHECK-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; CHECK-NEXT:    jne .LBB1_58
+; CHECK-NEXT:  .LBB1_59: # %else83
+; CHECK-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; CHECK-NEXT:    jne .LBB1_60
+; CHECK-NEXT:  .LBB1_61: # %else86
+; CHECK-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; CHECK-NEXT:    jne .LBB1_62
+; CHECK-NEXT:  .LBB1_63: # %else89
+; CHECK-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    jne .LBB1_64
+; CHECK-NEXT:  .LBB1_65: # %else92
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB1_6: # %cond.load4
+; CHECK-NEXT:    vpbroadcastw 4(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testb $8, %al
+; CHECK-NEXT:    je .LBB1_9
+; CHECK-NEXT:  .LBB1_8: # %cond.load7
+; CHECK-NEXT:    vpbroadcastw 6(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2],xmm1[3],xmm0[4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testb $16, %al
+; CHECK-NEXT:    je .LBB1_11
+; CHECK-NEXT:  .LBB1_10: # %cond.load10
+; CHECK-NEXT:    vpbroadcastw 8(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4],xmm0[5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testb $32, %al
+; CHECK-NEXT:    je .LBB1_13
+; CHECK-NEXT:  .LBB1_12: # %cond.load13
+; CHECK-NEXT:    vpbroadcastw 10(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4],xmm1[5],xmm0[6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testb $64, %al
+; CHECK-NEXT:    je .LBB1_15
+; CHECK-NEXT:  .LBB1_14: # %cond.load16
+; CHECK-NEXT:    vpbroadcastw 12(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5],xmm1[6],xmm0[7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jns .LBB1_17
+; CHECK-NEXT:  .LBB1_16: # %cond.load19
+; CHECK-NEXT:    vpbroadcastw 14(%rdi), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $256, %eax # imm = 0x100
+; CHECK-NEXT:    je .LBB1_19
+; CHECK-NEXT:  .LBB1_18: # %cond.load22
+; CHECK-NEXT:    vpbroadcastw 16(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $512, %eax # imm = 0x200
+; CHECK-NEXT:    je .LBB1_21
+; CHECK-NEXT:  .LBB1_20: # %cond.load25
+; CHECK-NEXT:    vpbroadcastw 18(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $1024, %eax # imm = 0x400
+; CHECK-NEXT:    je .LBB1_23
+; CHECK-NEXT:  .LBB1_22: # %cond.load28
+; CHECK-NEXT:    vpbroadcastw 20(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $2048, %eax # imm = 0x800
+; CHECK-NEXT:    je .LBB1_25
+; CHECK-NEXT:  .LBB1_24: # %cond.load31
+; CHECK-NEXT:    vpbroadcastw 22(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7,8,9,10],ymm1[11],ymm0[12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $4096, %eax # imm = 0x1000
+; CHECK-NEXT:    je .LBB1_27
+; CHECK-NEXT:  .LBB1_26: # %cond.load34
+; CHECK-NEXT:    vpbroadcastw 24(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7,8,9,10,11],ymm1[12],ymm0[13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $8192, %eax # imm = 0x2000
+; CHECK-NEXT:    je .LBB1_29
+; CHECK-NEXT:  .LBB1_28: # %cond.load37
+; CHECK-NEXT:    vpbroadcastw 26(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7,8,9,10,11,12],ymm1[13],ymm0[14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $16384, %eax # imm = 0x4000
+; CHECK-NEXT:    je .LBB1_31
+; CHECK-NEXT:  .LBB1_30: # %cond.load40
+; CHECK-NEXT:    vpbroadcastw 28(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6],ymm0[7,8,9,10,11,12,13],ymm1[14],ymm0[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    jns .LBB1_33
+; CHECK-NEXT:  .LBB1_32: # %cond.load43
+; CHECK-NEXT:    vpbroadcastw 30(%rdi), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:    testl $65536, %eax # imm = 0x10000
+; CHECK-NEXT:    je .LBB1_35
+; CHECK-NEXT:  .LBB1_34: # %cond.load46
+; CHECK-NEXT:    vpbroadcastw 32(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $131072, %eax # imm = 0x20000
+; CHECK-NEXT:    je .LBB1_37
+; CHECK-NEXT:  .LBB1_36: # %cond.load49
+; CHECK-NEXT:    vpbroadcastw 34(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $262144, %eax # imm = 0x40000
+; CHECK-NEXT:    je .LBB1_39
+; CHECK-NEXT:  .LBB1_38: # %cond.load52
+; CHECK-NEXT:    vpbroadcastw 36(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2],xmm2[3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $524288, %eax # imm = 0x80000
+; CHECK-NEXT:    je .LBB1_41
+; CHECK-NEXT:  .LBB1_40: # %cond.load55
+; CHECK-NEXT:    vpbroadcastw 38(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3],xmm2[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $1048576, %eax # imm = 0x100000
+; CHECK-NEXT:    je .LBB1_43
+; CHECK-NEXT:  .LBB1_42: # %cond.load58
+; CHECK-NEXT:    vpbroadcastw 40(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4],xmm2[5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $2097152, %eax # imm = 0x200000
+; CHECK-NEXT:    je .LBB1_45
+; CHECK-NEXT:  .LBB1_44: # %cond.load61
+; CHECK-NEXT:    vpbroadcastw 42(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4],xmm1[5],xmm2[6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $4194304, %eax # imm = 0x400000
+; CHECK-NEXT:    je .LBB1_47
+; CHECK-NEXT:  .LBB1_46: # %cond.load64
+; CHECK-NEXT:    vpbroadcastw 44(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $8388608, %eax # imm = 0x800000
+; CHECK-NEXT:    je .LBB1_49
+; CHECK-NEXT:  .LBB1_48: # %cond.load67
+; CHECK-NEXT:    vpbroadcastw 46(%rdi), %xmm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $16777216, %eax # imm = 0x1000000
+; CHECK-NEXT:    je .LBB1_51
+; CHECK-NEXT:  .LBB1_50: # %cond.load70
+; CHECK-NEXT:    vpbroadcastw 48(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7],ymm1[8],ymm2[9,10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; CHECK-NEXT:    je .LBB1_53
+; CHECK-NEXT:  .LBB1_52: # %cond.load73
+; CHECK-NEXT:    vpbroadcastw 50(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7,8],ymm1[9],ymm2[10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; CHECK-NEXT:    je .LBB1_55
+; CHECK-NEXT:  .LBB1_54: # %cond.load76
+; CHECK-NEXT:    vpbroadcastw 52(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7,8,9],ymm1[10],ymm2[11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; CHECK-NEXT:    je .LBB1_57
+; CHECK-NEXT:  .LBB1_56: # %cond.load79
+; CHECK-NEXT:    vpbroadcastw 54(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3],ymm2[4,5,6,7,8,9,10],ymm1[11],ymm2[12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; CHECK-NEXT:    je .LBB1_59
+; CHECK-NEXT:  .LBB1_58: # %cond.load82
+; CHECK-NEXT:    vpbroadcastw 56(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4],ymm2[5,6,7,8,9,10,11],ymm1[12],ymm2[13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; CHECK-NEXT:    je .LBB1_61
+; CHECK-NEXT:  .LBB1_60: # %cond.load85
+; CHECK-NEXT:    vpbroadcastw 58(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4],ymm1[5],ymm2[6,7,8,9,10,11,12],ymm1[13],ymm2[14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; CHECK-NEXT:    je .LBB1_63
+; CHECK-NEXT:  .LBB1_62: # %cond.load88
+; CHECK-NEXT:    vpbroadcastw 60(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5],ymm1[6],ymm2[7,8,9,10,11,12,13],ymm1[14],ymm2[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    je .LBB1_65
+; CHECK-NEXT:  .LBB1_64: # %cond.load91
+; CHECK-NEXT:    vpbroadcastw 62(%rdi), %ymm1
+; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7],ymm2[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr %p, i32 2, <32 x i1 > %mask, <32 x half> <half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0, half 2.0>)
   ret <32 x half> %1
 }
 

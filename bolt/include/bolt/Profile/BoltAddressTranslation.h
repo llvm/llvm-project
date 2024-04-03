@@ -11,10 +11,12 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 namespace llvm {
 class raw_ostream;
@@ -84,7 +86,7 @@ public:
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
-  std::error_code parse(StringRef Buf);
+  std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
   void dump(raw_ostream &OS);
@@ -110,22 +112,166 @@ public:
   /// addresses when aggregating profile
   bool enabledFor(llvm::object::ELFObjectFileBase *InputFile) const;
 
+  /// Save function and basic block hashes used for metadata dump.
+  void saveMetadata(BinaryContext &BC);
+
+  /// True if a given \p Address is a function with translation table entry.
+  bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
+
+  /// Returns branch offsets grouped by containing basic block in a given
+  /// function.
+  std::unordered_map<uint32_t, std::vector<uint32_t>>
+  getBFBranches(uint64_t FuncOutputAddress) const;
+
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
   /// \p BB for function located at \p FuncAddress. At least one entry will be
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncAddress);
+                         uint64_t FuncInputAddress, uint64_t FuncOutputAddress);
+
+  /// Write the serialized address translation table for a function.
+  template <bool Cold>
+  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
+                 raw_ostream &OS);
+
+  /// Read the serialized address translation table for a function.
+  /// Return a parse error if failed.
+  template <bool Cold>
+  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
+                 DataExtractor &DE, uint64_t &Offset, Error &Err);
+
+  /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
+  /// entries in function address translation map.
+  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
+
+  /// Calculate the number of equal offsets (output = input) in the beginning
+  /// of the function.
+  size_t getNumEqualOffsets(const MapTy &Map) const;
 
   std::map<uint64_t, MapTy> Maps;
+
+  /// Map a function to its basic blocks count
+  std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;
+
+  /// Map a function to its secondary entry points vector
+  std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
 
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
+  /// Links output address of a main fragment back to input address.
+  std::unordered_map<uint64_t, uint64_t> ReverseMap;
+
   /// Identifies the address of a control-flow changing instructions in a
   /// translation map entry
-  const static uint32_t BRANCHENTRY = 0x80000000;
+  const static uint32_t BRANCHENTRY = 0x1;
+
+public:
+  /// Map basic block input offset to a basic block index and hash pair.
+  class BBHashMapTy {
+    class EntryTy {
+      unsigned Index;
+      size_t Hash;
+
+    public:
+      unsigned getBBIndex() const { return Index; }
+      size_t getBBHash() const { return Hash; }
+      EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
+    };
+
+    std::unordered_map<uint32_t, EntryTy> Map;
+    const EntryTy &getEntry(uint32_t BBInputOffset) const {
+      auto It = Map.find(BBInputOffset);
+      assert(It != Map.end());
+      return It->second;
+    }
+
+  public:
+    bool isInputBlock(uint32_t InputOffset) const {
+      return Map.count(InputOffset);
+    }
+
+    unsigned getBBIndex(uint32_t BBInputOffset) const {
+      return getEntry(BBInputOffset).getBBIndex();
+    }
+
+    size_t getBBHash(uint32_t BBInputOffset) const {
+      return getEntry(BBInputOffset).getBBHash();
+    }
+
+    void addEntry(uint32_t BBInputOffset, unsigned BBIndex, size_t BBHash) {
+      Map.emplace(BBInputOffset, EntryTy(BBIndex, BBHash));
+    }
+
+    size_t getNumBasicBlocks() const { return Map.size(); }
+  };
+
+  /// Map function output address to its hash and basic blocks hash map.
+  class FuncHashesTy {
+    class EntryTy {
+      size_t Hash;
+      BBHashMapTy BBHashMap;
+
+    public:
+      size_t getBFHash() const { return Hash; }
+      const BBHashMapTy &getBBHashMap() const { return BBHashMap; }
+      EntryTy(size_t Hash) : Hash(Hash) {}
+    };
+
+    std::unordered_map<uint64_t, EntryTy> Map;
+    const EntryTy &getEntry(uint64_t FuncOutputAddress) const {
+      auto It = Map.find(FuncOutputAddress);
+      assert(It != Map.end());
+      return It->second;
+    }
+
+  public:
+    size_t getBFHash(uint64_t FuncOutputAddress) const {
+      return getEntry(FuncOutputAddress).getBFHash();
+    }
+
+    const BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) const {
+      return getEntry(FuncOutputAddress).getBBHashMap();
+    }
+
+    void addEntry(uint64_t FuncOutputAddress, size_t BFHash) {
+      Map.emplace(FuncOutputAddress, EntryTy(BFHash));
+    }
+
+    size_t getNumFunctions() const { return Map.size(); };
+
+    size_t getNumBasicBlocks() const {
+      size_t NumBasicBlocks{0};
+      for (auto &I : Map)
+        NumBasicBlocks += I.second.getBBHashMap().getNumBasicBlocks();
+      return NumBasicBlocks;
+    }
+  };
+
+  /// Returns BF hash by function output address (after BOLT).
+  size_t getBFHash(uint64_t FuncOutputAddress) const {
+    return FuncHashes.getBFHash(FuncOutputAddress);
+  }
+
+  /// Returns BBHashMap by function output address (after BOLT).
+  const BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) const {
+    return FuncHashes.getBBHashMap(FuncOutputAddress);
+  }
+
+  BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) {
+    return const_cast<BBHashMapTy &>(
+        std::as_const(*this).getBBHashMap(FuncOutputAddress));
+  }
+
+  /// Returns the number of basic blocks in a function.
+  size_t getNumBasicBlocks(uint64_t OutputAddress) const {
+    return NumBasicBlocksMap.at(OutputAddress);
+  }
+
+private:
+  FuncHashesTy FuncHashes;
 };
 } // namespace bolt
 

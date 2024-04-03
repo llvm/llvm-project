@@ -36,6 +36,11 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
     ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
 
+    // Re-map SM version numbers, SmVersion carries the regular SMs which do
+    // have relative order, while FullSmVersion allows distinguishing sm_90 from
+    // sm_90a, which would *not* be a subset of sm_91.
+    SmVersion = getSmVersion();
+
     // Set default to PTX 6.0 (CUDA 9.0)
     if (PTXVersion == 0) {
       PTXVersion = 60;
@@ -48,7 +53,7 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      SmVersion(20), TM(TM),
+      FullSmVersion(200), SmVersion(getSmVersion()), TM(TM),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
 
 bool NVPTXSubtarget::hasImageHandles() const {

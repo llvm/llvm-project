@@ -41,13 +41,13 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
                 {
                     "text": "var",
                     "label": "var -- vector<baz> &",
-                }
-            ],
-            [
+                },
                 {
                     "text": "var",
                     "label": "var -- Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
                 },
+            ],
+            [
                 {"text": "var1", "label": "var1 -- int &"},
             ],
         )

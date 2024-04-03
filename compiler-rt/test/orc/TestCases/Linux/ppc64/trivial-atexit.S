@@ -1,5 +1,11 @@
 // Test that the runtime correctly interposes atexit.
 //
+// REQUIRES: disabled
+//   This test is disabled until a proper atexit interpose can be implemented:
+//   the current one assumes that atexit is defined in the dylib that calls it,
+//   which is not true in general. See
+//   https://github.com/llvm/llvm-project/issues/74641.
+//
 // RUN: %clang -c -o %t %s
 // RUN: %llvm_jitlink %t
 

@@ -133,7 +133,9 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
   Result.Val.setIsUnsigned(false); // Result is signed intmax_t.
   DT.IncludedUndefinedIds = !Macro;
 
-  PP.emitMacroExpansionWarnings(PeekTok);
+  PP.emitMacroExpansionWarnings(
+      PeekTok,
+      (II->getName() == "INFINITY" || II->getName() == "NAN") ? true : false);
 
   // If there is a macro, mark it used.
   if (Result.Val != 0 && ValueLive)
@@ -267,7 +269,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
             const StringRef IdentifierName = II->getName();
             if (llvm::any_of(UndefPrefixes,
                              [&IdentifierName](const std::string &Prefix) {
-                               return IdentifierName.startswith(Prefix);
+                               return IdentifierName.starts_with(Prefix);
                              }))
               PP.Diag(PeekTok, diag::warn_pp_undef_prefix)
                   << AddFlagValue{llvm::join(UndefPrefixes, ",")} << II;

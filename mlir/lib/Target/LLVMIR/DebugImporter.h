@@ -35,6 +35,13 @@ public:
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
 
+  /// Translates the LLVM DWARF expression metadata to MLIR.
+  DIExpressionAttr translateExpression(llvm::DIExpression *node);
+
+  /// Translates the LLVM DWARF global variable expression metadata to MLIR.
+  DIGlobalVariableExpressionAttr
+  translateGlobalVariableExpression(llvm::DIGlobalVariableExpression *node);
+
   /// Translates the debug information for the given function into a Location.
   /// Returns UnknownLoc if `func` has no debug information attached to it.
   Location translateFuncLocation(llvm::Function *func);
@@ -61,6 +68,7 @@ private:
   DILabelAttr translateImpl(llvm::DILabel *node);
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
+  DIGlobalVariableAttr translateImpl(llvm::DIGlobalVariable *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
@@ -74,12 +82,28 @@ private:
   /// null attribute otherwise.
   StringAttr getStringAttrOrNull(llvm::MDString *stringNode);
 
+  /// Get the DistinctAttr used to represent `node` if one was already created
+  /// for it, or create a new one if not.
+  DistinctAttr getOrCreateDistinctID(llvm::DINode *node);
+
+  /// Get the `getRecSelf` constructor for the translated type of `node` if its
+  /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+  function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
+  getRecSelfConstructor(llvm::DINode *node);
+
   /// A mapping between LLVM debug metadata and the corresponding attribute.
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
+  /// A mapping between distinct LLVM debug metadata nodes and the corresponding
+  /// distinct id attribute.
+  DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
   /// A stack that stores the metadata nodes that are being traversed. The stack
   /// is used to detect cyclic dependencies during the metadata translation.
-  SetVector<llvm::DINode *> translationStack;
+  /// A node is pushed with a null value. If it is ever seen twice, it is given
+  /// a recursive id attribute, indicating that it is a recursive node.
+  llvm::MapVector<llvm::DINode *, DistinctAttr> translationStack;
+  /// All the unbound recursive self references in the translation stack.
+  SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;
 
   MLIRContext *context;
   ModuleOp mlirModule;

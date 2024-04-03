@@ -43,9 +43,9 @@ PLT("plt",
 namespace llvm {
 namespace bolt {
 
-void PLTCall::runOnFunctions(BinaryContext &BC) {
+Error PLTCall::runOnFunctions(BinaryContext &BC) {
   if (opts::PLT == OT_NONE)
-    return;
+    return Error::success();
 
   uint64_t NumCallsOptimized = 0;
   for (auto &It : BC.getBinaryFunctions()) {
@@ -80,9 +80,10 @@ void PLTCall::runOnFunctions(BinaryContext &BC) {
 
   if (NumCallsOptimized) {
     BC.RequiresZNow = true;
-    outs() << "BOLT-INFO: " << NumCallsOptimized
-           << " PLT calls in the binary were optimized.\n";
+    BC.outs() << "BOLT-INFO: " << NumCallsOptimized
+              << " PLT calls in the binary were optimized.\n";
   }
+  return Error::success();
 }
 
 } // namespace bolt

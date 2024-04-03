@@ -20,6 +20,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -764,6 +765,10 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
 // Filter out names reserved for the implementation if they come from a
 // system header.
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
+  // Debuggers want access to all identifiers, including reserved ones.
+  if (SemaRef.getLangOpts().DebuggerSupport)
+    return false;
+
   ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
   if (isReservedInAllContexts(Status) && ND->getLocation().isInvalid())
@@ -4165,6 +4170,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::Concept:
     return CXCursor_ConceptDecl;
 
+  case Decl::LinkageSpec:
+    return CXCursor_LinkageSpec;
+
   default:
     if (const auto *TD = dyn_cast<TagDecl>(D)) {
       switch (TD->getTagKind()) {
@@ -5671,6 +5679,10 @@ QualType getApproximateType(const Expr *E) {
         return getApproximateType(VD->getInit());
     }
   }
+  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref)
+      return UO->getSubExpr()->getType()->getPointeeType();
+  }
   return Unresolved;
 }
 
@@ -6134,6 +6146,7 @@ ProduceSignatureHelp(Sema &SemaRef, MutableArrayRef<ResultCandidate> Candidates,
 // so that we can recover argument names from it.
 static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
   TypeLoc Target;
+
   if (const auto *T = Fn->getType().getTypePtr()->getAs<TypedefType>()) {
     Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
 
@@ -6141,6 +6154,11 @@ static FunctionProtoTypeLoc GetPrototypeLoc(Expr *Fn) {
     const auto *D = DR->getDecl();
     if (const auto *const VD = dyn_cast<VarDecl>(D)) {
       Target = VD->getTypeSourceInfo()->getTypeLoc();
+    }
+  } else if (const auto *ME = dyn_cast<MemberExpr>(Fn)) {
+    const auto *MD = ME->getMemberDecl();
+    if (const auto *FD = dyn_cast<FieldDecl>(MD)) {
+      Target = FD->getTypeSourceInfo()->getTypeLoc();
     }
   }
 
@@ -9795,7 +9813,7 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
   Results.ExitScope();
 
   if (!AtParameterName && !SelIdents.empty() &&
-      SelIdents.front()->getName().startswith("init")) {
+      SelIdents.front()->getName().starts_with("init")) {
     for (const auto &M : PP.macros()) {
       if (M.first->getName() != "NS_DESIGNATED_INITIALIZER")
         continue;
@@ -10107,9 +10125,9 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
     }
 
     const StringRef &Dirname = llvm::sys::path::filename(Dir);
-    const bool isQt = Dirname.startswith("Qt") || Dirname == "ActiveQt";
+    const bool isQt = Dirname.starts_with("Qt") || Dirname == "ActiveQt";
     const bool ExtensionlessHeaders =
-        IsSystem || isQt || Dir.endswith(".framework/Headers");
+        IsSystem || isQt || Dir.ends_with(".framework/Headers");
     std::error_code EC;
     unsigned Count = 0;
     for (auto It = FS.dir_begin(Dir, EC);

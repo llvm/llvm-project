@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -38,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "winehprepare"
+#define DEBUG_TYPE "win-eh-prepare"
 
 static cl::opt<bool> DisableDemotion(
     "disable-demotion", cl::Hidden,
@@ -51,27 +52,19 @@ static cl::opt<bool> DisableCleanups(
     cl::desc("Do not remove implausible terminators or other similar cleanups"),
     cl::init(false));
 
+// TODO: Remove this option when we fully migrate to new pass manager
 static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
     "demote-catchswitch-only", cl::Hidden,
     cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
 
 namespace {
 
-class WinEHPrepare : public FunctionPass {
+class WinEHPrepareImpl {
 public:
-  static char ID; // Pass identification, replacement for typeid.
-  WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
-      : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
+  WinEHPrepareImpl(bool DemoteCatchSwitchPHIOnly)
+      : DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
 
-  bool runOnFunction(Function &Fn) override;
-
-  bool doFinalization(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  StringRef getPassName() const override {
-    return "Windows exception handling preparation";
-  }
+  bool runOnFunction(Function &Fn);
 
 private:
   void insertPHIStores(PHINode *OriginalPHI, AllocaInst *SpillSlot);
@@ -100,17 +93,41 @@ private:
   MapVector<BasicBlock *, std::vector<BasicBlock *>> FuncletBlocks;
 };
 
+class WinEHPrepare : public FunctionPass {
+  bool DemoteCatchSwitchPHIOnly;
+
+public:
+  static char ID; // Pass identification, replacement for typeid.
+
+  WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
+      : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
+
+  StringRef getPassName() const override {
+    return "Windows exception handling preparation";
+  }
+
+  bool runOnFunction(Function &Fn) override {
+    return WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(Fn);
+  }
+};
+
 } // end anonymous namespace
 
+PreservedAnalyses WinEHPreparePass::run(Function &F,
+                                        FunctionAnalysisManager &) {
+  bool Changed = WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(F);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
 char WinEHPrepare::ID = 0;
-INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions",
-                false, false)
+INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
+                false)
 
 FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
   return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
 }
 
-bool WinEHPrepare::runOnFunction(Function &Fn) {
+bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   if (!Fn.hasPersonalityFn())
     return false;
 
@@ -124,10 +141,6 @@ bool WinEHPrepare::runOnFunction(Function &Fn) {
   DL = &Fn.getParent()->getDataLayout();
   return prepareExplicitEH(Fn);
 }
-
-bool WinEHPrepare::doFinalization(Module &M) { return false; }
-
-void WinEHPrepare::getAnalysisUsage(AnalysisUsage &AU) const {}
 
 static int addUnwindMapEntry(WinEHFuncInfo &FuncInfo, int ToState,
                              const BasicBlock *BB) {
@@ -311,7 +324,7 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(I)->getArgOperand(0)->stripPointerCasts());
       const Function *Filter = dyn_cast<Function>(FilterOrNull);
-      if (!Filter || !Filter->getName().startswith("__IsLocalUnwind"))
+      if (!Filter || !Filter->getName().starts_with("__IsLocalUnwind"))
         State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
     } else if ((isa<CleanupReturnInst>(TI) || isa<CatchReturnInst>(TI)) &&
                State > 0) {
@@ -831,7 +844,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
   calculateStateNumbersForInvokes(Fn, FuncInfo);
 }
 
-void WinEHPrepare::colorFunclets(Function &F) {
+void WinEHPrepareImpl::colorFunclets(Function &F) {
   BlockColors = colorEHFunclets(F);
 
   // Invert the map from BB to colors to color to BBs.
@@ -842,8 +855,8 @@ void WinEHPrepare::colorFunclets(Function &F) {
   }
 }
 
-void WinEHPrepare::demotePHIsOnFunclets(Function &F,
-                                        bool DemoteCatchSwitchPHIOnly) {
+void WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
+                                            bool DemoteCatchSwitchPHIOnly) {
   // Strip PHI nodes off of EH pads.
   SmallVector<PHINode *, 16> PHINodes;
   for (BasicBlock &BB : make_early_inc_range(F)) {
@@ -873,7 +886,7 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F,
   }
 }
 
-void WinEHPrepare::cloneCommonBlocks(Function &F) {
+void WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
   // We need to clone all blocks which belong to multiple funclets.  Values are
   // remapped throughout the funclet to propagate both the new instructions
   // *and* the new basic blocks themselves.
@@ -895,10 +908,10 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
       if (NumColorsForBB == 1)
         continue;
 
-      DEBUG_WITH_TYPE("winehprepare-coloring",
+      DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                       dbgs() << "  Cloning block \'" << BB->getName()
-                              << "\' for funclet \'" << FuncletPadBB->getName()
-                              << "\'.\n");
+                             << "\' for funclet \'" << FuncletPadBB->getName()
+                             << "\'.\n");
 
       // Create a new basic block and copy instructions into it!
       BasicBlock *CBB =
@@ -929,19 +942,19 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
       assert(NewColors.empty() && "A new block should only have one color!");
       NewColors.push_back(FuncletPadBB);
 
-      DEBUG_WITH_TYPE("winehprepare-coloring",
+      DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                       dbgs() << "  Assigned color \'" << FuncletPadBB->getName()
-                              << "\' to block \'" << NewBlock->getName()
-                              << "\'.\n");
+                             << "\' to block \'" << NewBlock->getName()
+                             << "\'.\n");
 
       llvm::erase(BlocksInFunclet, OldBlock);
       ColorVector &OldColors = BlockColors[OldBlock];
       llvm::erase(OldColors, FuncletPadBB);
 
-      DEBUG_WITH_TYPE("winehprepare-coloring",
+      DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                       dbgs() << "  Removed color \'" << FuncletPadBB->getName()
-                              << "\' from block \'" << OldBlock->getName()
-                              << "\'.\n");
+                             << "\' from block \'" << OldBlock->getName()
+                             << "\'.\n");
     }
 
     // Loop over all of the instructions in this funclet, fixing up operand
@@ -1075,7 +1088,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
   }
 }
 
-void WinEHPrepare::removeImplausibleInstructions(Function &F) {
+void WinEHPrepareImpl::removeImplausibleInstructions(Function &F) {
   // Remove implausible terminators and replace them with UnreachableInst.
   for (auto &Funclet : FuncletBlocks) {
     BasicBlock *FuncletPadBB = Funclet.first;
@@ -1149,7 +1162,7 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
   }
 }
 
-void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
+void WinEHPrepareImpl::cleanupPreparedFunclets(Function &F) {
   // Clean-up some of the mess we made by removing useles PHI nodes, trivial
   // branches, etc.
   for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
@@ -1164,7 +1177,7 @@ void WinEHPrepare::cleanupPreparedFunclets(Function &F) {
 }
 
 #ifndef NDEBUG
-void WinEHPrepare::verifyPreparedFunclets(Function &F) {
+void WinEHPrepareImpl::verifyPreparedFunclets(Function &F) {
   for (BasicBlock &BB : F) {
     size_t NumColors = BlockColors[&BB].size();
     assert(NumColors == 1 && "Expected monochromatic BB!");
@@ -1178,7 +1191,7 @@ void WinEHPrepare::verifyPreparedFunclets(Function &F) {
 }
 #endif
 
-bool WinEHPrepare::prepareExplicitEH(Function &F) {
+bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
   // Remove unreachable blocks.  It is not valuable to assign them a color and
   // their existence can trick us into thinking values are alive when they are
   // not.
@@ -1206,15 +1219,12 @@ bool WinEHPrepare::prepareExplicitEH(Function &F) {
   LLVM_DEBUG(colorFunclets(F));
   LLVM_DEBUG(verifyPreparedFunclets(F));
 
-  BlockColors.clear();
-  FuncletBlocks.clear();
-
   return true;
 }
 
 // TODO: Share loads when one use dominates another, or when a catchpad exit
 // dominates uses (needs dominators).
-AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
+AllocaInst *WinEHPrepareImpl::insertPHILoads(PHINode *PN, Function &F) {
   BasicBlock *PHIBlock = PN->getParent();
   AllocaInst *SpillSlot = nullptr;
   Instruction *EHPad = PHIBlock->getFirstNonPHI();
@@ -1224,10 +1234,10 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
     // that will dominate all uses.
     SpillSlot = new AllocaInst(PN->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(PN->getName(), ".wineh.spillslot"),
-                               &F.getEntryBlock().front());
+                               F.getEntryBlock().begin());
     Value *V = new LoadInst(PN->getType(), SpillSlot,
                             Twine(PN->getName(), ".wineh.reload"),
-                            &*PHIBlock->getFirstInsertionPt());
+                            PHIBlock->getFirstInsertionPt());
     PN->replaceAllUsesWith(V);
     return SpillSlot;
   }
@@ -1251,8 +1261,8 @@ AllocaInst *WinEHPrepare::insertPHILoads(PHINode *PN, Function &F) {
 // to be careful not to introduce interfering stores (needs liveness analysis).
 // TODO: identify related phi nodes that can share spill slots, and share them
 // (also needs liveness).
-void WinEHPrepare::insertPHIStores(PHINode *OriginalPHI,
-                                   AllocaInst *SpillSlot) {
+void WinEHPrepareImpl::insertPHIStores(PHINode *OriginalPHI,
+                                       AllocaInst *SpillSlot) {
   // Use a worklist of (Block, Value) pairs -- the given Value needs to be
   // stored to the spill slot by the end of the given Block.
   SmallVector<std::pair<BasicBlock *, Value *>, 4> Worklist;
@@ -1288,7 +1298,7 @@ void WinEHPrepare::insertPHIStores(PHINode *OriginalPHI,
   }
 }
 
-void WinEHPrepare::insertPHIStore(
+void WinEHPrepareImpl::insertPHIStore(
     BasicBlock *PredBlock, Value *PredVal, AllocaInst *SpillSlot,
     SmallVectorImpl<std::pair<BasicBlock *, Value *>> &Worklist) {
 
@@ -1299,17 +1309,17 @@ void WinEHPrepare::insertPHIStore(
   }
 
   // Otherwise, insert the store at the end of the basic block.
-  new StoreInst(PredVal, SpillSlot, PredBlock->getTerminator());
+  new StoreInst(PredVal, SpillSlot, PredBlock->getTerminator()->getIterator());
 }
 
-void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
-                                      DenseMap<BasicBlock *, Value *> &Loads,
-                                      Function &F) {
+void WinEHPrepareImpl::replaceUseWithLoad(
+    Value *V, Use &U, AllocaInst *&SpillSlot,
+    DenseMap<BasicBlock *, Value *> &Loads, Function &F) {
   // Lazilly create the spill slot.
   if (!SpillSlot)
     SpillSlot = new AllocaInst(V->getType(), DL->getAllocaAddrSpace(), nullptr,
                                Twine(V->getName(), ".wineh.spillslot"),
-                               &F.getEntryBlock().front());
+                               F.getEntryBlock().begin());
 
   auto *UsingInst = cast<Instruction>(U.getUser());
   if (auto *UsingPHI = dyn_cast<PHINode>(UsingInst)) {
@@ -1366,16 +1376,16 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
     Value *&Load = Loads[IncomingBlock];
     // Insert the load into the predecessor block
     if (!Load)
-      Load = new LoadInst(V->getType(), SpillSlot,
-                          Twine(V->getName(), ".wineh.reload"),
-                          /*isVolatile=*/false, IncomingBlock->getTerminator());
+      Load = new LoadInst(
+          V->getType(), SpillSlot, Twine(V->getName(), ".wineh.reload"),
+          /*isVolatile=*/false, IncomingBlock->getTerminator()->getIterator());
 
     U.set(Load);
   } else {
     // Reload right before the old use.
     auto *Load = new LoadInst(V->getType(), SpillSlot,
                               Twine(V->getName(), ".wineh.reload"),
-                              /*isVolatile=*/false, UsingInst);
+                              /*isVolatile=*/false, UsingInst->getIterator());
     U.set(Load);
   }
 }

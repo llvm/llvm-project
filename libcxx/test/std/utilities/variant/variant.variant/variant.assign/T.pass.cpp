@@ -19,6 +19,7 @@
 #include <string>
 #include <type_traits>
 #include <variant>
+#include <vector>
 #include <memory>
 
 #include "test_macros.h"
@@ -133,8 +134,7 @@ void test_T_assignment_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(std::is_assignable<V, int>::value == VariantAllowsNarrowingConversions,
-    "no matching operator=");
+    static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
@@ -143,10 +143,8 @@ void test_T_assignment_sfinae() {
     struct X {
       operator void*();
     };
-    static_assert(!std::is_assignable<V, X>::value,
-                  "no boolean conversion in operator=");
-    static_assert(!std::is_assignable<V, std::false_type>::value,
-                  "no converted to bool in operator=");
+    static_assert(!std::is_assignable<V, X>::value, "no boolean conversion in operator=");
+    static_assert(std::is_assignable<V, std::false_type>::value, "converted to bool in operator=");
   }
   {
     struct X {};
@@ -157,16 +155,6 @@ void test_T_assignment_sfinae() {
     static_assert(std::is_assignable<V, Y>::value,
                   "regression on user-defined conversions in operator=");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, int &&>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-  {
-    using V = std::variant<int, const int &>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_basic() {
@@ -185,7 +173,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == 43);
   }
-#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     std::variant<unsigned, long> v;
     v = 42;
@@ -195,7 +182,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 0);
     assert(std::get<0>(v) == 43);
   }
-#endif
   {
     std::variant<std::string, bool> v = true;
     v = "bar";
@@ -208,25 +194,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &, int &&, long>;
-    int x = 42;
-    V v(43l);
-    v = x;
-    assert(v.index() == 0);
-    assert(&std::get<0>(v) == &x);
-    v = std::move(x);
-    assert(v.index() == 1);
-    assert(&std::get<1>(v) == &x);
-    // 'long' is selected by FUN(const int &) since 'const int &' cannot bind
-    // to 'int&'.
-    const int &cx = x;
-    v = cx;
-    assert(v.index() == 2);
-    assert(std::get<2>(v) == 42);
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_performs_construction() {
@@ -295,12 +262,21 @@ void test_T_assignment_performs_assignment() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
+void test_T_assignment_vector_bool() {
+  std::vector<bool> vec = {true};
+  std::variant<bool, int> v;
+  v = vec[0];
+  assert(v.index() == 0);
+  assert(std::get<0>(v) == true);
+}
+
 int main(int, char**) {
   test_T_assignment_basic();
   test_T_assignment_performs_construction();
   test_T_assignment_performs_assignment();
   test_T_assignment_noexcept();
   test_T_assignment_sfinae();
+  test_T_assignment_vector_bool();
 
   return 0;
 }

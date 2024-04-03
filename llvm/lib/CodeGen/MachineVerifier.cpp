@@ -38,8 +38,9 @@
 #include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConvergenceVerifier.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -57,6 +58,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -220,6 +222,11 @@ namespace {
     LiveStacks *LiveStks = nullptr;
     SlotIndexes *Indexes = nullptr;
 
+    // This is calculated only when trying to verify convergence control tokens.
+    // Similar to the LLVM IR verifier, we calculate this locally instead of
+    // relying on the pass manager.
+    MachineDomTree DT;
+
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
     void visitMachineBundleBefore(const MachineInstr *MI);
@@ -339,8 +346,7 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
   return new MachineVerifierPass(Banner);
 }
 
-void llvm::verifyMachineFunction(MachineFunctionAnalysisManager *,
-                                 const std::string &Banner,
+void llvm::verifyMachineFunction(const std::string &Banner,
                                  const MachineFunction &MF) {
   // TODO: Use MFAM after porting below analyses.
   // LiveVariables *LiveVars;
@@ -1189,13 +1195,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
       if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
           MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
-        if (MMO.getSizeInBits() >= ValTy.getSizeInBits())
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
-        if (MMO.getSize() > ValTy.getSizeInBytes())
+        if (TypeSize::isKnownGT(MMO.getSize().getValue(),
+                                ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
-        if (ValTy.getSizeInBytes() < MMO.getSize())
+        if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
+                                MMO.getSize().getValue()))
           report("store memory size cannot exceed value size", MI);
       }
 
@@ -1289,11 +1298,21 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !PtrTy.isValid() || !OffsetTy.isValid())
       break;
 
-    if (!PtrTy.getScalarType().isPointer())
+    if (!PtrTy.isPointerOrPointerVector())
       report("gep first operand must be a pointer", MI);
 
-    if (OffsetTy.getScalarType().isPointer())
+    if (OffsetTy.isPointerOrPointerVector())
       report("gep offset operand must not be a pointer", MI);
+
+    if (PtrTy.isPointerOrPointerVector()) {
+      const DataLayout &DL = MF->getDataLayout();
+      unsigned AS = PtrTy.getAddressSpace();
+      unsigned IndexSizeInBits = DL.getIndexSize(AS) * 8;
+      if (OffsetTy.getScalarSizeInBits() != IndexSizeInBits) {
+        report("gep offset operand must match index size for address space",
+               MI);
+      }
+    }
 
     // TODO: Is the offset allowed to be a scalar with a vector?
     break;
@@ -1305,7 +1324,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid() || !MaskTy.isValid())
       break;
 
-    if (!DstTy.getScalarType().isPointer())
+    if (!DstTy.isPointerOrPointerVector())
       report("ptrmask result type must be a pointer", MI);
 
     if (!MaskTy.getScalarType().isScalar())
@@ -1331,15 +1350,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isValid() || !SrcTy.isValid())
       break;
 
-    LLT DstElTy = DstTy.getScalarType();
-    LLT SrcElTy = SrcTy.getScalarType();
-    if (DstElTy.isPointer() || SrcElTy.isPointer())
+    if (DstTy.isPointerOrPointerVector() || SrcTy.isPointerOrPointerVector())
       report("Generic extend/truncate can not operate on pointers", MI);
 
     verifyVectorElementMatch(DstTy, SrcTy, MI);
 
-    unsigned DstSize = DstElTy.getSizeInBits();
-    unsigned SrcSize = SrcElTy.getSizeInBits();
+    unsigned DstSize = DstTy.getScalarSizeInBits();
+    unsigned SrcSize = SrcTy.getScalarSizeInBits();
     switch (MI->getOpcode()) {
     default:
       if (DstSize <= SrcSize)
@@ -1400,7 +1417,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
       if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
-          SrcTy.getNumElements() != NumDsts * DstTy.getNumElements())
+          SrcTy.isScalableVector() != DstTy.isScalableVector() ||
+          SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
                "destination operands",
                MI);
@@ -1477,8 +1495,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
       if (MRI->getType(MI->getOperand(1).getReg()) != MRI->getType(MO.getReg()))
         report("G_CONCAT_VECTOR source operand types are not homogeneous", MI);
-    if (DstTy.getNumElements() !=
-        SrcTy.getNumElements() * (MI->getNumOperands() - 1))
+    if (DstTy.getElementCount() !=
+        SrcTy.getElementCount() * (MI->getNumOperands() - 1))
       report("G_CONCAT_VECTOR num dest and source elements should match", MI);
     break;
   }
@@ -1488,7 +1506,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(2).getReg());
 
     if ((DstTy.isVector() != SrcTy.isVector()) ||
-        (DstTy.isVector() && DstTy.getNumElements() != SrcTy.getNumElements()))
+        (DstTy.isVector() &&
+         DstTy.getElementCount() != SrcTy.getElementCount()))
       report("Generic vector icmp/fcmp must preserve number of lanes", MI);
 
     break;
@@ -1598,6 +1617,115 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_BSWAP size must be a multiple of 16 bits", MI);
     break;
   }
+  case TargetOpcode::G_VSCALE: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
+      break;
+    }
+    if (MI->getOperand(1).getCImm()->isZero()) {
+      report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    const MachineOperand &Src0Op = MI->getOperand(1);
+    if (!Src0Op.isReg()) {
+      report("G_INSERT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &Src1Op = MI->getOperand(2);
+    if (!Src1Op.isReg()) {
+      report("G_INSERT_SUBVECTOR second source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(3);
+    if (!IndexOp.isImm()) {
+      report("G_INSERT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT Src0Ty = MRI->getType(Src0Op.getReg());
+    LLT Src1Ty = MRI->getType(Src1Op.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!Src0Ty.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (!Src1Ty.isVector()) {
+      report("Second source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy != Src0Ty) {
+      report("Destination type must match the first source vector type", MI);
+      break;
+    }
+
+    if (Src0Ty.getElementType() != Src1Ty.getElementType()) {
+      report("Element type of source vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        Src1Ty.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the second source vector's "
+             "minimum vector length",
+             MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg()) {
+      report("G_EXTRACT_SUBVECTOR first source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &IndexOp = MI->getOperand(2);
+    if (!IndexOp.isImm()) {
+      report("G_EXTRACT_SUBVECTOR index must be an immediate", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(SrcOp.getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (!SrcTy.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    if (DstTy.getElementType() != SrcTy.getElementType()) {
+      report("Element type of vectors must be the same", MI);
+      break;
+    }
+
+    if (IndexOp.getImm() != 0 &&
+        SrcTy.getElementCount().getKnownMinValue() % IndexOp.getImm() != 0) {
+      report("Index must be a multiple of the source vector's minimum vector "
+             "length",
+             MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     const MachineOperand &MaskOp = MI->getOperand(3);
     if (!MaskOp.isShuffleMask()) {
@@ -1631,6 +1759,31 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
       if (Idx >= 2 * SrcNumElts)
         report("Out of bounds shuffle index", MI);
+    }
+
+    break;
+  }
+
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+
+    if (!DstTy.isScalableVector()) {
+      report("Destination type must be a scalable vector", MI);
+      break;
+    }
+
+    if (!SrcTy.isScalar()) {
+      report("Source type must be a scalar", MI);
+      break;
+    }
+
+    if (TypeSize::isKnownGT(DstTy.getElementType().getSizeInBits(),
+                            SrcTy.getSizeInBits())) {
+      report("Element type of the destination must be the same size or smaller "
+             "than the source type",
+             MI);
+      break;
     }
 
     break;
@@ -1722,6 +1875,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_UBSANTRAP: {
+    const MachineOperand &KindOp = MI->getOperand(0);
+    if (!MI->getOperand(0).isImm()) {
+      report("Crash kind must be an immediate", &KindOp, 0);
+      break;
+    }
+    int64_t Kind = MI->getOperand(0).getImm();
+    if (!isInt<8>(Kind))
+      report("Crash kind must be 8 bit wide", &KindOp, 0);
+    break;
+  }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
   case TargetOpcode::G_VECREDUCE_SEQ_FMUL: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
@@ -1808,6 +1972,29 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     int64_t Test = TestMO.getImm();
     if (Test < 0 || Test > fcAllFlags) {
       report("Incorrect floating-point class set (operand 2)", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_PREFETCH: {
+    const MachineOperand &AddrOp = MI->getOperand(0);
+    if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer()) {
+      report("addr operand must be a pointer", &AddrOp, 0);
+      break;
+    }
+    const MachineOperand &RWOp = MI->getOperand(1);
+    if (!RWOp.isImm() || (uint64_t)RWOp.getImm() >= 2) {
+      report("rw operand must be an immediate 0-1", &RWOp, 1);
+      break;
+    }
+    const MachineOperand &LocalityOp = MI->getOperand(2);
+    if (!LocalityOp.isImm() || (uint64_t)LocalityOp.getImm() >= 4) {
+      report("locality operand must be an immediate 0-3", &LocalityOp, 2);
+      break;
+    }
+    const MachineOperand &CacheTypeOp = MI->getOperand(3);
+    if (!CacheTypeOp.isImm() || (uint64_t)CacheTypeOp.getImm() >= 2) {
+      report("cache type operand must be an immediate 0-1", &CacheTypeOp, 3);
       break;
     }
     break;
@@ -2126,9 +2313,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
     } else if (MO->isReg() && MO->isTied())
       report("Explicit operand should not be tied", MO, MONum);
-  } else {
+  } else if (!MI->isVariadic()) {
     // ARM adds %reg0 operands to indicate predicates. We'll allow that.
-    if (MO->isReg() && !MO->isImplicit() && !MI->isVariadic() && MO->getReg())
+    if (!MO->isValidExcessOperand())
       report("Extra explicit operand on non-variadic instruction", MO, MONum);
   }
 
@@ -2262,7 +2449,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
 
           // Make sure the register fits into its register bank if any.
-          if (RegBank && Ty.isValid() &&
+          if (RegBank && Ty.isValid() && !Ty.isScalableVector() &&
               RBI->getMaximumSize(RegBank->getID()) < Ty.getSizeInBits()) {
             report("Register bank is too small for virtual register", MO,
                    MONum);
@@ -2934,7 +3121,30 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
   }
 }
 
+static void
+verifyConvergenceControl(const MachineFunction &MF, MachineDomTree &DT,
+                         std::function<void(const Twine &Message)> FailureCB) {
+  MachineConvergenceVerifier CV;
+  CV.initialize(&errs(), FailureCB, MF);
+
+  for (const auto &MBB : MF) {
+    CV.visit(MBB);
+    for (const auto &MI : MBB.instrs())
+      CV.visit(MI);
+  }
+
+  if (CV.sawTokens()) {
+    DT.recalculate(const_cast<MachineFunction &>(MF));
+    CV.verify(DT);
+  }
+}
+
 void MachineVerifier::visitMachineFunctionAfter() {
+  auto FailureCB = [this](const Twine &Message) {
+    report(Message.str().c_str(), MF);
+  };
+  verifyConvergenceControl(*MF, DT, FailureCB);
+
   calcRegsPassed();
 
   for (const MachineBasicBlock &MBB : *MF)
@@ -3506,6 +3716,9 @@ void MachineVerifier::verifyStackFrame() {
       if (I.getOpcode() == FrameSetupOpcode) {
         if (BBState.ExitIsSetup)
           report("FrameSetup is after another FrameSetup", &I);
+        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
+          report("AdjustsStack not set in presence of a frame pseudo "
+                 "instruction.", &I);
         BBState.ExitValue -= TII->getFrameTotalSize(I);
         BBState.ExitIsSetup = true;
       }
@@ -3521,6 +3734,9 @@ void MachineVerifier::verifyStackFrame() {
           errs() << "FrameDestroy <" << Size << "> is after FrameSetup <"
               << AbsSPAdj << ">.\n";
         }
+        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
+          report("AdjustsStack not set in presence of a frame pseudo "
+                 "instruction.", &I);
         BBState.ExitValue += Size;
         BBState.ExitIsSetup = false;
       }

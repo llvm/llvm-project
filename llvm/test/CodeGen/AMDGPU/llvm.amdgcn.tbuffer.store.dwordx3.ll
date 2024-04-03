@@ -1,4 +1,4 @@
-;RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=gfx700 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN
+;RUN: llc -global-isel=0 < %s -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs | FileCheck %s -check-prefixes=GCN
 
 ; GCN-LABEL: {{^}}tbuffer_raw_store_immoffs_x3:
 ; GCN: tbuffer_store_format_xyz v[0:2], off, s[0:3], 0 format:[BUF_DATA_FORMAT_16_16,BUF_NUM_FORMAT_FLOAT] offset:42

@@ -159,7 +159,7 @@ extern "C" void workshareloop_iterator(float *a, float *b, float *c) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOGICAL_ADDR]], align 8
 // CHECK-NEXT:    [[MUL:%.*]] = mul i64 1, [[TMP2]]
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[MUL]] to i32
-// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(ptr sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP1]], i32 noundef [[CONV]])
+// CHECK-NEXT:    call void @_ZNK10MyIteratorplEj(ptr dead_on_unwind writable sret([[STRUCT_MYITERATOR]]) align 1 [[REF_TMP]], ptr noundef nonnull align 1 dereferenceable(1) [[TMP1]], i32 noundef [[CONV]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOOPVAR_ADDR]], align 8
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef nonnull align 1 dereferenceable(1) ptr @_ZN10MyIteratoraSERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[TMP3]], ptr noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK-NEXT:    ret void

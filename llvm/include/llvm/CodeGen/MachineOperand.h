@@ -782,6 +782,10 @@ public:
   void ChangeToGA(const GlobalValue *GV, int64_t Offset,
                   unsigned TargetFlags = 0);
 
+  /// ChangeToBA - Replace this operand with a new block address operand.
+  void ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                  unsigned TargetFlags = 0);
+
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
 

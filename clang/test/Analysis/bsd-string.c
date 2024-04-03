@@ -7,8 +7,8 @@
 #define NULL ((void *)0)
 
 typedef __typeof(sizeof(int)) size_t;
-size_t strlcpy(char *dst, const char *src, size_t n);
-size_t strlcat(char *dst, const char *src, size_t n);
+size_t strlcpy(char *restrict dst, const char *restrict src, size_t n);
+size_t strlcat(char *restrict dst, const char *restrict src, size_t n);
 size_t strlen(const char *s);
 void clang_analyzer_eval(int);
 

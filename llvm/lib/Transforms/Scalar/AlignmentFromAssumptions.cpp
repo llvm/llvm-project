@@ -83,11 +83,7 @@ static Align getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
                              const SCEV *OffSCEV, Value *Ptr,
                              ScalarEvolution *SE) {
   const SCEV *PtrSCEV = SE->getSCEV(Ptr);
-  // On a platform with 32-bit allocas, but 64-bit flat/global pointer sizes
-  // (*cough* AMDGPU), the effective SCEV type of AASCEV and PtrSCEV
-  // may disagree. Trunc/extend so they agree.
-  PtrSCEV = SE->getTruncateOrZeroExtend(
-      PtrSCEV, SE->getEffectiveSCEVType(AASCEV->getType()));
+
   const SCEV *DiffSCEV = SE->getMinusSCEV(PtrSCEV, AASCEV);
   if (isa<SCEVCouldNotCompute>(DiffSCEV))
     return Align(1);
@@ -267,11 +263,17 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     // Now that we've updated that use of the pointer, look for other uses of
     // the pointer to update.
     Visited.insert(J);
-    for (User *UJ : J->users()) {
-      Instruction *K = cast<Instruction>(UJ);
-      if (!Visited.count(K))
-        WorkList.push_back(K);
-    }
+    if (isa<GetElementPtrInst>(J) || isa<PHINode>(J))
+      for (auto &U : J->uses()) {
+        if (U->getType()->isPointerTy()) {
+          Instruction *K = cast<Instruction>(U.getUser());
+          StoreInst *SI = dyn_cast<StoreInst>(K);
+          if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
+            continue;
+          if (!Visited.count(K))
+            WorkList.push_back(K);
+        }
+      }
   }
 
   return true;

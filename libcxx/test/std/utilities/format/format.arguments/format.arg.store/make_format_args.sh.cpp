@@ -24,6 +24,7 @@
 #include "test_macros.h"
 
 void test() {
+  char c = 'c';
   TEST_IGNORE_NODISCARD
-  std::make_format_args<std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>('c');
+  std::make_format_args<std::basic_format_context<std::back_insert_iterator<std::basic_string<wchar_t>>, wchar_t>>(c);
 }

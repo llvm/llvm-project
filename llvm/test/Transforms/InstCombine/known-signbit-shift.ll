@@ -5,8 +5,7 @@
 ; with nsw flag should also be non-negative
 define i1 @test_shift_nonnegative(i32 %a) {
 ; CHECK-LABEL: @test_shift_nonnegative(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %b = lshr i32 %a, 2
   %shift = shl nsw i32 %b, 3

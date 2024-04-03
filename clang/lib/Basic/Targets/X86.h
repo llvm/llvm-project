@@ -168,6 +168,12 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasUINTR = false;
   bool HasCRC32 = false;
   bool HasX87 = false;
+  bool HasEGPR = false;
+  bool HasPush2Pop2 = false;
+  bool HasPPX = false;
+  bool HasNDD = false;
+  bool HasCCMP = false;
+  bool HasCF = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;
@@ -182,6 +188,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+    HasUnalignedAccess = true;
 
     bool IsWinCOFF =
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
@@ -213,6 +220,10 @@ public:
   bool isSPRegName(StringRef RegName) const override {
     return RegName.equals("esp") || RegName.equals("rsp");
   }
+
+  bool supportsCpuSupports() const override { return true; }
+  bool supportsCpuIs() const override { return true; }
+  bool supportsCpuInit() const override { return true; }
 
   bool validateCpuSupports(StringRef FeatureStr) const override;
 
@@ -662,6 +673,7 @@ public:
   MCUX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : X86_32TargetInfo(Triple, Opts) {
     LongDoubleWidth = 64;
+    DefaultAlignForAttributeAligned = 32;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:32-"
                     "f64:32-f128:32-n8:16:32-a:0:32-S32");
@@ -766,6 +778,7 @@ public:
     case CC_Win64:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86RegCall:
     case CC_OpenCLKernel:
       return CCCR_OK;
@@ -843,6 +856,7 @@ public:
     case CC_IntelOclBicc:
     case CC_PreserveMost:
     case CC_PreserveAll:
+    case CC_PreserveNone:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:

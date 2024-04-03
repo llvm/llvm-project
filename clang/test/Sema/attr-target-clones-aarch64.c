@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu  -fsyntax-only -verify %s
 
-void __attribute__((target_clones("fp16+sve2-aes", "sb+sve2-sha3+rcpc3"))) no_def(void);
+void __attribute__((target_clones("fp16+sve2-aes", "sb+sve2-sha3+rcpc3+mops", "rdma"))) no_def(void);
 
 // expected-warning@+1 {{unsupported 'default' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default+sha3"))) warn1(void);
@@ -27,7 +27,7 @@ int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void)
 int __attribute__((target_clones("dgh+memtag+rpres+ls64_v", "ebf16+dpb+sha1", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
-// expected-error@+2 {{multiversioning attributes cannot be combined}}
+// expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
 // expected-note@-2 {{previous declaration is here}}
 int __attribute__((target_clones("flagm2", "default"))) redef2(void) { return 1; }
 

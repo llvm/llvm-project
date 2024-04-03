@@ -491,10 +491,10 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
                      SmallPtrSet<TypeID, 4> &isIds) {
   // For `irdl.any_of`, we get the bases from all its arguments.
   if (auto anyOf = dyn_cast<AnyOfOp>(op)) {
-    bool has_any = false;
+    bool hasAny = false;
     for (Value arg : anyOf.getArgs())
-      has_any &= getBases(arg.getDefiningOp(), paramIds, paramIrdlOps, isIds);
-    return has_any;
+      hasAny &= getBases(arg.getDefiningOp(), paramIds, paramIrdlOps, isIds);
+    return hasAny;
   }
 
   // For `irdl.all_of`, we get the bases from the first argument.

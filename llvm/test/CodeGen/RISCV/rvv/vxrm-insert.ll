@@ -83,7 +83,7 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    vaadd.vv v8, v8, v9
-; RV32-NEXT:    call foo@plt
+; RV32-NEXT:    call foo
 ; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    addi a0, sp, 16
@@ -111,7 +111,7 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    vaadd.vv v8, v8, v9
-; RV64-NEXT:    call foo@plt
+; RV64-NEXT:    call foo
 ; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    addi a0, sp, 16
@@ -385,7 +385,7 @@ mergeblock:
 }
 
 ; Test loop with no dominating vxrm write.
-define void @test10(i8* nocapture %ptr_dest, i8* nocapture readonly %ptr_op1, i8* nocapture readonly %ptr_op2, iXLen %n) {
+define void @test10(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, ptr nocapture readonly %ptr_op2, iXLen %n) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    beqz a3, .LBB9_3
@@ -422,11 +422,11 @@ for.end:
 }
 
 declare iXLen @llvm.riscv.vsetvli.iXLen(iXLen, iXLen immarg, iXLen immarg)
-declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8>, <vscale x 1 x i8>* nocapture, iXLen)
-declare void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8>, <vscale x 1 x i8>* nocapture, iXLen)
+declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
+declare void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8>, ptr nocapture, iXLen)
 
 ; Test loop with dominating vxrm write. Make sure there is no write in the loop.
-define void @test11(i8* nocapture %ptr_dest, i8* nocapture readonly %ptr_op1, i8* nocapture readonly %ptr_op2, iXLen %n) {
+define void @test11(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, ptr nocapture readonly %ptr_op2, iXLen %n) {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a4, a3, e8, mf8, ta, ma

@@ -202,7 +202,7 @@ entry:
 ; CHECK-IR1-LABEL: ret i32
 ; CHECK-IR1-LABEL: }
 
-; CHECK-IR2: define i32 @test2
+; CHECK-IR2: define noundef i32 @test2
 ; CHECK-IR2-NEXT: entry:
 ; Check that the call was devirtualized. Ignore extra character before
 ; symbol name which would happen if it was promoted during module

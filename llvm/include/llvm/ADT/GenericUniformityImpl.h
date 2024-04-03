@@ -33,6 +33,12 @@
 /// the propagation of the impact of divergent control flow on the divergence of
 /// values (sync dependencies).
 ///
+/// NOTE: In general, no interface exists for a transform to update
+/// (Machine)UniformityInfo. Additionally, (Machine)CycleAnalysis is a
+/// transitive dependence, but it also does not provide an interface for
+/// updating itself. Given that, transforms should not preserve uniformity in
+/// their getAnalysisUsage() callback.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICUNIFORMITYIMPL_H
@@ -40,6 +46,7 @@
 
 #include "llvm/ADT/GenericUniformityInfo.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -50,10 +57,6 @@
 #define DEBUG_TYPE "uniformity"
 
 namespace llvm {
-
-template <typename Range> auto unique(Range &&R) {
-  return std::unique(adl_begin(R), adl_end(R));
-}
 
 /// Construct a specially modified post-order traversal of cycles.
 ///

@@ -464,15 +464,15 @@ public:
     auto affineFor = loopAndIndex.first;
     auto inductionVar = loopAndIndex.second;
 
-    rewriter.startRootUpdate(affineFor.getOperation());
+    rewriter.startOpModification(affineFor.getOperation());
     affineFor.getBody()->getOperations().splice(
         std::prev(affineFor.getBody()->end()), loopOps, loopOps.begin(),
         std::prev(loopOps.end()));
-    rewriter.finalizeRootUpdate(affineFor.getOperation());
+    rewriter.finalizeOpModification(affineFor.getOperation());
 
-    rewriter.startRootUpdate(loop.getOperation());
+    rewriter.startOpModification(loop.getOperation());
     loop.getInductionVar().replaceAllUsesWith(inductionVar);
-    rewriter.finalizeRootUpdate(loop.getOperation());
+    rewriter.finalizeOpModification(loop.getOperation());
 
     rewriteMemoryOps(affineFor.getBody(), rewriter);
 
@@ -561,7 +561,7 @@ public:
     auto affineIf = rewriter.create<affine::AffineIfOp>(
         op.getLoc(), affineCondition.getIntegerSet(),
         affineCondition.getAffineArgs(), !op.getElseRegion().empty());
-    rewriter.startRootUpdate(affineIf);
+    rewriter.startOpModification(affineIf);
     affineIf.getThenBlock()->getOperations().splice(
         std::prev(affineIf.getThenBlock()->end()), ifOps, ifOps.begin(),
         std::prev(ifOps.end()));
@@ -571,7 +571,7 @@ public:
           std::prev(affineIf.getElseBlock()->end()), otherOps, otherOps.begin(),
           std::prev(otherOps.end()));
     }
-    rewriter.finalizeRootUpdate(affineIf);
+    rewriter.finalizeOpModification(affineIf);
     rewriteMemoryOps(affineIf.getBody(), rewriter);
 
     LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: if converted to:\n";

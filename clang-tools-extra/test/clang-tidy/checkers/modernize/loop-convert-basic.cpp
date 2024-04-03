@@ -88,6 +88,19 @@ void f() {
   // CHECK-FIXES-NEXT: printf("Fibonacci number %d has address %p\n", I, &I);
   // CHECK-FIXES-NEXT: Sum += I + 2;
 
+  int Matrix[N][12];
+  unsigned size = 0;
+  for (int I = 0; I < N; ++I) {
+      size += sizeof(Matrix[I]);
+      size += sizeof Matrix[I];
+      size += sizeof((Matrix[I]));
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (auto & I : Matrix)
+  // CHECK-FIXES-NEXT: size += sizeof(I);
+  // CHECK-FIXES-NEXT: size += sizeof I;
+  // CHECK-FIXES-NEXT: size += sizeof(I);
+
   Val Teas[N];
   for (int I = 0; I < N; ++I) {
     Teas[I].g();
@@ -954,3 +967,16 @@ void dependenceArrayTest() {
 }
 
 } // namespace PseudoArray
+
+namespace PR78381 {
+  struct blocked_range {
+    int begin() const;
+    int end() const;
+  };
+
+  void test() {
+    blocked_range r;
+    for (auto i = r.begin(); i!=r.end(); ++i) {
+    }
+  }
+}

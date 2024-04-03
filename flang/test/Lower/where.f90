@@ -17,7 +17,7 @@
   ! CHECK:         %[[VAL_14:.*]] = arith.subi %[[VAL_5]], %[[VAL_12]] : index
   ! CHECK:         %[[VAL_15:.*]] = fir.do_loop %[[VAL_16:.*]] = %[[VAL_13]] to %[[VAL_14]] step %[[VAL_12]] unordered iter_args(%[[VAL_17:.*]] = %[[VAL_11]]) -> (!fir.array<10x!fir.logical<4>>) {
   ! CHECK:           %[[VAL_18:.*]] = fir.array_fetch %[[VAL_7]], %[[VAL_16]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:           %[[VAL_19:.*]] = arith.cmpf ogt, %[[VAL_18]], %[[VAL_8]] : f32
+  ! CHECK:           %[[VAL_19:.*]] = arith.cmpf ogt, %[[VAL_18]], %[[VAL_8]] {{.*}} : f32
   ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i1) -> !fir.logical<4>
   ! CHECK:           %[[VAL_21:.*]] = fir.array_update %[[VAL_17]], %[[VAL_20]], %[[VAL_16]] : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
   ! CHECK:           fir.result %[[VAL_21]] : !fir.array<10x!fir.logical<4>>
@@ -61,7 +61,7 @@
   ! CHECK:         %[[VAL_55:.*]] = arith.subi %[[VAL_46]], %[[VAL_53]] : index
   ! CHECK:         %[[VAL_56:.*]] = fir.do_loop %[[VAL_57:.*]] = %[[VAL_54]] to %[[VAL_55]] step %[[VAL_53]] unordered iter_args(%[[VAL_58:.*]] = %[[VAL_52]]) -> (!fir.array<10x!fir.logical<4>>) {
   ! CHECK:           %[[VAL_59:.*]] = fir.array_fetch %[[VAL_48]], %[[VAL_57]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:           %[[VAL_60:.*]] = arith.cmpf ogt, %[[VAL_59]], %[[VAL_49]] : f32
+  ! CHECK:           %[[VAL_60:.*]] = arith.cmpf ogt, %[[VAL_59]], %[[VAL_49]] {{.*}} : f32
   ! CHECK:           %[[VAL_61:.*]] = fir.convert %[[VAL_60]] : (i1) -> !fir.logical<4>
   ! CHECK:           %[[VAL_62:.*]] = fir.array_update %[[VAL_58]], %[[VAL_61]], %[[VAL_57]] : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
   ! CHECK:           fir.result %[[VAL_62]] : !fir.array<10x!fir.logical<4>>
@@ -105,7 +105,7 @@
   ! CHECK:         %[[VAL_97:.*]] = arith.subi %[[VAL_88]], %[[VAL_95]] : index
   ! CHECK:         %[[VAL_98:.*]] = fir.do_loop %[[VAL_99:.*]] = %[[VAL_96]] to %[[VAL_97]] step %[[VAL_95]] unordered iter_args(%[[VAL_100:.*]] = %[[VAL_94]]) -> (!fir.array<10x!fir.logical<4>>) {
   ! CHECK:           %[[VAL_101:.*]] = fir.array_fetch %[[VAL_90]], %[[VAL_99]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:           %[[VAL_102:.*]] = arith.cmpf ogt, %[[VAL_101]], %[[VAL_91]] : f32
+  ! CHECK:           %[[VAL_102:.*]] = arith.cmpf ogt, %[[VAL_101]], %[[VAL_91]] {{.*}} : f32
   ! CHECK:           %[[VAL_103:.*]] = fir.convert %[[VAL_102]] : (i1) -> !fir.logical<4>
   ! CHECK:           %[[VAL_104:.*]] = fir.array_update %[[VAL_100]], %[[VAL_103]], %[[VAL_99]] : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
   ! CHECK:           fir.result %[[VAL_104]] : !fir.array<10x!fir.logical<4>>

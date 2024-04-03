@@ -1,4 +1,5 @@
 ; RUN: opt -safe-stack -S -mtriple=x86_64-unknown < %s -o - | FileCheck %s
+; RUN: opt -passes=safe-stack -S -mtriple=x86_64-unknown < %s -o - | FileCheck %s
 
 define void @foo() safestack sspreq {
 entry:

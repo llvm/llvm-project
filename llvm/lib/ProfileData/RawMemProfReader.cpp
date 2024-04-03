@@ -127,6 +127,7 @@ CallStackMap readStackInfo(const char *Ptr) {
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
     SmallVector<uint64_t> CallStack;
+    CallStack.reserve(NumPCs);
     for (uint64_t J = 0; J < NumPCs; J++) {
       CallStack.push_back(
           endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
@@ -336,6 +337,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                                           inconvertibleErrorCode()),
                   FileName);
 
+  // Process the raw profile.
+  if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
+    return E;
+
   auto *Object = cast<object::ObjectFile>(Binary.getBinary());
   std::unique_ptr<DIContext> Context = DWARFContext::create(
       *Object, DWARFContext::ProcessDebugRelocations::Process);
@@ -344,16 +352,13 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
       Object, std::move(Context), /*UntagAddresses=*/false);
   if (!SOFOr)
     return report(SOFOr.takeError(), FileName);
-  Symbolizer = std::move(SOFOr.get());
+  auto Symbolizer = std::move(SOFOr.get());
 
-  // Process the raw profile.
-  if (Error E = readRawProfile(std::move(DataBuffer)))
-    return E;
-
-  if (Error E = setupForSymbolization())
-    return E;
-
-  if (Error E = symbolizeAndFilterStackFrames())
+  // The symbolizer ownership is moved into symbolizeAndFilterStackFrames so
+  // that it is freed automatically at the end, when it is no longer used. This
+  // reduces peak memory since it won't be live while also mapping the raw
+  // profile into records afterwards.
+  if (Error E = symbolizeAndFilterStackFrames(std::move(Symbolizer)))
     return E;
 
   return mapRawProfileToRecords();
@@ -441,6 +446,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
+    CallStackId CSId = hashCallStack(Callstack);
+
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
@@ -448,7 +455,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       auto Result =
           FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
       IndexedMemProfRecord &Record = Result.first->second;
-      Record.AllocSites.emplace_back(Callstack, Entry.second);
+      Record.AllocSites.emplace_back(Callstack, CSId, Entry.second);
 
       if (!F.IsInlineFrame)
         break;
@@ -466,10 +473,13 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
   }
 
+  verifyFunctionProfileData(FunctionProfileData);
+
   return Error::success();
 }
 
-Error RawMemProfReader::symbolizeAndFilterStackFrames() {
+Error RawMemProfReader::symbolizeAndFilterStackFrames(
+    std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer) {
   // The specifier to use when symbolization is requested.
   const DILineInfoSpecifier Specifier(
       DILineInfoSpecifier::FileLineInfoKind::RawValue,

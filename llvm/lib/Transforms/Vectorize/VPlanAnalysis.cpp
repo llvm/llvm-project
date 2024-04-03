@@ -35,6 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
     VPValue *OtherV = R->getOperand(1);
@@ -43,6 +44,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::PtrAdd:
+    // Return the type based on the pointer argument (i.e. first operand).
+    return inferScalarType(R->getOperand(0));
   default:
     break;
   }
@@ -181,6 +185,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
     return inferScalarType(R->getOperand(0));
   case Instruction::Load:
     return cast<LoadInst>(R->getUnderlyingInstr())->getType();
+  case Instruction::Store:
+    // FIXME: VPReplicateRecipes with store opcodes still define a result
+    // VPValue, so we need to handle them here. Remove the code here once this
+    // is modeled accurately in VPlan.
+    return Type::getVoidTy(Ctx);
   default:
     break;
   }
@@ -196,8 +205,13 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn())
-    return V->getLiveInIRValue()->getType();
+  if (V->isLiveIn()) {
+    if (auto *IRValue = V->getLiveInIRValue())
+      return IRValue->getType();
+    // All VPValues without any underlying IR value (like the vector trip count
+    // or the backedge-taken count) have the same type as the canonical IV.
+    return CanonicalIVTy;
+  }
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
@@ -225,7 +239,13 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return V->getUnderlyingValue()->getType();
           })
           .Case<VPWidenCastRecipe>(
-              [](const VPWidenCastRecipe *R) { return R->getResultType(); });
+              [](const VPWidenCastRecipe *R) { return R->getResultType(); })
+          .Case<VPScalarCastRecipe>(
+              [](const VPScalarCastRecipe *R) { return R->getResultType(); })
+          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+            return R->getSCEV()->getType();
+          });
+
   assert(ResultTy && "could not infer type for the given VPValue");
   CachedTypes[V] = ResultTy;
   return ResultTy;

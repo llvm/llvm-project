@@ -1354,9 +1354,9 @@ let isScalarNarrowShift = 1 in {
   // Signed/Unsigned Saturating Rounded Shift Right Narrow (Immediate)
   def SCALAR_SQRSHRN_N: SInst<"vqrshrn_n", "(1<)1I", "SsSiSlSUsSUiSUl">;
   // Signed Saturating Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQSHRUN_N: SInst<"vqshrun_n", "(1<U)1I", "SsSiSl">;
   // Signed Saturating Rounded Shift Right Unsigned Narrow (Immediate)
-  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<)1I", "SsSiSl">;
+  def SCALAR_SQRSHRUN_N: SInst<"vqrshrun_n", "(1<U)1I", "SsSiSl">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1758,24 +1758,21 @@ let TargetGuard = "fullfp16" in {
   // Mul lane
   def VMUL_LANEH    : IOpInst<"vmul_lane", "..qI", "hQh", OP_MUL_LN>;
   def VMUL_NH       : IOpInst<"vmul_n", "..1", "hQh", OP_MUL_N>;
-
-  // Data processing intrinsics - section 5
-
-  // Logical operations
-  let isHiddenLInst = 1 in
-  def VBSLH    : SInst<"vbsl", ".U..", "hQh">;
-
-  // Transposition operations
-  def VZIPH    : WInst<"vzip", "2..", "hQh">;
-  def VUZPH    : WInst<"vuzp", "2..", "hQh">;
-  def VTRNH    : WInst<"vtrn", "2..", "hQh">;
-
-  // Vector Extract
-  def VEXTH      : WInst<"vext", "...I", "hQh">;
-
-  // Reverse vector elements
-  def VREV64H    : WOpInst<"vrev64", "..", "hQh", OP_REV64>;
 }
+
+// Data processing intrinsics - section 5. Do not require fullfp16.
+
+// Logical operations
+let isHiddenLInst = 1 in
+def VBSLH    : SInst<"vbsl", ".U..", "hQh">;
+// Transposition operations
+def VZIPH    : WInst<"vzip", "2..", "hQh">;
+def VUZPH    : WInst<"vuzp", "2..", "hQh">;
+def VTRNH    : WInst<"vtrn", "2..", "hQh">;
+// Vector Extract
+def VEXTH      : WInst<"vext", "...I", "hQh">;
+// Reverse vector elements
+def VREV64H    : WOpInst<"vrev64", "..", "hQh", OP_REV64>;
 
 // ARMv8.2-A FP16 vector intrinsics for A64 only.
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "fullfp16" in {
@@ -1857,7 +1854,9 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fullfp16" in {
   def VMINVH   : SInst<"vminv", "1.", "hQh">;
   def FMAXNMVH : SInst<"vmaxnmv", "1.", "hQh">;
   def FMINNMVH : SInst<"vminnmv", "1.", "hQh">;
+}
 
+let ArchGuard = "defined(__aarch64__)" in {
   // Permutation
   def VTRN1H     : SOpInst<"vtrn1", "...", "hQh", OP_TRN1>;
   def VZIP1H     : SOpInst<"vzip1", "...", "hQh", OP_ZIP1>;

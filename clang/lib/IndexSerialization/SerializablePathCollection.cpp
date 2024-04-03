@@ -45,8 +45,8 @@ SerializablePathCollection::SerializablePathCollection(
       SysRootPath(Paths.addDirPath(SysRoot)),
       OutputFilePath(Paths.addDirPath(OutputFile)) {}
 
-size_t SerializablePathCollection::tryStoreFilePath(const FileEntry &FE) {
-  auto FileIt = UniqueFiles.find(&FE);
+size_t SerializablePathCollection::tryStoreFilePath(FileEntryRef FE) {
+  auto FileIt = UniqueFiles.find(FE);
   if (FileIt != UniqueFiles.end())
     return FileIt->second;
 
@@ -54,7 +54,7 @@ size_t SerializablePathCollection::tryStoreFilePath(const FileEntry &FE) {
   const auto FileIdx =
       Paths.addFilePath(Dir.Root, Dir.Path, sys::path::filename(FE.getName()));
 
-  UniqueFiles.try_emplace(&FE, FileIdx);
+  UniqueFiles.try_emplace(FE, FileIdx);
   return FileIdx;
 }
 
@@ -70,11 +70,11 @@ PathPool::DirPath SerializablePathCollection::tryStoreDirPath(StringRef Dir) {
   const std::string OrigDir = Dir.str();
 
   PathPool::RootDirKind Root = PathPool::RootDirKind::Regular;
-  if (!SysRoot.empty() && Dir.startswith(SysRoot) &&
+  if (!SysRoot.empty() && Dir.starts_with(SysRoot) &&
       llvm::sys::path::is_separator(Dir[SysRoot.size()])) {
     Root = PathPool::RootDirKind::SysRoot;
     Dir = Dir.drop_front(SysRoot.size());
-  } else if (!WorkDir.empty() && Dir.startswith(WorkDir) &&
+  } else if (!WorkDir.empty() && Dir.starts_with(WorkDir) &&
              llvm::sys::path::is_separator(Dir[WorkDir.size()])) {
     Root = PathPool::RootDirKind::CurrentWorkDir;
     Dir = Dir.drop_front(WorkDir.size());

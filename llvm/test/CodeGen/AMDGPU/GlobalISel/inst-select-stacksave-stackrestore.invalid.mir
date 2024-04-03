@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1030 -run-pass=instruction-select -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=instruction-select -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 # ERR: LLVM ERROR: cannot select: G_STACKRESTORE %{{[0-9]+}}:vgpr(p5) (in function: stackrestore_waveaddress_vgpr)
 

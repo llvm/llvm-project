@@ -5,6 +5,9 @@
 ; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations=false -stop-before=finalize-isel -o - | FileCheck %s
 ; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations -stop-before=finalize-isel -o - | FileCheck %s
 
+; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations=false -stop-before=finalize-isel -o - --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare --experimental-debug-variable-locations -stop-before=finalize-isel -o - --try-experimental-debuginfo-iterators | FileCheck %s
+
 ;; Check that unused argument values are handled the same way for variadic
 ;; dbg_values as non-variadics.
 

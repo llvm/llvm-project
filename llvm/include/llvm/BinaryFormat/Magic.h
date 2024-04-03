@@ -21,6 +21,7 @@ struct file_magic {
   enum Impl {
     unknown = 0,       ///< Unrecognized file
     bitcode,           ///< Bitcode file
+    clang_ast,         ///< Clang PCH or PCM
     archive,           ///< ar style archive file
     elf,               ///< ELF Unknown type
     elf_relocatable,   ///< ELF Relocatable object file
@@ -57,6 +58,7 @@ struct file_magic {
     dxcontainer_object,        ///< DirectX container file
     offload_bundle,            ///< Clang offload bundle file
     offload_bundle_compressed, ///< Compressed clang offload bundle file
+    spirv_object,              ///< A binary SPIR-V file
   };
 
   bool is_object() const { return V != unknown; }

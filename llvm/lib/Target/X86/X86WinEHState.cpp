@@ -418,13 +418,13 @@ void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
   // Emit the .safeseh directive for this function.
   Handler->addFnAttr("safeseh");
 
+  LLVMContext &C = Builder.getContext();
   Type *LinkTy = getEHLinkRegistrationType();
   // Handler = Handler
   Builder.CreateStore(Handler, Builder.CreateStructGEP(LinkTy, Link, 1));
   // Next = [fs:00]
-  Constant *FSZero =
-      Constant::getNullValue(LinkTy->getPointerTo()->getPointerTo(257));
-  Value *Next = Builder.CreateLoad(LinkTy->getPointerTo(), FSZero);
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
+  Value *Next = Builder.CreateLoad(PointerType::getUnqual(C), FSZero);
   Builder.CreateStore(Next, Builder.CreateStructGEP(LinkTy, Link, 0));
   // [fs:00] = Link
   Builder.CreateStore(Link, FSZero);
@@ -437,12 +437,13 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
     Builder.Insert(GEP);
     Link = GEP;
   }
+
+  LLVMContext &C = Builder.getContext();
   Type *LinkTy = getEHLinkRegistrationType();
   // [fs:00] = Link->Next
-  Value *Next = Builder.CreateLoad(LinkTy->getPointerTo(),
+  Value *Next = Builder.CreateLoad(PointerType::getUnqual(C),
                                    Builder.CreateStructGEP(LinkTy, Link, 0));
-  Constant *FSZero =
-      Constant::getNullValue(LinkTy->getPointerTo()->getPointerTo(257));
+  Constant *FSZero = Constant::getNullValue(PointerType::get(C, 257));
   Builder.CreateStore(Next, FSZero);
 }
 

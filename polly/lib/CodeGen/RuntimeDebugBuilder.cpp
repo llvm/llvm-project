@@ -34,8 +34,7 @@ Function *RuntimeDebugBuilder::getVPrintF(PollyIRBuilder &Builder) {
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
     FunctionType *Ty = FunctionType::get(
-        Builder.getInt32Ty(), {Builder.getInt8PtrTy(), Builder.getInt8PtrTy()},
-        false);
+        Builder.getInt32Ty(), {Builder.getPtrTy(), Builder.getPtrTy()}, false);
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
@@ -78,7 +77,7 @@ prepareValuesForPrinting(PollyIRBuilder &Builder, ArrayRef<Value *> Values) {
         assert(Ty->getIntegerBitWidth() &&
                "Integer types larger 64 bit not supported");
     } else if (isa<PointerType>(Ty)) {
-      if (Ty == Builder.getInt8PtrTy(4)) {
+      if (Ty == Builder.getPtrTy(4)) {
         Val = Builder.CreateGEP(Builder.getInt8Ty(), Val, Builder.getInt64(0));
       } else {
         Val = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
@@ -148,7 +147,7 @@ void RuntimeDebugBuilder::createFlush(PollyIRBuilder &Builder) {
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
     FunctionType *Ty =
-        FunctionType::get(Builder.getInt32Ty(), Builder.getInt8PtrTy(), false);
+        FunctionType::get(Builder.getInt32Ty(), Builder.getPtrTy(), false);
     F = Function::Create(Ty, Linkage, Name, M);
   }
 

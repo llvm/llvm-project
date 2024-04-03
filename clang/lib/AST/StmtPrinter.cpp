@@ -1138,6 +1138,15 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 }
 
 //===----------------------------------------------------------------------===//
+//  OpenACC construct printing methods
+//===----------------------------------------------------------------------===//
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+  // TODO OpenACC: Print Clauses.
+  PrintStmt(S->getStructuredBlock());
+}
+
+//===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
 
@@ -1833,7 +1842,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
     break;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   }
   OS << Name;
 
@@ -1841,6 +1850,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   PrintExpr(Node->getPtr());
   if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
       Node->getOp() != AtomicExpr::AO__atomic_load_n &&
+      Node->getOp() != AtomicExpr::AO__scoped_atomic_load_n &&
       Node->getOp() != AtomicExpr::AO__opencl_atomic_load &&
       Node->getOp() != AtomicExpr::AO__hip_atomic_load) {
     OS << ", ";
@@ -2299,9 +2309,8 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
     OS << ")";
 
   CXXNewInitializationStyle InitStyle = E->getInitializationStyle();
-  if (InitStyle != CXXNewInitializationStyle::None &&
-      InitStyle != CXXNewInitializationStyle::Implicit) {
-    bool Bare = InitStyle == CXXNewInitializationStyle::Call &&
+  if (InitStyle != CXXNewInitializationStyle::None) {
+    bool Bare = InitStyle == CXXNewInitializationStyle::Parens &&
                 !isa<ParenListExpr>(E->getInitializer());
     if (Bare)
       OS << "(";
@@ -2447,6 +2456,10 @@ void StmtPrinter::VisitPackExpansionExpr(PackExpansionExpr *E) {
 
 void StmtPrinter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   OS << "sizeof...(" << *E->getPack() << ")";
+}
+
+void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  OS << E->getPackIdExpression() << "...[" << E->getIndexExpr() << "]";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

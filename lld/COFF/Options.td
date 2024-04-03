@@ -79,6 +79,7 @@ def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
     HelpText<"Save intermediate LTO compilation results">;
+def lto_sample_profile: P<"lto-sample-profile", "Sample profile file path">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -301,6 +302,11 @@ def : Flag<["--"], "time-trace">, Alias<time_trace_eq>,
 
 def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
     HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
+
+defm build_id: B<
+     "build-id", 
+     "Generate build ID (always on when generating PDB)",
+     "Do not Generate build ID">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

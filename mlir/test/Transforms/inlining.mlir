@@ -297,3 +297,23 @@ func.func @inline_convert_and_handle_attr_call(%arg0 : i16) -> (i16) {
   %res = "test.conversion_call_op"(%arg0) { callee=@handle_attr_callee_fn } : (i16) -> (i16)
   return %res : i16
 }
+
+// Check a function with complex ops is inlined.
+func.func @double_square_complex(%cplx: complex<f32>) -> complex<f32> {
+  %double = complex.add %cplx, %cplx : complex<f32>
+  %square = complex.mul %double, %double : complex<f32>
+  return %square : complex<f32>
+}
+
+// CHECK-LABEL: func @inline_with_complex_ops
+func.func @inline_with_complex_ops() -> complex<f32> {
+  %c1 = arith.constant 1.0 : f32
+  %c2 = arith.constant 2.0 : f32
+  %c = complex.create %c1, %c2 : complex<f32>
+
+  // CHECK: complex.add
+  // CHECK: complex.mul
+  // CHECK-NOT: call
+  %r = call @double_square_complex(%c) : (complex<f32>) -> (complex<f32>)
+  return %r : complex<f32>
+}

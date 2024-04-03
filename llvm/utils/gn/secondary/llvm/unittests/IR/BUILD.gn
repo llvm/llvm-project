@@ -52,5 +52,6 @@ unittest("IRTests") {
     "VectorBuilderTest.cpp",
     "VectorTypesTest.cpp",
     "VerifierTest.cpp",
+    "VFABIDemanglerTest.cpp",
   ]
 }

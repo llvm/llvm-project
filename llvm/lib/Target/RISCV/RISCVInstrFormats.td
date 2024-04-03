@@ -109,6 +109,8 @@ def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def Vcompress    : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value)>;
+def Sha2Constraint : RISCVVConstraint<!or(VS2Constraint.Value,
+                                          VS1Constraint.Value)>;
 
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
@@ -212,6 +214,15 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // to the correct CSR.
   bit UsesVXRM = 0;
   let TSFlags{20} =  UsesVXRM;
+
+  // Indicates whther these instructions can partially overlap between source
+  // registers and destination registers according to the vector spec.
+  // 0 -> not a vector pseudo
+  // 1 -> default value for vector pseudos. not widening or narrowing.
+  // 2 -> narrowing case
+  // 3 -> widening case
+  bits<2> TargetOverlapConstraintType = 0;
+  let TSFlags{22-21} = TargetOverlapConstraintType;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

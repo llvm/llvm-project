@@ -128,8 +128,7 @@ define i1 @gep_decomp_i80(ptr %a) {
 ; CHECK-LABEL: @gep_decomp_i80(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i80 1973801615886922022913
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
-; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 false, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 1973801615886922022913
 ; CHECK-NEXT:    ret i1 true

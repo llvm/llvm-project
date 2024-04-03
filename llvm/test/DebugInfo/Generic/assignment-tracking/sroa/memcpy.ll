@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that the new slices of an alloca and memcpy intructions get dbg.assign
 ;; intrinsics with the correct fragment info.
@@ -54,25 +56,25 @@ entry:
   %To = alloca %struct.LargeStruct, align 4, !DIAssignID !25
   call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !25, metadata ptr %To, metadata !DIExpression()), !dbg !26
   %0 = bitcast ptr %To to ptr, !dbg !27
-  call void @llvm.lifetime.start.p0i8(i64 28, ptr %0) #3, !dbg !27
+  call void @llvm.lifetime.start.p0(i64 28, ptr %0) #3, !dbg !27
   %1 = bitcast ptr %To to ptr, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %1, ptr align 4 bitcast (ptr @From to ptr), i64 28, i1 false), !dbg !28, !DIAssignID !34
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 @From, i64 28, i1 false), !dbg !28, !DIAssignID !34
   call void @llvm.dbg.assign(metadata i1 undef, metadata !24, metadata !DIExpression(), metadata !34, metadata ptr %1, metadata !DIExpression()), !dbg !28
   %Var = getelementptr inbounds %struct.LargeStruct, ptr %To, i32 0, i32 3, !dbg !35
   %2 = load i32, ptr %Var, align 4, !dbg !35
   %3 = bitcast ptr %To to ptr, !dbg !38
-  call void @llvm.lifetime.end.p0i8(i64 28, ptr %3) #3, !dbg !38
+  call void @llvm.lifetime.end.p0(i64 28, ptr %3) #3, !dbg !38
   ret i32 %2, !dbg !39
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2

@@ -1,0 +1,101 @@
+/* Compile with:
+   for FILE in `seq 3`; do
+     clang -g -c  X86/odr-fwd-declaration.cpp -DFILE$FILE -o
+       Inputs/odr-fwd-declaration/$FILE.o done
+*/
+
+// RUN: dsymutil --linker=parallel -f \
+// RUN: -oso-prepend-path=%p/../../Inputs/odr-fwd-declaration \
+// RUN: -y %p/../dummy-debug-map.map -o %t1.out
+// RUN: llvm-dwarfdump -v -debug-info %t1.out | FileCheck %s
+
+#ifdef FILE1
+# 1 "Header.h" 1
+typedef struct S *Sptr;
+typedef Sptr *Sptrptr;
+# 3 "Source1.cpp" 2
+void foo() { Sptrptr ptr1 = 0; }
+
+// First we confirm that types are in type table.
+//
+// CHECK: DW_TAG_compile_unit
+// CHECK: DW_AT_name{{.*}}"__artificial_type_unit"
+
+// CHECK: DW_TAG_base_type
+
+// CHECK: 0x[[PTR_S:[a-f0-9]*]]: DW_TAG_pointer_type
+// CHECK-NEXT: DW_AT_type{{.*}}{0x[[STRUCT_S:[a-f0-9]*]]} "S"
+
+// CHECK: 0x[[PTR_PTR_S:[a-f0-9]*]]: DW_TAG_pointer_type
+// CHECK-NEXT: DW_AT_type{{.*}}{0x[[TYPEDEF_PTR_S:[a-f0-9]*]]} "Sptr"
+
+// CHECK: 0x[[STRUCT_S]]: DW_TAG_structure_type
+// CHECK-NEXT: DW_AT_name{{.*}}"S"
+
+// CHECK: DW_TAG_member
+// CHECK-NEXT: DW_AT_name{{.*}}"field"
+
+// CHECK: 0x[[TYPEDEF_PTR_S]]: DW_TAG_typedef
+// CHECK-NEXT: DW_AT_type{{.*}}{0x[[PTR_S]]} "S *"
+// CHECK-NEXT: DW_AT_name{{.*}}"Sptr"
+
+// CHECK: 0x[[TYPEDEF_PTR_PTR_S:[a-f0-9]*]]: DW_TAG_typedef
+// CHECK-NEXT: DW_AT_type{{.*}}{0x[[PTR_PTR_S]]} "Sptr *"
+// CHECK-NEXT: DW_AT_name{{.*}}"Sptrptr"
+
+// First we confirm that first compile unit properly references type.
+//
+// CHECK: DW_TAG_compile_unit
+// CHECK: DW_AT_name{{.*}}"X86/odr-fwd-declaration.cpp"
+//
+// CHECK: TAG_variable
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_name{{.*}} "ptr1"
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_type{{.*}}0x00000000[[TYPEDEF_PTR_PTR_S]]
+
+#elif defined(FILE2)
+# 1 "Header.h" 1
+typedef struct S *Sptr;
+typedef Sptr *Sptrptr;
+# 3 "Source2.cpp" 2
+struct S {
+  int field;
+};
+void bar() { Sptrptr ptr2 = 0; }
+
+// Next we confirm that the second compile unit properly references types.
+//
+// CHECK: DW_TAG_compile_unit
+// CHECK: DW_AT_name{{.*}}"X86/odr-fwd-declaration.cpp"
+//
+// CHECK: TAG_variable
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_name{{.*}} "ptr2"
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_type{{.*}}0x00000000[[TYPEDEF_PTR_PTR_S]]
+
+#elif defined(FILE3)
+# 1 "Header.h" 1
+typedef struct S *Sptr;
+typedef Sptr *Sptrptr;
+# 3 "Source1.cpp" 2
+void foo() { Sptrptr ptr1 = 0; }
+
+// Finally we confirm that third compile unit references types correctly.
+//
+// CHECK: DW_TAG_compile_unit
+// CHECK: DW_AT_name{{.*}}"X86/odr-fwd-declaration.cpp"
+//
+// CHECK: TAG_variable
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_name{{.*}} "ptr1"
+// CHECK-NOT: {{DW_TAG|NULL}}
+// CHECK: AT_type{{.*}}0x00000000[[TYPEDEF_PTR_PTR_S]]
+// CHECK-NOT: TAG_typedef
+// CHECK-NOT: TAG_pointer
+// CHECK-NOT: TAG_structure_type
+
+#else
+#error "You must define which file you generate"
+#endif

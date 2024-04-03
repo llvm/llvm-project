@@ -31,6 +31,14 @@ protected:
   _verifyIncompleteFormat(__FILE__, __LINE__, __VA_ARGS__)
 #define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
+TEST(FormatTestObjCStyle, DetectsObjCInStdin) {
+  auto Style = getStyle("LLVM", "<stdin>", "none",
+                        "@interface\n"
+                        "- (id)init;");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+}
+
 TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   auto Style = getStyle("LLVM", "a.h", "none",
                         "@interface\n"

@@ -24,6 +24,7 @@ extern StringRef MachODataCommonSectionName;
 extern StringRef MachODataDataSectionName;
 extern StringRef MachOEHFrameSectionName;
 extern StringRef MachOCompactUnwindInfoSectionName;
+extern StringRef MachOCStringSectionName;
 extern StringRef MachOModInitFuncSectionName;
 extern StringRef MachOObjCCatListSectionName;
 extern StringRef MachOObjCCatList2SectionName;

@@ -18,6 +18,7 @@ endif()
 
 check_cxx_compiler_flag(-Wall OPENMP_HAVE_WALL_FLAG)
 check_cxx_compiler_flag(-Werror OPENMP_HAVE_WERROR_FLAG)
+check_cxx_compiler_flag(-fcolor-diagnostics OPENMP_HAVE_COLOR_DIAGNOSTICS)
 
 # Additional warnings that are not enabled by -Wall.
 check_cxx_compiler_flag(-Wcast-qual OPENMP_HAVE_WCAST_QUAL_FLAG)
@@ -32,7 +33,12 @@ check_cxx_compiler_flag(-Wsign-compare OPENMP_HAVE_WSIGN_COMPARE_FLAG)
 # printed. Therefore, check for whether the compiler supports options in the
 # form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
 
-check_cxx_compiler_flag(-Wenum-constexpr-conversion OPENMP_HAVE_WENUM_CONSTEXPR_CONVERSION_FLAG)
 check_cxx_compiler_flag(-Wextra OPENMP_HAVE_WEXTRA_FLAG)
 check_cxx_compiler_flag(-Wpedantic OPENMP_HAVE_WPEDANTIC_FLAG)
 check_cxx_compiler_flag(-Wmaybe-uninitialized OPENMP_HAVE_WMAYBE_UNINITIALIZED_FLAG)
+
+# Additional flags for optimizing created libraries.
+
+check_cxx_compiler_flag(-fno-semantic-interposition OPENMP_HAVE_NO_SEMANTIC_INTERPOSITION)
+check_cxx_compiler_flag(-ffunction-section OPENMP_HAVE_FUNCTION_SECTIONS)
+check_cxx_compiler_flag(-fdata-sections OPENMP_HAVE_DATA_SECTIONS)

@@ -28,7 +28,11 @@ class SimpleSValBuilder : public SValBuilder {
   // returns NULL.
   // This is an implementation detail. Checkers should use `getKnownValue()`
   // instead.
-  const llvm::APSInt *getConstValue(ProgramStateRef state, SVal V);
+  static const llvm::APSInt *getConstValue(ProgramStateRef state, SVal V);
+
+  // Helper function that returns the value stored in a nonloc::ConcreteInt or
+  // loc::ConcreteInt.
+  static const llvm::APSInt *getConcreteValue(SVal V);
 
   // With one `simplifySValOnce` call, a compound symbols might collapse to
   // simpler symbol tree that is still possible to further simplify. Thus, we
@@ -75,6 +79,16 @@ public:
   /// simplifying the children SVals. If the SVal has only one possible
   /// (integer) value, that value is returned. Otherwise, returns NULL.
   const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal V) override;
+
+  /// Evaluates a given SVal by recursively evaluating and simplifying the
+  /// children SVals, then returns its minimal possible (integer) value. If the
+  /// constraint manager cannot provide a meaningful answer, this returns NULL.
+  const llvm::APSInt *getMinValue(ProgramStateRef state, SVal V) override;
+
+  /// Evaluates a given SVal by recursively evaluating and simplifying the
+  /// children SVals, then returns its maximal possible (integer) value. If the
+  /// constraint manager cannot provide a meaningful answer, this returns NULL.
+  const llvm::APSInt *getMaxValue(ProgramStateRef state, SVal V) override;
 
   SVal simplifySVal(ProgramStateRef State, SVal V) override;
 
@@ -1182,14 +1196,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
 const llvm::APSInt *SimpleSValBuilder::getConstValue(ProgramStateRef state,
                                                      SVal V) {
-  if (V.isUnknownOrUndef())
-    return nullptr;
-
-  if (std::optional<loc::ConcreteInt> X = V.getAs<loc::ConcreteInt>())
-    return &X->getValue();
-
-  if (std::optional<nonloc::ConcreteInt> X = V.getAs<nonloc::ConcreteInt>())
-    return &X->getValue();
+  if (const llvm::APSInt *Res = getConcreteValue(V))
+    return Res;
 
   if (SymbolRef Sym = V.getAsSymbol())
     return state->getConstraintManager().getSymVal(state, Sym);
@@ -1197,9 +1205,45 @@ const llvm::APSInt *SimpleSValBuilder::getConstValue(ProgramStateRef state,
   return nullptr;
 }
 
+const llvm::APSInt *SimpleSValBuilder::getConcreteValue(SVal V) {
+  if (std::optional<loc::ConcreteInt> X = V.getAs<loc::ConcreteInt>())
+    return &X->getValue();
+
+  if (std::optional<nonloc::ConcreteInt> X = V.getAs<nonloc::ConcreteInt>())
+    return &X->getValue();
+
+  return nullptr;
+}
+
 const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
                                                      SVal V) {
   return getConstValue(state, simplifySVal(state, V));
+}
+
+const llvm::APSInt *SimpleSValBuilder::getMinValue(ProgramStateRef state,
+                                                   SVal V) {
+  V = simplifySVal(state, V);
+
+  if (const llvm::APSInt *Res = getConcreteValue(V))
+    return Res;
+
+  if (SymbolRef Sym = V.getAsSymbol())
+    return state->getConstraintManager().getSymMinVal(state, Sym);
+
+  return nullptr;
+}
+
+const llvm::APSInt *SimpleSValBuilder::getMaxValue(ProgramStateRef state,
+                                                   SVal V) {
+  V = simplifySVal(state, V);
+
+  if (const llvm::APSInt *Res = getConcreteValue(V))
+    return Res;
+
+  if (SymbolRef Sym = V.getAsSymbol())
+    return state->getConstraintManager().getSymMaxVal(state, Sym);
+
+  return nullptr;
 }
 
 SVal SimpleSValBuilder::simplifyUntilFixpoint(ProgramStateRef State, SVal Val) {

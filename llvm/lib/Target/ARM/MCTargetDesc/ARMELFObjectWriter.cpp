@@ -16,6 +16,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -84,6 +85,14 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
   MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  auto CheckFDPIC = [&](uint32_t Type) {
+    if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation " +
+                          object::getELFRelocationTypeName(ELF::EM_ARM, Type) +
+                          " only supported in FDPIC mode");
+    return Type;
+  };
 
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
@@ -158,6 +167,18 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       default:
         return ELF::R_ARM_THM_CALL;
       }
+    case ARM::fixup_arm_ldst_pcrel_12:
+      return ELF::R_ARM_LDR_PC_G0;
+    case ARM::fixup_arm_pcrel_10_unscaled:
+      return ELF::R_ARM_LDRS_PC_G0;
+    case ARM::fixup_t2_ldst_pcrel_12:
+      return ELF::R_ARM_THM_PC12;
+    case ARM::fixup_arm_adr_pcrel_12:
+      return ELF::R_ARM_ALU_PC_G0;
+    case ARM::fixup_thumb_adr_pcrel_10:
+      return ELF::R_ARM_THM_PC8;
+    case ARM::fixup_t2_adr_pcrel_12:
+      return ELF::R_ARM_THM_ALU_PREL_11_0;
     case ARM::fixup_bf_target:
       return ELF::R_ARM_THM_BF16;
     case ARM::fixup_bfc_target:
@@ -228,6 +249,18 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_TLS_LDM32;
     case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
       return ELF::R_ARM_TLS_DESCSEQ;
+    case MCSymbolRefExpr::VK_FUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_FUNCDESC);
+    case MCSymbolRefExpr::VK_GOTFUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_GOTFUNCDESC);
+    case MCSymbolRefExpr::VK_GOTOFFFUNCDESC:
+      return CheckFDPIC(ELF::R_ARM_GOTOFFFUNCDESC);
+    case MCSymbolRefExpr::VK_TLSGD_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_GD32_FDPIC);
+    case MCSymbolRefExpr::VK_TLSLDM_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_LDM32_FDPIC);
+    case MCSymbolRefExpr::VK_GOTTPOFF_FDPIC:
+      return CheckFDPIC(ELF::R_ARM_TLS_IE32_FDPIC);
     }
   case ARM::fixup_arm_condbranch:
   case ARM::fixup_arm_uncondbranch:

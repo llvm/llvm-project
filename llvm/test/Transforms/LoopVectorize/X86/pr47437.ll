@@ -61,7 +61,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE2-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
 ; SSE2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP18]] to i32
 ; SSE2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; SSE2-NEXT:    [[TMP19:%.*]] = or i64 [[TMP16]], 1
+; SSE2-NEXT:    [[TMP19:%.*]] = or disjoint i64 [[TMP16]], 1
 ; SSE2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP19]]
 ; SSE2-NEXT:    [[TMP20:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; SSE2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP20]] to i32
@@ -74,7 +74,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE2-NEXT:    store i32 [[ADD18]], ptr [[ARRAYIDX20]], align 4
 ; SSE2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; SSE2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; SSE2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; SSE2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SSE2:       for.end.loopexit:
 ; SSE2-NEXT:    br label [[FOR_END]]
 ; SSE2:       for.end:
@@ -135,8 +135,8 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE41-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[D1:%.*]], i64 [[TMP0]]
 ; SSE41-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[D1]], i64 [[TMP1]]
 ; SSE41-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i32 0
-; SSE41-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP28]], align 4
 ; SSE41-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i32 4
+; SSE41-NEXT:    store <4 x i32> [[TMP24]], ptr [[TMP28]], align 4
 ; SSE41-NEXT:    store <4 x i32> [[TMP25]], ptr [[TMP29]], align 4
 ; SSE41-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SSE41-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -157,7 +157,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE41-NEXT:    [[TMP33:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
 ; SSE41-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP33]] to i32
 ; SSE41-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; SSE41-NEXT:    [[TMP34:%.*]] = or i64 [[TMP31]], 1
+; SSE41-NEXT:    [[TMP34:%.*]] = or disjoint i64 [[TMP31]], 1
 ; SSE41-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP34]]
 ; SSE41-NEXT:    [[TMP35:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; SSE41-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP35]] to i32
@@ -170,7 +170,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; SSE41-NEXT:    store i32 [[ADD18]], ptr [[ARRAYIDX20]], align 4
 ; SSE41-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; SSE41-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; SSE41-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; SSE41-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SSE41:       for.end.loopexit:
 ; SSE41-NEXT:    br label [[FOR_END]]
 ; SSE41:       for.end:
@@ -271,12 +271,12 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    [[TMP54:%.*]] = getelementptr inbounds i32, ptr [[D1]], i64 [[TMP2]]
 ; AVX1-NEXT:    [[TMP55:%.*]] = getelementptr inbounds i32, ptr [[D1]], i64 [[TMP3]]
 ; AVX1-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 0
-; AVX1-NEXT:    store <4 x i32> [[TMP48]], ptr [[TMP56]], align 4
 ; AVX1-NEXT:    [[TMP57:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 4
-; AVX1-NEXT:    store <4 x i32> [[TMP49]], ptr [[TMP57]], align 4
 ; AVX1-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 8
-; AVX1-NEXT:    store <4 x i32> [[TMP50]], ptr [[TMP58]], align 4
 ; AVX1-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i32, ptr [[TMP52]], i32 12
+; AVX1-NEXT:    store <4 x i32> [[TMP48]], ptr [[TMP56]], align 4
+; AVX1-NEXT:    store <4 x i32> [[TMP49]], ptr [[TMP57]], align 4
+; AVX1-NEXT:    store <4 x i32> [[TMP50]], ptr [[TMP58]], align 4
 ; AVX1-NEXT:    store <4 x i32> [[TMP51]], ptr [[TMP59]], align 4
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX1-NEXT:    [[TMP60:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -297,7 +297,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    [[TMP63:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
 ; AVX1-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP63]] to i32
 ; AVX1-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; AVX1-NEXT:    [[TMP64:%.*]] = or i64 [[TMP61]], 1
+; AVX1-NEXT:    [[TMP64:%.*]] = or disjoint i64 [[TMP61]], 1
 ; AVX1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP64]]
 ; AVX1-NEXT:    [[TMP65:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; AVX1-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP65]] to i32
@@ -310,7 +310,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX1-NEXT:    store i32 [[ADD18]], ptr [[ARRAYIDX20]], align 4
 ; AVX1-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; AVX1-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; AVX1-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AVX1:       for.end.loopexit:
 ; AVX1-NEXT:    br label [[FOR_END]]
 ; AVX1:       for.end:
@@ -371,7 +371,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX2-NEXT:    [[TMP18:%.*]] = load i16, ptr [[ARRAYIDX4]], align 2
 ; AVX2-NEXT:    [[CONV5:%.*]] = sext i16 [[TMP18]] to i32
 ; AVX2-NEXT:    [[MUL6:%.*]] = mul nsw i32 [[CONV5]], [[CONV]]
-; AVX2-NEXT:    [[TMP19:%.*]] = or i64 [[TMP16]], 1
+; AVX2-NEXT:    [[TMP19:%.*]] = or disjoint i64 [[TMP16]], 1
 ; AVX2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[S1]], i64 [[TMP19]]
 ; AVX2-NEXT:    [[TMP20:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; AVX2-NEXT:    [[CONV11:%.*]] = sext i16 [[TMP20]] to i32
@@ -384,7 +384,7 @@ define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readon
 ; AVX2-NEXT:    store i32 [[ADD18]], ptr [[ARRAYIDX20]], align 4
 ; AVX2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; AVX2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; AVX2-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AVX2:       for.end.loopexit:
 ; AVX2-NEXT:    br label [[FOR_END]]
 ; AVX2:       for.end:
@@ -408,7 +408,7 @@ for.body:
   %2 = load i16, ptr %arrayidx4, align 2
   %conv5 = sext i16 %2 to i32
   %mul6 = mul nsw i32 %conv5, %conv
-  %3 = or i64 %0, 1
+  %3 = or disjoint i64 %0, 1
   %arrayidx10 = getelementptr inbounds i16, ptr %s1, i64 %3
   %4 = load i16, ptr %arrayidx10, align 2
   %conv11 = sext i16 %4 to i32

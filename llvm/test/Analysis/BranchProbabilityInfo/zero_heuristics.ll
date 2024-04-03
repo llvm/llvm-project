@@ -10,8 +10,8 @@ entry:
   %tmp1 = load i32, ptr @B, align 4
   br label %for.body
 
-; CHECK: edge for.body -> if.then probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge for.body -> for.inc probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %for.body -> %if.then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %for.body -> %for.inc probability is 0x50000000 / 0x80000000 = 62.50%
 for.body:
   %tmp4 = phi i32 [ %tmp1, %entry ], [ %tmp7, %for.inc ]
   %inc.iv = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
@@ -43,8 +43,8 @@ entry:
   %tmp1 = load i32, ptr @B, align 4
   br label %for.body
 
-; CHECK: edge for.body -> if.then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge for.body -> for.inc probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %for.body -> %if.then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %for.body -> %for.inc probability is 0x30000000 / 0x80000000 = 37.50%
 for.body:
   %tmp4 = phi i32 [ %tmp1, %entry ], [ %tmp7, %for.inc ]
   %inc.iv = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
@@ -76,8 +76,8 @@ entry:
   %tmp1 = load i32, ptr @B, align 4
   br label %for.body
 
-; CHECK: edge for.body -> if.then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge for.body -> for.inc probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %for.body -> %if.then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %for.body -> %for.inc probability is 0x30000000 / 0x80000000 = 37.50%
 for.body:
   %tmp4 = phi i32 [ %tmp1, %entry ], [ %tmp7, %for.inc ]
   %inc.iv = phi i32 [ 0, %entry ], [ %inc, %for.inc ]

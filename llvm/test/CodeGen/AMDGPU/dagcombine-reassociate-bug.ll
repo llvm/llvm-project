@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; Test for a bug where DAGCombiner::ReassociateOps() was creating adds
 ; with offset in the first operand and base pointers in the second.

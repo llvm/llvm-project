@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -63,22 +64,6 @@ SystemZFrameLowering::create(const SystemZSubtarget &STI) {
   if (STI.isTargetXPLINK64())
     return std::make_unique<SystemZXPLINKFrameLowering>();
   return std::make_unique<SystemZELFFrameLowering>();
-}
-
-MachineBasicBlock::iterator SystemZFrameLowering::eliminateCallFramePseudoInstr(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MI) const {
-  switch (MI->getOpcode()) {
-  case SystemZ::ADJCALLSTACKDOWN:
-  case SystemZ::ADJCALLSTACKUP:
-    assert(hasReservedCallFrame(MF) &&
-           "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
-    return MBB.erase(MI);
-    break;
-
-  default:
-    llvm_unreachable("Unexpected call frame instruction");
-  }
 }
 
 namespace {
@@ -839,8 +824,10 @@ void SystemZELFFrameLowering::inlineStackProbe(
   StackAllocMI->eraseFromParent();
   if (DoneMBB != nullptr) {
     // Compute the live-in lists for the new blocks.
-    recomputeLiveIns(*DoneMBB);
-    recomputeLiveIns(*LoopMBB);
+    bool anyChange = false;
+    do {
+      anyChange = recomputeLiveIns(*DoneMBB) || recomputeLiveIns(*LoopMBB);
+    } while (anyChange);
   }
 }
 
@@ -993,6 +980,11 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   // be stored, then save the stack pointer register R4.
   if (hasFP(MF) || Subtarget.hasBackChain())
     CSI.push_back(CalleeSavedInfo(Regs.getStackPointerRegister()));
+
+  // If this function has an associated personality function then the
+  // environment register R5 must be saved in the DSA.
+  if (!MF.getLandingPads().empty())
+    CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
@@ -1433,8 +1425,10 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   StackAllocMI->eraseFromParent();
 
   // Compute the live-in lists for the new blocks.
-  recomputeLiveIns(*NextMBB);
-  recomputeLiveIns(*StackExtMBB);
+  bool anyChange = false;
+  do {
+    anyChange = recomputeLiveIns(*StackExtMBB) || recomputeLiveIns(*NextMBB);
+  } while (anyChange);
 }
 
 bool SystemZXPLINKFrameLowering::hasFP(const MachineFunction &MF) const {

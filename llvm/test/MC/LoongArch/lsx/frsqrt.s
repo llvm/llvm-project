@@ -10,3 +10,11 @@ vfrsqrt.s $vr19, $vr30
 vfrsqrt.d $vr1, $vr0
 # CHECK-INST: vfrsqrt.d $vr1, $vr0
 # CHECK-ENCODING: encoding: [0x01,0x08,0x9d,0x72]
+
+vfrsqrte.s $vr19, $vr30
+# CHECK-INST: vfrsqrte.s $vr19, $vr30
+# CHECK-ENCODING: encoding: [0xd3,0x27,0x9d,0x72]
+
+vfrsqrte.d $vr1, $vr0
+# CHECK-INST: vfrsqrte.d $vr1, $vr0
+# CHECK-ENCODING: encoding: [0x01,0x28,0x9d,0x72]

@@ -59,7 +59,7 @@ public:
   bool ParseDebugMacros(CompileUnit &comp_unit) override { return false; }
 
   bool ParseSupportFiles(CompileUnit &comp_unit,
-                         FileSpecList &support_files) override {
+                         SupportFileList &support_files) override {
     return false;
   }
 

@@ -27,9 +27,9 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGLOWERTOAFFINELOOPS
-#define GEN_PASS_DEF_LINALGLOWERTOLOOPS
-#define GEN_PASS_DEF_LINALGLOWERTOPARALLELLOOPS
+#define GEN_PASS_DEF_CONVERTLINALGTOAFFINELOOPSPASS
+#define GEN_PASS_DEF_CONVERTLINALGTOLOOPSPASS
+#define GEN_PASS_DEF_CONVERTLINALGTOPARALLELLOOPSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -128,7 +128,7 @@ template <typename LoadOpTy, typename StoreOpTy>
 static void emitScalarImplementation(OpBuilder &b, Location loc,
                                      ArrayRef<Value> allIvs,
                                      LinalgOp linalgOp) {
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SmallVector<Value> indexedValues;
   indexedValues.reserve(linalgOp->getNumOperands());
@@ -218,7 +218,7 @@ static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
-  assert(linalgOp.hasBufferSemantics() &&
+  assert(linalgOp.hasPureBufferSemantics() &&
          "expected linalg op with buffer semantics");
 
   auto loopRanges = linalgOp.createLoopRanges(rewriter, linalgOp.getLoc());
@@ -264,7 +264,7 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!isa<LinalgOp>(op) || !linalgOp.hasBufferSemantics()) {
+    if (!isa<LinalgOp>(op) || !linalgOp.hasPureBufferSemantics()) {
       return rewriter.notifyMatchFailure(
           op, "expected linalg op with buffer semantics");
     }
@@ -326,7 +326,9 @@ static void lowerLinalgToLoopsImpl(Operation *enclosingOp) {
 }
 
 struct LowerToAffineLoops
-    : public impl::LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
+    : public impl::ConvertLinalgToAffineLoopsPassBase<LowerToAffineLoops> {
+  using impl::ConvertLinalgToAffineLoopsPassBase<
+      LowerToAffineLoops>::ConvertLinalgToAffineLoopsPassBase;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
@@ -335,7 +337,9 @@ struct LowerToAffineLoops
   }
 };
 
-struct LowerToLoops : public impl::LinalgLowerToLoopsBase<LowerToLoops> {
+struct LowerToLoops : public impl::ConvertLinalgToLoopsPassBase<LowerToLoops> {
+  using impl::ConvertLinalgToLoopsPassBase<
+      LowerToLoops>::ConvertLinalgToLoopsPassBase;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, scf::SCFDialect>();
   }
@@ -345,25 +349,15 @@ struct LowerToLoops : public impl::LinalgLowerToLoopsBase<LowerToLoops> {
 };
 
 struct LowerToParallelLoops
-    : public impl::LinalgLowerToParallelLoopsBase<LowerToParallelLoops> {
+    : public impl::ConvertLinalgToParallelLoopsPassBase<LowerToParallelLoops> {
+  using impl::ConvertLinalgToParallelLoopsPassBase<
+      LowerToParallelLoops>::ConvertLinalgToParallelLoopsPassBase;
   void runOnOperation() override {
     lowerLinalgToLoopsImpl<scf::ParallelOp>(getOperation());
   }
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertLinalgToLoopsPass() {
-  return std::make_unique<LowerToLoops>();
-}
-
-std::unique_ptr<Pass> mlir::createConvertLinalgToParallelLoopsPass() {
-  return std::make_unique<LowerToParallelLoops>();
-}
-
-std::unique_ptr<Pass> mlir::createConvertLinalgToAffineLoopsPass() {
-  return std::make_unique<LowerToAffineLoops>();
-}
 
 /// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
 FailureOr<LinalgLoops>

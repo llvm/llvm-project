@@ -570,8 +570,8 @@ files.
 .. productionlist::
    TableGenFile: (`Statement` | `IncludeDirective`
             :| `PreprocessorDirective`)*
-   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
-            :| `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
+   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Deftype`
+            :| `Defvar` | `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
 
 The following sections describe each of these top-level statements.
 
@@ -661,7 +661,7 @@ The argument values can be specified in two forms:
   argument with name ``a`` and ``a1`` will be assigned to the argument with
   name ``b``.
 
-Required arguments can alse be specified as named argument.
+Required arguments can also be specified as named argument.
 
 Note that the argument can only be specified once regardless of the way (named
 or positional) to specify and positional arguments should be put before named
@@ -1215,6 +1215,20 @@ set.
 Anonymous records created inside initialization expressions using the
 ``ClassID<...>`` syntax are not collected in the set.
 
+``deftype`` --- define a type
+--------------------------------
+
+A ``deftype`` statement defines a type. The type can be used throughout the
+statements that follow the definition.
+
+.. productionlist::
+   Deftype: "deftype" `TokIdentifier` "=" `Type` ";"
+
+The identifier on the left of the ``=`` is defined to be a type name
+whose actual type is given by the type expression on the right of the ``=``.
+
+Currently, only primitive types and type aliases are supported to be the source
+type and `deftype` statements can only appear at the top level.
 
 ``defvar`` --- define a variable
 --------------------------------

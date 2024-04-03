@@ -41,8 +41,8 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         context = self.expect_gdbremote_sequence()
         spec = context.get("spec")
-        self.assertRegexpMatches(spec, '"file_path":".*"')
-        self.assertRegexpMatches(spec, '"file_offset":\d+')
-        self.assertRegexpMatches(spec, '"file_size":\d+')
-        self.assertRegexpMatches(spec, '"triple":"\w*-\w*-.*"')
-        self.assertRegexpMatches(spec, '"uuid":"[A-Fa-f0-9]+"')
+        self.assertRegex(spec, '"file_path":".*"')
+        self.assertRegex(spec, '"file_offset":\d+')
+        self.assertRegex(spec, '"file_size":\d+')
+        self.assertRegex(spec, '"triple":"\w*-\w*-.*"')
+        self.assertRegex(spec, '"uuid":"[A-Fa-f0-9]+"')

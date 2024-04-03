@@ -1004,4 +1004,3 @@ define <vscale x 8 x i32> @vmul_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
   %vc = mul <vscale x 8 x i32> %va, %vs
   ret <vscale x 8 x i32> %vc
 }
-

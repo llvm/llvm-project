@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 --stop-after=amdgpu-isel -verify-machineinstrs < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX10 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 --stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL %s
-; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 --stop-after=amdgpu-isel -verify-machineinstrs < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX11 %s
-; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 --stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 --stop-after=amdgpu-isel -verify-machineinstrs < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX10 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1010 --stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=amdgpu-isel -verify-machineinstrs < %s | FileCheck -check-prefixes=SDAG,SDAG-GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 --stop-after=instruction-select -verify-machineinstrs < %s | FileCheck -check-prefixes=GISEL %s
 
 declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1, i1)
 declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1, i1)

@@ -270,32 +270,38 @@ public:
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
   }
 
-  bool isAArch64Exclusive(const MCInst &Inst) const override {
+  bool isAArch64ExclusiveLoad(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::LDXPX ||
             Inst.getOpcode() == AArch64::LDXPW ||
             Inst.getOpcode() == AArch64::LDXRX ||
             Inst.getOpcode() == AArch64::LDXRW ||
             Inst.getOpcode() == AArch64::LDXRH ||
             Inst.getOpcode() == AArch64::LDXRB ||
-            Inst.getOpcode() == AArch64::STXPX ||
-            Inst.getOpcode() == AArch64::STXPW ||
-            Inst.getOpcode() == AArch64::STXRX ||
-            Inst.getOpcode() == AArch64::STXRW ||
-            Inst.getOpcode() == AArch64::STXRH ||
-            Inst.getOpcode() == AArch64::STXRB ||
             Inst.getOpcode() == AArch64::LDAXPX ||
             Inst.getOpcode() == AArch64::LDAXPW ||
             Inst.getOpcode() == AArch64::LDAXRX ||
             Inst.getOpcode() == AArch64::LDAXRW ||
             Inst.getOpcode() == AArch64::LDAXRH ||
-            Inst.getOpcode() == AArch64::LDAXRB ||
+            Inst.getOpcode() == AArch64::LDAXRB);
+  }
+
+  bool isAArch64ExclusiveStore(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::STXPX ||
+            Inst.getOpcode() == AArch64::STXPW ||
+            Inst.getOpcode() == AArch64::STXRX ||
+            Inst.getOpcode() == AArch64::STXRW ||
+            Inst.getOpcode() == AArch64::STXRH ||
+            Inst.getOpcode() == AArch64::STXRB ||
             Inst.getOpcode() == AArch64::STLXPX ||
             Inst.getOpcode() == AArch64::STLXPW ||
             Inst.getOpcode() == AArch64::STLXRX ||
             Inst.getOpcode() == AArch64::STLXRW ||
             Inst.getOpcode() == AArch64::STLXRH ||
-            Inst.getOpcode() == AArch64::STLXRB ||
-            Inst.getOpcode() == AArch64::CLREX);
+            Inst.getOpcode() == AArch64::STLXRB);
+  }
+
+  bool isAArch64ExclusiveClear(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::CLREX);
   }
 
   bool isLoadFromStack(const MCInst &Inst) const {
@@ -314,6 +320,12 @@ public:
 
   bool isRegToRegMove(const MCInst &Inst, MCPhysReg &From,
                       MCPhysReg &To) const override {
+    if (Inst.getOpcode() == AArch64::FMOVDXr) {
+      From = Inst.getOperand(1).getReg();
+      To = Inst.getOperand(0).getReg();
+      return true;
+    }
+
     if (Inst.getOpcode() != AArch64::ORRXrs)
       return false;
     if (Inst.getOperand(1).getReg() != AArch64::XZR)
@@ -1014,7 +1026,7 @@ public:
     return Code;
   }
 
-  bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+  void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createDirectCall(Inst, Target, Ctx, /*IsTailCall*/ true);
   }
@@ -1024,11 +1036,10 @@ public:
     createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
   }
 
-  bool createTrap(MCInst &Inst) const override {
+  void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(AArch64::BRK);
     Inst.addOperand(MCOperand::createImm(1));
-    return true;
   }
 
   bool convertJmpToTailCall(MCInst &Inst) override {
@@ -1056,16 +1067,15 @@ public:
            Inst.getOperand(0).getImm() == 0;
   }
 
-  bool createNoop(MCInst &Inst) const override {
+  void createNoop(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::HINT);
     Inst.clear();
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   bool mayStore(const MCInst &Inst) const override { return false; }
 
-  bool createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
+  void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
@@ -1074,7 +1084,6 @@ public:
         *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
-    return true;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -1281,14 +1290,13 @@ public:
     return true;
   }
 
-  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+  void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
         Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
         *Ctx, 0)));
-    return true;
   }
 
   bool shouldRecordCodeRelocation(uint64_t RelType) const override {
@@ -1341,14 +1349,13 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
-  bool createReturn(MCInst &Inst) const override {
+  void createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(AArch64::LR));
-    return true;
   }
 
-  bool createStackPointerIncrement(
+  void createStackPointerIncrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::SUBXri);
@@ -1357,10 +1364,9 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
-  bool createStackPointerDecrement(
+  void createStackPointerDecrement(
       MCInst &Inst, int Size,
       bool NoFlagsClobber = false /*unused for AArch64*/) const override {
     Inst.setOpcode(AArch64::ADDXri);
@@ -1369,12 +1375,12 @@ public:
     Inst.addOperand(MCOperand::createReg(AArch64::SP));
     Inst.addOperand(MCOperand::createImm(Size));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
   void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
                             int64_t Disp) const {
     Inst.setOpcode(AArch64::BR);
+    Inst.clear();
     Inst.addOperand(MCOperand::createReg(MemBaseReg));
   }
 
@@ -1617,6 +1623,9 @@ public:
     uint64_t RelType;
     if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
+    else if (Fixup.getKind() ==
+             MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
+      RelType = ELF::R_AARCH64_JUMP26;
     else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:

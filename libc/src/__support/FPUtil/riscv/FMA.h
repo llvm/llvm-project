@@ -26,6 +26,7 @@
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
+#ifdef __riscv_flen
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
   float result;
@@ -35,6 +36,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
   return result;
 }
 
+#if __riscv_flen >= 64
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
   double result;
@@ -43,6 +45,8 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
                   : "f"(x), "f"(y), "f"(z));
   return result;
 }
+#endif // __riscv_flen >= 64
+#endif // __riscv_flen
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE

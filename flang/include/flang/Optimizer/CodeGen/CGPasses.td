@@ -23,10 +23,16 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     will also convert ops in the standard and FIRCG dialects.
   }];
   let constructor = "::fir::createFIRToLLVMPass()";
-  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect", "mlir::DLTIDialect"];
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
+    Option<"forcedDataLayout", "datalayout", "std::string", /*default=*/"",
+           "Override module's data layout.">,
+    Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
+           "Override module's target CPU.">,
+    Option<"forcedTargetFeatures", "target-features", "std::string",
+           /*default=*/"", "Override module's target features.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
            "Attach TBAA tags to memory accessing operations.">
   ];
@@ -53,16 +59,24 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
       representations that may differ based on the target machine.
   }];
   let constructor = "::fir::createFirTargetRewritePass()";
-  let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect" ];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect",
+                            "mlir::DLTIDialect" ];
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
+    Option<"forcedTargetCPU", "target-cpu", "std::string", /*default=*/"",
+           "Override module's target CPU.">,
+    Option<"forcedTargetFeatures", "target-features", "std::string",
+           /*default=*/"", "Override module's target features.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,
     Option<"noComplexConversion", "no-complex-conversion",
            "bool", /*default=*/"false",
-           "Disable target-specific conversion of COMPLEX.">
+           "Disable target-specific conversion of COMPLEX.">,
+    Option<"noStructConversion", "no-struct-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of derived type value.">
   ];
 }
 

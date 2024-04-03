@@ -34,9 +34,20 @@ class SPIRVGlobalRegistry {
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
 
+  // Map LLVM Type* to <MF, Reg>
   SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
+
+  // map a Function to its definition (as a machine instruction operand)
+  DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
+  DenseMap<const MachineInstr *, const Function *> FunctionToInstrRev;
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
+  DenseMap<const MachineOperand *, const Function *> InstrToFunction;
+  // Maps Functions to their calls (in a form of the machine instruction,
+  // OpFunctionCall) that happened before the definition is available
+  DenseMap<const Function *, SmallVector<MachineInstr *>> ForwardCalls;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -48,6 +59,16 @@ class SPIRVGlobalRegistry {
 
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
+
+  // Holds the maximum ID we have in the module.
+  unsigned Bound;
+
+  // Maps values associated with untyped pointers into deduced element types of
+  // untyped pointers.
+  DenseMap<Value *, Type *> DeducedElTys;
+  // Maps composite values to deduced types where untyped pointers are replaced
+  // with typed ones
+  DenseMap<Value *, Type *> DeducedNestedTys;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
@@ -84,6 +105,14 @@ public:
     DT.add(Arg, MF, R);
   }
 
+  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
+    DT.add(MI, MF, R);
+  }
+
+  Register find(const MachineInstr *MI, MachineFunction *MF) {
+    return DT.find(MI, MF);
+  }
+
   Register find(const Constant *C, MachineFunction *MF) {
     return DT.find(C, MF);
   }
@@ -99,6 +128,101 @@ public:
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
                       MachineModuleInfo *MMI = nullptr) {
     DT.buildDepsGraph(Graph, MMI);
+  }
+
+  void setBound(unsigned V) { Bound = V; }
+  unsigned getBound() { return Bound; }
+
+  // Deduced element types of untyped pointers and composites:
+  // - Add a record to the map of deduced element types.
+  void addDeducedElementType(Value *Val, Type *Ty) { DeducedElTys[Val] = Ty; }
+  // - Find a record in the map of deduced element types.
+  Type *findDeducedElementType(const Value *Val) {
+    auto It = DeducedElTys.find(Val);
+    return It == DeducedElTys.end() ? nullptr : It->second;
+  }
+  // - Add a record to the map of deduced composite types.
+  void addDeducedCompositeType(Value *Val, Type *Ty) {
+    DeducedNestedTys[Val] = Ty;
+  }
+  // - Find a record in the map of deduced composite types.
+  Type *findDeducedCompositeType(const Value *Val) {
+    auto It = DeducedNestedTys.find(Val);
+    return It == DeducedNestedTys.end() ? nullptr : It->second;
+  }
+  // - Find a type of the given Global value
+  Type *getDeducedGlobalValueType(const GlobalValue *Global) {
+    // we may know element type if it was deduced earlier
+    Type *ElementTy = findDeducedElementType(Global);
+    if (!ElementTy) {
+      // or we may know element type if it's associated with a composite
+      // value
+      if (Value *GlobalElem =
+              Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
+        ElementTy = findDeducedCompositeType(GlobalElem);
+    }
+    return ElementTy ? ElementTy : Global->getValueType();
+  }
+
+  // Map a machine operand that represents a use of a function via function
+  // pointer to a machine operand that represents the function definition.
+  // Return either the register or invalid value, because we have no context for
+  // a good diagnostic message in case of unexpectedly missing references.
+  const MachineOperand *getFunctionDefinitionByUse(const MachineOperand *Use) {
+    auto ResF = InstrToFunction.find(Use);
+    if (ResF == InstrToFunction.end())
+      return nullptr;
+    auto ResReg = FunctionToInstr.find(ResF->second);
+    return ResReg == FunctionToInstr.end() ? nullptr : ResReg->second;
+  }
+
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const MachineInstr *getFunctionDefinition(const Function *F) {
+    if (!F)
+      return nullptr;
+    auto MOIt = FunctionToInstr.find(F);
+    return MOIt == FunctionToInstr.end() ? nullptr : MOIt->second->getParent();
+  }
+
+  // Map a Function to a machine instruction that represents the function
+  // definition.
+  const Function *getFunctionByDefinition(const MachineInstr *MI) {
+    if (!MI)
+      return nullptr;
+    auto FIt = FunctionToInstrRev.find(MI);
+    return FIt == FunctionToInstrRev.end() ? nullptr : FIt->second;
+  }
+
+  // map function pointer (as a machine instruction operand) to the used
+  // Function
+  void recordFunctionPointer(const MachineOperand *MO, const Function *F) {
+    InstrToFunction[MO] = F;
+  }
+
+  // map a Function to its definition (as a machine instruction)
+  void recordFunctionDefinition(const Function *F, const MachineOperand *MO) {
+    FunctionToInstr[F] = MO;
+    FunctionToInstrRev[MO->getParent()] = F;
+  }
+
+  // Return true if any OpConstantFunctionPointerINTEL were generated
+  bool hasConstFunPtr() { return !InstrToFunction.empty(); }
+
+  // Add a record about forward function call.
+  void addForwardCall(const Function *F, MachineInstr *MI) {
+    auto It = ForwardCalls.find(F);
+    if (It == ForwardCalls.end())
+      ForwardCalls[F] = {MI};
+    else
+      It->second.push_back(MI);
+  }
+
+  // Map a Function to the vector of machine instructions that represents
+  // forward function calls or to nullptr if not found.
+  SmallVector<MachineInstr *> *getForwardCalls(const Function *F) {
+    auto It = ForwardCalls.find(F);
+    return It == ForwardCalls.end() ? nullptr : &It->second;
   }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
@@ -136,8 +260,12 @@ public:
     return Res->second;
   }
 
+  // Return a pointee's type op code, or 0 otherwise.
+  unsigned getPointeeTypeOp(Register PtrReg);
+
   // Either generate a new OpTypeXXX instruction or return an existing one
   // corresponding to the given string containing the name of the builtin type.
+  // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
       StringRef TypeStr, MachineIRBuilder &MIRBuilder,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,
@@ -167,8 +295,23 @@ public:
   // opcode (e.g. OpTypeBool, or OpTypeVector %x 4, where %x is OpTypeBool).
   bool isScalarOrVectorOfType(Register VReg, unsigned TypeOpcode) const;
 
-  // For vectors or scalars of ints/floats, return the scalar type's bitwidth.
+  // Return number of elements in a vector if the argument is associated with
+  // a vector type. Return 1 for a scalar type, and 0 for a missing type.
+  unsigned getScalarOrVectorComponentCount(Register VReg) const;
+  unsigned getScalarOrVectorComponentCount(SPIRVType *Type) const;
+
+  // For vectors or scalars of booleans, integers and floats, return the scalar
+  // type's bitwidth. Otherwise calls llvm_unreachable().
   unsigned getScalarOrVectorBitWidth(const SPIRVType *Type) const;
+
+  // For vectors or scalars of integers and floats, return total bitwidth of the
+  // argument. Otherwise returns 0.
+  unsigned getNumScalarOrVectorTotalBitWidth(const SPIRVType *Type) const;
+
+  // Returns either pointer to integer type, that may be a type of vector
+  // elements or an original type, or nullptr if the argument is niether
+  // an integer scalar, nor an integer vector
+  const SPIRVType *retrieveScalarOrVectorIntType(const SPIRVType *Type) const;
 
   // For integer vectors or scalars, return whether the integers are signed.
   bool isScalarOrVectorSigned(const SPIRVType *Type) const;
@@ -178,6 +321,11 @@ public:
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }
+
+  // Returns true if two types are defined and are compatible in a sense of
+  // OpBitcast instruction
+  bool isBitcastCompatible(const SPIRVType *Type1,
+                           const SPIRVType *Type2) const;
 
 private:
   SPIRVType *getOpTypeBool(MachineIRBuilder &MIRBuilder);

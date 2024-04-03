@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ;
-; CHECK-SPIRV-DAG: %[[#i8:]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: %[[#i32:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#one:]] = OpConstant %[[#i32]] 1
 ; CHECK-SPIRV-DAG: %[[#two:]] = OpConstant %[[#i32]] 2
@@ -13,16 +12,12 @@
 ; CHECK-SPIRV:     %[[#test_arr2:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 ; CHECK-SPIRV:     %[[#test_arr:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 
-; CHECK-SPIRV-DAG: %[[#i8_ptr:]] = OpTypePointer Function %[[#i8]]
-; CHECK-SPIRV-DAG: %[[#const_i8_ptr:]] = OpTypePointer UniformConstant %[[#i8]]
 ; CHECK-SPIRV-DAG: %[[#i32x3_ptr:]] = OpTypePointer Function %[[#i32x3]]
 
 ; CHECK-SPIRV:     %[[#arr:]] = OpVariable %[[#i32x3_ptr]] Function
 ; CHECK-SPIRV:     %[[#arr2:]] = OpVariable %[[#i32x3_ptr]] Function
-; CHECK-SPIRV:     %[[#arr_i8_ptr:]] = OpBitcast %[[#i8_ptr]] %[[#arr]]
-; CHECK-SPIRV:     OpCopyMemorySized %[[#arr_i8_ptr]] %[[#test_arr]] %[[#twelve]] Aligned 4
-; CHECK-SPIRV:     %[[#arr2_i8_ptr:]] = OpBitcast %[[#i8_ptr]] %[[#arr2]]
-; CHECK-SPIRV:     OpCopyMemorySized %[[#arr2_i8_ptr]] %[[#test_arr2]] %[[#twelve]] Aligned 4
+; CHECK-SPIRV:     OpCopyMemorySized %[[#arr]] %[[#test_arr]] %[[#twelve]] Aligned 4
+; CHECK-SPIRV:     OpCopyMemorySized %[[#arr2]] %[[#test_arr2]] %[[#twelve]] Aligned 4
 
 
 @__const.test.arr = private unnamed_addr addrspace(2) constant [3 x i32] [i32 1, i32 2, i32 3], align 4

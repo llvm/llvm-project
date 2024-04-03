@@ -36,14 +36,6 @@ enum class VarKind { Symbol = 1, Dimension = 0, Level = 2 };
   return 0 <= vk_ && vk_ <= 2;
 }
 
-/// Swaps `Dimension` and `Level`, but leaves `Symbol` the same.
-constexpr VarKind flipVarKind(VarKind vk) {
-  return VarKind{2 - llvm::to_underlying(vk)};
-}
-static_assert(flipVarKind(VarKind::Symbol) == VarKind::Symbol &&
-              flipVarKind(VarKind::Dimension) == VarKind::Level &&
-              flipVarKind(VarKind::Level) == VarKind::Dimension);
-
 /// Gets the ASCII character used as the prefix when printing `Var`.
 constexpr char toChar(VarKind vk) {
   // If `isWF(vk)` then this computation's intermediate results are always
@@ -260,12 +252,10 @@ public:
   Ranks getRanks() const {
     return Ranks(getSymRank(), getDimRank(), getLvlRank());
   }
-  /// For the `contains`/`occursIn` methods: if variables occurring in
+  /// For the `contains` method: if variables occurring in
   /// the method parameter are OOB for the `VarSet`, then these methods will
   /// always return false.
   bool contains(Var var) const;
-  bool occursIn(VarSet const &vars) const;
-  bool occursIn(DimLvlExpr expr) const;
 
   /// For the `add` methods: OOB parameters cause undefined behavior.
   /// Currently the `add` methods will raise an assertion error.
@@ -318,9 +308,6 @@ public:
   constexpr Var getVar() const {
     assert(hasNum());
     return Var(kind, *num);
-  }
-  constexpr std::optional<Var> tryGetVar() const {
-    return num ? std::make_optional(Var(kind, *num)) : std::nullopt;
   }
 };
 
@@ -405,12 +392,6 @@ public:
   /// Gets the `Var` identified by the `VarInfo::ID`, raising an assertion
   /// failure if the variable is not bound.
   Var getVar(VarInfo::ID id) const { return access(id).getVar(); }
-
-  /// Gets the `Var` identified by the `VarInfo::ID`, returning nullopt
-  /// if the variable is not bound.
-  std::optional<Var> tryGetVar(VarInfo::ID id) const {
-    return access(id).tryGetVar();
-  }
 };
 
 //===----------------------------------------------------------------------===//

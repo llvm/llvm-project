@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-tiling-interface=lower-to-scalar-using-scf-for -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -transform-interpreter -split-input-file -canonicalize -cse %s | FileCheck %s
 
 func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
   %arg2 : memref<?x?xf32>) {
@@ -6,13 +6,23 @@ func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
       outs(%arg2 : memref<?x?xf32>)
   return
 }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %matmul
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
 // CHECK-LABEL: func @gemm
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: memref<?x?xf32>
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[K:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //   CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
 //       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C1]]
@@ -24,6 +34,58 @@ func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
 //       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
 //       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
 //       CHECK:         memref.store %[[ADDF]], %[[ARG2]][%[[IV0]], %[[IV1]]]
+//   CHECK-NOT:   linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+
+// -----
+
+func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
+  %arg2 : memref<?x?xf32>, %arg3 : memref<?xf32>, %arg4 : memref<?xf32>) {
+  linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>)
+  linalg.matvec ins(%arg0, %arg3 : memref<?x?xf32>, memref<?xf32>)
+      outs(%arg4 : memref<?xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %linalg_ops = transform.structured.match interface{TilingInterface} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %linalg_ops
+      : (!transform.any_op) -> (!transform.any_op)
+    %1:5 = transform.split_handle %0
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @gemm
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: memref<?xf32>
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[K:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//   CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
+//       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C1]]
+//       CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[N]] step %[[C1]]
+//       CHECK:       scf.for %[[IV2:[a-zA-Z0-9]+]] = %[[C0]] to %[[K]] step %[[C1]]
+//   CHECK-DAG:         %[[LHS:.+]] = memref.load %[[ARG0]][%[[IV0]], %[[IV2]]]
+//   CHECK-DAG:         %[[RHS:.+]] = memref.load %[[ARG1]][%[[IV2]], %[[IV1]]]
+//   CHECK-DAG:         %[[OUT:.+]] = memref.load %[[ARG2]][%[[IV0]], %[[IV1]]]
+//       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
+//       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
+//       CHECK:         memref.store %[[ADDF]], %[[ARG2]][%[[IV0]], %[[IV1]]]
+//       CHECK:   scf.for %[[IV3:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C1]]
+//       CHECK:     scf.for %[[IV4:[a-zA-Z0-9]+]] = %[[C0]] to %[[K]] step %[[C1]]
+//   CHECK-DAG:         %[[LHS:.+]] = memref.load %[[ARG0]][%[[IV3]], %[[IV4]]]
+//   CHECK-DAG:         %[[RHS:.+]] = memref.load %[[ARG3]][%[[IV4]]]
+//   CHECK-DAG:         %[[OUT:.+]] = memref.load %[[ARG4]][%[[IV3]]]
+//       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
+//       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
+//       CHECK:         memref.store %[[ADDF]], %[[ARG4]][%[[IV3]]]
 
 // -----
 
@@ -50,6 +112,16 @@ func.func @indexed_generic(%arg0 : memref<200x300xi32>, %arg1 : memref<300xi16>,
       linalg.yield %10 : i64
     }
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %generic
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
 }
 // CHECK-LABEL: func @indexed_generic
 //  CHECK-SAME:     %[[ARG0:.+]]: memref<200x300xi32>
@@ -87,8 +159,19 @@ func.func @conv_strides_and_dilation(%arg0 : memref<?x?x?x?xf32>, %arg1 : memref
       outs(%arg2 : memref<?x?x?x?xf32>)
   return
 }
-//  CHECK-DAG:  #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d1 + d4 * 3)>
-//  CHECK-DAG:  #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d2 * 2 + d5 * 4)>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %conv = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %conv
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+
+//  CHECK-DAG:  #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0 + d1 * 3)>
+//  CHECK-DAG:  #[[MAP1:.+]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
 //       CHECK: func @conv_strides_and_dilation(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
@@ -111,8 +194,8 @@ func.func @conv_strides_and_dilation(%arg0 : memref<?x?x?x?xf32>, %arg1 : memref
 //       CHECK:           scf.for %[[IV4:[a-zA-Z0-9]+]] = %[[C0]] to %[[H]] step %[[C1]]
 //       CHECK:             scf.for %[[IV5:[a-zA-Z0-9]+]] = %[[C0]] to %[[W]] step %[[C1]]
 //       CHECK:               scf.for %[[IV6:[a-zA-Z0-9]+]] = %[[C0]] to %[[C]] step %[[C1]]
-//   CHECK-DAG:                 %[[I:.+]] = affine.apply #[[MAP0]](%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]], %[[IV4]], %[[IV5]], %[[IV6]])
-//   CHECK-DAG:                 %[[J:.+]] = affine.apply #[[MAP1]](%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]], %[[IV4]], %[[IV5]], %[[IV6]])
+//   CHECK-DAG:                 %[[I:.+]] = affine.apply #[[MAP0]](%[[IV1]], %[[IV4]])
+//   CHECK-DAG:                 %[[J:.+]] = affine.apply #[[MAP1]](%[[IV2]], %[[IV5]])
 //   CHECK-DAG:                 %[[T9:.+]] = memref.load %[[ARG0]][%[[IV0]], %[[I]], %[[J]], %[[IV6]]]
 //   CHECK-DAG:                 %[[T10:.+]] = memref.load %[[ARG1]][%[[IV4]], %[[IV5]], %[[IV6]], %[[IV3]]]
 //   CHECK-DAG:                 %[[T11:.+]] = memref.load %[[ARG2]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
@@ -131,8 +214,19 @@ func.func @pool_strides_and_dilation(%arg0 : memref<?x?x?x?xf32>, %arg1 : memref
       outs(%arg2 : memref<?x?x?x?xf32>)
   return
 }
-//  CHECK-DAG:  #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d1 + d4 * 3)>
-//  CHECK-DAG:  #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d2 * 2 + d5 * 4)>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %pool = transform.structured.match ops{["linalg.pooling_nhwc_max"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %pool
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+
+//  CHECK-DAG:  #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0 + d1 * 3)>
+//  CHECK-DAG:  #[[MAP1:.+]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
 //       CHECK: func @pool_strides_and_dilation
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
@@ -153,8 +247,8 @@ func.func @pool_strides_and_dilation(%arg0 : memref<?x?x?x?xf32>, %arg1 : memref
 //       CHECK:         scf.for %[[IV3:[a-zA-Z0-9]+]] = %[[C0]] to %[[C]] step %[[C1]]
 //       CHECK:           scf.for %[[IV4:[a-zA-Z0-9]+]] = %[[C0]] to %[[H]] step %[[C1]]
 //       CHECK:             scf.for %[[IV5:[a-zA-Z0-9]+]] = %[[C0]] to %[[W]] step %[[C1]]
-//   CHECK-DAG:               %[[I:.+]] = affine.apply #[[MAP0]](%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]], %[[IV4]], %[[IV5]])
-//   CHECK-DAG:               %[[J:.+]] = affine.apply #[[MAP1]](%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]], %[[IV4]], %[[IV5]])
+//   CHECK-DAG:               %[[I:.+]] = affine.apply #[[MAP0]](%[[IV1]], %[[IV4]])
+//   CHECK-DAG:               %[[J:.+]] = affine.apply #[[MAP1]](%[[IV2]], %[[IV5]])
 //   CHECK-DAG:               %[[T8:.+]] = memref.load %[[ARG0]][%[[IV0]], %[[I]], %[[J]], %[[IV3]]]
 //   CHECK-DAG:               %[[T9:.+]] = memref.load %[[ARG2]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 //       CHECK:               %[[T10:.+]] = arith.maximumf %[[T9]], %[[T8]]
@@ -171,6 +265,16 @@ func.func @map(%lhs: memref<64xf32>,
       linalg.yield %0 : f32
     }
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %map = transform.structured.match ops{["linalg.map"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %map
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
 }
 // CHECK-LABEL: func.func @map(
 // CHECK-SAME:    %[[LHS:[a-zA-Z0-9]+]]: memref<64xf32>,
@@ -195,6 +299,16 @@ func.func @transpose(%arg0: memref<16x32x64xf32>,
                    outs(%arg1 : memref<32x64x16xf32>) permutation = [1, 2, 0]
   return
 }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %transpose = transform.structured.match ops{["linalg.transpose"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %transpose
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
 // CHECK-LABEL: func.func @transpose(
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<16x32x64xf32>,
 // CHECK-SAME:    %[[OUT:[a-zA-Z0-9]+]]: memref<32x64x16xf32>)
@@ -205,11 +319,11 @@ func.func @transpose(%arg0: memref<16x32x64xf32>,
 // CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
 // CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
 
-// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
-// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
-// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
-// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[J]], %[[K]]]
-// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[J]], %[[K]], %[[I]]]
+// CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
+// CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[K]], %[[I]], %[[J]]]
+// CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[I]], %[[J]], %[[K]]]
 
 // -----
 
@@ -222,6 +336,16 @@ func.func @reduce(%arg0: memref<16x32x64xf32>,
       linalg.yield %0 : f32
     }
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %reduce = transform.structured.match ops{["linalg.reduce"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %reduce
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
 }
 // CHECK-LABEL: func.func @reduce(
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<16x32x64xf32>,
@@ -250,6 +374,16 @@ func.func @broadcast(%input: memref<8x32xf32>,
       outs(%init:memref<8x16x32xf32>)
       dimensions = [1]
   func.return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %broadcast = transform.structured.match ops{["linalg.broadcast"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %broadcast
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
 }
 // CHECK-LABEL: func.func @broadcast(
 // CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]: memref<8x32xf32>,

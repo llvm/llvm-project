@@ -225,6 +225,15 @@ Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
                              const FunctionDecl *Callee) {
   assert(Callee && "Callee must be valid.");
+
+  // Treat ctor/dtor as host device function in device var initializer to allow
+  // trivial ctor/dtor without device attr to be used. Non-trivial ctor/dtor
+  // will be diagnosed by checkAllowedCUDAInitializer.
+  if (Caller == nullptr && CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
+      CurCUDATargetCtx.Target == CFT_Device &&
+      (isa<CXXConstructorDecl>(Callee) || isa<CXXDestructorDecl>(Callee)))
+    return CFP_HostDevice;
+
   CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
   CUDAFunctionTarget CalleeTarget = IdentifyCUDATarget(Callee);
 
@@ -886,7 +895,10 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
     // For -fgpu-rdc, keep track of external kernels used by host functions.
     if (LangOpts.CUDAIsDevice && LangOpts.GPURelocatableDeviceCode &&
-        Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined())
+        Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined() &&
+        (!Caller || (!Caller->getDescribedFunctionTemplate() &&
+                     getASTContext().GetGVALinkageForFunction(Caller) ==
+                         GVA_StrongExternal)))
       getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Callee);
     return true;
   }

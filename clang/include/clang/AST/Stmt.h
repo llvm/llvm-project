@@ -583,11 +583,13 @@ protected:
     unsigned IsArrow : 1;
 
     /// True if this member expression used a nested-name-specifier to
-    /// refer to the member, e.g., "x->Base::f", or found its member via
-    /// a using declaration.  When true, a MemberExprNameQualifier
-    /// structure is allocated immediately after the MemberExpr.
+    /// refer to the member, e.g., "x->Base::f".
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasQualifierOrFoundDecl : 1;
+    unsigned HasQualifier : 1;
+
+    // True if this member expression found its member via a using declaration.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFoundDecl : 1;
 
     /// True if this member expression specified a template keyword
     /// and/or a template argument list explicitly, e.g., x->f<int>,
@@ -868,9 +870,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned UsualArrayDeleteWantsSize : 1;
 
-    /// What kind of initializer do we have? Could be none, parens, or braces.
-    /// In storage, we distinguish between "none, and no initializer expr", and
-    /// "none, but an implicit initializer expr".
+    // Is initializer expr present?
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasInitializer : 1;
+
+    /// What kind of initializer syntax used? Could be none, parens, or braces.
     LLVM_PREFERRED_TYPE(CXXNewInitializationStyle)
     unsigned StoredInitializationStyle : 2;
 
@@ -1631,8 +1635,10 @@ public:
                               SourceLocation RB);
 
   // Build an empty compound statement with a location.
-  explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
+  explicit CompoundStmt(SourceLocation Loc) : CompoundStmt(Loc, Loc) {}
+
+  CompoundStmt(SourceLocation Loc, SourceLocation EndLoc)
+      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(EndLoc) {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
   }

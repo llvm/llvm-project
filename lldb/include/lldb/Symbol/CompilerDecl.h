@@ -84,6 +84,13 @@ public:
   // based argument index
   CompilerType GetFunctionArgumentType(size_t arg_idx) const;
 
+  /// Populate a valid compiler context from the current declaration.
+  ///
+  /// \returns A valid vector of CompilerContext entries that describes
+  /// this declaration. The first entry in the vector is the parent of
+  /// the subsequent entry, so the topmost entry is the global namespace.
+  std::vector<lldb_private::CompilerContext> GetCompilerContext() const;
+
 private:
   TypeSystem *m_type_system = nullptr;
   void *m_opaque_decl = nullptr;

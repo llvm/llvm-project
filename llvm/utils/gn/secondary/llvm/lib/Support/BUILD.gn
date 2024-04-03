@@ -3,6 +3,7 @@ static_library("Support") {
   deps = [
     "BLAKE3",
     "//llvm/include/llvm/Config:config",
+    "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
     "//llvm/utils/gn/build/libs/terminfo",
@@ -77,6 +78,7 @@ static_library("Support") {
     "ELFAttributes.cpp",
     "Error.cpp",
     "ErrorHandling.cpp",
+    "ExponentialBackoff.cpp",
     "ExtensibleRTTI.cpp",
     "FileCollector.cpp",
     "FileOutputBuffer.cpp",
@@ -88,6 +90,8 @@ static_library("Support") {
     "GlobPattern.cpp",
     "GraphWriter.cpp",
     "Hashing.cpp",
+    "HexagonAttributeParser.cpp",
+    "HexagonAttributes.cpp",
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",
@@ -155,6 +159,7 @@ static_library("Support") {
     "circular_raw_ostream.cpp",
     "raw_os_ostream.cpp",
     "raw_ostream.cpp",
+    "raw_socket_stream.cpp",
     "regcomp.c",
     "regerror.c",
     "regexec.c",
@@ -185,6 +190,8 @@ static_library("Support") {
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]
   } else if (current_os == "win") {
+    libs = [ "ws2_32.lib" ]
+
     # Delay load shell32.dll if possible to speed up process startup.
     libs += [ "delayimp.lib" ]
     ldflags = [

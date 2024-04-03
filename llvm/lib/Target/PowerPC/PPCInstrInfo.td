@@ -213,12 +213,14 @@ def PPCaddTls     : SDNode<"PPCISD::ADD_TLS", SDTIntBinOp, []>;
 def PPCaddisTlsgdHA : SDNode<"PPCISD::ADDIS_TLSGD_HA", SDTIntBinOp>;
 def PPCaddiTlsgdL   : SDNode<"PPCISD::ADDI_TLSGD_L", SDTIntBinOp>;
 def PPCgetTlsAddr   : SDNode<"PPCISD::GET_TLS_ADDR", SDTIntBinOp>;
+def PPCgetTlsMod   : SDNode<"PPCISD::GET_TLS_MOD_AIX", SDTIntUnaryOp>;
 def PPCgetTpointer : SDNode<"PPCISD::GET_TPOINTER", SDTIntLeaf, []>;
 def PPCaddiTlsgdLAddr : SDNode<"PPCISD::ADDI_TLSGD_L_ADDR",
                                SDTypeProfile<1, 3, [
                                  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                                  SDTCisSameAs<0, 3>, SDTCisInt<0> ]>>;
 def PPCTlsgdAIX     : SDNode<"PPCISD::TLSGD_AIX", SDTIntBinOp>;
+def PPCTlsldAIX     : SDNode<"PPCISD::TLSLD_AIX", SDTIntUnaryOp>;
 def PPCaddisTlsldHA : SDNode<"PPCISD::ADDIS_TLSLD_HA", SDTIntBinOp>;
 def PPCaddiTlsldL   : SDNode<"PPCISD::ADDI_TLSLD_L", SDTIntBinOp>;
 def PPCgetTlsldAddr : SDNode<"PPCISD::GET_TLSLD_ADDR", SDTIntBinOp>;
@@ -1328,6 +1330,9 @@ def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
                     "#SETFLM", [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
 }
 
+let isBarrier = 1, hasSideEffects = 1, Defs = [RM] in
+def FENCE : PPCEmitTimePseudo<(outs), (ins), "#FENCE", []>;
+
 let Defs = [LR] in
   def MovePCtoLR : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR", []>,
                    PPC970_Unit_BRU;
@@ -1909,7 +1914,7 @@ def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$RST, gprc:$RA, u5imm:$RB),
                           "stwat $RST, $RA, $RB", IIC_LdStStore>,
             Requires<[IsISA3_0]>;
 
-let isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+let isTrap = 1, hasCtrlDep = 1 in
 def TRAP  : XForm_24<31, 4, (outs), (ins), "trap", IIC_LdStLoad, [(trap)]>;
 
 def TWI : DForm_base<3, (outs), (ins u5imm:$RST, gprc:$RA, s16imm:$D, variable_ops),
@@ -3187,6 +3192,7 @@ def : Pat<(PPCtc_return (i32 texternalsym:$dst), imm:$imm),
 def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
+def : Pat<(int_ppc_fence), (FENCE)>;
 def : Pat<(int_ppc_readflm), (MFFS)>;
 def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
@@ -3245,11 +3251,16 @@ def GETtlsADDR32 : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$reg, tlsgd32:$s
 // The rest of the Defs are the exact set of registers that will be clobbered by
 // the call.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
-    Defs = [R0,R4,R5,R11,LR,CR0] in
+    Defs = [R0,R4,R5,R11,LR,CR0] in {
 def GETtlsADDR32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handle),
                           "GETtlsADDR32AIX",
                           [(set i32:$rD,
                             (PPCgetTlsAddr i32:$offset, i32:$handle))]>;
+def GETtlsMOD32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
+                          "GETtlsMOD32AIX",
+                          [(set i32:$rD,
+                            (PPCgetTlsMod i32:$handle))]>;
+}
 
 // For local-exec accesses on 32-bit AIX, a call to .__get_tpointer is
 // generated to retrieve the thread pointer. GETtlsTpointer32AIX clobbers both
@@ -3289,6 +3300,9 @@ def TLSGDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$offset, gprc:$handl
                           "#TLSGDAIX",
                           [(set i32:$rD,
                             (PPCTlsgdAIX i32:$offset, i32:$handle))]>;
+// This pseudo is expanded to the call to GETtlsMOD32AIX.
+def TLSLDAIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc:$handle),
+                          "#TLSLDAIX", [(set i32:$rD, (PPCTlsldAIX i32:$handle))]>;
 // LR is a true define, while the rest of the Defs are clobbers.  R3 is
 // explicitly defined when this op is created, so not mentioned here.
 let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1,
@@ -3436,6 +3450,23 @@ def crnot : OutPatFrag<(ops node:$in),
                        (CRNOT $in)>;
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
+
+// Pseudo-instructions for alternate assembly syntax (never used by codegen).
+// These are aliases that require C++ handling to convert to the target
+// instruction, while InstAliases can be handled directly by tblgen.
+class PPCAsmPseudo<string asm, dag iops>
+  : Instruction {
+  let Namespace = "PPC";
+  bit PPC64 = 0;  // Default value, override with isPPC64
+
+  let OutOperandList = (outs);
+  let InOperandList = iops;
+  let Pattern = [];
+  let AsmString = asm;
+  let isAsmParserOnly = 1;
+  let isPseudo = 1;
+  let hasNoSchedulingInfo = 1;
+}
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
@@ -4458,23 +4489,6 @@ def ICBIEP  : XForm_1a<31, 991, (outs), (ins (memrr $RA, $RB):$addr), "icbiep $a
 // PowerPC Assembler Instruction Aliases
 //
 
-// Pseudo-instructions for alternate assembly syntax (never used by codegen).
-// These are aliases that require C++ handling to convert to the target
-// instruction, while InstAliases can be handled directly by tblgen.
-class PPCAsmPseudo<string asm, dag iops>
-  : Instruction {
-  let Namespace = "PPC";
-  bit PPC64 = 0;  // Default value, override with isPPC64
-
-  let OutOperandList = (outs);
-  let InOperandList = iops;
-  let Pattern = [];
-  let AsmString = asm;
-  let isAsmParserOnly = 1;
-  let isPseudo = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
 def : InstAlias<"sc", (SC 0)>;
 
 def : InstAlias<"sync", (SYNC 0)>, Requires<[HasSYNC]>;
@@ -4826,6 +4840,9 @@ def RLWNMbm : PPCAsmPseudo<"rlwnm $rA, $rS, $n, $b",
                           (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
+def PPCLdFixedAddr :
+  PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm), "#FA_LOAD",
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.
@@ -5028,12 +5045,12 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(atomic_load_8  DForm:$src), (LBZ  memri:$src)>;
-def : Pat<(atomic_load_16 DForm:$src), (LHZ  memri:$src)>;
-def : Pat<(atomic_load_32 DForm:$src), (LWZ  memri:$src)>;
-def : Pat<(atomic_load_8  XForm:$src), (LBZX memrr:$src)>;
-def : Pat<(atomic_load_16 XForm:$src), (LHZX memrr:$src)>;
-def : Pat<(atomic_load_32 XForm:$src), (LWZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
 def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
@@ -5259,6 +5276,9 @@ def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
                                  (ins gprc:$RB, (memrihash $D, $RA):$addr),
                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
+
+let Defs = [CR7], Itinerary = IIC_LdStSync in
+def CFENCE : PPCPostRAExpPseudo<(outs), (ins gprc:$cr), "#CFENCE", []>;
 
 // Now both high word and low word are reversed, next
 // swap the high word and low word.

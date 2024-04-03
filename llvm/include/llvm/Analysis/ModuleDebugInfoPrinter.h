@@ -23,6 +23,7 @@ class ModuleDebugInfoPrinterPass
 public:
   explicit ModuleDebugInfoPrinterPass(raw_ostream &OS);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 } // end namespace llvm
 

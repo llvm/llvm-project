@@ -171,6 +171,16 @@ CompilerType TypeSystem::DeclGetFunctionArgumentType(void *opaque_decl,
   return CompilerType();
 }
 
+std::vector<lldb_private::CompilerContext>
+TypeSystem::DeclGetCompilerContext(void *opaque_decl) {
+  return {};
+}
+
+std::vector<lldb_private::CompilerContext>
+TypeSystem::DeclContextGetCompilerContext(void *opaque_decl_ctx) {
+  return {};
+}
+
 std::vector<CompilerDecl>
 TypeSystem::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                                       bool ignore_imported_decls) {

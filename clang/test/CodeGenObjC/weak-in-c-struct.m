@@ -149,7 +149,7 @@ void test_argument_Weak(Weak *a) {
   calleeWeak(*a);
 }
 
-// COMMON: define{{.*}} void @test_return_Weak(ptr noalias sret(%[[STRUCT_WEAK]]) align {{.*}} %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
+// COMMON: define{{.*}} void @test_return_Weak(ptr dead_on_unwind noalias writable sret(%[[STRUCT_WEAK]]) align {{.*}} %[[AGG_RESULT:.*]], ptr noundef %[[A:.*]])
 // COMMON: %[[A_ADDR:.*]] = alloca ptr
 // COMMON: store ptr %[[A]], ptr %[[A_ADDR]]
 // COMMON: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]]

@@ -10,9 +10,7 @@ import os
 import pickle
 import pipes
 import platform
-import re
 import shutil
-import subprocess
 import tempfile
 
 import libcxx.test.format

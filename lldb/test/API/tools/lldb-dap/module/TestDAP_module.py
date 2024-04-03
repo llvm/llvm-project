@@ -17,7 +17,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         functions = ["foo"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]

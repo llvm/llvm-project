@@ -210,10 +210,18 @@ public:
   /// registration. The promised interface type can be an interface of any type
   /// not just a dialect interface, i.e. it may also be an
   /// AttributeInterface/OpInterface/TypeInterface/etc.
-  template <typename ConcreteT, typename InterfaceT>
+  template <typename InterfaceT, typename ConcreteT>
   void declarePromisedInterface() {
     unresolvedPromisedInterfaces.insert(
         {TypeID::get<ConcreteT>(), InterfaceT::getInterfaceID()});
+  }
+
+  // Declare the same interface for multiple types.
+  // Example:
+  // declarePromisedInterfaces<FunctionOpInterface, MyFuncType1, MyFuncType2>()
+  template <typename InterfaceT, typename... ConcreteT>
+  void declarePromisedInterfaces() {
+    (declarePromisedInterface<InterfaceT, ConcreteT>(), ...);
   }
 
   /// Checks if the given interface, which is attempting to be used, is a
@@ -281,7 +289,11 @@ protected:
   /// Register a set of type classes with this dialect.
   template <typename... Args>
   void addTypes() {
-    (addType<Args>(), ...);
+    // This initializer_list argument pack expansion is essentially equal to
+    // using a fold expression with a comma operator. Clang however, refuses
+    // to compile a fold expression with a depth of more than 256 by default.
+    // There seem to be no such limitations for initializer_list.
+    (void)std::initializer_list<int>{0, (addType<Args>(), 0)...};
   }
 
   /// Register a type instance with this dialect.
@@ -292,7 +304,11 @@ protected:
   /// Register a set of attribute classes with this dialect.
   template <typename... Args>
   void addAttributes() {
-    (addAttribute<Args>(), ...);
+    // This initializer_list argument pack expansion is essentially equal to
+    // using a fold expression with a comma operator. Clang however, refuses
+    // to compile a fold expression with a depth of more than 256 by default.
+    // There seem to be no such limitations for initializer_list.
+    (void)std::initializer_list<int>{0, (addAttribute<Args>(), 0)...};
   }
 
   /// Register an attribute instance with this dialect.

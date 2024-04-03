@@ -17,11 +17,14 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
+
 namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char TEST_FILE[] = "testdata/truncate.test";
+  constexpr const char *FILENAME = "truncate.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   constexpr const char WRITE_DATA[] = "hello, truncate";
   constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);
   char buf[WRITE_SIZE];
@@ -31,16 +34,16 @@ TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   //   2. Read it to make sure what was written is actually in the file.
   //   3. Truncate to 1 byte.
   //   4. Try to read more than 1 byte and fail.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(WRITE_SIZE),
             LIBC_NAMESPACE::write(fd, WRITE_DATA, WRITE_SIZE));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(WRITE_SIZE), LIBC_NAMESPACE::read(fd, buf, WRITE_SIZE));
   ASSERT_EQ(cpp::string_view(buf), cpp::string_view(WRITE_DATA));
@@ -49,7 +52,7 @@ TEST(LlvmLibcTruncateTest, CreateAndTruncate) {
   ASSERT_THAT(LIBC_NAMESPACE::truncate(TEST_FILE, off_t(1)), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_EQ(ssize_t(1), LIBC_NAMESPACE::read(fd, buf, WRITE_SIZE));
   ASSERT_EQ(buf[0], WRITE_DATA[0]);

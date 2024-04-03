@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 #SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
@@ -110,4 +110,3 @@ func.func @update_inplace(%arga: tensor<10xf32, #SV>,
   } -> tensor<10xf32>
   return %0 : tensor<10xf32>
 }
-

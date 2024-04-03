@@ -2518,15 +2518,18 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
   switch (DKind) {
   case OMPD_nothing:
-    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
-        ParsedStmtContext())
-      Diag(Tok, diag::err_omp_immediate_directive)
-        << getOpenMPDirectiveName(DKind) << 0;
     ConsumeToken();
-    skipUntilPragmaOpenMPEnd(DKind);
+    // If we are parsing the directive within a metadirective, the directive
+    // ends with a ')'.
+    if (ReadDirectiveWithinMetadirective && Tok.is(tok::r_paren))
+      while (Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+    else
+      skipUntilPragmaOpenMPEnd(DKind);
     if (Tok.is(tok::annot_pragma_openmp_end))
       ConsumeAnnotationToken();
-    break;
+    // return an empty statement
+    return StmtEmpty();
   case OMPD_metadirective: {
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
@@ -2670,7 +2673,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   }
   case OMPD_threadprivate: {
     // FIXME: Should this be permitted in C++?
-    if ((StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
@@ -2689,7 +2692,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   }
   case OMPD_allocate: {
     // FIXME: Should this be permitted in C++?
-    if ((StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
@@ -2981,8 +2984,29 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     OMPDirectiveScope.Exit();
     break;
   }
+  case OMPD_declare_target: {
+    SourceLocation DTLoc = ConsumeAnyToken();
+    bool HasClauses = Tok.isNot(tok::annot_pragma_openmp_end);
+    Sema::DeclareTargetContextInfo DTCI(DKind, DTLoc);
+    if (HasClauses)
+      ParseOMPDeclareTargetClauses(DTCI);
+    bool HasImplicitMappings =
+        !HasClauses || (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect);
+
+    if (HasImplicitMappings) {
+      Diag(Tok, diag::err_omp_unexpected_directive)
+          << 1 << getOpenMPDirectiveName(DKind);
+      SkipUntil(tok::annot_pragma_openmp_end);
+      break;
+    }
+
+    // Skip the last annot_pragma_openmp_end.
+    ConsumeAnyToken();
+
+    Actions.ActOnFinishedOpenMPDeclareTargetContext(DTCI);
+    break;
+  }
   case OMPD_declare_simd:
-  case OMPD_declare_target:
   case OMPD_begin_declare_target:
   case OMPD_end_declare_target:
   case OMPD_requires:
@@ -3248,6 +3272,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     else
       Clause = ParseOpenMPSingleExprClause(CKind, WrongDirective);
     break;
+  case OMPC_fail:
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_atomic_default_mem_order:
@@ -3310,6 +3335,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_acquire:
   case OMPC_release:
   case OMPC_relaxed:
+  case OMPC_weak:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_nogroup:
@@ -3369,6 +3395,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_exclusive:
   case OMPC_affinity:
   case OMPC_doacross:
+  case OMPC_enter:
     if (getLangOpts().OpenMP >= 52 && DKind == OMPD_ordered &&
         CKind == OMPC_depend)
       Diag(Tok, diag::warn_omp_depend_in_ordered_deprecated);

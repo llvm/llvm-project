@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_DECL_H
 #define LLVM_CLANG_AST_DECL_H
 
+#include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContextAllocate.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -358,7 +359,8 @@ public:
   ///
   /// \param IsKnownNewer \c true if this declaration is known to be newer
   /// than \p OldD (for instance, if this declaration is newly-created).
-  bool declarationReplaces(NamedDecl *OldD, bool IsKnownNewer = true) const;
+  bool declarationReplaces(const NamedDecl *OldD,
+                           bool IsKnownNewer = true) const;
 
   /// Determine whether this declaration has linkage.
   bool hasLinkage() const;
@@ -2292,8 +2294,8 @@ public:
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return FunctionDeclBits.IsPure; }
-  void setPure(bool P = true);
+  bool isPureVirtual() const { return FunctionDeclBits.IsPureVirtual; }
+  void setIsPureVirtual(bool P = true);
 
   /// Whether this templated function will be late parsed.
   bool isLateTemplateParsed() const {
@@ -2613,9 +2615,17 @@ public:
   /// the target functionality.
   bool isTargetMultiVersion() const;
 
+  /// True if this function is the default version of a multiversioned dispatch
+  /// function as a part of the target functionality.
+  bool isTargetMultiVersionDefault() const;
+
   /// True if this function is a multiversioned dispatch function as a part of
   /// the target-clones functionality.
   bool isTargetClonesMultiVersion() const;
+
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target-version functionality.
+  bool isTargetVersionMultiVersion() const;
 
   /// \brief Get the associated-constraints of this function declaration.
   /// Currently, this will either be a vector of size 1 containing the
@@ -3250,15 +3260,16 @@ public:
 /// that is defined.  For example, in "enum X {a,b}", each of a/b are
 /// EnumConstantDecl's, X is an instance of EnumDecl, and the type of a/b is a
 /// TagType for the X EnumDecl.
-class EnumConstantDecl : public ValueDecl, public Mergeable<EnumConstantDecl> {
+class EnumConstantDecl : public ValueDecl,
+                         public Mergeable<EnumConstantDecl>,
+                         public APIntStorage {
   Stmt *Init; // an integer constant expression
-  llvm::APSInt Val; // The value.
+  bool IsUnsigned;
 
 protected:
-  EnumConstantDecl(DeclContext *DC, SourceLocation L,
+  EnumConstantDecl(const ASTContext &C, DeclContext *DC, SourceLocation L,
                    IdentifierInfo *Id, QualType T, Expr *E,
-                   const llvm::APSInt &V)
-    : ValueDecl(EnumConstant, DC, L, Id, T), Init((Stmt*)E), Val(V) {}
+                   const llvm::APSInt &V);
 
 public:
   friend class StmtIteratorBase;
@@ -3271,10 +3282,15 @@ public:
 
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
-  const llvm::APSInt &getInitVal() const { return Val; }
+  llvm::APSInt getInitVal() const {
+    return llvm::APSInt(getValue(), IsUnsigned);
+  }
 
   void setInitExpr(Expr *E) { Init = (Stmt*) E; }
-  void setInitVal(const llvm::APSInt &V) { Val = V; }
+  void setInitVal(const ASTContext &C, const llvm::APSInt &V) {
+    setValue(C, V);
+    IsUnsigned = V.isUnsigned();
+  }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -4332,30 +4348,6 @@ public:
     return field_begin() == field_end();
   }
 
-  FieldDecl *getLastField() {
-    FieldDecl *FD = nullptr;
-    for (FieldDecl *Field : fields())
-      FD = Field;
-    return FD;
-  }
-  const FieldDecl *getLastField() const {
-    return const_cast<RecordDecl *>(this)->getLastField();
-  }
-
-  template <typename Functor>
-  const FieldDecl *findFieldIf(Functor &Pred) const {
-    for (const Decl *D : decls()) {
-      if (const auto *FD = dyn_cast<FieldDecl>(D); FD && Pred(FD))
-        return FD;
-
-      if (const auto *RD = dyn_cast<RecordDecl>(D))
-        if (const FieldDecl *FD = RD->findFieldIf(Pred))
-          return FD;
-    }
-
-    return nullptr;
-  }
-
   /// Note that the definition of this type is now complete.
   virtual void completeDefinition();
 
@@ -4427,7 +4419,7 @@ public:
 ///
 /// \note This is used in libInterpreter, clang -cc1 -fincremental-extensions
 /// and in tools such as clang-repl.
-class TopLevelStmtDecl : public Decl {
+class TopLevelStmtDecl : public Decl, public DeclContext {
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
@@ -4435,7 +4427,7 @@ class TopLevelStmtDecl : public Decl {
   bool IsSemiMissing = false;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
-      : Decl(TopLevelStmt, DC, L), Statement(S) {}
+      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
 
   virtual void anchor();
 
@@ -4446,15 +4438,19 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
   Stmt *getStmt() { return Statement; }
   const Stmt *getStmt() const { return Statement; }
-  void setStmt(Stmt *S) {
-    assert(IsSemiMissing && "Operation supported for printing values only!");
-    Statement = S;
-  }
+  void setStmt(Stmt *S);
   bool isSemiMissing() const { return IsSemiMissing; }
   void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
+
+  static DeclContext *castToDeclContext(const TopLevelStmtDecl *D) {
+    return static_cast<DeclContext *>(const_cast<TopLevelStmtDecl *>(D));
+  }
+  static TopLevelStmtDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<TopLevelStmtDecl *>(const_cast<DeclContext *>(DC));
+  }
 };
 
 /// Represents a block literal declaration, which is like an

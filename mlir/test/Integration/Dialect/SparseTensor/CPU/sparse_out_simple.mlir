@@ -5,12 +5,12 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -21,7 +21,7 @@
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and, if available, VLA
@@ -70,7 +70,7 @@ module {
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
   //
-  func.func @entry() {
+  func.func @main() {
     %d0 = arith.constant 0.0 : f64
     %c0 = arith.constant 0 : index
 
@@ -83,11 +83,18 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: ( 1, 1.96, 4, 6.25, 9, 16.81, 16, 27.04, 25 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 9
+    // CHECK-NEXT: dim = ( 5, 5 )
+    // CHECK-NEXT: lvl = ( 5, 5 )
+    // CHECK-NEXT: pos[0] : ( 0, 5
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 5, 7, 9
+    // CHECK-NEXT: crd[1] : ( 0, 3, 1, 4, 2, 0, 3, 1, 4
+    // CHECK-NEXT: values : ( 1, 1.96, 4, 6.25, 9, 16.81, 16, 27.04, 25
+    // CHECK-NEXT: ----
     //
-    %m = sparse_tensor.values %0 : tensor<?x?xf64, #DCSR> to memref<?xf64>
-    %v = vector.transfer_read %m[%c0], %d0: memref<?xf64>, vector<9xf64>
-    vector.print %v : vector<9xf64>
+    sparse_tensor.print %0 : tensor<?x?xf64, #DCSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %x : tensor<?x?xf64, #DCSR>

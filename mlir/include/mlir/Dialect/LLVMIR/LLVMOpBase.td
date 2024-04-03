@@ -67,6 +67,9 @@ class LLVM_PointerInAddressSpace<int addressSpace> : Type<
     # addressSpace # ")";
 }
 
+// Type constraint accepting an LLVM pointer type in address space 0.
+def LLVM_DefaultPointer : LLVM_PointerInAddressSpace<0>;
+
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMStructType>($_self)">,
                          "LLVM structure type">;
@@ -167,6 +170,10 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_label_attr - substituted by a call to a label attribute matcher;
+  //   - $_roundingMode_attr - substituted by a call to a rounding mode
+  //     attribute matcher;
+  //   - $_fpExceptionBehavior_attr - substituted by a call to a FP exception
+  //     behavior attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;
@@ -231,27 +238,6 @@ class LLVM_MemOpPatterns {
   }];
 }
 
-// Patterns with code obtaining the LLVM IR type of the given operand or result
-// of operation. "$0" is expected to be replaced by the position of the operand
-// or result in the operation.
-def LLVM_IntrPatterns {
-  string operand =
-    [{moduleTranslation.convertType(opInst.getOperand($0).getType())}];
-  string result =
-    [{moduleTranslation.convertType(opInst.getResult($0).getType())}];
-  string structResult =
-    [{moduleTranslation.convertType(
-        ::llvm::cast<LLVM::LLVMStructType>(opInst.getResult(0).getType())
-              .getBody()[$0])}];
-}
-
-// For every value in the list, substitutes the value in the place of "$0" in
-// "pattern" and stores the list of strings as "lst".
-class ListIntSubst<string pattern, list<int> values> {
-  list<string> lst = !foreach(x, values,
-                              !subst("$0", !cast<string>(x), pattern));
-}
-
 //===----------------------------------------------------------------------===//
 // Base classes for LLVM dialect operations.
 //===----------------------------------------------------------------------===//
@@ -295,12 +281,19 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // interfaces the intrinsic implements. If the corresponding flags are set, the
 // "aliasAttrs" list contains the arguments required by the access group and
 // alias analysis interfaces. Derived intrinsics should append the "aliasAttrs"
-// to their argument list if they set one of the flags.
+// to their argument list if they set one of the flags. LLVM `immargs` can be
+// represented as MLIR attributes by providing both the `immArgPositions` and
+// `immArgAttrNames` lists. These two lists should have equal length, with
+// `immArgPositions` containing the argument positions on the LLVM IR attribute
+// that are `immargs`, and `immArgAttrNames` mapping these to corresponding
+// MLIR attributes.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
                       bit requiresAccessGroup = 0, bit requiresAliasAnalysis = 0,
-                      bit requiresFastmath = 0>
+                      bit requiresFastmath = 0,
+                      list<int> immArgPositions = [],
+                      list<string> immArgAttrNames = []>
     : LLVM_OpBase<dialect, opName, !listconcat(
         !if(!gt(requiresAccessGroup, 0),
             [DeclareOpInterfaceMethods<AccessGroupOpInterface>], []),
@@ -320,37 +313,38 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
             (ins )));
-  string resultPattern = !if(!gt(numResults, 1),
-                             LLVM_IntrPatterns.structResult,
-                             LLVM_IntrPatterns.result);
   string llvmEnumName = enumName;
-  list<string> declTypeList = !listconcat(
-            ListIntSubst<resultPattern, overloadedResults>.lst,
-            ListIntSubst<LLVM_IntrPatterns.operand,
-                         overloadedOperands>.lst);
-  string declTypes = [{ { }] # !interleave(declTypeList, ", ") # [{ } }];
+  string overloadedResultsCpp =  "{" # !interleave(overloadedResults, ", ") # "}";
+  string overloadedOperandsCpp =  "{" # !interleave(overloadedOperands, ", ") # "}";
+  string immArgPositionsCpp = "{" # !interleave(immArgPositions, ", ") # "}";
+  string immArgAttrNamesCpp = "{" # !interleave(!foreach(name, immArgAttrNames,
+    "StringLiteral(\"" # name # "\")"), ", ") # "}";
   let llvmBuilder = [{
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::}] # enumName # [{,}] # declTypes # [{);
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    }] # [{
-    auto *inst = builder.CreateCall(fn, operands);
+    auto *inst = LLVM::detail::createIntrinsicCall(
+      builder, moduleTranslation, &opInst, llvm::Intrinsic::}] # !interleave([
+        enumName, "" # numResults, overloadedResultsCpp, overloadedOperandsCpp,
+        immArgPositionsCpp, immArgAttrNamesCpp], ",") # [{);
     (void) inst;
     }] # !if(!gt(requiresAccessGroup, 0), setAccessGroupsMetadataCode, "")
        # !if(!gt(requiresAliasAnalysis, 0), setAliasAnalysisMetadataCode, "")
        # !if(!gt(numResults, 0), "$res = inst;", "");
 
   string mlirBuilder = [{
-    FailureOr<SmallVector<Value>> mlirOperands =
-      moduleImport.convertValues(llvmOperands);
-    if (failed(mlirOperands))
+    SmallVector<Value> mlirOperands;
+    SmallVector<NamedAttribute> mlirAttrs;
+    if (failed(moduleImport.convertIntrinsicArguments(
+      llvmOperands,
+      }] # immArgPositionsCpp # [{,
+      }] # immArgAttrNamesCpp # [{,
+      mlirOperands,
+      mlirAttrs))
+    ) {
       return failure();
+    }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
     auto op = $_builder.create<$_qualCppClassName>(
-      $_location, resultTypes, *mlirOperands);
+      $_location, resultTypes, mlirOperands, mlirAttrs);
     }] # !if(!gt(requiresFastmath, 0),
       "moduleImport.setFastmathFlagsAttr(inst, op);", "")
     # !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
@@ -361,11 +355,13 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
-                  bit requiresAliasAnalysis = 0, bit requiresFastmath = 0>
+                  bit requiresAliasAnalysis = 0, bit requiresFastmath = 0,
+                  list<int> immArgPositions = [],
+                  list<string> immArgAttrNames = []>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
-                      requiresFastmath>;
+                      requiresFastmath, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -384,9 +380,12 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
 class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             list<Trait> traits = [],
                             bit requiresAccessGroup = 0,
-                            bit requiresAliasAnalysis = 0>
+                            bit requiresAliasAnalysis = 0,
+                            list<int> immArgPositions = [],
+                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
-                  requiresAccessGroup, requiresAliasAnalysis>;
+                  requiresAccessGroup, requiresAliasAnalysis,
+                  /*requiresFastMath=*/0, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
@@ -397,10 +396,12 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
-                           bit requiresFastmath = 0>
+                           bit requiresFastmath = 0,
+                          list<int> immArgPositions = [],
+                          list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
                   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath>;
+                  requiresFastmath, immArgPositions, immArgAttrNames>;
 
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,

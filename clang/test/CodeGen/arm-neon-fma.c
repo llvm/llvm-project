@@ -24,7 +24,7 @@ float32x2_t test_fma_order(float32x2_t accum, float32x2_t lhs, float32x2_t rhs) 
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_fmaq_order
-// CHECK-SAME: (<4 x float> noundef [[ACCUM:%.*]], <4 x float> noundef [[LHS:%.*]], <4 x float> noundef [[RHS:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (<4 x float> noundef [[ACCUM:%.*]], <4 x float> noundef [[LHS:%.*]], <4 x float> noundef [[RHS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[ACCUM]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[LHS]] to <16 x i8>
@@ -39,7 +39,7 @@ float32x4_t test_fmaq_order(float32x4_t accum, float32x4_t lhs, float32x4_t rhs)
 // CHECK-LABEL: define {{[^@]+}}@test_vfma_n_f32
 // CHECK-SAME: (<2 x float> noundef [[A:%.*]], <2 x float> noundef [[B:%.*]], float noundef [[N:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float [[N]], i32 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float [[N]], i32 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float [[N]], i32 1
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[B]] to <8 x i8>
@@ -52,9 +52,9 @@ float32x2_t test_vfma_n_f32(float32x2_t a, float32x2_t b, float32_t n) {
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_vfmaq_n_f32
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]], float noundef [[N:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]], float noundef [[N:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float [[N]], i32 0
+// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float [[N]], i32 0
 // CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float [[N]], i32 1
 // CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float [[N]], i32 2
 // CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float [[N]], i32 3
