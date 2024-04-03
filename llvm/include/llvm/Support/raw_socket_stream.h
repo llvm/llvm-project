@@ -35,7 +35,6 @@ public:
 };
 #endif // _WIN32
 
-/// \class ListeningSocket
 /// Manages a passive (i.e., listening) UNIX domain socket
 ///
 /// The ListeningSocket class encapsulates a UNIX domain socket that can listen
@@ -66,7 +65,7 @@ class ListeningSocket {
   /// file descriptor (FD) could be closed while ::poll is waiting for it to be
   /// ready to perform a I/O operations. ::poll will continue to block even
   /// after FD is closed so use a self-pipe mechanism to get ::poll to return
-  int PipeFD[2]; // Not modified after construction other then deconstructor
+  int PipeFD[2]; // Not modified after construction other then move constructor
 
   ListeningSocket(int SocketFD, StringRef SocketPath, int PipeFD[2]);
 
