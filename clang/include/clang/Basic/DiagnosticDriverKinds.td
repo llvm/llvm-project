@@ -548,6 +548,12 @@ def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
   "in api extraction; use '-x %2' to override">;
 
+def err_drv_missing_symbol_graph_dir: Error<
+  "Must provide a symbol graph output directory using --symbol-graph-dir=<directory>">;
+
+def err_drv_unexpected_symbol_graph_output : Error<
+  "Unexpected output symbol graph '%1'; please provide --symbol-graph-dir=<directory> instead">;
+
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
 def note_use_dashdash : Note<
