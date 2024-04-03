@@ -2836,6 +2836,10 @@ bool RangeConstraintManager::canReasonAbout(SVal X) const {
     return false;
   }
 
+  // Non-integer types are not supported.
+  if (X.getAs<nonloc::LazyCompoundVal>())
+    return false;
+
   return true;
 }
 
