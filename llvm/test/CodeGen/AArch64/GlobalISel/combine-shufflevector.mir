@@ -18,9 +18,7 @@ body:             |
     ; CHECK-NEXT: %b:_(<4 x s8>) = G_LOAD %p3(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: %c:_(<4 x s8>) = G_LOAD %p2(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), %b(<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %c(<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
-    ; CHECK-NEXT: %z:_(<16 x s8>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<16 x s8>), [[CONCAT_VECTORS1]], shufflemask(0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, undef, undef, undef, undef)
+    ; CHECK-NEXT: %z:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), %b(<4 x s8>), %c(<4 x s8>), [[DEF]](<4 x s8>)
     ; CHECK-NEXT: $q0 = COPY %z(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %p1:_(p0) = COPY $x0
@@ -56,16 +54,11 @@ body:             |
     ; CHECK-NEXT: %p2:_(p0) = COPY $x1
     ; CHECK-NEXT: %p3:_(p0) = COPY $x2
     ; CHECK-NEXT: %p4:_(p0) = COPY $x3
-    ; CHECK-NEXT: %ImpDef:_(<4 x s8>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: %a:_(<4 x s8>) = G_LOAD %p4(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: %b:_(<4 x s8>) = G_LOAD %p3(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: %c:_(<4 x s8>) = G_LOAD %p2(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: %d:_(<4 x s8>) = G_LOAD %p1(p0) :: (load (<4 x s8>))
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), %b(<4 x s8>), %ImpDef(<4 x s8>), %ImpDef(<4 x s8>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %c(<4 x s8>), %ImpDef(<4 x s8>), %ImpDef(<4 x s8>), %ImpDef(<4 x s8>)
-    ; CHECK-NEXT: %x:_(<16 x s8>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<16 x s8>), [[CONCAT_VECTORS1]], shufflemask(0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, undef, undef, undef, undef)
-    ; CHECK-NEXT: [[CONCAT_VECTORS2:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %d(<4 x s8>), %ImpDef(<4 x s8>), %ImpDef(<4 x s8>), %ImpDef(<4 x s8>)
-    ; CHECK-NEXT: %z:_(<16 x s8>) = G_SHUFFLE_VECTOR %x(<16 x s8>), [[CONCAT_VECTORS2]], shufflemask(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 18, 19)
+    ; CHECK-NEXT: %z:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), %b(<4 x s8>), %c(<4 x s8>), %d(<4 x s8>)
     ; CHECK-NEXT: $q0 = COPY %z(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %p1:_(p0) = COPY $x0
@@ -141,15 +134,11 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %p2:_(p0) = COPY $x1
-    ; CHECK-NEXT: %p3:_(p0) = COPY $x2
     ; CHECK-NEXT: %p4:_(p0) = COPY $x3
     ; CHECK-NEXT: %a:_(<4 x s8>) = G_LOAD %p4(p0) :: (load (<4 x s8>))
-    ; CHECK-NEXT: %b:_(<4 x s8>) = G_LOAD %p3(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: %c:_(<4 x s8>) = G_LOAD %p2(p0) :: (load (<4 x s8>))
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), %b(<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<16 x s8>) = G_CONCAT_VECTORS %c(<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
-    ; CHECK-NEXT: %z:_(<16 x s8>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<16 x s8>), [[CONCAT_VECTORS1]], shufflemask(0, 1, 2, 3, undef, undef, undef, undef, 16, 17, 18, 19, undef, undef, undef, undef)
+    ; CHECK-NEXT: %z:_(<16 x s8>) = G_CONCAT_VECTORS %a(<4 x s8>), [[DEF]](<4 x s8>), %c(<4 x s8>), [[DEF]](<4 x s8>)
     ; CHECK-NEXT: $q0 = COPY %z(<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %p1:_(p0) = COPY $x0

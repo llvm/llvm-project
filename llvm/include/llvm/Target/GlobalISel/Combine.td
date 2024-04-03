@@ -1513,6 +1513,18 @@ def combine_concat_vector : GICombineRule<
         [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
 
+// Combines Shuffles of Concats
+// a = G_CONCAT_VECTORS x, y, undef, undef
+// b = G_CONCAT_VECTORS z, undef, undef, undef
+// c = G_SHUFFLE_VECTORS a, b, <0, 1, 4, undef>
+// ===>
+// c = G_CONCAT_VECTORS x, y, z, undef
+def combine_shuffle_concat : GICombineRule<
+  (defs root:$root, concat_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+        [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
+
 // match_extract_of_element must be the first!
 def vector_ops_combines: GICombineGroup<[
 match_extract_of_element_undef_vector,
@@ -1543,6 +1555,7 @@ extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
 extract_vector_element_freeze
 ]>;
+
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -1620,7 +1633,8 @@ def all_combines : GICombineGroup<[trivial_combines, vector_ops_combines,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    combine_concat_vector, double_icmp_zero_and_or_combine, match_addos]>;
+    combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
+    combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

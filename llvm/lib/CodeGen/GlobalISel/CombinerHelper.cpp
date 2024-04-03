@@ -303,6 +303,79 @@ void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
   replaceRegWith(MRI, DstReg, NewDstReg);
 }
 
+bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  auto ConcatMI1 = dyn_cast<GConcatVectors>(
+      getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI));
+  auto ConcatMI2 = dyn_cast<GConcatVectors>(
+      getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI));
+  if (!ConcatMI1 || !ConcatMI2)
+    return false;
+
+  // Check that the sources of the Concat instructions have the same type
+  if (MRI.getType(ConcatMI1->getSourceReg(0)) !=
+      MRI.getType(ConcatMI2->getSourceReg(0)))
+    return false;
+
+  LLT ConcatSrcTy = MRI.getType(ConcatMI1->getReg(1));
+  LLT ShuffleSrcTy1 = MRI.getType(MI.getOperand(1).getReg());
+  unsigned ConcatSrcNumElt = ConcatSrcTy.getNumElements();
+  for (unsigned i = 0; i < Mask.size(); i += ConcatSrcNumElt) {
+    // Check if the index takes a whole source register from G_CONCAT_VECTORS
+    // Assumes that all Sources of G_CONCAT_VECTORS are the same type
+    if (Mask[i] == -1) {
+      for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
+        if (i + j >= Mask.size())
+          return false;
+        if (Mask[i + j] != -1)
+          return false;
+      }
+      Ops.push_back(0);
+    } else if (Mask[i] % (int)ConcatSrcNumElt == 0) {
+      for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
+        if (i + j >= Mask.size())
+          return false;
+        if (Mask[i + j] != Mask[i] + (int)j)
+          return false;
+      }
+      // Retrieve the source register from its respective G_CONCAT_VECTORS
+      // instruction
+      if (Mask[i] < (int)ShuffleSrcTy1.getNumElements()) {
+        Ops.push_back(ConcatMI1->getSourceReg(Mask[i] / (int)ConcatSrcNumElt));
+      } else {
+        Ops.push_back(ConcatMI2->getSourceReg(Mask[i] / (int)ConcatSrcNumElt -
+                                              (int)ConcatMI1->getNumSources()));
+      }
+    } else {
+      return false;
+    }
+  }
+
+  if (Ops.size() == 0)
+    return false;
+  // Only deal with cases where G_CONCAT_VECTORS sources are all the same type
+  if ((Mask.size() - (Ops.size() * ConcatSrcNumElt)) %
+          MRI.getType(Ops[0]).getNumElements() !=
+      0)
+    return false;
+  return true;
+}
+
+void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
+  LLT SrcTy = MRI.getType(Ops[0]);
+  Register UndefReg = Builder.buildUndef(SrcTy).getReg(0);
+
+  for (unsigned i = 0; i < Ops.size(); i++) {
+    if (Ops[i] == 0)
+      Ops[i] = UndefReg;
+  }
+
+  Builder.buildConcatVectors(MI.getOperand(0).getReg(), Ops);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   SmallVector<Register, 4> Ops;
   if (matchCombineShuffleVector(MI, Ops)) {
