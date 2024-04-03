@@ -123,10 +123,10 @@ static cl::opt<unsigned> PrintBeforePassNumber(
     cl::desc("Print IR before the pass with this number as "
              "reported by print-pass-numbers"));
 
-static cl::opt<unsigned> PrintAfterPassNumber(
-    "print-after-pass-number", cl::init(0), cl::Hidden,
-    cl::desc("Print IR after the pass with this number as "
-             "reported by print-pass-numbers"));
+static cl::opt<unsigned>
+    PrintAfterPassNumber("print-after-pass-number", cl::init(0), cl::Hidden,
+                         cl::desc("Print IR after the pass with this number as "
+                                  "reported by print-pass-numbers"));
 
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
@@ -932,8 +932,7 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
   if (shouldPrintAfterAll())
     return true;
 
-  if (shouldPrintAfterPassNumber() &&
-      CurrentPassNumber == PrintAfterPassNumber)
+  if (shouldPrintAfterPassNumber() && CurrentPassNumber == PrintAfterPassNumber)
     return true;
 
   StringRef PassName = PIC->getPassNameForClassName(PassID);
@@ -957,7 +956,8 @@ void PrintIRInstrumentation::registerCallbacks(
   this->PIC = &PIC;
 
   // BeforePass callback is not just for printing, it also saves a Module
-  // for later use in AfterPassInvalidated and keeps tracks of the CurrentPassNumber.
+  // for later use in AfterPassInvalidated and keeps tracks of the
+  // CurrentPassNumber.
   if (shouldPrintPassNumbers() || shouldPrintBeforePassNumber() ||
       shouldPrintAfterPassNumber() || shouldPrintBeforeSomePass() ||
       shouldPrintAfterSomePass())
