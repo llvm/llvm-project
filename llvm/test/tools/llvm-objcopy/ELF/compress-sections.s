@@ -2,7 +2,7 @@
 
 # RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o a.o
-## '*0=none' wins. '*0' sections are decompressed (if originally compressed) or kept unchanged (if uncompressed).
+## '*0=none' wins because it is the last. '*0' sections are decompressed (if originally compressed) or kept unchanged (if uncompressed).
 ## No section is named 'nomatch'. The third option is a no-op.
 # RUN: llvm-objcopy a.o out --compress-sections='*0=zlib' --compress-sections '*0=none' --compress-sections 'nomatch=none' 2>&1 | count 0
 # RUN: llvm-readelf -S out | FileCheck %s --check-prefix=CHECK1
@@ -18,12 +18,10 @@
 # CHECK1-NEXT: nonalloc1      PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
 # CHECK1-NEXT: .debug_str     PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MS   0   0  1
 
+## Mixing zlib and zstd.
 # RUN: llvm-objcopy a.o out2 --compress-sections '*c0=zlib' --compress-sections .debug_str=zstd
 # RUN: llvm-readelf -Sr -x nonalloc0 -x .debug_str out2 2>&1 | FileCheck %s --check-prefix=CHECK2
 # RUN: llvm-readelf -z -x nonalloc0 -x .debug_str out2 | FileCheck %s --check-prefix=CHECK2DE
-
-# RUN: llvm-objcopy a.o out2 --regex --compress-sections '.*c0=zlib' --compress-sections .debug_str=zstd
-# RUN: llvm-readelf -Sr -x nonalloc0 -x .debug_str out2 2>&1 | FileCheck %s --check-prefix=CHECK2
 
 # CHECK2:      Name           Type          Address     Off      Size     ES Flg Lk Inf Al
 # CHECK2:      .text          PROGBITS [[#%x,TEXT:]]    [[#%x,]] [[#%x,]] 00 AX   0   0  4
@@ -36,7 +34,7 @@
 # CHECK2-NEXT: nonalloc1      PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
 # CHECK2-NEXT: .debug_str     PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MSC  0   0  8
 
-## llvm-readelf doesn't support SHF_COMPRESSED SHT_RELA.
+## llvm-readelf -r doesn't support SHF_COMPRESSED SHT_RELA.
 # CHECK2: warning: {{.*}}: unable to read relocations from SHT_RELA section with index 8: section [index 8] has an invalid sh_size ([[#]]) which is not a multiple of its sh_entsize (24)
 
 # CHECK2:      Hex dump of section 'nonalloc0':
@@ -54,7 +52,7 @@
 # CHECK2DE-NEXT:  Hex dump of section '.debug_str':
 # CHECK2DE-NEXT:  0x00000000 41414141 41414141 41414141 41414141 AAAAAAAAAAAAAAAA
 
-## --compress-debug-sections=none takes precedence.
+## --compress-debug-sections takes precedence, even if it is before --compress-sections
 # RUN: llvm-objcopy a.o out3 --decompress-debug-sections --compress-sections .debug_str=zstd
 # RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK3
 
@@ -73,6 +71,17 @@
 # CHECK4-NEXT: .relanonalloc0 RELA     [[#%x,]]         [[#%x,]] [[#%x,]] 18  IC 11   7  8
 # CHECK4-NEXT: nonalloc1      PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  8
 # CHECK4-NEXT: .debug_str     PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01  MS  0   0  1
+
+## If a section is already compressed, compression request for another format is ignored.
+# RUN: llvm-objcopy a.o out5 --compress-sections 'nonalloc0=zlib'
+# RUN: llvm-readelf -x nonalloc0 out5 | FileCheck %s --check-prefix=CHECK5
+# RUN: llvm-objcopy out5 out5a --compress-sections 'nonalloc0=zstd'
+# RUN: cmp out5 out5a
+
+# CHECK5:      Hex dump of section 'nonalloc0':
+## zlib with ch_size=0x10
+# CHECK5-NEXT: 01000000 00000000 10000000 00000000
+# CHECK5-NEXT: 08000000 00000000 {{.*}}
 
 # RUN: not llvm-objcopy --compress-sections=foo a.o out 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR1 --implicit-check-not=error:

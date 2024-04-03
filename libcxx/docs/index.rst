@@ -66,6 +66,25 @@ Getting Started with libc++
 Current Status
 ==============
 
+libc++ has become the default C++ Standard Library implementation for many major platforms, including Apple's macOS,
+iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD. As a result, libc++ has an estimated
+user base of over 1 billion daily active users.
+
+Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
+been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14, 
+with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
+
+libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
+and compatibility across various systems. The library's extensive test suite and rigorous quality assurance process have
+made it a top choice for platform providers looking to offer their users a robust and efficient C++ Standard Library.
+
+As an open-source project, libc++ benefits from a vibrant community of contributors who work together to improve the
+library and add new features. This ongoing development and support ensure that libc++ remains at the forefront of
+C++ standardization efforts and continues to meet the evolving needs of C++ developers worldwide.
+
+
+History
+-------
 After its initial introduction, many people have asked "why start a new
 library instead of contributing to an existing library?" (like Apache's
 libstdcxx, GNU's libstdc++, STLport, etc).  There are many contributing
@@ -189,6 +208,7 @@ Design Documents
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
+   DesignDocs/NodiscardPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI

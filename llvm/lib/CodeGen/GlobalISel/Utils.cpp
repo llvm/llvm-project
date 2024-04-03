@@ -997,6 +997,74 @@ llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
   return std::nullopt;
 }
 
+std::optional<SmallVector<APInt>>
+llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Op1);
+  if (Ty != MRI.getType(Op2))
+    return std::nullopt;
+
+  auto TryFoldScalar = [&MRI, Pred](Register LHS,
+                                    Register RHS) -> std::optional<APInt> {
+    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+    auto RHSCst = getIConstantVRegVal(RHS, MRI);
+    if (!LHSCst || !RHSCst)
+      return std::nullopt;
+
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_EQ:
+      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+    case CmpInst::Predicate::ICMP_NE:
+      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGT:
+      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGE:
+      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULT:
+      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULE:
+      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGT:
+      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGE:
+      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLT:
+      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLE:
+      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+    default:
+      return std::nullopt;
+    }
+  };
+
+  SmallVector<APInt> FoldedICmps;
+
+  if (Ty.isVector()) {
+    // Try to constant fold each element.
+    auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+    auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+    if (!BV1 || !BV2)
+      return std::nullopt;
+    assert(BV1->getNumSources() == BV2->getNumSources() && "Invalid vectors");
+    for (unsigned I = 0; I < BV1->getNumSources(); ++I) {
+      if (auto MaybeFold =
+              TryFoldScalar(BV1->getSourceReg(I), BV2->getSourceReg(I))) {
+        FoldedICmps.emplace_back(*MaybeFold);
+        continue;
+      }
+      return std::nullopt;
+    }
+    return FoldedICmps;
+  }
+
+  if (auto MaybeCst = TryFoldScalar(Op1, Op2)) {
+    FoldedICmps.emplace_back(*MaybeCst);
+    return FoldedICmps;
+  }
+
+  return std::nullopt;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =

@@ -724,7 +724,7 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp funcOp = builder.getNamedFunction(libFuncName);
 
   if (!funcOp) {
-    funcOp = builder.addNamedFunction(loc, libFuncName, libFuncType);
+    funcOp = builder.createFunction(loc, libFuncName, libFuncType);
     // C-interoperability rules apply to these library functions.
     funcOp->setAttr(fir::getSymbolAttrName(),
                     mlir::StringAttr::get(builder.getContext(), libFuncName));
@@ -1894,8 +1894,8 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // Create local context to emit code into the newly created function
     // This new function is not linked to a source file location, only
     // its calls will be.
-    auto localBuilder =
-        std::make_unique<fir::FirOpBuilder>(function, builder.getKindMap());
+    auto localBuilder = std::make_unique<fir::FirOpBuilder>(
+        function, builder.getKindMap(), builder.getMLIRSymbolTable());
     localBuilder->setFastMathFlags(builder.getFastMathFlags());
     localBuilder->setInsertionPointToStart(&function.front());
     // Location of code inside wrapper of the wrapper is independent from
@@ -5259,9 +5259,12 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                  remainder);
   }
 
+  auto fastMathFlags = builder.getFastMathFlags();
   // F128 arith::RemFOp may be lowered to a runtime call that may be unsupported
   // on the target, so generate a call to Fortran Runtime's ModuloReal16.
-  if (resultType == mlir::FloatType::getF128(builder.getContext()))
+  if (resultType == mlir::FloatType::getF128(builder.getContext()) ||
+      (fastMathFlags & mlir::arith::FastMathFlags::ninf) ==
+          mlir::arith::FastMathFlags::none)
     return builder.createConvert(
         loc, resultType,
         fir::runtime::genModulo(builder, loc, args[0], args[1]));
