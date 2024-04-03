@@ -365,7 +365,7 @@ struct IndexedMemProfRecord {
   // the last entry in the list with the same function GUID.
   llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites;
   // Conceptually the same as above.  We are going to keep both CallSites and
-  // CallSiteIds while we are transitioning from CallSites to CallSitesIds.
+  // CallSiteIds while we are transitioning from CallSites to CallSiteIds.
   llvm::SmallVector<CallStackId> CallSiteIds;
 
   void clear() {
