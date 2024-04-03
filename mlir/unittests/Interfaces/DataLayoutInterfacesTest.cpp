@@ -22,7 +22,7 @@ using namespace mlir;
 
 namespace {
 constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
-constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endiannes";
+constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
 constexpr static llvm::StringLiteral kAllocaKeyName =
     "dltest.alloca_memory_space";
 constexpr static llvm::StringLiteral kProgramKeyName =
@@ -406,7 +406,7 @@ TEST(DataLayout, SpecWithEntries) {
   #dlti.dl_entry<i42, 5>,
   #dlti.dl_entry<i16, 6>,
   #dlti.dl_entry<index, 42>,
-  #dlti.dl_entry<"dltest.endiannes", "little">,
+  #dlti.dl_entry<"dltest.endianness", "little">,
   #dlti.dl_entry<"dltest.alloca_memory_space", 5 : i32>,
   #dlti.dl_entry<"dltest.program_memory_space", 3 : i32>,
   #dlti.dl_entry<"dltest.global_memory_space", 2 : i32>,
