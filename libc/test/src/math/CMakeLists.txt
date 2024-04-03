@@ -646,7 +646,6 @@ add_fp_unittest(
     exp2m1f_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_macros
-    libc.include.llvm-libc-macros.stdint_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f
     libc.src.__support.CPP.array
