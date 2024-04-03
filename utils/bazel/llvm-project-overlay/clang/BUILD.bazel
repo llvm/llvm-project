@@ -2651,7 +2651,11 @@ cc_library(
     srcs = glob([
         "lib/ExtractAPI/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
+    hdrs = glob([
+       "include/clang/ExtractAPI/**/*.h",
+    ]) + [
+       "include/clang/ExtractAPI/APIRecords.inc",
+    ],
     includes = ["include"],
     deps = [
         ":ast",
