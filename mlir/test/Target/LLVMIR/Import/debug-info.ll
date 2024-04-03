@@ -698,3 +698,56 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !10 = !{!8}
 
 !18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+
+; // -----
+
+; Ensures that replacing a nested mutually recursive decl does not result in
+; nested duplicate recursive decls.
+;
+; A ---> B <--> C
+; ^             ^
+; +-------------+
+
+; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[A_TO_B:.+]], #[[A_TO_C:.+]]>
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
+; CHECK-DAG: #[[A_TO_B]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_FROM_A:.+]]>
+; CHECK-DAG: #[[A_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_A:.+]]>
+
+; CHECK-DAG: #[[B_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B_TO_C:.+]]>
+; CHECK-DAG: #[[B_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_B:.+]]>
+; CHECK-DAG: #[[C_FROM_B]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID:.+]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF:.+]], #[[TO_B_SELF:.+]], #[[TO_C_SELF:.+]]>
+
+; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[TO_B_INNER:.+]], #[[TO_C_SELF]]
+; CHECK-DAG: #[[TO_B_INNER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_INNER:.+]]>
+; CHECK-DAG: #[[B_INNER]] = #llvm.di_composite_type<{{.*}}name = "B", {{.*}}elements = #[[TO_C_SELF]]>
+
+; CHECK-DAG: #[[TO_A_SELF]] = #llvm.di_derived_type<{{.*}}name = "->A", {{.*}}baseType = #[[A_SELF:.+]]>
+; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[TO_C_SELF]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_SELF:.+]]>
+; CHECK-DAG: #[[A_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]>
+; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
+; CHECK-DAG: #[[C_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]]>
+
+define void @class_field(ptr %arg1) !dbg !18 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+!4 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !10)
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !11)
+
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "->A", file: !2, baseType: !3)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "->B", file: !2, baseType: !4)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "->C", file: !2, baseType: !5)
+
+!9 = !{!7, !8} ; A -> B, C
+!10 = !{!8} ; B -> C
+!11 = !{!6, !7, !8} ; C -> A, B, C
+
+!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)

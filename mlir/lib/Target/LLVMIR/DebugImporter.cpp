@@ -318,6 +318,75 @@ getRecSelfConstructor(llvm::DINode *node) {
       .Default(CtorType());
 }
 
+/// An attribute replacer that replaces nested recursive decls with recursive
+/// self-references instead.
+///
+/// - Recurses down the attribute tree while replacing attributes based on the
+///   provided replacement map.
+/// - Keeps track of the currently open recursive declarations, and upon
+///   encountering a duplicate declaration, replace with a self-ref instead.
+static Attribute replaceAndPruneRecursiveTypesImpl(
+    Attribute node,
+    const DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> &mapping,
+    DenseSet<DistinctAttr> &openDecls) {
+  DistinctAttr recId;
+  if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(node)) {
+    recId = recType.getRecId();
+
+    // Configure context.
+    if (recId) {
+      if (recType.isRecSelf()) {
+        // Replace selfRef based on the provided mapping.
+        if (DINodeAttr replacement = mapping.lookup(recType))
+          return replaceAndPruneRecursiveTypesImpl(replacement, mapping,
+                                                   openDecls);
+        return node;
+      }
+
+      auto [_, inserted] = openDecls.insert(recId);
+      if (!inserted) {
+        // This is a nested decl. Replace with recSelf.
+        return recType.getRecSelf(recId);
+      }
+    }
+  }
+
+  // Collect sub attrs.
+  SmallVector<Attribute> attrs;
+  SmallVector<Type> types;
+  node.walkImmediateSubElements(
+      [&attrs](Attribute attr) { attrs.push_back(attr); },
+      [&types](Type type) { types.push_back(type); });
+
+  // Recurse into attributes.
+  bool changed = false;
+  for (auto it = attrs.begin(); it != attrs.end(); it++) {
+    Attribute replaced =
+        replaceAndPruneRecursiveTypesImpl(*it, mapping, openDecls);
+    if (replaced != *it) {
+      *it = replaced;
+      changed = true;
+    }
+  }
+
+  Attribute result = node;
+  if (changed)
+    result = result.replaceImmediateSubElements(attrs, types);
+
+  // Reset context.
+  if (recId)
+    openDecls.erase(recId);
+
+  return result;
+}
+
+static Attribute replaceAndPruneRecursiveTypes(
+    DINodeAttr node,
+    const DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> &mapping) {
+  DenseSet<DistinctAttr> openDecls;
+  return replaceAndPruneRecursiveTypesImpl(node, mapping, openDecls);
+}
+
 DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
     llvm::DINode *node) {
   // Lookup the cache first.
@@ -448,18 +517,8 @@ DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
   if (entry.pendingReplacements.empty())
     return std::make_pair(entry.attr, DenseSet<DIRecursiveTypeAttrInterface>{});
 
-  AttrTypeReplacer replacer;
-  replacer.addReplacement(
-      [&entry](DIRecursiveTypeAttrInterface attr)
-          -> std::optional<std::pair<Attribute, WalkResult>> {
-        if (auto replacement = entry.pendingReplacements.lookup(attr)) {
-          // A replacement may contain additional unbound self-refs.
-          return std::make_pair(replacement, mlir::WalkResult::advance());
-        }
-        return std::make_pair(attr, mlir::WalkResult::advance());
-      });
-
-  Attribute replacedAttr = replacer.replace(entry.attr);
+  Attribute replacedAttr =
+      replaceAndPruneRecursiveTypes(entry.attr, entry.pendingReplacements);
   DINodeAttr result = cast<DINodeAttr>(replacedAttr);
 
   // Update cache entry to save replaced version and remove already-applied
