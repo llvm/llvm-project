@@ -20,6 +20,7 @@
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
@@ -166,6 +167,52 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   return success();
 }
 
+static void rewriteVectorReadWriteToLoadStore(RewriterBase &b, Operation *op) {
+  b.setInsertionPoint(op);
+  if (auto write = dyn_cast<vector::TransferWriteOp>(op)) {
+    b.replaceOpWithNewOp<vector::StoreOp>(
+        op, write.getVector(), write.getSource(), write.getIndices());
+  } else if (auto read = dyn_cast<vector::TransferReadOp>(op)) {
+    b.replaceOpWithNewOp<vector::LoadOp>(op, read.getVectorType(),
+                                         read.getSource(), read.getIndices());
+  }
+}
+
+static bool hasVectorSizeEqualToStep(Operation *Op,
+                                     std::optional<int64_t> step) {
+  if (!step)
+    return false;
+
+  if (isa<vector::TransferWriteOp, vector::TransferReadOp>(Op)) {
+    auto vectorType = isa<vector::TransferWriteOp>(Op)
+                          ? cast<vector::TransferWriteOp>(Op).getVectorType()
+                          : cast<vector::TransferReadOp>(Op).getVectorType();
+
+    if (vectorType.getRank() != 1)
+      return false;
+
+    auto vectorSize = vectorType.getShape()[0];
+    if (vectorSize == *step)
+      return true;
+  }
+
+  return false;
+}
+
+static void rewriteVectorizedLoopAfterPeeling(RewriterBase &rewriter,
+                                              ForOp forOp) {
+  auto stepInt = getConstantIntValue(forOp.getStep());
+
+  forOp.walk([&](Operation *affineOp) {
+    if (!isa<vector::TransferWriteOp, vector::TransferReadOp>(affineOp))
+      return WalkResult::advance();
+    if (!hasVectorSizeEqualToStep(affineOp, stepInt))
+      return WalkResult::advance();
+    rewriteVectorReadWriteToLoadStore(rewriter, affineOp);
+    return WalkResult::advance();
+  });
+}
+
 static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
                                         ForOp partialIteration,
                                         Value previousUb) {
@@ -199,6 +246,8 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
   Value splitBound;
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
     return failure();
+
+  rewriteVectorizedLoopAfterPeeling(rewriter, forOp);
 
   // Rewrite affine.min and affine.max ops.
   rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
