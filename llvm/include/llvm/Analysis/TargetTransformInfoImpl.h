@@ -327,11 +327,11 @@ public:
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale,
-                                       unsigned AddrSpace) const {
+                                       int64_t Scale, unsigned AddrSpace,
+                                       int64_t ScalableOffset) const {
     // Guess that all legal addressing mode are free.
     if (isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
-                              AddrSpace))
+                              AddrSpace, /*I=*/nullptr, ScalableOffset))
       return 0;
     return -1;
   }

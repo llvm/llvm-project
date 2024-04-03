@@ -835,8 +835,8 @@ public:
   /// TODO: Handle pre/postinc as well.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale,
-                                       unsigned AddrSpace = 0) const;
+                                       int64_t Scale, unsigned AddrSpace = 0,
+                                       int64_t ScalableOffset = 0) const;
 
   /// Return true if the loop strength reduce pass should make
   /// Instruction* based TTI queries to isLegalAddressingMode(). This is
@@ -1893,7 +1893,8 @@ public:
   virtual InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                int64_t BaseOffset,
                                                bool HasBaseReg, int64_t Scale,
-                                               unsigned AddrSpace) = 0;
+                                               unsigned AddrSpace,
+                                               int64_t ScalableOffset) = 0;
   virtual bool LSRWithInstrQueries() = 0;
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) = 0;
   virtual bool isProfitableToHoist(Instruction *I) = 0;
@@ -2404,10 +2405,10 @@ public:
   }
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale,
-                                       unsigned AddrSpace) override {
+                                       int64_t Scale, unsigned AddrSpace,
+                                       int64_t ScalableOffset) override {
     return Impl.getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
-                                     AddrSpace);
+                                     AddrSpace, ScalableOffset);
   }
   bool LSRWithInstrQueries() override { return Impl.LSRWithInstrQueries(); }
   bool isTruncateFree(Type *Ty1, Type *Ty2) override {

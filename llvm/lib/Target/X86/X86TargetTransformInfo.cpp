@@ -6710,7 +6710,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
 InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                                  int64_t BaseOffset,
                                                  bool HasBaseReg, int64_t Scale,
-                                                 unsigned AddrSpace) const {
+                                                 unsigned AddrSpace,
+                                                 int64_t ScalableOffset) const {
   // Scaling factors are not free at all.
   // An indexed folded instruction, i.e., inst (reg1, reg2, scale),
   // will take 2 allocations in the out of order engine instead of 1

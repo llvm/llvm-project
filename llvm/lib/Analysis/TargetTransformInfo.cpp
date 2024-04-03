@@ -532,9 +532,9 @@ bool TargetTransformInfo::prefersVectorizedAddressing() const {
 
 InstructionCost TargetTransformInfo::getScalingFactorCost(
     Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
-    int64_t Scale, unsigned AddrSpace) const {
+    int64_t Scale, unsigned AddrSpace, int64_t ScalableOffset) const {
   InstructionCost Cost = TTIImpl->getScalingFactorCost(
-      Ty, BaseGV, BaseOffset, HasBaseReg, Scale, AddrSpace);
+      Ty, BaseGV, BaseOffset, HasBaseReg, Scale, AddrSpace, ScalableOffset);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
