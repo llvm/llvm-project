@@ -193,6 +193,9 @@ Non-comprehensive list of changes in this release
   with support for any unsigned integer type. Like the previous builtins, these
   new builtins are constexpr and may be used in constant expressions.
 
+- ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
+  like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
