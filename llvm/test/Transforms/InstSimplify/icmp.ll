@@ -281,14 +281,7 @@ define i1 @load_ptr_null_valid(ptr %p) null_pointer_is_valid {
 
 define i1 @non_eq_disjoint_or_common_op(i8 %x, i8 %y, i8 %ww, i8 %a) {
 ; CHECK-LABEL: @non_eq_disjoint_or_common_op(
-; CHECK-NEXT:    [[W:%.*]] = add nuw i8 [[WW:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = add i8 [[Y:%.*]], [[W]]
-; CHECK-NEXT:    [[XY:%.*]] = or disjoint i8 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[XZ:%.*]] = or disjoint i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[AXY:%.*]] = add i8 [[A:%.*]], [[XY]]
-; CHECK-NEXT:    [[AXZ:%.*]] = add i8 [[A]], [[XZ]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AXY]], [[AXZ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %w = add nuw i8 %ww, 1
   %z = add i8 %y, %w
@@ -327,14 +320,7 @@ define i1 @non_eq_disjoint_or_common_op_fail(i8 %x, i8 %y, i8 %ww, i8 %a) {
 
 define i1 @non_eq_xor_common_op(i8 %x, i8 %y, i8 %ww, i8 %a) {
 ; CHECK-LABEL: @non_eq_xor_common_op(
-; CHECK-NEXT:    [[W:%.*]] = add nuw i8 [[WW:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = add i8 [[Y:%.*]], [[W]]
-; CHECK-NEXT:    [[XY:%.*]] = xor i8 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[XZ:%.*]] = xor i8 [[X]], [[Z]]
-; CHECK-NEXT:    [[AXY:%.*]] = add i8 [[A:%.*]], [[XY]]
-; CHECK-NEXT:    [[AXZ:%.*]] = add i8 [[A]], [[XZ]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AXY]], [[AXZ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %w = add nuw i8 %ww, 1
   %z = add i8 %y, %w
