@@ -32,9 +32,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu no-info.s -o noinfo1.o
 # RUN: cp noinfo1.o noinfo2.o
-# RUN: not ld.lld -z pauth-report=error tag1.o noinfo1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR5 %s
-# RUN: ld.lld -z pauth-report=warning tag1.o noinfo1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix WARN %s
-# RUN: ld.lld -z pauth-report=none tag1.o noinfo1.o noinfo2.o --fatal-warnings -o /dev/null
+# RUN: not ld.lld -z pauth-report=error noinfo1.o tag1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR5 %s
+# RUN: ld.lld -z pauth-report=warning noinfo1.o tag1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix WARN %s
+# RUN: ld.lld -z pauth-report=none noinfo1.o tag1.o noinfo2.o --fatal-warnings -o /dev/null
 
 # ERR5:      error: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
 # ERR5-NEXT: error: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
