@@ -878,7 +878,7 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForCallSiteEntry() &&
          "Call site info refers only to call (MI) candidates");
 
-  if (!Target.Options.EmitCallSiteInfo)
+  if (!Target.Options.EmitCallSiteInfo && !Target.Options.EmitCallGraphSection)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
