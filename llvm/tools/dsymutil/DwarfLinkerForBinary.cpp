@@ -857,7 +857,9 @@ bool DwarfLinkerForBinary::linkImpl(
       return error(toString(std::move(E)));
   }
 
-  if (Map.getTriple().isOSDarwin() && !Map.getBinaryPath().empty() &&
+  auto MapTriple = Map.getTriple();
+  if ((MapTriple.isOSDarwin() || MapTriple.isOSBinFormatMachO()) &&
+      !Map.getBinaryPath().empty() &&
       ObjectType == Linker::OutputFileType::Object)
     return MachOUtils::generateDsymCompanion(
         Options.VFS, Map, *Streamer->getAsmPrinter().OutStreamer, OutFile,
