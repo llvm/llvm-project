@@ -2763,6 +2763,29 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
   }
+  case Instruction::InsertElement: {
+    if (isa<ScalableVectorType>(I->getType()))
+      break;
+
+    const Value *Vec = I->getOperand(0);
+    const Value *Elt = I->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
+
+    unsigned NumElts = DemandedElts.getBitWidth();
+    APInt DemandedVecElts = DemandedElts;
+    bool SkipElt = false;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      SkipElt = !DemandedElts[CIdx->getZExtValue()];
+    }
+
+    // Result is zero if Elt is non-zero and rest of the demanded elts in Vec
+    // are non-zero.
+    return (SkipElt || isKnownNonZero(Elt, Depth, Q)) &&
+           (DemandedVecElts.isZero() ||
+            isKnownNonZero(Vec, DemandedVecElts, Depth, Q));
+  }
   case Instruction::ExtractElement:
     if (const auto *EEI = dyn_cast<ExtractElementInst>(I)) {
       const Value *Vec = EEI->getVectorOperand();
