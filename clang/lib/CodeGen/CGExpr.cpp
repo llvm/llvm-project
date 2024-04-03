@@ -5953,6 +5953,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     }
   }
 
+  // Set type identifier metadata of indirect calls for call graph section.
+  if (CGM.getCodeGenOpts().CallGraphSection && CallOrInvoke &&
+      CallOrInvoke->isIndirectCall())
+    CGM.CreateFunctionTypeMetadataForIcall(QualType(FnType, 0), CallOrInvoke);
+
   return Call;
 }
 
