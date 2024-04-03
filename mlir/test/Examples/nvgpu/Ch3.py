@@ -73,7 +73,9 @@ def gemm_128_128_64(a, b, d):
     b_tma = TMA([64, 64], b.type, swizzle=sw)
     a_tma.create_descriptor(a_dev)
     b_tma.create_descriptor(b_dev)
-    smem_size_in_bytes = get_type_size(a.type) + get_type_size(b.type)
+    a_size = get_type_size(a.type)
+    b_size = get_type_size(b.type)
+    smem_size_in_bytes = a_size + b_size
 
     @NVDSL.mlir_gpu_launch(grid=(1, 1, 1), block=(128, 1, 1), smem=smem_size_in_bytes)
     def gemm_tma_kernel():
@@ -81,16 +83,13 @@ def gemm_128_128_64(a, b, d):
 
         mbar_group = Mbarriers(number_of_barriers=1)
         isThread0 = tidx == 0
-        with ir.InsertionPoint(scf.IfOp(isThread0).then_block):
-            mbar_group[0].init(1)
-            a_tma.prefetch()
-            b_tma.prefetch()
-            scf.yield_([])
+
+        mbar_group[0].init(1, predicate=isThread0)
+        a_tma.prefetch(predicate=isThread0)
+        b_tma.prefetch(predicate=isThread0)
 
         a_smem = get_dynamic_shared_memory((M, K), T.f16())
-        b_smem = get_dynamic_shared_memory(
-            (K, N), T.f16(), offset=get_type_size(a.type)
-        )
+        b_smem = get_dynamic_shared_memory((K, N), T.f16(), offset=a_size)
 
         # 1. Execute TMA Load for two input matrices
         tma_load(mbar_group, a_tma, b_tma, isThread0)
@@ -99,9 +98,9 @@ def gemm_128_128_64(a, b, d):
         mbar_group[0].try_wait()
 
         # 3. Performs Tensor Core GEMM 128x128x64 by warpgroup
-        A = WGMMAMatrix(WGMMAType.Descriptor, [M,K], desc=a_tma, smem=a_smem)
-        B = WGMMAMatrix(WGMMAType.Descriptor, [K,N], desc=b_tma, smem=b_smem)
-        C = WGMMAMatrix(WGMMAType.Accumulator, shape=[M,N], ty=T.f32())
+        A = WGMMAMatrix(WGMMAType.Descriptor, [M, K], desc=a_tma, smem=a_smem)
+        B = WGMMAMatrix(WGMMAType.Descriptor, [K, N], desc=b_tma, smem=b_smem)
+        C = WGMMAMatrix(WGMMAType.Accumulator, shape=[M, N], ty=T.f32())
 
         # Matrix Multiply
         C += A @ B

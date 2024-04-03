@@ -46,21 +46,15 @@ def saxpy_tma(x, y, alpha):
 
         # 1. Create and initialize asynchronous transactional barrier (mbarrier)
         mbar_group = Mbarriers(number_of_barriers=1)
-        with ir.InsertionPoint(scf.IfOp(isThread0).then_block):
-            mbar_group[0].init(1)
-            x_tma.prefetch()
-            y_tma.prefetch()
-            scf.yield_([])
+        mbar_group[0].init(1, predicate=isThread0)
 
         x_smem = get_dynamic_shared_memory((M, N), T.f32())
         y_smem = get_dynamic_shared_memory((M, N), T.f32(), offset=M * N * 2)
 
         # 2. Execute Tensor Memory Accelerator (TMA) Load
-        with ir.InsertionPoint(scf.IfOp(isThread0).then_block):
-            x_tma.load(x_smem, mbar_group[0])
-            y_tma.load(y_smem, mbar_group[0])
-            mbar_group[0].arrive(txcount=M * N * 2 * 4)
-            scf.yield_([])
+        x_tma.load(x_smem, mbar_group[0], predicate=isThread0)
+        y_tma.load(y_smem, mbar_group[0], predicate=isThread0)
+        mbar_group[0].arrive(txcount=M * N * 2 * 4, predicate=isThread0)
 
         # 3. Wait for completion of TMA load with mbarrier
         mbar_group[0].try_wait()

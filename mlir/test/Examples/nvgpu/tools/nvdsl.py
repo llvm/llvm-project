@@ -184,7 +184,7 @@ class WGMMAMatrix:
             self.desc = desc
             self.smem = smem
             if matrix_type is WGMMAType.Accumulator:
-               self.acc_op = nvgpu.warpgroup_mma_init_accumulator(self.acc_ty) 
+                self.acc_op = nvgpu.warpgroup_mma_init_accumulator(self.acc_ty)
         elif acc_op:
             self.acc_op = acc_op
             self.matrix_type = WGMMAType.Accumulator
@@ -200,10 +200,10 @@ class WGMMAMatrix:
         return ir.Type.parse(parse_str)
 
     def update_smem(self, smem):
-        self.smem = smem 
-    
+        self.smem = smem
+
     def update_accumulator(self, acc_op):
-        self.acc_op = acc_op 
+        self.acc_op = acc_op
 
     def __matmul__(self, rhs):
         lhs = nvgpu.warpgroup_generate_descriptor(

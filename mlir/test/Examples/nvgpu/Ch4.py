@@ -155,7 +155,7 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
     A = WGMMAMatrix(WGMMAType.Descriptor, [TILE_M, TILE_K], desc=a_tma)
     B = WGMMAMatrix(WGMMAType.Descriptor, [TILE_K, TILE_N], desc=b_tma)
     C = WGMMAMatrix(WGMMAType.Accumulator, shape=[TILE_M, TILE_N], ty=T.f32())
-    
+
     pp = const(False, ty=T.bool())
 
     # Main Loop
@@ -185,7 +185,7 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         # Wait Tensor Core for single stage
         if NUM_STAGES == 1:
             nvvm.WgmmaWaitGroupSyncOp(0)
-            
+
         # Load next stage
         pred = ((iv + ns) < const(K // TILE_K)) & (tidx == 0)
         nextStage = iv + ns
