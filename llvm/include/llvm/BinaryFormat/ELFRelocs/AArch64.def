@@ -13,7 +13,7 @@ ELF_RELOC(R_AARCH64_ABS16,                           0x103)
 ELF_RELOC(R_AARCH64_PREL64,                          0x104)
 ELF_RELOC(R_AARCH64_PREL32,                          0x105)
 ELF_RELOC(R_AARCH64_PREL16,                          0x106)
-// Static relocations
+// Static AArch64 relocations
 ELF_RELOC(R_AARCH64_MOVW_UABS_G0,                    0x107)
 ELF_RELOC(R_AARCH64_MOVW_UABS_G0_NC,                 0x108)
 ELF_RELOC(R_AARCH64_MOVW_UABS_G1,                    0x109)
