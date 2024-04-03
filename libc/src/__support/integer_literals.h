@@ -153,12 +153,13 @@ LIBC_INLINE constexpr T parse_with_prefix(const char *ptr) {
   using P = Parser<T>;
   if (ptr == nullptr)
     return T();
-  else if (ptr[0] == '0' && ptr[1] == 'x')
-    return P::template parse<16>(ptr + 2);
-  else if (ptr[0] == '0' && ptr[1] == 'b')
-    return P::template parse<2>(ptr + 2);
-  else
-    return P::template parse<10>(ptr);
+  if (ptr[0] == '0') {
+    if (ptr[1] == 'b')
+      return P::template parse<2>(ptr + 2);
+    if (ptr[1] == 'x')
+      return P::template parse<16>(ptr + 2);
+  }
+  return P::template parse<10>(ptr);
 }
 
 } // namespace internal
