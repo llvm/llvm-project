@@ -427,12 +427,18 @@ bool MIRParserImpl::initializeCallSiteInfo(
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
+    if (YamlCSInfo.TypeId.has_value()) {
+      IntegerType *Int64Ty = Type::getInt64Ty(Context);
+      CSInfo.TypeId = ConstantInt::get(Int64Ty, YamlCSInfo.TypeId.value(),
+                                       /*isSigned=*/false);
+    }
 
-    if (TM.Options.EmitCallSiteInfo)
+    if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection)
       MF.addCallSiteInfo(&*CallI, std::move(CSInfo));
   }
 
-  if (YamlMF.CallSitesInfo.size() && !TM.Options.EmitCallSiteInfo)
+  if (YamlMF.CallSitesInfo.size() &&
+      !(TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection))
     return error(Twine("Call site info provided but not used"));
   return false;
 }
