@@ -116,8 +116,8 @@ add_test_input_binary(linking-kernel0 source/linking/kernel0.cl source/linking/k
 add_test_input_binary(linking-kernel1 source/linking/kernel1.cl source/linking/kernel1.o -c -mcode-object-version=4)
 add_test_input_binary(linking-empty   source/linking/empty.cl   source/linking/empty.o   -c -mcode-object-version=4)
 
-add_test_input_linked(multiple-note-records source/linking/kernel0.o source/linking/kernel1.o source/multiple-note-records.out)
-add_test_input_linked(multiple-note-records-one-kernel source/linking/kernel0.o source/linking/empty.o source/multiple-note-records-one-kernel.out)
+add_test_input_linked(multiple-note-records source/linking/kernel0.o source/linking/kernel1.o source/multiple-note-records.out -w)
+add_test_input_linked(multiple-note-records-one-kernel source/linking/kernel0.o source/linking/empty.o source/multiple-note-records-one-kernel.out -w)
 
 configure_file("source/linking/kernel0.cl" "source/linking/kernel0.cl" COPYONLY)
 configure_file("source/linking/kernel1.cl" "source/linking/kernel1.cl" COPYONLY)
