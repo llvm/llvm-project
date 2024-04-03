@@ -295,7 +295,9 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
     word &dst = out[at(index)];
-    if constexpr (direction == LEFT)
+    if (bit_offset == 0)
+      dst = part1; // no crosstalk between parts.
+    else if constexpr (direction == LEFT)
       dst = (part1 << bit_offset) | (part2 >> (WORD_BITS - bit_offset));
     else
       dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
