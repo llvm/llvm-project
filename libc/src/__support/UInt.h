@@ -254,9 +254,9 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   static_assert(direction == LEFT || direction == RIGHT);
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
   constexpr size_t TOTAL_BITS = N * WORD_BITS;
-  if (offset == 0)
+  if (LIBC_UNLIKELY(offset == 0))
     return array;
-  if (offset >= TOTAL_BITS)
+  if (LIBC_UNLIKELY(offset >= TOTAL_BITS))
     return {};
 #ifdef LIBC_TYPES_HAS_INT128
   if constexpr (TOTAL_BITS == 128) {
@@ -570,9 +570,9 @@ public:
   // That is by truncating the fractionnal part
   // https://stackoverflow.com/a/3602857
   LIBC_INLINE constexpr cpp::optional<BigInt> div(const BigInt &divider) {
-    if (divider.is_zero())
+    if (LIBC_UNLIKELY(divider.is_zero()))
       return cpp::nullopt;
-    if (divider == 1)
+    if (LIBC_UNLIKELY(divider == BigInt::one()))
       return BigInt::zero();
     Division result;
     if constexpr (SIGNED)
