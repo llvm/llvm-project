@@ -651,6 +651,9 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
       } else if (auto *IPTU = dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
         lowerMCDCCondBitmapUpdate(IPTU);
         MadeChange = true;
+      } else if (isa<InstrProfCallsite>(Instr)) {
+        Instr.eraseFromParent();
+        MadeChange = true;
       }
     }
   }

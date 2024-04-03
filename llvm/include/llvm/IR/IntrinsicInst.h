@@ -1435,6 +1435,7 @@ protected:
     case Intrinsic::instrprof_cover:
     case Intrinsic::instrprof_increment:
     case Intrinsic::instrprof_increment_step:
+    case Intrinsic::instrprof_callsite:
     case Intrinsic::instrprof_timestamp:
     case Intrinsic::instrprof_value_profile:
       return true;
@@ -1506,6 +1507,18 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
   Value *getStep() const;
+};
+
+/// This represents the llvm.instrprof.increment intrinsic.
+class InstrProfCallsite : public InstrProfCntrInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_callsite;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  Value *getCallee() const;
 };
 
 /// This represents the llvm.instrprof.increment.step intrinsic.
