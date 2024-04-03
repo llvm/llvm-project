@@ -43,9 +43,10 @@
 
 # PIE:      Section Headers:
 # PIE-NEXT: Name Type Address Off Size ES Flg Lk Inf Al
-# PIE:      .rela.dyn RELA {{0*}}[[ADDR1:.*]] {{0*}}[[ADDR1]] 000108 18 A 1 0 8
+# PIE:      .rela.dyn RELA {{0*}}[[#%x,ADDR1:]]
+# PIE-SAME:                                     {{0*}}[[#ADDR1]] 000108 18 A 1 0 8
 
-# PIE:      Relocation section '.rela.dyn' at offset 0x[[ADDR1]] contains 11 entries:
+# PIE:      Relocation section '.rela.dyn' at offset 0x[[#ADDR1]] contains 11 entries:
 # PIE-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # PIE-NEXT: 0000000000030470  0000000000000411 R_AARCH64_AUTH_RELATIVE 1
 # PIE-NEXT: 0000000000030478  0000000000000411 R_AARCH64_AUTH_RELATIVE 30472
