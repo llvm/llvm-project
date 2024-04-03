@@ -472,6 +472,26 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
+/// Returns true if \p R is dead and can be removed.
+static bool isDeadRecipe(VPRecipeBase &R) {
+  using namespace llvm::PatternMatch;
+  // Do remove conditional assume instructions as their conditions may be
+  // flattened.
+  auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+  bool IsConditionalAssume =
+      RepR && RepR->isPredicated() &&
+      match(RepR->getUnderlyingInstr(), m_Intrinsic<Intrinsic::assume>());
+  if (IsConditionalAssume)
+    return true;
+
+  if (R.mayHaveSideEffects())
+    return false;
+
+  // Recipe is dead if no user keeps the recipe alive.
+  return all_of(R.definedValues(),
+                [](VPValue *V) { return V->getNumUsers() == 0; });
+}
+
 static void removeDeadRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
@@ -480,22 +500,8 @@ static void removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      // A user keeps R alive:
-      if (any_of(R.definedValues(),
-                 [](VPValue *V) { return V->getNumUsers(); }))
-        continue;
-
-      using namespace llvm::PatternMatch;
-      // Having side effects keeps R alive, but do remove conditional assume
-      // instructions as their conditions may be flattened.
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      bool IsConditionalAssume =
-          RepR && RepR->isPredicated() &&
-          match(RepR->getUnderlyingInstr(), m_Intrinsic<Intrinsic::assume>());
-      if (R.mayHaveSideEffects() && !IsConditionalAssume)
-        continue;
-
-      R.eraseFromParent();
+      if (isDeadRecipe(R))
+        R.eraseFromParent();
     }
   }
 }
