@@ -66,6 +66,7 @@ private:
   bool shouldPrintAfterPass(StringRef PassID);
   bool shouldPrintPassNumbers();
   bool shouldPrintBeforePassNumber();
+  bool shouldPrintAfterPassNumber();
 
   void pushPassRunDescriptor(StringRef PassID, Any IR,
                              std::string &DumpIRFilename);

@@ -1,9 +1,12 @@
 ; RUN: opt -passes="loop(indvars,loop-deletion,loop-unroll-full)" -print-pass-numbers -S -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=NUMBER
 ; RUN: opt -passes="loop(indvars,loop-deletion,loop-unroll-full)" -print-module-scope -print-before-pass-number=3 -S -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=BEFORE
+; RUN: opt -passes="loop(indvars,loop-deletion,loop-unroll-full)" -print-module-scope -print-after-pass-number=2 -S -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=AFTER
 
 define i32 @bar(i32 %arg) {
 ; BEFORE: *** IR Dump Before 3-IndVarSimplifyPass on bb1 ***
 ; BEFORE: define i32 @bar(i32 %arg) {
+; AFTER:  *** IR Dump After 2-LCSSAPass on bar ***
+; AFTER:  define i32 @bar(i32 %arg) {
 
 bb:
   br label %bb1
