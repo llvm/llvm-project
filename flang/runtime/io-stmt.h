@@ -296,6 +296,10 @@ public:
 
   RT_API_ATTRS void BadInquiryKeywordHashCrash(InquiryKeywordHash);
 
+  RT_API_ATTRS void ReportUnsupportedChildIo() const {
+    Crash("not yet implemented: child IO");
+  }
+
 protected:
   bool completedOperation_{false};
 };
