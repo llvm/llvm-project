@@ -19,11 +19,11 @@ For no-split-dwarf scenarios, there are 2 variations:
 
 
 # It looks like Linux-AArch64 doesn't support build-id's on the LLDB builtbots
-@skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def test_normal_no_symbols(self):
         """
         Validate behavior with no symbols or symbol locator.
@@ -32,6 +32,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"])
         self.try_breakpoint(False)
 
+    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def test_normal_default(self):
         """
         Validate behavior with symbols, but no symbol locator.
@@ -40,6 +41,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out", "a.out.debug"])
         self.try_breakpoint(True)
 
+    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def test_debuginfod_symbols(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -48,6 +50,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def test_debuginfod_executable(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -56,6 +59,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], None, "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     def test_debuginfod_okd_symbols(self):
         """
         Test behavior with the 'only-keep-debug' symbols available from Debuginfod.
