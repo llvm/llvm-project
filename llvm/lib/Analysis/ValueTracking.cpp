@@ -2456,10 +2456,11 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
-  // TODO: Move this case into isKnownNonEqual().
-  if (auto *C = dyn_cast<Constant>(X))
-    if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Depth, Q))
-      return true;
+  // We duplicate this case with isKnownNonEqual because we have DemandedElts
+  // here but not in isKnownNonEqual.
+  // If we add support for DemandedElts in isKnownNonEqual, drop this case.
+  if (match(X, m_Zero()))
+    return isKnownNonZero(Y, DemandedElts, Depth, Q);
 
   return ::isKnownNonEqual(X, Y, Depth, Q);
 }
@@ -3134,6 +3135,49 @@ static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
   return false;
 }
 
+/// Return true if V1 == V2 - X or V1 == X - V2 implies V2 != V1
+static bool isNonEqualSub(const Value *V1, const Value *V2, unsigned Depth,
+                          const SimplifyQuery &Q) {
+  const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
+  if (!BO || BO->getOpcode() != Instruction::Sub)
+    return false;
+
+  // -V2 != V2 iff V2 != 0 and V2 != INT_MIN
+  if (match(BO, m_Sub(m_Zero(), m_Specific(V2)))) {
+    const OverflowingBinaryOperator *OBO = cast<OverflowingBinaryOperator>(V1);
+    // nsw implies no INT_MIN case.
+    if (OBO->hasNoSignedWrap())
+      return isKnownNonZero(V2, Depth + 1, Q);
+    // Otherwise check for INT_MIN case directly.
+    KnownBits V2Known = computeKnownBits(V2, Depth + 1, Q);
+    if (V2Known.isNonNegative() ||
+        (!V2Known.One.isZero() && !V2Known.One.isMinSignedValue()))
+      return V2Known.isNonZero() || isKnownNonZero(V2, Depth + 1, Q);
+  }
+  // V2 - X != V2 if X != 0
+  if (V2 == BO->getOperand(0))
+    return isKnownNonZero(BO->getOperand(1), Depth + 1, Q);
+
+  // X - V2 != V2 if X != 2 * V2
+  if (V2 == BO->getOperand(1)) {
+    KnownBits XKnown = computeKnownBits(BO->getOperand(0), Depth + 1, Q);
+    // 2 * V2 implies non-odd.
+    if (XKnown.One[0])
+      return true;
+
+    if (!XKnown.isUnknown()) {
+      KnownBits V2Known = computeKnownBits(V2, Depth + 1, Q);
+      KnownBits One = KnownBits::makeConstant(
+          APInt::getOneBitSet(V2Known.getBitWidth(), 0));
+      V2Known = KnownBits::shl(V2Known, One);
+
+      if (KnownBits::ne(XKnown, V2Known).value_or(false))
+        return true;
+    }
+  }
+  return false;
+}
+
 static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
                            unsigned Depth, const SimplifyQuery &Q) {
   // Check two PHIs are in same block.
@@ -3272,6 +3316,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     return true;
 
   if (isNonEqualShl(V1, V2, Depth, Q) || isNonEqualShl(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualSub(V1, V2, Depth, Q) || isNonEqualSub(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
