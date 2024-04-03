@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This File Provides utility function for HLSL code generation.
+// This file provides utility functions for HLSL code generation.
 // It is used to abstract away implementation details of backends.
 //
 //===----------------------------------------------------------------------===//
@@ -33,12 +33,14 @@
     }                                                                          \
   }
 
-class CGHLSLUtils {
-public:
-  GENERATE_HLSL_INTRINSIC_FUNCTION(all)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
-private:
-  CGHLSLUtils() = delete;
-};
+namespace clang::CodeGen {
+  class HLSLUtils {
+  public:
+    GENERATE_HLSL_INTRINSIC_FUNCTION(all)
+    GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
+  private:
+    HLSLUtils() = delete;
+  };
+} // namespace clang::CodeGen
 
-#endif
+#endif // LLVM_CLANG_LIB_CODEGEN_CGHLSLUTILS_H

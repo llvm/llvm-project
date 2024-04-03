@@ -343,7 +343,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(CGHLSLUtils::get_hlsl_thread_id_intrinsic(
+        CGM.getIntrinsic(HLSLUtils::get_hlsl_thread_id_intrinsic(
             CGM.getTarget().getTriple().getArch()));
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
