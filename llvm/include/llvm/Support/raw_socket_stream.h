@@ -25,7 +25,7 @@ namespace llvm {
 class raw_socket_stream;
 
 #ifdef _WIN32
-/// \brief Ensures proper initialization and cleanup of winsock resources
+/// Ensures proper initialization and cleanup of winsock resources
 ///
 /// Make sure that calls to WSAStartup and WSACleanup are balanced.
 class WSABalancer {
@@ -36,7 +36,7 @@ public:
 #endif // _WIN32
 
 /// \class ListeningSocket
-/// \brief Manages a passive (i.e., listening) UNIX domain socket
+/// Manages a passive (i.e., listening) UNIX domain socket
 ///
 /// The ListeningSocket class encapsulates a UNIX domain socket that can listen
 /// and accept incoming connections. ListeningSocket is portable and supports
@@ -60,13 +60,13 @@ public:
 class ListeningSocket {
 
   std::atomic<int> FD;
-  std::string SocketPath; // Never modified after construction
+  std::string SocketPath; // Not modified after construction
 
   /// If a seperate thread calls ListeningSocket::shutdown, the ListeningSocket
   /// file descriptor (FD) could be closed while ::poll is waiting for it to be
-  /// ready to perform a I/O operations. ::poll with continue to block even
+  /// ready to perform a I/O operations. ::poll will continue to block even
   /// after FD is closed so use a self-pipe mechanism to get ::poll to return
-  int PipeFD[2]; // Never modified after construction
+  int PipeFD[2]; // Not modified after construction other then deconstructor
 
   ListeningSocket(int SocketFD, StringRef SocketPath, int PipeFD[2]);
 
