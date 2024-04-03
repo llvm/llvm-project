@@ -29,6 +29,9 @@ ELF Improvements
 * ``--compress-sections <section-glib>=[none|zlib|zstd]`` is added to compress
   matched output sections without the ``SHF_ALLOC`` flag.
   (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
+* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes and ``R_AARCH64_AUTH_ABS64``
+  relocations are now supported.
+  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
 
 Breaking changes
 ----------------
