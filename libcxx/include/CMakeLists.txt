@@ -282,6 +282,7 @@ set(files
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/leap_second.h
   __chrono/literals.h
   __chrono/month.h
   __chrono/month_weekday.h
