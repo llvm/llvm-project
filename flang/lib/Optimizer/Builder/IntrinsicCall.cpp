@@ -5259,9 +5259,12 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                  remainder);
   }
 
+  auto fastMathFlags = builder.getFastMathFlags();
   // F128 arith::RemFOp may be lowered to a runtime call that may be unsupported
   // on the target, so generate a call to Fortran Runtime's ModuloReal16.
-  if (resultType == mlir::FloatType::getF128(builder.getContext()))
+  if (resultType == mlir::FloatType::getF128(builder.getContext()) ||
+      (fastMathFlags & mlir::arith::FastMathFlags::ninf) ==
+          mlir::arith::FastMathFlags::none)
     return builder.createConvert(
         loc, resultType,
         fir::runtime::genModulo(builder, loc, args[0], args[1]));
