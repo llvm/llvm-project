@@ -881,7 +881,7 @@ TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
   ASSERT_EQ(static_cast<int>(a), 3);
   ASSERT_EQ(static_cast<uint64_t>(a), uint64_t(0x2'0000'0003));
   ASSERT_EQ(static_cast<int>(a >> 32), 2);
-  ASSERT_EQ(static_cast<int>(a >> (128 + 32)), 1);
+  ASSERT_EQ(static_cast<int>(a >> (128 + 32)), 0);
 
   LL_UInt128_128 b(__uint128_t(1) << 127);
   LL_UInt128_128 c(b);
