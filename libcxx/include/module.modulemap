@@ -1738,7 +1738,10 @@ module std_private_ranges_transform_view             [system] {
 }
 module std_private_ranges_view_interface             [system] { header "__ranges/view_interface.h" }
 module std_private_ranges_views                      [system] { header "__ranges/views.h" }
-module std_private_ranges_zip_view                   [system] { header "__ranges/zip_view.h" }
+module std_private_ranges_zip_view                   [system] {
+  header "__ranges/zip_view.h"
+  export std_private_utility_pair
+}
 
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
 
