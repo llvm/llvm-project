@@ -282,12 +282,7 @@ define i1 @load_ptr_null_valid(ptr %p) null_pointer_is_valid {
 
 define i1 @non_eq_disjoint_or(i8 %x, i8 %yy, i8 %w) {
 ; CHECK-LABEL: @non_eq_disjoint_or(
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
-; CHECK-NEXT:    [[VAL:%.*]] = or disjoint i8 [[Y]], [[W]]
-; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y = add nuw i8 %yy, 1
   %lhs = add i8 %x, %w
@@ -316,12 +311,7 @@ define i1 @non_eq_or_fail(i8 %x, i8 %yy, i8 %w) {
 
 define i1 @non_eq_xor(i8 %x, i8 %yy, i8 %w) {
 ; CHECK-LABEL: @non_eq_xor(
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
-; CHECK-NEXT:    [[VAL:%.*]] = xor i8 [[Y]], [[W]]
-; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y = add nuw i8 %yy, 1
   %lhs = add i8 %x, %w
