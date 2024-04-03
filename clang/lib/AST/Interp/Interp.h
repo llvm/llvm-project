@@ -1333,6 +1333,11 @@ inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool Dump(InterpState &S, CodePtr OpPC) {
+  S.Stk.dump();
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
