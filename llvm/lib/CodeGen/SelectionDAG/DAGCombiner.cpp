@@ -3053,17 +3053,15 @@ static SDValue foldAddSubMasked1(bool IsAdd, SDValue N0, SDValue N1,
 
 /// Helper for doing combines based on N0 and N1 being added to each other.
 SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
-                                          SDNode *LocReference) {
+                                             SDNode *LocReference) {
   EVT VT = N0.getValueType();
   SDLoc DL(LocReference);
 
   // fold (add x, shl(0 - y, n)) -> sub(x, shl(y, n))
-  if (N1.getOpcode() == ISD::SHL && N1.getOperand(0).getOpcode() == ISD::SUB &&
-      isNullOrNullSplat(N1.getOperand(0).getOperand(0)))
+  SDValue Y, N;
+  if (sd_match(N1, m_Shl(m_Neg(m_Value(Y)), m_Value(N))))
     return DAG.getNode(ISD::SUB, DL, VT, N0,
-                       DAG.getNode(ISD::SHL, DL, VT,
-                                   N1.getOperand(0).getOperand(1),
-                                   N1.getOperand(1)));
+                       DAG.getNode(ISD::SHL, DL, VT, Y, N));
 
   if (SDValue V = foldAddSubMasked1(true, N0, N1, DAG, DL))
     return V;
