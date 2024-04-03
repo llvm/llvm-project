@@ -1654,7 +1654,8 @@ void RelocationBaseSection::partitionRels() {
     return;
   const RelType relativeRel = target->relativeRel;
   numRelativeRelocs =
-      llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; }) -
+      std::stable_partition(relocs.begin(), relocs.end(),
+                            [=](auto &r) { return r.type == relativeRel; }) -
       relocs.begin();
 }
 
@@ -1687,7 +1688,7 @@ void RelocationBaseSection::computeRels() {
   parallelForEach(relocs,
                   [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
 
-  auto irelative = std::partition(
+  auto irelative = std::stable_partition(
       relocs.begin() + numRelativeRelocs, relocs.end(),
       [t = target->iRelativeRel](auto &r) { return r.type != t; });
 
