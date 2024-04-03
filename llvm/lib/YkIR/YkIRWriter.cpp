@@ -423,7 +423,7 @@ private:
     // OPERAND 0: What to call.
     //
     // In LLVM IR this is the final operand, which is a cause of confusion.
-    serialiseOperand(I, VLMap, I->getOperand(NumOpers - 1));
+    serialiseOperand(I, VLMap, I->getCalledOperand());
 
     // Now the rest of the operands.
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
