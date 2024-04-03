@@ -877,6 +877,32 @@ static void collectReductionInfo(
   }
 }
 
+/// handling of DeclareReductionOp's cleanup region
+static LogicalResult inlineReductionCleanup(
+    llvm::SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
+    llvm::ArrayRef<llvm::Value *> privateReductionVariables,
+    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder) {
+  for (auto [i, reductionDecl] : llvm::enumerate(reductionDecls)) {
+    Region &cleanupRegion = reductionDecl.getCleanupRegion();
+    if (cleanupRegion.empty())
+      continue;
+
+    // map the argument to the cleanup region
+    Block &entry = cleanupRegion.front();
+    moduleTranslation.mapValue(entry.getArgument(0),
+                               privateReductionVariables[i]);
+
+    if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
+                                       builder, moduleTranslation)))
+      return failure();
+
+    // clear block argument mapping in case it needs to be re-created with a
+    // different source for another use of the same reduction decl
+    moduleTranslation.forgetMapping(cleanupRegion);
+  }
+  return success();
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1073,26 +1099,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(nextInsertionPoint);
 
   // after the workshare loop, deallocate private reduction variables
-  for (auto [i, reductionDecl] : llvm::enumerate(reductionDecls)) {
-    Region &cleanupRegion = reductionDecl.getCleanupRegion();
-    if (cleanupRegion.empty())
-      continue;
-
-    // map the argument to the cleanup region
-    Block &entry = cleanupRegion.front();
-    moduleTranslation.mapValue(entry.getArgument(0),
-                               privateReductionVariables[i]);
-
-    if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
-                                       builder, moduleTranslation)))
-      return failure();
-
-    // clear block argument mapping in case it needs to be re-created with a
-    // different source for another use of the same reduction decl
-    moduleTranslation.forgetMapping(cleanupRegion);
-  }
-
-  return success();
+  return inlineReductionCleanup(reductionDecls, privateReductionVariables,
+                                moduleTranslation, builder);
 }
 
 /// A RAII class that on construction replaces the region arguments of the
@@ -1357,24 +1365,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
     // if the reduction has a cleanup region, inline it here to finalize the
     // reduction variables
-    for (auto [i, reductionDecl] : llvm::enumerate(reductionDecls)) {
-      Region &cleanupRegion = reductionDecl.getCleanupRegion();
-      if (cleanupRegion.empty())
-        continue;
-
-      // map the argument to the cleanup region
-      Block &entry = cleanupRegion.front();
-      moduleTranslation.mapValue(entry.getArgument(0),
-                                 privateReductionVariables[i]);
-
-      if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
-                                         builder, moduleTranslation)))
-        bodyGenStatus = failure();
-
-      // clear block argument mapping in case it needs to be re-created with a
-      // different source for another use of the same reduction decl
-      moduleTranslation.forgetMapping(cleanupRegion);
-    }
+    if (failed(inlineReductionCleanup(reductionDecls, privateReductionVariables,
+                                      moduleTranslation, builder)))
+      bodyGenStatus = failure();
 
     builder.restoreIP(oldIP);
   };
