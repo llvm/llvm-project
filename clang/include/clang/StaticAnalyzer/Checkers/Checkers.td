@@ -607,7 +607,8 @@ def StreamChecker : Checker<"Stream">,
   CheckerOptions<[
     CmdLineOption<Boolean,
                   "Pedantic",
-                  "If false, assume that stream write operations do never "
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail."
                   "fail.",
                   "false",
                   InAlpha>

@@ -3138,10 +3138,13 @@ are detected:
   allowed in this state.
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
-The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
+The checker assumes by default that any of the stream operations, except the
+write operations (like ``fwrite``, ``fprintf``) can fail. The option
+``Pedantic`` controls if the write operations are assumed to be successful or
+not. If set to ``true``, the write operations (including change of file
+position) can fail too (default is ``false``). This option was added to prevent
+many checker warnings if the code contains many write operations without error
+check.
 
 .. code-block:: c
 
@@ -3195,6 +3198,13 @@ are usually not opened explicitly by the program, and are global variables).
 
    fclose(p);
  }
+
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
 
 .. _alpha-unix-cstring-BufferOverlap:
 

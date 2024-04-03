@@ -1064,11 +1064,11 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     C.addTransition(StateNotFailed);
   }
 
-  // Add transition for the failed state. The resulting value of the file
-  // position indicator for the stream is indeterminate.
   if (!PedanticMode)
     return;
 
+  // Add transition for the failed state. The resulting value of the file
+  // position indicator for the stream is indeterminate.
   ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorFError, true));
@@ -1102,11 +1102,11 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
       E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
 
-  // Add transition for the failed state. The resulting value of the file
-  // position indicator for the stream is indeterminate.
   if (!PedanticMode)
     return;
 
+  // Add transition for the failed state. The resulting value of the file
+  // position indicator for the stream is indeterminate.
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorFError, true));
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
@@ -1284,16 +1284,16 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
       E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
 
-  // Add failure state.
   if (!PedanticMode)
     return;
 
-  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
+  // Add failure state.
   // At error it is possible that fseek fails but sets none of the error flags.
   // If fseek failed, assume that the file position becomes indeterminate in any
   // case.
   // It is allowed to set the position beyond the end of the file. EOF error
   // should not occur.
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
