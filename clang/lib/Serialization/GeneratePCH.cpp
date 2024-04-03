@@ -102,7 +102,7 @@ ReducedBMIGenerator::ReducedBMIGenerator(Preprocessor &PP,
 
 Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
   Module *M = Ctx.getCurrentNamedModule();
-  assert(M->isNamedModuleUnit() &&
+  assert(M && M->isNamedModuleUnit() &&
          "ReducedBMIGenerator should only be used with C++20 Named modules.");
   return M;
 }
