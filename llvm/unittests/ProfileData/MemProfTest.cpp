@@ -265,7 +265,9 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
 }
 
-TEST(MemProf, RecordSerializationRoundTripVersion0) {
+// Version0 and Version1 serialize IndexedMemProfRecord in the same format, so
+// we share one test.
+TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
   const MemProfSchema Schema = getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,

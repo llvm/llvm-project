@@ -291,7 +291,7 @@ struct IndexedAllocationInfo {
       : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(IndexedVersion Version = Version0) const {
+  size_t serializedSize(IndexedVersion Version) const {
     size_t Size = 0;
     if (Version <= Version1) {
       // The number of frames to serialize.
@@ -310,14 +310,6 @@ struct IndexedAllocationInfo {
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
       return false;
-
-    if (Other.CallStack.size() != CallStack.size())
-      return false;
-
-    for (size_t J = 0; J < Other.CallStack.size(); J++) {
-      if (Other.CallStack[J] != CallStack[J])
-        return false;
-    }
 
     if (Other.CSId != CSId)
       return false;
@@ -388,7 +380,7 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize(IndexedVersion Version = Version0) const {
+  size_t serializedSize(IndexedVersion Version) const {
     size_t Result = sizeof(GlobalValue::GUID);
     for (const IndexedAllocationInfo &N : AllocSites)
       Result += N.serializedSize(Version);
@@ -412,16 +404,8 @@ struct IndexedMemProfRecord {
     if (Other.AllocSites.size() != AllocSites.size())
       return false;
 
-    if (Other.CallSites.size() != CallSites.size())
-      return false;
-
     for (size_t I = 0; I < AllocSites.size(); I++) {
       if (AllocSites[I] != Other.AllocSites[I])
-        return false;
-    }
-
-    for (size_t I = 0; I < CallSites.size(); I++) {
-      if (CallSites[I] != Other.CallSites[I])
         return false;
     }
 
@@ -433,12 +417,12 @@ struct IndexedMemProfRecord {
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
-                 IndexedVersion Version = Version0);
+                 IndexedVersion Version);
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
                                           const unsigned char *Buffer,
-                                          IndexedVersion Version = Version0);
+                                          IndexedVersion Version);
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -535,7 +519,7 @@ public:
 
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
-    Record = IndexedMemProfRecord::deserialize(Schema, D);
+    Record = IndexedMemProfRecord::deserialize(Schema, D, Version1);
     return Record;
   }
 
@@ -574,7 +558,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize();
+    offset_type M = V.serializedSize(Version1);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -588,7 +572,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
-    V.serialize(*Schema, Out);
+    V.serialize(*Schema, Out, Version1);
     // Clear the IndexedMemProfRecord which results in clearing/freeing its
     // vectors of allocs and callsites. This is owned by the associated on-disk
     // hash table, but unused after this point. See also the comment added to
