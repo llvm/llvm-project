@@ -1,467 +1,221 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx \
-// RUN:   -x c++-header %t/input.h -o %t/output.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -triple arm64-apple-macosx -x c++-header %s -o %t/output.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
-
-//--- input.h
 class Foo {
+  // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GETCOUNT
   int getCount();
+  // GETCOUNT: "!testRelLabel": "memberOf $ c:@S@Foo@F@getCount# $ c:@S@Foo"
+  // GETCOUNT-LABEL: "!testLabel":  "c:@S@Foo@F@getCount#"
+  // GETCOUNT: "accessLevel": "private",
+  // GETCOUNT:      "declarationFragments": [
+  // GETCOUNT-NEXT:   {
+  // GETCOUNT-NEXT:     "kind": "typeIdentifier",
+  // GETCOUNT-NEXT:     "preciseIdentifier": "c:I",
+  // GETCOUNT-NEXT:     "spelling": "int"
+  // GETCOUNT-NEXT:   },
+  // GETCOUNT-NEXT:   {
+  // GETCOUNT-NEXT:     "kind": "text",
+  // GETCOUNT-NEXT:     "spelling": " "
+  // GETCOUNT-NEXT:   },
+  // GETCOUNT-NEXT:   {
+  // GETCOUNT-NEXT:     "kind": "identifier",
+  // GETCOUNT-NEXT:     "spelling": "getCount"
+  // GETCOUNT-NEXT:   },
+  // GETCOUNT-NEXT:   {
+  // GETCOUNT-NEXT:     "kind": "text",
+  // GETCOUNT-NEXT:     "spelling": "();"
+  // GETCOUNT-NEXT:   }
+  // GETCOUNT-NEXT: ],
+  // GETCOUNT:      "functionSignature": {
+  // GETCOUNT-NEXT:   "returns": [
+  // GETCOUNT-NEXT:     {
+  // GETCOUNT-NEXT:       "kind": "typeIdentifier",
+  // GETCOUNT-NEXT:       "preciseIdentifier": "c:I",
+  // GETCOUNT-NEXT:       "spelling": "int"
+  // GETCOUNT-NEXT:     }
+  // GETCOUNT-NEXT:   ]
+  // GETCOUNT-NEXT: },
+  // GETCOUNT: "displayName": "Instance Method",
+  // GETCOUNT-NEXT: "identifier": "c++.method"
+  // GETCOUNT: "title": "getCount"
+  // GETCOUNT: "pathComponents": [
+  // GETCOUNT-NEXT:   "Foo",
+  // GETCOUNT-NEXT:   "getCount"
+  // GETCOUNT-NEXT: ]
 
+  // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SETL
   void setLength(int length) noexcept;
+  // SETL: "!testRelLabel": "memberOf $ c:@S@Foo@F@setLength#I# $ c:@S@Foo"
+  // SETL-LABEL: "!testLabel": "c:@S@Foo@F@setLength#I#"
+  // SETL:      "declarationFragments": [
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "typeIdentifier",
+  // SETL-NEXT:     "preciseIdentifier": "c:v",
+  // SETL-NEXT:     "spelling": "void"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": " "
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "identifier",
+  // SETL-NEXT:     "spelling": "setLength"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": "("
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "typeIdentifier",
+  // SETL-NEXT:     "preciseIdentifier": "c:I",
+  // SETL-NEXT:     "spelling": "int"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": " "
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "internalParam",
+  // SETL-NEXT:     "spelling": "length"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": ")"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": " "
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "keyword",
+  // SETL-NEXT:     "spelling": "noexcept"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": ";"
+  // SETL-NEXT:   }
+  // SETL-NEXT: ],
+  // SETL:      "functionSignature": {
+  // SETL-NEXT:   "parameters": [
+  // SETL-NEXT:     {
+  // SETL-NEXT:       "declarationFragments": [
+  // SETL-NEXT:         {
+  // SETL-NEXT:           "kind": "typeIdentifier",
+  // SETL-NEXT:           "preciseIdentifier": "c:I",
+  // SETL-NEXT:           "spelling": "int"
+  // SETL-NEXT:         },
+  // SETL-NEXT:         {
+  // SETL-NEXT:           "kind": "text",
+  // SETL-NEXT:           "spelling": " "
+  // SETL-NEXT:         },
+  // SETL-NEXT:         {
+  // SETL-NEXT:           "kind": "internalParam",
+  // SETL-NEXT:           "spelling": "length"
+  // SETL-NEXT:         }
+  // SETL-NEXT:       ],
+  // SETL-NEXT:       "name": "length"
+  // SETL-NEXT:     }
+  // SETL-NEXT:   ],
+  // SETL-NEXT:   "returns": [
+  // SETL-NEXT:     {
+  // SETL-NEXT:       "kind": "typeIdentifier",
+  // SETL-NEXT:       "preciseIdentifier": "c:v",
+  // SETL-NEXT:       "spelling": "void"
+  // SETL-NEXT:     }
+  // SETL-NEXT:   ]
+  // SETL-NEXT: },
 
 public:
+  // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GETFOO
   static double getFoo();
+  // GETFOO: "!testRelLabel": "memberOf $ c:@S@Foo@F@getFoo#S $ c:@S@Foo"
+
+  // GETFOO-LABEL: "!testLabel": "c:@S@Foo@F@getFoo#S"
+  // GETFOO: "accessLevel": "public",
+  // GETFOO:      "declarationFragments": [
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "keyword",
+  // GETFOO-NEXT:     "spelling": "static"
+  // GETFOO-NEXT:   },
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "text",
+  // GETFOO-NEXT:     "spelling": " "
+  // GETFOO-NEXT:   },
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "typeIdentifier",
+  // GETFOO-NEXT:     "preciseIdentifier": "c:d",
+  // GETFOO-NEXT:     "spelling": "double"
+  // GETFOO-NEXT:   },
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "text",
+  // GETFOO-NEXT:     "spelling": " "
+  // GETFOO-NEXT:   },
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "identifier",
+  // GETFOO-NEXT:     "spelling": "getFoo"
+  // GETFOO-NEXT:   },
+  // GETFOO-NEXT:   {
+  // GETFOO-NEXT:     "kind": "text",
+  // GETFOO-NEXT:     "spelling": "();"
+  // GETFOO-NEXT:   }
+  // GETFOO-NEXT: ],
+  // GETFOO:      "functionSignature": {
+  // GETFOO-NEXT:   "returns": [
+  // GETFOO-NEXT:     {
+  // GETFOO-NEXT:       "kind": "typeIdentifier",
+  // GETFOO-NEXT:       "preciseIdentifier": "c:d",
+  // GETFOO-NEXT:       "spelling": "double"
+  // GETFOO-NEXT:     }
+  // GETFOO-NEXT:   ]
+  // GETFOO-NEXT: },
+  // GETFOO:      "kind": {
+  // GETFOO-NEXT:   "displayName": "Static Method",
+  // GETFOO-NEXT:   "identifier": "c++.type.method"
+  // GETFOO-NEXT: },
 
 protected:
+  // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix GETBAR
   constexpr int getBar() const;
-};
-/// expected-no-diagnostics
+  // GETBAR: "!testRelLabel": "memberOf $ c:@S@Foo@F@getBar#1 $ c:@S@Foo"
 
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Foo@F@getCount#",
-      "target": "c:@S@Foo",
-      "targetFallback": "Foo"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Foo@F@setLength#I#",
-      "target": "c:@S@Foo",
-      "targetFallback": "Foo"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Foo@F@getBar#1",
-      "target": "c:@S@Foo",
-      "targetFallback": "Foo"
-    },
-    {
-      "kind": "memberOf",
-      "source": "c:@S@Foo@F@getFoo#S",
-      "target": "c:@S@Foo",
-      "targetFallback": "Foo"
-    }
-  ],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "class"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "Foo"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo"
-      },
-      "kind": {
-        "displayName": "Class",
-        "identifier": "c++.class"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 0
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "Foo"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "Foo"
-          }
-        ],
-        "title": "Foo"
-      },
-      "pathComponents": [
-        "Foo"
-      ]
-    },
-    {
-      "accessLevel": "private",
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getCount"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:I",
-            "spelling": "int"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo@F@getCount#"
-      },
-      "kind": {
-        "displayName": "Instance Method",
-        "identifier": "c++.method"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getCount"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "getCount"
-          }
-        ],
-        "title": "getCount"
-      },
-      "pathComponents": [
-        "Foo",
-        "getCount"
-      ]
-    },
-    {
-      "accessLevel": "private",
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "setLength"
-        },
-        {
-          "kind": "text",
-          "spelling": "("
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "internalParam",
-          "spelling": "length"
-        },
-        {
-          "kind": "text",
-          "spelling": ")"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "noexcept"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "functionSignature": {
-        "parameters": [
-          {
-            "declarationFragments": [
-              {
-                "kind": "typeIdentifier",
-                "preciseIdentifier": "c:I",
-                "spelling": "int"
-              },
-              {
-                "kind": "text",
-                "spelling": " "
-              },
-              {
-                "kind": "internalParam",
-                "spelling": "length"
-              }
-            ],
-            "name": "length"
-          }
-        ],
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo@F@setLength#I#"
-      },
-      "kind": {
-        "displayName": "Instance Method",
-        "identifier": "c++.method"
-      },
-      "location": {
-        "position": {
-          "character": 7,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "setLength"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "setLength"
-          }
-        ],
-        "title": "setLength"
-      },
-      "pathComponents": [
-        "Foo",
-        "setLength"
-      ]
-    },
-    {
-      "accessLevel": "protected",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "constexpr"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getBar"
-        },
-        {
-          "kind": "text",
-          "spelling": "() "
-        },
-        {
-          "kind": "keyword",
-          "spelling": "const"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:I",
-            "spelling": "int"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo@F@getBar#1"
-      },
-      "kind": {
-        "displayName": "Instance Method",
-        "identifier": "c++.method"
-      },
-      "location": {
-        "position": {
-          "character": 16,
-          "line": 9
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getBar"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "getBar"
-          }
-        ],
-        "title": "getBar"
-      },
-      "pathComponents": [
-        "Foo",
-        "getBar"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "static"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:d",
-          "spelling": "double"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "getFoo"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:d",
-            "spelling": "double"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c++",
-        "precise": "c:@S@Foo@F@getFoo#S"
-      },
-      "kind": {
-        "displayName": "Static Method",
-        "identifier": "c++.type.method"
-      },
-      "location": {
-        "position": {
-          "character": 16,
-          "line": 6
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "getFoo"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "getFoo"
-          }
-        ],
-        "title": "getFoo"
-      },
-      "pathComponents": [
-        "Foo",
-        "getFoo"
-      ]
-    }
-  ]
-}
+  // GETBAR-LABEL: "!testLabel": "c:@S@Foo@F@getBar#1"
+  // GETBAR: "accessLevel": "protected"
+  // GETBAR:      "declarationFragments": [
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "keyword",
+  // GETBAR-NEXT:     "spelling": "constexpr"
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "text",
+  // GETBAR-NEXT:     "spelling": " "
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "typeIdentifier",
+  // GETBAR-NEXT:     "preciseIdentifier": "c:I",
+  // GETBAR-NEXT:     "spelling": "int"
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "text",
+  // GETBAR-NEXT:     "spelling": " "
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "identifier",
+  // GETBAR-NEXT:     "spelling": "getBar"
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "text",
+  // GETBAR-NEXT:     "spelling": "() "
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "keyword",
+  // GETBAR-NEXT:     "spelling": "const"
+  // GETBAR-NEXT:   },
+  // GETBAR-NEXT:   {
+  // GETBAR-NEXT:     "kind": "text",
+  // GETBAR-NEXT:     "spelling": ";"
+  // GETBAR-NEXT:   }
+  // GETBAR-NEXT: ],
+};
+
+// expected-no-diagnostics
