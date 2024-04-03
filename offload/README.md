@@ -14,6 +14,7 @@ discussions on [Discourse](https://discourse.llvm.org/tag/offload).
 
 # Meetings
 
-Every second Friday, starting Jan 12, 2024, 9:00 - 10:00am PST.
-[invite.ics](https://drive.google.com/file/d/10Gv-MuEQ-VztJBqpQBggJclv2vU5VF0V/view?usp=sharing)
+Every second Wednesday, 7:00 - 8:00am PT, starting Jan 24, 2024.
+Alternates with the OpenMP in LLVM meeting.
+[invite.ics](https://drive.google.com/file/d/1AYwKdnM01aV9Gv9k435ArEAhn7PAer7z/view?usp=sharing)
 [Meeting Minutes and Agenda](https://docs.google.com/document/d/1PAeEshxHCv22JDBCPA9GXGggLp0t7rsnD_jL04MBbzw/edit?usp=sharing)
