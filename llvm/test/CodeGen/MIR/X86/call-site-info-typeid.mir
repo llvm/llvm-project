@@ -1,0 +1,68 @@
+# Test MIR printer and parser for type id field in callSites. It is used
+# for propogating call site type identifiers to emit in the call graph section.
+
+# RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
+# CHECK: name: main
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+# CHECK-NEXT: 123456789 }
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local void @foo(i8 signext %a) {
+  entry:
+    ret void
+  }
+  
+  define dso_local i32 @main() {
+  entry:
+    %retval = alloca i32, align 4
+    %fp = alloca void (i8)*, align 8
+    store i32 0, i32* %retval, align 4
+    store void (i8)* @foo, void (i8)** %fp, align 8
+    %0 = load void (i8)*, void (i8)** %fp, align 8
+    call void %0(i8 signext 97)
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    RET 0
+
+...
+---
+name:            main
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: retval, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: fp, type: default, offset: 0, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:
+  - { bb: 0, offset: 6, fwdArgRegs: [], typeId: 
+    123456789 }
+body:             |
+  bb.0.entry:
+    MOV32mi %stack.0.retval, 1, $noreg, 0, $noreg, 0 :: (store (s32) into %ir.retval)
+    MOV64mi32 %stack.1.fp, 1, $noreg, 0, $noreg, @foo :: (store (s64) into %ir.fp)
+    %0:gr64 = MOV32ri64 @foo
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %1:gr32 = MOV32ri 97
+    $edi = COPY %1
+    CALL64r killed %0, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+
+...
