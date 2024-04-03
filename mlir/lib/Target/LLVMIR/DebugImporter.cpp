@@ -318,73 +318,101 @@ getRecSelfConstructor(llvm::DINode *node) {
       .Default(CtorType());
 }
 
-/// An attribute replacer that replaces nested recursive decls with recursive
-/// self-references instead.
-///
+/// An iterative attribute replacer that also handles pruning recursive types.
 /// - Recurses down the attribute tree while replacing attributes based on the
 ///   provided replacement map.
 /// - Keeps track of the currently open recursive declarations, and upon
-///   encountering a duplicate declaration, replace with a self-ref instead.
-static Attribute replaceAndPruneRecursiveTypesImpl(
-    Attribute node,
-    const DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> &mapping,
-    DenseSet<DistinctAttr> &openDecls) {
-  DistinctAttr recId;
-  if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(node)) {
-    recId = recType.getRecId();
-
-    // Configure context.
-    if (recId) {
-      if (recType.isRecSelf()) {
-        // Replace selfRef based on the provided mapping.
-        if (DINodeAttr replacement = mapping.lookup(recType))
-          return replaceAndPruneRecursiveTypesImpl(replacement, mapping,
-                                                   openDecls);
-        return node;
-      }
-
-      auto [_, inserted] = openDecls.insert(recId);
-      if (!inserted) {
-        // This is a nested decl. Replace with recSelf.
-        return recType.getRecSelf(recId);
-      }
-    }
-  }
-
-  // Collect sub attrs.
-  SmallVector<Attribute> attrs;
-  SmallVector<Type> types;
-  node.walkImmediateSubElements(
-      [&attrs](Attribute attr) { attrs.push_back(attr); },
-      [&types](Type type) { types.push_back(type); });
-
-  // Recurse into attributes.
-  bool changed = false;
-  for (auto it = attrs.begin(); it != attrs.end(); it++) {
-    Attribute replaced =
-        replaceAndPruneRecursiveTypesImpl(*it, mapping, openDecls);
-    if (replaced != *it) {
-      *it = replaced;
-      changed = true;
-    }
-  }
-
-  Attribute result = node;
-  if (changed)
-    result = result.replaceImmediateSubElements(attrs, types);
-
-  // Reset context.
-  if (recId)
-    openDecls.erase(recId);
-
-  return result;
-}
-
+///   encountering a duplicate declaration, replace with a self-reference.
 static Attribute replaceAndPruneRecursiveTypes(
-    DINodeAttr node,
+    Attribute baseNode,
     const DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> &mapping) {
+
+  struct ReplacementState {
+    // The attribute being replaced.
+    Attribute node;
+    // The nested elements of `node`.
+    SmallVector<Attribute> attrs;
+    SmallVector<Type> types;
+    // The current attr being walked on (index into `attrs`).
+    size_t attrIndex;
+    // Whether or not any attr was replaced.
+    bool changed;
+
+    void replaceCurrAttr(Attribute attr) {
+      Attribute &target = attrs[attrIndex];
+      if (attr != target) {
+        changed = true;
+        target = attr;
+      }
+    }
+  };
+
+  // Every iteration, perform replacement on the attribute at `attrIndex` at the
+  // top of `workStack`.
+  // If `attrIndex` reaches past the size of `attrs`, replace `node` with
+  // `attrs` & `types`, and pop off a stack frame and assign the replacement to
+  // the attr being replaced on the previous stack frame.
+  SmallVector<ReplacementState> workStack;
+  workStack.push_back({nullptr, {baseNode}, {}, 0, false});
+
   DenseSet<DistinctAttr> openDecls;
-  return replaceAndPruneRecursiveTypesImpl(node, mapping, openDecls);
+  while (workStack.size() > 1 || workStack.back().attrIndex == 0) {
+    ReplacementState &state = workStack.back();
+
+    // Check for popping condition.
+    if (state.attrIndex == state.attrs.size()) {
+      Attribute result = state.node;
+      if (state.changed)
+        result = result.replaceImmediateSubElements(state.attrs, state.types);
+
+      // Reset context.
+      if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(state.node))
+        if (DistinctAttr recId = recType.getRecId())
+          openDecls.erase(recId);
+
+      workStack.pop_back();
+      ReplacementState &prevState = workStack.back();
+      prevState.replaceCurrAttr(result);
+      ++prevState.attrIndex;
+      continue;
+    }
+
+    Attribute node = state.attrs[state.attrIndex];
+    if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(node)) {
+      if (DistinctAttr recId = recType.getRecId()) {
+        if (recType.isRecSelf()) {
+          // Replace selfRef based on the provided mapping and re-walk from the
+          // replacement node (do not increment attrIndex).
+          if (DINodeAttr replacement = mapping.lookup(recType)) {
+            state.replaceCurrAttr(replacement);
+            continue;
+          }
+
+          // Otherwise, nothing to do. Advance to next attr.
+          ++state.attrIndex;
+          continue;
+        }
+
+        // Configure context.
+        auto [_, inserted] = openDecls.insert(recId);
+        if (!inserted) {
+          // This is a nested decl. Replace with recSelf. Nothing more to do.
+          state.replaceCurrAttr(recType.getRecSelf(recId));
+          ++state.attrIndex;
+          continue;
+        }
+      }
+    }
+
+    // Recurse into this node.
+    workStack.push_back({node, {}, {}, 0, false});
+    ReplacementState &newState = workStack.back();
+    node.walkImmediateSubElements(
+        [&newState](Attribute attr) { newState.attrs.push_back(attr); },
+        [&newState](Type type) { newState.types.push_back(type); });
+  };
+
+  return workStack.back().attrs.front();
 }
 
 DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
