@@ -75,6 +75,8 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let HasDst32 = 0;
   // VOPC disallows dst_sel and dst_unused as they have no effect on destination
   let EmitDstSel = 0;
+  // FIXME: work around AsmParser bug
+  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
   let Outs64 = (outs VOPDstS64orS32:$sdst);
   let OutsVOP3DPP = Outs64;
   let OutsVOP3DPP8 = Outs64;
@@ -112,6 +114,8 @@ class VOPC_NoSdst_Profile<list<SchedReadWrite> sched, ValueType vt0,
                                      "$src0, $src1");
   let AsmSDWA9 = "$src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let EmitDst = 0;
+  // FIXME: work around AsmParser bug
+  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> {
@@ -785,6 +789,8 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   let HasSrc1Mods = 0;
   let HasClamp = 0;
   let HasOMod = 0;
+  // FIXME: work around AsmParser bug
+  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
@@ -812,6 +818,8 @@ class VOPC_Class_NoSdst_Profile<list<SchedReadWrite> sched, ValueType src0VT, Va
   let AsmVOP3Base = "$src0_modifiers, $src1";
   let AsmSDWA9 = "$src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let EmitDst = 0;
+  // FIXME: work around AsmParser bug
+  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {

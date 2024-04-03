@@ -127,3 +127,19 @@ s_prefetch_inst s[14:15], 0xffffff, m0, 7
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 24-bit signed offset
 // GFX12-ERR: s_prefetch_inst s[14:15], 0xffffff, m0, 7
 // GFX12-ERR:                           ^
+
+v_cmp_le_f32 vcc_lo, v1, s2 row_mirror
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error:
+// FIXME add test when VOPC e64_dpp src1 asm is fixed
+
+v_cmp_le_f32 vcc_lo, v1, s2 quad_perm:[1,1,1,1]
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error:
+// FIXME add test when VOPC e64_dpp src1 asm is fixed
+
+v_cmpx_gt_u16 v1, s2 op_sel:[1,1] quad_perm:[1,1,1,1]
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error:
+// FIXME add test when VOPC e64_dpp src1 asm is fixed
+
+v_cmpx_class_f16_u16 v1, 2.0 quad_perm:[1,1,1,1]
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error:
+// FIXME add test when VOPC e64_dpp src1 asm is fixed
