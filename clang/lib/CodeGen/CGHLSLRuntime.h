@@ -80,6 +80,7 @@ public:
   //===----------------------------------------------------------------------===//
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
+
   template <unsigned BI> llvm::Intrinsic::ID getIntrinsic();
   GENERATE_HLSL_INTRINSIC_TEMPLATE(builtin_hlsl_elementwise_all, all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
@@ -139,6 +140,11 @@ private:
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
 };
+
+// Default implementation
+template <unsigned BI> llvm::Intrinsic::ID CGHLSLRuntime::getIntrinsic() {
+  static_assert(false, "getIntrinsic is only allowed on specialized templates");
+}
 
 } // namespace CodeGen
 } // namespace clang
