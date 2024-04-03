@@ -30,8 +30,9 @@ Version changelog:
    in case arguments are split to a separate SAME line.
 4: --check-globals now has a third option ('smart'). The others are now called
    'none' and 'all'. 'smart' is the default.
+5: Basic block labels are matched by FileCheck expressions
 """
-DEFAULT_VERSION = 4
+DEFAULT_VERSION = 5
 
 
 SUPPORTED_ANALYSES = {
@@ -984,12 +985,14 @@ class NamelessValue:
         is_number=False,
         replace_number_with_counter=False,
         match_literally=False,
-        interlaced_with_previous=False
+        interlaced_with_previous=False,
+        ir_suffix=r"",
     ):
         self.check_prefix = check_prefix
         self.check_key = check_key
         self.ir_prefix = ir_prefix
         self.ir_regexp = ir_regexp
+        self.ir_suffix = ir_suffix
         self.global_ir_rhs_regexp = global_ir_rhs_regexp
         self.is_before_functions = is_before_functions
         self.is_number = is_number
@@ -1000,15 +1003,10 @@ class NamelessValue:
         self.interlaced_with_previous = interlaced_with_previous
         self.variable_mapping = {}
 
-    # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
+    # Return true if this kind of IR value is defined "locally" to functions,
+    # which we assume is only the case precisely for LLVM IR local values.
     def is_local_def_ir_value(self):
-        return self.ir_prefix == "%"
-
-    # Return the IR prefix and check prefix we use for this kind or IR value,
-    # e.g., (%, TMP) for locals. If the IR prefix is a regex, return the prefix
-    # used in the IR output
-    def get_ir_prefix_from_ir_value_match(self, match):
-        return re.search(self.ir_prefix, match[0])[0], self.check_prefix
+        return self.check_key == "%"
 
     # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
     def get_ir_regex(self):
@@ -1043,30 +1041,10 @@ class NamelessValue:
         var = var.replace("-", "_")
         return var.upper()
 
-    # Create a FileCheck variable from regex.
-    def get_value_definition(self, var, match):
-        # for backwards compatibility we check locals with '.*'
-        varname = self.get_value_name(var, self.check_prefix)
-        prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
-        if self.is_number:
-            regex = ""  # always capture a number in the default format
-            capture_start = "[[#"
-        else:
-            regex = self.get_ir_regex()
-            capture_start = "[["
-        if self.is_local_def_ir_value():
-            return capture_start + varname + ":" + prefix + regex + "]]"
-        return prefix + capture_start + varname + ":" + regex + "]]"
-
-    # Use a FileCheck variable.
-    def get_value_use(self, var, match, var_prefix=None):
-        if var_prefix is None:
-            var_prefix = self.check_prefix
-        capture_start = "[[#" if self.is_number else "[["
-        if self.is_local_def_ir_value():
-            return capture_start + self.get_value_name(var, var_prefix) + "]]"
-        prefix = self.get_ir_prefix_from_ir_value_match(match)[0]
-        return prefix + capture_start + self.get_value_name(var, var_prefix) + "]]"
+    def get_affixes_from_match(self, match: re.Match):
+        prefix = re.match(self.ir_prefix, match.group(2)).group(0)
+        suffix = re.search(self.ir_suffix + "$", match.group(2)).group(0)
+        return prefix, suffix
 
 
 class GeneralizerInfo:
@@ -1111,7 +1089,7 @@ class GeneralizerInfo:
             if unstable_only and nameless_value.match_literally:
                 continue
 
-            match = f"(?:{nameless_value.ir_prefix}({nameless_value.ir_regexp}))"
+            match = f"(?:{nameless_value.ir_prefix}({nameless_value.ir_regexp}){nameless_value.ir_suffix})"
             if self.is_ir() and not globals_only and is_global:
                 match = "^" + match
             matches.append(match)
@@ -1176,7 +1154,15 @@ class GeneralizerInfo:
 
 
 def make_ir_generalizer(version):
-    values = [
+    values = []
+
+    if version >= 5:
+        values += [
+            NamelessValue(r"BB", "%", r"label %", r"[\w$.-]+?", None),
+            NamelessValue(r"BB", "%", r"^", r"[\w$.-]+?", None, ir_suffix=r":"),
+        ]
+
+    values += [
         #            check_prefix   check_key  ir_prefix           ir_regexp                global_ir_rhs_regexp
         NamelessValue(r"TMP", "%", r"%", r"[\w$.-]+?", None),
         NamelessValue(r"ATTR", "#", r"#", r"[0-9]+", None),
@@ -1421,16 +1407,68 @@ METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
 NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
 
 
+class TestVar:
+    def __init__(self, nameless_value: NamelessValue, prefix: str, suffix: str):
+        self._nameless_value = nameless_value
+
+        self._prefix = prefix
+        self._suffix = suffix
+
+    def seen(self, nameless_value: NamelessValue, prefix: str, suffix: str):
+        if prefix != self._prefix:
+            self._prefix = ""
+        if suffix != self._suffix:
+            self._suffix = ""
+
+    def get_variable_name(self, text):
+        return self._nameless_value.get_value_name(
+            text, self._nameless_value.check_prefix
+        )
+
+    def get_def(self, name, prefix, suffix):
+        if self._nameless_value.is_number:
+            return f"{prefix}[[#{name}:]]{suffix}"
+        if self._prefix:
+            assert self._prefix == prefix
+            prefix = ""
+        if self._suffix:
+            assert self._suffix == suffix
+            suffix = ""
+        return f"{prefix}[[{name}:{self._prefix}{self._nameless_value.get_ir_regex()}{self._suffix}]]{suffix}"
+
+    def get_use(self, name, prefix, suffix):
+        if self._nameless_value.is_number:
+            return f"{prefix}[[#{name}]]{suffix}"
+        if self._prefix:
+            assert self._prefix == prefix
+            prefix = ""
+        if self._suffix:
+            assert self._suffix == suffix
+            suffix = ""
+        return f"{prefix}[[{name}]]{suffix}"
+
+
 class CheckValueInfo:
     def __init__(
         self,
-        nameless_value: NamelessValue,
-        var: str,
+        key,
+        text,
+        name: str,
         prefix: str,
+        suffix: str,
     ):
-        self.nameless_value = nameless_value
-        self.var = var
+        # Key for the value, e.g. '%'
+        self.key = key
+
+        # Text to be matched by the FileCheck variable (without any prefix or suffix)
+        self.text = text
+
+        # Name of the FileCheck variable
+        self.name = name
+
+        # Prefix and suffix that were captured by the NamelessValue regular expression
         self.prefix = prefix
+        self.suffix = suffix
 
 
 # Represent a check line in a way that allows us to compare check lines while
@@ -1469,7 +1507,7 @@ def remap_metavar_names(
     new_mapping = {}
     for line in new_line_infos:
         for value in line.values:
-            new_mapping[value.var] = value.var
+            new_mapping[value.name] = value.name
 
     # Recursively commit to the identity mapping or find a better one
     def recurse(old_begin, old_end, new_begin, new_end):
@@ -1481,7 +1519,7 @@ def remap_metavar_names(
         def diffify_line(line, mapper):
             values = []
             for value in line.values:
-                mapped = mapper(value.var)
+                mapped = mapper(value.name)
                 values.append(mapped if mapped in committed_names else "?")
             return line.line.strip() + " @@@ " + " @ ".join(values)
 
@@ -1506,29 +1544,29 @@ def remap_metavar_names(
             local_commits = {}
 
             for lhs_value, rhs_value in zip(lhs_line.values, rhs_line.values):
-                if new_mapping[rhs_value.var] in committed_names:
+                if new_mapping[rhs_value.name] in committed_names:
                     # The new value has already been committed. If it was mapped
                     # to the same name as the original value, we can consider
                     # committing other values from this line. Otherwise, we
                     # should ignore this line.
-                    if new_mapping[rhs_value.var] == lhs_value.var:
+                    if new_mapping[rhs_value.name] == lhs_value.name:
                         continue
                     else:
                         break
 
-                if rhs_value.var in local_commits:
+                if rhs_value.name in local_commits:
                     # Same, but for a possible commit happening on the same line
-                    if local_commits[rhs_value.var] == lhs_value.var:
+                    if local_commits[rhs_value.name] == lhs_value.name:
                         continue
                     else:
                         break
 
-                if lhs_value.var in committed_names:
+                if lhs_value.name in committed_names:
                     # We can't map this value because the name we would map it to has already been
                     # committed for something else. Give up on this line.
                     break
 
-                local_commits[rhs_value.var] = lhs_value.var
+                local_commits[rhs_value.name] = lhs_value.name
             else:
                 # No reason not to add any commitments for this line
                 for rhs_var, lhs_var in local_commits.items():
@@ -1596,42 +1634,6 @@ def generalize_check_lines(
     else:
         regexp = ginfo.get_regexp()
 
-    # This gets called for each match that occurs in
-    # a line. We transform variables we haven't seen
-    # into defs, and variables we have seen into uses.
-    def transform_line_vars(match, transform_locals=True):
-        var = ginfo.get_name_from_match(match)
-        nameless_value = ginfo.get_nameless_value_from_match(match)
-        if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
-            warn(
-                "Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
-                " with scripted FileCheck name." % (var,)
-            )
-        key = (var, nameless_value.check_key)
-        is_local_def = nameless_value.is_local_def_ir_value()
-        if is_local_def and not transform_locals:
-            return None
-        if is_local_def and key in vars_seen:
-            rv = nameless_value.get_value_use(var, match)
-        elif not is_local_def and key in global_vars_seen:
-            # We could have seen a different prefix for the global variables first,
-            # ensure we use that one instead of the prefix for the current match.
-            rv = nameless_value.get_value_use(var, match, global_vars_seen[key])
-        else:
-            if is_local_def:
-                vars_seen.add(key)
-            else:
-                global_vars_seen[key] = nameless_value.check_prefix
-            rv = nameless_value.get_value_definition(var, match)
-        # re.sub replaces the entire regex match
-        # with whatever you return, so we have
-        # to make sure to hand it back everything
-        # including the commas and spaces.
-        return match.group(1) + rv + match.group(match.lastindex)
-
-    def transform_non_local_line_vars(match):
-        return transform_line_vars(match, False)
-
     multiple_braces_re = re.compile(r"({{+)|(}}+)")
     def escape_braces(match_obj):
         return '{{' + re.escape(match_obj.group(0)) + '}}'
@@ -1657,121 +1659,139 @@ def generalize_check_lines(
             lines[i] = scrubbed_line
 
     if not preserve_names:
-        if ginfo.is_asm():
-            for i, _ in enumerate(lines):
-                # It can happen that two matches are back-to-back and for some reason sub
-                # will not replace both of them. For now we work around this by
-                # substituting until there is no more match.
-                changed = True
-                while changed:
-                    (lines[i], changed) = regexp.subn(
-                        transform_line_vars, lines[i], count=1
-                    )
-        else:
-            # LLVM IR case. Start by handling global meta variables (global IR variables,
-            # metadata, attributes)
-            for i, _ in enumerate(lines):
-                start = 0
-                while True:
-                    m = regexp.search(lines[i][start:])
-                    if m is None:
-                        break
-                    start += m.start()
-                    sub = transform_non_local_line_vars(m)
-                    if sub is not None:
-                        lines[i] = (
-                            lines[i][:start] + sub + lines[i][start + len(m.group(0)) :]
-                        )
-                    start += 1
+        committed_names = set(
+            test_var.get_variable_name(name)
+            for (name, _), test_var in vars_seen.items()
+        )
+        defs = set()
 
-            # Collect information about new check lines and original check lines (if any)
-            new_line_infos = []
-            for line in lines:
-                filtered_line = ""
-                values = []
-                while True:
-                    m = regexp.search(line)
-                    if m is None:
-                        filtered_line += line
-                        break
+        # Collect information about new check lines, and generalize global reference
+        new_line_infos = []
+        for line in lines:
+            filtered_line = ""
+            values = []
+            while True:
+                m = regexp.search(line)
+                if m is None:
+                    filtered_line += line
+                    break
 
-                    var = ginfo.get_name_from_match(m)
-                    nameless_value = ginfo.get_nameless_value_from_match(m)
-                    var = nameless_value.get_value_name(
-                        var, nameless_value.check_prefix
+                name = ginfo.get_name_from_match(m)
+                nameless_value = ginfo.get_nameless_value_from_match(m)
+                prefix, suffix = nameless_value.get_affixes_from_match(m)
+                if may_clash_with_default_check_prefix_name(
+                    nameless_value.check_prefix, name
+                ):
+                    warn(
+                        "Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
+                        " with scripted FileCheck name." % (name,)
                     )
 
-                    # Replace with a [[@@]] tag, but be sure to keep the spaces and commas.
-                    filtered_line += (
-                        line[: m.start()]
-                        + m.group(1)
-                        + VARIABLE_TAG
-                        + m.group(m.lastindex)
+                # Record the variable as seen and (for locals) accumulate
+                # prefixes/suffixes
+                is_local_def = nameless_value.is_local_def_ir_value()
+                if is_local_def:
+                    vars_dict = vars_seen
+                else:
+                    vars_dict = global_vars_seen
+
+                key = (name, nameless_value.check_key)
+
+                if is_local_def:
+                    test_prefix = prefix
+                    test_suffix = suffix
+                else:
+                    test_prefix = ""
+                    test_suffix = ""
+
+                if key in vars_dict:
+                    vars_dict[key].seen(nameless_value, test_prefix, test_suffix)
+                else:
+                    vars_dict[key] = TestVar(nameless_value, test_prefix, test_suffix)
+                    defs.add(key)
+
+                var = vars_dict[key].get_variable_name(name)
+
+                # Replace with a [[@@]] tag, but be sure to keep the spaces and commas.
+                filtered_line += (
+                    line[: m.start()] + m.group(1) + VARIABLE_TAG + m.group(m.lastindex)
+                )
+                line = line[m.end() :]
+
+                values.append(
+                    CheckValueInfo(
+                        key=nameless_value.check_key,
+                        text=name,
+                        name=var,
+                        prefix=prefix,
+                        suffix=suffix,
                     )
-                    line = line[m.end() :]
-                    values.append(
-                        CheckValueInfo(
-                            nameless_value=nameless_value,
-                            var=var,
-                            prefix=nameless_value.get_ir_prefix_from_ir_value_match(m)[
-                                0
-                            ],
-                        )
+                )
+
+            new_line_infos.append(CheckLineInfo(filtered_line, values))
+
+        committed_names.update(
+            test_var.get_variable_name(name)
+            for (name, _), test_var in global_vars_seen.items()
+        )
+
+        # Collect information about original check lines, if any.
+        orig_line_infos = []
+        for line in original_check_lines or []:
+            filtered_line = ""
+            values = []
+            while True:
+                m = METAVAR_RE.search(line)
+                if m is None:
+                    filtered_line += line
+                    break
+
+                # Replace with a [[@@]] tag, but be sure to keep the spaces and commas.
+                filtered_line += line[: m.start()] + VARIABLE_TAG
+                line = line[m.end() :]
+                values.append(
+                    CheckValueInfo(
+                        key=None,
+                        text=None,
+                        name=m.group(1),
+                        prefix="",
+                        suffix="",
                     )
-                new_line_infos.append(CheckLineInfo(filtered_line, values))
+                )
+            orig_line_infos.append(CheckLineInfo(filtered_line, values))
 
-            orig_line_infos = []
-            for line in original_check_lines or []:
-                filtered_line = ""
-                values = []
-                while True:
-                    m = METAVAR_RE.search(line)
-                    if m is None:
-                        filtered_line += line
-                        break
+        # Compute the variable name mapping
+        mapping = remap_metavar_names(orig_line_infos, new_line_infos, committed_names)
 
-                    # Replace with a [[@@]] tag, but be sure to keep the spaces and commas.
-                    filtered_line += line[: m.start()] + VARIABLE_TAG
-                    line = line[m.end() :]
-                    values.append(
-                        CheckValueInfo(
-                            nameless_value=None,
-                            var=m.group(1),
-                            prefix=None,
-                        )
+        # Apply the variable name mapping
+        for i, line_info in enumerate(new_line_infos):
+            line_template = line_info.line
+            line = ""
+
+            for value in line_info.values:
+                idx = line_template.find(VARIABLE_TAG)
+                line += line_template[:idx]
+                line_template = line_template[idx + len(VARIABLE_TAG) :]
+
+                key = (value.text, value.key)
+                if value.key == "%":
+                    vars_dict = vars_seen
+                else:
+                    vars_dict = global_vars_seen
+
+                if key in defs:
+                    line += vars_dict[key].get_def(
+                        mapping[value.name], value.prefix, value.suffix
                     )
-                orig_line_infos.append(CheckLineInfo(filtered_line, values))
+                    defs.remove(key)
+                else:
+                    line += vars_dict[key].get_use(
+                        mapping[value.name], value.prefix, value.suffix
+                    )
 
-            # Compute the variable name mapping
-            committed_names = set(vars_seen)
+            line += line_template
 
-            mapping = remap_metavar_names(
-                orig_line_infos, new_line_infos, committed_names
-            )
-
-            for i, line_info in enumerate(new_line_infos):
-                line_template = line_info.line
-                line = ""
-
-                for value in line_info.values:
-                    idx = line_template.find(VARIABLE_TAG)
-                    line += line_template[:idx]
-                    line_template = line_template[idx + len(VARIABLE_TAG) :]
-
-                    key = (mapping[value.var], nameless_value.check_key)
-                    is_local_def = nameless_value.is_local_def_ir_value()
-                    if is_local_def:
-                        if mapping[value.var] in vars_seen:
-                            line += f"[[{mapping[value.var]}]]"
-                        else:
-                            line += f"[[{mapping[value.var]}:{value.prefix}{value.nameless_value.get_ir_regex()}]]"
-                            vars_seen.add(mapping[value.var])
-                    else:
-                        raise RuntimeError("not implemented")
-
-                line += line_template
-
-                lines[i] = line
+            lines[i] = line
 
     if ginfo.is_analyze():
         for i, _ in enumerate(lines):
@@ -1843,7 +1863,7 @@ def add_checks(
 
             global_vars_seen_before = [key for key in global_vars_seen.keys()]
 
-            vars_seen = set()
+            vars_seen = {}
             printed_prefixes.append(checkprefix)
             attrs = str(func_dict[checkprefix][func_name].attrs)
             attrs = "" if attrs == "None" else attrs
@@ -2265,7 +2285,7 @@ def add_global_checks(
                     [new_line] = generalize_check_lines(
                         [line],
                         ginfo,
-                        set(),
+                        {},
                         global_vars_seen,
                         preserve_names,
                         unstable_globals_only=True,
