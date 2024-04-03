@@ -4273,7 +4273,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       // check here to see if the intrinsic needs to be upgraded normally.
       if (!CI->getModule()->IsNewDbgInfoFormat) {
         ShouldRemove = false;
-        bool NeedsUpgrade = upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+        bool NeedsUpgrade =
+            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
         if (!NeedsUpgrade)
           return;
       } else {
