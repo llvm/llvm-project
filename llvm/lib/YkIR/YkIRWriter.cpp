@@ -418,8 +418,7 @@ private:
     // opcode:
     serialiseOpcode(OpCode::Call);
     // num_operands:
-    unsigned NumOpers = I->getNumOperands();
-    OutStreamer.emitInt32(NumOpers);
+    OutStreamer.emitInt32(I->arg_size() + 1); // +1 for callee operand.
 
     // OPERAND 0: What to call.
     //
@@ -427,7 +426,7 @@ private:
     serialiseOperand(I, VLMap, I->getOperand(NumOpers - 1));
 
     // Now the rest of the operands.
-    for (unsigned OI = 0; OI < NumOpers - 1; OI++) {
+    for (unsigned OI = 0; OI < I->arg_size(); OI++) {
       serialiseOperand(I, VLMap, I->getOperand(OI));
     }
 
