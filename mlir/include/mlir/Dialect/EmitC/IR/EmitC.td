@@ -347,9 +347,8 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
     %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
 
     // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"()
-        {value = #emitc.opaque<"CHAR_MIN"> : !emitc.opaque<"char">}
-        : () -> !emitc.opaque<"char">
+    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
+      : () -> !emitc.opaque<"char">
     ```
   }];
 
@@ -992,9 +991,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"()
-        {value = #emitc.opaque<"NULL"> : !emitc.opaque<"int32_t*">}
-        : () -> !emitc.opaque<"int32_t*">
+    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
+      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
     ```
 
     Since folding is not supported, it can be used with pointers.
