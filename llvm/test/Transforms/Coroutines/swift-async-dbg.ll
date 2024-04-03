@@ -1,13 +1,13 @@
-; RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
-; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
-; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
-; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s
+; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s
+; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s --check-prefix=NOENTRY
 
 ;; Replicate those tests with non-instruction debug markers.
-; RUN: opt --try-experimental-debuginfo-iterators -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
-; RUN: opt --try-experimental-debuginfo-iterators -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg),always-inline' -o - | FileCheck %s --check-prefix=NOENTRY
 
 ; NOENTRY-NOT: OP_llvm_entry_value
 
@@ -93,29 +93,29 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 @coroutineBTu = global <{i32, i32}> <{ i32 trunc (i64 sub (i64 ptrtoint (ptr @"coroutineB" to i64), i64 ptrtoint (ptr @"coroutineBTu" to i64)) to i32), i32 16 }>, align 8
 @coroutineATu = global <{i32, i32}> <{ i32 trunc (i64 sub (i64 ptrtoint (ptr @"coroutineA" to i64), i64 ptrtoint (ptr @"coroutineATu" to i64)) to i32), i32 16 }>, align 8
 
-define weak_odr hidden ptr @__swift_async_resume_get_context(ptr %arg) !dbg !64 {
+define weak_odr hidden ptr @__swift_async_resume_get_context(ptr %arg) alwaysinline !dbg !64 {
   ret ptr %arg, !dbg !65
 }
-define hidden swifttailcc void @coroutineA.1(ptr %arg, i64 %arg1, i64 %arg2, ptr %arg3) !dbg !66 {
+define hidden swifttailcc void @coroutineA.1(ptr %arg, i64 %arg1, i64 %arg2, ptr %arg3) alwaysinline !dbg !66 {
   musttail call swifttailcc void @swift_task_switch(ptr swiftasync %arg3, ptr %arg, i64 %arg1, i64 %arg2), !dbg !67
   ret void, !dbg !67
 }
 
-define weak_odr hidden ptr @__swift_async_resume_project_context(ptr %arg) !dbg !68 {
+define weak_odr hidden ptr @__swift_async_resume_project_context(ptr %arg) alwaysinline !dbg !68 {
   %i1 = load ptr, ptr %arg, align 8, !dbg !69
   %i2 = call ptr @llvm.swift.async.context.addr(), !dbg !69
   store ptr %i1, ptr %i2, align 8, !dbg !69
   ret ptr %i1, !dbg !69
 }
-define hidden swifttailcc void @coroutineA.0(ptr %arg, ptr %arg1) !dbg !70 {
+define hidden swifttailcc void @coroutineA.0(ptr %arg, ptr %arg1) alwaysinline !dbg !70 {
   musttail call swifttailcc void %arg(ptr swiftasync %arg1), !dbg !71
   ret void, !dbg !71
 }
-define hidden swifttailcc void @coroutineA.0.1(ptr %arg, ptr %arg1) !dbg !72 {
+define hidden swifttailcc void @coroutineA.0.1(ptr %arg, ptr %arg1) alwaysinline !dbg !72 {
   musttail call swifttailcc void %arg(ptr swiftasync %arg1), !dbg !73
   ret void, !dbg !73
 }
-define swifttailcc void @coroutineB(ptr swiftasync %arg) !dbg !37 {
+define swifttailcc void @coroutineB(ptr swiftasync %arg) alwaysinline !dbg !37 {
   %i2 = call token @llvm.coro.id.async(i32 16, i32 16, i32 0, ptr nonnull @coroutineBTu)
   %i3 = call ptr @llvm.coro.begin(token %i2, ptr null)
   %i6 = getelementptr inbounds <{ ptr, ptr }>, ptr %arg, i64 0, i32 1, !dbg !42
@@ -123,7 +123,7 @@ define swifttailcc void @coroutineB(ptr swiftasync %arg) !dbg !37 {
   %i10 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %i3, i1 false, ptr nonnull @coroutineB.0, ptr %i712, ptr %arg), !dbg !42
   unreachable, !dbg !42
 }
-define hidden swifttailcc void @coroutineB.0(ptr %arg, ptr %arg1) !dbg !44 {
+define hidden swifttailcc void @coroutineB.0(ptr %arg, ptr %arg1) alwaysinline !dbg !44 {
   musttail call swifttailcc void %arg(ptr swiftasync %arg1), !dbg !47
   ret void, !dbg !47
 }
