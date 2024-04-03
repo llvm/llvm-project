@@ -5644,7 +5644,11 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
-  llvm::DIFile *Unit = Builder.getCurrentDebugLocation()->getFile();
+  llvm::DebugLoc SaveDebugLoc = Builder.getCurrentDebugLocation();
+  if (!SaveDebugLoc.get())
+    return;
+
+  llvm::DIFile *Unit = SaveDebugLoc->getFile();
   llvm::DIType *Type = getOrCreateType(Ty, Unit);
 
   // Check if Value is already a declared variable and has debug info, in this
@@ -5685,10 +5689,11 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
     Builder.SetInsertPoint(Next);
   else
     Builder.SetInsertPoint(Value->getParent());
-  auto SaveDebugLoc = Builder.getCurrentDebugLocation();
   llvm::DebugLoc DL = Value->getDebugLoc();
   if (DL.get())
     Builder.SetCurrentDebugLocation(DL);
+  else if (!Builder.getCurrentDebugLocation().get())
+    Builder.SetCurrentDebugLocation(SaveDebugLoc);
 
   llvm::AllocaInst *PseudoVar = Builder.CreateAlloca(Value->getType());
   Address PseudoVarAddr(PseudoVar, Value->getType(),
