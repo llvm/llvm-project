@@ -14525,19 +14525,23 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
         UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
 
-  case OR_Deleted:
+  case OR_Deleted: {
     // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
     // object whose method was called. Later in NoteCandidates size of ArgsArray
     // is passed further and it eventually ends up compared to number of
     // function candidate parameters which never includes the object parameter,
     // so slice ArgsArray to make sure apples are compared to apples.
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
+                                       << !!Msg
+                                       << (Msg ? Msg->getString() : StringRef())
                                        << Input->getSourceRange()),
         *this, OCD_AllCandidates, ArgsArray.drop_front(),
         UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
+  }
   }
 
   // Either we found no viable overloaded operator or we matched a
@@ -15055,7 +15059,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           OpLoc);
       return ExprError();
 
-    case OR_Deleted:
+    case OR_Deleted: {
       if (isImplicitlyDeleted(Best->Function)) {
         FunctionDecl *DeletedFD = Best->Function;
         DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
@@ -15073,16 +15077,20 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         NoteDeletedFunction(DeletedFD);
         return ExprError();
       }
+
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
               OpLoc, PDiag(diag::err_ovl_deleted_oper)
                          << getOperatorSpelling(Best->Function->getDeclName()
                                                     .getCXXOverloadedOperator())
+                         << !!Msg << (Msg ? Msg->getString() : StringRef())
                          << Args[0]->getSourceRange()
                          << Args[1]->getSourceRange()),
           *this, OCD_AllCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
           OpLoc);
       return ExprError();
+    }
   }
 
   // We matched a built-in operator; build it.
@@ -15394,13 +15402,17 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       }
       return ExprError();
 
-    case OR_Deleted:
+    case OR_Deleted: {
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
-          PartialDiagnosticAt(LLoc, PDiag(diag::err_ovl_deleted_oper)
-                                        << "[]" << Args[0]->getSourceRange()
-                                        << Range),
+          PartialDiagnosticAt(LLoc,
+                              PDiag(diag::err_ovl_deleted_oper)
+                                  << "[]" << !!Msg
+                                  << (Msg ? Msg->getString() : StringRef())
+                                  << Args[0]->getSourceRange() << Range),
           *this, OCD_AllCandidates, Args, "[]", LLoc);
       return ExprError();
+    }
     }
 
   // We matched a built-in operator; build it.
@@ -15881,14 +15893,20 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
           *this, OCD_AmbiguousCandidates, Args);
     break;
 
-  case OR_Deleted:
+  case OR_Deleted: {
+    // FIXME: Is this diagnostic here really necessary? It seems that
+    //   1. we don't have any tests for this diagnostic, and
+    //   2. we already issue err_deleted_function_use for this later on anyway.
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(Object.get()->getBeginLoc(),
                             PDiag(diag::err_ovl_deleted_object_call)
-                                << Object.get()->getType()
+                                << Object.get()->getType() << !!Msg
+                                << (Msg ? Msg->getString() : StringRef())
                                 << Object.get()->getSourceRange()),
         *this, OCD_AllCandidates, Args);
     break;
+  }
   }
 
   if (Best == CandidateSet.end())
@@ -16088,12 +16106,16 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
           *this, OCD_AmbiguousCandidates, Base);
     return ExprError();
 
-  case OR_Deleted:
+  case OR_Deleted: {
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
-                                       << "->" << Base->getSourceRange()),
+                                       << "->" << !!Msg
+                                       << (Msg ? Msg->getString() : StringRef())
+                                       << Base->getSourceRange()),
         *this, OCD_AllCandidates, Base);
     return ExprError();
+  }
   }
 
   CheckMemberOperatorAccess(OpLoc, Base, nullptr, Best->FoundDecl);

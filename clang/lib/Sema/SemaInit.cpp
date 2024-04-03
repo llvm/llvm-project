@@ -9762,12 +9762,15 @@ bool InitializationSequence::Diagnose(Sema &S,
       break;
     }
     case OR_Deleted: {
-      S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
-        << OnlyArg->getType() << DestType.getNonReferenceType()
-        << Args[0]->getSourceRange();
       OverloadCandidateSet::iterator Best;
       OverloadingResult Ovl
         = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
+
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
+      S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
+          << OnlyArg->getType() << DestType.getNonReferenceType() << !!Msg
+          << (Msg ? Msg->getString() : StringRef())
+          << Args[0]->getSourceRange();
       if (Ovl == OR_Deleted) {
         S.NoteDeletedFunction(Best->Function);
       } else {
@@ -10025,9 +10028,12 @@ bool InitializationSequence::Diagnose(Sema &S,
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
             << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
             << DestType << ArgsRange;
-        else
+        else {
+          StringLiteral *Msg = Best->Function->getDeletedMessage();
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-              << DestType << ArgsRange;
+              << DestType << !!Msg << (Msg ? Msg->getString() : StringRef())
+              << ArgsRange;
+        }
 
         S.NoteDeletedFunction(Best->Function);
         break;
@@ -11075,6 +11081,9 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   }
 
   case OR_Deleted: {
+    // FIXME: There are no tests for this diagnostic, and it doesn't seem
+    // like we ever get here; attempts to trigger this seem to yield a
+    // generic c'all to deleted function' diagnostic instead.
     Diag(Kind.getLocation(), diag::err_deduced_class_template_deleted)
       << TemplateName;
     NoteDeletedFunction(Best->Function);
