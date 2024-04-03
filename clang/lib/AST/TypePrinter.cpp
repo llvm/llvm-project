@@ -1746,14 +1746,15 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
 static void printCountAttributedImpl(const CountAttributedType *T,
                                      raw_ostream &OS,
                                      const PrintingPolicy &Policy) {
+  OS << ' ';
   if (T->isCountInBytes() && T->isOrNull())
-    OS << " __sized_by_or_null(";
+    OS << "__sized_by_or_null(";
   else if (T->isCountInBytes())
-    OS << " __sized_by(";
+    OS << "__sized_by(";
   else if (T->isOrNull())
-    OS << " __counted_by_or_null(";
+    OS << "__counted_by_or_null(";
   else
-    OS << " __counted_by(";
+    OS << "__counted_by(";
   if (T->getCountExpr())
     T->getCountExpr()->printPretty(OS, nullptr, Policy);
   OS << ')';
