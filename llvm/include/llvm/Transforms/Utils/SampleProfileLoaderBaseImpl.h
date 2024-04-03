@@ -132,11 +132,14 @@ public:
     bool IsAvailableExternallyLinkage =
         GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
     // Always check the function attribute to determine checksum mismatch for
-    // `available_externally` functions even their desc is available. This is
-    // because the desc is computed based on the original internal function
-    // which is substituted by the `available_externally` function, their
-    // mismatch state could be different and we should use state from the new
-    // one.
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
     assert((LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink ||
             IsAvailableExternallyLinkage || !Desc ||
             profileIsHashMismatched(*Desc, Samples) ==
