@@ -2,95 +2,95 @@
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the AnalysisBasedWarnings pass from running at all.
 
-#if !__has_attribute(clang_nolock)
-#error "the 'nolock' attribute is not available"
+#if !__has_attribute(clang_nonblocking)
+#error "the 'nonblocking' attribute is not available"
 #endif
 
 // --- CONSTRAINTS ---
 
-void nl1() [[clang::nolock]]
+void nl1() [[clang::nonblocking]]
 {
-	auto* pInt = new int; // expected-warning {{'nolock' function must not allocate or deallocate memory}}
+	auto* pInt = new int; // expected-warning {{'nonblocking' function must not allocate or deallocate memory}}
 }
 
-void nl2() [[clang::nolock]]
+void nl2() [[clang::nonblocking]]
 {
-	static int global; // expected-warning {{'nolock' function must not have static locals}}
+	static int global; // expected-warning {{'nonblocking' function must not have static locals}}
 }
 
-void nl3() [[clang::nolock]]
+void nl3() [[clang::nonblocking]]
 {
 	try {
-		throw 42; // expected-warning {{'nolock' function must not throw or catch exceptions}}
+		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
 	}
-	catch (...) { // expected-warning {{'nolock' function must not throw or catch exceptions}}
+	catch (...) { // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
 	}
 }
 
 void nl4_inline() {}
-void nl4_not_inline(); // expected-note {{function cannot be inferred 'nolock' because it has no definition in this translation unit}}
+void nl4_not_inline(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 
-void nl4() [[clang::nolock]]
+void nl4() [[clang::nonblocking]]
 {
 	nl4_inline(); // OK
-	nl4_not_inline(); // expected-warning {{'nolock' function must not call non-'nolock' function}}
+	nl4_not_inline(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
 
 struct HasVirtual {
-	virtual void unsafe(); // expected-note {{virtual method cannot be inferred 'nolock'}}
+	virtual void unsafe(); // expected-note {{virtual method cannot be inferred 'nonblocking'}}
 };
 
-void nl5() [[clang::nolock]]
+void nl5() [[clang::nonblocking]]
 {
  	HasVirtual hv;
- 	hv.unsafe(); // expected-warning {{'nolock' function must not call non-'nolock' function}}
+ 	hv.unsafe(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
-void nl6_unsafe(); // expected-note {{function cannot be inferred 'nolock' because it has no definition in this translation unit}}
+void nl6_unsafe(); // expected-note {{function cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
 void nl6_transitively_unsafe()
 {
-	nl6_unsafe(); // expected-note {{function cannot be inferred 'nolock' because it calls non-'nolock' function}}
+	nl6_unsafe(); // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function}}
 }
 
-void nl6() [[clang::nolock]]
+void nl6() [[clang::nonblocking]]
 {
-	nl6_transitively_unsafe(); // expected-warning {{'nolock' function must not call non-'nolock' function}}
+	nl6_transitively_unsafe(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
 thread_local int tl_var{ 42 };
 
-bool tl_test() [[clang::nolock]]
+bool tl_test() [[clang::nonblocking]]
 {
-	return tl_var > 0; // expected-warning {{'nolock' function must not use thread-local variables}}
+	return tl_var > 0; // expected-warning {{'nonblocking' function must not use thread-local variables}}
 }
 
 void nl7()
 {
 	// Make sure we verify blocks
-	auto blk = ^() [[clang::nolock]] {
-		throw 42; // expected-warning {{'nolock' function must not throw or catch exceptions}}
+	auto blk = ^() [[clang::nonblocking]] {
+		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
 	};
 }
 
 void nl8()
 {
 	// Make sure we verify lambdas
-	auto lambda = []() [[clang::nolock]] {
-		throw 42; // expected-warning {{'nolock' function must not throw or catch exceptions}}
+	auto lambda = []() [[clang::nonblocking]] {
+		throw 42; // expected-warning {{'nonblocking' function must not throw or catch exceptions}}
 	};
 }
 
 // Make sure template expansions are found and verified.
 	template <typename T>
 	struct Adder {
-		static T add_explicit(T x, T y) [[clang::nolock]]
+		static T add_explicit(T x, T y) [[clang::nonblocking]]
 		{
-			return x + y; // expected-warning {{'nolock' function must not call non-'nolock' function}}
+			return x + y; // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 		}
 		static T add_implicit(T x, T y)
 		{
-			return x + y; // expected-note {{function cannot be inferred 'nolock' because it calls non-'nolock' function}}
+			return x + y; // expected-note {{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function}}
 		}
 	};
 
@@ -98,7 +98,7 @@ void nl8()
 		friend Stringy operator+(const Stringy& x, const Stringy& y)
 		{
 			// Do something inferably unsafe
-			auto* z = new char[42]; // expected-note {{function cannot be inferred 'nolock' because it allocates/deallocates memory}}
+			auto* z = new char[42]; // expected-note {{function cannot be inferred 'nonblocking' because it allocates/deallocates memory}}
 			return {};
 		}
 	};
@@ -107,82 +107,82 @@ void nl8()
 		friend Stringy2 operator+(const Stringy2& x, const Stringy2& y)
 		{
 			// Do something inferably unsafe
-			throw 42; // expected-note {{function cannot be inferred 'nolock' because it throws or catches exceptions}}
+			throw 42; // expected-note {{function cannot be inferred 'nonblocking' because it throws or catches exceptions}}
 		}
 	};
 
-void nl9() [[clang::nolock]]
+void nl9() [[clang::nonblocking]]
 {
 	Adder<int>::add_explicit(1, 2);
 	Adder<int>::add_implicit(1, 2);
 
 	Adder<Stringy>::add_explicit({}, {}); // expected-note {{in template expansion here}}
-	Adder<Stringy2>::add_implicit({}, {}); // expected-warning {{'nolock' function must not call non-'nolock' function}} \
+	Adder<Stringy2>::add_implicit({}, {}); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}} \
 		expected-note {{in template expansion here}}
 }
 
 void nl10(
-	void (*fp1)(), // expected-note {{function pointer cannot be inferred 'nolock'}}
-	void (*fp2)() [[clang::nolock]]
-	) [[clang::nolock]]
+	void (*fp1)(), // expected-note {{function pointer cannot be inferred 'nonblocking'}}
+	void (*fp2)() [[clang::nonblocking]]
+	) [[clang::nonblocking]]
 {
-	fp1(); // expected-warning {{'nolock' function must not call non-'nolock' function}}
+	fp1(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 	fp2();
 }
 
-// Interactions with nolock(false)
-void nl11_no_inference() [[clang::nolock(false)]] // expected-note {{function does not permit inference of 'nolock'}}
+// Interactions with nonblocking(false)
+void nl11_no_inference() [[clang::nonblocking(false)]] // expected-note {{function does not permit inference of 'nonblocking'}}
 {
 }
 
-void nl11() [[clang::nolock]]
+void nl11() [[clang::nonblocking]]
 {
-	nl11_no_inference(); // expected-warning {{'nolock' function must not call non-'nolock' function}}
+	nl11_no_inference(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
 // Verify that when attached to a redeclaration, the attribute successfully attaches.
 void nl12() {
-	static int x; // expected-warning {{'nolock' function must not have static locals}}
+	static int x; // expected-warning {{'nonblocking' function must not have static locals}}
 }
-void nl12() [[clang::nolock]];
-void nl13() [[clang::nolock]] { nl12(); }
+void nl12() [[clang::nonblocking]];
+void nl13() [[clang::nonblocking]] { nl12(); }
 
 // Objective-C
 @interface OCClass
 - (void)method;
 @end
 
-void nl14(OCClass *oc) [[clang::nolock]] {
-	[oc method]; // expected-warning {{'nolock' function must not access an ObjC method or property}}
+void nl14(OCClass *oc) [[clang::nonblocking]] {
+	[oc method]; // expected-warning {{'nonblocking' function must not access an ObjC method or property}}
 }
 void nl15(OCClass *oc) {
-	[oc method]; // expected-note {{function cannot be inferred 'nolock' because it accesses an ObjC method or property}}
+	[oc method]; // expected-note {{function cannot be inferred 'nonblocking' because it accesses an ObjC method or property}}
 }
-void nl16(OCClass *oc) [[clang::nolock]] {
-	nl15(oc); // expected-warning {{'nolock' function must not call non-'nolock' function 'nl15'}}
+void nl16(OCClass *oc) [[clang::nonblocking]] {
+	nl15(oc); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'nl15'}}
 }
 
 // C++ member function pointers
 struct PTMFTester {
-	typedef void (PTMFTester::*ConvertFunction)() [[clang::nolock]];
+	typedef void (PTMFTester::*ConvertFunction)() [[clang::nonblocking]];
 
-	void convert() [[clang::nolock]];
+	void convert() [[clang::nonblocking]];
 
 	ConvertFunction mConvertFunc;
 };
 
-void PTMFTester::convert() [[clang::nolock]]
+void PTMFTester::convert() [[clang::nonblocking]]
 {
 	(this->*mConvertFunc)();
 }
 
 // Block variables
-void nl17(void (^blk)() [[clang::nolock]]) [[clang::nolock]] {
+void nl17(void (^blk)() [[clang::nonblocking]]) [[clang::nonblocking]] {
 	blk();
 }
 
 // References to blocks
-void nl18(void (^block)() [[clang::nolock]]) [[clang::nolock]]
+void nl18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 {
 	auto &ref = block;
 	ref();

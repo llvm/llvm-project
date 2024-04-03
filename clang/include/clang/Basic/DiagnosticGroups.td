@@ -1515,7 +1515,7 @@ def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">
 def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
 
 // Warnings and notes related to the function effects system underlying
-// the nolock and noalloc attributes.
+// the nonblocking and nonallocating attributes.
 def FunctionEffects : DiagGroup<"function-effects">;
 
 // Warnings and notes InstallAPI verification.

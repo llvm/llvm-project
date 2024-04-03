@@ -1402,21 +1402,21 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
-def NoLock : TypeAttr {
-  let Spellings = [CXX11<"clang", "nolock">,
-                   C23<"clang", "nolock">,
-                   GNU<"clang_nolock">];
+def NonBlocking : TypeAttr {
+  let Spellings = [CXX11<"clang", "nonblocking">,
+                   C23<"clang", "nonblocking">,
+                   GNU<"clang_nonblocking">];
 
   let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
-  let Documentation = [NoLockNoAllocDocs];
+  let Documentation = [NonBlockingNonAllocatingDocs];
 }
 
-def NoAlloc : TypeAttr {
-  let Spellings = [CXX11<"clang", "noalloc">,
-                   C23<"clang", "noalloc">,
-                   GNU<"clang_noalloc">];
+def NonAllocating : TypeAttr {
+  let Spellings = [CXX11<"clang", "nonallocating">,
+                   C23<"clang", "nonallocating">,
+                   GNU<"clang_nonallocating">];
   let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
-  let Documentation = [NoLockNoAllocDocs];
+  let Documentation = [NonBlockingNonAllocatingDocs];
 }
 
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because

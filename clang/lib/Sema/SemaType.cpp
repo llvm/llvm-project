@@ -145,8 +145,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
   case ParsedAttr::AT_NSReturnsRetained:                                       \
   case ParsedAttr::AT_NoReturn:                                                \
-  case ParsedAttr::AT_NoLock:                                                  \
-  case ParsedAttr::AT_NoAlloc:                                                 \
+  case ParsedAttr::AT_NonBlocking:                                             \
+  case ParsedAttr::AT_NonAllocating:                                           \
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
@@ -214,10 +214,10 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
-    // Flags to diagnose illegal permutations of nolock(cond) and noalloc(cond).
-    // Manual logic for finding previous attributes would be more complex,
-    // unless we transformed nolock/noalloc(false) into distinct separate
-    // attributes from the ones which are parsed.
+    // Flags to diagnose illegal permutations of nonblocking(cond) and
+    // nonallocating(cond). Manual logic for finding previous attributes would
+    // be more complex, unless we transformed nonblocking/nonallocating(false)
+    // into distinct separate attributes from the ones which are parsed.
     BoolAttrState parsedNolock : 2;
     BoolAttrState parsedNoalloc : 2;
 
@@ -7977,14 +7977,15 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
-static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
-                                        ParsedAttr &PAttr, QualType &type,
-                                        FunctionTypeUnwrapper &unwrapped) {
+static bool
+handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
+                                       ParsedAttr &PAttr, QualType &type,
+                                       FunctionTypeUnwrapper &unwrapped) {
   // Delay if this is not a function type.
   if (!unwrapped.isFunctionType())
     return false;
 
-  const bool isNoLock = PAttr.getKind() == ParsedAttr::AT_NoLock;
+  const bool isNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking;
   Sema &S = state.getSema();
 
   // Require FunctionProtoType
@@ -8017,58 +8018,62 @@ static bool handleNoLockNoAllocTypeAttr(TypeProcessingState &state,
     return true;
   };
 
-  // check nolock(true) against nolock(false), and same for noalloc
+  // check nonblocking(true) against nonblocking(false), and same for
+  // nonallocating
   const BoolAttrState newState =
       Cond ? BoolAttrState::True : BoolAttrState::False;
   const BoolAttrState oppositeNewState =
       Cond ? BoolAttrState::False : BoolAttrState::True;
-  if (isNoLock) {
+  if (isNonBlocking) {
     if (state.getParsedNolock() == oppositeNewState) {
-      return incompatible("nolock(true)", "nolock(false)");
+      return incompatible("nonblocking(true)", "nonblocking(false)");
     }
-    // also check nolock(true) against noalloc(false)
+    // also check nonblocking(true) against nonallocating(false)
     if (Cond && state.getParsedNoalloc() == BoolAttrState::False) {
-      return incompatible("nolock(true)", "noalloc(false)");
+      return incompatible("nonblocking(true)", "nonallocating(false)");
     }
     state.setParsedNolock(newState);
   } else {
     if (state.getParsedNoalloc() == oppositeNewState) {
-      return incompatible("noalloc(true)", "noalloc(false)");
+      return incompatible("nonallocating(true)", "nonallocating(false)");
     }
-    // also check nolock(true) against noalloc(false)
+    // also check nonblocking(true) against nonallocating(false)
     if (state.getParsedNolock() == BoolAttrState::True) {
       if (!Cond) {
-        return incompatible("nolock(true)", "noalloc(false)");
+        return incompatible("nonblocking(true)", "nonallocating(false)");
       }
-      // Ignore noalloc(true) since we already have nolock(true).
+      // Ignore nonallocating(true) since we already have nonblocking(true).
       return true;
     }
     state.setParsedNoalloc(newState);
   }
 
   if (!Cond) {
-    // nolock(false) and noalloc(false) are represented as sugar, with
-    // AttributedType
+    // nonblocking(false) and nonallocating(false) are represented as sugar,
+    // with AttributedType
     Attr *A = nullptr;
-    if (isNoLock) {
-      A = NoLockAttr::Create(S.Context, false);
+    if (isNonBlocking) {
+      A = NonBlockingAttr::Create(S.Context, false);
     } else {
-      A = NoAllocAttr::Create(S.Context, false);
+      A = NonAllocatingAttr::Create(S.Context, false);
     }
     type = state.getAttributedType(A, type, type);
     return true;
   }
 
-  // nolock(true) and noalloc(true) are represented as FunctionEffects, in a
-  // FunctionEffectSet attached to a FunctionProtoType.
-  const FunctionEffect NewEffect(isNoLock ? FunctionEffect::Type::NoLockTrue
-                                          : FunctionEffect::Type::NoAllocTrue);
+  // nonblocking(true) and nonallocating(true) are represented as
+  // FunctionEffects, in a FunctionEffectSet attached to a FunctionProtoType.
+  const FunctionEffect NewEffect(isNonBlocking
+                                     ? FunctionEffect::Type::NonBlocking
+                                     : FunctionEffect::Type::NonAllocating);
 
   MutableFunctionEffectSet NewFX(NewEffect);
   if (EPI.FunctionEffects) {
-    // Preserve any previous effects - except noalloc, when we are adding nolock
+    // Preserve any previous effects - except nonallocating, when we are adding
+    // nonblocking
     for (const auto &Effect : EPI.FunctionEffects) {
-      if (!(isNoLock && Effect.type() == FunctionEffect::Type::NoAllocTrue))
+      if (!(isNonBlocking &&
+            Effect.type() == FunctionEffect::Type::NonAllocating))
         NewFX.insert(Effect);
     }
   }
@@ -8394,9 +8399,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
-  if (attr.getKind() == ParsedAttr::AT_NoLock ||
-      attr.getKind() == ParsedAttr::AT_NoAlloc) {
-    return handleNoLockNoAllocTypeAttr(state, attr, type, unwrapped);
+  if (attr.getKind() == ParsedAttr::AT_NonBlocking ||
+      attr.getKind() == ParsedAttr::AT_NonAllocating) {
+    return handleNonBlockingNonAllocatingTypeAttr(state, attr, type, unwrapped);
   }
 
   // Delay if the type didn't work out to a function.

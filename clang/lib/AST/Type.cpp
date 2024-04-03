@@ -5029,14 +5029,14 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
 FunctionEffect::FunctionEffect(Type T)
     : Type_(unsigned(T)), Flags_(0), Padding(0) {
   switch (T) {
-  case Type::NoLockTrue:
+  case Type::NonBlocking:
     Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
              FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
              FE_ExcludeStaticLocalVars | FE_ExcludeThreadLocalVars;
     break;
 
-  case Type::NoAllocTrue:
-    // Same as NoLockTrue, except without FE_ExcludeStaticLocalVars
+  case Type::NonAllocating:
+    // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
     Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
              FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
              FE_ExcludeThreadLocalVars;
@@ -5050,10 +5050,10 @@ StringRef FunctionEffect::name() const {
   switch (type()) {
   default:
     return "";
-  case Type::NoLockTrue:
-    return "nolock";
-  case Type::NoAllocTrue:
-    return "noalloc";
+  case Type::NonBlocking:
+    return "nonblocking";
+  case Type::NonAllocating:
+    return "nonallocating";
   }
 }
 
@@ -5063,18 +5063,18 @@ bool FunctionEffect::diagnoseConversion(bool Adding, QualType OldType,
                                         FunctionEffectSet NewFX) const {
 
   switch (type()) {
-  case Type::NoAllocTrue:
-    // noalloc can't be added (spoofed) during a conversion, unless we have
-    // nolock
+  case Type::NonAllocating:
+    // nonallocating can't be added (spoofed) during a conversion, unless we
+    // have nonblocking
     if (Adding) {
       for (const auto &Effect : OldFX) {
-        if (Effect.type() == Type::NoLockTrue)
+        if (Effect.type() == Type::NonBlocking)
           return false;
       }
     }
     [[fallthrough]];
-  case Type::NoLockTrue:
-    // nolock can't be added (spoofed) during a conversion
+  case Type::NonBlocking:
+    // nonblocking can't be added (spoofed) during a conversion
     return Adding;
   default:
     break;
@@ -5088,9 +5088,9 @@ bool FunctionEffect::diagnoseRedeclaration(bool Adding,
                                            const FunctionDecl &NewFunction,
                                            FunctionEffectSet NewFX) const {
   switch (type()) {
-  case Type::NoAllocTrue:
-  case Type::NoLockTrue:
-    // nolock/noalloc can't be removed in a redeclaration
+  case Type::NonAllocating:
+  case Type::NonBlocking:
+    // nonblocking/nonallocating can't be removed in a redeclaration
     // adding -> false, removing -> true (diagnose)
     return !Adding;
   default:
@@ -5103,9 +5103,9 @@ FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
     bool Adding, const CXXMethodDecl &OldMethod, FunctionEffectSet OldFX,
     const CXXMethodDecl &NewMethod, FunctionEffectSet NewFX) const {
   switch (type()) {
-  case Type::NoAllocTrue:
-  case Type::NoLockTrue:
-    // nolock/noalloc can't be removed from an override
+  case Type::NonAllocating:
+  case Type::NonBlocking:
+    // nonblocking/nonallocating can't be removed from an override
     // adding -> false, removing -> true (diagnose)
     return Adding ? OverrideResult::Ignore : OverrideResult::Propagate;
   default:
@@ -5117,11 +5117,11 @@ FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
 bool FunctionEffect::canInferOnFunction(QualType QT,
                                         const TypeSourceInfo *FType) const {
   switch (type()) {
-  case Type::NoAllocTrue:
-  case Type::NoLockTrue: {
-    // Does the sugar have nolock(false) / noalloc(false) ?
-    if (QT->hasAttr(type() == Type::NoLockTrue ? attr::Kind::NoLock
-                                               : attr::Kind::NoAlloc)) {
+  case Type::NonAllocating:
+  case Type::NonBlocking: {
+    // Does the sugar have nonblocking(false) / nonallocating(false) ?
+    if (QT->hasAttr(type() == Type::NonBlocking ? attr::Kind::NonBlocking
+                                                : attr::Kind::NonAllocating)) {
       return false;
     }
 
@@ -5137,14 +5137,14 @@ bool FunctionEffect::canInferOnFunction(QualType QT,
 bool FunctionEffect::diagnoseFunctionCall(bool Direct,
                                           FunctionEffectSet CalleeFX) const {
   switch (type()) {
-  case Type::NoAllocTrue:
-  case Type::NoLockTrue: {
+  case Type::NonAllocating:
+  case Type::NonBlocking: {
     const Type CallerType = type();
     for (const auto &Effect : CalleeFX) {
       const Type ET = Effect.type();
       // Does callee have same or stronger constraint?
       if (ET == CallerType ||
-          (CallerType == Type::NoAllocTrue && ET == Type::NoLockTrue)) {
+          (CallerType == Type::NonAllocating && ET == Type::NonBlocking)) {
         return false; // no diagnostic
       }
     }

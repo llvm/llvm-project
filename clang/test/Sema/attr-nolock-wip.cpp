@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify %s
 
-#if !__has_attribute(clang_nolock)
-#error "the 'nolock' attribute is not available"
+#if !__has_attribute(clang_nonblocking)
+#error "the 'nonblocking' attribute is not available"
 #endif
 
 
@@ -13,31 +13,31 @@ struct HasVirtual {
 	virtual void method();
 };
 
-void nl999(HasVirtual& x) [[clang::nolock]] {
+void nl999(HasVirtual& x) [[clang::nonblocking]] {
 	x.method();
 }
 
 
 
 #if 0
-	using nl_sugar = int (*)(int) [[clang::nolock]];
+	using nl_sugar = int (*)(int) [[clang::nonblocking]];
 
 	void receives_fp_nl(nl_sugar fp) {
 	}
 	
-	int callback(int) noexcept [[clang::nolock]];
+	int callback(int) noexcept [[clang::nonblocking]];
 
 void type_conversions_2()
 {
 	auto receives_fp = [](void (*fp)()) {
 	};
 	
-	//auto receives_fp_nl = [](void (*fp)() [[clang::nolock]]) {
+	//auto receives_fp_nl = [](void (*fp)() [[clang::nonblocking]]) {
 	//};
 
 	auto ne = +[]() noexcept {};
-	auto nl = +[]() [[clang::nolock]] {};
-	//auto nl_ne = +[](int x) noexcept [[clang::nolock]] -> int  { return x; };
+	auto nl = +[]() [[clang::nonblocking]] {};
+	//auto nl_ne = +[](int x) noexcept [[clang::nonblocking]] -> int  { return x; };
 	
 	receives_fp(ne);
 	receives_fp(nl);
@@ -51,11 +51,11 @@ void type_conversions_2()
 struct S {
 	void foo();
 	// void foo() noexcept; // error, redeclaration
-	// void foo() [[clang::nolock]]; // error, redeclaration
+	// void foo() [[clang::nonblocking]]; // error, redeclaration
 	
 	using FP = void (*)();
 	using FPNE = void (*)() noexcept;
-	using FPNL = void (*)() [[clang::nolock]];
+	using FPNL = void (*)() [[clang::nonblocking]];
 	
 	void bar(FP x);
 	void bar(FPNE x);	// This is a distinct overload
@@ -101,9 +101,9 @@ typedef integral_constant<bool, true>  true_type;
 typedef integral_constant<bool, false> false_type;
 
 template <typename T>
-struct is_nolock;
+struct is_nonblocking;
 
-void g() [[clang::nolock]];
-void h() [[clang::nolock(false)]];
+void g() [[clang::nonblocking]];
+void h() [[clang::nonblocking(false)]];
 #endif
 

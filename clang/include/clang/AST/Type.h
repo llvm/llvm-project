@@ -4448,8 +4448,8 @@ public:
   /// Identifies the particular type of effect.
   enum class Type {
     None = 0,
-    NoLockTrue,
-    NoAllocTrue,
+    NonBlocking,
+    NonAllocating,
   };
 
   /// Flags describing behaviors of the effect.
@@ -4458,16 +4458,17 @@ public:
   // would OR together the bits of multiple effects.)
   using Flags = unsigned;
   enum FlagBit : unsigned {
-    // Some effects require verification, e.g. nolock(true); others might not?
-    // (no example yet; TODO: maybe always true, vestigial from nolock(false)).
+    // Some effects require verification, e.g. nonblocking(true); others might
+    // not? (no example yet; TODO: maybe always true, vestigial from
+    // nonblocking(false)).
     FE_RequiresVerification = 0x1,
 
     // Does this effect want to verify all function calls originating in
     // functions having this effect? TODO: maybe always true, vestigial.
     FE_VerifyCalls = 0x2,
 
-    // Can verification inspect callees' implementations? (e.g. nolock: yes,
-    // tcb+types: no)
+    // Can verification inspect callees' implementations? (e.g. nonblocking:
+    // yes, tcb+types: no)
     FE_InferrableOnCallees = 0x4,
 
     // Language constructs which effects can diagnose as disallowed.
@@ -4515,7 +4516,7 @@ public:
   /// Flags describing behaviors of the effect.
   Flags flags() const { return Flags_; }
 
-  /// The description printed in diagnostics, e.g. 'nolock'.
+  /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
   /// A hashable representation.
@@ -4548,7 +4549,8 @@ public:
   /// on an implicit function like a default constructor.
   ///
   /// This is only used if the effect has FE_InferrableOnCallees flag set.
-  /// Example: This allows nolock(false) to prevent inference for the function.
+  /// Example: This allows nonblocking(false) to prevent inference for the
+  /// function.
   bool canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const;
 
   // Called if FE_VerifyCalls flag is set; return false for success. When true

@@ -10517,7 +10517,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 
-    // TODO: (nolock) Does anything need to be done with FunctionEffects?
+    // TODO: (nonblocking) Does anything need to be done with FunctionEffects?
 
     SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
     bool canUseLeft, canUseRight;

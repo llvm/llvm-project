@@ -10870,7 +10870,7 @@ def warn_func_effect_false_on_type : Warning<
 def note_func_effect_from_template : Note<
   "in template expansion here">;
 
-// spoofing nolock/noalloc
+// spoofing nonblocking/nonallocating
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,
   InGroup<FunctionEffects>;

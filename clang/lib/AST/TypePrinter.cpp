@@ -1996,11 +1996,11 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   // Nothing to print for this attribute.
   case attr::HLSLParamModifier:
     break;
-  case attr::NoLock:
-    OS << "clang_nolock(false)";
+  case attr::NonBlocking:
+    OS << "clang_nonblocking(false)";
     break;
-  case attr::NoAlloc:
-    OS << "clang_noalloc(false)";
+  case attr::NonAllocating:
+    OS << "clang_nonallocating(false)";
     break;
   }
   OS << "))";

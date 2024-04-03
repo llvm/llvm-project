@@ -1,4 +1,5 @@
-//==--- AttrDocs.td - Attribute documentation ----------------------------===//
+  
+  //==--- AttrDocs.td - Attribute documentation ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8045,17 +8046,17 @@ requirement:
   }];
 }
 
-def NoLockNoAllocDocs : Documentation {
+def NonBlockingNonAllocatingDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
-The ``nolock`` and ``noalloc`` attributes can be attached to functions, blocks,
+The ``nonblocking`` and ``nonallocating`` attributes can be attached to functions, blocks,
 function pointers, lambdas, and member functions. The attributes identify code
 which must not allocate memory or lock, and the compiler uses the attributes to
 verify these requirements.
 
-Like ``noexcept``, ``nolock`` and ``noalloc`` have an optional argument, a
+Like ``noexcept``, ``nonblocking`` and ``nonallocating`` have an optional argument, a
 compile-time constant boolean expression. By default, the argument is true, so
-``[[clang::nolock(true)]]`` is equivalent to ``[[clang::nolock]]``, and declares
+``[[clang::nonblocking(true)]]`` is equivalent to ``[[clang::nonblocking]]``, and declares
 the function type as never locking.
 
 TODO: how much of the RFC to include here? Make it a separate page?

@@ -2765,7 +2765,7 @@ public:
 };
 
 /*
-        TODO: nolock and noalloc imply noexcept
+        TODO: nonblocking and nonallocating imply noexcept
         if (auto* Method = dyn_cast<CXXMethodDecl>(CInfo.CDecl)) {
           if (Method->getType()->castAs<FunctionProtoType>()->canThrow()
               != clang::CT_Cannot) {
