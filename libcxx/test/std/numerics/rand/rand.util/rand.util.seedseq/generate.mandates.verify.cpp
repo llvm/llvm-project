@@ -15,7 +15,7 @@
 
 // Check the following requirement: https://eel.is/c++draft/rand.util.seedseq#7
 //
-//  Mandates: iterator_traits<RandomAccessIterator>​::​​value_type is an unsigned integer
+//  Mandates: iterator_traits<RandomAccessIterator>::value_type is an unsigned integer
 //            type capable of accommodating 32-bit quantities.
 
 // UNSUPPORTED: c++03
