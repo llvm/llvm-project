@@ -91,6 +91,7 @@ TYPE("lto-ir",                   LTO_IR,       INVALID,         "s",      phases
 TYPE("lto-bc",                   LTO_BC,       INVALID,         "o",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 TYPE("cir",                      CIR,          INVALID,         "cir",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("cir-flat",                 CIR_FLAT,     INVALID,         "cir",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("mlir",                     MLIR,         INVALID,         "mlir",   phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
 // Misc.

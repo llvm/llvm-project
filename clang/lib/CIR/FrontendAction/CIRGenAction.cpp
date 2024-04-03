@@ -185,7 +185,8 @@ public:
               mlirMod, mlirCtx.get(), C, !feOptions.ClangIRDisableCIRVerifier,
               feOptions.ClangIRLifetimeCheck, lifetimeOpts,
               feOptions.ClangIRIdiomRecognizer, idiomRecognizerOpts,
-              feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure)
+              feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
+              action == CIRGenAction::OutputType::EmitCIRFlat)
               .failed()) {
         if (!passOptParsingFailure.empty())
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)
@@ -233,6 +234,7 @@ public:
 
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
+    case CIRGenAction::OutputType::EmitCIRFlat:
       if (outputStream && mlirMod) {
         // Emit remaining defaulted C++ methods
         if (!feOptions.ClangIRDisableEmitCXXDefault)
@@ -353,6 +355,8 @@ getOutputStream(CompilerInstance &ci, StringRef inFile,
     return ci.createDefaultOutputFile(false, inFile, "s");
   case CIRGenAction::OutputType::EmitCIR:
     return ci.createDefaultOutputFile(false, inFile, "cir");
+  case CIRGenAction::OutputType::EmitCIRFlat:
+    return ci.createDefaultOutputFile(false, inFile, "cir");
   case CIRGenAction::OutputType::EmitMLIR:
     return ci.createDefaultOutputFile(false, inFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
@@ -445,6 +449,10 @@ EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *_MLIRContext)
 void EmitCIRAction::anchor() {}
 EmitCIRAction::EmitCIRAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::EmitCIR, _MLIRContext) {}
+
+void EmitCIRFlatAction::anchor() {}
+EmitCIRFlatAction::EmitCIRFlatAction(mlir::MLIRContext *_MLIRContext)
+    : CIRGenAction(OutputType::EmitCIRFlat, _MLIRContext) {}
 
 void EmitCIROnlyAction::anchor() {}
 EmitCIROnlyAction::EmitCIROnlyAction(mlir::MLIRContext *_MLIRContext)

@@ -6,6 +6,7 @@ add_clang_library(MLIRCIRTransforms
   IdiomRecognizer.cpp
   LibOpt.cpp
   StdHelpers.cpp
+  FlattenCFG.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
