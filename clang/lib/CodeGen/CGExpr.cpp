@@ -5601,7 +5601,7 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());
 
     if (LV.isBitField()) {
-      llvm::Value *Result;
+      llvm::Value *Result = nullptr;
       // If bitfield sanitizers are enabled we want to use the result
       // to check whether a truncation or sign change has occurred.
       if (SanOpts.has(SanitizerKind::ImplicitBitfieldConversion))
