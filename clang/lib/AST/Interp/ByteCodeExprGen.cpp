@@ -819,7 +819,7 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     const ArrayType *AT = QT->getAsArrayTypeUnsafe();
     assert(AT);
     const auto *CAT = cast<ConstantArrayType>(AT);
-    size_t NumElems = CAT->getSize().getZExtValue();
+    size_t NumElems = CAT->getZExtSize();
     PrimType ElemT = classifyPrim(CAT->getElementType());
 
     for (size_t I = 0; I != NumElems; ++I) {
@@ -992,7 +992,7 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     if (const Expr *Filler = E->getArrayFiller()) {
       const ConstantArrayType *CAT =
           Ctx.getASTContext().getAsConstantArrayType(E->getType());
-      uint64_t NumElems = CAT->getSize().getZExtValue();
+      uint64_t NumElems = CAT->getZExtSize();
 
       for (; ElementIndex != NumElems; ++ElementIndex) {
         if (!this->visitArrayElemInit(ElementIndex, Filler))
@@ -1318,7 +1318,7 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 
   // If the initializer string is too long, a diagnostic has already been
   // emitted. Read only the array length from the string literal.
-  unsigned ArraySize = CAT->getSize().getZExtValue();
+  unsigned ArraySize = CAT->getZExtSize();
   unsigned N = std::min(ArraySize, E->getLength());
   size_t CharWidth = E->getCharByteWidth();
 
@@ -1919,7 +1919,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
     const ConstantArrayType *CAT =
         Ctx.getASTContext().getAsConstantArrayType(E->getType());
     assert(CAT);
-    size_t NumElems = CAT->getSize().getZExtValue();
+    size_t NumElems = CAT->getZExtSize();
     const Function *Func = getFunction(E->getConstructor());
     if (!Func || !Func->isConstexpr())
       return false;

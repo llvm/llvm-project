@@ -9,9 +9,6 @@
 #include "src/stdlib/strfromd.h"
 #include "src/stdlib/str_from_util.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strfromd,

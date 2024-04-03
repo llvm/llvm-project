@@ -217,6 +217,7 @@ set(files
   __algorithm/shift_right.h
   __algorithm/shuffle.h
   __algorithm/sift_down.h
+  __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
@@ -429,22 +430,27 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
+  __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
+  __fwd/queue.h
   __fwd/span.h
   __fwd/sstream.h
+  __fwd/stack.h
   __fwd/streambuf.h
   __fwd/string.h
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/vector.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
@@ -703,12 +709,12 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/make_tuple_types.h
-  __tuple/pair_like.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
+  __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_const.h

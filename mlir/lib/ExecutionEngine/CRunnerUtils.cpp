@@ -51,8 +51,20 @@ void stdSort(uint64_t n, V *p) {
 // details of our vectors. Also useful for direct LLVM IR output.
 extern "C" void printI64(int64_t i) { fprintf(stdout, "%" PRId64, i); }
 extern "C" void printU64(uint64_t u) { fprintf(stdout, "%" PRIu64, u); }
-extern "C" void printF32(float f) { fprintf(stdout, "%g", f); }
-extern "C" void printF64(double d) { fprintf(stdout, "%lg", d); }
+extern "C" void printF32(float f) {
+  if (std::isnan(f) && std::signbit(f)) {
+    fprintf(stdout, "-nan");
+  } else {
+    fprintf(stdout, "%g", f);
+  }
+}
+extern "C" void printF64(double d) {
+  if (std::isnan(d) && std::signbit(d)) {
+    fprintf(stdout, "-nan");
+  } else {
+    fprintf(stdout, "%lg", d);
+  }
+}
 extern "C" void printString(char const *s) { fputs(s, stdout); }
 extern "C" void printOpen() { fputs("( ", stdout); }
 extern "C" void printClose() { fputs(" )", stdout); }
