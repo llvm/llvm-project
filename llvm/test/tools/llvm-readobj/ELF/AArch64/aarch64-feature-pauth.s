@@ -1,7 +1,6 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 #--- gnu-42-1.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -45,7 +44,6 @@ end:
 # OBJ-NEXT: ]
 
 #--- gnu-0-0.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -68,7 +66,6 @@ end:
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x0 (invalid)" -DVERSION=0x0 %s
 
 #--- gnu-1-0.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -91,7 +88,6 @@ end:
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x1 (baremetal)" -DVERSION=0x0 %s
 
 #--- gnu-0x10000002-85.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -116,7 +112,6 @@ end:
 # RUN:   -DVERSION="0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)" %s
 
 #--- gnu-0x10000002-128.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -139,7 +134,6 @@ end:
 # RUN:   FileCheck --check-prefix=OBJ -DPLATFORM="0x10000002 (llvm_linux)" -DVERSION="0x80 (unknown)" %s
 
 #--- gnu-short.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length
@@ -185,7 +179,6 @@ end:
 # OBJ-ERR-NEXT: ]
 
 #--- gnu-long.s
-
 .section ".note.gnu.property", "a"
   .long 4           // Name length is always 4 ("GNU")
   .long end - begin // Data length

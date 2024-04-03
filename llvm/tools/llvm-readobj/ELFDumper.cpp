@@ -5156,12 +5156,12 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
                   "Update when new enum items are defined");
 
     std::string Desc;
-    for (uint32_t I = 0; I < Flags.size(); ++I) {
+    for (uint32_t I = 0, End = Flags.size(); I < End; ++I) {
       if (!(Version & (1 << I)))
         Desc += '!';
-      Desc += Twine("PointerAuth" + Flags[I] + ", ").str();
+      Desc +=
+          Twine("PointerAuth" + Flags[I] + (I == End - 1 ? "" : ", ")).str();
     }
-    Desc.resize(Desc.size() - 2); // Trim last ", "
     return Desc;
   }();
 
