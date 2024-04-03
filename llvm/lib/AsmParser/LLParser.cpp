@@ -3091,9 +3091,21 @@ bool LLParser::parseOptionalOperandBundles(
         return true;
 
       Type *Ty = nullptr;
-      Value *Input = nullptr;
-      if (parseType(Ty) || parseValue(Ty, Input, PFS))
+      if (parseType(Ty))
         return true;
+
+      Value *Input = nullptr;
+      // FIXME: Metadata operand bundle value is garbage when LLVM IR is
+      // compiled to bitcode, then disassembled back to LLVM IR. See D107039
+      // for the reproducers, and https://bugs.llvm.org/show_bug.cgi?id=51264
+      // for the bug report.
+      if (Ty->isMetadataTy()) {
+        if (parseMetadataAsValue(Input, PFS))
+          return true;
+      } else {
+        if (parseValue(Ty, Input, PFS))
+          return true;
+      }
       Inputs.push_back(Input);
     }
 
