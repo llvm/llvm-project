@@ -11,14 +11,15 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -819,7 +820,7 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   assert(outputs.size() == 1 && "expected one output");
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
-      [](Type ty) { return isa<transform::TransformHandleTypeInterface>(ty); });
+      llvm::IsaPred<transform::TransformHandleTypeInterface>);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1020,6 +1021,8 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
     matchActionPairs.emplace_back(matcherSymbol, actionSymbol);
   }
 
+  DiagnosedSilenceableFailure overallDiag =
+      DiagnosedSilenceableFailure::success();
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
       // If getRestrictRoot is not present, skip over the root op itself so we
@@ -1058,8 +1061,19 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
              action.getFunctionBody().front().without_terminator()) {
           DiagnosedSilenceableFailure result =
               state.applyTransform(cast<TransformOpInterface>(transform));
-          if (failed(result.checkAndReport()))
+          if (result.isDefiniteFailure())
             return WalkResult::interrupt();
+          if (result.isSilenceableFailure()) {
+            if (overallDiag.succeeded()) {
+              overallDiag = emitSilenceableError() << "actions failed";
+            }
+            overallDiag.attachNote(action->getLoc())
+                << "failed action: " << result.getMessage();
+            overallDiag.attachNote(op->getLoc())
+                << "when applied to this matching payload";
+            (void)result.silence();
+            continue;
+          }
         }
         break;
       }
@@ -1075,7 +1089,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
   // by actions, are invalidated.
   results.set(llvm::cast<OpResult>(getUpdated()),
               state.getPayloadOps(getRoot()));
-  return DiagnosedSilenceableFailure::success();
+  return overallDiag;
 }
 
 void transform::ForeachMatchOp::getEffects(
@@ -2614,14 +2628,26 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
   if (getName().has_value())
     llvm::outs() << *getName() << " ";
 
+  OpPrintingFlags printFlags;
+  if (getAssumeVerified().value_or(false))
+    printFlags.assumeVerified();
+  if (getUseLocalScope().value_or(false))
+    printFlags.useLocalScope();
+  if (getSkipRegions().value_or(false))
+    printFlags.skipRegions();
+
   if (!getTarget()) {
-    llvm::outs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    llvm::outs() << "top-level ]]]\n";
+    state.getTopLevel()->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
     return DiagnosedSilenceableFailure::success();
   }
 
   llvm::outs() << "]]]\n";
-  for (Operation *target : state.getPayloadOps(getTarget()))
-    llvm::outs() << *target << "\n";
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    target->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
+  }
 
   return DiagnosedSilenceableFailure::success();
 }

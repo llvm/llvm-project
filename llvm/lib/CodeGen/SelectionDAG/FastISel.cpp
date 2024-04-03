@@ -1461,6 +1461,15 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::is_constant:
     llvm_unreachable("llvm.is.constant.* should have been lowered already");
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check: {
+    Register ResultReg = getRegForValue(ConstantInt::getTrue(II->getType()));
+    if (!ResultReg)
+      return false;
+    updateValueMap(II, ResultReg);
+    return true;
+  }
+
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::expect: {

@@ -870,6 +870,5 @@ define <2 x float> @f25(<2 x float> %src) {
 !2 = !{ !"set2", !0 }
 !3 = !{ !3, !{!"llvm.loop.parallel_accesses", !13} }
 !4 = !{ float 4.0 }
-!5 = !{ i64 0, i64 8, !6 }
-!6 = !{ !1, !1, i64 0 }
+!5 = !{ i64 0, i64 8, null }
 !13 = distinct !{}

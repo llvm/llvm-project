@@ -2798,6 +2798,59 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueOptional) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalAssignValue) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using OptionalInt = $ns::$optional<int>;
+
+    void target($ns::$optional<OptionalInt> opt) {
+      if (!opt) return;
+
+      // Accessing the outer optional is OK now.
+      *opt;
+
+      // But accessing the nested optional is still unsafe because we haven't
+      // checked it.
+      **opt;  // [[unsafe]]
+
+      *opt = 1;
+
+      // Accessing the nested optional is safe after assigning a value to it.
+      **opt;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, NestedOptionalAssignOptional) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using OptionalInt = $ns::$optional<int>;
+
+    void target($ns::$optional<OptionalInt> opt) {
+      if (!opt) return;
+
+      // Accessing the outer optional is OK now.
+      *opt;
+
+      // But accessing the nested optional is still unsafe because we haven't
+      // checked it.
+      **opt;  // [[unsafe]]
+
+      // Assign from `optional<short>` so that we trigger conversion assignment
+      // instead of move assignment.
+      *opt = $ns::$optional<short>();
+
+      // Accessing the nested optional is still unsafe after assigning an empty
+      // optional to it.
+      **opt;  // [[unsafe]]
+    }
+  )");
+}
+
 // Tests that structs can be nested. We use an optional field because its easy
 // to use in a test, but the type of the field shouldn't matter.
 TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
@@ -3441,6 +3494,22 @@ TEST_P(UncheckedOptionalAccessTest, ClassDerivedPrivatelyFromOptional) {
     };
   )",
                        ast_matchers::hasName("Method"));
+}
+
+TEST_P(UncheckedOptionalAccessTest, ClassDerivedFromOptionalValueConstructor) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Derived : public $ns::$optional<int> {
+      Derived(int);
+    };
+
+    void target(Derived opt) {
+      *opt;  // [[unsafe]]
+      opt = 1;
+      *opt;
+    }
+  )");
 }
 
 // FIXME: Add support for:

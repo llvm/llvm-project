@@ -492,6 +492,13 @@ enum OverflowingBinaryOperatorOptionalFlags {
   OBO_NO_SIGNED_WRAP = 1
 };
 
+/// TruncInstOptionalFlags - Flags for serializing
+/// TruncInstOptionalFlags's SubclassOptionalData contents.
+enum TruncInstOptionalFlags {
+  TIO_NO_UNSIGNED_WRAP = 0,
+  TIO_NO_SIGNED_WRAP = 1
+};
+
 /// FastMath Flags
 /// This is a fixed layout derived from the bitcode emitted by LLVM 5.0
 /// intended to decouple the in-memory representation from the serialization.
