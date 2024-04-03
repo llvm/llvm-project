@@ -9,10 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
+#include "src/__support/macros/config.h"
+
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_config.h"
 
 #include <inttypes.h>
