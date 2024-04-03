@@ -182,6 +182,8 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
     return 4;
   case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
     return 5;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    return 6;
   default:
     return getDefaultAMDHSACodeObjectVersion();
   }
