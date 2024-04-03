@@ -2749,18 +2749,12 @@ def PureOp : TEST_Op<"always_speculatable_op", [Pure]> {
   let results = (outs I32:$result);
 }
 
-def NeverSpeculatableOp : TEST_Op<"never_speculatable_op", [ConditionallySpeculatable]> {
+def NeverSpeculatableOp : TEST_Op<"never_speculatable_op", [NeverSpeculatable]> {
   let description = [{
     Op used to test conditional speculation.  This op can never be
     speculatively executed.
   }];
   let results = (outs I32:$result);
-
-  let extraClassDeclaration = [{
-    ::mlir::Speculation::Speculatability getSpeculatability() {
-      return ::mlir::Speculation::NotSpeculatable;
-    }
-  }];
 }
 
 def RecursivelySpeculatableOp : TEST_Op<"recursively_speculatable_op", [

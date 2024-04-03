@@ -304,6 +304,17 @@ struct AlwaysSpeculatableImplTrait
     return Speculation::Speculatable;
   }
 };
+
+/// This trait marks an op (which must be tagged as implementing the
+/// ConditionallySpeculatable interface) as never being speculatable.
+template <typename ConcreteType>
+struct NeverSpeculatableImplTrait
+    : public TraitBase<ConcreteType, NeverSpeculatableImplTrait> {
+
+  Speculation::Speculatability getSpeculatability() {
+    return Speculation::NotSpeculatable;
+  }
+};
 } // namespace OpTrait
 
 //===----------------------------------------------------------------------===//

@@ -110,6 +110,11 @@ def RecursivelySpeculatableImplTrait
 def AlwaysSpeculatableImplTrait
   : NativeOpTrait<"AlwaysSpeculatableImplTrait">;
 
+// Used to inject an implementation of getSpeculatability.  Users should not use
+// this directly.
+def NeverSpeculatableImplTrait
+  : NativeOpTrait<"NeverSpeculatableImplTrait">;
+
 // This op interface enables Op authors to inject custom logic to determine
 // whether an Operation can be speculatively executed.  Ops that implement this
 // interface need to implement the custom logic in the `getSpeculatability` method.
@@ -135,6 +140,10 @@ def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
 // Marks an Operation as always speculatable.
 def AlwaysSpeculatable : TraitList<[
     ConditionallySpeculatable, AlwaysSpeculatableImplTrait]>;
+
+// Marks an Operation as never speculatable.
+def NeverSpeculatable : TraitList<[
+    ConditionallySpeculatable, NeverSpeculatableImplTrait]>;
 
 // Marks an Operation as speculatable only if all the operations in all attached
 // regions are also speculatable.
