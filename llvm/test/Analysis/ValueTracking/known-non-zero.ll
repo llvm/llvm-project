@@ -882,11 +882,7 @@ define i1 @usub_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
 ; CHECK-LABEL: @usub_sat_nonzero(
 ; CHECK-NEXT:    [[Y_ULT_31:%.*]] = icmp ult i8 [[YY:%.*]], 31
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_ULT_31]])
-; CHECK-NEXT:    [[XO:%.*]] = or i8 [[XX:%.*]], 34
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[XO]], i8 [[YY]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y_ult_31 = icmp ult i8 %yy, 31
   call void @llvm.assume(i1 %y_ult_31)

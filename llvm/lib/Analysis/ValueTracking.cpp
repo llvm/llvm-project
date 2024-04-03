@@ -2816,6 +2816,20 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       case Intrinsic::bswap:
       case Intrinsic::ctpop:
         return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
+      case Intrinsic::usub_sat: {
+        KnownBits XKnown =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (XKnown.isUnknown())
+          break;
+        KnownBits YKnown =
+            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
+        if (YKnown.isUnknown())
+          break;
+        std::optional<bool> NonZero = KnownBits::ugt(XKnown, YKnown);
+        if (NonZero.has_value())
+          return *NonZero;
+        break;
+      }
       case Intrinsic::ssub_sat:
         return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1));
