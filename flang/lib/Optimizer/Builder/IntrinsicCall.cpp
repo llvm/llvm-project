@@ -3621,7 +3621,7 @@ mlir::Value IntrinsicLibrary::genIbclr(mlir::Type resultType,
   assert(args.size() == 2);
   mlir::Value pos = builder.createConvert(loc, resultType, args[1]);
   mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
   auto res = builder.create<mlir::arith::XOrIOp>(loc, ones, mask);
   return builder.create<mlir::arith::AndIOp>(loc, args[0], res);
@@ -3645,7 +3645,7 @@ mlir::Value IntrinsicLibrary::genIbits(mlir::Type resultType,
       loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
   auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   auto mask = builder.create<mlir::arith::ShRUIOp>(loc, ones, shiftCount);
   auto res1 = builder.create<mlir::arith::ShRSIOp>(loc, args[0], pos);
   auto res2 = builder.create<mlir::arith::AndIOp>(loc, res1, mask);
@@ -4318,7 +4318,7 @@ mlir::Value IntrinsicLibrary::genIeeeLogb(mlir::Type resultType,
   // X is zero -- result is -infinity
   builder.setInsertionPointToStart(&outerIfOp.getThenRegion().front());
   genRaiseExcept(_FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO);
-  mlir::Value ones = builder.createIntegerConstant(loc, intType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, intType);
   mlir::Value result = builder.create<mlir::arith::ShLIOp>(
       loc, ones,
       builder.createIntegerConstant(loc, intType,
@@ -4937,7 +4937,7 @@ mlir::Value IntrinsicLibrary::genIshftc(mlir::Type resultType,
   mlir::Value size =
       args[2] ? builder.createConvert(loc, resultType, args[2]) : bitSize;
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value absShift = genAbs(resultType, {shift});
   auto elseSize = builder.create<mlir::arith::SubIOp>(loc, size, absShift);
   auto shiftIsZero = builder.create<mlir::arith::CmpIOp>(
@@ -5073,7 +5073,7 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
   assert(args.size() == 2);
 
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value bitSize = builder.createIntegerConstant(
       loc, resultType, resultType.getIntOrFloatBitWidth());
   mlir::Value bitsToSet = builder.createConvert(loc, resultType, args[0]);
@@ -5206,7 +5206,7 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
   mlir::Value i = builder.createConvert(loc, resultType, args[0]);
   mlir::Value j = builder.createConvert(loc, resultType, args[1]);
   mlir::Value mask = builder.createConvert(loc, resultType, args[2]);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
 
   // MERGE_BITS(I, J, MASK) = IOR(IAND(I, MASK), IAND(J, NOT(MASK)))
   mlir::Value notMask = builder.create<mlir::arith::XOrIOp>(loc, mask, ones);
@@ -5350,7 +5350,7 @@ void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
   auto to = builder.create<fir::LoadOp>(loc, resultType, toAddr);
   mlir::Value topos = builder.createConvert(loc, resultType, unbox(args[4]));
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value bitSize = builder.createIntegerConstant(
       loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
   auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
@@ -5429,7 +5429,7 @@ IntrinsicLibrary::genNorm2(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genNot(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  mlir::Value allOnes = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value allOnes = builder.createAllOnesInteger(loc, resultType);
   return builder.create<mlir::arith::XOrIOp>(loc, args[0], allOnes);
 }
 
@@ -5872,7 +5872,7 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   // the shift amount is equal to the element size.
   // So if SHIFT is equal to the bit width then it is handled as a special case.
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value minusOne = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value minusOne = builder.createMinusOneInteger(loc, resultType);
   mlir::Value valueIsNeg = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::slt, args[0], zero);
   mlir::Value specialRes =
