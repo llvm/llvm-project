@@ -43,14 +43,13 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; FORWARD-NEXT:    addi 3, 3, 15
 ; FORWARD-NEXT:    rldicr 3, 3, 0, 59
 ; FORWARD-NEXT:    addi 4, 3, 16
+; FORWARD-NEXT:    addi 5, 3, 31
 ; FORWARD-NEXT:    std 4, -8(1)
-; FORWARD-NEXT:    ld 4, -8(1)
+; FORWARD-NEXT:    rldicr 4, 5, 0, 59
 ; FORWARD-NEXT:    lvx 2, 0, 3
-; FORWARD-NEXT:    addi 4, 4, 15
-; FORWARD-NEXT:    rldicr 3, 4, 0, 59
-; FORWARD-NEXT:    addi 4, 3, 16
-; FORWARD-NEXT:    std 4, -8(1)
-; FORWARD-NEXT:    lvx 3, 0, 3
+; FORWARD-NEXT:    addi 3, 4, 16
+; FORWARD-NEXT:    std 3, -8(1)
+; FORWARD-NEXT:    lvx 3, 0, 4
 ; FORWARD-NEXT:    blr
   %args = alloca ptr, align 4
   %x = va_arg ptr %args, <8 x i32>

@@ -18582,6 +18582,10 @@ StoreSDNode *DAGCombiner::getUniqueStoreFeeding(LoadSDNode *LD,
   if (Chain.getOpcode() == ISD::CALLSEQ_START)
     Chain = Chain->getOperand(0);
 
+  // Look through Loads.
+  while (isa<LoadSDNode>(Chain.getNode()))
+    Chain = Chain->getOperand(0);
+
   StoreSDNode *ST = nullptr;
   SmallVector<SDValue, 8> Aliases;
   if (Chain.getOpcode() == ISD::TokenFactor) {
