@@ -979,16 +979,15 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
         f.andFeatures |= read32<ELFT::Endianness>(desc.data());
       } else if (config->emachine == EM_AARCH64 &&
                  type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-        if (!f.aarch64PauthAbiCoreInfo.empty())
+        if (!f.aarch64PauthAbiCoreInfo.empty()) {
           reportFatal(data.data(),
                       "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
                       "not supported");
-        if (size != 16)
-          reportFatal(
-              data.data(),
-              Twine("GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is too ") +
-                  (size < 16 ? "short" : "long") +
-                  ": expected 16 bytes, but got " + Twine(size));
+        } else if (size != 16) {
+          reportFatal(data.data(), "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                                   "is invalid: expected 16 bytes, but got " +
+                                       Twine(size));
+        }
         f.aarch64PauthAbiCoreInfo = desc;
       }
 

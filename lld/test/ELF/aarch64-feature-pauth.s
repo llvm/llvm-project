@@ -19,12 +19,12 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s
 
-# ERR2: error: short.o:(.note.gnu.property+0x0): GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is too short: expected 16 bytes, but got 12
+# ERR2: error: short.o:(.note.gnu.property+0x0): GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is invalid: expected 16 bytes, but got 12
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-long.s -o long.o
 # RUN: not ld.lld long.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR3 %s
 
-# ERR3: error: long.o:(.note.gnu.property+0x0): GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is too long: expected 16 bytes, but got 24
+# ERR3: error: long.o:(.note.gnu.property+0x0): GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry is invalid: expected 16 bytes, but got 24
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-multiple.s -o multiple.o
 # RUN: not ld.lld multiple.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR4 %s
