@@ -9,8 +9,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv1i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s8>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 1 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 1 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s8>) = COPY $v8
     %1:_(<vscale x 1 x s8>) = COPY $v9
@@ -27,8 +27,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv2i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s8>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 2 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 2 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s8>) = COPY $v8
     %1:_(<vscale x 2 x s8>) = COPY $v9
@@ -45,8 +45,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv4i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s8>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 4 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 4 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 4 x s8>) = COPY $v8
     %1:_(<vscale x 4 x s8>) = COPY $v9
@@ -63,8 +63,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv8i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s8>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 8 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 8 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 8 x s8>) = COPY $v8
     %1:_(<vscale x 8 x s8>) = COPY $v9
@@ -81,8 +81,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv16i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s8>) = COPY $v10m2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[OR]](<vscale x 16 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[XOR]](<vscale x 16 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 16 x s8>) = COPY $v8m2
     %1:_(<vscale x 16 x s8>) = COPY $v10m2
@@ -99,8 +99,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv32i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 32 x s8>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 32 x s8>) = COPY $v12m4
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 32 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[OR]](<vscale x 32 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 32 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[XOR]](<vscale x 32 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 32 x s8>) = COPY $v8m4
     %1:_(<vscale x 32 x s8>) = COPY $v12m4
@@ -117,8 +117,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv64i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 64 x s8>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 64 x s8>) = COPY $v16m8
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[OR]](<vscale x 64 x s8>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 64 x s8>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[XOR]](<vscale x 64 x s8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %0:_(<vscale x 64 x s8>) = COPY $v8m8
     %1:_(<vscale x 64 x s8>) = COPY $v16m8
@@ -135,8 +135,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv1i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s16>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 1 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 1 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s16>) = COPY $v8
     %1:_(<vscale x 1 x s16>) = COPY $v9
@@ -153,8 +153,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv2i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s16>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 2 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 2 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s16>) = COPY $v8
     %1:_(<vscale x 2 x s16>) = COPY $v9
@@ -171,8 +171,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv4i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s16>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 4 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 4 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 4 x s16>) = COPY $v8
     %1:_(<vscale x 4 x s16>) = COPY $v9
@@ -189,8 +189,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv8i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s16>) = COPY $v10m2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[OR]](<vscale x 8 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[XOR]](<vscale x 8 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 8 x s16>) = COPY $v8m2
     %1:_(<vscale x 8 x s16>) = COPY $v10m2
@@ -207,8 +207,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv16i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s16>) = COPY $v12m4
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[OR]](<vscale x 16 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[XOR]](<vscale x 16 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 16 x s16>) = COPY $v8m4
     %1:_(<vscale x 16 x s16>) = COPY $v12m4
@@ -225,8 +225,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv32i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 32 x s16>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 32 x s16>) = COPY $v16m8
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 32 x s16>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[OR]](<vscale x 32 x s16>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 32 x s16>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[XOR]](<vscale x 32 x s16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %0:_(<vscale x 32 x s16>) = COPY $v8m8
     %1:_(<vscale x 32 x s16>) = COPY $v16m8
@@ -243,8 +243,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv1i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s32>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 1 x s32>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 1 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s32>) = COPY $v8
     %1:_(<vscale x 1 x s32>) = COPY $v9
@@ -261,8 +261,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv2i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 2 x s32>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 2 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 2 x s32>) = COPY $v8
     %1:_(<vscale x 2 x s32>) = COPY $v9
@@ -279,8 +279,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv4i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s32>) = COPY $v10m2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[OR]](<vscale x 4 x s32>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[XOR]](<vscale x 4 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 4 x s32>) = COPY $v8m2
     %1:_(<vscale x 4 x s32>) = COPY $v10m2
@@ -297,8 +297,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv8i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s32>) = COPY $v12m4
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[OR]](<vscale x 8 x s32>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[XOR]](<vscale x 8 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 8 x s32>) = COPY $v8m4
     %1:_(<vscale x 8 x s32>) = COPY $v12m4
@@ -315,8 +315,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv16i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 16 x s32>) = COPY $v16m8
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[OR]](<vscale x 16 x s32>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[XOR]](<vscale x 16 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %0:_(<vscale x 16 x s32>) = COPY $v8m8
     %1:_(<vscale x 16 x s32>) = COPY $v16m8
@@ -333,8 +333,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv1i64
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 1 x s64>) = COPY $v9
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8 = COPY [[OR]](<vscale x 1 x s64>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8 = COPY [[XOR]](<vscale x 1 x s64>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 1 x s64>) = COPY $v8
     %1:_(<vscale x 1 x s64>) = COPY $v9
@@ -351,8 +351,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv2i64
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8m2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v10m2
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[OR]](<vscale x 2 x s64>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[XOR]](<vscale x 2 x s64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %0:_(<vscale x 2 x s64>) = COPY $v8m2
     %1:_(<vscale x 2 x s64>) = COPY $v10m2
@@ -369,8 +369,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv4i64
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v8m4
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 4 x s64>) = COPY $v12m4
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[OR]](<vscale x 4 x s64>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[XOR]](<vscale x 4 x s64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %0:_(<vscale x 4 x s64>) = COPY $v8m4
     %1:_(<vscale x 4 x s64>) = COPY $v12m4
@@ -387,8 +387,8 @@ body:             |
     ; CHECK-LABEL: name: test_nxv8i64
     ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v8m8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<vscale x 8 x s64>) = COPY $v16m8
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_XOR [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[OR]](<vscale x 8 x s64>)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[XOR]](<vscale x 8 x s64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %0:_(<vscale x 8 x s64>) = COPY $v8m8
     %1:_(<vscale x 8 x s64>) = COPY $v16m8

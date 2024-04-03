@@ -903,6 +903,58 @@ define <8 x i16> @shadd_fixedwidth_v8i16(<8 x i16> %a0, <8 x i16> %a1)  {
   ret <8 x i16> %res
 }
 
+define <8 x i16> @shadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: shadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @srhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: srhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @uhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: uhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
+define <8 x i16> @urhadd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: urhadd_demandedelts:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> zeroinitializer
+  %op = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %s0, <8 x i16> %a1)
+  %r0 = shufflevector <8 x i16> %op, <8 x i16> undef, <8 x i32> zeroinitializer
+  ret <8 x i16> %r0
+}
+
 declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
 declare <4 x i16> @llvm.aarch64.neon.shadd.v4i16(<4 x i16>, <4 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.shadd.v2i32(<2 x i32>, <2 x i32>)
