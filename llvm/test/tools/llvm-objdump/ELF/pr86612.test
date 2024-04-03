@@ -1,0 +1,93 @@
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objdump -p %t1 | FileCheck %s
+# RUN: llvm-objdump -p %t1 2>&1 >/dev/null | \
+# RUN: FileCheck %s -DFILE=%t1 --implicit-check-not=warning --check-prefix=ERROR
+
+# ERROR: warning: '[[FILE]]': virtual address is not in any segment: 0x474
+# CHECK:      Dynamic Section:
+# CHECK-NEXT:   NEEDED       0xffffffffbe5a0b5f
+# CHECK-NEXT:   FLAGS_1      0x0000000008000000
+# CHECK-NEXT:   DEBUG        0x0000000000000000
+# CHECK-NEXT:   RELA         0x00000000000004e0
+# CHECK-NEXT:   RELASZ       0x0000000000000090
+# CHECK-NEXT:   RELAENT      0x0000000000000018
+# CHECK-NEXT:   RELACOUNT    0x0000000000000004
+# CHECK-NEXT:   JMPREL       0x0000000000000570
+# CHECK-NEXT:   PLTRELSZ     0x0000000000000078
+# CHECK-NEXT:   PLTGOT       0x0000000000003aa0
+# CHECK-NEXT:   PLTREL       0x0000000000000007
+# CHECK-NEXT:   SYMTAB       0x0000000000000308
+# CHECK-NEXT:   SYMENT       0x0000000000000018
+# CHECK-NEXT:   STRTAB       0x0000000000000474
+# CHECK-NEXT:   STRSZ        0x000000000000006b
+# CHECK-NEXT:   GNU_HASH     0x0000000000000408
+# CHECK-NEXT:   HASH         0x000000000000042c
+# CHECK-NEXT:   INIT_ARRAY   0x00000000000028d8
+# CHECK-NEXT:   INIT_ARRAYSZ 0x0000000000000008
+# CHECK-NEXT:   INIT         0x000000000000180e
+# CHECK-NEXT:   FINI         0x0000000000001820
+# CHECK-NEXT:   VERSYM       0x00000000000003c8
+# CHECK-NEXT:   VERNEED      0x00000000000003d8
+# CHECK-NEXT:   VERNEEDNUM   0x0000000000000001
+
+---
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Flags: [SHF_WRITE, SHF_ALLOC]
+    Entries:
+      - Tag: DT_NEEDED
+        Value: 0xFFFFFFFFBE5A0B5F
+      - Tag: DT_FLAGS_1
+        Value: 0x8000000
+      - Tag: DT_DEBUG
+        Value: 0x0
+      - Tag: DT_RELA
+        Value: 0x4E0
+      - Tag: DT_RELASZ
+        Value: 0x90
+      - Tag: DT_RELAENT
+        Value: 0x18
+      - Tag: DT_RELACOUNT
+        Value: 0x4
+      - Tag: DT_JMPREL
+        Value: 0x570
+      - Tag: DT_PLTRELSZ
+        Value: 0x78
+      - Tag: DT_PLTGOT
+        Value: 0x3AA0
+      - Tag: DT_PLTREL
+        Value: 0x7
+      - Tag: DT_SYMTAB
+        Value: 0x308
+      - Tag: DT_SYMENT
+        Value: 0x18
+      - Tag: DT_STRTAB
+        Value: 0x474
+      - Tag: DT_STRSZ
+        Value: 0x6B
+      - Tag: DT_GNU_HASH
+        Value: 0x408
+      - Tag: DT_HASH
+        Value: 0x42C
+      - Tag: DT_INIT_ARRAY
+        Value: 0x28D8
+      - Tag: DT_INIT_ARRAYSZ
+        Value: 0x8
+      - Tag: DT_INIT
+        Value: 0x180E
+      - Tag: DT_FINI
+        Value: 0x1820
+      - Tag: DT_VERSYM
+        Value: 0x3C8
+      - Tag: DT_VERNEED
+        Value: 0x3D8
+      - Tag: DT_VERNEEDNUM
+        Value: 0x1
+      - Tag: DT_NULL
+        Value: 0x0

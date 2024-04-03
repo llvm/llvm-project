@@ -68,7 +68,7 @@ static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
     if (Dyn.d_tag == ELF::DT_STRTAB) {
       auto MappedAddrOrError = Elf.toMappedAddr(Dyn.getPtr());
       if (!MappedAddrOrError)
-        consumeError(MappedAddrOrError.takeError());
+        return MappedAddrOrError.takeError();
       return StringRef(reinterpret_cast<const char *>(*MappedAddrOrError));
     }
   }
