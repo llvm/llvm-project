@@ -1348,7 +1348,8 @@ std::pair<uint32_t, bool> DWARFDebugLine::LineTable::lookupAddressImpl(
       if (RowIndex != UnknownRowIndex && Rows[RowIndex].Line)
         break;
       IsApproximate = true;
-      if (RowIndex != UnknownRowIndex && Rows[RowIndex].PrologueEnd)
+      if (RowIndex != UnknownRowIndex &&
+          (Rows[RowIndex].BasicBlock | Rows[RowIndex].PrologueEnd))
         break;
       --Address.Address;
     }
@@ -1358,7 +1359,8 @@ std::pair<uint32_t, bool> DWARFDebugLine::LineTable::lookupAddressImpl(
       if (RowIndex != UnknownRowIndex && Rows[RowIndex].Line)
         break;
       IsApproximate = true;
-      if (RowIndex != UnknownRowIndex && Rows[RowIndex].EpilogueBegin)
+      if (RowIndex != UnknownRowIndex &&
+          (Rows[RowIndex].BasicBlock | Rows[RowIndex].EpilogueBegin))
         break;
       ++Address.Address;
     }

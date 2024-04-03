@@ -213,10 +213,10 @@ Example 8 - Addresses having approximate line info:
 
   $ llvm-symbolizer --obj=test.elf --approximate-line-info=before 0xa
   main
-  /home/ampandey/test-hip/main.c:4:6 (approximate)
+  /tmp/test/main.c:4:6 (approximate)
   $ llvm-symbolizer --obj=test.elf --approximate-line-info=after 0xa
   main
-  /home/ampandey/test-hip/main.c:8:2 (approximate)
+  /tmp/test/main.c:8:2 (approximate)
 
 OPTIONS
 -------
