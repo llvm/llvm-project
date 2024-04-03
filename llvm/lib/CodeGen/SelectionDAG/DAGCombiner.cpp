@@ -12056,6 +12056,13 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitVP_SELECT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue N2 = N->getOperand(2);
+
+  if (SDValue V = DAG.simplifySelect(N0, N1, N2))
+    return V;
+
   if (SDValue V = foldBoolSelectToLogic<VPMatchContext>(N, DAG))
     return V;
 
