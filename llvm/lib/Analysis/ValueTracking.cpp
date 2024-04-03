@@ -7378,7 +7378,7 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
     }
     case Instruction::Ret:
       if (I->getFunction()->hasRetAttribute(Attribute::NoUndef) &&
-          Handle(I->getOperand(0)))
+          Handle(cast<ReturnInst>(I)->getReturnValue()))
         return true;
       break;
     case Instruction::Switch:
