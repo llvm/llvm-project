@@ -2,18 +2,18 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
 func.func @emitc_constant() {
-  %c0 = "emitc.constant"(){value = #emitc.opaque<"INT_MAX">} : () -> i32
-  %c1 = "emitc.constant"(){value = 42 : i32} : () -> i32
-  %c2 = "emitc.constant"(){value = -1 : i32} : () -> i32
-  %c3 = "emitc.constant"(){value = -1 : si8} : () -> si8
-  %c4 = "emitc.constant"(){value = 255 : ui8} : () -> ui8
-  %c5 = "emitc.constant"(){value = #emitc.opaque<"CHAR_MIN">} : () -> !emitc.opaque<"char">
-  %c6 = "emitc.constant"(){value = 2 : index} : () -> index
-  %c7 = "emitc.constant"(){value = 2.0 : f32} : () -> f32
-  %f64 = "emitc.constant"(){value = 4.0 : f64} : () -> f64
-  %c8 = "emitc.constant"(){value = dense<0> : tensor<i32>} : () -> tensor<i32>
-  %c9 = "emitc.constant"(){value = dense<[0, 1]> : tensor<2xindex>} : () -> tensor<2xindex>
-  %c10 = "emitc.constant"(){value = dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>} : () -> tensor<2x2xf32>
+  %c0 = emitc.constant(#emitc.opaque<"INT_MAX">) : i32
+  %c1 = emitc.constant(42 : i32) : i32
+  %c2 = emitc.constant(-1 : i32) : i32
+  %c3 = emitc.constant(-1 : si8) : si8
+  %c4 = emitc.constant(255 : ui8) : ui8
+  %c5 = emitc.constant(#emitc.opaque<"CHAR_MIN">) : !emitc.opaque<"char">
+  %c6 = emitc.constant(2 : index) : index
+  %c7 = emitc.constant(2.0 : f32) : f32
+  %f64 = emitc.constant(4.0 : f64) : f64
+  %c8 = emitc.constant(dense<0> : tensor<i32>) : tensor<i32>
+  %c9 = emitc.constant(dense<[0, 1]> : tensor<2xindex>) : tensor<2xindex>
+  %c10 = emitc.constant(dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>) : tensor<2x2xf32>
   return
 }
 // CPP-DEFAULT: void emitc_constant() {

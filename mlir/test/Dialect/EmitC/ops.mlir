@@ -40,7 +40,7 @@ func.func @cast(%arg0: i32) {
 }
 
 func.func @c() {
-  %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %1 = emitc.constant(42 : i32) : i32
   return
 }
 
@@ -170,13 +170,13 @@ func.func @test_if_else(%arg0: i1, %arg1: f32) {
 }
 
 func.func @test_assign(%arg1: f32) {
-  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f32
+  %v = emitc.variable(#emitc.opaque<"">) : f32
   emitc.assign %arg1 : f32 to %v : f32
   return
 }
 
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
-  %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
+  %c7 = emitc.constant(7 : i32) : i32
   %q = emitc.expression : i32 {
     %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
     emitc.yield %a : i32

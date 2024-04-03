@@ -34,7 +34,7 @@ func.func @single_use(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 {
     %d = emitc.cmp lt, %c, %arg1 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> i32
+  %v = emitc.variable(#emitc.opaque<"">) : i32
   emitc.if %e {
     emitc.assign %arg0 : i32 to %v : i32
     emitc.yield
@@ -120,7 +120,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
     %d = emitc.cmp lt, %c, %arg1 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> i32
+  %v = emitc.variable(#emitc.opaque<"">) : i32
   emitc.if %e {
     emitc.assign %arg0 : i32 to %v : i32
     emitc.yield
@@ -128,7 +128,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
     emitc.assign %arg0 : i32 to %v : i32
     emitc.yield
   }
-  %q = "emitc.variable"(){value = #emitc.opaque<"">} : () -> i1
+  %q = emitc.variable(#emitc.opaque<"">) : i1
   emitc.assign %e : i1 to %q : i1
   return %v : i32
 }
@@ -175,7 +175,7 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
     %d = emitc.cmp lt, %c, %arg1 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> i32
+  %v = emitc.variable(#emitc.opaque<"">) : i32
   emitc.if %e3 {
     emitc.assign %arg0 : i32 to %v : i32
     emitc.yield

@@ -344,16 +344,17 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 
     ```mlir
     // Integer constant
-    %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
+    %0 = emitc.constant(42 : i32) : i32
 
-    // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
-      : () -> !emitc.opaque<"char">
+    // Constant emitted as `char c = CHAR_MIN;`
+    %1 = emitc.constant(#emitc.opaque<"CHAR_MIN">) : !emitc.opaque<"char">
     ```
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
+
+  let assemblyFormat = "`(` $value `)` attr-dict `:` type(results)";
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -988,19 +989,19 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = emitc.variable(42 : i32) : i32
 
-    // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
-      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
+    // Variable emitted as `int32_t* p = NULL;`
+    %1 = emitc.variable(#emitc.opaque<"NULL">)
+      : !emitc.ptr<!emitc.opaque<"int32_t">>
     ```
 
     Since folding is not supported, it can be used with pointers.
     As an example, it is valid to create pointers to `variable` operations
     by using `apply` operations and pass these to a `call` operation.
     ```mlir
-    %0 = "emitc.variable"() {value = 0 : i32} : () -> i32
-    %1 = "emitc.variable"() {value = 0 : i32} : () -> i32
+    %0 = emitc.variable(0 : i32) : i32
+    %1 = emitc.variable(0 : i32) : i32
     %2 = emitc.apply "&"(%0) : (i32) -> !emitc.ptr<i32>
     %3 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
     emitc.call_opaque "write"(%2, %3)
@@ -1011,6 +1012,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
 
+  let assemblyFormat = "`(` $value `)` attr-dict `:` type(results)";
   let hasVerifier = 1;
 }
 
@@ -1060,7 +1062,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = emitc.variable(42 : i32) : i32
     %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
