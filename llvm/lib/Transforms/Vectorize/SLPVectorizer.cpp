@@ -9063,25 +9063,35 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind,
             E->getAltOp());
       } else {
-        Type *Src0SclTy = E->getMainOp()->getOperand(0)->getType();
-        Type *Src1SclTy = E->getAltOp()->getOperand(0)->getType();
-        auto *Src0Ty = FixedVectorType::get(Src0SclTy, VL.size());
-        auto *Src1Ty = FixedVectorType::get(Src1SclTy, VL.size());
-        if (It != MinBWs.end()) {
-          if (!MinBWs.contains(getOperandEntry(E, 0)))
-            VecCost =
-                TTIRef.getCastInstrCost(Instruction::Trunc, VecTy, Src0Ty,
-                                        TTI::CastContextHint::None, CostKind);
-          LLVM_DEBUG({
-            dbgs() << "SLP: alternate extension, which should be truncated.\n";
-            E->dump();
-          });
-          return VecCost;
+        Type *SrcSclTy = E->getMainOp()->getOperand(0)->getType();
+        auto *SrcTy = FixedVectorType::get(SrcSclTy, VL.size());
+        if (SrcSclTy->isIntegerTy() && ScalarTy->isIntegerTy()) {
+          auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
+          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+          unsigned SrcBWSz =
+              DL->getTypeSizeInBits(E->getMainOp()->getOperand(0)->getType());
+          if (SrcIt != MinBWs.end()) {
+            SrcBWSz = SrcIt->second.first;
+            SrcSclTy = IntegerType::get(SrcSclTy->getContext(), SrcBWSz);
+            SrcTy = FixedVectorType::get(SrcSclTy, VL.size());
+          }
+          if (BWSz <= SrcBWSz) {
+            if (BWSz < SrcBWSz)
+              VecCost =
+                  TTIRef.getCastInstrCost(Instruction::Trunc, VecTy, SrcTy,
+                                          TTI::CastContextHint::None, CostKind);
+            LLVM_DEBUG({
+              dbgs()
+                  << "SLP: alternate extension, which should be truncated.\n";
+              E->dump();
+            });
+            return VecCost;
+          }
         }
-        VecCost = TTIRef.getCastInstrCost(E->getOpcode(), VecTy, Src0Ty,
+        VecCost = TTIRef.getCastInstrCost(E->getOpcode(), VecTy, SrcTy,
                                           TTI::CastContextHint::None, CostKind);
         VecCost +=
-            TTIRef.getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
+            TTIRef.getCastInstrCost(E->getAltOpcode(), VecTy, SrcTy,
                                     TTI::CastContextHint::None, CostKind);
       }
       SmallVector<int> Mask;
@@ -12591,15 +12601,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         CmpInst::Predicate AltPred = AltCI->getPredicate();
         V1 = Builder.CreateCmp(AltPred, LHS, RHS);
       } else {
-        if (It != MinBWs.end()) {
-          if (!MinBWs.contains(getOperandEntry(E, 0)))
-            LHS = Builder.CreateIntCast(LHS, VecTy, It->second.first);
-          assert(LHS->getType() == VecTy && "Expected same type as operand.");
-          if (auto *I = dyn_cast<Instruction>(LHS))
-            LHS = propagateMetadata(I, E->Scalars);
-          E->VectorizedValue = LHS;
-          ++NumVectorInstructions;
-          return LHS;
+        if (LHS->getType()->isIntOrIntVectorTy() && ScalarTy->isIntegerTy()) {
+          unsigned SrcBWSz = DL->getTypeSizeInBits(
+              cast<VectorType>(LHS->getType())->getElementType());
+          unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+          if (BWSz <= SrcBWSz) {
+            if (BWSz < SrcBWSz)
+              LHS = Builder.CreateIntCast(LHS, VecTy, It->second.first);
+            assert(LHS->getType() == VecTy && "Expected same type as operand.");
+            if (auto *I = dyn_cast<Instruction>(LHS))
+              LHS = propagateMetadata(I, E->Scalars);
+            E->VectorizedValue = LHS;
+            ++NumVectorInstructions;
+            return LHS;
+          }
         }
         V0 = Builder.CreateCast(
             static_cast<Instruction::CastOps>(E->getOpcode()), LHS, VecTy);
