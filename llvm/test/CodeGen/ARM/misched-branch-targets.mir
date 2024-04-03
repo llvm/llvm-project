@@ -32,13 +32,12 @@
     ret i32 0
   }
 
-  declare i32 @setjmp(ptr noundef) #2
-  declare void @longjmp(ptr noundef, i32 noundef) #3
+  declare i32 @setjmp(ptr noundef) #1
+  declare void @longjmp(ptr noundef, i32 noundef) #2
 
   attributes #0 = { "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
-  attributes #1 = { "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
-  attributes #2 = { nounwind returns_twice "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
-  attributes #3 = { noreturn nounwind "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
+  attributes #1 = { nounwind returns_twice "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
+  attributes #2 = { noreturn nounwind "frame-pointer"="all" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main" }
 
 ...
 ---
