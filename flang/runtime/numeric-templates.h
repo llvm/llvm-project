@@ -242,12 +242,13 @@ inline RT_API_ATTRS T RealMod(
         IS_MODULO ? "MODULO with P==0" : "MOD with P==0");
   }
   if (ISNANTy<T>::compute(a) || ISNANTy<T>::compute(p) ||
-      ISINFTy<T>::compute(a) ||
-      // Other compilers behave consistently for MOD(x, +/-INF)
-      // and always return x. This is probably related to
-      // implementation of std::fmod(). Stick to this behavior
-      // for MOD, but return NaN for MODULO(x, +/-INF).
-      (IS_MODULO && ISINFTy<T>::compute(p))) {
+      ISINFTy<T>::compute(a)) {
+    return QNANTy<T>::compute();
+  } else if (IS_MODULO && ISINFTy<T>::compute(p)) {
+    // Other compilers behave consistently for MOD(x, +/-INF)
+    // and always return x. This is probably related to
+    // implementation of std::fmod(). Stick to this behavior
+    // for MOD, but return NaN for MODULO(x, +/-INF).
     return QNANTy<T>::compute();
   }
   T aAbs{ABSTy<T>::compute(a)};
