@@ -169,6 +169,7 @@ def CIR_Double : CIR_FloatType<"Double", "double"> {
 // Constraints
 
 def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double]>;
+def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//
 // PointerType
@@ -371,6 +372,16 @@ def VoidPtr : Type<
     BuildableType<
       "mlir::cir::PointerType::get($_builder.getContext(),"
       "mlir::cir::VoidType::get($_builder.getContext()))"> {
+}
+
+// Pointer to int, float or double
+def IntOrFPPtr : Type<
+    And<[
+      CPred<"$_self.isa<::mlir::cir::PointerType>()">,
+      CPred<"$_self.cast<::mlir::cir::PointerType>()"
+            ".getPointee().isa<::mlir::cir::IntType,"
+            "::mlir::cir::SingleType, ::mlir::cir::DoubleType>()">,
+    ]>, "{int,void}*"> {
 }
 
 // Pointer to struct

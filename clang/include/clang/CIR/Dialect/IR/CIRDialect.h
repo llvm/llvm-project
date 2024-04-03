@@ -43,6 +43,7 @@ namespace impl {
 // corresponding trait classes.  This avoids them being template
 // instantiated/duplicated.
 LogicalResult verifySameFirstOperandAndResultType(Operation *op);
+LogicalResult verifySameSecondOperandAndResultType(Operation *op);
 LogicalResult verifySameFirstSecondOperandAndResultType(Operation *op);
 } // namespace impl
 
@@ -59,7 +60,19 @@ public:
 };
 
 /// This class provides verification for ops that are known to have the same
-/// first operand and result type.
+/// second operand and result type.
+///
+template <typename ConcreteType>
+class SameSecondOperandAndResultType
+    : public TraitBase<ConcreteType, SameSecondOperandAndResultType> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameSecondOperandAndResultType(op);
+  }
+};
+
+/// This class provides verification for ops that are known to have the same
+/// first, second operand and result type.
 ///
 template <typename ConcreteType>
 class SameFirstSecondOperandAndResultType

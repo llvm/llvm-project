@@ -79,6 +79,7 @@ public:
   /// Return address with different element type, but same pointer and
   /// alignment.
   Address withElementType(mlir::Type ElemTy) const {
+    // TODO(cir): hasOffset() check
     return Address(getPointer(), ElemTy, getAlignment(), isKnownNonNull());
   }
 
