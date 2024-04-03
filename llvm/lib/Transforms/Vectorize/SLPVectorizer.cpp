@@ -306,10 +306,7 @@ static bool isCommutative(Instruction *I) {
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative();
-  // TODO: This should check for generic Instruction::isCommutative(), but
-  //       we need to confirm that the caller code correctly handles Intrinsics
-  //       for example (does not have 2 operands).
-  return false;
+  return I->isCommutative();
 }
 
 /// \returns inserting index of InsertElement or InsertValue instruction,
@@ -658,6 +655,29 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned AltOpcode = Opcode;
   unsigned AltIndex = BaseIndex;
 
+  bool SwappedPredsCompatible = [&]() {
+    if (!IsCmpOp)
+      return false;
+    SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
+    UniquePreds.insert(BasePred);
+    UniqueNonSwappedPreds.insert(BasePred);
+    for (Value *V : VL) {
+      auto *I = dyn_cast<CmpInst>(V);
+      if (!I)
+        return false;
+      CmpInst::Predicate CurrentPred = I->getPredicate();
+      CmpInst::Predicate SwappedCurrentPred =
+          CmpInst::getSwappedPredicate(CurrentPred);
+      UniqueNonSwappedPreds.insert(CurrentPred);
+      if (!UniquePreds.contains(CurrentPred) &&
+          !UniquePreds.contains(SwappedCurrentPred))
+        UniquePreds.insert(CurrentPred);
+    }
+    // Total number of predicates > 2, but if consider swapped predicates
+    // compatible only 2, consider swappable predicates as compatible opcodes,
+    // not alternate.
+    return UniqueNonSwappedPreds.size() > 2 && UniquePreds.size() == 2;
+  }();
   // Check for one alternate opcode from another BinaryOperator.
   // TODO - generalize to support all operators (types, calls etc.).
   auto *IBase = cast<Instruction>(VL[BaseIndex]);
@@ -710,7 +730,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         CmpInst::Predicate SwappedCurrentPred =
             CmpInst::getSwappedPredicate(CurrentPred);
 
-        if (E == 2 &&
+        if ((E == 2 || SwappedPredsCompatible) &&
             (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
           continue;
 
@@ -1087,7 +1107,7 @@ public:
     MinBWs.clear();
     ReductionBitWidth = 0;
     CastMaxMinBWSizes.reset();
-    TruncNodes.clear();
+    ExtraBitWidthNodes.clear();
     InstrElementSize.clear();
     UserIgnoreList = nullptr;
     PostponedGathers.clear();
@@ -1952,6 +1972,9 @@ public:
              "Expected same number of lanes");
       assert(isa<Instruction>(VL[0]) && "Expected instruction");
       unsigned NumOperands = cast<Instruction>(VL[0])->getNumOperands();
+      constexpr unsigned IntrinsicNumOperands = 2;
+      if (auto *CI = dyn_cast<IntrinsicInst>(VL[0]))
+        NumOperands = IntrinsicNumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
       for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
@@ -3397,10 +3420,11 @@ private:
           // immediates do not affect scheduler behavior this is considered
           // okay.
           auto *In = BundleMember->Inst;
-          assert(In &&
-                 (isa<ExtractValueInst, ExtractElementInst>(In) ||
-                  In->getNumOperands() == TE->getNumOperands()) &&
-                 "Missed TreeEntry operands?");
+          assert(
+              In &&
+              (isa<ExtractValueInst, ExtractElementInst, IntrinsicInst>(In) ||
+               In->getNumOperands() == TE->getNumOperands()) &&
+              "Missed TreeEntry operands?");
           (void)In; // fake use to avoid build failure when assertions disabled
 
           for (unsigned OpIdx = 0, NumOperands = TE->getNumOperands();
@@ -3659,8 +3683,9 @@ private:
   /// type sizes, used in the tree.
   std::optional<std::pair<unsigned, unsigned>> CastMaxMinBWSizes;
 
-  /// Indices of the vectorized trunc nodes.
-  DenseSet<unsigned> TruncNodes;
+  /// Indices of the vectorized nodes, which supposed to be the roots of the new
+  /// bitwidth analysis attempt, like trunc, IToFP or ICmp.
+  DenseSet<unsigned> ExtraBitWidthNodes;
 };
 
 } // end namespace slpvectorizer
@@ -6588,7 +6613,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                 PrevMaxBW),
             std::min<unsigned>(DL->getTypeSizeInBits(VL0->getType()),
                                PrevMinBW));
-        TruncNodes.insert(VectorizableTree.size());
+        ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
+      } else if (ShuffleOrOp == Instruction::SIToFP ||
+                 ShuffleOrOp == Instruction::UIToFP) {
+        unsigned NumSignBits =
+            ComputeNumSignBits(VL0->getOperand(0), *DL, 0, AC, nullptr, DT);
+        if (auto *OpI = dyn_cast<Instruction>(VL0->getOperand(0))) {
+          APInt Mask = DB->getDemandedBits(OpI);
+          NumSignBits = std::max(NumSignBits, Mask.countl_zero());
+        }
+        if (NumSignBits * 2 >=
+            DL->getTypeSizeInBits(VL0->getOperand(0)->getType()))
+          ExtraBitWidthNodes.insert(VectorizableTree.size() + 1);
       }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndicies);
@@ -6636,6 +6672,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       TE->setOperand(1, Right);
       buildTree_rec(Left, Depth + 1, {TE, 0});
       buildTree_rec(Right, Depth + 1, {TE, 1});
+      if (ShuffleOrOp == Instruction::ICmp) {
+        unsigned NumSignBits0 =
+            ComputeNumSignBits(VL0->getOperand(0), *DL, 0, AC, nullptr, DT);
+        if (NumSignBits0 * 2 >=
+            DL->getTypeSizeInBits(VL0->getOperand(0)->getType()))
+          ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
+        unsigned NumSignBits1 =
+            ComputeNumSignBits(VL0->getOperand(1), *DL, 0, AC, nullptr, DT);
+        if (NumSignBits1 * 2 >=
+            DL->getTypeSizeInBits(VL0->getOperand(1)->getType()))
+          ExtraBitWidthNodes.insert(getOperandEntry(TE, 1)->Idx);
+      }
       return;
     }
     case Instruction::Select:
@@ -6775,6 +6823,33 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndicies);
+      // Sort operands of the instructions so that each side is more likely to
+      // have the same opcode.
+      if (isCommutative(VL0)) {
+        ValueList Left, Right;
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
+        TE->setOperand(0, Left);
+        TE->setOperand(1, Right);
+        SmallVector<ValueList> Operands;
+        for (unsigned I : seq<unsigned>(2, CI->arg_size())) {
+          Operands.emplace_back();
+          if (isVectorIntrinsicWithScalarOpAtArg(ID, I))
+            continue;
+          for (Value *V : VL) {
+            auto *CI2 = cast<CallInst>(V);
+            Operands.back().push_back(CI2->getArgOperand(I));
+          }
+          TE->setOperand(I, Operands.back());
+        }
+        buildTree_rec(Left, Depth + 1, {TE, 0});
+        buildTree_rec(Right, Depth + 1, {TE, 1});
+        for (unsigned I : seq<unsigned>(2, CI->arg_size())) {
+          if (Operands[I - 2].empty())
+            continue;
+          buildTree_rec(Operands[I - 2], Depth + 1, {TE, I});
+        }
+        return;
+      }
       TE->setOperandsInOrder();
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         // For scalar operands no need to create an entry since no need to
@@ -14251,7 +14326,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   bool IsStoreOrInsertElt =
       VectorizableTree.front()->getOpcode() == Instruction::Store ||
       VectorizableTree.front()->getOpcode() == Instruction::InsertElement;
-  if ((IsStoreOrInsertElt || UserIgnoreList) && TruncNodes.size() <= 1 &&
+  if ((IsStoreOrInsertElt || UserIgnoreList) &&
+      ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
        CastMaxMinBWSizes->first / CastMaxMinBWSizes->second <= 2))
     return;
@@ -14455,16 +14531,23 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTopRoot = false;
     IsProfitableToDemoteRoot = true;
 
-    if (TruncNodes.empty()) {
+    if (ExtraBitWidthNodes.empty()) {
       NodeIdx = VectorizableTree.size();
     } else {
       unsigned NewIdx = 0;
       do {
-        NewIdx = *TruncNodes.begin() + 1;
-        TruncNodes.erase(TruncNodes.begin());
-      } while (NewIdx <= NodeIdx && !TruncNodes.empty());
+        NewIdx = *ExtraBitWidthNodes.begin();
+        ExtraBitWidthNodes.erase(ExtraBitWidthNodes.begin());
+      } while (NewIdx <= NodeIdx && !ExtraBitWidthNodes.empty());
       NodeIdx = NewIdx;
-      IsTruncRoot = true;
+      IsTruncRoot =
+          NodeIdx < VectorizableTree.size() &&
+          any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
+                 [](const EdgeInfo &EI) {
+                   return EI.EdgeIdx == 0 &&
+                          EI.UserTE->getOpcode() == Instruction::Trunc &&
+                          !EI.UserTE->isAltShuffle();
+                 });
     }
 
     // If the maximum bit width we compute is less than the with of the roots'
