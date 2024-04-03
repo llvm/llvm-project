@@ -3136,6 +3136,12 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
       auto attr = sz.get<Attribute>();
       vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
+    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
+      assert(params.size() == 1 && "expected a single param");
+      vectorSizes.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
+      continue;
     }
 
     auto szPayloads = state.getPayloadOps(sz.get<Value>());
