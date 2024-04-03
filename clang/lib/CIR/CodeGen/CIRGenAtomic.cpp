@@ -269,6 +269,10 @@ static Address buildValToTemp(CIRGenFunction &CGF, Expr *E) {
 }
 
 Address AtomicInfo::castToAtomicIntPointer(Address addr) const {
+  auto intTy = addr.getElementType().dyn_cast<mlir::cir::IntType>();
+  // Don't bother with int casts if the integer size is the same.
+  if (intTy && intTy.getWidth() == AtomicSizeInBits)
+    return addr;
   auto ty = CGF.getBuilder().getUIntNTy(AtomicSizeInBits);
   return addr.withElementType(ty);
 }
@@ -314,10 +318,12 @@ static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, llvm::AtomicOrdering Order,
+                          uint64_t Size, mlir::cir::MemOrder Order,
                           uint8_t Scope) {
   assert(!UnimplementedFeature::syncScopeID());
+  StringRef Op;
   [[maybe_unused]] bool PostOpMinMax = false;
+  auto loc = CGF.getLoc(E->getSourceRange());
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -375,18 +381,19 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
-    llvm_unreachable("NYI");
+    // In LLVM codegen, the post operation codegen is tracked here.
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__hip_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicAddFetch::getOperationName();
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
+    // In LLVM codegen, the post operation codegen is tracked here.
     llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_sub:
@@ -423,6 +430,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__scoped_atomic_and_fetch:
+    // In LLVM codegen, the post operation codegen is tracked here.
     llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_and:
@@ -435,6 +443,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_or_fetch:
+    // In LLVM codegen, the post operation codegen is tracked here.
     llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_or:
@@ -447,6 +456,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
+    // In LLVM codegen, the post operation codegen is tracked here.
     llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_xor:
@@ -459,6 +469,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+    // In LLVM codegen, the post operation codegen is tracked here.
     llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_nand:
@@ -467,13 +478,38 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm_unreachable("NYI");
     break;
   }
-  llvm_unreachable("NYI");
+
+  assert(Op.size() && "expected operation name to build");
+  auto &builder = CGF.getBuilder();
+
+  auto LoadVal1 = builder.createLoad(loc, Val1);
+
+  SmallVector<mlir::Value> atomicOperands = {Ptr.getPointer(), LoadVal1};
+  SmallVector<mlir::Type> atomicResTys = {
+      Ptr.getPointer().getType().cast<mlir::cir::PointerType>().getPointee()};
+  auto orderAttr = mlir::cir::MemOrderAttr::get(builder.getContext(), Order);
+  auto RMWI = builder.create(loc, builder.getStringAttr(Op), atomicOperands,
+                             atomicResTys, {});
+  RMWI->setAttr("mem_order", orderAttr);
+  if (E->isVolatile())
+    RMWI->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
+  auto Result = RMWI->getResult(0);
+
+  if (PostOpMinMax)
+    llvm_unreachable("NYI");
+
+  // This should be handled in LowerToLLVM.cpp, still tracking here for now.
+  if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch ||
+      E->getOp() == AtomicExpr::AO__scoped_atomic_nand_fetch)
+    llvm_unreachable("NYI");
+
+  builder.createStore(loc, Result, Dest);
 }
 
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
-                          uint64_t Size, llvm::AtomicOrdering Order,
+                          uint64_t Size, mlir::cir::MemOrder Order,
                           mlir::Value Scope) {
   auto ScopeModel = Expr->getScopeModel();
 
@@ -1011,34 +1047,34 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     // We should not ever get to a case where the ordering isn't a valid CABI
     // value, but it's hard to enforce that in general.
     auto ord = ordAttr.getUInt();
-    if (llvm::isValidAtomicOrderingCABI(ord)) {
-      switch ((llvm::AtomicOrderingCABI)ord) {
-      case llvm::AtomicOrderingCABI::relaxed:
+    if (mlir::cir::isValidCIRAtomicOrderingCABI(ord)) {
+      switch ((mlir::cir::MemOrder)ord) {
+      case mlir::cir::MemOrder::Relaxed:
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      llvm::AtomicOrdering::Monotonic, Scope);
+                      mlir::cir::MemOrder::Relaxed, Scope);
         break;
-      case llvm::AtomicOrderingCABI::consume:
-      case llvm::AtomicOrderingCABI::acquire:
+      case mlir::cir::MemOrder::Consume:
+      case mlir::cir::MemOrder::Acquire:
         if (IsStore)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      llvm::AtomicOrdering::Acquire, Scope);
+                      mlir::cir::MemOrder::Acquire, Scope);
         break;
-      case llvm::AtomicOrderingCABI::release:
+      case mlir::cir::MemOrder::Release:
         if (IsLoad)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      llvm::AtomicOrdering::Release, Scope);
+                      mlir::cir::MemOrder::Release, Scope);
         break;
-      case llvm::AtomicOrderingCABI::acq_rel:
+      case mlir::cir::MemOrder::AcquireRelease:
         if (IsLoad || IsStore)
           break; // Avoid crashing on code with undefined behavior
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      llvm::AtomicOrdering::AcquireRelease, Scope);
+                      mlir::cir::MemOrder::AcquireRelease, Scope);
         break;
-      case llvm::AtomicOrderingCABI::seq_cst:
+      case mlir::cir::MemOrder::SequentiallyConsistent:
         buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
-                      llvm::AtomicOrdering::SequentiallyConsistent, Scope);
+                      mlir::cir::MemOrder::SequentiallyConsistent, Scope);
         break;
       }
     }

@@ -40,6 +40,17 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
+// CIR Op Traits
+//===----------------------------------------------------------------------===//
+
+def SameFirstOperandAndResultType :
+  NativeOpTrait<"SameFirstOperandAndResultType">;
+def SameSecondOperandAndResultType :
+  NativeOpTrait<"SameSecondOperandAndResultType">;
+def SameFirstSecondOperandAndResultType :
+  NativeOpTrait<"SameFirstSecondOperandAndResultType">;
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -109,6 +120,7 @@ def CastOp : CIR_Op<"cast", [Pure]> {
 
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -182,9 +194,6 @@ def PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 //===----------------------------------------------------------------------===//
 // PtrStrideOp
 //===----------------------------------------------------------------------===//
-
-def SameFirstOperandAndResultType :
-  NativeOpTrait<"SameFirstOperandAndResultType">;
 
 def PtrStrideOp : CIR_Op<"ptr_stride",
                          [Pure, SameFirstOperandAndResultType]> {
@@ -2933,9 +2942,6 @@ def MemChrOp : CIR_Op<"libc.memchr"> {
 // StdFindOp
 //===----------------------------------------------------------------------===//
 
-def SameFirstSecondOperandAndResultType :
-  NativeOpTrait<"SameFirstSecondOperandAndResultType">;
-
 def StdFindOp : CIR_Op<"std.find", [SameFirstSecondOperandAndResultType]> {
   let arguments = (ins FlatSymbolRefAttr:$original_fn,
                        CIR_AnyType:$first,
@@ -3410,6 +3416,46 @@ def IsConstantOp : CIR_Op<"is_constant", [Pure]> {
   let assemblyFormat = [{
     `(` $val `:` type($val) `)` `:` type($result) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic operations
+//===----------------------------------------------------------------------===//
+
+def MemOrderRelaxed : I32EnumAttrCase<"Relaxed", 0, "relaxed">;
+def MemOrderConsume : I32EnumAttrCase<"Consume", 1, "consume">;
+def MemOrderAcquire : I32EnumAttrCase<"Acquire", 2, "acquire">;
+def MemOrderRelease : I32EnumAttrCase<"Release", 3, "release">;
+def MemOrderAcqRel : I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">;
+def MemOrderSeqCst : I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">;
+
+def MemOrder : I32EnumAttr<
+    "MemOrder",
+    "Memory order according to C++11 memory model",
+    [MemOrderRelaxed, MemOrderConsume, MemOrderAcquire,
+     MemOrderRelease, MemOrderAcqRel, MemOrderSeqCst]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def AtomicAddFetch : CIR_Op<"atomic.add_fetch",
+                            [Pure, SameSecondOperandAndResultType]> {
+  let summary = "Represents the __atomic_add_fetch builtin";
+  let description = [{}];
+  let results = (outs CIR_AnyIntOrFloat:$result);
+  let arguments = (ins IntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
+                       Arg<MemOrder, "memory order">:$mem_order,
+                       UnitAttr:$is_volatile);
+
+  let assemblyFormat = [{
+    `(`
+    $ptr `:` type($ptr) `,`
+    $val `:` type($val) `,`
+    $mem_order `)`
+    (`volatile` $is_volatile^)?
+    `:` type($result) attr-dict
+  }];
+
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//

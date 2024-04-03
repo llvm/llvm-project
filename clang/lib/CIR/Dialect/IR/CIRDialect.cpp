@@ -511,6 +511,20 @@ LogicalResult CastOp::verify() {
   llvm_unreachable("Unknown CastOp kind?");
 }
 
+OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
+  if (getKind() != mlir::cir::CastKind::integral)
+    return {};
+  if (getSrc().getType() != getResult().getType())
+    return {};
+  // TODO: for sign differences, it's possible in certain conditions to
+  // create a new attributes that's capable or representing the source.
+  SmallVector<mlir::OpFoldResult, 1> foldResults;
+  auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
+  if (foldOrder.succeeded() && foldResults[0].is<mlir::Attribute>())
+    return foldResults[0].get<mlir::Attribute>();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//
@@ -2365,6 +2379,21 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 
   auto type = op->getResult(0).getType();
   auto opType = op->getOperand(0).getType();
+
+  if (type != opType)
+    return op->emitOpError()
+           << "requires the same type for first operand and result";
+
+  return success();
+}
+
+LogicalResult
+mlir::OpTrait::impl::verifySameSecondOperandAndResultType(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 2)) || failed(verifyOneResult(op)))
+    return failure();
+
+  auto type = op->getResult(0).getType();
+  auto opType = op->getOperand(1).getType();
 
   if (type != opType)
     return op->emitOpError()

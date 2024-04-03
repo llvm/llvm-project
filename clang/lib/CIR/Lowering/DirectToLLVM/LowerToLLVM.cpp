@@ -2406,6 +2406,65 @@ public:
   }
 };
 
+class CIRAtomicFetchLowering
+    : public mlir::OpConversionPattern<mlir::cir::AtomicAddFetch> {
+public:
+  using OpConversionPattern<mlir::cir::AtomicAddFetch>::OpConversionPattern;
+
+  mlir::LLVM::AtomicOrdering
+  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
+    switch (memo) {
+    case mlir::cir::MemOrder::Relaxed:
+      return mlir::LLVM::AtomicOrdering::monotonic;
+    case mlir::cir::MemOrder::Consume:
+    case mlir::cir::MemOrder::Acquire:
+      return mlir::LLVM::AtomicOrdering::acquire;
+    case mlir::cir::MemOrder::Release:
+      return mlir::LLVM::AtomicOrdering::release;
+    case mlir::cir::MemOrder::AcquireRelease:
+      return mlir::LLVM::AtomicOrdering::acq_rel;
+    case mlir::cir::MemOrder::SequentiallyConsistent:
+      return mlir::LLVM::AtomicOrdering::seq_cst;
+    }
+    llvm_unreachable("shouldn't get here");
+  }
+
+  mlir::LogicalResult buildPostOp(mlir::cir::AtomicAddFetch op,
+                                  OpAdaptor adaptor,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Value rmwVal) const {
+    if (op.getVal().getType().isa<mlir::cir::IntType>())
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, rmwVal,
+                                                     adaptor.getVal());
+    else if (op.getVal()
+                 .getType()
+                 .isa<mlir::cir::SingleType, mlir::cir::DoubleType>())
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, rmwVal,
+                                                      adaptor.getVal());
+    else
+      return op.emitError() << "Unsupported type";
+    return mlir::success();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AtomicAddFetch op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto llvmOrder = getLLVMAtomicOrder(adaptor.getMemOrder());
+
+    // FIXME: add syncscope.
+    auto rmwVal = rewriter.create<mlir::LLVM::AtomicRMWOp>(
+        op.getLoc(), mlir::LLVM::AtomicBinOp::add, adaptor.getPtr(),
+        adaptor.getVal(), llvmOrder);
+
+    // FIXME: Make the rewrite generic and expand this to more opcodes.
+    bool hasPostOp = isa<mlir::cir::AtomicAddFetch>(op);
+
+    if (hasPostOp)
+      return buildPostOp(op, adaptor, rewriter, rmwVal.getRes());
+    return mlir::success();
+  }
+};
+
 class CIRBrOpLowering : public mlir::OpConversionPattern<mlir::cir::BrOp> {
 public:
   using OpConversionPattern<mlir::cir::BrOp>::OpConversionPattern;
@@ -2844,13 +2903,13 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<
       CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
       CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
-      CIRBitPopcountOpLowering, CIRLoopOpInterfaceLowering, CIRBrCondOpLowering,
-      CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
-      CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
-      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-      CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering, CIRGlobalOpLowering,
-      CIRGetGlobalOpLowering, CIRVAStartLowering, CIRVAEndLowering,
-      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
+      CIRBitPopcountOpLowering, CIRAtomicFetchLowering,
+      CIRLoopOpInterfaceLowering, CIRBrCondOpLowering, CIRPtrStrideOpLowering,
+      CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering,
+      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+      CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering,
+      CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
+      CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
       CIRTernaryOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
