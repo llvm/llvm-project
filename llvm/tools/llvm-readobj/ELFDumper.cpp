@@ -5165,8 +5165,8 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
     return Desc;
   }();
 
-  OS << format("platform 0x%x (%s), version 0x%x", Platform, PlatformDesc,
-               Version);
+  OS << format("platform 0x%" PRIx64 " (%s), version 0x%" PRIx64, Platform,
+               PlatformDesc, Version);
   if (!VersionDesc.empty())
     OS << format(" (%s)", VersionDesc.c_str());
 
