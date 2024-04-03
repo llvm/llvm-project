@@ -292,19 +292,14 @@ struct IndexedAllocationInfo {
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(IndexedVersion Version) const {
-    size_t Size = 0;
-    if (Version <= Version1) {
-      // The number of frames to serialize.
-      Size += sizeof(uint64_t);
-      // The callstack frame ids.
-      Size += sizeof(FrameId) * CallStack.size();
-    } else {
-      // The CallStackId
-      Size += sizeof(CallStackId);
+    switch (Version) {
+    case Version0:
+    case Version1:
+      return serializedSizeV0();
+    case Version2:
+      return serializedSizeV2();
     }
-    // The size of the payload.
-    Size += PortableMemInfoBlock::serializedSize();
-    return Size;
+    llvm_unreachable("unsupported MemProf version");
   }
 
   bool operator==(const IndexedAllocationInfo &Other) const {
@@ -318,6 +313,27 @@ struct IndexedAllocationInfo {
 
   bool operator!=(const IndexedAllocationInfo &Other) const {
     return !operator==(Other);
+  }
+
+private:
+  size_t serializedSizeV0() const {
+    size_t Size = 0;
+    // The number of frames to serialize.
+    Size += sizeof(uint64_t);
+    // The callstack frame ids.
+    Size += sizeof(FrameId) * CallStack.size();
+    // The size of the payload.
+    Size += PortableMemInfoBlock::serializedSize();
+    return Size;
+  }
+
+  size_t serializedSizeV2() const {
+    size_t Size = 0;
+    // The CallStackId
+    Size += sizeof(CallStackId);
+    // The size of the payload.
+    Size += PortableMemInfoBlock::serializedSize();
+    return Size;
   }
 };
 
@@ -381,23 +397,14 @@ struct IndexedMemProfRecord {
   }
 
   size_t serializedSize(IndexedVersion Version) const {
-    size_t Result = sizeof(GlobalValue::GUID);
-    for (const IndexedAllocationInfo &N : AllocSites)
-      Result += N.serializedSize(Version);
-
-    // The number of callsites we have information for.
-    Result += sizeof(uint64_t);
-    if (Version <= Version1) {
-      for (const auto &Frames : CallSites) {
-        // The number of frame ids to serialize.
-        Result += sizeof(uint64_t);
-        Result += Frames.size() * sizeof(FrameId);
-      }
-    } else {
-      // The CallStackId
-      Result += CallSiteIds.size() * sizeof(CallStackId);
+    switch (Version) {
+    case Version0:
+    case Version1:
+      return serializedSizeV0();
+    case Version2:
+      return serializedSizeV2();
     }
-    return Result;
+    llvm_unreachable("unsupported MemProf version");
   }
 
   bool operator==(const IndexedMemProfRecord &Other) const {
@@ -428,6 +435,41 @@ struct IndexedMemProfRecord {
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
   // mapped to functions using this GUID.
   static GlobalValue::GUID getGUID(const StringRef FunctionName);
+
+private:
+  size_t serializedSizeV0() const {
+    size_t Result = sizeof(GlobalValue::GUID);
+    for (const IndexedAllocationInfo &N : AllocSites)
+      Result += N.serializedSize(Version0);
+
+    // The number of callsites we have information for.
+    Result += sizeof(uint64_t);
+    for (const auto &Frames : CallSites) {
+      // The number of frame ids to serialize.
+      Result += sizeof(uint64_t);
+      Result += Frames.size() * sizeof(FrameId);
+    }
+    return Result;
+  }
+
+  size_t serializedSizeV2() const {
+    size_t Result = sizeof(GlobalValue::GUID);
+    for (const IndexedAllocationInfo &N : AllocSites)
+      Result += N.serializedSize(Version2);
+
+    // The number of callsites we have information for.
+    Result += sizeof(uint64_t);
+    // The CallStackId
+    Result += CallSiteIds.size() * sizeof(CallStackId);
+    return Result;
+  }
+
+  void serializeV0(const MemProfSchema &Schema, raw_ostream &OS);
+  void serializeV2(const MemProfSchema &Schema, raw_ostream &OS);
+  static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
+                                            const unsigned char *Buffer);
+  static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
+                                            const unsigned char *Buffer);
 };
 
 // Holds the memprof profile information for a function. The internal

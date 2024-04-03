@@ -13,41 +13,76 @@ namespace memprof {
 
 void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
                                      raw_ostream &OS, IndexedVersion Version) {
+  switch (Version) {
+  case Version0:
+  case Version1:
+    serializeV0(Schema, OS);
+    return;
+  case Version2:
+    serializeV2(Schema, OS);
+    return;
+  }
+  llvm_unreachable("unsupported MemProf version");
+}
+
+void IndexedMemProfRecord::serializeV0(const MemProfSchema &Schema,
+                                       raw_ostream &OS) {
   using namespace support;
 
   endian::Writer LE(OS, llvm::endianness::little);
 
   LE.write<uint64_t>(AllocSites.size());
   for (const IndexedAllocationInfo &N : AllocSites) {
-    if (Version <= Version1) {
-      LE.write<uint64_t>(N.CallStack.size());
-      for (const FrameId &Id : N.CallStack)
-        LE.write<FrameId>(Id);
-    } else {
-      LE.write<CallStackId>(N.CSId);
-    }
+    LE.write<uint64_t>(N.CallStack.size());
+    for (const FrameId &Id : N.CallStack)
+      LE.write<FrameId>(Id);
     N.Info.serialize(Schema, OS);
   }
 
   // Related contexts.
-  if (Version <= Version1) {
-    LE.write<uint64_t>(CallSites.size());
-    for (const auto &Frames : CallSites) {
-      LE.write<uint64_t>(Frames.size());
-      for (const FrameId &Id : Frames)
-        LE.write<FrameId>(Id);
-    }
-  } else {
-    LE.write<uint64_t>(CallSiteIds.size());
-    for (const auto &CSId : CallSiteIds)
-      LE.write<CallStackId>(CSId);
+  LE.write<uint64_t>(CallSites.size());
+  for (const auto &Frames : CallSites) {
+    LE.write<uint64_t>(Frames.size());
+    for (const FrameId &Id : Frames)
+      LE.write<FrameId>(Id);
   }
+}
+
+void IndexedMemProfRecord::serializeV2(const MemProfSchema &Schema,
+                                       raw_ostream &OS) {
+  using namespace support;
+
+  endian::Writer LE(OS, llvm::endianness::little);
+
+  LE.write<uint64_t>(AllocSites.size());
+  for (const IndexedAllocationInfo &N : AllocSites) {
+    LE.write<CallStackId>(N.CSId);
+    N.Info.serialize(Schema, OS);
+  }
+
+  // Related contexts.
+  LE.write<uint64_t>(CallSiteIds.size());
+  for (const auto &CSId : CallSiteIds)
+    LE.write<CallStackId>(CSId);
 }
 
 IndexedMemProfRecord
 IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
                                   const unsigned char *Ptr,
                                   IndexedVersion Version) {
+  switch (Version) {
+  case Version0:
+  case Version1:
+    return deserializeV0(Schema, Ptr);
+  case Version2:
+    return deserializeV2(Schema, Ptr);
+  }
+  llvm_unreachable("unsupported MemProf version");
+}
+
+IndexedMemProfRecord
+IndexedMemProfRecord::deserializeV0(const MemProfSchema &Schema,
+                                    const unsigned char *Ptr) {
   using namespace support;
 
   IndexedMemProfRecord Record;
@@ -57,20 +92,14 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
       endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
-    if (Version <= Version1) {
-      const uint64_t NumFrames =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
-      for (uint64_t J = 0; J < NumFrames; J++) {
-        const FrameId Id =
-            endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
-        Node.CallStack.push_back(Id);
-      }
-      Node.CSId = hashCallStack(Node.CallStack);
-    } else {
-      Node.CSId =
-          endian::readNext<CallStackId, llvm::endianness::little, unaligned>(
-              Ptr);
+    const uint64_t NumFrames =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    for (uint64_t J = 0; J < NumFrames; J++) {
+      const FrameId Id =
+          endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
+      Node.CallStack.push_back(Id);
     }
+    Node.CSId = hashCallStack(Node.CallStack);
     Node.Info.deserialize(Schema, Ptr);
     Ptr += PortableMemInfoBlock::serializedSize();
     Record.AllocSites.push_back(Node);
@@ -80,24 +109,48 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
   for (uint64_t J = 0; J < NumCtxs; J++) {
-    if (Version <= Version1) {
-      const uint64_t NumFrames =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
-      llvm::SmallVector<FrameId> Frames;
-      Frames.reserve(NumFrames);
-      for (uint64_t K = 0; K < NumFrames; K++) {
-        const FrameId Id =
-            endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
-        Frames.push_back(Id);
-      }
-      Record.CallSites.push_back(Frames);
-      Record.CallSiteIds.push_back(hashCallStack(Frames));
-    } else {
-      CallStackId CSId =
-          endian::readNext<CallStackId, llvm::endianness::little, unaligned>(
-              Ptr);
-      Record.CallSiteIds.push_back(CSId);
+    const uint64_t NumFrames =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    llvm::SmallVector<FrameId> Frames;
+    Frames.reserve(NumFrames);
+    for (uint64_t K = 0; K < NumFrames; K++) {
+      const FrameId Id =
+          endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
+      Frames.push_back(Id);
     }
+    Record.CallSites.push_back(Frames);
+    Record.CallSiteIds.push_back(hashCallStack(Frames));
+  }
+
+  return Record;
+}
+
+IndexedMemProfRecord
+IndexedMemProfRecord::deserializeV2(const MemProfSchema &Schema,
+                                    const unsigned char *Ptr) {
+  using namespace support;
+
+  IndexedMemProfRecord Record;
+
+  // Read the meminfo nodes.
+  const uint64_t NumNodes =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+  for (uint64_t I = 0; I < NumNodes; I++) {
+    IndexedAllocationInfo Node;
+    Node.CSId =
+        endian::readNext<CallStackId, llvm::endianness::little, unaligned>(Ptr);
+    Node.Info.deserialize(Schema, Ptr);
+    Ptr += PortableMemInfoBlock::serializedSize();
+    Record.AllocSites.push_back(Node);
+  }
+
+  // Read the callsite information.
+  const uint64_t NumCtxs =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+  for (uint64_t J = 0; J < NumCtxs; J++) {
+    CallStackId CSId =
+        endian::readNext<CallStackId, llvm::endianness::little, unaligned>(Ptr);
+    Record.CallSiteIds.push_back(CSId);
   }
 
   return Record;
