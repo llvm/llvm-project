@@ -3762,6 +3762,7 @@ private:
       builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs, transferKindAttr);
       return;
     }
+    llvm_unreachable("Unhandled CUDA data transfer");
   }
 
   llvm::SmallVector<mlir::Value>
