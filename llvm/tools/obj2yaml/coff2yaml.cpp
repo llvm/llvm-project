@@ -180,7 +180,9 @@ void COFFDumper::dumpSections(unsigned NumSections) {
 
     ArrayRef<uint8_t> sectionData;
     if (!ObjSection.isBSS())
-      cantFail(Obj.getSectionContents(COFFSection, sectionData));
+      if (Error E = Obj.getSectionContents(COFFSection, sectionData))
+        report_fatal_error(
+            "missing COFF section data: " + Twine(NewYAMLSection.Name), false);
     NewYAMLSection.SectionData = yaml::BinaryRef(sectionData);
 
     if (NewYAMLSection.Name == ".debug$S")
@@ -200,12 +202,8 @@ void COFFDumper::dumpSections(unsigned NumSections) {
       COFFYAML::Relocation Rel;
       object::symbol_iterator Sym = Reloc.getSymbol();
       Expected<StringRef> SymbolNameOrErr = Sym->getName();
-      if (!SymbolNameOrErr) {
-       std::string Buf;
-       raw_string_ostream OS(Buf);
-       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
-       report_fatal_error(Twine(OS.str()));
-      }
+      if (!SymbolNameOrErr)
+        report_fatal_error(SymbolNameOrErr.takeError(), false);
       if (SymbolUnique.lookup(*SymbolNameOrErr))
         Rel.SymbolName = *SymbolNameOrErr;
       else
