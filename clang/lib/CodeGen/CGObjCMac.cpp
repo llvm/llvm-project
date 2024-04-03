@@ -2220,6 +2220,14 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
   RValue rvalue = CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs,
                                &CallSite);
 
+  // Set type identifier metadata of indirect calls for call graph section.
+  if (CGM.getCodeGenOpts().CallGraphSection && Method && CallSite &&
+      CallSite->isIndirectCall()) {
+    if (const auto *FnType = Method->getFunctionType()) {
+      CGM.CreateFunctionTypeMetadataForIcall(QualType(FnType, 0), CallSite);
+    }
+  }
+
   // Mark the call as noreturn if the method is marked noreturn and the
   // receiver cannot be null.
   if (Method && Method->hasAttr<NoReturnAttr>() && !ReceiverCanBeNull) {
