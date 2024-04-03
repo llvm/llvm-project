@@ -769,6 +769,9 @@ $(EXE): $(OBJECTS)
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
+ifneq "$(HIDE_SWIFTMODULE)" ""
+	rm -f $(MODULENAME).swiftmodule
+endif
 else # OS = Linux
 ifeq "$(HIDE_SWIFTMODULE)" ""
 WRAPPED_SWIFTMODULE = $(MODULENAME).o
@@ -777,7 +780,9 @@ endif
 $(EXE): $(OBJECTS)
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $(LD_SWIFTFLAGS) $(WRAPPED_SWIFTMODULE) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
-
+ifneq "$(HIDE_SWIFTMODULE)" ""
+	rm -f $(MODULENAME).swiftmodule
+endif
 endif
 
 else # USESWIFTDRIVER = 0
