@@ -147,6 +147,7 @@ struct ImplicitConversionData {
   const TypeDescriptor &FromType;
   const TypeDescriptor &ToType;
   /* ImplicitConversionCheckKind */ unsigned char Kind;
+  unsigned int BitfieldBits;
 };
 
 /// \brief Implict conversion that changed the value.
