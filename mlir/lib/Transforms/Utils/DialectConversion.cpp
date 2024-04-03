@@ -2825,9 +2825,9 @@ static void computeNecessaryMaterializations(
     }
 
     // Check to see if this is an argument materialization.
-    auto isBlockArg = [](Value v) { return isa<BlockArgument>(v); };
-    if (llvm::any_of(op->getOperands(), isBlockArg) ||
-        llvm::any_of(inverseMapping[op->getResult(0)], isBlockArg)) {
+    if (llvm::any_of(op->getOperands(), llvm::IsaPred<BlockArgument>) ||
+        llvm::any_of(inverseMapping[op->getResult(0)],
+                     llvm::IsaPred<BlockArgument>)) {
       mat->setMaterializationKind(MaterializationKind::Argument);
     }
 

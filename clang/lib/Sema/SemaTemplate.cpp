@@ -2191,6 +2191,7 @@ DeclResult Sema::CheckClassTemplate(
 
   AddPushedVisibilityAttribute(NewClass);
   inferGslOwnerPointerAttribute(NewClass);
+  inferNullableClassAttribute(NewClass);
 
   if (TUK != TUK_Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.
@@ -2717,6 +2718,12 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       MarkAppeared(DRE->getFoundDecl());
       return true;
+    }
+
+    bool TraverseTemplateName(TemplateName Template) {
+      if (auto *TD = Template.getAsTemplateDecl())
+        MarkAppeared(TD);
+      return RecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
     void MarkAppeared(NamedDecl *ND) {
@@ -6896,6 +6903,11 @@ bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
 
 bool UnnamedLocalNoLinkageFinder::VisitBitIntType(const BitIntType *T) {
   return false;
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitArrayParameterType(
+    const ArrayParameterType *T) {
+  return VisitConstantArrayType(T);
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDependentBitIntType(
