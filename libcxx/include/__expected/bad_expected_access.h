@@ -33,7 +33,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
 template <>
-class bad_expected_access<void> : public exception {
+class _LIBCPP_EXPORTED_FROM_ABI bad_expected_access<void> : public exception {
 protected:
   _LIBCPP_HIDE_FROM_ABI bad_expected_access() noexcept                             = default;
   _LIBCPP_HIDE_FROM_ABI bad_expected_access(const bad_expected_access&)            = default;
