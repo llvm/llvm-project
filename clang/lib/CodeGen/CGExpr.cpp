@@ -3527,7 +3527,7 @@ void CodeGenFunction::EmitCheck(
                   : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
   }
-  
+
   if (ClSanitizeGuardChecks) {
     llvm::Value *Allow =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
