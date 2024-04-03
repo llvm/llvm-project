@@ -81,10 +81,10 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IONBF", "2">,
   ];
   let Types = [
-    "size_t",
     "FILE",
     "cookie_io_functions_t",
     "off_t",
+    "size_t",
   ];
 }
 
