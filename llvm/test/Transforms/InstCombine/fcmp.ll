@@ -644,7 +644,7 @@ define <2 x i1> @is_signbit_set_anyzero(<2 x double> %x) {
 
 define i1 @is_signbit_clear(double %x) {
 ; CHECK-LABEL: @is_signbit_clear(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -655,7 +655,7 @@ define i1 @is_signbit_clear(double %x) {
 
 define i1 @is_signbit_clear_1(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_1(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp ugt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -666,7 +666,7 @@ define i1 @is_signbit_clear_1(double %x) {
 
 define i1 @is_signbit_clear_2(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_2(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -677,7 +677,7 @@ define i1 @is_signbit_clear_2(double %x) {
 
 define i1 @is_signbit_clear_3(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_3(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -705,7 +705,7 @@ define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
 
 define i1 @is_signbit_clear_nonzero(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_nonzero(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double -4.200000e+01, double [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

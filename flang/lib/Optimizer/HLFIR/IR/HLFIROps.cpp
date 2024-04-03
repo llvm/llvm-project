@@ -1406,31 +1406,43 @@ void hlfir::AsExprOp::getEffects(
 // ElementalOp
 //===----------------------------------------------------------------------===//
 
+/// Common builder for ElementalOp and ElementalAddrOp to add the arguments and
+/// create the elemental body. Result and clean-up body must be handled in
+/// specific builders.
+template <typename Op>
+static void buildElemental(mlir::OpBuilder &builder,
+                           mlir::OperationState &odsState, mlir::Value shape,
+                           mlir::Value mold, mlir::ValueRange typeparams,
+                           bool isUnordered) {
+  odsState.addOperands(shape);
+  if (mold)
+    odsState.addOperands(mold);
+  odsState.addOperands(typeparams);
+  odsState.addAttribute(
+      Op::getOperandSegmentSizesAttrName(odsState.name),
+      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
+                                    static_cast<int32_t>(typeparams.size())}));
+  if (isUnordered)
+    odsState.addAttribute(Op::getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
+    unsigned dim = shapeType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+}
+
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
                                mlir::Value mold, mlir::ValueRange typeparams,
                                bool isUnordered) {
-  odsState.addOperands(shape);
-  if (mold)
-    odsState.addOperands(mold);
-  odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
-  odsState.addAttribute(
-      getOperandSegmentSizesAttrName(odsState.name),
-      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
-                                    static_cast<int32_t>(typeparams.size())}));
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
-    unsigned dim = exprType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+  buildElemental<hlfir::ElementalOp>(builder, odsState, shape, mold, typeparams,
+                                     isUnordered);
 }
 
 mlir::Value hlfir::ElementalOp::getElementEntity() {
@@ -1681,19 +1693,11 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape, bool isUnordered) {
-  odsState.addOperands(shape);
-  if (isUnordered)
-    odsState.addAttribute(getUnorderedAttrName(odsState.name),
-                          isUnordered ? builder.getUnitAttr() : nullptr);
-  mlir::Region *bodyRegion = odsState.addRegion();
-  bodyRegion->push_back(new mlir::Block{});
-  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
-    unsigned dim = shapeType.getRank();
-    mlir::Type indexType = builder.getIndexType();
-    for (unsigned d = 0; d < dim; ++d)
-      bodyRegion->front().addArgument(indexType, odsState.location);
-  }
+                                   mlir::Value shape, mlir::Value mold,
+                                   mlir::ValueRange typeparams,
+                                   bool isUnordered) {
+  buildElemental<hlfir::ElementalAddrOp>(builder, odsState, shape, mold,
+                                         typeparams, isUnordered);
   // Push cleanUp region.
   odsState.addRegion();
 }

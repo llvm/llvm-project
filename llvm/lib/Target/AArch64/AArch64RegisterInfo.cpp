@@ -1072,3 +1072,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
 
   return true;
 }
+
+bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
+    MCRegister R) const {
+  return R == AArch64::VG;
+}

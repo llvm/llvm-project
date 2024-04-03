@@ -43,6 +43,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -135,6 +136,7 @@ namespace sema {
 class SemaPPCallbacks : public PPCallbacks {
   Sema *S = nullptr;
   llvm::SmallVector<SourceLocation, 8> IncludeStack;
+  llvm::SmallVector<llvm::TimeTraceProfilerEntry *, 8> ProfilerStack;
 
 public:
   void set(Sema &S) { this->S = &S; }
@@ -153,8 +155,8 @@ public:
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
           OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
-          llvm::timeTraceProfilerBegin("Source", FE ? FE->getName()
-                                                    : StringRef("<unknown>"));
+          ProfilerStack.push_back(llvm::timeTraceAsyncProfilerBegin(
+              "Source", FE ? FE->getName() : StringRef("<unknown>")));
         }
 
         IncludeStack.push_back(IncludeLoc);
@@ -167,7 +169,7 @@ public:
     case ExitFile:
       if (!IncludeStack.empty()) {
         if (llvm::timeTraceProfilerEnabled())
-          llvm::timeTraceProfilerEnd();
+          llvm::timeTraceProfilerEnd(ProfilerStack.pop_back_val());
 
         S->DiagnoseNonDefaultPragmaAlignPack(
             Sema::PragmaAlignPackDiagnoseKind::ChangedStateAtExit,
@@ -195,7 +197,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       ThreadSafetyDeclCache(nullptr), LateTemplateParser(nullptr),
       LateTemplateParserCleanup(nullptr), OpaqueParser(nullptr),
       CurContext(nullptr), ExternalSource(nullptr), CurScope(nullptr),
-      Ident_super(nullptr),
+      Ident_super(nullptr), OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
       MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
@@ -670,6 +672,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     case CK_FunctionToPointerDecay:
     case CK_ToVoid:
     case CK_NonAtomicToAtomic:
+    case CK_HLSLArrayRValue:
       break;
     }
   }
@@ -1229,26 +1232,35 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   // A global-module-fragment is only permitted within a module unit.
-  bool DiagnosedMissingModuleDeclaration = false;
   if (!ModuleScopes.empty() && ModuleScopes.back().Module->Kind ==
                                    Module::ExplicitGlobalModuleFragment) {
     Diag(ModuleScopes.back().BeginLoc,
          diag::err_module_declaration_missing_after_global_module_introducer);
-    DiagnosedMissingModuleDeclaration = true;
   }
 
-  if (TUKind == TU_Module) {
-    // If we are building a module interface unit, we need to have seen the
-    // module declaration by now.
-    if (getLangOpts().getCompilingModule() ==
-            LangOptions::CMK_ModuleInterface &&
-        !isCurrentModulePurview() && !DiagnosedMissingModuleDeclaration) {
-      // FIXME: Make a better guess as to where to put the module declaration.
-      Diag(getSourceManager().getLocForStartOfFile(
-               getSourceManager().getMainFileID()),
-           diag::err_module_declaration_missing);
-    }
+  // Now we can decide whether the modules we're building need an initializer.
+  if (Module *CurrentModule = getCurrentModule();
+      CurrentModule && CurrentModule->isInterfaceOrPartition()) {
+    auto DoesModNeedInit = [this](Module *M) {
+      if (!getASTContext().getModuleInitializers(M).empty())
+        return true;
+      for (auto [Exported, _] : M->Exports)
+        if (Exported->isNamedModuleInterfaceHasInit())
+          return true;
+      for (Module *I : M->Imports)
+        if (I->isNamedModuleInterfaceHasInit())
+          return true;
 
+      return false;
+    };
+
+    CurrentModule->NamedModuleHasInit =
+        DoesModNeedInit(CurrentModule) ||
+        llvm::any_of(CurrentModule->submodules(),
+                     [&](auto *SubM) { return DoesModNeedInit(SubM); });
+  }
+
+  if (TUKind == TU_ClangModule) {
     // If we are building a module, resolve all of the exported declarations
     // now.
     if (Module *CurrentModule = PP.getCurrentModule()) {
@@ -1271,28 +1283,6 @@ void Sema::ActOnEndOfTranslationUnit() {
         auto SubmodulesRange = Mod->submodules();
         Stack.append(SubmodulesRange.begin(), SubmodulesRange.end());
       }
-    }
-
-    // Now we can decide whether the modules we're building need an initializer.
-    if (Module *CurrentModule = getCurrentModule();
-        CurrentModule && CurrentModule->isInterfaceOrPartition()) {
-      auto DoesModNeedInit = [this](Module *M) {
-        if (!getASTContext().getModuleInitializers(M).empty())
-          return true;
-        for (auto [Exported, _] : M->Exports)
-          if (Exported->isNamedModuleInterfaceHasInit())
-            return true;
-        for (Module *I : M->Imports)
-          if (I->isNamedModuleInterfaceHasInit())
-            return true;
-
-        return false;
-      };
-
-      CurrentModule->NamedModuleHasInit =
-          DoesModNeedInit(CurrentModule) ||
-          llvm::any_of(CurrentModule->submodules(),
-                       [&](auto *SubM) { return DoesModNeedInit(SubM); });
     }
 
     // Warnings emitted in ActOnEndOfTranslationUnit() should be emitted for
@@ -1380,7 +1370,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // noise. Don't warn for a use from a module: either we should warn on all
   // file-scope declarations in modules or not at all, but whether the
   // declaration is used is immaterial.
-  if (!Diags.hasErrorOccurred() && TUKind != TU_Module) {
+  if (!Diags.hasErrorOccurred() && TUKind != TU_ClangModule) {
     // Output warning for unused file scoped decls.
     for (UnusedFileScopedDeclsType::iterator
              I = UnusedFileScopedDecls.begin(ExternalSource.get()),
@@ -2099,8 +2089,11 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType())
-      checkRVVTypeSupport(Ty, Loc, D);
+    if (TI.hasRISCVVTypes() && Ty->isRVVSizelessBuiltinType() && FD) {
+      llvm::StringMap<bool> CallerFeatureMap;
+      Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      checkRVVTypeSupport(Ty, Loc, D, CallerFeatureMap);
+    }
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
@@ -2241,7 +2234,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   // block copy/destroy functions. Resolve it here.
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DD = RD->getDestructor()) {
-      auto *FPT = DD->getType()->getAs<FunctionProtoType>();
+      auto *FPT = DD->getType()->castAs<FunctionProtoType>();
       S.ResolveExceptionSpec(Loc, FPT);
     }
 }

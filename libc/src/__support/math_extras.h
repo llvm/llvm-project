@@ -10,10 +10,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H
 
-#include "src/__support/CPP/limits.h"        // CHAR_BIT
+#include "src/__support/CPP/bit.h"           // countl_one, countr_zero
+#include "src/__support/CPP/limits.h"        // CHAR_BIT, numeric_limits
 #include "src/__support/CPP/type_traits.h"   // is_unsigned_v
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 
 namespace LIBC_NAMESPACE {
 
@@ -60,7 +60,7 @@ add_with_carry(T a, T b, T carry_in) {
   return add_with_carry_const<T>(a, b, carry_in);
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_addc)
+#if __has_builtin(__builtin_addc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -128,7 +128,7 @@ add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
   }
 }
 
-#endif // LIBC_HAS_BUILTIN(__builtin_addc)
+#endif // __has_builtin(__builtin_addc)
 
 // Subtract with borrow
 template <typename T> struct DiffBorrow {
@@ -156,7 +156,7 @@ sub_with_borrow(T a, T b, T borrow_in) {
   return sub_with_borrow_const<T>(a, b, borrow_in);
 }
 
-#if LIBC_HAS_BUILTIN(__builtin_subc)
+#if __has_builtin(__builtin_subc)
 // https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
 
 template <>
@@ -224,7 +224,41 @@ sub_with_borrow<unsigned long long>(unsigned long long a, unsigned long long b,
   }
 }
 
-#endif // LIBC_HAS_BUILTIN(__builtin_subc)
+#endif // __has_builtin(__builtin_subc)
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_leading_zero(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countl_one(value) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_leading_one(T value) {
+  return first_leading_zero(static_cast<T>(~value));
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_trailing_zero(T value) {
+  return value == cpp::numeric_limits<T>::max()
+             ? 0
+             : cpp::countr_zero(static_cast<T>(~value)) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+first_trailing_one(T value) {
+  return value == cpp::numeric_limits<T>::max() ? 0
+                                                : cpp::countr_zero(value) + 1;
+}
+
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+count_zeros(T value) {
+  return cpp::popcount<T>(static_cast<T>(~value));
+}
 
 } // namespace LIBC_NAMESPACE
 

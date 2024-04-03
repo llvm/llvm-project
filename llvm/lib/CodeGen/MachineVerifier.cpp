@@ -1195,13 +1195,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       const MachineMemOperand &MMO = **MI->memoperands_begin();
       if (MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
           MI->getOpcode() == TargetOpcode::G_SEXTLOAD) {
-        if (MMO.getSizeInBits() >= ValTy.getSizeInBits())
+        if (TypeSize::isKnownGE(MMO.getSizeInBits().getValue(),
+                                ValTy.getSizeInBits()))
           report("Generic extload must have a narrower memory type", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_LOAD) {
-        if (MMO.getSize() > ValTy.getSizeInBytes())
+        if (TypeSize::isKnownGT(MMO.getSize().getValue(),
+                                ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
-        if (ValTy.getSizeInBytes() < MMO.getSize())
+        if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
+                                MMO.getSize().getValue()))
           report("store memory size cannot exceed value size", MI);
       }
 
@@ -1503,7 +1506,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(2).getReg());
 
     if ((DstTy.isVector() != SrcTy.isVector()) ||
-        (DstTy.isVector() && DstTy.getNumElements() != SrcTy.getNumElements()))
+        (DstTy.isVector() &&
+         DstTy.getElementCount() != SrcTy.getElementCount()))
       report("Generic vector icmp/fcmp must preserve number of lanes", MI);
 
     break;
@@ -1611,6 +1615,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     if (DstTy.getScalarSizeInBits() % 16 != 0)
       report("G_BSWAP size must be a multiple of 16 bits", MI);
+    break;
+  }
+  case TargetOpcode::G_VSCALE: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("G_VSCALE operand must be cimm", MI);
+      break;
+    }
+    if (MI->getOperand(1).getCImm()->isZero()) {
+      report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
     break;
   }
   case TargetOpcode::G_INSERT_SUBVECTOR: {
@@ -1753,16 +1768,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector())
+    if (!DstTy.isScalableVector()) {
       report("Destination type must be a scalable vector", MI);
+      break;
+    }
 
-    if (!SrcTy.isScalar())
+    if (!SrcTy.isScalar()) {
       report("Source type must be a scalar", MI);
+      break;
+    }
 
-    if (DstTy.getScalarType() != SrcTy)
-      report("Element type of the destination must be the same type as the "
-             "source type",
+    if (TypeSize::isKnownGT(DstTy.getElementType().getSizeInBits(),
+                            SrcTy.getSizeInBits())) {
+      report("Element type of the destination must be the same size or smaller "
+             "than the source type",
              MI);
+      break;
+    }
 
     break;
   }
@@ -1851,6 +1873,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
       report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
 
+    break;
+  }
+  case TargetOpcode::G_UBSANTRAP: {
+    const MachineOperand &KindOp = MI->getOperand(0);
+    if (!MI->getOperand(0).isImm()) {
+      report("Crash kind must be an immediate", &KindOp, 0);
+      break;
+    }
+    int64_t Kind = MI->getOperand(0).getImm();
+    if (!isInt<8>(Kind))
+      report("Crash kind must be 8 bit wide", &KindOp, 0);
     break;
   }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
@@ -3683,6 +3716,9 @@ void MachineVerifier::verifyStackFrame() {
       if (I.getOpcode() == FrameSetupOpcode) {
         if (BBState.ExitIsSetup)
           report("FrameSetup is after another FrameSetup", &I);
+        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
+          report("AdjustsStack not set in presence of a frame pseudo "
+                 "instruction.", &I);
         BBState.ExitValue -= TII->getFrameTotalSize(I);
         BBState.ExitIsSetup = true;
       }
@@ -3698,6 +3734,9 @@ void MachineVerifier::verifyStackFrame() {
           errs() << "FrameDestroy <" << Size << "> is after FrameSetup <"
               << AbsSPAdj << ">.\n";
         }
+        if (!MRI->isSSA() && !MF->getFrameInfo().adjustsStack())
+          report("AdjustsStack not set in presence of a frame pseudo "
+                 "instruction.", &I);
         BBState.ExitValue += Size;
         BBState.ExitIsSetup = false;
       }

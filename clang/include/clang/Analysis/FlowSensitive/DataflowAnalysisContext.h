@@ -18,8 +18,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -183,9 +183,9 @@ public:
   LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
                                           llvm::raw_ostream &OS = llvm::dbgs());
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// Returns the `AdornedCFG` registered for `F`, if any. Otherwise,
   /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+  const AdornedCFG *getAdornedCFG(const FunctionDecl *F);
 
   const Options &getOptions() { return Opts; }
 
@@ -296,7 +296,7 @@ private:
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
   const Formula *Invariant = nullptr;
 
-  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+  llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
   FieldSet ModeledFields;

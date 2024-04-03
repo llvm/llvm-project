@@ -15,13 +15,6 @@
 
 namespace LIBC_NAMESPACE::cpp {
 
-using UnsignedTypesNoBigInt = testing::TypeList<
-#if defined(LIBC_TYPES_HAS_INT128)
-    __uint128_t,
-#endif // LIBC_TYPES_HAS_INT128
-    unsigned char, unsigned short, unsigned int, unsigned long,
-    unsigned long long>;
-
 using UnsignedTypes = testing::TypeList<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
@@ -228,39 +221,7 @@ TEST(LlvmLibcBitTest, Rotr) {
             rotr<uint64_t>(0x12345678deadbeefULL, -19));
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_zero<T>(~(T(1) << i)),
-              cpp::numeric_limits<T>::digits - i);
-}
-
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_one<T>(T(1) << i),
-              cpp::numeric_limits<T>::digits - i);
-}
-
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_trailing_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
-}
-
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
-}
-
-TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(count_zeros(T(0)), cpp::numeric_limits<T>::digits);
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> i), i);
-}
-
-TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, CountOnes, UnsignedTypes) {
   EXPECT_EQ(popcount(T(0)), 0);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
     EXPECT_EQ(popcount<T>(cpp::numeric_limits<T>::max() >> i),

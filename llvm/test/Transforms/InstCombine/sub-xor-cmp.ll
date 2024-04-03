@@ -117,11 +117,9 @@ define i64 @sext_diff_i1_xor_sub_1(i64 %a, i1 %b, i1 %c) {
 define i64 @sext_multi_uses(i64 %a, i1 %b, i64 %x) {
 ; CHECK-LABEL: define i64 @sext_multi_uses(
 ; CHECK-SAME: i64 [[A:%.*]], i1 [[B:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[C:%.*]] = sext i1 [[B]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[A]]
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[B]], i64 [[TMP1]], i64 [[A]]
-; CHECK-NEXT:    [[F:%.*]] = mul i64 [[C]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[F]], [[E]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], [[A]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 0, [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i64 [[TMP2]], i64 [[A]]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %c = sext i1 %b to i64

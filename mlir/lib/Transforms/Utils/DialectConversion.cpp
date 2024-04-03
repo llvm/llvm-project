@@ -1020,8 +1020,8 @@ void BlockTypeConversionRewrite::commit(RewriterBase &rewriter) {
   // Inform the listener about all IR modifications that have already taken
   // place: References to the original block have been replaced with the new
   // block.
-  if (auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-          rewriter.getListener()))
+  if (auto *listener =
+          dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener()))
     for (Operation *op : block->getUsers())
       listener->notifyOperationModified(op);
 
@@ -1123,8 +1123,8 @@ void ReplaceBlockArgRewrite::commit(RewriterBase &rewriter) {
 void ReplaceBlockArgRewrite::rollback() { rewriterImpl.mapping.erase(arg); }
 
 void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
-  auto *listener = dyn_cast_or_null<RewriterBase::ForwardingListener>(
-      rewriter.getListener());
+  auto *listener =
+      dyn_cast_or_null<RewriterBase::Listener>(rewriter.getListener());
 
   // Compute replacement values.
   SmallVector<Value> replacements =
@@ -2825,9 +2825,9 @@ static void computeNecessaryMaterializations(
     }
 
     // Check to see if this is an argument materialization.
-    auto isBlockArg = [](Value v) { return isa<BlockArgument>(v); };
-    if (llvm::any_of(op->getOperands(), isBlockArg) ||
-        llvm::any_of(inverseMapping[op->getResult(0)], isBlockArg)) {
+    if (llvm::any_of(op->getOperands(), llvm::IsaPred<BlockArgument>) ||
+        llvm::any_of(inverseMapping[op->getResult(0)],
+                     llvm::IsaPred<BlockArgument>)) {
       mat->setMaterializationKind(MaterializationKind::Argument);
     }
 

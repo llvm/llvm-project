@@ -42,10 +42,14 @@ Getting the Source Code and Building LLVM
 
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
-   * You are likely only interested in the main branch moving forward, if
-     you don't want `git fetch` (or `git pull`) to download user branches, use:
+   * You are likely not interested in the user branches in the repo (used for
+     stacked pull-requests and reverts), you can filter them from your
+     `git fetch` (or `git pull`) with this configuration:
 
-     ``sed 's#fetch = +refs/heads/\*:refs/remotes/origin/\*#fetch = +refs/heads/main:refs/remotes/origin/main#' -i llvm-project/.git/config``
+.. code-block:: console
+
+  git config --add remote.origin.fetch '^refs/heads/users/*'
+  git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -90,11 +94,11 @@ Getting the Source Code and Building LLVM
        is installed on your system. This can dramatically speed up link times
        if the default linker is slow.
 
-     * ``-DLLVM_PARALLEL_{COMPILE,LINK}_JOBS=N`` --- Limit the number of
-       compile/link jobs running in parallel at the same time. This is
+     * ``-DLLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS=N`` --- Limit the number of
+       compile/link/tablegen jobs running in parallel at the same time. This is
        especially important for linking since linking can use lots of memory. If
        you run into memory issues building LLVM, try setting this to limit the
-       maximum number of compile/link jobs running at the same time.
+       maximum number of compile/link/tablegen jobs running at the same time.
 
    * ``cmake --build build [--target <target>]`` or the build system specified
      above directly.

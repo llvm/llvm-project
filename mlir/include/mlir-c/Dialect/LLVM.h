@@ -229,16 +229,16 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIBasicTypeAttrGet(
 
 /// Creates a LLVM DICompositeType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
-    uint32_t line, MlirAttribute scope, MlirAttribute baseType, int64_t flags,
-    uint64_t sizeInBits, uint64_t alignInBits, intptr_t nElements,
-    MlirAttribute const *elements);
+    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
+    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
+    uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements);
 
 /// Creates a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name,
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits);
+    uint64_t offsetInBits, MlirAttribute extraData);
 
 /// Gets the base type from a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
