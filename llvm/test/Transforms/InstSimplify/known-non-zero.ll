@@ -169,11 +169,7 @@ B:
 
 define <2 x i1> @insert_nonzero0(<2 x i8> %xx, i8 %yy) {
 ; CHECK-LABEL: @insert_nonzero0(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 1, i8 0>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[X]], i8 [[Y]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[INS]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x = add nuw <2 x i8> %xx, <i8 1, i8 0>
   %y = add nuw i8 %yy, 1
@@ -185,11 +181,7 @@ define <2 x i1> @insert_nonzero0(<2 x i8> %xx, i8 %yy) {
 
 define <2 x i1> @insert_nonzero1(<2 x i8> %xx, i8 %yy) {
 ; CHECK-LABEL: @insert_nonzero1(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 0, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[X]], i8 [[Y]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[INS]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x = add nuw <2 x i8> %xx, <i8 0, i8 1>
   %y = add nuw i8 %yy, 1
@@ -233,11 +225,7 @@ define <2 x i1> @insert_nonzero_fail2(<2 x i8> %xx, i8 %yy) {
 
 define <2 x i1> @insert_nonzero_any_idx(<2 x i8> %xx, i8 %yy, i32 %idx) {
 ; CHECK-LABEL: @insert_nonzero_any_idx(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> [[X]], i8 [[Y]], i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[INS]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x = add nuw <2 x i8> %xx, <i8 1, i8 1>
   %y = add nuw i8 %yy, 1
