@@ -466,8 +466,8 @@ static void findPathBetween(const VarLocResult &from, VarLocResult to,
         pathFilter.push_back(icfg.getNodeId(loc.fid, loc.bid));
     }
 
-    ICFGPathFinder pFinder(icfg);
-    pFinder.search(u, v, pathFilter, 3);
+    auto pFinder = DfsPathFinder(icfg);
+    pFinder.search(u, v, pathFilter, {}, 3);
 
     saveAsJson(pFinder.results, type, jResults);
 }

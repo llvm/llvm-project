@@ -3,22 +3,35 @@
 #include "utils.h"
 
 struct ICFGPathFinder {
+    const ICFG &icfg;
     ICFGPathFinder(const ICFG &icfg) : icfg(icfg) {}
 
-    const ICFG &icfg;
+    std::set<std::vector<int>> results;
+
+    virtual void search(int source, int target,
+                        const std::vector<int> &pointsToPass,
+                        const std::vector<int> &pointsToAvoid,
+                        int maxCallDepth) = 0;
+};
+
+struct DfsPathFinder : public ICFGPathFinder {
+    DfsPathFinder(const ICFG &icfg) : ICFGPathFinder(icfg) {}
 
     int source;
     int target;
     int maxCallDepth;
     std::vector<int> path;
     std::vector<bool> visiting;
-    std::set<std::vector<int>> results;
 
     std::stack<int> callStack; // 部分平衡的括号匹配
     std::set<int> callSites;
 
-    void search(int source, int target, const std::vector<int> &pathFilter,
-                int maxCallDepth) {
+    /**
+     * TODO: 目前 pointsToAvoid 还没处理
+     */
+    void search(int source, int target, const std::vector<int> &pointsToPass,
+                const std::vector<int> &pointsToAvoid,
+                int maxCallDepth) override {
         this->source = source;
         this->target = target;
         this->maxCallDepth = maxCallDepth;
@@ -27,7 +40,8 @@ struct ICFGPathFinder {
         logger.info("source: {}", source);
         logger.info("target: {}", target);
         logger.info("maxCallDepth: {}", maxCallDepth);
-        logger.info("filter: {}", fmt::join(pathFilter, " "));
+        logger.info("pass:   {}", fmt::join(pointsToPass, " "));
+        logger.info("avoid:  {}", fmt::join(pointsToAvoid, " "));
 
         path.clear();
         path.push_back(source);
@@ -48,13 +62,13 @@ struct ICFGPathFinder {
             bool match = true;
             int i = 0;
             for (int x : path) {
-                if (i >= pathFilter.size())
+                if (i >= pointsToPass.size())
                     break;
-                if (x == pathFilter[i]) {
+                if (x == pointsToPass[i]) {
                     i++;
                 }
             }
-            if (i != pathFilter.size()) {
+            if (i != pointsToPass.size()) {
                 toDelete.push_back(it);
             }
         }
