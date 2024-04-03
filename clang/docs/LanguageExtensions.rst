@@ -3464,6 +3464,34 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
 
+``__builtin_allow_runtime_check``
+------------------
+
+``__builtin_allow_runtime_check`` return true if the check at the current program location should be executed.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    bool __builtin_allow_runtime_check(const char* kind)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_allow_runtime_check("mycheck") && !ExpensiveCheck()) {
+     abort();
+  }
+
+**Description**
+
+``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check`` <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_ builtin.
+
+The ``__builtin_allow_runtime_check()`` builtin is typically used with control flow
+conditions such as in ``if`` to guard expensive runtime checks. The specific rules for selecting permitted checks can differ and are controlled by the compiler options.
+
+Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 

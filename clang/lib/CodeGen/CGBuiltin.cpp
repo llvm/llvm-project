@@ -3423,17 +3423,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateCall(FnAssume, ArgValue);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_assume_separate_storage: {
-    const Expr *Arg0 = E->getArg(0);
-    const Expr *Arg1 = E->getArg(1);
+  case Builtin::BI__builtin_allow_runtime_check: {
+    StringRef Kind =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Metadata *KindStr[] = {llvm::MDString::get(Ctx, Kind)};
+    llvm::MDNode *KindNode = llvm::MDNode::get(Ctx, KindStr);
+    llvm::Value *KindMD = llvm::MetadataAsValue::get(Ctx, KindNode);
+    llvm::Value *Allow = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check), KindMD);
 
-    Value *Value0 = EmitScalarExpr(Arg0);
-    Value *Value1 = EmitScalarExpr(Arg1);
-
-    Value *Values[] = {Value0, Value1};
-    OperandBundleDefT<Value *> OBD("separate_storage", Values);
-    Builder.CreateAssumption(ConstantInt::getTrue(getLLVMContext()), {OBD});
-    return RValue::get(nullptr);
+    return RValue::get(Allow);
   }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
