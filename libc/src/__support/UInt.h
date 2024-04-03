@@ -14,8 +14,9 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/optimization.h"        // LIBC_UNLIKELY
+#include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128, LIBC_TYPES_HAS_INT64
 #include "src/__support/math_extras.h" // add_with_carry, sub_with_borrow
 #include "src/__support/number_pair.h"
@@ -250,6 +251,7 @@ enum Direction { LEFT, RIGHT };
 template <Direction direction, bool is_signed, typename word, size_t N>
 LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
                                                 size_t offset) {
+  static_assert(direction == LEFT || direction == RIGHT);
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
   constexpr size_t TOTAL_BITS = N * WORD_BITS;
   if (offset == 0)
@@ -262,7 +264,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     auto tmp = cpp::bit_cast<type>(array);
     if constexpr (direction == LEFT)
       tmp <<= offset;
-    else if constexpr (direction == RIGHT)
+    else
       tmp >>= offset;
     return cpp::bit_cast<cpp::array<word, N>>(tmp);
   }
@@ -285,17 +287,18 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
+#ifdef LIBC_COMPILER_IS_CLANG
+  __builtin_assume(index_offset < N);
+#endif
   cpp::array<word, N> out = {};
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
     word &dst = out[at(index)];
-    if (bit_offset == 0)
-      dst = part1; // no crosstalk between parts.
-    else if constexpr (direction == RIGHT)
-      dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
-    else if constexpr (direction == LEFT)
+    if constexpr (direction == LEFT)
       dst = (part1 << bit_offset) | (part2 >> (WORD_BITS - bit_offset));
+    else
+      dst = (part1 >> bit_offset) | (part2 << (WORD_BITS - bit_offset));
   }
   return out;
 }
