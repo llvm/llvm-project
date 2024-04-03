@@ -772,6 +772,7 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
+  opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
 
 /// Parses all semantic related arguments and populates the variables

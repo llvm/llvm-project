@@ -11,6 +11,9 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -44,6 +47,110 @@ bool Definition::set_isDisabled(bool disable) {
   bool was{isDisabled_};
   isDisabled_ = disable;
   return was;
+}
+
+void Definition::Print(
+    llvm::raw_ostream &out, llvm::StringRef macroName) const {
+  if (isDisabled_) {
+    return;
+  }
+  if (!isFunctionLike_) {
+    // If it's not a function-like macro, then just print the replacement.
+    out << ' ' << replacement_.ToString();
+    return;
+  }
+
+  // The sequence of characters from which argument names will be created.
+  static llvm::StringRef charSeq{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"};
+
+  auto couldCollide = [&](llvm::StringRef str) {
+    return !str.empty() && llvm::all_of(str, [&](char c) {
+      return charSeq.find(c) != llvm::StringRef::npos;
+    });
+  };
+
+  // For function-like macros we need to invent valid argument names (they
+  // are represented as ~A, ~B, ...). These invented names cannot collide
+  // with any other tokens in the macro definitions.
+  llvm::SmallSet<std::string, 10> usedNames;
+  for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
+    std::string tok{replacement_.TokenAt(i).ToString()};
+    if (tok.empty()) {
+      continue;
+    }
+    // The generated names will only use characters from `charSeq`, so
+    // collect names that could collide, and ignore others.
+    if (couldCollide(tok)) {
+      usedNames.insert(tok);
+    }
+  }
+  if (couldCollide(macroName)) {
+    usedNames.insert(macroName.str());
+  }
+
+  // Given a string that is either empty, or composed from characters
+  // from `charSeq`, create the next string in the lexicographical
+  // order.
+  auto getNextString = [&](llvm::StringRef str) {
+    if (str.empty()) {
+      return charSeq.take_front().str();
+    }
+    if (str.back() == charSeq.back()) {
+      return (llvm::Twine(str) + charSeq.take_front()).str();
+    }
+    size_t idx{charSeq.find(str.back())};
+    return (llvm::Twine(str.drop_back()) + charSeq.substr(idx + 1, 1)).str();
+  };
+
+  // Generate consecutive arg names, until we get one that works
+  // (i.e. doesn't collide with existing names). Give up after 4096
+  // attempts.
+  auto genArgName = [&](std::string name) {
+    for (size_t x{0}; x != 4096; ++x) {
+      name = getNextString(name);
+      if (!usedNames.contains(name))
+        return name;
+    }
+    return std::string();
+  };
+
+  std::string nextName;
+  llvm::SmallVector<std::string> argNames;
+  for (size_t i{0}; i != argumentCount_; ++i) {
+    nextName = genArgName(nextName);
+    if (nextName.empty()) {
+      out << " // unable to print";
+      return;
+    }
+    argNames.push_back(nextName);
+  }
+
+  // Finally, print the macro.
+  out << '(';
+  for (size_t i{0}; i != argumentCount_; ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << argNames[i];
+  }
+  if (isVariadic_) {
+    out << ", ...";
+  }
+  out << ") ";
+
+  for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
+    std::string tok{replacement_.TokenAt(i).ToString()};
+    if (tok.size() >= 2 && tok[0] == '~') {
+      // This should be an argument name. The `Tokenize` function only
+      // generates a single character.
+      size_t idx{static_cast<size_t>(tok[1] - 'A')};
+      if (idx < argumentCount_) {
+        out << argNames[idx];
+        continue;
+      }
+    }
+    out << tok;
+  }
 }
 
 static bool IsLegalIdentifierStart(const CharBlock &cpl) {
@@ -710,6 +817,27 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
   } else {
     prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
         "#%s: unknown or unimplemented directive"_err_en_US, dirName);
+  }
+}
+
+void Preprocessor::PrintMacros(llvm::raw_ostream &out) const {
+  // Sort the entries by macro name.
+  llvm::SmallVector<decltype(definitions_)::const_iterator> entries;
+  for (auto it{definitions_.begin()}, e{definitions_.end()}; it != e; ++it) {
+    entries.push_back(it);
+  }
+  llvm::sort(entries, [](const auto it1, const auto it2) {
+    return it1->first.ToString() < it2->first.ToString();
+  });
+
+  for (auto &&it : entries) {
+    const auto &[name, def]{*it};
+    if (def.isDisabled()) {
+      continue;
+    }
+    out << "#define " << name;
+    def.Print(out, name.ToString());
+    out << '\n';
   }
 }
 

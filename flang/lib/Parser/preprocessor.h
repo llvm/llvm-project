@@ -18,6 +18,8 @@
 #include "token-sequence.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/provenance.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <list>
 #include <stack>
@@ -48,6 +50,8 @@ public:
   bool set_isDisabled(bool disable);
 
   TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &);
+
+  void Print(llvm::raw_ostream &out, llvm::StringRef macroName = "") const;
 
 private:
   static TokenSequence Tokenize(const std::vector<std::string> &argNames,
@@ -88,6 +92,8 @@ public:
 
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner &);
+
+  void PrintMacros(llvm::raw_ostream &out) const;
 
 private:
   enum class IsElseActive { No, Yes };
