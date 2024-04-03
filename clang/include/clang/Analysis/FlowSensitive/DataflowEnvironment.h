@@ -43,6 +43,15 @@ enum class ComparisonResult {
   Unknown,
 };
 
+/// The result of a `widen` operation.
+struct WidenResult {
+  /// Non-null pointer to a potentially widened version of the input value.
+  Value *V;
+  /// Whether `V` represents a "change" (that is, a different value) with
+  /// respect to the previous value in the sequence.
+  LatticeEffect Effect;
+};
+
 /// Holds the state of the program (store and heap) at a given program point.
 ///
 /// WARNING: Symbolic values that are created by the environment for static
@@ -97,15 +106,6 @@ public:
                       const Value &Val2, const Environment &Env2,
                       Value &JoinedVal, Environment &JoinedEnv) {}
 
-    /// The result of the `widen` operation.
-    struct WidenResult {
-      /// Non-null pointer to a potentially widened version of the input value.
-      Value *V;
-      /// Whether `V` represents a "change" (that is, a different value) with
-      /// respect to the previous value in the sequence.
-      LatticeJoinEffect Effect;
-    };
-
     /// This function may widen the current value -- replace it with an
     /// approximation that can reach a fixed point more quickly than iterated
     /// application of the transfer function alone. The previous value is
@@ -121,7 +121,7 @@ public:
     ///       version of `Current`. This value must be consistent with
     ///       the flow condition of `CurrentEnv`. We particularly caution
     ///       against using `Prev`, which is rarely consistent.
-    ///    *  A `LatticeJoinEffect` indicating whether the value should be
+    ///    *  A `LatticeEffect` indicating whether the value should be
     ///       considered a new value (`Changed`) or one *equivalent* (if not
     ///       necessarily equal) to `Prev` (`Unchanged`).
     ///
@@ -144,9 +144,9 @@ public:
       case ComparisonResult::Unknown:
         return std::nullopt;
       case ComparisonResult::Same:
-        return WidenResult{&Current, LatticeJoinEffect::Unchanged};
+        return WidenResult{&Current, LatticeEffect::Unchanged};
       case ComparisonResult::Different:
-        return WidenResult{&Current, LatticeJoinEffect::Changed};
+        return WidenResult{&Current, LatticeEffect::Changed};
       }
       llvm_unreachable("all cases in switch covered");
     }
@@ -250,8 +250,8 @@ public:
   ///
   ///  `PrevEnv` must be the immediate previous version of the environment.
   ///  `PrevEnv` and `this` must use the same `DataflowAnalysisContext`.
-  LatticeJoinEffect widen(const Environment &PrevEnv,
-                          Environment::ValueModel &Model);
+  LatticeEffect widen(const Environment &PrevEnv,
+                      Environment::ValueModel &Model);
 
   // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
   // `getStableStorageLocation`, or something more appropriate.
