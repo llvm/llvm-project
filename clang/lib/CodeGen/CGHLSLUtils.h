@@ -29,18 +29,19 @@
     case llvm::Triple::spirv:                                                  \
       return llvm::Intrinsic::spv_##name;                                      \
     default:                                                                   \
-      llvm_unreachable("Input semantic not supported by target");              \
+      llvm_unreachable("Intrinsic " #name                                      \
+                       " not supported by target architecture");               \
     }                                                                          \
   }
 
 namespace clang::CodeGen {
-  class HLSLUtils {
-  public:
-    GENERATE_HLSL_INTRINSIC_FUNCTION(all)
-    GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
-  private:
-    HLSLUtils() = delete;
-  };
+class HLSLUtils {
+public:
+  GENERATE_HLSL_INTRINSIC_FUNCTION(all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
+private:
+  HLSLUtils() = delete;
+};
 } // namespace clang::CodeGen
 
 #endif // LLVM_CLANG_LIB_CODEGEN_CGHLSLUTILS_H
