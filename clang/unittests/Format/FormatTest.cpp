@@ -27235,6 +27235,18 @@ TEST_F(FormatTest, PPBranchesInBracedInit) {
                "};");
 }
 
+TEST_F(FormatTest, PPDirectivesAndCommentsInBracedInit) {
+  verifyFormat("{\n"
+               "  char *a[] = {\n"
+               "      /* abc */ \"abc\",\n"
+               "#if FOO\n"
+               "      /* xyz */ \"xyz\",\n"
+               "#endif\n"
+               "      /* last */ \"last\"};\n"
+               "}",
+               getLLVMStyleWithColumns(30));
+}
+
 TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
   verifyFormat("std::cout << \"foo\\n\"\n"
