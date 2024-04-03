@@ -666,14 +666,15 @@ public:
                                                     IntrinsicInst & II) const;
   /// Can be used to implement target-specific instruction combining.
   /// \see instCombineIntrinsic
-  std::optional<Value *> simplifyDemandedUseBitsIntrinsic(
-      InstCombiner & IC, IntrinsicInst & II, APInt DemandedMask,
-      KnownBits & Known, bool &KnownBitsComputed) const;
+  std::optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   const APInt &DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) const;
   /// Can be used to implement target-specific instruction combining.
   /// \see instCombineIntrinsic
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner & IC, IntrinsicInst & II, APInt DemandedElts,
-      APInt & UndefElts, APInt & UndefElts2, APInt & UndefElts3,
+      InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+      APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
   /// @}
@@ -1839,11 +1840,12 @@ public:
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) = 0;
   virtual std::optional<Instruction *> instCombineIntrinsic(
       InstCombiner &IC, IntrinsicInst &II) = 0;
-  virtual std::optional<Value *> simplifyDemandedUseBitsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedMask,
-      KnownBits & Known, bool &KnownBitsComputed) = 0;
+  virtual std::optional<Value *>
+  simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
+                                   const APInt &DemandedMask, KnownBits &Known,
+                                   bool &KnownBitsComputed) = 0;
   virtual std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts,
+      InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
       APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) = 0;
@@ -2293,14 +2295,14 @@ public:
   }
   std::optional<Value *>
   simplifyDemandedUseBitsIntrinsic(InstCombiner &IC, IntrinsicInst &II,
-                                   APInt DemandedMask, KnownBits &Known,
+                                   const APInt &DemandedMask, KnownBits &Known,
                                    bool &KnownBitsComputed) override {
     return Impl.simplifyDemandedUseBitsIntrinsic(IC, II, DemandedMask, Known,
                                                  KnownBitsComputed);
   }
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
-      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
-      APInt &UndefElts2, APInt &UndefElts3,
+      InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+      APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) override {
     return Impl.simplifyDemandedVectorEltsIntrinsic(

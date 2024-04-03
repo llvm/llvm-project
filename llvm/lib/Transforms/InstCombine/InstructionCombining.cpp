@@ -162,7 +162,7 @@ InstCombiner::targetInstCombineIntrinsic(IntrinsicInst &II) {
 }
 
 std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
-    IntrinsicInst &II, APInt DemandedMask, KnownBits &Known,
+    IntrinsicInst &II, const APInt &DemandedMask, KnownBits &Known,
     bool &KnownBitsComputed) {
   // Handle target specific intrinsics
   if (II.getCalledFunction()->isTargetIntrinsic()) {
@@ -173,7 +173,7 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedUseBitsIntrinsic(
 }
 
 std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
-    IntrinsicInst &II, APInt DemandedElts, APInt &PoisonElts,
+    IntrinsicInst &II, const APInt &DemandedElts, APInt &PoisonElts,
     APInt &PoisonElts2, APInt &PoisonElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) {
