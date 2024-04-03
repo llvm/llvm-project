@@ -9,9 +9,11 @@
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -27,15 +29,18 @@ namespace bolt {
 
 /// Set CallSiteInfo destination fields from \p Symbol and return a target
 /// BinaryFunction for that symbol.
-static const BinaryFunction *setCSIDestination(const BinaryContext &BC,
-                                               yaml::bolt::CallSiteInfo &CSI,
-                                               const MCSymbol *Symbol) {
+static const BinaryFunction *
+setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+                  const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
+
   if (Symbol) {
     uint64_t EntryID = 0;
-    if (const BinaryFunction *const Callee =
+    if (const BinaryFunction *Callee =
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol);
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
       return Callee;
@@ -45,7 +50,8 @@ static const BinaryFunction *setCSIDestination(const BinaryContext &BC,
 }
 
 yaml::bolt::BinaryFunctionProfile
-YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
+YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const BoltAddressTranslation *BAT) {
   yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
 
@@ -98,7 +104,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
           StringRef TargetName = "";
-          const BinaryFunction *Callee = setCSIDestination(BC, CSI, CSP.Symbol);
+          const BinaryFunction *Callee =
+              setCSIDestination(BC, CSI, CSP.Symbol, BAT);
           if (Callee)
             TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
@@ -109,7 +116,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS) {
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
-            setCSIDestination(BC, CSI, CalleeSymbol);
+            setCSIDestination(BC, CSI, CalleeSymbol, BAT);
         if (Callee)
           TargetName = Callee->getOneName();
 
