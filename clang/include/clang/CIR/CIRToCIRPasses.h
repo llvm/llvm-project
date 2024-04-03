@@ -28,12 +28,15 @@ class ModuleOp;
 namespace cir {
 
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
-mlir::LogicalResult runCIRToCIRPasses(
-    mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
-    clang::ASTContext &astCtx, bool enableVerifier, bool enableLifetime,
-    llvm::StringRef lifetimeOpts, bool enableIdiomRecognizer,
-    llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
-    llvm::StringRef libOptOpts, std::string &passOptParsingFailure);
+mlir::LogicalResult
+runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
+                  clang::ASTContext &astCtx, bool enableVerifier,
+                  bool enableLifetime, llvm::StringRef lifetimeOpts,
+                  bool enableIdiomRecognizer,
+                  llvm::StringRef idiomRecognizerOpts, bool enableLibOpt,
+                  llvm::StringRef libOptOpts,
+                  std::string &passOptParsingFailure, bool flattenCIR);
+
 } // namespace cir
 
 #endif // CLANG_CIR_CIRTOCIRPASSES_H_

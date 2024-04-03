@@ -53,7 +53,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 
   auto UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
   auto Act = CI.getFrontendOpts().ProgramAction;
-  auto EmitsCIR = Act == EmitCIR || Act == EmitCIROnly;
+  auto EmitsCIR = Act == EmitCIR || Act == EmitCIRFlat || Act == EmitCIROnly;
 
   if (!UseCIR && EmitsCIR)
     llvm::report_fatal_error(
@@ -81,10 +81,13 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case EmitBC:                 return std::make_unique<EmitBCAction>();
 #if CLANG_ENABLE_CIR
   case EmitCIR:                return std::make_unique<::cir::EmitCIRAction>();
+  case EmitCIRFlat:
+    return std::make_unique<::cir::EmitCIRFlatAction>();
   case EmitCIROnly:            return std::make_unique<::cir::EmitCIROnlyAction>();
   case EmitMLIR:               return std::make_unique<::cir::EmitMLIRAction>();
 #else
   case EmitCIR:
+  case EmitCIRFlat:
   case EmitCIROnly:
     llvm_unreachable("CIR suppport not built into clang");
 #endif

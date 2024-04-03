@@ -3105,6 +3105,8 @@ def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
 def emit_cir_only : Flag<["-"], "emit-cir-only">,
   HelpText<"Build ASTs and convert to CIR, discarding output">;
+def emit_cir_flat : Flag<["-"], "emit-cir-flat">, Visibility<[ClangOption, CC1Option]>,
+  Group<Action_Group>, HelpText<"Similar to -emit-cir but also lowers structured CFG into basic blocks.">;
 def emit_mlir : Flag<["-"], "emit-mlir">, Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then lower through ClangIR to MLIR, emit the .milr file">;
 /// ClangIR-specific options - END
