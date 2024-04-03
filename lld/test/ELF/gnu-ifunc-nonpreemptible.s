@@ -23,12 +23,13 @@
 # RUN: ld.lld -shared a.o b.so -o a2
 # RUN: llvm-readelf -rs a2 | FileCheck %s --check-prefix=PIC
 
-# PIC:                                 R_X86_64_GLOB_DAT      0000000000000000 ext + 0
-# PIC-NEXT: {{0*}}[[#%x,O:]]  [[#%x,]] R_X86_64_64            0000000000000000 __rela_iplt_start + 0
-# PIC-NEXT: {{0*}}[[#O+8]]    [[#%x,]] R_X86_64_64            0000000000000000 __rela_iplt_end + 0
-# PIE-NEXT: {{0*}}[[#O+16]]   [[#%x,]] R_X86_64_IRELATIVE
-# PIE-NEXT: {{0*}}[[#O+24]]   [[#%x,]] R_X86_64_IRELATIVE
-# PIE-NEXT: {{0*}}[[#O+32]]   [[#%x,]] R_X86_64_IRELATIVE
+# PIC:      {{0*}}[[#%x,O:]] [[#%x,]] R_X86_64_RELATIVE
+# PIC-NEXT:                           R_X86_64_GLOB_DAT      0000000000000000 ext + 0
+# PIC-NEXT: {{0*}}[[#O-16]]  [[#%x,]] R_X86_64_64            0000000000000000 __rela_iplt_start + 0
+# PIC-NEXT: {{0*}}[[#O-8]]   [[#%x,]] R_X86_64_64            0000000000000000 __rela_iplt_end + 0
+# PIE-NEXT: {{0*}}[[#O+8]]   [[#%x,]] R_X86_64_IRELATIVE
+# PIE-NEXT: {{0*}}[[#O+16]]  [[#%x,]] R_X86_64_IRELATIVE
+# PIE-NEXT: {{0*}}[[#O+24]]  [[#%x,]] R_X86_64_IRELATIVE
 
 # PIC:        0 NOTYPE  WEAK   DEFAULT    UND __rela_iplt_start
 # PIC-NEXT:   0 NOTYPE  WEAK   DEFAULT    UND __rela_iplt_end
@@ -83,6 +84,7 @@ _start:
 .data
   .quad __rela_iplt_start
   .quad __rela_iplt_end
+  .quad .data
 
 #--- b.s
 .globl ext
