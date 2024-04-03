@@ -4509,10 +4509,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_start_object_lifetime:
+    // FIXME: we need some TBAA fences to prevent strict-aliasing miscompiles.
   case Builtin::BI__builtin_launder: {
     const Expr *Arg = E->getArg(0);
     QualType ArgTy = Arg->getType()->getPointeeType();
     Value *Ptr = EmitScalarExpr(Arg);
+    // Arguments of __builtin_launder and __builtin_start_object_lifetime may
+    // need the LLVM IR launder.invariant.group intrinsic barrier to prevent
+    // alising-based optimizations (e.g. -fstrict-vtable-pointers).
     if (TypeRequiresBuiltinLaunder(CGM, ArgTy))
       Ptr = Builder.CreateLaunderInvariantGroup(Ptr);
 

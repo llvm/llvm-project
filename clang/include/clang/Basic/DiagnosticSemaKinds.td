@@ -12013,9 +12013,9 @@ def warn_noderef_on_non_pointer_or_array : Warning<
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 
-def err_builtin_launder_invalid_arg : Error<
+def err_builtin_launder_or_start_object_lifetime_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
-  "'__builtin_launder' is not allowed">;
+  "'%select{__builtin_launder|__builtin_start_object_lifetime}1' is not allowed">;
 
 def err_builtin_invalid_arg_type: Error <
   "%ordinal0 argument must be "
