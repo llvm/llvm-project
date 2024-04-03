@@ -211,13 +211,6 @@ public:
     return false;
   }
 
-  // FIXME: For compatibility with old LLVM only!
-  bool isTerminator(const MCInst &Inst) const override {
-    unsigned Opcode = Inst.getOpcode();
-    return Info->get(Opcode).isTerminator() || X86::isUD1(Opcode) ||
-           X86::isUD2(Opcode);
-  }
-
   bool isIndirectCall(const MCInst &Inst) const override {
     return isCall(Inst) &&
            ((getMemoryOperandNo(Inst) != -1) || Inst.getOperand(0).isReg());

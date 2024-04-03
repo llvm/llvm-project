@@ -146,6 +146,10 @@ public:
 
 extern cl::opt<bool> SampleProfileUseProfi;
 
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
 template <typename FT> class SampleProfileLoaderBaseImpl {
 public:
   SampleProfileLoaderBaseImpl(std::string Name, std::string RemapName,
