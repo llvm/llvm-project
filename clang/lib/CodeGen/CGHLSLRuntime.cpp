@@ -14,7 +14,6 @@
 
 #include "CGHLSLRuntime.h"
 #include "CGDebugInfo.h"
-#include "CGHLSLUtils.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
@@ -343,7 +342,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(HLSLUtils::get_hlsl_thread_id_intrinsic(
+        CGM.getIntrinsic(CGHLSLRuntime::get_hlsl_thread_id_intrinsic(
             CGM.getTarget().getTriple().getArch()));
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }

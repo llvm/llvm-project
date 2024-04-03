@@ -16,6 +16,9 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 
 #include "clang/Basic/HLSLRuntime.h"
 
@@ -25,6 +28,21 @@
 
 #include <optional>
 #include <vector>
+
+// Define the function generator macro
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(name)                                 \
+  static llvm::Intrinsic::ID get_hlsl_##name##_intrinsic(                      \
+      const llvm::Triple::ArchType Arch) {                                     \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil:                                                   \
+      return llvm::Intrinsic::dx_##name;                                       \
+    case llvm::Triple::spirv:                                                  \
+      return llvm::Intrinsic::spv_##name;                                      \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #name                                      \
+                       " not supported by target architecture");               \
+    }                                                                          \
+  }
 
 namespace llvm {
 class GlobalVariable;
@@ -48,6 +66,17 @@ class CodeGenModule;
 
 class CGHLSLRuntime {
 public:
+  //===----------------------------------------------------------------------===//
+  // Start of reserved area for HLSL intrinsic getters.
+  //===----------------------------------------------------------------------===//
+
+  GENERATE_HLSL_INTRINSIC_FUNCTION(all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
+
+  //===----------------------------------------------------------------------===//
+  // End of reserved area for HLSL intrinsic getters.
+  //===----------------------------------------------------------------------===//
+
   struct BufferResBinding {
     // The ID like 2 in register(b2, space1).
     std::optional<unsigned> Reg;

@@ -13,7 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
-#include "CGHLSLUtils.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -18177,7 +18177,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        HLSLUtils::get_hlsl_all_intrinsic(
+        CGHLSLRuntime::get_hlsl_all_intrinsic(
             CGM.getTarget().getTriple().getArch()),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.all");
   }
