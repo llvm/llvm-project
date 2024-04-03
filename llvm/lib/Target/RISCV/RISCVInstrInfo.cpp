@@ -379,7 +379,7 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
     // aligned to larger LMUL, we can eliminate some copyings.
     auto [LMulCopied, RegClass, Opc, VVOpc, VIOpc] =
         GetCopyInfo(SrcEncoding, DstEncoding);
-    unsigned NumCopied = 1 << LMulCopied;
+    auto [NumCopied, _] = RISCVVType::decodeVLMUL(LMul);
 
     MachineBasicBlock::const_iterator DefMBBI;
     if (LMul == LMulCopied &&
