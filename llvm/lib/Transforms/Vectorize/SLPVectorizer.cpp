@@ -306,10 +306,7 @@ static bool isCommutative(Instruction *I) {
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative();
-  // TODO: This should check for generic Instruction::isCommutative(), but
-  //       we need to confirm that the caller code correctly handles Intrinsics
-  //       for example (does not have 2 operands).
-  return false;
+  return I->isCommutative();
 }
 
 /// \returns inserting index of InsertElement or InsertValue instruction,
@@ -1975,6 +1972,9 @@ public:
              "Expected same number of lanes");
       assert(isa<Instruction>(VL[0]) && "Expected instruction");
       unsigned NumOperands = cast<Instruction>(VL[0])->getNumOperands();
+      constexpr unsigned IntrinsicNumOperands = 2;
+      if (auto *CI = dyn_cast<IntrinsicInst>(VL[0]))
+        NumOperands = IntrinsicNumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
       for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
@@ -3420,10 +3420,11 @@ private:
           // immediates do not affect scheduler behavior this is considered
           // okay.
           auto *In = BundleMember->Inst;
-          assert(In &&
-                 (isa<ExtractValueInst, ExtractElementInst>(In) ||
-                  In->getNumOperands() == TE->getNumOperands()) &&
-                 "Missed TreeEntry operands?");
+          assert(
+              In &&
+              (isa<ExtractValueInst, ExtractElementInst, IntrinsicInst>(In) ||
+               In->getNumOperands() == TE->getNumOperands()) &&
+              "Missed TreeEntry operands?");
           (void)In; // fake use to avoid build failure when assertions disabled
 
           for (unsigned OpIdx = 0, NumOperands = TE->getNumOperands();
@@ -6798,6 +6799,33 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndicies);
+      // Sort operands of the instructions so that each side is more likely to
+      // have the same opcode.
+      if (isCommutative(VL0)) {
+        ValueList Left, Right;
+        reorderInputsAccordingToOpcode(VL, Left, Right, *this);
+        TE->setOperand(0, Left);
+        TE->setOperand(1, Right);
+        SmallVector<ValueList> Operands;
+        for (unsigned I : seq<unsigned>(2, CI->arg_size())) {
+          Operands.emplace_back();
+          if (isVectorIntrinsicWithScalarOpAtArg(ID, I))
+            continue;
+          for (Value *V : VL) {
+            auto *CI2 = cast<CallInst>(V);
+            Operands.back().push_back(CI2->getArgOperand(I));
+          }
+          TE->setOperand(I, Operands.back());
+        }
+        buildTree_rec(Left, Depth + 1, {TE, 0});
+        buildTree_rec(Right, Depth + 1, {TE, 1});
+        for (unsigned I : seq<unsigned>(2, CI->arg_size())) {
+          if (Operands[I - 2].empty())
+            continue;
+          buildTree_rec(Operands[I - 2], Depth + 1, {TE, I});
+        }
+        return;
+      }
       TE->setOperandsInOrder();
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         // For scalar operands no need to create an entry since no need to
