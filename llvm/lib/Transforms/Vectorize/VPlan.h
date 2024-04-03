@@ -913,6 +913,11 @@ public:
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
 
+  struct DisjointFlagsTy {
+    char IsDisjoint : 1;
+    DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
+  };
+
 protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
@@ -920,9 +925,6 @@ protected:
   };
 
 private:
-  struct DisjointFlagsTy {
-    char IsDisjoint : 1;
-  };
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -1015,6 +1017,12 @@ public:
                       FastMathFlags FMFs, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
+        DisjointFlags(DisjointFlags) {}
 
 protected:
   template <typename IterT>
@@ -1220,6 +1228,14 @@ public:
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
         Opcode(Opcode), Name(Name.str()) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
+        Opcode(Opcode), Name(Name.str()) {
+    assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
+  }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");

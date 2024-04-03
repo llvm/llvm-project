@@ -3889,6 +3889,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       }
     } else if (ClosingParen) {
       for (auto *Tok = ClosingParen->Next; Tok; Tok = Tok->Next) {
+        if (Tok->is(TT_CtorInitializerColon))
+          break;
         if (Tok->is(tok::arrow)) {
           Tok->setType(TT_TrailingReturnArrow);
           break;
