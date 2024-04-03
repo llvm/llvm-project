@@ -10,12 +10,10 @@ module m
   attributes(device) subroutine devsub2
     real, device :: x(10)
     print*,'from device'
-    !ERROR: Only list-directed PRINT statement may appear in device code
     print '(f10.5)', (x(ivar), ivar = 1, 10)
-
     write(*,*), "Hello world from device!"
-    !ERROR: Only list-directed WRITE statement may appear in device code
-    write(*,'(10F4.1)'), x
+    !WARNING: I/O statement might not be supported on device
+    write(12,'(10F4.1)'), x
   end
 end
 
