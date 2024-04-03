@@ -270,7 +270,7 @@ def get_function_body(builder, args, filename, clang_args, extra_commands, prefi
             raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
     if "-emit-llvm" in clang_args:
         builder.process_run_line(
-            common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes, False
+            common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes
         )
         builder.processed_prefixes(prefixes)
     else:
@@ -360,8 +360,13 @@ def main():
 
         # Store only filechecked runlines.
         filecheck_run_list = [i for i in run_list if i[0]]
+        ginfo = common.make_ir_generalizer(version=ti.args.version)
         builder = common.FunctionTestBuilder(
-            run_list=filecheck_run_list, flags=ti.args, scrubber_args=[], path=ti.path
+            run_list=filecheck_run_list,
+            flags=ti.args,
+            scrubber_args=[],
+            path=ti.path,
+            ginfo=ginfo,
         )
 
         for prefixes, args, extra_commands, triple_in_cmd in run_list:
@@ -423,7 +428,7 @@ def main():
                     func,
                     False,
                     ti.args.function_signature,
-                    ti.args.version,
+                    ginfo,
                     global_vars_seen_dict,
                     is_filtered=builder.is_filtered(),
                 )
@@ -435,6 +440,7 @@ def main():
                         "//",
                         run_list,
                         output_lines,
+                        ginfo,
                         global_vars_seen_dict,
                         False,
                         True,
@@ -495,6 +501,7 @@ def main():
                                         "//",
                                         run_list,
                                         output_lines,
+                                        ginfo,
                                         global_vars_seen_dict,
                                         False,
                                         True,
@@ -514,7 +521,7 @@ def main():
                                     mangled,
                                     False,
                                     args.function_signature,
-                                    args.version,
+                                    ginfo,
                                     global_vars_seen_dict,
                                     is_filtered=builder.is_filtered(),
                                 )
@@ -532,6 +539,7 @@ def main():
                     "//",
                     run_list,
                     output_lines,
+                    ginfo,
                     global_vars_seen_dict,
                     False,
                     False,

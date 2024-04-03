@@ -133,6 +133,7 @@ def main():
         else:
             check_indent = ""
 
+        ginfo = common.make_asm_generalizer(version=1)
         builder = common.FunctionTestBuilder(
             run_list=run_list,
             flags=type(
@@ -148,6 +149,7 @@ def main():
             ),
             scrubber_args=[ti.args],
             path=ti.path,
+            ginfo=ginfo,
         )
 
         for (
@@ -173,9 +175,7 @@ def main():
                 triple = common.get_triple_from_march(march_in_cmd)
 
             scrubber, function_re = output_type.get_run_handler(triple)
-            builder.process_run_line(
-                function_re, scrubber, raw_tool_output, prefixes, True
-            )
+            builder.process_run_line(function_re, scrubber, raw_tool_output, prefixes)
             builder.processed_prefixes(prefixes)
 
         func_dict = builder.finish_and_get_func_dict()
@@ -218,6 +218,7 @@ def main():
                     prefixes,
                     func_dict,
                     func,
+                    ginfo,
                     global_vars_seen_dict,
                     is_filtered=builder.is_filtered(),
                 ),
@@ -243,6 +244,7 @@ def main():
                             run_list,
                             func_dict,
                             func_name,
+                            ginfo,
                             global_vars_seen_dict,
                             is_filtered=builder.is_filtered(),
                         )
