@@ -7773,7 +7773,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           auto *EE = dyn_cast<ExtractElementInst>(V);
           if (!EE)
             return Sz;
-          auto *VecTy = cast<FixedVectorType>(EE->getVectorOperandType());
+          auto *VecTy = dyn_cast<FixedVectorType>(EE->getVectorOperandType());
+          if (!VecTy)
+            return Sz;
           return std::max(Sz, VecTy->getNumElements());
         });
     unsigned NumSrcRegs = TTI.getNumberOfParts(
@@ -8791,6 +8793,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       } else if (It != MinBWs.end()) {
         assert(BWSz > SrcBWSz && "Invalid cast!");
         VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+      } else if (SrcIt != MinBWs.end()) {
+        assert(BWSz > SrcBWSz && "Invalid cast!");
+        VecOpcode =
+            SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
       }
     }
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
@@ -9061,6 +9067,17 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Type *Src1SclTy = E->getAltOp()->getOperand(0)->getType();
         auto *Src0Ty = FixedVectorType::get(Src0SclTy, VL.size());
         auto *Src1Ty = FixedVectorType::get(Src1SclTy, VL.size());
+        if (It != MinBWs.end()) {
+          if (!MinBWs.contains(getOperandEntry(E, 0)))
+            VecCost =
+                TTIRef.getCastInstrCost(Instruction::Trunc, VecTy, Src0Ty,
+                                        TTI::CastContextHint::None, CostKind);
+          LLVM_DEBUG({
+            dbgs() << "SLP: alternate extension, which should be truncated.\n";
+            E->dump();
+          });
+          return VecCost;
+        }
         VecCost = TTIRef.getCastInstrCost(E->getOpcode(), VecTy, Src0Ty,
                                           TTI::CastContextHint::None, CostKind);
         VecCost +=
@@ -12131,6 +12148,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           VecOpcode = Instruction::BitCast;
         } else if (BWSz < SrcBWSz) {
           VecOpcode = Instruction::Trunc;
+        } else if (It != MinBWs.end()) {
+          assert(BWSz > SrcBWSz && "Invalid cast!");
+          VecOpcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
         } else if (SrcIt != MinBWs.end()) {
           assert(BWSz > SrcBWSz && "Invalid cast!");
           VecOpcode =
@@ -12297,7 +12317,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, !MinBWs.contains(E));
+      propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
       if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
 
@@ -12571,6 +12591,16 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         CmpInst::Predicate AltPred = AltCI->getPredicate();
         V1 = Builder.CreateCmp(AltPred, LHS, RHS);
       } else {
+        if (It != MinBWs.end()) {
+          if (!MinBWs.contains(getOperandEntry(E, 0)))
+            LHS = Builder.CreateIntCast(LHS, VecTy, It->second.first);
+          assert(LHS->getType() == VecTy && "Expected same type as operand.");
+          if (auto *I = dyn_cast<Instruction>(LHS))
+            LHS = propagateMetadata(I, E->Scalars);
+          E->VectorizedValue = LHS;
+          ++NumVectorInstructions;
+          return LHS;
+        }
         V0 = Builder.CreateCast(
             static_cast<Instruction::CastOps>(E->getOpcode()), LHS, VecTy);
         V1 = Builder.CreateCast(
@@ -12598,8 +12628,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           },
           Mask, &OpScalars, &AltScalars);
 
-      propagateIRFlags(V0, OpScalars, E->getMainOp(), !MinBWs.contains(E));
-      propagateIRFlags(V1, AltScalars, E->getAltOp(), !MinBWs.contains(E));
+      propagateIRFlags(V0, OpScalars, E->getMainOp(), It == MinBWs.end());
+      propagateIRFlags(V1, AltScalars, E->getAltOp(), It == MinBWs.end());
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
