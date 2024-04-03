@@ -1102,7 +1102,7 @@ public:
   // Canonicalize the KMP_HW_SUBSET value if it is not an absolute subset.
   // This means putting each of {sockets, cores, threads} in the topology if
   // they are not specified:
-  // e.g., 1s,2c => 1s,2c,*t | 2c,1t => *s,2c,1t | 1t => 1s,*c,*t | etc.
+  // e.g., 1s,2c => 1s,2c,*t | 2c,1t => *s,2c,1t | 1t => *s,*c,1t | etc.
   // e.g., 3module => *s,3module,*c,*t
   // By doing this, the runtime assumes users who fiddle with KMP_HW_SUBSET
   // are expecting the traditional sockets/cores/threads topology. For newer
