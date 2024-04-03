@@ -5030,16 +5030,15 @@ FunctionEffect::FunctionEffect(Type T)
     : Type_(unsigned(T)), Flags_(0), Padding(0) {
   switch (T) {
   case Type::NonBlocking:
-    Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
-             FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
-             FE_ExcludeStaticLocalVars | FE_ExcludeThreadLocalVars;
+    Flags_ = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
+             FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
+             FE_ExcludeThreadLocalVars;
     break;
 
   case Type::NonAllocating:
     // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
-    Flags_ = FE_RequiresVerification | FE_VerifyCalls | FE_InferrableOnCallees |
-             FE_ExcludeThrow | FE_ExcludeCatch | FE_ExcludeObjCMessageSend |
-             FE_ExcludeThreadLocalVars;
+    Flags_ = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
+             FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
     break;
   default:
     break;

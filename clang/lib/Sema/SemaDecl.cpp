@@ -11153,16 +11153,7 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
 
   // Filter out declarations that the FunctionEffect analysis should skip
   // and not verify.
-  bool FXNeedVerification = false;
-  for (const auto &Effect : FX) {
-    if (Effect.flags() & FunctionEffect::FE_RequiresVerification) {
-      AllEffectsToVerify.insert(Effect);
-      FXNeedVerification = true;
-    }
-  }
-  if (!FXNeedVerification) {
-    return;
-  }
+  AllEffectsToVerify |= FX;
 
   // Record the declaration for later analysis.
   DeclsWithEffectsToVerify.push_back(D);

@@ -2620,16 +2620,10 @@ public:
   PendingFunctionAnalysis(Sema &Sem, const CallableInfo &CInfo,
                           FunctionEffectSet AllInferrableEffectsToVerify) {
     ASTContext &Ctx = Sem.getASTContext();
-    MutableFunctionEffectSet FX;
-    for (const auto &Effect : CInfo.Effects) {
-      if (Effect.flags() & FunctionEffect::FE_RequiresVerification) {
-        FX.insert(Effect);
-      }
-    }
-    DeclaredVerifiableEffects = Ctx.getUniquedFunctionEffectSet(FX);
+    DeclaredVerifiableEffects = CInfo.Effects;
 
     // Check for effects we are not allowed to infer
-    FX.clear();
+    MutableFunctionEffectSet FX;
     TypeSourceInfo *TSI = nullptr;
     if (const auto *DD = dyn_cast<DeclaratorDecl>(CInfo.CDecl)) {
       TSI = DD->getTypeSourceInfo();
@@ -3050,26 +3044,24 @@ private:
 
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       const auto Flags = Effect.flags();
-      if (Flags & FunctionEffect::FE_VerifyCalls) {
-        const bool diagnose =
-            Effect.diagnoseFunctionCall(DirectCall, CalleeEffects);
-        if (diagnose) {
-          // If inference is not allowed, or the target is indirect (virtual
-          // method/function ptr?), generate a diagnostic now.
-          if (!IsInferencePossible ||
-              !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
-            if (Callee.FuncType == SpecialFuncType::None) {
-              PFA.checkAddDiagnostic(Inferring,
-                                     {Effect, DiagnosticID::CallsUnsafeDecl,
-                                      CallLoc, Callee.CDecl});
-            } else {
-              PFA.checkAddDiagnostic(
-                  Inferring, {Effect, DiagnosticID::AllocatesMemory, CallLoc});
-            }
+      const bool diagnose =
+          Effect.diagnoseFunctionCall(DirectCall, CalleeEffects);
+      if (diagnose) {
+        // If inference is not allowed, or the target is indirect (virtual
+        // method/function ptr?), generate a diagnostic now.
+        if (!IsInferencePossible ||
+            !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
+          if (Callee.FuncType == SpecialFuncType::None) {
+            PFA.checkAddDiagnostic(
+                Inferring,
+                {Effect, DiagnosticID::CallsUnsafeDecl, CallLoc, Callee.CDecl});
           } else {
-            // Inference is allowed and necessary; defer it.
-            PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
+            PFA.checkAddDiagnostic(
+                Inferring, {Effect, DiagnosticID::AllocatesMemory, CallLoc});
           }
+        } else {
+          // Inference is allowed and necessary; defer it.
+          PFA.addUnverifiedDirectCall(Callee.CDecl, CallLoc);
         }
       }
     };
@@ -3327,14 +3319,12 @@ private:
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
 
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
-        if (Effect.flags() & FunctionEffect::FE_VerifyCalls) {
-          if (FPT == nullptr ||
-              Effect.diagnoseFunctionCall(
-                  /*direct=*/false, FPT->getFunctionEffects())) {
-            addDiagnosticInner(Inferring, Effect,
-                               DiagnosticID::CallsDisallowedExpr,
-                               Call->getBeginLoc());
-          }
+        if (FPT == nullptr ||
+            Effect.diagnoseFunctionCall(
+                /*direct=*/false, FPT->getFunctionEffects())) {
+          addDiagnosticInner(Inferring, Effect,
+                             DiagnosticID::CallsDisallowedExpr,
+                             Call->getBeginLoc());
         }
       };
 

@@ -4458,25 +4458,16 @@ public:
   // would OR together the bits of multiple effects.)
   using Flags = unsigned;
   enum FlagBit : unsigned {
-    // Some effects require verification, e.g. nonblocking(true); others might
-    // not? (no example yet; TODO: maybe always true, vestigial from
-    // nonblocking(false)).
-    FE_RequiresVerification = 0x1,
-
-    // Does this effect want to verify all function calls originating in
-    // functions having this effect? TODO: maybe always true, vestigial.
-    FE_VerifyCalls = 0x2,
-
     // Can verification inspect callees' implementations? (e.g. nonblocking:
     // yes, tcb+types: no)
-    FE_InferrableOnCallees = 0x4,
+    FE_InferrableOnCallees = 0x1,
 
     // Language constructs which effects can diagnose as disallowed.
-    FE_ExcludeThrow = 0x8,
-    FE_ExcludeCatch = 0x10,
-    FE_ExcludeObjCMessageSend = 0x20,
-    FE_ExcludeStaticLocalVars = 0x40,
-    FE_ExcludeThreadLocalVars = 0x80
+    FE_ExcludeThrow = 0x2,
+    FE_ExcludeCatch = 0x4,
+    FE_ExcludeObjCMessageSend = 0x8,
+    FE_ExcludeStaticLocalVars = 0x10,
+    FE_ExcludeThreadLocalVars = 0x20
   };
 
   /// Describes the result of effects differing between a base class's virtual
@@ -4553,10 +4544,10 @@ public:
   /// function.
   bool canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const;
 
-  // Called if FE_VerifyCalls flag is set; return false for success. When true
-  // is returned for a direct call, then the FE_InferrableOnCallees flag may
-  // trigger inference rather than an immediate diagnostic. Caller should be
-  // assumed to have the effect (it may not have it explicitly when inferring).
+  // Return false for success. When true is returned for a direct call, then the
+  // FE_InferrableOnCallees flag may trigger inference rather than an immediate
+  // diagnostic. Caller should be assumed to have the effect (it may not have it
+  // explicitly when inferring).
   bool diagnoseFunctionCall(bool Direct, FunctionEffectSet CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {

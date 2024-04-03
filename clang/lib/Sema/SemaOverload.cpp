@@ -1788,7 +1788,6 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 /// type.
 bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
                                 QualType &ResultTy) {
-
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
