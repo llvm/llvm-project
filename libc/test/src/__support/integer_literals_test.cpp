@@ -138,14 +138,13 @@ TEST(LlvmLibcIntegerLiteralTest, parse_bigint) {
   using T = LIBC_NAMESPACE::Int<128>;
   struct {
     const char *str;
-    int expected;
+    T expected;
   } constexpr TEST_CASES[] = {
       {"0", 0}, {"-1", -1}, {"+1", 1}, {"-0xFF", -255}, {"-0b11", -3},
   };
   for (auto tc : TEST_CASES) {
     T actual = LIBC_NAMESPACE::parse_bigint<T>(tc.str);
-    T expected(tc.expected);
-    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(actual, tc.expected);
   }
 }
 
