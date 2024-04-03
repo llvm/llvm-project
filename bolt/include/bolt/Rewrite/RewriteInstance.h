@@ -97,6 +97,8 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  void keepPrologueFunction();
+
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
   /// found.

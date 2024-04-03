@@ -738,6 +738,7 @@ Error RewriteInstance::run() {
     return E;
   adjustCommandLineOptions();
   discoverFileObjects();
+  keepPrologueFunction();
 
   if (opts::Instrument && !BC->IsStaticExecutable)
     if (Error E = discoverRtFiniAddress())
@@ -805,6 +806,24 @@ Error RewriteInstance::run() {
   // Rewrite allocatable contents and copy non-allocatable parts with mods.
   rewriteFile();
   return Error::success();
+}
+
+void RewriteInstance::keepPrologueFunction() {
+ BC->outs() << "keepPrologueFunction!"<<"\n";
+  for(auto &BFI : BC->getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    ErrorOr<ArrayRef<uint8_t>> ErrorOrFunctionData = BF.getData();
+    assert(ErrorOrFunctionData && "function data is not available");
+    ArrayRef<uint8_t> IData = *ErrorOrFunctionData;
+      BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(IData[0]) << "\n";
+      // Check for common function prologue patterns
+      if ((char)IData[0] == '\x55' && (char)IData[1] == '\x48' && (char)IData[2] == '\x89' && (char)IData[3] == '\xe5') {
+          BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(BF.getAddress()) << "\n";
+      } else {
+        BF.setIgnored();
+      }
+
+  }
 }
 
 void RewriteInstance::discoverFileObjects() {
