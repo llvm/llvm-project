@@ -639,9 +639,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
   return false;
 }
 
-static bool supportsSPMDExecutionMode(CodeGenModule &CGM,
+static bool supportsSPMDExecutionMode(ASTContext &Ctx,
                                       const OMPExecutableDirective &D) {
-  ASTContext &Ctx = CGM.getContext();
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   switch (DirectiveKind) {
   case OMPD_target:
@@ -878,7 +877,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  bool Mode = supportsSPMDExecutionMode(CGM, D);
+  bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
   bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
   if (Mode || IsBareKernel)
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
