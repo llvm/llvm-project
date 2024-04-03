@@ -4627,10 +4627,15 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
     if (Src1Idx >= 0) {
       const MCOperand &Src1 = Inst.getOperand(Src1Idx);
       const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-      if (Src1.isImm() ||
-          (Src1.isReg() && isSGPR(mc2PseudoReg(Src1.getReg()), TRI))) {
-        AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[Src1Idx]);
-        Error(Op.getStartLoc(), "invalid operand for instruction");
+      if (Src1.isReg() && isSGPR(mc2PseudoReg(Src1.getReg()), TRI)) {
+        auto Reg = mc2PseudoReg(Inst.getOperand(Src1Idx).getReg());
+        SMLoc S = getRegLoc(Reg, Operands);
+        Error(S, "invalid operand for instruction");
+        return false;
+      }
+      if (Src1.isImm()) {
+        Error(getInstLoc(Operands),
+              "src1 immediate operand invalid for instruction");
         return false;
       }
     }
