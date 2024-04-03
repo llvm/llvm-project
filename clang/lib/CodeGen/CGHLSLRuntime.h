@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -29,19 +30,29 @@
 #include <optional>
 #include <vector>
 
-// Define the function generator macro
-#define GENERATE_HLSL_INTRINSIC_FUNCTION(name)                                 \
-  llvm::Intrinsic::ID get_hlsl_##name##_intrinsic() {                          \
-    llvm::Triple::ArchType Arch = getArch();                                   \
-    switch (Arch) {                                                            \
-    case llvm::Triple::dxil:                                                   \
-      return llvm::Intrinsic::dx_##name;                                       \
-    case llvm::Triple::spirv:                                                  \
-      return llvm::Intrinsic::spv_##name;                                      \
-    default:                                                                   \
-      llvm_unreachable("Intrinsic " #name                                      \
-                       " not supported by target architecture");               \
-    }                                                                          \
+#define GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                         \
+  llvm::Triple::ArchType Arch = getArch();                                     \
+  switch (Arch) {                                                              \
+  case llvm::Triple::dxil:                                                     \
+    return llvm::Intrinsic::dx_##IntrinsicPostfix;                             \
+  case llvm::Triple::spirv:                                                    \
+    return llvm::Intrinsic::spv_##IntrinsicPostfix;                            \
+  default:                                                                     \
+    llvm_unreachable("Intrinsic " #IntrinsicPostfix                            \
+                     " not supported by target architecture");                 \
+  }
+
+// A function generator macro for when there is no builtins or
+// when builtins are mapped to a set of intrinsics for different types.
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+  llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
+    GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                             \
+  }
+
+// A template function generator macro for when we have builtins.
+#define GENERATE_HLSL_INTRINSIC_TEMPLATE(BuiltinName, IntrinsicPostfix)        \
+  template <> llvm::Intrinsic::ID getIntrinsic<Builtin::BI__##BuiltinName>() { \
+    GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                             \
   }
 
 namespace llvm {
@@ -69,9 +80,9 @@ public:
   //===----------------------------------------------------------------------===//
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  GENERATE_HLSL_INTRINSIC_FUNCTION(all)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(thread_id)
+  template <unsigned BI> llvm::Intrinsic::ID getIntrinsic();
+  GENERATE_HLSL_INTRINSIC_TEMPLATE(builtin_hlsl_elementwise_all, all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.

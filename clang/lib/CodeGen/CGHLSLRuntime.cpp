@@ -346,7 +346,7 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(get_hlsl_thread_id_intrinsic());
+        CGM.getIntrinsic(getThreadIdIntrinsic());
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   assert(false && "Unhandled parameter attribute");
