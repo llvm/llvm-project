@@ -56,7 +56,6 @@ public:
 
 */
 
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -276,7 +275,19 @@ struct __type_info_implementations {
           __impl;
 };
 
-class _LIBCPP_EXPORTED_FROM_ABI type_info {
+#    if defined(__arm64__) && __has_cpp_attribute(clang::ptrauth_vtable_pointer)
+#      if __has_feature(ptrauth_type_info_discriminated_vtable_pointer)
+#        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
+          [[clang::ptrauth_vtable_pointer(process_independent, address_discrimination, type_discrimination)]]
+#      else
+#        define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH                                                                  \
+          [[clang::ptrauth_vtable_pointer(process_independent, no_address_discrimination, no_extra_discrimination)]]
+#      endif
+#    else
+#      define _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH
+#    endif
+
+class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_TYPE_INFO_VTABLE_POINTER_AUTH type_info {
   type_info& operator=(const type_info&);
   type_info(const type_info&);
 
