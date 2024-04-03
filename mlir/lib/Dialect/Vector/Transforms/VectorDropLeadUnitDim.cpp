@@ -398,13 +398,30 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
           transposeResults.push_back(targetExpr);
         }
       }
+
+      // Checks if only the outer, unit dimensions (of size 1) are permuted.
+      // Such transposes do not materially effect the underlying vector and can
+      // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
+      bool transposeNonOuterUnitDims = false;
+      auto operandShape = operands[it.index()].getType().cast<ShapedType>();
+      for (auto [index, dim] :
+           llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
+        if (dim != static_cast<int64_t>(index) &&
+            operandShape.getDimSize(index) != 1) {
+          transposeNonOuterUnitDims = true;
+          break;
+        }
+      }
+
       // Do the tranpose now if needed so that we can drop the
       // correct dim using extract later.
       if (tranposeNeeded) {
         map = AffineMap::get(map.getNumDims(), 0, transposeResults,
                              contractOp.getContext());
-        operands[it.index()] = rewriter.create<vector::TransposeOp>(
-            loc, operands[it.index()], perm);
+        if (transposeNonOuterUnitDims) {
+          operands[it.index()] = rewriter.createOrFold<vector::TransposeOp>(
+              loc, operands[it.index()], perm);
+        }
       }
     }
     // We have taken care to have the dim to be dropped be
