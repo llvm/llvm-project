@@ -4,7 +4,7 @@ import subprocess
 import json
 import os
 
-from compiler_opt.tools import extract_ir_lib
+from mlgo.corpus import extract_ir_lib
 
 CONFIGURE_LOG_NAME = './configure.log'
 BUILD_LOG_NAME = './build.log'
@@ -17,7 +17,7 @@ def generate_configure_command(root_path, options_dict):
   # Add some default flags that are needed for bitcode extraction
   command_vector.append("-DCMAKE_C_COMPILER=clang")
   command_vector.append("-DCMAKE_CXX_COMPILER=clang++")
-  # These two flags assume this is a stanard non-LTO build, will need to fix
+  # These two flags assume this is a standard non-LTO build, will need to fix
   # later when we want to support (Thin)LTO builds.
   command_vector.append("-DCMAKE_C_FLAGS='-Xclang -fembed-bitcode=all'")
   command_vector.append("-DCMAKE_CXX_FLAGS='-Xclang -fembed-bitcode=all'")

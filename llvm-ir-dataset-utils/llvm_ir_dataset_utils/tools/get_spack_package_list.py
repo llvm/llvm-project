@@ -40,11 +40,15 @@ flags.DEFINE_integer('max_projects', sys.maxsize,
 def add_concrete_package_and_all_deps(concretized_packages, spec):
   spec_string = str(spec)
   license_string = re.findall('license=".*?"', spec_string)[0][9:-1]
+  license_source = None
+  if license_string != 'NOASSERTION':
+    license_source = 'spack'
   concretized_packages[spec.dag_hash()] = {
       'spec': spec_string,
       'deps': [dep_spec.dag_hash() for dep_spec in spec.dependencies()],
       'name': str(spec.package.fullname.split('.')[1]),
-      'license': license_string
+      'license': license_string,
+      'license_source': license_source
   }
   for dep_spec in spec.dependencies():
     if dep_spec.dag_hash() not in concretized_packages:
@@ -119,7 +123,7 @@ def main(_):
 
   concretized_packages = {}
 
-  erorr_log_file = None
+  error_log_file = None
 
   if FLAGS.error_log is not None:
     error_log_file = open(FLAGS.error_log, 'w')

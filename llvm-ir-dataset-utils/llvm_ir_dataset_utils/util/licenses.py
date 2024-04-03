@@ -11,6 +11,13 @@ from llvm_ir_dataset_utils.sources import git_source
 
 GITHUB_GRAPHQL_URL = 'https://api.github.com/graphql'
 
+PERMISSIVE_LICENSES = {
+    'MIT': True,
+    'Apache-2.0': True,
+    'BSD-3-Clause': True,
+    'BSD-2-Clause': True
+}
+
 
 def generate_repository_spdx_request(repo_index, repository_url):
   repository_parts = repository_url.split('/')
@@ -96,7 +103,7 @@ def get_detected_license_from_repo(repo_url, repo_name):
     os.mkdir(corpus_dir)
     source_status = git_source.download_source_code(repo_url, repo_name, None,
                                                     base_dir, corpus_dir)
-    if source_status['success'] == False:
+    if not source_status['success']:
       return 'NOASSERTION'
     project_dir = os.path.join(base_dir, repo_name)
     return get_detected_license_from_dir(project_dir)
@@ -171,3 +178,23 @@ def get_all_license_files(repo_dir):
         'license': upgrade_deprecated_spdx_id(license_files_map[license_file])
     })
   return license_files
+
+
+def is_license_valid(package_license,
+                     license_files_ids,
+                     ignore_license_files=False):
+  license_parts = [part.strip() for part in package_license.split('OR')]
+  has_valid_license = False
+  for license_part in license_parts:
+    if license_part not in PERMISSIVE_LICENSES:
+      continue
+
+    if ignore_license_files and license_part in PERMISSIVE_LICENSES:
+      has_valid_license = True
+      break
+
+    if license_part in license_files_ids:
+      has_valid_license = True
+      break
+
+  return has_valid_license

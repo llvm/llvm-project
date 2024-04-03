@@ -70,7 +70,7 @@ def get_constants_from_bitcode_batch(project_dir, bitcode_file_paths):
 def get_constants_from_project(project_dir):
   try:
     bitcode_file_paths = dataset_corpus.get_bitcode_file_paths(project_dir)
-  except:
+  except Exception:
     return {}
 
   batches = parallel.split_batches(bitcode_file_paths, 16)

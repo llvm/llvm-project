@@ -11,5 +11,6 @@
   "commands": [
     "make CC=clang CFLAGS='-Xclang -fembed-bitcode=all -O3' -j${jobs}"
   ],
-  "license": "GPL-2.0-or-later"
+  "license": "GPL-2.0-or-later",
+  "license_source": "manual"
 }

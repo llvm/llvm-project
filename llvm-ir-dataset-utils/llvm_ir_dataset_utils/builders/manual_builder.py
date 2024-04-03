@@ -4,8 +4,8 @@ arbitrary build system by manually running specified commands."""
 import subprocess
 import os
 
-from compiler_opt.tools import extract_ir_lib
-from compiler_opt.tools import make_corpus_lib
+from mlgo.corpus import extract_ir_lib
+from mlgo.corpus import make_corpus_lib
 
 BUILD_LOG_NAME = './build.log'
 

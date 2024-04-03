@@ -28,7 +28,7 @@ flags.mark_flag_as_required('strings')
 def does_project_contain_strings(project_dir, strings):
   try:
     bitcode_paths = dataset_corpus.get_bitcode_file_paths(project_dir)
-  except:
+  except Exception:
     return False
 
   for bitcode_path in bitcode_paths:

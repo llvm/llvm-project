@@ -12,5 +12,6 @@
   ],
   "folder_name": "efm32wg-pacs",
   "build_system": "cargo",
-  "license": "BSD-3-Clause"
+  "license": "BSD-3-Clause",
+  "license_source": "manual"
 }

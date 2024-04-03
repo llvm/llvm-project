@@ -8,5 +8,7 @@
 	"folder_name": "googletest",
 	"build_system": "cmake",
 	"cmake_flags": {},
-	"cmake_root": "./"
+	"cmake_root": "./",
+	"licnese": "BSD-3-Clause",
+	"license_source": "manual"
 }

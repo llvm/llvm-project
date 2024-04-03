@@ -9,5 +9,6 @@
   "folder_name": "swift-blocks",
   "build_system": "swift",
   "package_name": "swift-blocks",
-  "license": "MIT"
+  "license": "MIT",
+  "license_source": "manual"
 }

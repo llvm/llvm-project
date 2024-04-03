@@ -12,5 +12,6 @@
     "cc": "clang",
     "cxx": "clang++"
   },
-  "license": "LGLP-2.1-or-later"
+  "license": "LGLP-2.1-or-later",
+  "license_source": "manual"
 }

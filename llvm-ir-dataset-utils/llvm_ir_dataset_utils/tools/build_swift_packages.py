@@ -43,7 +43,8 @@ def main(_):
         'folder_name': f'build-{index}',
         'build_system': 'swift',
         'package_name': f'build-{index}',
-        'license': package_repository['license']
+        'license': package_repository['license'],
+        'license_source': package_repository['license_source']
     }
 
     build_futures.append(

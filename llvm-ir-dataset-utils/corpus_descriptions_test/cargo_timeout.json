@@ -8,5 +8,6 @@
   ],
   "folder_name": "tetcore",
   "build_system": "cargo",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "license_source": "manual"
 }

@@ -4,6 +4,7 @@ import logging
 import os
 
 import pandas
+import numpy
 
 import plotly.express
 import plotly.subplots
@@ -24,6 +25,8 @@ DEFAULT_SUBPLOT_SECTIONS = [
 flags.DEFINE_multi_string('data_path', None, 'The path to the data file.')
 flags.DEFINE_string('output_path', None,
                     'The path to a folder to write the histograms to.')
+flags.DEFINE_string('data_output_path', None,
+                    'The path to a CSV where the data is written to.')
 flags.DEFINE_integer('num_bins', 12,
                      'The number of bins to use for the histograms.')
 flags.DEFINE_multi_string(
@@ -52,7 +55,7 @@ def main(_):
 
   for data_path in FLAGS.data_path:
     logging.info(f'Loading data from {data_path}')
-    data_frame = pandas.read_csv(data_path)
+    data_frame = pandas.read_csv(data_path, engine='pyarrow')
     data_frame.drop(['name'], axis=1, inplace=True)
     language_name = os.path.basename(data_path)[:-4]
     languages.append(language_name)
@@ -84,29 +87,50 @@ def main(_):
   subplot_figure = plotly.subplots.make_subplots(
       rows=2, cols=4, subplot_titles=subplot_titles)
 
+  output_data_path_handle = None
+  if FLAGS.data_output_path:
+    output_data_path_handle = open(FLAGS.data_output_path, 'w')
+
   for index, sub_plot_section in enumerate(FLAGS.sub_plot_sections):
     column = (index % 4) + 1
     row = int(index / 4 + 1)
 
     for language_index, language in enumerate(languages):
+      column_max = data_frame[sub_plot_section].max()
       data_frame_subset = data_frame[data_frame['language'] == language]
       to_show_legend = True if index == 0 else False
-      subplot_figure.add_trace(
-          plotly.graph_objects.Histogram(
-              x=data_frame_subset[sub_plot_section].to_numpy(),
-              nbinsx=FLAGS.num_bins,
-              name=language,
-              marker_color=plotly.colors.qualitative.Plotly[language_index],
-              showlegend=to_show_legend),
+      data = data_frame_subset[sub_plot_section].to_numpy()
+      counts, bins = numpy.histogram(
+          data, bins=FLAGS.num_bins, range=(0, column_max))
+
+      if output_data_path_handle:
+        output_data_path_handle.write(f'{language}-{sub_plot_section}\n')
+
+        for current_bin in bins:
+          output_data_path_handle.write(f'{current_bin},')
+        output_data_path_handle.write('\n')
+
+        for current_count in counts:
+          output_data_path_handle.write(f'{current_count},')
+        output_data_path_handle.write('\n')
+
+      subplot_figure.add_bar(
+          x=bins,
+          y=counts,
+          name=language,
+          row=row,
           col=column,
-          row=row)
+          marker_color=plotly.colors.qualitative.Plotly[language_index],
+          showlegend=to_show_legend)
+      subplot_figure.update_layout(barmode='group')
       subplot_figure.update_yaxes(
           type="log", col=column, row=row, exponentformat='power')
       logging.info(
           f'Finished generating figure for {sub_plot_section} in {language}')
 
-  subplot_figure.update_layout(
-      width=2200, height=1000, barmode='group', font=dict(size=30))
+  output_data_path_handle.close()
+
+  subplot_figure.update_layout(width=2200, height=1000, font=dict(size=30))
   subplot_figure.update_annotations(font_size=40)
 
   logging.info('Writing image to file')

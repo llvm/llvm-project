@@ -22,7 +22,7 @@ flags.DEFINE_string(
     'gh_pat', None,
     'Your github personal access token. Needed to query license information')
 flags.DEFINE_boolean(
-    'github_ld', False,
+    'source_ld', False,
     'Whether or not to download the repositories that have not already been '
     'tagged with license information and use go-license-detector to detect '
     'license information')
@@ -79,14 +79,17 @@ def main(_):
         'name': package.split('/')[-1][:-4],
         'license': repository_license_map[package[:-4]]
     }
+    if repository_license_map[package[:-4]] != 'NOASSERTION':
+      current_package['license_source'] = 'github'
+    else:
+      current_package['license_source'] = None
     output_package_list.append(current_package)
 
-  if FLAGS.github_ld:
-    logging.info('Gathering license information through license detection/')
+  if FLAGS.source_ld:
+    logging.info('Gathering license information through license detection')
     ray.init()
 
     repo_license_futures = []
-    repo_name_license_map = {}
 
     for package_dict in output_package_list:
       if package_dict['license'] == 'NOASSERTION':
@@ -94,6 +97,7 @@ def main(_):
             get_detected_license_repo_future.remote(package_dict['repo'],
                                                     package_dict['name']))
 
+    detected_repo_name_license_map = {}
     while len(repo_license_futures) > 0:
       finished, repo_license_futures = ray.wait(
           repo_license_futures, timeout=5.0)
@@ -102,11 +106,14 @@ def main(_):
       )
       repo_names_licenses = ray.get(finished)
       for repo_name, repo_license in repo_names_licenses:
-        repo_name_license_map[repo_name] = repo_license
+        detected_repo_name_license_map[repo_name] = repo_license
 
     for package_dict in output_package_list:
-      if package_dict['name'] in repo_name_license_map:
-        package_dict['license'] = repo_name_license_map[package_dict['name']]
+      if package_dict['name'] in detected_repo_name_license_map:
+        package_dict['license'] = detected_repo_name_license_map[
+            package_dict['name']]
+        if package_dict['license'] != 'NOASSERTION':
+          package_dict['license_source'] = 'go_license_detector'
 
   with open(FLAGS.package_list, 'w') as package_list_file:
     json.dump(output_package_list, package_list_file, indent=2)

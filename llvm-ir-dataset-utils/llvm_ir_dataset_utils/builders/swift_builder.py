@@ -4,7 +4,7 @@ import subprocess
 import os
 import logging
 
-from compiler_opt.tools import extract_ir_lib
+from mlgo.corpus import extract_ir_lib
 
 BUILD_TIMEOUT = 900
 

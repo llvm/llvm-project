@@ -57,14 +57,12 @@ llvm-dis *.bc
 
 ## IR Sources
 
-The package contains a number of builders to target the LLVM-based languages, and extract IR. The current status of builders for individual sources is as follows:
+The package contains a number of builders to target the LLVM-based languages, and extract IR:
 
-- [x] Individual projects
-- [x] Rust crates
-- [x] Spack packages
-- [x] Autoconf
-- [x] Cmake
-- [x] Julia packages
-- [x] Swift packages
-- ~~[ ] Haskell packages~~ (deferred to a later version of the package)
-- [ ] Python packages (numba)
+- Individual projects (C/C++)
+- Rust crates
+- Spack packages
+- Autoconf
+- Cmake
+- Julia packages
+- Swift packages

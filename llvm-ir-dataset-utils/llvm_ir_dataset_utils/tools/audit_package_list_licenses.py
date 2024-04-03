@@ -8,6 +8,8 @@ import logging
 from absl import app
 from absl import flags
 
+from llvm_ir_dataset_utils.util import licenses
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('input_file', None, 'The input file to look at')
@@ -16,13 +18,6 @@ flags.DEFINE_boolean(
     'Whether or not to treat the input file as being a list of spack packages.')
 
 flags.mark_flag_as_required('input_file')
-
-PERMISSIVE_LICENSES = {
-    'MIT': True,
-    'Apache-2.0': True,
-    'BSD-3-Clause': True,
-    'BSD-2-Clause': True
-}
 
 
 def main(_):
@@ -35,12 +30,11 @@ def main(_):
   for package in input_data:
     if FLAGS.is_spack:
       package = input_data[package]
-    license_parts = [part.strip() for part in package['license'].split('OR')]
-    for license_part in license_parts:
-      if license_part in PERMISSIVE_LICENSES:
-        good_licenses += 1
-      else:
-        bad_licenses += 1
+    if licenses.is_license_valid(
+        package['license'], [], ignore_license_files=True):
+      good_licenses += 1
+    else:
+      bad_licenses += 1
 
   logging.info(f'Packages that can be used by the dataset: {good_licenses}')
   logging.info(f'Packages that cannot be used by the dataset: {bad_licenses}')

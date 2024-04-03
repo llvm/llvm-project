@@ -7,13 +7,15 @@ import logging
 import pathlib
 import shutil
 import re
+import getpass
 
 import ray
 
-from compiler_opt.tools import extract_ir_lib
+from mlgo.corpus import extract_ir_lib
 
 from llvm_ir_dataset_utils.util import file
 from llvm_ir_dataset_utils.util import spack as spack_utils
+from llvm_ir_dataset_utils.util import extract_source_lib
 
 SPACK_THREAD_OVERSUBSCRIPTION_FACTOR = 1
 
@@ -68,7 +70,7 @@ def perform_build(package_name, assembled_build_command, corpus_dir, build_dir):
 
 
 def get_spack_stage_directory(package_hash, build_dir):
-  spack_build_directory = os.path.join(build_dir, os.getlogin())
+  spack_build_directory = os.path.join(build_dir, getpass.getuser())
   if not os.path.exists(spack_build_directory):
     return None
   spack_stages = os.listdir(spack_build_directory)
@@ -97,6 +99,7 @@ def extract_ir(package_hash, corpus_dir, build_dir, threads):
     extract_ir_lib.write_corpus_manifest(None, relative_output_paths,
                                          corpus_dir)
     logging.getLogger().setLevel(current_verbosity)
+    extract_source_lib.copy_source(build_directory, corpus_dir)
 
 
 def push_to_buildcache(package_spec, buildcache_dir, corpus_dir, build_dir):
@@ -198,10 +201,10 @@ def build_package(dependency_futures,
                   cleanup_build=False):
   dependency_futures = ray.get(dependency_futures)
   for dependency_future in dependency_futures:
-    if dependency_future['targets'][0]['success'] != True:
+    if not dependency_future['targets'][0]['success']:
       logging.warning(
-          f'Dependency {dependency_future["targets"][0]["name"]} failed to build for package {package_name}, not building.'
-      )
+          f'Dependency {dependency_future["targets"][0]["name"]} failed to build'
+          f'for package{package_name}, not building.')
       if cleanup_build:
         cleanup(
             package_name, package_spec, corpus_dir, build_dir, uninstall=False)

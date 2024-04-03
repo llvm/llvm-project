@@ -17,7 +17,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_multi_string('bc_dist_file', None, 'The path to a data file.')
 flags.DEFINE_multi_string(
-    'opt_bc_dist_file', None,
+    'opt_bc_dist_file', [],
     'The path to a data file containing data gathered post-optimization.')
 flags.DEFINE_string('output_file', None, 'The path to the output image.')
 flags.DEFINE_string(

@@ -8,5 +8,6 @@
   ],
   "folder_name": "syn",
   "build_system": "cargo",
-  "license": "MIT"
+  "license": "MIT",
+  "license_source": "manual"
 }

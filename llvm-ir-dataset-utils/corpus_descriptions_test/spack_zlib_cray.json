@@ -1,9 +1,0 @@
-{
-  "sources": [],
-  "folder_name": "zlib",
-  "build_system": "spack",
-  "package_name": "zlib",
-  "package_spec": "zlib@1.2.13%clang@16.0.6 cflags=\"-Xclang -fembed-bitcode=all\" cxxflags=\"-Xclang -fembed-bitcode=all\" +optimize+pic+shared build_system=makefile arch=cray-ubuntu22.04-x86_64",
-  "package_hash": "ctg354lial5zjl552xriw2cpnhcwhk3i",
-  "license": "Zlib"
-}

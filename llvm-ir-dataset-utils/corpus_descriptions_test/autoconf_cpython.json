@@ -10,5 +10,6 @@
   "folder_name": "cpython",
   "build_system": "autoconf",
   "autoconf_flags": {},
-  "license": "PSF-2.0"
+  "license": "PSF-2.0",
+  "license_source": "manual"
 }

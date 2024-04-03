@@ -6,6 +6,7 @@ import tempfile
 import logging
 import json
 import shutil
+import textwrap
 
 import ray
 
@@ -78,7 +79,7 @@ def get_run_passes_opt(bitcode_function_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         timeout=OPT_TIMEOUT_SECONDS)
-  except:
+  except Exception:
     return ('timeout', None)
   if opt_process.returncode != 0:
     return (opt_process.stdout.replace('\n', ''), None)
@@ -311,25 +312,24 @@ def get_function_statistics_batch(bitcode_module, function_symbols,
 
 def get_bitcode_module_function_statistics(bitcode_module, statistics_type,
                                            module_path):
-  with tempfile.TemporaryDirectory() as extracted_functions_dir:
-    function_symbols_expected = get_function_symbols(bitcode_module)
+  function_symbols_expected = get_function_symbols(bitcode_module)
 
-    if function_symbols_expected[0]:
-      return [(function_symbols_expected[0], None, module_path)]
+  if function_symbols_expected[0]:
+    return [(function_symbols_expected[0], None, module_path)]
 
-    function_symbols = function_symbols_expected[1]
+  function_symbols = function_symbols_expected[1]
 
-    statistics_futures = []
-    batches = parallel.split_batches(function_symbols, BITCODE_FILE_CHUNK_SIZE)
-    for batch in batches:
-      statistics_futures.append(
-          get_function_statistics_batch.remote(bitcode_module, batch,
-                                               statistics_type, module_path))
+  statistics_futures = []
+  batches = parallel.split_batches(function_symbols, BITCODE_FILE_CHUNK_SIZE)
+  for batch in batches:
+    statistics_futures.append(
+        get_function_statistics_batch.remote(bitcode_module, batch,
+                                             statistics_type, module_path))
 
-    statistics_chunks = ray.get(statistics_futures)
-    statistics = []
-    for statistics_chunk in statistics_chunks:
-      statistics.extend(statistics_chunk)
+  statistics_chunks = ray.get(statistics_futures)
+  statistics = []
+  for statistics_chunk in statistics_chunks:
+    statistics.extend(statistics_chunk)
   return statistics
 
 
@@ -399,6 +399,27 @@ def get_token_count(bitcode_module, vocab_path):
     except subprocess.TimeoutExpired:
       return ('fastbpe timeout expired', None)
     return (None, output.count('@@'))
+
+
+def get_hf_token_count(bitcode_module, tokenizer_json):
+  textual_ir_or_error = get_textual_ir(bitcode_module)
+  if textual_ir_or_error[0]:
+    return (textual_ir_or_error[0], None)
+
+  import sentencepiece as snp
+  tokenizer_object = snp.SentencePieceProcessor(model_file=tokenizer_json)
+
+  token_count = 0
+
+  # Chunk the textual IR so that the tokenizer memory usage does not explode.
+  # This is not really the optimal way to do things and does slightly impact
+  # output accuracey (2-3% wrappinga at 10^6 from my testing). The number is
+  # somewhat arbitrary, but seems to work for most corpora on a machine with
+  # 96 threads/256GB of RAM.
+  for string_part in textwrap.wrap(textual_ir_or_error[1], 5000000):
+    token_count += len(tokenizer_object.encode(string_part))
+
+  return (None, token_count)
 
 
 def get_lowered_size(bitcode_module):
@@ -560,8 +581,12 @@ def get_module_statistics_batch(project_dir,
                                                         relative_module_path)
     if filter != 'none':
       command_line_path = os.path.splitext(relative_module_path)[0] + '.cmd'
-      command_line = dataset_corpus.load_file_from_corpus(
-          project_dir, command_line_path).decode('utf-8')
+      command_line_raw = dataset_corpus.load_file_from_corpus(
+          project_dir, command_line_path)
+      if command_line_raw is None:
+        continue
+
+      command_line = command_line_raw.decode('utf-8')
       # This is a very hacky heuristic, mostly based on how many include paths
       # the driver tries to add to the frontend command line. Might need to be
       # fixed in the future for portability.
@@ -573,7 +598,7 @@ def get_module_statistics_batch(project_dir,
     module_path = f'{project_dir}:{relative_module_path}'
     if statistics_type == 'parsing':
       parse_result = test_parsing(bitcode_file)
-      if parse_result[1] == True:
+      if parse_result[1]:
         statistics.append((None, parse_result[1], module_path))
       else:
         statistics.append((parse_result[0], parse_result[1], module_path))
@@ -635,7 +660,8 @@ def get_module_statistics_batch(project_dir,
         statistics.append((properties_tuple[0], None, module_path))
       else:
         statistics.append((None, properties_tuple[1], module_path))
-    elif statistics_type == 'module_instruction_distribution' or statistics_type == 'module_instruction_distribution_O3':
+    elif statistics_type == 'module_instruction_distribution' or \
+      statistics_type == 'module_instruction_distribution_O3':
       additional_passes = '' if statistics_type == 'module_instruction_distribution' else 'default<O3>'
       instruction_hist_or_error = get_instruction_histogram(
           bitcode_file, additional_passes)
@@ -659,6 +685,11 @@ def get_module_statistics_batch(project_dir,
       else:
         token_count_wrapped = {'token_count': [token_count_or_error[1]]}
         statistics.append((None, token_count_wrapped, module_path))
+    elif statistics_type == 'hf_token_count':
+      token_count_or_error = get_hf_token_count(
+          bitcode_file, extra_properties['bpe_vocab_path'])
+      token_count_wrapped = {'hf_token_count': [token_count_or_error[1]]}
+      statistics.append((None, token_count_wrapped, module_path))
   return statistics
 
 

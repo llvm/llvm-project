@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llvm-ir-dataset-utils"
-description = "Infrastructure to build an LLVM IR dataset."
+description = "Infrastructure to build LLVM IR-based Datasets."
 readme = "README.md"
 authors = [
     {name="Aiden Grossman", email="aidengrossmanpso@gmail.com"},
     {name="Ludger Paehler", email="ludger.paehler@tum.de"}
 ]
-version = "0.1"
+version = "0.2"
 license = {text="Apache-2.0"}
 classifiers = [
     "Programming Language :: Python",
@@ -38,8 +38,22 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "yapf>=0.33.0",
+    "ruff>=0.3.3",
     "pytest>=7.4.0"
 ]
 
 [tool.setuptools.packages.find]
 include = ["llvm_ir_dataset_utils"]
+
+[tool.yapf]
+based_on_style = "yapf"  # Google open-source format
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["F401", "E731"]
+
+[tool.codespell]
+ignore-words-list = "crate,"

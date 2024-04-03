@@ -8,7 +8,7 @@ import logging
 import shutil
 import glob
 
-from compiler_opt.tools import make_corpus_lib
+from mlgo.corpus import make_corpus_lib
 """
 Generates the command to compile a bitcode archive from a Julia package.
 The archive then needs to be unpacked with `ar -x`.

@@ -45,7 +45,7 @@ def dedeuplicate_repositories(crates_list):
   # TODO(boomanaiden154): Investigate further whether or not this assumption
   # makes sense.
   for crate in crates_list:
-    if crate['repository'] == None:
+    if crate['repository'] is None:
       new_crates_list.append(crate)
     elif crate['repository'] not in repository_dict:
       repository_dict[crate['repository']] = True
@@ -54,7 +54,7 @@ def dedeuplicate_repositories(crates_list):
 
 
 def canonicalize_license(license_string):
-  # Some of the licenses include / as a seperator. This is equivalent to OR
+  # Some of the licenses include / as a separator. This is equivalent to OR
   # within the rust crates index, but not standard in the SPDX format.
   license_string = license_string.replace('/', ' OR ')
   return license_string
@@ -112,6 +112,7 @@ def main(_):
       crate_source_dict[
           'tar_archive'] = f'https://crates.io/api/v1/crates/{crate["name"]}/{crate_version}/download'
       crate_source_dict['license'] = versions_map[crate['id']][1]
+      crate_source_dict['license_source'] = 'crates'
     else:
       crate_source_dict['tar_archive'] = None
     source_list.append(crate_source_dict)

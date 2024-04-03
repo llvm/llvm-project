@@ -13,5 +13,6 @@
     "LLVM_ENABLE_PROJECTS": "all"
   },
   "cmake_root": "./llvm",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "license_source": "manual"
 }

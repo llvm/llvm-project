@@ -3,7 +3,7 @@
 import os
 import subprocess
 
-from compiler_opt.tools import extract_ir_lib
+from mlgo.corpus import extract_ir_lib
 
 CONFIGURE_LOG_NAME = './configure.log'
 BUILD_LOG_NAME = './build.log'

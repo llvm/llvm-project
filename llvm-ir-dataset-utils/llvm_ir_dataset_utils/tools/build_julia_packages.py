@@ -47,7 +47,8 @@ def main(_):
         'folder_name': package['name'],
         'build_system': 'julia',
         'package_name': package['name'],
-        'license': package['license']
+        'license': package['license'],
+        'license_source': package['license_source']
     }
 
     build_futures.append(

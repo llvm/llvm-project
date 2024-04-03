@@ -74,7 +74,8 @@ def main(_):
         'sources': sources,
         'folder_name': f'build-{index}',
         'build_system': 'cargo',
-        'license': crate_to_build['license']
+        'license': crate_to_build['license'],
+        'license_source': crate_to_build['license_source']
     }
 
     additional_build_env_variables = {

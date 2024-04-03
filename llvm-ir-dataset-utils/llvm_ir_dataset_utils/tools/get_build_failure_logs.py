@@ -28,7 +28,7 @@ def process_corpus(build_corpus_path):
   if build_manifest is None:
     return None
   for target in build_manifest['targets']:
-    if target['success'] == False and target['build_log'] is not None:
+    if not target['success'] and target['build_log'] is not None:
       # We're assuming the spack builder here because that's mainly what this
       # script is being used for currently.
       # TODO(boomanaiden154): Make this more generic when #77 is fixed and the

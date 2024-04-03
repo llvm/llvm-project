@@ -13,5 +13,6 @@
     "clang++ -std=c++11 -pthread -O3 fastBPE/main.cc -IfastBPE -emit-llvm -c -o fast.bc"
   ],
   "raw_bc_corpus": "bitcode",
-  "license": "MIT"
+  "license": "MIT",
+  "license_source": "manual"
 }

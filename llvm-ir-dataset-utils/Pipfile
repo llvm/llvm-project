@@ -1,15 +1,15 @@
 [packages]
-absl-py = ">=1.4.0" # Apache-2.0
-ml-compiler-opt = ">=0.0.1.dev202308100007" # Apache-2.0
-ray = ">=2.5.1" # Apache-2.0
-toml = ">=0.10.2" # MIT
-pandas = ">=2.0.3" # BSD-3-Clause
-plotly = ">=5.16.1" # MIT
+absl-py = ">=1.4.0"
+mlgo-utils = ">=18.0.0.dev202401210722"
+ray = ">=2.5.1"
+toml = ">=0.10.2"
+pandas = ">=2.0.3"
+plotly = ">=5.16.1"
 # Kaleido is a dependency of plotly not explicitly declared needed for image
 # export.
-kaleido = ">=0.2.1" # MIT
-umap-learn = ">=0.5.3" # BSD-3-Clause
+kaleido = ">=0.2.1"
+umap-learn = ">=0.5.3"
 
 [dev-packages]
-yapf = ">=0.33.0" # Apache-2.0
-pytest = ">=7.4.0" # MIT
+yapf = ">=0.33.0"
+pytest = ">=7.4.0"

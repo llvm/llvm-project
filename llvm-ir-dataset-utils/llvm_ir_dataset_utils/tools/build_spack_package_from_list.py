@@ -59,6 +59,7 @@ def get_package_future(package_dict, current_package_futures, package, threads):
       'package_spec': package_dict[package]['spec'],
       'package_hash': package,
       'license': package_dict[package]['license'],
+      'license_source': package_dict[package]['license_source'],
       'sources': []
   }
   extra_builder_arguments = {

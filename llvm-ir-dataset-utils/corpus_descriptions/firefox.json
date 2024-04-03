@@ -17,6 +17,7 @@
     "./mach build"
   ],
   "raw_bc_corpus": "bitcode",
-  "license": "MPL-2.0"
+  "license": "MPL-2.0",
+  "license_source": "manual"
 }
 

@@ -9,5 +9,7 @@
   "folder_name": "cpuinfo",
   "build_system": "cmake",
   "cmake_flags": {},
-  "cmake_root": "./"
+  "cmake_root": "./",
+  "license": "BSD-2-Clause",
+  "license_source": "manual"
 }
