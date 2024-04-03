@@ -23,6 +23,10 @@ v_add3_u32_e64_dpp v5, v1, s2, s3 dpp8:[7,6,5,4,3,2,1,0]
 v_cmp_ne_i32_e64_dpp vcc_lo, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX1150: encoding: [0x6a,0x00,0x45,0xd4,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
 
+// This is a regression test for potential changes in the future.
+v_cmp_le_f32 vcc_lo, v1, v2 row_mirror
+// GFX1150: encoding: [0xfa,0x04,0x26,0x7c,0x01,0x40,0x01,0xff]
+
 //
 // Elements of CPol operand can be given in any order
 //
