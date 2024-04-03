@@ -239,8 +239,7 @@ public:
     return result;
   }
 
-  MPFRNumber
-  exp2m1([[maybe_unused]] const MPFRNumber &underflow_rndz_fallback) const {
+  MPFRNumber exp2m1() const {
     // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
@@ -611,15 +610,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp();
   case Operation::Exp2:
     return mpfrInput.exp2();
-  case Operation::Exp2m1: {
-    constexpr InputType UNDERFLOW_RNDZ_FALLBACK =
-        FPBits<InputType>::create_value(Sign::NEG,
-                                        -1 + FPBits<InputType>::EXP_BIAS,
-                                        FPBits<InputType>::SIG_MASK)
-            .get_val();
-    MPFRNumber underflow_rndz_fallback(UNDERFLOW_RNDZ_FALLBACK);
-    return mpfrInput.exp2m1(underflow_rndz_fallback);
-  }
+  case Operation::Exp2m1:
+    return mpfrInput.exp2m1();
   case Operation::Exp10:
     return mpfrInput.exp10();
   case Operation::Expm1:
