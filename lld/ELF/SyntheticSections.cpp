@@ -324,7 +324,6 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
   unsigned offset = 16;
-
   if (config->andFeatures != 0) {
     write32(buf + offset + 0, featureAndType);      // Feature type
     write32(buf + offset + 4, 4);                   // Feature size
