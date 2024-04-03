@@ -3237,7 +3237,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
 
   case Builtin::BI__builtin_allow_runtime_check: {
-    Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
+    Expr *Arg = TheCall->getArg(0);
     // Check if the argument is a string literal.
     if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
       Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
