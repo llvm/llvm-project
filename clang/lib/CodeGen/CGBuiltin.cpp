@@ -17297,6 +17297,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
     Value *Op3 = EmitScalarExpr(E->getArg(3));
+    // rldimi is 64-bit instruction, expand the intrinsic before isel to
+    // leverage peephole and avoid legalization efforts.
     if (BuiltinID == PPC::BI__builtin_ppc_rldimi &&
         !getTarget().getTriple().isPPC64()) {
       Function *F = CGM.getIntrinsic(Intrinsic::fshl, Op0->getType());
