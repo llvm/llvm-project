@@ -9821,6 +9821,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
+def warn_format_conversion_argument_type_mismatch_signedness : Warning<
+  warn_format_conversion_argument_type_mismatch.Summary>,
+  InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;

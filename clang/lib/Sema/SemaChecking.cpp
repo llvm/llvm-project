@@ -27,6 +27,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/FormatString.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -7610,6 +7611,14 @@ bool Sema::getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
 ///
 /// Returns true if the value evaluates to null.
 static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
+  // Treat (smart) pointers constructed from nullptr as null, whether we can
+  // const-evaluate them or not.
+  // This must happen first: the smart pointer expr might have _Nonnull type!
+  if (isa<CXXNullPtrLiteralExpr>(
+          IgnoreExprNodes(Expr, IgnoreImplicitAsWrittenSingleStep,
+                          IgnoreElidableImplicitConstructorSingleStep)))
+    return true;
+
   // If the expression has non-null type, it doesn't evaluate to null.
   if (auto nullability = Expr->IgnoreImplicit()->getType()->getNullability()) {
     if (*nullability == NullabilityKind::NonNull)
@@ -12446,6 +12455,19 @@ isArithmeticArgumentPromotion(Sema &S, const ImplicitCastExpr *ICE) {
          S.Context.getFloatingTypeOrder(From, To) < 0;
 }
 
+static analyze_format_string::ArgType::MatchKind
+handleFormatSignedness(analyze_format_string::ArgType::MatchKind Match,
+                       DiagnosticsEngine &Diags, SourceLocation Loc) {
+  if (Match == analyze_format_string::ArgType::NoMatchSignedness) {
+    Match =
+        Diags.isIgnored(
+            diag::warn_format_conversion_argument_type_mismatch_signedness, Loc)
+            ? analyze_format_string::ArgType::Match
+            : analyze_format_string::ArgType::NoMatch;
+  }
+  return Match;
+}
+
 bool
 CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
                                     const char *StartSpecifier,
@@ -12489,6 +12511,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
   ArgType::MatchKind ImplicitMatch = ArgType::NoMatch;
   ArgType::MatchKind Match = AT.matchesType(S.Context, ExprTy);
+  ArgType::MatchKind OrigMatch = Match;
+
+  Match = handleFormatSignedness(Match, S.getDiagnostics(), E->getExprLoc());
   if (Match == ArgType::Match)
     return true;
 
@@ -12512,6 +12537,14 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           ICE->getType() == S.Context.UnsignedIntTy) {
         // All further checking is done on the subexpression
         ImplicitMatch = AT.matchesType(S.Context, ExprTy);
+        if (OrigMatch == ArgType::NoMatchSignedness &&
+            ImplicitMatch != ArgType::NoMatchSignedness)
+          // If the original match was a signedness match this match on the
+          // implicit cast type also need to be signedness match otherwise we
+          // might introduce new unexpected warnings from -Wformat-signedness.
+          return true;
+        ImplicitMatch = handleFormatSignedness(
+            ImplicitMatch, S.getDiagnostics(), E->getExprLoc());
         if (ImplicitMatch == ArgType::Match)
           return true;
       }
@@ -12633,6 +12666,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
+      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
@@ -12668,8 +12702,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
       SmallVector<FixItHint,4> Hints;
-      if (AT.matchesType(S.Context, IntendedTy) != ArgType::Match ||
-          ShouldNotPrintDirectly)
+      ArgType::MatchKind IntendedMatch = AT.matchesType(S.Context, IntendedTy);
+      IntendedMatch = handleFormatSignedness(IntendedMatch, S.getDiagnostics(),
+                                             E->getExprLoc());
+      if ((IntendedMatch != ArgType::Match) || ShouldNotPrintDirectly)
         Hints.push_back(FixItHint::CreateReplacement(SpecRange, os.str()));
 
       if (const CStyleCastExpr *CCast = dyn_cast<CStyleCastExpr>(E)) {
@@ -12738,6 +12774,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
+      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
@@ -12949,6 +12986,7 @@ bool CheckScanfHandler::HandleScanfSpecifier(
 
   analyze_format_string::ArgType::MatchKind Match =
       AT.matchesType(S.Context, Ex->getType());
+  Match = handleFormatSignedness(Match, S.getDiagnostics(), Ex->getExprLoc());
   bool Pedantic = Match == analyze_format_string::ArgType::NoMatchPedantic;
   if (Match == analyze_format_string::ArgType::Match)
     return true;
