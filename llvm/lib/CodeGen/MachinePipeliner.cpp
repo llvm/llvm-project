@@ -1268,7 +1268,7 @@ private:
   // Calculate the upper limit of each pressure set
   void computePressureSetLimit(const RegisterClassInfo &RCI) {
     for (unsigned PSet = 0; PSet < PSetNum; PSet++)
-      PressureSetLimit[PSet] = RCI.getRegPressureSetLimit(PSet);
+      PressureSetLimit[PSet] = TRI->getRegPressureSetLimit(MF, PSet);
 
     // We assume fixed registers, such as stack pointer, are already in use.
     // Therefore subtracting the weight of the fixed registers from the limit of
