@@ -1763,14 +1763,14 @@ static void printCountAttributedImpl(const CountAttributedType *T,
 void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
                                              raw_ostream &OS) {
   printBefore(T->desugar(), OS);
-  if (!T->desugar()->isArrayType())
+  if (!T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
 }
 
 void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
                                             raw_ostream &OS) {
   printAfter(T->desugar(), OS);
-  if (T->desugar()->isArrayType())
+  if (T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
 }
 
