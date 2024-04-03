@@ -328,6 +328,9 @@ Improvements to Clang's diagnostics
 - New ``-Wformat-signedness`` diagnostic that warn if the format string requires an
   unsigned argument and the argument is signed and vice versa.
 
+- Clang now emits ``unused argument`` warning when the -fmodule-output flag is used
+  with an input that is not of type c++-module.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
