@@ -151,7 +151,9 @@ template <size_t N> struct Parser<LIBC_NAMESPACE::UInt<N>> {
 template <typename T>
 LIBC_INLINE constexpr T parse_with_prefix(const char *ptr) {
   using P = Parser<T>;
-  if (ptr[0] == '0' && ptr[1] == 'x')
+  if (ptr == nullptr)
+    return T();
+  else if (ptr[0] == '0' && ptr[1] == 'x')
     return P::template parse<16>(ptr + 2);
   else if (ptr[0] == '0' && ptr[1] == 'b')
     return P::template parse<2>(ptr + 2);
@@ -169,13 +171,14 @@ LIBC_INLINE constexpr auto operator""_u256(const char *x) {
   return internal::parse_with_prefix<UInt<256>>(x);
 }
 
-template <typename T> LIBC_INLINE constexpr T parse_bigint(const char *x) {
-  if (x[0] == '-' || x[0] == '+') {
-    auto positive = internal::parse_with_prefix<T>(x + 1);
-    return x[0] == '-' ? -positive : positive;
-  } else {
-    return internal::parse_with_prefix<T>(x);
+template <typename T> LIBC_INLINE constexpr T parse_bigint(const char *ptr) {
+  if (ptr == nullptr)
+    return T();
+  if (ptr[0] == '-' || ptr[0] == '+') {
+    auto positive = internal::parse_with_prefix<T>(ptr + 1);
+    return ptr[0] == '-' ? -positive : positive;
   }
+  return internal::parse_with_prefix<T>(ptr);
 }
 
 } // namespace LIBC_NAMESPACE

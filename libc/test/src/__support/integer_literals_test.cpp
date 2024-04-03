@@ -148,3 +148,10 @@ TEST(LlvmLibcIntegerLiteralTest, parse_bigint) {
     EXPECT_EQ(actual, expected);
   }
 }
+
+TEST(LlvmLibcIntegerLiteralTest, parse_bigint_invalid) {
+  using T = LIBC_NAMESPACE::Int<128>;
+  const T expected; // default construction
+  EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(nullptr), expected);
+  EXPECT_EQ(LIBC_NAMESPACE::parse_bigint<T>(""), expected);
+}
