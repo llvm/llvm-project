@@ -17,18 +17,11 @@ define i32 @main(i64 %x, ptr %d, ptr noalias %p) {
 ; CHECK-NEXT:    [[T2_PRE_PRE25:%.*]] = phi ptr [ [[T2_PRE_PRE23]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE:%.*]] ], [ [[T2_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T1_PRE_PRE21:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T1_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T3_PRE:%.*]] = phi ptr [ [[T3_PRE16:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T3_PRE_PRE_PRE]], [[LOOP]] ]
-; CHECK-NEXT:    [[T2_PRE:%.*]] = phi ptr [ [[T2_PRE13:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T2_PRE_PRE]], [[LOOP]] ]
-; CHECK-NEXT:    [[T1_PRE:%.*]] = phi ptr [ [[T1_PRE10:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T1_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    br label [[LOOP3:%.*]]
 ; CHECK:       loop3:
 ; CHECK-NEXT:    [[T2_PRE_PRE24:%.*]] = phi ptr [ [[T2_PRE_PRE23]], [[LOOP3_LATCH:%.*]] ], [ [[T2_PRE_PRE25]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[T1_PRE_PRE20:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP3_LATCH]] ], [ [[T1_PRE_PRE21]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[T3_PRE17:%.*]] = phi ptr [ [[T3_PRE16]], [[LOOP3_LATCH]] ], [ [[T3_PRE]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T2_PRE14:%.*]] = phi ptr [ [[T2_PRE13]], [[LOOP3_LATCH]] ], [ [[T2_PRE]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T1_PRE11:%.*]] = phi ptr [ [[T1_PRE10]], [[LOOP3_LATCH]] ], [ [[T1_PRE]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T78:%.*]] = phi ptr [ [[T7:%.*]], [[LOOP3_LATCH]] ], [ [[T3_PRE]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T66:%.*]] = phi ptr [ [[T6:%.*]], [[LOOP3_LATCH]] ], [ [[T2_PRE]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T54:%.*]] = phi ptr [ [[T5:%.*]], [[LOOP3_LATCH]] ], [ [[T1_PRE]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[TOBOOL_NOT2_I:%.*]] = icmp eq i64 [[X]], 0
 ; CHECK-NEXT:    br i1 false, label [[LOOP3_LOOP3_LATCH_CRIT_EDGE:%.*]], label [[FOR_BODY_LR_PH_I:%.*]]
 ; CHECK:       loop3.loop3.latch_crit_edge:
@@ -43,11 +36,6 @@ define i32 @main(i64 %x, ptr %d, ptr noalias %p) {
 ; CHECK-NEXT:    [[T2_PRE_PRE23]] = phi ptr [ [[T2_PRE_PRE24]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T6_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    [[T1_PRE_PRE19]] = phi ptr [ [[T1_PRE_PRE20]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T5_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    [[T3_PRE16]] = phi ptr [ [[T3_PRE17]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T7_PRE]], [[FOR_BODY_LR_PH_I]] ]
-; CHECK-NEXT:    [[T2_PRE13]] = phi ptr [ [[T2_PRE14]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T6_PRE]], [[FOR_BODY_LR_PH_I]] ]
-; CHECK-NEXT:    [[T1_PRE10]] = phi ptr [ [[T1_PRE11]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T5_PRE]], [[FOR_BODY_LR_PH_I]] ]
-; CHECK-NEXT:    [[T7]] = phi ptr [ [[T78]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T7_PRE]], [[FOR_BODY_LR_PH_I]] ]
-; CHECK-NEXT:    [[T6]] = phi ptr [ [[T66]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T6_PRE]], [[FOR_BODY_LR_PH_I]] ]
-; CHECK-NEXT:    [[T5]] = phi ptr [ [[T54]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T5_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_LATCH:%.*]], label [[LOOP3]]
 ; CHECK:       loop2.latch:
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_LATCH_LOOP2_CRIT_EDGE]], label [[LOOP_LATCH]]
