@@ -147,7 +147,7 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param ErrS     - A stream to print newline seperated error comments that
+  /// \param ErrS     - A stream to print newline separated error comments that
   ///                   will be emitted if Fail is returned.
   /// \return         - MCDisassembler::Success if bytes are decoded
   ///                   successfully. Size must hold the number of bytes that
