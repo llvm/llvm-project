@@ -8447,7 +8447,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     else if (auto *IE = dyn_cast<InsertElementInst>(VL[0]))
       ScalarTy = IE->getOperand(1)->getType();
   }
-  if (!FixedVectorType::isValidElementType(ScalarTy))
+  if (!isValidElementType(ScalarTy))
     return InstructionCost::getInvalid();
   auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
