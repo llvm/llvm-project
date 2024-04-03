@@ -11549,7 +11549,8 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
                              unsigned OperandNo) {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
-  if (auto *ConstV = isConstOrConstSplat(V, false, true)) {
+  if (auto *ConstV = isConstOrConstSplat(V, /*AllowUndefs*/ false,
+                                         /*AllowTruncation*/ true)) {
     APInt Const = ConstV->getAPIntValue().trunc(V.getScalarValueSizeInBits());
     switch (Opcode) {
     case ISD::ADD:
