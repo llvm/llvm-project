@@ -1836,8 +1836,8 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
     Opcode = It->getOpcode();
     if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
       IsHeader = true;
-    }
-    else if (IsHeader && !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
       ++It;
       break;
     }
