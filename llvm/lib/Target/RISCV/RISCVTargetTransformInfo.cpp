@@ -862,9 +862,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
+    // Legalisation of illegal types involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
     if (ST->hasVInstructions())
-      return LT.first *
-             getRISCVInstructionCost(RISCV::VID_V, LT.second, CostKind);
+      return getRISCVInstructionCost(RISCV::VID_V, LT.second, CostKind) +
+             (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
     return 1 + (LT.first - 1);
   }
   case Intrinsic::vp_rint: {
