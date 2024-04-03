@@ -4554,15 +4554,15 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
   if (MinTeamsVal > 1 || MaxTeamsVal > 0)
-    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal, MaxThreadsVal);
+
+  if (MaxThreadsVal > 0)
+    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
 
   // For max values, < 0 means unset, == 0 means set but unknown.
   if (MaxThreadsVal < 0)
     MaxThreadsVal = std::max(
         int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
-
-  if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
 
   Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
@@ -4785,11 +4785,14 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 }
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
-                                          int32_t LB, int32_t UB) {
+                                          int32_t LB, int32_t UB,
+                                          int32_t NTid) {
   if (T.isNVPTX()) {
     if (UB > 0)
       updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
-    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+    // The 'minctasm' attribute is ignored without 'maxntid' also being set.
+    if (NTid > 0)
+      updateNVPTXMetadata(Kernel, "minctasm", LB, false);
   }
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }

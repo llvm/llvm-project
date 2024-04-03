@@ -2107,7 +2107,7 @@ public:
   static std::pair<int32_t, int32_t> readTeamBoundsForKernel(const Triple &T,
                                                              Function &Kernel);
   static void writeTeamsForKernel(const Triple &T, Function &Kernel, int32_t LB,
-                                  int32_t UB);
+                                  int32_t UB, int32_t NTid);
   ///}
 
 private:

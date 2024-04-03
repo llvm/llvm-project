@@ -7,7 +7,7 @@
 #define HEADER
 
 void foo(int N) {
-// CHECK: l11, !"maxntidx", i32 128}
+// CHECK-NOT: l11, !"maxntidx", i32 128}
 #pragma omp target teams distribute parallel for simd
   for (int i = 0; i < N; ++i)
     ;
