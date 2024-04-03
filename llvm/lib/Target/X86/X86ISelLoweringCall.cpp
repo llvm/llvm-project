@@ -2021,6 +2021,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
 
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
+
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
     // If we are using a GOT, disable tail calls to external symbols with

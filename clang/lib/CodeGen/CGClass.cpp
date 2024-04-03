@@ -2247,7 +2247,14 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
-  EmitCall(Info, Callee, ReturnValueSlot(), Args, nullptr, false, Loc);
+  llvm::CallBase *CallOrInvoke = nullptr;
+  EmitCall(Info, Callee, ReturnValueSlot(), Args, &CallOrInvoke, false, Loc);
+
+  // Set type identifier metadata of indirect calls for call graph section.
+  if (CGM.getCodeGenOpts().CallGraphSection && CallOrInvoke &&
+      CallOrInvoke->isIndirectCall())
+    CGM.CreateFunctionTypeMetadataForIcall(D->getType(), CallOrInvoke);
+
 
   // Generate vtable assumptions if we're constructing a complete object
   // with a vtable.  We don't do this for base subobjects for two reasons:
