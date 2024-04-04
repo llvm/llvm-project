@@ -14,6 +14,8 @@
 
 using namespace llvm;
 
+namespace {
+
 TEST(InterleaveTest, Interleave) {
   std::string Str;
   raw_string_ostream OS(Str);
@@ -36,3 +38,5 @@ TEST(InterleaveTest, InterleaveComma) {
 
   EXPECT_EQ(OS.str(), "dachshund, doxie, dackel, teckel");
 }
+
+} // anonymous namespace
