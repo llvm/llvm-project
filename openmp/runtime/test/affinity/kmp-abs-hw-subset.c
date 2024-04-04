@@ -6,6 +6,12 @@
 // RUN: env OMP_PLACES=threads %libomp-run 3 1
 // RUN: env OMP_PLACES=threads %libomp-run 3 2
 // REQUIRES: linux
+//
+// The test requires topologies with sockets, cores, threads layers where
+// the socket layer contains multiple threads.
+// The s390x architecture does not produce this topology and seems to have
+// one thread per socket.
+// UNSUPPORTED: s390x-target-arch
 
 #include <stdio.h>
 #include <stdlib.h>
