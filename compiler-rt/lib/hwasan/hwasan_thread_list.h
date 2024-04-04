@@ -55,6 +55,9 @@ static uptr RingBufferSize() {
   uptr desired_bytes = flags()->stack_history_size * sizeof(uptr);
   // FIXME: increase the limit to 8 once this bug is fixed:
   // https://bugs.llvm.org/show_bug.cgi?id=39030
+  // Note that we *cannot* do that on Android, as the runtime will indefinitely
+  // have to support code that is compield with ashr, which only works with
+  // shifts up to 6.
   for (int shift = 0; shift < 7; ++shift) {
     uptr size = 4096 * (1ULL << shift);
     if (size >= desired_bytes)
