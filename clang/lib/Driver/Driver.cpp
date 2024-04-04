@@ -2005,38 +2005,35 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // Print out build configuration options that impact the compiler's runtime
   // behavior. Intended for identifying the source of issues when reproducing
   // changes.
-  std::vector<std::string> BuildOptions = {
-#if !__OPTIMIZE__
-      "+unoptimized",
+  SmallVector<StringRef> BuildOptions = {
+#if __GNUC__ && !__OPTIMIZE__
+    // FIXME: __OPTIMIZE__ is not available on MSVC, this will never show there
+    "+unoptimized",
 #endif
 #ifndef NDEBUG
-      "+assertions",
+    "+assertions",
 #endif
 #ifdef EXPENSIVE_CHECKS
-      "+expensive-checks",
+    "+expensive-checks",
 #endif
 #if __has_feature(address_sanitizer)
-      "+asan",
+    "+asan",
 #endif
 #if __has_feature(undefined_behavior_sanitizer)
-      "+ubsan",
+    "+ubsan",
 #endif
 #if __has_feature(memory_sanitizer)
-      "+msan",
+    "+msan",
 #endif
 #if __has_feature(dataflow_sanitizer)
-      "+dfsan",
+    "+dfsan",
 #endif
   };
   if (!BuildOptions.empty()) {
-    OS << "Build configuration: ";
-    bool FirstOption = true;
-    for (const auto &Option : BuildOptions) {
-      if (!FirstOption)
-        OS << ", ";
-      OS << Option;
-      FirstOption = false;
-    }
+    OS << "Build config: ";
+    llvm::interleaveComma(BuildOptions, OS, [&OS](const StringRef &Option) {
+        OS << Option;
+    });
     OS << '\n';
   }
 
