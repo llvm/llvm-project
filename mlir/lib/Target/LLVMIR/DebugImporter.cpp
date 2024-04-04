@@ -13,6 +13,7 @@
 #include "mlir/IR/Location.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
@@ -355,6 +356,14 @@ static Attribute replaceAndPruneRecursiveTypes(
   SmallVector<ReplacementState> workStack;
   workStack.push_back({nullptr, {baseNode}, {}, 0, false});
 
+  // Replacement cache that remembers the context in which the cache is valid.
+  // All unboundRecIds must be in openDecls at time of lookup.
+  struct CacheWithContext {
+    DenseSet<DistinctAttr> unboundRecIds;
+    Attribute entry;
+  };
+  DenseMap<Attribute, CacheWithContext> replacementCache;
+
   DenseSet<DistinctAttr> openDecls;
   while (workStack.size() > 1 || workStack.back().attrIndex == 0) {
     ReplacementState &state = workStack.back();
@@ -370,6 +379,8 @@ static Attribute replaceAndPruneRecursiveTypes(
         if (DistinctAttr recId = recType.getRecId())
           openDecls.erase(recId);
 
+      replacementCache[state.node] = CacheWithContext{openDecls, result};
+
       workStack.pop_back();
       ReplacementState &prevState = workStack.back();
       prevState.replaceCurrAttr(result);
@@ -378,6 +389,20 @@ static Attribute replaceAndPruneRecursiveTypes(
     }
 
     Attribute node = state.attrs[state.attrIndex];
+
+    // Lookup in cache first.
+    if (auto it = replacementCache.find(node); it != replacementCache.end()) {
+      // If all the requried recIds are open decls, use cache.
+      if (llvm::set_is_subset(it->second.unboundRecIds, openDecls)) {
+        state.replaceCurrAttr(it->second.entry);
+        ++state.attrIndex;
+        continue;
+      }
+
+      // Otherwise, the cache entry is stale and can be removed now.
+      replacementCache.erase(it);
+    }
+
     if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(node)) {
       if (DistinctAttr recId = recType.getRecId()) {
         if (recType.isRecSelf()) {
