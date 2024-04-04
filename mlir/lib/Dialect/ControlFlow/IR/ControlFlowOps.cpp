@@ -531,8 +531,8 @@ static ParseResult parseSwitchOpCases(
         failed(parser.parseSuccessor(destination)))
       return failure();
     if (succeeded(parser.parseOptionalLParen())) {
-      if (failed(parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                         /*allowResultNumber=*/false)) ||
+      if (failed(parser.parseOperandList(operands,
+                                         OpAsmParser::Delimiter::None)) ||
           failed(parser.parseColonTypeList(operandTypes)) ||
           failed(parser.parseRParen()))
         return failure();
