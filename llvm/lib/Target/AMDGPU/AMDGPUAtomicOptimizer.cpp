@@ -413,7 +413,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   assert(ST->hasPermLaneX16());
   V = B.CreateBitCast(V, IntNTy);
   Value *Permlanex16Call = B.CreateIntrinsic(
-      Intrinsic::amdgcn_permlanex16, {},
+      V->getType(), Intrinsic::amdgcn_permlanex16,
       {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
   V = buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                           B.CreateBitCast(Permlanex16Call, AtomicTy));
@@ -425,7 +425,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
     // Reduce across the upper and lower 32 lanes.
     V = B.CreateBitCast(V, IntNTy);
     Value *Permlane64Call =
-        B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V);
+        B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane64, V);
     return buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                                B.CreateBitCast(Permlane64Call, AtomicTy));
   }
@@ -481,7 +481,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     assert(ST->hasPermLaneX16());
     V = B.CreateBitCast(V, IntNTy);
     Value *PermX = B.CreateIntrinsic(
-        Intrinsic::amdgcn_permlanex16, {},
+        V->getType(), Intrinsic::amdgcn_permlanex16,
         {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
 
     Value *UpdateDPPCall =
@@ -493,8 +493,8 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
       V = B.CreateBitCast(V, IntNTy);
-      Value *const Lane31 = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
-                                              {V, B.getInt32(31)});
+      Value *const Lane31 = B.CreateIntrinsic(
+          V->getType(), Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
 
       Value *UpdateDPPCall = B.CreateCall(
           UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
@@ -574,7 +574,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto NeedResult = !I.use_empty();
 
   auto *Ballot =
-      B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
+      B.CreateIntrinsic(WaveTy, Intrinsic::amdgcn_ballot, B.getTrue());
 
   // Start inserting instructions for ComputeLoop block
   B.SetInsertPoint(ComputeLoop);
@@ -591,15 +591,15 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
 
   // Use llvm.cttz instrinsic to find the lowest remaining active lane.
   auto *FF1 =
-      B.CreateIntrinsic(Intrinsic::cttz, WaveTy, {ActiveBits, B.getTrue()});
+      B.CreateIntrinsic(WaveTy, Intrinsic::cttz, {ActiveBits, B.getTrue()});
 
   Type *IntNTy = B.getIntNTy(Ty->getPrimitiveSizeInBits());
   auto *LaneIdxInt = B.CreateTrunc(FF1, IntNTy);
 
   // Get the value required for atomic operation
   V = B.CreateBitCast(V, IntNTy);
-  Value *LaneValue =
-      B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {}, {V, LaneIdxInt});
+  Value *LaneValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
+                                       {V, LaneIdxInt});
   LaneValue = B.CreateBitCast(LaneValue, Ty);
 
   // Perform writelane if intermediate scan results are required later in the
@@ -607,7 +607,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   Value *OldValue = nullptr;
   if (NeedResult) {
     OldValue =
-        B.CreateIntrinsic(Intrinsic::amdgcn_writelane, {},
+        B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_writelane,
                           {B.CreateBitCast(Accumulator, IntNTy), LaneIdxInt,
                            B.CreateBitCast(OldValuePhi, IntNTy)});
     OldValue = B.CreateBitCast(OldValue, Ty);
@@ -696,7 +696,8 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's original position as the entry block.
     PixelEntryBB = I.getParent();
 
-    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {}, {});
+    Value *const Cond =
+        B.CreateIntrinsic(B.getInt1Ty(), Intrinsic::amdgcn_ps_live, {});
     Instruction *const NonHelperTerminator =
         SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
@@ -722,7 +723,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // this by doing a ballot of active lanes.
   Type *const WaveTy = B.getIntNTy(ST->getWavefrontSize());
   CallInst *const Ballot =
-      B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
+      B.CreateIntrinsic(WaveTy, Intrinsic::amdgcn_ballot, B.getTrue());
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is
@@ -730,15 +731,15 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // using the mbcnt intrinsic.
   Value *Mbcnt;
   if (ST->isWave32()) {
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+    Mbcnt = B.CreateIntrinsic(WaveTy, Intrinsic::amdgcn_mbcnt_lo,
                               {Ballot, B.getInt32(0)});
   } else {
     Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
     Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
-    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+    Mbcnt = B.CreateIntrinsic(Int32Ty, Intrinsic::amdgcn_mbcnt_lo,
                               {ExtractLo, B.getInt32(0)});
-    Mbcnt =
-        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
+    Mbcnt = B.CreateIntrinsic(Int32Ty, Intrinsic::amdgcn_mbcnt_hi,
+                              {ExtractHi, Mbcnt});
   }
 
   Function *F = I.getFunction();
@@ -769,7 +770,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       // that they can correctly contribute to the final result.
       V = B.CreateBitCast(V, IntNTy);
       Identity = B.CreateBitCast(Identity, IntNTy);
-      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, IntNTy,
+      NewV = B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_set_inactive,
                                {V, Identity});
       NewV = B.CreateBitCast(NewV, Ty);
       V = B.CreateBitCast(V, Ty);
@@ -789,12 +790,12 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
         assert(TyBitWidth == 32);
         NewV = B.CreateBitCast(NewV, IntNTy);
-        NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+        NewV = B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_readlane,
                                  {NewV, LastLaneIdx});
         NewV = B.CreateBitCast(NewV, Ty);
       }
       // Finally mark the readlanes in the WWM section.
-      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
+      NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_strict_wwm, NewV);
     } else if (ScanImpl == ScanOptions::Iterative) {
       // Alternative implementation for scan
       ComputeLoop = BasicBlock::Create(C, "ComputeLoop", F);
@@ -925,10 +926,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       Value *const ExtractLo = B.CreateTrunc(CastedPhi, Int32Ty);
       Value *const ExtractHi =
           B.CreateTrunc(B.CreateLShr(CastedPhi, 32), Int32Ty);
-      CallInst *const ReadFirstLaneLo =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
-      CallInst *const ReadFirstLaneHi =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
+      CallInst *const ReadFirstLaneLo = B.CreateIntrinsic(
+          Int32Ty, Intrinsic::amdgcn_readfirstlane, ExtractLo);
+      CallInst *const ReadFirstLaneHi = B.CreateIntrinsic(
+          Int32Ty, Intrinsic::amdgcn_readfirstlane, ExtractHi);
       Value *const PartialInsert = B.CreateInsertElement(
           PoisonValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
       Value *const Insert =
@@ -937,7 +938,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     } else if (TyBitWidth == 32) {
       Value *CastedPhi = B.CreateBitCast(PHI, IntNTy);
       BroadcastI =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, CastedPhi);
+          B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_readfirstlane, CastedPhi);
       BroadcastI = B.CreateBitCast(BroadcastI, Ty);
 
     } else {
@@ -952,7 +953,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     if (ValDivergent) {
       if (ScanImpl == ScanOptions::DPP) {
         LaneOffset =
-            B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
+            B.CreateIntrinsic(Ty, Intrinsic::amdgcn_strict_wwm, ExclScan);
       } else if (ScanImpl == ScanOptions::Iterative) {
         LaneOffset = ExclScan;
       } else {

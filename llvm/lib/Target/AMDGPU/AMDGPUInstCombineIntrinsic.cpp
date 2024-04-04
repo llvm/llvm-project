@@ -830,8 +830,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // fmed3((fpext X), (fpext Y), (fpext Z)) -> fpext (fmed3(X, Y, Z))
     if (matchFPExtFromF16(Src0, X) && matchFPExtFromF16(Src1, Y) &&
         matchFPExtFromF16(Src2, Z)) {
-      Value *NewCall = IC.Builder.CreateIntrinsic(IID, {X->getType()},
-                                                  {X, Y, Z}, &II, II.getName());
+      Value *NewCall = IC.Builder.CreateIntrinsic(X->getType(), IID, {X, Y, Z},
+                                                  &II, II.getName());
       return new FPExtInst(NewCall, II.getType());
     }
 
@@ -994,8 +994,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // %b32 = call i32 ballot.i32(...)
       // %b64 = zext i32 %b32 to i64
       Value *Call = IC.Builder.CreateZExt(
-          IC.Builder.CreateIntrinsic(Intrinsic::amdgcn_ballot,
-                                     {IC.Builder.getInt32Ty()},
+          IC.Builder.CreateIntrinsic(IC.Builder.getInt32Ty(),
+                                     Intrinsic::amdgcn_ballot,
                                      {II.getArgOperand(0)}),
           II.getType());
       Call->takeName(&II);

@@ -675,7 +675,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
                           : Builder.CreateZExtOrTrunc(RHSVals[I], I32Ty);
     Intrinsic::ID ID =
         IsSigned ? Intrinsic::amdgcn_mul_i24 : Intrinsic::amdgcn_mul_u24;
-    Value *Result = Builder.CreateIntrinsic(ID, {IntrinTy}, {LHS, RHS});
+    Value *Result = Builder.CreateIntrinsic(IntrinTy, ID, {LHS, RHS});
     Result = IsSigned ? Builder.CreateSExtOrTrunc(Result, DstTy)
                       : Builder.CreateZExtOrTrunc(Result, DstTy);
     ResultVals.push_back(Result);
@@ -769,8 +769,8 @@ std::pair<Value *, Value *>
 AMDGPUCodeGenPrepareImpl::getFrexpResults(IRBuilder<> &Builder,
                                           Value *Src) const {
   Type *Ty = Src->getType();
-  Value *Frexp = Builder.CreateIntrinsic(Intrinsic::frexp,
-                                         {Ty, Builder.getInt32Ty()}, Src);
+  Type *FrexpTy = StructType::get(Ty, Builder.getInt32Ty());
+  Value *Frexp = Builder.CreateIntrinsic(FrexpTy, Intrinsic::frexp, Src);
   Value *FrexpMant = Builder.CreateExtractValue(Frexp, {0});
 
   // Bypass the bug workaround for the exponent result since it doesn't matter.
@@ -779,8 +779,8 @@ AMDGPUCodeGenPrepareImpl::getFrexpResults(IRBuilder<> &Builder,
 
   Value *FrexpExp =
       ST->hasFractBug()
-          ? Builder.CreateIntrinsic(Intrinsic::amdgcn_frexp_exp,
-                                    {Builder.getInt32Ty(), Ty}, Src)
+          ? Builder.CreateIntrinsic(Builder.getInt32Ty(),
+                                    Intrinsic::amdgcn_frexp_exp, Src)
           : Builder.CreateExtractValue(Frexp, {1});
   return {FrexpMant, FrexpExp};
 }
@@ -1027,7 +1027,8 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
   if (!HasFP32DenormalFlush && !NumIsOne)
     return nullptr;
 
-  return Builder.CreateIntrinsic(Intrinsic::amdgcn_fdiv_fast, {}, {Num, Den});
+  return Builder.CreateIntrinsic(Den->getType(), Intrinsic::amdgcn_fdiv_fast,
+                                 {Num, Den});
 }
 
 Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
@@ -1276,8 +1277,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   auto FMAD = !ST->hasMadMacF32Insts()
                   ? Intrinsic::fma
                   : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR = Builder.CreateIntrinsic(FMAD,
-                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
+  Value *FR = Builder.CreateIntrinsic(F32Ty, FMAD, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
@@ -2159,7 +2159,7 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   Type *Ty = FractArg->getType()->getScalarType();
   for (unsigned I = 0, E = FractVals.size(); I != E; ++I) {
     ResultVals[I] =
-        Builder.CreateIntrinsic(Intrinsic::amdgcn_fract, {Ty}, {FractVals[I]});
+        Builder.CreateIntrinsic(Ty, Intrinsic::amdgcn_fract, {FractVals[I]});
   }
 
   return insertValues(Builder, FractArg->getType(), ResultVals);

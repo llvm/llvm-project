@@ -1098,7 +1098,7 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
       MaskOp = B.CreateTrunc(MaskOp, MaskTy);
     }
 
-    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
+    return B.CreateIntrinsic(NewV->getType(), Intrinsic::ptrmask,
                              {NewV, MaskOp});
   }
   case Intrinsic::amdgcn_flat_atomic_fadd:

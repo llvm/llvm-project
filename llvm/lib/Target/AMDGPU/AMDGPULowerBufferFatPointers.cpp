@@ -877,7 +877,7 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   void setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx);
   void insertPreMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
   void insertPostMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
-  Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr, Type *Ty,
+  Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
                           Align Alignment, AtomicOrdering Order,
                           bool IsVolatile, SyncScope::ID SSID);
 
@@ -1199,9 +1199,8 @@ void SplitPtrStructs::insertPostMemOpFence(AtomicOrdering Order,
 }
 
 Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
-                                         Type *Ty, Align Alignment,
-                                         AtomicOrdering Order, bool IsVolatile,
-                                         SyncScope::ID SSID) {
+                                         Align Alignment, AtomicOrdering Order,
+                                         bool IsVolatile, SyncScope::ID SSID) {
   IRB.SetInsertPoint(I);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
@@ -1299,7 +1298,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     }
   }
 
-  auto *Call = IRB.CreateIntrinsic(IID, Ty, Args);
+  auto *Call = IRB.CreateIntrinsic(I->getType(), IID, Args);
   copyMetadata(Call, I);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
@@ -1319,9 +1318,8 @@ PtrParts SplitPtrStructs::visitInstruction(Instruction &I) {
 PtrParts SplitPtrStructs::visitLoadInst(LoadInst &LI) {
   if (!isSplitFatPtr(LI.getPointerOperandType()))
     return {nullptr, nullptr};
-  handleMemoryInst(&LI, nullptr, LI.getPointerOperand(), LI.getType(),
-                   LI.getAlign(), LI.getOrdering(), LI.isVolatile(),
-                   LI.getSyncScopeID());
+  handleMemoryInst(&LI, nullptr, LI.getPointerOperand(), LI.getAlign(),
+                   LI.getOrdering(), LI.isVolatile(), LI.getSyncScopeID());
   return {nullptr, nullptr};
 }
 
@@ -1329,9 +1327,8 @@ PtrParts SplitPtrStructs::visitStoreInst(StoreInst &SI) {
   if (!isSplitFatPtr(SI.getPointerOperandType()))
     return {nullptr, nullptr};
   Value *Arg = SI.getValueOperand();
-  handleMemoryInst(&SI, Arg, SI.getPointerOperand(), Arg->getType(),
-                   SI.getAlign(), SI.getOrdering(), SI.isVolatile(),
-                   SI.getSyncScopeID());
+  handleMemoryInst(&SI, Arg, SI.getPointerOperand(), SI.getAlign(),
+                   SI.getOrdering(), SI.isVolatile(), SI.getSyncScopeID());
   return {nullptr, nullptr};
 }
 
@@ -1339,9 +1336,8 @@ PtrParts SplitPtrStructs::visitAtomicRMWInst(AtomicRMWInst &AI) {
   if (!isSplitFatPtr(AI.getPointerOperand()->getType()))
     return {nullptr, nullptr};
   Value *Arg = AI.getValOperand();
-  handleMemoryInst(&AI, Arg, AI.getPointerOperand(), Arg->getType(),
-                   AI.getAlign(), AI.getOrdering(), AI.isVolatile(),
-                   AI.getSyncScopeID());
+  handleMemoryInst(&AI, Arg, AI.getPointerOperand(), AI.getAlign(),
+                   AI.getOrdering(), AI.isVolatile(), AI.getSyncScopeID());
   return {nullptr, nullptr};
 }
 
@@ -1367,7 +1363,7 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
   if (AI.isVolatile())
     Aux |= AMDGPU::CPol::VOLATILE;
   auto *Call =
-      IRB.CreateIntrinsic(Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap, Ty,
+      IRB.CreateIntrinsic(Ty, Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap,
                           {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc,
                            Off, IRB.getInt32(0), IRB.getInt32(Aux)});
   copyMetadata(Call, &AI);
@@ -1727,8 +1723,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
       return {nullptr, nullptr};
     IRB.SetInsertPoint(&I);
     auto [Rsrc, Off] = getPtrParts(Ptr);
-    Type *NewTy = PointerType::get(I.getContext(), AMDGPUAS::BUFFER_RESOURCE);
-    auto *NewRsrc = IRB.CreateIntrinsic(IID, {NewTy}, {I.getOperand(0), Rsrc});
+    auto *NewRsrc =
+        IRB.CreateIntrinsic(I.getType(), IID, {I.getOperand(0), Rsrc});
     copyMetadata(NewRsrc, &I);
     NewRsrc->takeName(&I);
     SplitUsers.insert(&I);
@@ -1743,8 +1739,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Value *RealRsrc = getPtrParts(RealPtr).first;
     Value *InvPtr = I.getArgOperand(0);
     Value *Size = I.getArgOperand(1);
-    Value *NewRsrc = IRB.CreateIntrinsic(IID, {RealRsrc->getType()},
-                                         {InvPtr, Size, RealRsrc});
+    Value *NewRsrc =
+        IRB.CreateIntrinsic(IRB.getVoidTy(), IID, {InvPtr, Size, RealRsrc});
     copyMetadata(NewRsrc, &I);
     NewRsrc->takeName(&I);
     SplitUsers.insert(&I);
@@ -1758,7 +1754,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
       return {nullptr, nullptr};
     IRB.SetInsertPoint(&I);
     auto [Rsrc, Off] = getPtrParts(Ptr);
-    Value *NewRsrc = IRB.CreateIntrinsic(IID, {Rsrc->getType()}, {Rsrc});
+    Value *NewRsrc = IRB.CreateIntrinsic(Rsrc->getType(), IID, {Rsrc});
     copyMetadata(NewRsrc, &I);
     NewRsrc->takeName(&I);
     SplitUsers.insert(&I);
