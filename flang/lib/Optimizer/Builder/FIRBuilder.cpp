@@ -1584,3 +1584,18 @@ void fir::factory::setInternalLinkage(mlir::func::FuncOp func) {
       mlir::LLVM::LinkageAttr::get(func->getContext(), internalLinkage);
   func->setAttr("llvm.linkage", linkage);
 }
+
+std::optional<int64_t> fir::factory::getIfConstantIntValue(mlir::Value val) {
+  if (!val || !val.dyn_cast<mlir::OpResult>())
+    return {};
+
+  mlir::Operation *defop = val.getDefiningOp();
+
+  if (auto constOp = mlir::dyn_cast<mlir::arith::ConstantIntOp>(defop))
+    return constOp.value();
+  if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(defop))
+    if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
+      return attr.getValue().getSExtValue();
+
+  return {};
+}

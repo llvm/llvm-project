@@ -695,6 +695,10 @@ mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+/// Extract constant from a value if it is a result of one of the ConstantOp
+/// operations, otherwise, return std::nullopt.
+std::optional<int64_t> getIfConstantIntValue(mlir::Value val);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
