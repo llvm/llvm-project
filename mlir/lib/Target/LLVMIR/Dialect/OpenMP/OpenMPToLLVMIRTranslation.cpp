@@ -3116,6 +3116,8 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
   return success();
 }
 
+// Returns true if the operation is inside a TargetOp or
+// is part of a declare target function.
 static bool isTargetDeviceOp(Operation *op) {
   // Assumes no reverse offloading
   if (op->getParentOfType<omp::TargetOp>())
