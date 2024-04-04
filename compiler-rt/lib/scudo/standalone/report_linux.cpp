@@ -27,9 +27,8 @@ void NORETURN reportMapError(uptr SizeIfOOM) {
   ScopedString Error;
   Error.append("Scudo ERROR: internal map failure (error desc=%s)",
                strerror(errno));
-  if (SizeIfOOM) {
+  if (SizeIfOOM)
     Error.append(" requesting %zuKB", SizeIfOOM >> 10);
-  }
   Error.append("\n");
   reportRawError(Error.data());
 }
