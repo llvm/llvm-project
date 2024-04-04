@@ -140,21 +140,34 @@ if.end668:                                        ; preds = %if.then665, %entry
 }
 
 define void @gather_2(ptr %mat1, float %0, float %1) {
-; CHECK-LABEL: define void @gather_2(
-; CHECK-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP6]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[TMP4:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul float [[TMP4]], 0.000000e+00
-; CHECK-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
-; CHECK-NEXT:    [[ARRAYIDX5_I_I_I280:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1, i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX163]], align 4
-; CHECK-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX5_I_I_I280]], align 4
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: define void @gather_2(
+; NON-POW2-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
+; NON-POW2-NEXT:  entry:
+; NON-POW2-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> poison, float [[TMP0]], i32 0
+; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <3 x i32> zeroinitializer
+; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> <float 0.000000e+00, float poison, float poison>, float [[TMP1]], i32 1
+; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 1>
+; NON-POW2-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP3]], <3 x float> [[TMP5]], <3 x float> zeroinitializer)
+; NON-POW2-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
+; NON-POW2-NEXT:    [[TMP7:%.*]] = fmul <3 x float> [[TMP6]], zeroinitializer
+; NON-POW2-NEXT:    store <3 x float> [[TMP7]], ptr [[ARRAYIDX163]], align 4
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: define void @gather_2(
+; POW2-ONLY-SAME: ptr [[MAT1:%.*]], float [[TMP0:%.*]], float [[TMP1:%.*]]) {
+; POW2-ONLY-NEXT:  entry:
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP1]], i32 1
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x float> zeroinitializer)
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = call float @llvm.fmuladd.f32(float [[TMP0]], float [[TMP1]], float 0.000000e+00)
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = fmul float [[TMP6]], 0.000000e+00
+; POW2-ONLY-NEXT:    [[ARRAYIDX163:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1
+; POW2-ONLY-NEXT:    [[ARRAYIDX5_I_I_I280:%.*]] = getelementptr [4 x [4 x float]], ptr [[MAT1]], i64 0, i64 1, i64 2
+; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
+; POW2-ONLY-NEXT:    store <2 x float> [[TMP8]], ptr [[ARRAYIDX163]], align 4
+; POW2-ONLY-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX5_I_I_I280]], align 4
+; POW2-ONLY-NEXT:    ret void
 ;
 entry:
   %2 = call float @llvm.fmuladd.f32(float %0, float 0.000000e+00, float 0.000000e+00)

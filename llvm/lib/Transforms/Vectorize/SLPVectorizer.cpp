@@ -6141,6 +6141,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (NumUniqueScalarValues == VL.size()) {
       ReuseShuffleIndicies.clear();
     } else {
+      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                             "for nodes with padding.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return false;
+      }
+
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
       if (NumUniqueScalarValues <= 1 ||
           (UniquePositions.size() == 1 && all_of(UniqueValues,
@@ -6160,12 +6167,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           if (PWSz == VL.size()) {
             ReuseShuffleIndicies.clear();
           } else {
-            if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
-              LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
-                                   "for nodes with padding.\n");
-              newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-              return false;
-            }
             NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
             NonUniqueValueVL.append(PWSz - UniqueValues.size(),
                                     UniqueValues.back());
@@ -6174,12 +6175,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           return true;
         }
         LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
-        return false;
-      }
-      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
-        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported for "
-                             "nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
         return false;
       }
