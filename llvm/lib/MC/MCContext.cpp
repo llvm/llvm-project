@@ -653,15 +653,18 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
 
 MCSectionGOFF *MCContext::getGOFFLSDASection(StringRef Section,
                                              SectionKind Kind) {
-  return getGOFFSection(Section, Kind, nullptr, nullptr, GOFF::GOFFSectionType::Other,
-                        GOFF::ESD_TS_Unstructured, GOFF::ESD_LB_Deferred, true);
+  return getGOFFSection(Section, Kind, nullptr, nullptr,
+                        GOFF::GOFFSectionType::Other, GOFF::ESD_TS_Unstructured,
+                        GOFF::ESD_LB_Deferred, true);
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(
-    StringRef Section, SectionKind Kind, MCSection *Parent,
-    const MCExpr *SubsectionId, GOFF::GOFFSectionType SectionType,
-    GOFF::ESDTextStyle TextStyle, GOFF::ESDLoadingBehavior LoadBehavior,
-    bool isRooted) {
+MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
+                                         MCSection *Parent,
+                                         const MCExpr *SubsectionId,
+                                         GOFF::GOFFSectionType SectionType,
+                                         GOFF::ESDTextStyle TextStyle,
+                                         GOFF::ESDLoadingBehavior LoadBehavior,
+                                         bool isRooted) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool = GOFFUniquingMap.insert(std::make_pair(
       GOFFSectionKey{Section.str(), SectionType, (Parent != nullptr)},

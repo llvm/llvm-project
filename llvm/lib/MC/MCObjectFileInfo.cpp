@@ -560,8 +560,8 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                           GOFF::GOFFSectionType::PPA2Offset);
 
   PPA2ListSection =
-      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(),
-                          nullptr, nullptr, GOFF::GOFFSectionType::PPA2Offset);
+      Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr, nullptr,
+                          GOFF::GOFFSectionType::PPA2Offset);
 
   ADASection = Ctx->getGOFFSection(".ada", SectionKind::getText(), nullptr,
                                    nullptr, GOFF::GOFFSectionType::Static);

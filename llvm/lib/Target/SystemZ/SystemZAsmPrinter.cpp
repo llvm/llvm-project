@@ -1438,11 +1438,12 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
       if (Sym) {
         if (Sym->isExternal())
           return SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
-                                      MCSymbolRefExpr::create(Sym, OutContext),
-                                      OutContext);
+                                       MCSymbolRefExpr::create(Sym, OutContext),
+                                       OutContext);
         // Trigger creation of function descriptor in ADA for internal
         // functions.
-        unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+        unsigned Disp =
+            ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
         return MCBinaryExpr::createAdd(
             SystemZMCExpr::create(MCSymbolRefExpr::create(ADASym, OutContext),
                                   OutContext),

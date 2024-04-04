@@ -348,8 +348,9 @@ private:
   // data of the section.
   void writeSectionSymbols(MCAssembler &Asm, const MCAsmLayout &Layout);
 
-  void writeText(const MCSectionGOFF *MCSec, uint32_t EsdId, GOFF::TXTRecordStyle RecordStyle,
-                 MCAssembler &Asm, const MCAsmLayout &Layout);
+  void writeText(const MCSectionGOFF *MCSec, uint32_t EsdId,
+                 GOFF::TXTRecordStyle RecordStyle, MCAssembler &Asm,
+                 const MCAsmLayout &Layout);
 
   void writeEnd();
 
@@ -583,7 +584,8 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
 
     LD.MCSym = &Symbol;
     writeSymbol(LD, Layout);
-  } else if ((Kind.isBSS() || Kind.isData() || Kind.isThreadData()) && Symbol.isAlias()) {
+  } else if ((Kind.isBSS() || Kind.isData() || Kind.isThreadData()) &&
+             Symbol.isAlias()) {
     // Alias to variable at the object file level.
     // Not supported in RENT mode.
     llvm_unreachable("Alias to rent variable is unsupported");
@@ -639,11 +641,10 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
     auto SymbAlign = Symbol.getCommonAlignment().valueOrOne();
     GOFFSymbol ED = createWSASymbol(SD.EsdId);
     writeSymbol(ED, Layout);
-    GOFFSymbol PR =
-        createPRSymbol(Symbol.getName(), ED.EsdId, GOFF::ESD_NS_Parts,
-                       GOFF::ESD_EXE_Unspecified,
-                       GOFFSymbol::setGOFFAlignment(SymbAlign),
-                       GOFF::ESD_BSC_ImportExport, 0);
+    GOFFSymbol PR = createPRSymbol(
+        Symbol.getName(), ED.EsdId, GOFF::ESD_NS_Parts,
+        GOFF::ESD_EXE_Unspecified, GOFFSymbol::setGOFFAlignment(SymbAlign),
+        GOFF::ESD_BSC_ImportExport, 0);
     GSym = PR;
     break;
   }
@@ -945,11 +946,11 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
           EDSectionName, SD.EsdId, 0, GOFF::ESD_EXE_DATA,
           GOFF::ESD_BSC_Unspecified, GOFF::ESD_NS_Parts, GOFF::ESD_BA_Merge,
           /*ReadOnly*/ true, GOFF::ESD_TS_ByteOriented, GOFF::ESD_LB_Initial);
-      GOFFSymbol PR =
-          createPRSymbol(PRSectionName, ED.EsdId, GOFF::ESD_NS_Parts,
-                         GOFF::ESD_EXE_Unspecified, GOFF::ESD_ALIGN_Doubleword,
-                         GOFF::ESD_BSC_Section, Layout.getSectionAddressSize(&Section),
-                         GOFF::ESD_LB_Initial, GOFF::ESD_LT_OS);
+      GOFFSymbol PR = createPRSymbol(
+          PRSectionName, ED.EsdId, GOFF::ESD_NS_Parts,
+          GOFF::ESD_EXE_Unspecified, GOFF::ESD_ALIGN_Doubleword,
+          GOFF::ESD_BSC_Section, Layout.getSectionAddressSize(&Section),
+          GOFF::ESD_LB_Initial, GOFF::ESD_LT_OS);
       writeSymbol(ED, Layout);
       writeSymbol(PR, Layout);
 
@@ -1044,8 +1045,8 @@ void TextStream::write_impl(const char *Ptr, size_t Size) {
 } // namespace
 
 void GOFFObjectWriter::writeText(const MCSectionGOFF *MCSec, uint32_t EsdId,
-                                 GOFF::TXTRecordStyle RecordStyle, MCAssembler &Asm,
-                                 const MCAsmLayout &Layout) {
+                                 GOFF::TXTRecordStyle RecordStyle,
+                                 MCAssembler &Asm, const MCAsmLayout &Layout) {
   TextStream S(OS, EsdId, RecordStyle);
   Asm.writeSectionData(S, MCSec, Layout);
 }
@@ -1096,7 +1097,8 @@ uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
        GSecIter++) {
     auto &MCGOFFSec = cast<MCSectionGOFF>(*(GSecIter->first));
     GOFFSection &CurrGSec = GSecIter->second;
-    auto TextStyle = static_cast<GOFF::TXTRecordStyle>(MCGOFFSec.getTextStyle());
+    auto TextStyle =
+        static_cast<GOFF::TXTRecordStyle>(MCGOFFSec.getTextStyle());
     writeText(&MCGOFFSec, CurrGSec.PEsdId, TextStyle, Asm, Layout);
   }
 

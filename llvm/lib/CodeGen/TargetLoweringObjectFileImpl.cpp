@@ -2762,12 +2762,14 @@ TargetLoweringObjectFileGOFF::getTargetSymbol(const GlobalValue *GV,
   if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV)) {
     if (!GVar->hasInitializer() && GVar->getValueType()->isSized()) {
       SmallString<128> NameStr;
-      getNameWithPrefix(NameStr, GV, TM); 
+      getNameWithPrefix(NameStr, GV, TM);
       MCSymbolGOFF *Sym =
           static_cast<MCSymbolGOFF *>(getContext().getOrCreateSymbol(NameStr));
-      auto Alignment = GVar->getParent()->getDataLayout().getPreferredAlign(GVar);
-      auto Size = GVar->getParent()->getDataLayout().getTypeSizeInBits(GVar->getValueType());
-      Sym->declareCommon(Size, Alignment, true);  
+      auto Alignment =
+          GVar->getParent()->getDataLayout().getPreferredAlign(GVar);
+      auto Size = GVar->getParent()->getDataLayout().getTypeSizeInBits(
+          GVar->getValueType());
+      Sym->declareCommon(Size, Alignment, true);
     }
   }
   return nullptr;
