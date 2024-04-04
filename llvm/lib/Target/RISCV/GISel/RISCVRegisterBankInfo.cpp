@@ -320,10 +320,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
@@ -529,7 +525,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
        if (!Ty.isValid())
          continue;
 
-       if (isPreISelGenericFloatingPointOpcode(Opc))
+       if (Ty.isVector())
+         OpdsMapping[Idx] =
+             getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+       else if (isPreISelGenericFloatingPointOpcode(Opc))
          OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
        else
          OpdsMapping[Idx] = GPRValueMapping;

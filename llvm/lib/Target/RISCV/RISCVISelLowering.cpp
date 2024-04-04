@@ -21115,12 +21115,10 @@ void RVVArgDispatcher::constructArgInfos(ArrayRef<Type *> TypeList) {
             RegisterVT.getVectorElementType() == MVT::i1) {
           RVVArgInfos.push_back({1, RegisterVT, true});
           FirstVMaskAssigned = true;
-        } else {
-          RVVArgInfos.push_back({1, RegisterVT, false});
+          --NumRegs;
         }
 
-        RVVArgInfos.insert(RVVArgInfos.end(), --NumRegs,
-                           {1, RegisterVT, false});
+        RVVArgInfos.insert(RVVArgInfos.end(), NumRegs, {1, RegisterVT, false});
       }
     }
   }
