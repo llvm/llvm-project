@@ -42,6 +42,7 @@ Implemented Papers
 - P2652R2 - Disallow User Specialization of ``allocator_traits``
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
+- P2867R2 - Remove Deprecated ``strstream``\s From C++26
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
@@ -53,6 +54,8 @@ Improvements and New Features
   resulting in a performance increase of up to 1400x.
 - The ``std::mismatch`` algorithm has been optimized for integral types, which can lead up to 40x performance
   improvements.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
 
 Deprecations and Removals
 -------------------------
