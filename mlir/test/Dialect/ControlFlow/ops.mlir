@@ -38,3 +38,16 @@ func.func @switch_i64(%flag : i64, %caseOperand : i32) {
   ^bb3(%bb3arg : i32):
     return
 }
+
+// CHECK-LABEL: func @switch_result_number
+func.func @switch_result_number(%arg0: i32) {
+  %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
+  cf.switch %arg0 : i32, [
+    default: ^bb2,
+    0: ^bb1(%0#0 : i32)
+  ]
+  ^bb1(%1: i32):
+    return
+  ^bb2:
+    return
+}
