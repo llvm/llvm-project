@@ -14,23 +14,24 @@
 using namespace llvm;
 
 TEST(InterleaveTest, Interleave) {
-    std::string Str;
-    raw_string_ostream OS(Str);
+  std::string Str;
+  raw_string_ostream OS(Str);
 
-    // Check that interleave works on a SmallVector.
-    SmallVector<const char *> Doodles = { "golden", "berna", "labra" };
-    interleave(Doodles, OS, [&](const char *Name) { OS << Name << "doodle"; }, ", ");
+  // Check that interleave works on a SmallVector.
+  SmallVector<const char *> Doodles = {"golden", "berna", "labra"};
+  interleave(
+      Doodles, OS, [&](const char *Name) { OS << Name << "doodle"; }, ", ");
 
-    EXPECT_EQ(OS.str(), "goldendoodle, bernadoodle, labradoodle");
+  EXPECT_EQ(OS.str(), "goldendoodle, bernadoodle, labradoodle");
 }
 
 TEST(InterleaveTest, InterleaveComma) {
-    std::string Str;
-    raw_string_ostream OS(Str);
+  std::string Str;
+  raw_string_ostream OS(Str);
 
-    // Check that interleaveComma uses ADL to find begin/end on an array.
-    const StringRef LongDogs[] = { "dachshund", "doxie", "dackel", "teckel" };
-    interleaveComma(LongDogs, OS);
+  // Check that interleaveComma uses ADL to find begin/end on an array.
+  const StringRef LongDogs[] = {"dachshund", "doxie", "dackel", "teckel"};
+  interleaveComma(LongDogs, OS);
 
-    EXPECT_EQ(OS.str(), "dachshund, doxie, dackel, teckel");
+  EXPECT_EQ(OS.str(), "dachshund, doxie, dackel, teckel");
 }
