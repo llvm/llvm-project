@@ -38,7 +38,15 @@ void test() {
 
   std::chrono::get_tzdb_list();
   std::chrono::get_tzdb();
+  std::chrono::locate_zone("name");
+  std::chrono::current_zone();
   std::chrono::remote_version();
+
+  {
+    const std::chrono::tzdb& t = list.front();
+    t.locate_zone("name");
+    t.current_zone();
+  }
 
   {
     tz.name();
