@@ -10,7 +10,9 @@
 #define LLVM_LIBC_MACROS_MATH_MACROS_H
 
 // TODO: Remove this. This is a temporary fix for a downstream problem.
-#ifdef LLVM_LIBC_FULLBUILD
+// This cannot be left permanently since it would require downstream users to
+// define this macro.
+#ifdef LIBC_FULL_BUILD
 
 #include "limits-macros.h"
 
@@ -82,10 +84,10 @@ template <typename T> inline constexpr bool isnan(T x) {
 
 #endif
 
-#else
+#else // LIBC_FULL_BUILD
 
 #include <math.h>
 
-#endif // LLVM_LIBC_FULLBUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H
