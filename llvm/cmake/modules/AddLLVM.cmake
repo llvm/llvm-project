@@ -1038,7 +1038,7 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
-  if (LLVM_ENABLE_NO_EXPORTED_SYMBOLS AND LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+  if (NOT LLVM_ENABLE_EXPORTED_SYMBOLS AND LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
     set_property(TARGET ${name} APPEND_STRING PROPERTY
       LINK_FLAGS " -Wl,-no_exported_symbols")
   endif()

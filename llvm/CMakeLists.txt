@@ -673,8 +673,8 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
-option(LLVM_ENABLE_NO_EXPORTED_SYMBOLS
-  "When building executables, disable any symbol exports (Darwin Only)" OFF)
+option(LLVM_ENABLE_EXPORTED_SYMBOLS
+  "Preserve exported symbols in executables" ON)
 
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
