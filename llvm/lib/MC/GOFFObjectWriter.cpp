@@ -919,25 +919,6 @@ void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
 
       GOFFSection GoffSec = GOFFSection(EntryEDEsdId, CodeLDEsdId, RootSDEsdId);
       SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.getName().starts_with(".lsda")) {
-      GOFFSymbol SD = RootSD;
-
-      const char *WSAClassName = "C_WSA64";
-      GOFFSymbol ED = createEDSymbol(
-          WSAClassName, SD.EsdId, 0, GOFF::ESD_EXE_DATA,
-          GOFF::ESD_BSC_Unspecified, GOFF::ESD_NS_Parts, GOFF::ESD_BA_Merge,
-          /*ReadOnly*/ false, GOFF::ESD_TS_Unstructured, GOFF::ESD_LB_Initial);
-      GOFFSymbol PR = createPRSymbol(
-          Section.getName(), ED.EsdId, GOFF::ESD_NS_Parts,
-          GOFF::ESD_EXE_Unspecified, GOFF::ESD_ALIGN_Fullword,
-          GOFF::ESD_BSC_Section, Layout.getSectionAddressSize(&Section),
-          GOFF::ESD_LB_Deferred);
-
-      writeSymbol(ED, Layout);
-      writeSymbol(PR, Layout);
-
-      GOFFSection GoffSec = GOFFSection(PR.EsdId, PR.EsdId, SD.EsdId);
-      SectionMap.insert(std::make_pair(&Section, GoffSec));
     } else if (Section.isPPA2Offset()) {
       StringRef EDSectionName = "C_@@QPPA2";
       StringRef PRSectionName = ".&ppa2";
