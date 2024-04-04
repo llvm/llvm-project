@@ -232,3 +232,35 @@ define i32 @or_disjoint_keep(i32 %a, i32 %b) {
   %op = or disjoint i32 %a, %b
   ret i32 %op
 }
+
+; CHECK-LABEL: @trunc_nuw_drop(
+; INTERESTING: = trunc
+; RESULT: trunc i64
+define i32 @trunc_nuw_drop(i64 %a) {
+  %op = trunc nuw i64 %a to i32
+  ret i32 %op
+}
+
+; CHECK-LABEL: @trunc_nuw_keep(
+; INTERESTING: = trunc nuw
+; RESULT: trunc nuw i64
+define i32 @trunc_nuw_keep(i64 %a) {
+  %op = trunc nuw i64 %a to i32
+  ret i32 %op
+}
+
+; CHECK-LABEL: @trunc_nsw_drop(
+; INTERESTING: = trunc
+; RESULT: trunc i64
+define i32 @trunc_nsw_drop(i64 %a) {
+  %op = trunc nsw i64 %a to i32
+  ret i32 %op
+}
+
+; CHECK-LABEL: @trunc_nsw_keep(
+; INTERESTING: = trunc nsw
+; RESULT: trunc nsw i64
+define i32 @trunc_nsw_keep(i64 %a) {
+  %op = trunc nsw i64 %a to i32
+  ret i32 %op
+}
