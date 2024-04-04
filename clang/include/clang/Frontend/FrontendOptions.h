@@ -580,7 +580,9 @@ public:
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
         IncludeTimestamps(true), UseTemporary(true),
         AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
-        TimeTraceGranularity(500) {}
+        EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
+        EmitSymbolGraphSymbolLabelsForTesting(false),
+        EmitPrettySymbolGraphs(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
