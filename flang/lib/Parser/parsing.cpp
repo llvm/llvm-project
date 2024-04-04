@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parsing.h"
-#include "preprocessor.h"
 #include "prescan.h"
 #include "type-parsers.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "llvm/Support/raw_ostream.h"

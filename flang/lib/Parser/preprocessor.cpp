@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "preprocessor.h"
+#include "flang/Parser/preprocessor.h"
+
 #include "prescan.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
