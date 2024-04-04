@@ -291,16 +291,7 @@ struct IndexedAllocationInfo {
       : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(IndexedVersion Version) const {
-    switch (Version) {
-    case Version0:
-    case Version1:
-      return serializedSizeV0();
-    case Version2:
-      return serializedSizeV2();
-    }
-    llvm_unreachable("unsupported MemProf version");
-  }
+  size_t serializedSize(IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -313,27 +304,6 @@ struct IndexedAllocationInfo {
 
   bool operator!=(const IndexedAllocationInfo &Other) const {
     return !operator==(Other);
-  }
-
-private:
-  size_t serializedSizeV0() const {
-    size_t Size = 0;
-    // The number of frames to serialize.
-    Size += sizeof(uint64_t);
-    // The callstack frame ids.
-    Size += sizeof(FrameId) * CallStack.size();
-    // The size of the payload.
-    Size += PortableMemInfoBlock::serializedSize();
-    return Size;
-  }
-
-  size_t serializedSizeV2() const {
-    size_t Size = 0;
-    // The CallStackId
-    Size += sizeof(CallStackId);
-    // The size of the payload.
-    Size += PortableMemInfoBlock::serializedSize();
-    return Size;
   }
 };
 
@@ -396,16 +366,7 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize(IndexedVersion Version) const {
-    switch (Version) {
-    case Version0:
-    case Version1:
-      return serializedSizeV0();
-    case Version2:
-      return serializedSizeV2();
-    }
-    llvm_unreachable("unsupported MemProf version");
-  }
+  size_t serializedSize(IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites.size() != AllocSites.size())
@@ -435,41 +396,6 @@ struct IndexedMemProfRecord {
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
   // mapped to functions using this GUID.
   static GlobalValue::GUID getGUID(const StringRef FunctionName);
-
-private:
-  size_t serializedSizeV0() const {
-    size_t Result = sizeof(GlobalValue::GUID);
-    for (const IndexedAllocationInfo &N : AllocSites)
-      Result += N.serializedSize(Version0);
-
-    // The number of callsites we have information for.
-    Result += sizeof(uint64_t);
-    for (const auto &Frames : CallSites) {
-      // The number of frame ids to serialize.
-      Result += sizeof(uint64_t);
-      Result += Frames.size() * sizeof(FrameId);
-    }
-    return Result;
-  }
-
-  size_t serializedSizeV2() const {
-    size_t Result = sizeof(GlobalValue::GUID);
-    for (const IndexedAllocationInfo &N : AllocSites)
-      Result += N.serializedSize(Version2);
-
-    // The number of callsites we have information for.
-    Result += sizeof(uint64_t);
-    // The CallStackId
-    Result += CallSiteIds.size() * sizeof(CallStackId);
-    return Result;
-  }
-
-  void serializeV0(const MemProfSchema &Schema, raw_ostream &OS);
-  void serializeV2(const MemProfSchema &Schema, raw_ostream &OS);
-  static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
-                                            const unsigned char *Buffer);
-  static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
-                                            const unsigned char *Buffer);
 };
 
 // Holds the memprof profile information for a function. The internal
