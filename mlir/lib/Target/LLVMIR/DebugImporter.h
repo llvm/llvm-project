@@ -116,12 +116,11 @@ private:
   public:
     RecursionPruner(MLIRContext *context) : context(context) {}
 
-    /// If this node was previously cached, returns the cached result.
     /// If this node is a recursive instance that was previously seen, returns a
-    /// self-reference.
-    /// Otherwise, returns null attr, and a translation stack frame is created
-    /// for this node. Expects `finalizeTranslation` & `popTranslationStack`
-    /// to be called on this node later.
+    /// self-reference. If this node was previously cached, returns the cached
+    /// result. Otherwise, returns null attr, and a translation stack frame is
+    /// created for this node. Expects `finalizeTranslation` &
+    /// `popTranslationStack` to be called on this node later.
     DINodeAttr pruneOrPushTranslationStack(llvm::DINode *node);
 
     /// Register the translated result of `node`. Returns the finalized result
@@ -135,33 +134,27 @@ private:
     void popTranslationStack(llvm::DINode *node);
 
   private:
-    /// Returns the cached result (if exists) with all known replacements
-    /// applied. Also returns the set of unbound self-refs that are unresolved
-    /// in this cached result. The cache entry will also be updated with the
-    /// replaced result and with the applied replacements removed from the
-    /// pendingReplacements map.
-    std::pair<DINodeAttr, DenseSet<DIRecursiveTypeAttrInterface>>
-    lookup(llvm::DINode *node);
+    /// Returns the cached result (if exists) or null.
+    /// The cache entry will be removed if not all of its dependent self-refs
+    /// exists.
+    DINodeAttr lookup(llvm::DINode *node);
 
     MLIRContext *context;
 
-    /// A lazy cached translation that contains the translated attribute as well
-    /// as any unbound self-references that need to be replaced at lookup.
-    struct CachedTranslation {
+    /// A cached translation that contains the translated attribute as well
+    /// as any unbound self-references that it depends on.
+    struct DependentTranslation {
       /// The translated attr. May contain unbound self-references for other
       /// recursive attrs.
       DINodeAttr attr;
-      /// The pending replacements that need to be run on this `attr` before it
-      /// can be used.
-      /// Each key is a recursive self-ref, and each value is a recursive decl
-      /// that may contain additional unbound self-refs that need to be
-      /// replaced. Each replacement will be applied at most once. Once a
-      /// replacement is applied, the cached `attr` will be updated, and the
-      /// replacement will be removed from this map.
-      DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> pendingReplacements;
+      /// The set of unbound self-refs that this cached entry refers to. All
+      /// these self-refs must exist for the cached entry to be valid.
+      DenseSet<DIRecursiveTypeAttrInterface> unboundSelfRefs;
     };
     /// A mapping between LLVM debug metadata and the corresponding attribute.
-    llvm::MapVector<llvm::DINode *, CachedTranslation> cache;
+    /// Only contains those with unboundSelfRefs. Fully self-contained attrs
+    /// will be cached by the outer main translator.
+    DenseMap<llvm::DINode *, DependentTranslation> dependentCache;
 
     /// Each potentially recursive node will have a TranslationState pushed onto
     /// the `translationStack` to keep track of whether this node is actually
@@ -171,9 +164,6 @@ private:
       /// instance of itself is seen while translating it). Null if this node
       /// has not been seen again deeper in the translation stack.
       DIRecursiveTypeAttrInterface recSelf;
-      /// The number of cache entries belonging to this layer of the translation
-      /// stack. This corresponds to the last `cacheSize` entries of `cache`.
-      uint64_t cacheSize = 0;
       /// All the unbound recursive self references in this layer of the
       /// translation stack.
       DenseSet<DIRecursiveTypeAttrInterface> unboundSelfRefs;
@@ -184,6 +174,11 @@ private:
     /// later when the stack is deeper, the node is recursive, and its
     /// TranslationState is assigned a recSelf.
     llvm::MapVector<llvm::DINode *, TranslationState> translationStack;
+
+    /// A mapping between DINodes that are recursive, and their assigned recId.
+    /// This is kept so that repeated occurrences of the same node can reuse the
+    /// same ID and be deduplicated.
+    DenseMap<llvm::DINode *, DistinctAttr> nodeToRecId;
   };
   RecursionPruner recursionPruner;
 

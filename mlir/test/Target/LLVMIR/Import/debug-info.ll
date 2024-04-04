@@ -663,19 +663,18 @@ define void @class_field(ptr %arg1) !dbg !18 {
 ; This should result in a cached instance of B --> C --> B_SELF to be reused
 ; when visiting B from C (after visiting B from A).
 
-; CHECK-DAG: #[[C_INNER:.+]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}scope = #[[A_SELF:[^ ]+]], {{.*}}elements = #[[C_INNER_TO_B_SELF:.+]]
-; CHECK-DAG: #[[C_INNER_TO_B_SELF:.+]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:[^ ]+]]>
-; CHECK-DAG: #[[B_TO_C_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_INNER]]
-; CHECK-DAG: #[[B:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}scope = #[[A_SELF]], {{.*}}elements = #[[B_TO_C_INNER]]
-; CHECK-DAG: #[[A_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]]>
+; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}name = "A", {{.*}}elements = #[[TO_B_OUTER:.+]], #[[TO_C_OUTER:.+]]>
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
+
+; CHECK-DAG: #[[TO_B_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_OUTER:.+]]>
+; CHECK-DAG: #[[B_OUTER]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[TO_C_INNER:.+]]>
+; CHECK-DAG: #[[TO_C_INNER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_INNER:.+]]>
+; CHECK-DAG: #[[C_INNER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_SELF:.+]]>
+; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
 ; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
 
-; CHECK-DAG: #[[TO_B:.+]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B]]
-; CHECK-DAG: #[[C_OUTER:.+]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}scope = #[[A_SELF]], {{.*}}elements = #[[TO_B]]
-; CHECK-DAG: #[[TO_C:.+]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_OUTER]]
-; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]], {{.*}}name = "A", {{.*}}elements = #[[TO_B]], #[[TO_C]]
-
-; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
+; CHECK-DAG: #[[TO_C_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_OUTER:.+]]>
+; CHECK-DAG: #[[C_OUTER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_OUTER]]>
 
 define void @class_field(ptr %arg1) !dbg !18 {
   ret void
@@ -688,8 +687,8 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
-!5 = !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: !3, file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !10)
-!6 = !DICompositeType(tag: DW_TAG_class_type, name: "C", scope: !3, file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !10)
+!6 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
 
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "->B", file: !2, baseType: !5)
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "->C", file: !2, baseType: !6)

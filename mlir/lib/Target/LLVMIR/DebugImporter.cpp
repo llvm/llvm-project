@@ -319,139 +319,8 @@ getRecSelfConstructor(llvm::DINode *node) {
       .Default(CtorType());
 }
 
-/// An iterative attribute replacer that also handles pruning recursive types.
-/// - Recurses down the attribute tree while replacing attributes based on the
-///   provided replacement map.
-/// - Keeps track of the currently open recursive declarations, and upon
-///   encountering a duplicate declaration, replace with a self-reference.
-static Attribute replaceAndPruneRecursiveTypes(
-    Attribute baseNode,
-    const DenseMap<DIRecursiveTypeAttrInterface, DINodeAttr> &mapping) {
-
-  struct ReplacementState {
-    // The attribute being replaced.
-    Attribute node;
-    // The nested elements of `node`.
-    SmallVector<Attribute> attrs;
-    SmallVector<Type> types;
-    // The current attr being walked on (index into `attrs`).
-    size_t attrIndex;
-    // Whether or not any attr was replaced.
-    bool changed;
-
-    void replaceCurrAttr(Attribute attr) {
-      Attribute &target = attrs[attrIndex];
-      if (attr != target) {
-        changed = true;
-        target = attr;
-      }
-    }
-  };
-
-  // Every iteration, perform replacement on the attribute at `attrIndex` at the
-  // top of `workStack`.
-  // If `attrIndex` reaches past the size of `attrs`, replace `node` with
-  // `attrs` & `types`, and pop off a stack frame and assign the replacement to
-  // the attr being replaced on the previous stack frame.
-  SmallVector<ReplacementState> workStack;
-  workStack.push_back({nullptr, {baseNode}, {}, 0, false});
-
-  // Replacement cache that remembers the context in which the cache is valid.
-  // All unboundRecIds must be in openDecls at time of lookup.
-  struct CacheWithContext {
-    DenseSet<DistinctAttr> unboundRecIds;
-    Attribute entry;
-  };
-  DenseMap<Attribute, CacheWithContext> replacementCache;
-
-  DenseSet<DistinctAttr> openDecls;
-  while (workStack.size() > 1 || workStack.back().attrIndex == 0) {
-    ReplacementState &state = workStack.back();
-
-    // Check for popping condition.
-    if (state.attrIndex == state.attrs.size()) {
-      Attribute result = state.node;
-      if (state.changed)
-        result = result.replaceImmediateSubElements(state.attrs, state.types);
-
-      // Reset context.
-      if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(state.node))
-        if (DistinctAttr recId = recType.getRecId())
-          openDecls.erase(recId);
-
-      replacementCache[state.node] = CacheWithContext{openDecls, result};
-
-      workStack.pop_back();
-      ReplacementState &prevState = workStack.back();
-      prevState.replaceCurrAttr(result);
-      ++prevState.attrIndex;
-      continue;
-    }
-
-    Attribute node = state.attrs[state.attrIndex];
-
-    // Lookup in cache first.
-    if (auto it = replacementCache.find(node); it != replacementCache.end()) {
-      // If all the requried recIds are open decls, use cache.
-      if (llvm::set_is_subset(it->second.unboundRecIds, openDecls)) {
-        state.replaceCurrAttr(it->second.entry);
-        ++state.attrIndex;
-        continue;
-      }
-
-      // Otherwise, the cache entry is stale and can be removed now.
-      replacementCache.erase(it);
-    }
-
-    if (auto recType = dyn_cast<DIRecursiveTypeAttrInterface>(node)) {
-      if (DistinctAttr recId = recType.getRecId()) {
-        if (recType.isRecSelf()) {
-          // Replace selfRef based on the provided mapping and re-walk from the
-          // replacement node (do not increment attrIndex).
-          if (DINodeAttr replacement = mapping.lookup(recType)) {
-            state.replaceCurrAttr(replacement);
-            continue;
-          }
-
-          // Otherwise, nothing to do. Advance to next attr.
-          ++state.attrIndex;
-          continue;
-        }
-
-        // Configure context.
-        auto [_, inserted] = openDecls.insert(recId);
-        if (!inserted) {
-          // This is a nested decl. Replace with recSelf. Nothing more to do.
-          state.replaceCurrAttr(recType.getRecSelf(recId));
-          ++state.attrIndex;
-          continue;
-        }
-      }
-    }
-
-    // Recurse into this node.
-    workStack.push_back({node, {}, {}, 0, false});
-    ReplacementState &newState = workStack.back();
-    node.walkImmediateSubElements(
-        [&newState](Attribute attr) { newState.attrs.push_back(attr); },
-        [&newState](Type type) { newState.types.push_back(type); });
-  };
-
-  return workStack.back().attrs.front();
-}
-
 DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
     llvm::DINode *node) {
-  // Lookup the cache first.
-  auto [result, unboundSelfRefs] = lookup(node);
-  if (result) {
-    // Need to inject unbound self-refs into the previous layer.
-    if (!unboundSelfRefs.empty())
-      translationStack.back().second.unboundSelfRefs.insert(
-          unboundSelfRefs.begin(), unboundSelfRefs.end());
-    return result;
-  }
-
   // If the node type is capable of being recursive, check if it's seen
   // before.
   auto recSelfCtor = getRecSelfConstructor(node);
@@ -465,7 +334,11 @@ DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
       // a different self-reference. Use that if possible.
       DIRecursiveTypeAttrInterface recSelf = iter->second.recSelf;
       if (!recSelf) {
-        DistinctAttr recId = DistinctAttr::create(UnitAttr::get(context));
+        DistinctAttr recId = nodeToRecId.lookup(node);
+        if (!recId) {
+          recId = DistinctAttr::create(UnitAttr::get(context));
+          nodeToRecId[node] = recId;
+        }
         recSelf = recSelfCtor(recId);
         iter->second.recSelf = recSelf;
       }
@@ -474,7 +347,8 @@ DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
       return cast<DINodeAttr>(recSelf);
     }
   }
-  return nullptr;
+
+  return lookup(node);
 }
 
 std::pair<DINodeAttr, bool>
@@ -493,39 +367,18 @@ DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
   if (DIRecursiveTypeAttrInterface recSelf = state.recSelf) {
     auto recType = cast<DIRecursiveTypeAttrInterface>(result);
     result = cast<DINodeAttr>(recType.withRecId(recSelf.getRecId()));
-
     // Remove this recSelf from the set of unbound selfRefs.
     state.unboundSelfRefs.erase(recSelf);
-
-    // Insert the newly resolved recursive type into the cache entries that
-    // rely on it.
-    // Only need to look at the caches at this level.
-    uint64_t numRemaining = state.cacheSize;
-    for (CachedTranslation &cacheEntry :
-         llvm::make_second_range(llvm::reverse(cache))) {
-      if (numRemaining == 0)
-        break;
-      --numRemaining;
-
-      if (auto refIter = cacheEntry.pendingReplacements.find(recSelf);
-          refIter != cacheEntry.pendingReplacements.end())
-        refIter->second = result;
-    }
   }
 
-  // Insert the current result into the cache.
-  state.cacheSize++;
-  auto [iter, inserted] = cache.try_emplace(node);
-  assert(inserted && "invalid state: caching the same DINode twice");
-  iter->second.attr = result;
-
-  // If this node had any unbound self-refs free when it is registered into
-  // the cache, set up replacement placeholders: This result will need these
-  // unbound self-refs to be replaced before being used.
-  for (DIRecursiveTypeAttrInterface selfRef : state.unboundSelfRefs)
-    iter->second.pendingReplacements.try_emplace(selfRef, nullptr);
-
-  return {result, state.unboundSelfRefs.empty()};
+  // Insert the result into our internal cache if it's not self-contained.
+  if (!state.unboundSelfRefs.empty()) {
+    auto [_, inserted] = dependentCache.try_emplace(
+        node, DependentTranslation{result, state.unboundSelfRefs});
+    assert(inserted && "invalid state: caching the same DINode twice");
+    return {result, false};
+  }
+  return {result, true};
 }
 
 void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
@@ -540,10 +393,7 @@ void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
   if (translationStack.size() == 1) {
     assert(currLayerState.unboundSelfRefs.empty() &&
            "internal error: unbound recursive self reference at top level.");
-    assert(currLayerState.cacheSize == cache.size() &&
-           "internal error: inconsistent cache size");
     translationStack.pop_back();
-    cache.clear();
     return;
   }
 
@@ -551,45 +401,22 @@ void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
   TranslationState &nextLayerState = (++translationStack.rbegin())->second;
   nextLayerState.unboundSelfRefs.insert(currLayerState.unboundSelfRefs.begin(),
                                         currLayerState.unboundSelfRefs.end());
-
-  // The current layer cache is now considered part of the lower layer cache.
-  nextLayerState.cacheSize += currLayerState.cacheSize;
-
-  // Finally pop off this layer when all bookkeeping is done.
   translationStack.pop_back();
 }
 
-std::pair<DINodeAttr, DenseSet<DIRecursiveTypeAttrInterface>>
-DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
-  auto cacheIter = cache.find(node);
-  if (cacheIter == cache.end())
+DINodeAttr DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
+  auto cacheIter = dependentCache.find(node);
+  if (cacheIter == dependentCache.end())
     return {};
 
-  CachedTranslation &entry = cacheIter->second;
+  DependentTranslation &entry = cacheIter->second;
+  if (llvm::set_is_subset(entry.unboundSelfRefs,
+                          translationStack.back().second.unboundSelfRefs))
+    return entry.attr;
 
-  if (entry.pendingReplacements.empty())
-    return std::make_pair(entry.attr, DenseSet<DIRecursiveTypeAttrInterface>{});
-
-  Attribute replacedAttr =
-      replaceAndPruneRecursiveTypes(entry.attr, entry.pendingReplacements);
-  DINodeAttr result = cast<DINodeAttr>(replacedAttr);
-
-  // Update cache entry to save replaced version and remove already-applied
-  // replacements.
-  entry.attr = result;
-  DenseSet<DIRecursiveTypeAttrInterface> unboundRefs;
-  DenseSet<DIRecursiveTypeAttrInterface> boundRefs;
-  for (auto [refSelf, replacement] : entry.pendingReplacements) {
-    if (replacement)
-      boundRefs.insert(refSelf);
-    else
-      unboundRefs.insert(refSelf);
-  }
-
-  for (DIRecursiveTypeAttrInterface ref : boundRefs)
-    entry.pendingReplacements.erase(ref);
-
-  return std::make_pair(result, unboundRefs);
+  // Stale cache entry.
+  dependentCache.erase(cacheIter);
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
