@@ -2016,6 +2016,27 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
   }
 }
 
+TEST_F(ComputeKnownFPClassTest, Constants) {
+  parseAssembly("declare float @func()\n"
+                "define float @test() {\n"
+                "  %A = call float @func()\n"
+                "  ret float %A\n"
+                "}\n");
+
+  Type *F32 = Type::getFloatTy(Context);
+  Type *V4F32 = FixedVectorType::get(F32, 4);
+
+  {
+    KnownFPClass ConstAggZero = computeKnownFPClass(
+        ConstantAggregateZero::get(V4F32), M->getDataLayout(), fcAllFlags, 0,
+        nullptr, nullptr, nullptr, nullptr);
+
+    EXPECT_EQ(fcPosZero, ConstAggZero.KnownFPClasses);
+    ASSERT_TRUE(ConstAggZero.SignBit);
+    EXPECT_FALSE(*ConstAggZero.SignBit);
+  }
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {
