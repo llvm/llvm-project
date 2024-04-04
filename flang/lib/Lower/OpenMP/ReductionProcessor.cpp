@@ -13,6 +13,7 @@
 #include "ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -527,7 +528,10 @@ void ReductionProcessor::addDeclareReduction(
     // all arrays must be boxed so that we have convenient access to all the
     // information needed to iterate over the array
     if (mlir::isa<fir::SequenceType>(redType.getEleTy())) {
-      hlfir::Entity entity{symVal};
+      // For Host associated symbols, use `SymbolBox` instead
+      Fortran::lower::SymbolBox symBox =
+          converter.lookupOneLevelUpSymbol(*symbol);
+      hlfir::Entity entity{symBox.getAddr()};
       entity = genVariableBox(currentLocation, builder, entity);
       mlir::Value box = entity.getBase();
 
