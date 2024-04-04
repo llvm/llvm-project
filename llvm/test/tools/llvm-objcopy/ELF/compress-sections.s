@@ -52,7 +52,7 @@
 # CHECK2DE-NEXT:  Hex dump of section '.debug_str':
 # CHECK2DE-NEXT:  0x00000000 41414141 41414141 41414141 41414141 AAAAAAAAAAAAAAAA
 
-## --compress-debug-sections takes precedence, even if it is before --compress-sections.
+## --decompress-debug-sections takes precedence, even if it is before --compress-sections.
 # RUN: llvm-objcopy a.o out3 --decompress-debug-sections --compress-sections .debug_str=zstd
 # RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK3
 
