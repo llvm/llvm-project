@@ -36,8 +36,8 @@ class TokenSequence {
 public:
   TokenSequence() {}
   TokenSequence(const TokenSequence &that) { Put(that); }
-  TokenSequence(const TokenSequence &that, std::size_t at,
-                std::size_t count = 1) {
+  TokenSequence(
+      const TokenSequence &that, std::size_t at, std::size_t count = 1) {
     Put(that, at, count);
   }
   TokenSequence(TokenSequence &&that)
