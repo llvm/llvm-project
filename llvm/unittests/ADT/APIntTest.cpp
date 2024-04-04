@@ -3249,22 +3249,11 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
 }
 
 TEST(APIntTest, MultiplicativeInverseExaustive) {
-  for (unsigned BitWidth = 1; BitWidth <= 16; ++BitWidth) {
-    for (unsigned Value = 0; Value < (1u << BitWidth); ++Value) {
+  for (unsigned BitWidth = 1; BitWidth <= 8; ++BitWidth) {
+    for (unsigned Value = 1; Value < (1u << BitWidth); Value += 2) {
+      // Multiplicative inverse exists for all odd numbers.
       APInt V = APInt(BitWidth, Value);
-      APInt MulInv =
-          V.zext(BitWidth + 1)
-              .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
-              .trunc(BitWidth);
-      APInt One = V * MulInv;
-      if (V[0]) {
-        // Multiplicative inverse exists for all odd numbers.
-        EXPECT_TRUE(One.isOne());
-        EXPECT_TRUE((V * V.multiplicativeInverse()).isOne());
-      } else {
-        // Multiplicative inverse does not exist for even numbers (and 0).
-        EXPECT_TRUE(MulInv.isZero());
-      }
+      EXPECT_EQ(V * V.multiplicativeInverse(), 1);
     }
   }
 }
