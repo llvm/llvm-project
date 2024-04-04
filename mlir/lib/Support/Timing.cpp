@@ -499,7 +499,8 @@ public:
 } // namespace mlir
 
 DefaultTimingManager::DefaultTimingManager()
-    : impl(std::make_unique<DefaultTimingManagerImpl>()) {
+    : impl(std::make_unique<DefaultTimingManagerImpl>()),
+      out(std::make_unique<OutputTextStrategy>(llvm::errs())) {
   clear(); // initializes the root timer
 }
 
