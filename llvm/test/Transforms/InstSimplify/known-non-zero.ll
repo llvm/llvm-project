@@ -177,3 +177,135 @@ define i1 @smax_non_zero(i8 %xx, i8 %y) {
   %r = icmp eq i8 %v, 0
   ret i1 %r
 }
+
+define <4 x i1> @shuf_nonzero_both(<4 x i8> %xx, <4 x i8> %yy) {
+; CHECK-LABEL: @shuf_nonzero_both(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %y = add nuw <4 x i8> %yy, <i8 1, i8 1, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_both_fail(<4 x i8> %xx, <4 x i8> %yy) {
+; CHECK-LABEL: @shuf_nonzero_both_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %y = add nuw <4 x i8> %yy, <i8 1, i8 1, i8 1, i8 0>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_both_fail2(<4 x i8> %xx, <4 x i8> %yy) {
+; CHECK-LABEL: @shuf_nonzero_both_fail2(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[Y:%.*]] = add <4 x i8> [[YY:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %y = add <4 x i8> %yy, <i8 1, i8 1, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 4, i32 7, i32 2>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_lhs(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_lhs(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> poison, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 2, i32 2, i32 0, i32 1>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_lhs2(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_lhs2(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 0>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 1>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_lhs2_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_lhs2_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 0>
+
+  %shuf = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_rhs(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_rhs(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> poison, <4 x i8> [[X]], <4 x i32> <i32 6, i32 7, i32 5, i32 4>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> poison, <4 x i8> %x, <4 x i32> <i32 6, i32 7, i32 5, i32 4>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_rhs2(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_rhs2(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 0, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> poison, <4 x i8> [[X]], <4 x i32> <i32 6, i32 7, i32 7, i32 6>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 0, i8 0, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> poison, <4 x i8> %x, <4 x i32> <i32 6, i32 7, i32 7, i32 6>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @shuf_nonzero_rhs2_fail(<4 x i8> %xx) {
+; CHECK-LABEL: @shuf_nonzero_rhs2_fail(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 0, i8 0, i8 1, i8 1>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> poison, <4 x i8> [[X]], <4 x i32> <i32 6, i32 7, i32 5, i32 6>
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[SHUF]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %x = add nuw <4 x i8> %xx, <i8 0, i8 0, i8 1, i8 1>
+
+  %shuf = shufflevector <4 x i8> poison, <4 x i8> %x, <4 x i32> <i32 6, i32 7, i32 5, i32 6>
+  %r = icmp eq <4 x i8> %shuf, zeroinitializer
+  ret <4 x i1> %r
+}
