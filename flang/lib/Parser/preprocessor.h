@@ -41,7 +41,7 @@ public:
   Definition(const std::string &predefined, AllSources &);
 
   bool isFunctionLike() const { return isFunctionLike_; }
-  std::size_t argumentCount() const { return argumentCount_; }
+  std::size_t argumentCount() const { return argNames_.size(); }
   bool isVariadic() const { return isVariadic_; }
   bool isDisabled() const { return isDisabled_; }
   bool isPredefined() const { return isPredefined_; }
@@ -56,12 +56,16 @@ public:
 private:
   static TokenSequence Tokenize(const std::vector<std::string> &argNames,
       const TokenSequence &token, std::size_t firstToken, std::size_t tokens);
+  // For a given token, return the index of the argument to which the token
+  // corresponds, or `argumentCount` if the token does not correspond to any
+  // argument.
+  std::size_t getArgumentIndex(const CharBlock &token) const;
 
   bool isFunctionLike_{false};
-  std::size_t argumentCount_{0};
   bool isVariadic_{false};
   bool isDisabled_{false};
   bool isPredefined_{false};
+  std::vector<std::string> argNames_;
   TokenSequence replacement_;
 };
 

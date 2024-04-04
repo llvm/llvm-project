@@ -32,10 +32,9 @@ Definition::Definition(
     : replacement_{Tokenize({}, repl, firstToken, tokens)} {}
 
 Definition::Definition(const std::vector<std::string> &argNames,
-    const TokenSequence &repl, std::size_t firstToken, std::size_t tokens,
-    bool isVariadic)
-    : isFunctionLike_{true},
-      argumentCount_(argNames.size()), isVariadic_{isVariadic},
+                       const TokenSequence &repl, std::size_t firstToken,
+                       std::size_t tokens, bool isVariadic)
+    : isFunctionLike_{true}, isVariadic_{isVariadic}, argNames_{argNames},
       replacement_{Tokenize(argNames, repl, firstToken, tokens)} {}
 
 Definition::Definition(const std::string &predefined, AllSources &sources)
@@ -57,97 +56,24 @@ void Definition::Print(
     return;
   }
 
-  // The sequence of characters from which argument names will be created.
-  static llvm::StringRef charSeq{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"};
+  size_t argCount{argumentCount()};
 
-  auto couldCollide{[&](llvm::StringRef str) {
-    return !str.empty() && llvm::all_of(str, [&](char c) {
-      return charSeq.find(c) != llvm::StringRef::npos;
-    });
-  }};
-
-  // For function-like macros we need to invent valid argument names (they
-  // are represented as ~A, ~B, ...). These invented names cannot collide
-  // with any other tokens in the macro definitions.
-  std::set<std::string> usedNames;
-  for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
-    std::string tok{replacement_.TokenAt(i).ToString()};
-    if (tok.empty()) {
-      continue;
-    }
-    // The generated names will only use characters from `charSeq`, so
-    // collect names that could collide, and ignore others.
-    if (couldCollide(tok)) {
-      usedNames.insert(tok);
-    }
-  }
-  if (couldCollide(macroName)) {
-    usedNames.insert(macroName.str());
-  }
-
-  // Given a string that is either empty, or composed from characters
-  // from `charSeq`, create the next string in the lexicographical
-  // order.
-  auto getNextString{[&](llvm::StringRef str) {
-    if (str.empty()) {
-      return charSeq.take_front().str();
-    }
-    if (str.back() == charSeq.back()) {
-      return (llvm::Twine(str) + charSeq.take_front()).str();
-    }
-    size_t idx{charSeq.find(str.back())};
-    return (llvm::Twine(str.drop_back()) + charSeq.substr(idx + 1, 1)).str();
-  }};
-
-  // Generate consecutive arg names, until we get one that works
-  // (i.e. doesn't collide with existing names). Give up after 4096
-  // attempts.
-  auto genArgName{[&](std::string name) {
-    for (size_t x{0}; x != 4096; ++x) {
-      name = getNextString(name);
-      if (usedNames.count(name) == 0)
-        return name;
-    }
-    return std::string();
-  }};
-
-  std::string nextName;
-  std::vector<std::string> argNames;
-  for (size_t i{0}; i != argumentCount_; ++i) {
-    nextName = genArgName(nextName);
-    if (nextName.empty()) {
-      out << " // unable to print";
-      return;
-    }
-    argNames.push_back(nextName);
-  }
-
-  // Finally, print the macro.
   out << '(';
-  for (size_t i{0}; i != argumentCount_; ++i) {
+  for (size_t i{0}; i != argCount; ++i) {
     if (i != 0) {
       out << ", ";
     }
-    out << argNames[i];
+    out << argNames_[i];
   }
   if (isVariadic_) {
     out << ", ...";
   }
   out << ") ";
 
-  auto getArgumentIndex{[&](llvm::StringRef name) -> size_t {
-    if (name.size() >= 2 && name[0] == '~') {
-      // `name` should be an argument name. The `Tokenize` function only
-      // generates a single character.
-      return static_cast<size_t>(name[1] - 'A');
-    }
-    return argumentCount_;
-  }};
-
   for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
     std::string tok{replacement_.TokenAt(i).ToString()};
-    if (size_t idx = getArgumentIndex(tok); idx < argumentCount_) {
-      out << argNames[idx];
+    if (size_t idx = getArgumentIndex(tok); idx < argCount) {
+      out << argNames_[idx];
     } else {
       out << tok;
     }
@@ -179,6 +105,13 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
     result.Put(token, firstToken + j, 1);
   }
   return result;
+}
+
+std::size_t Definition::getArgumentIndex(const CharBlock &token) const {
+  if (token.size() >= 2 && token[0] == '~') {
+    return static_cast<size_t>(token[1] - 'A');
+  }
+  return argumentCount();
 }
 
 static TokenSequence Stringify(
@@ -267,7 +200,7 @@ TokenSequence Definition::Apply(
       continue;
     }
     if (bytes == 2 && token[0] == '~') { // argument substitution
-      std::size_t index = token[1] - 'A';
+      std::size_t index = getArgumentIndex(token);
       if (index >= args.size()) {
         continue;
       }
@@ -310,8 +243,8 @@ TokenSequence Definition::Apply(
       Provenance commaProvenance{
           prescanner.preprocessor().allSources().CompilerInsertionProvenance(
               ',')};
-      for (std::size_t k{argumentCount_}; k < args.size(); ++k) {
-        if (k > argumentCount_) {
+      for (std::size_t k{argumentCount()}; k < args.size(); ++k) {
+        if (k > argumentCount()) {
           result.Put(","s, commaProvenance);
         }
         result.Put(args[k]);
@@ -320,7 +253,7 @@ TokenSequence Definition::Apply(
         j + 2 < tokens && replacement_.TokenAt(j + 1).OnlyNonBlank() == '(' &&
         parenthesesNesting == 0) {
       parenthesesNesting = 1;
-      skipping = args.size() == argumentCount_;
+      skipping = args.size() == argumentCount();
       ++j;
     } else {
       if (parenthesesNesting > 0) {
