@@ -142,7 +142,7 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  bool hasX3RegUsage() const {return X3Unknown || X3GP || X3SCS || X3Tmp; }
+  bool hasX3RegUsage() const { return X3Unknown || X3GP || X3SCS || X3Tmp; }
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
   bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
