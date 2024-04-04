@@ -414,16 +414,16 @@ static void setSummary(IndexedInstrProf::Summary *TheSummary,
     TheSummary->setEntry(I, Res[I]);
 }
 
-namespace {
 // Serialize Schema.
-void writeMemProfSchema(ProfOStream &OS, const memprof::MemProfSchema &Schema) {
+static void writeMemProfSchema(ProfOStream &OS,
+                               const memprof::MemProfSchema &Schema) {
   OS.write(static_cast<uint64_t>(Schema.size()));
   for (const auto Id : Schema)
     OS.write(static_cast<uint64_t>(Id));
 }
 
 // Serialize MemProfRecordData.  Return RecordTableOffset.
-uint64_t writeMemProfRecords(
+static uint64_t writeMemProfRecords(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
@@ -447,7 +447,7 @@ uint64_t writeMemProfRecords(
 }
 
 // Serialize MemProfFrameData.  Return FrameTableOffset.
-uint64_t writeMemProfFrames(
+static uint64_t writeMemProfFrames(
     ProfOStream &OS,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
   auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
@@ -463,7 +463,7 @@ uint64_t writeMemProfFrames(
   return FrameTableGenerator.Emit(OS.OS, *FrameWriter);
 }
 
-Error writeMemProfV0(
+static Error writeMemProfV0(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
@@ -488,7 +488,7 @@ Error writeMemProfV0(
   return Error::success();
 }
 
-Error writeMemProfV1(
+static Error writeMemProfV1(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
@@ -527,7 +527,7 @@ Error writeMemProfV1(
 // uint64_t Schema entry N - 1
 // OnDiskChainedHashTable MemProfRecordData
 // OnDiskChainedHashTable MemProfFrameData
-Error writeMemProf(
+static Error writeMemProf(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
@@ -551,7 +551,6 @@ Error writeMemProf(
               MemProfVersionRequested, memprof::MinimumSupportedVersion,
               memprof::MaximumSupportedVersion));
 }
-} // namespace
 
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
