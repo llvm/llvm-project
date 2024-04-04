@@ -5201,7 +5201,6 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
 
     // Calculate the multiplicative inverse modulo BW.
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
-    unsigned W = Divisor.getBitWidth();
     APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
     Factors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
