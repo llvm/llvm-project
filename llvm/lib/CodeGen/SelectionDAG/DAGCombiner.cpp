@@ -22265,12 +22265,6 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
       IndexC->getAPIntValue().uge(VecVT.getVectorNumElements()))
     return DAG.getUNDEF(ScalarVT);
 
-  // extract_vector_elt(freeze(x)), idx -> freeze(extract_vector_elt(x)), idx
-  if (VecOp.hasOneUse() && VecOp.getOpcode() == ISD::FREEZE) {
-    return DAG.getFreeze(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT,
-                                     VecOp.getOperand(0), Index));
-  }
-
   // extract_vector_elt (build_vector x, y), 1 -> y
   if (((IndexC && VecOp.getOpcode() == ISD::BUILD_VECTOR) ||
        VecOp.getOpcode() == ISD::SPLAT_VECTOR) &&
