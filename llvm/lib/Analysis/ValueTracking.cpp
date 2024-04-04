@@ -5355,14 +5355,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     const Value *Vec = Op->getOperand(0);
     const Value *Elt = Op->getOperand(1);
     auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(2));
-    // Early out if the index is non-constant or out-of-range.
     unsigned NumElts = DemandedElts.getBitWidth();
-    if (!CIdx || CIdx->getValue().uge(NumElts))
-      return;
+    APInt DemandedVecElts = DemandedElts;
+    bool NeedsElt = true;
+    // If we know the index we are inserting to, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      NeedsElt = DemandedElts[CIdx->getZExtValue()];
+    }
 
-    unsigned EltIdx = CIdx->getZExtValue();
     // Do we demand the inserted element?
-    if (DemandedElts[EltIdx]) {
+    if (NeedsElt) {
       computeKnownFPClass(Elt, Known, InterestedClasses, Depth + 1, Q);
       // If we don't know any bits, early out.
       if (Known.isUnknown())
@@ -5371,10 +5374,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       Known.KnownFPClasses = fcNone;
     }
 
-    // We don't need the base vector element that has been inserted.
-    APInt DemandedVecElts = DemandedElts;
-    DemandedVecElts.clearBit(EltIdx);
-    if (!!DemandedVecElts) {
+    // Do we need anymore elements from Vec?
+    if (!DemandedVecElts.isZero()) {
       KnownFPClass Known2;
       computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known2,
                           Depth + 1, Q);

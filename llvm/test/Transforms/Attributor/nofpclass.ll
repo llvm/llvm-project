@@ -1515,7 +1515,7 @@ define <4 x float> @insertelement_constant_chain() {
 
 define <4 x float> @insertelement_non_constant_chain(i32 %idx) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <4 x float> @insertelement_non_constant_chain
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) <4 x float> @insertelement_non_constant_chain
 ; CHECK-SAME: (i32 [[IDX:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
 ; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
@@ -1601,7 +1601,7 @@ define float @insertelement_extractelement_unknown(<4 x float> nofpclass(zero) %
 
 define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <4 x float> @insertelement_index_oob_chain
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <4 x float> @insertelement_index_oob_chain
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
