@@ -79,6 +79,20 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_Hidden:
     Symbol->setHidden(true);
     break;
+  case MCSA_Weak:
+  case MCSA_WeakReference:
+    Symbol->setExternal(true);
+    Symbol->setWeak();
+    break;
+  case MCSA_ELF_TypeFunction:
+    Symbol->setExecutable(GOFF::ESD_EXE_CODE);
+    break;
+  case MCSA_ELF_TypeObject:
+    Symbol->setExecutable(GOFF::ESD_EXE_DATA);
+    break;
+  case MCSA_ZOS_OS_Linkage:
+    Symbol->setOSLinkage();
+    break;
   default:
     return false;
   }

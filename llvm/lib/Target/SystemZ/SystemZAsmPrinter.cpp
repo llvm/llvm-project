@@ -1016,7 +1016,6 @@ void SystemZAsmPrinter::emitADASection() {
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
-      Sym->setExecutable(GOFF::ESD_EXE_CODE);
       EmittedBytes += PointerSize * 2;
       break;
     case SystemZII::MO_ADA_DATA_SYMBOL_ADDR:
@@ -1026,7 +1025,6 @@ void SystemZAsmPrinter::emitADASection() {
                                 MCSymbolRefExpr::create(Sym, OutContext),
                                 OutContext),
           PointerSize);
-      Sym->setExecutable(GOFF::ESD_EXE_DATA);
       EmittedBytes += PointerSize;
       break;
     case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
@@ -1424,15 +1422,6 @@ void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
                                       4);
 }
 
-void SystemZAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (TM.getTargetTriple().isOSzOS()) {
-    auto *Sym = cast<MCSymbolGOFF>(getSymbol(GV));
-    Sym->setExecutable(GOFF::ESD_EXE_DATA);
-  }
-
-  return AsmPrinter::emitGlobalVariable(GV);
-}
-
 const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
   const Triple &TargetTriple = TM.getTargetTriple();
   if (TargetTriple.isOSzOS()) {
@@ -1447,7 +1436,6 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
 
     if (IsFunc) {
       if (Sym) {
-      Sym->setExecutable(GOFF::ESD_EXE_CODE);
         if (Sym->isExternal())
           return SystemZMCExpr::create(SystemZMCExpr::VK_SystemZ_VCon,
                                       MCSymbolRefExpr::create(Sym, OutContext),
@@ -1460,7 +1448,6 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV) {
                                   OutContext),
             MCConstantExpr::create(Disp, OutContext), OutContext);
       } else {
-        Sym->setExecutable(GOFF::ESD_EXE_DATA);
         return MCSymbolRefExpr::create(Sym, OutContext);
       }
     }
@@ -1485,8 +1472,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   const char *StartSymbolName = "CELQSTRT";
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
   auto *GStartSym = static_cast<MCSymbolGOFF *>(CELQSTRT);
-  GStartSym->setExecutable(GOFF::ESD_EXE_CODE);
-  GStartSym->setOSLinkage();
+  OutStreamer->emitSymbolAttribute(GStartSym, MCSA_ELF_TypeFunction);
+  OutStreamer->emitSymbolAttribute(GStartSym, MCSA_ZOS_OS_Linkage);
   GStartSym->setExternal(true);
 
   // Create symbol and assign to class field for use in PPA1.
@@ -1655,6 +1642,23 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   }
 
   AsmPrinter::emitFunctionEntryLabel();
+}
+
+bool SystemZAsmPrinter::doFinalization(Module &M) {
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Set symbol flags for all global objects.
+    // Global Variables are objects (data)...
+    for (const auto &G : M.globals()) {
+      MCSymbol *Sym = getSymbol(&G);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+    }
+    // and Funtions are functions (executable).
+    for (const Function &F : M) {
+      MCSymbol *Sym = getSymbol(&F);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    }
+  }
+  return AsmPrinter::doFinalization(M);
 }
 
 // Force static initialization.

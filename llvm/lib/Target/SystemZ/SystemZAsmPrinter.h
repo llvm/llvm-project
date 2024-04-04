@@ -118,9 +118,9 @@ public:
   }
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
-  void emitGlobalVariable(const GlobalVariable *GV) override;
   const MCExpr *lowerConstant(const Constant *CV) override;
   void emitStartOfAsmFile(Module &M) override;
+  bool doFinalization(Module &M) override;
 
 private:
   void emitCallInformation(CallType CT);
