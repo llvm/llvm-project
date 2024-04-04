@@ -387,6 +387,9 @@ def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                SDTCisVT<3, XLenVT>]>;
 def riscv_sext_vl : SDNode<"RISCVISD::VSEXT_VL", SDT_RISCVVEXTEND_VL>;
 def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
+def riscv_ext_vl : PatFrags<(ops node:$A, node:$B, node:$C),
+                            [(riscv_sext_vl node:$A, node:$B, node:$C),
+                             (riscv_zext_vl node:$A, node:$B, node:$C)]>;
 
 def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                    SDTypeProfile<1, 3, [SDTCisVec<0>,
@@ -532,6 +535,11 @@ def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
 
 def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
                            (riscv_zext_vl node:$A, node:$B, node:$C), [{
+  return N->hasOneUse();
+}]>;
+
+def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                          (riscv_ext_vl node:$A, node:$B, node:$C), [{
   return N->hasOneUse();
 }]>;
 
