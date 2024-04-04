@@ -1257,6 +1257,12 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
+/// A set of global value summary pointers.
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 4>;
+
+/// The key is module path, and value is a set of global value summary pointers.
+using ModuleToGVSummaryPtrSet = std::map<std::string, GVSummaryPtrSet>;
+
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
 using TypeIdSummaryMapTy =
