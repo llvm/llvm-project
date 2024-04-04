@@ -47,7 +47,7 @@ class SPIRVGlobalRegistry {
   DenseMap<const MachineOperand *, const Function *> InstrToFunction;
   // Maps Functions to their calls (in a form of the machine instruction,
   // OpFunctionCall) that happened before the definition is available
-  DenseMap<const Function *, SmallVector<MachineInstr *>> ForwardCalls;
+  DenseMap<const Function *, SmallPtrSet<MachineInstr *, 8>> ForwardCalls;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -215,12 +215,12 @@ public:
     if (It == ForwardCalls.end())
       ForwardCalls[F] = {MI};
     else
-      It->second.push_back(MI);
+      It->second.insert(MI);
   }
 
   // Map a Function to the vector of machine instructions that represents
   // forward function calls or to nullptr if not found.
-  SmallVector<MachineInstr *> *getForwardCalls(const Function *F) {
+  SmallPtrSet<MachineInstr *, 8> *getForwardCalls(const Function *F) {
     auto It = ForwardCalls.find(F);
     return It == ForwardCalls.end() ? nullptr : &It->second;
   }
