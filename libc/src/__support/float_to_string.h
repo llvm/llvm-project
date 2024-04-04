@@ -689,7 +689,7 @@ template <> class FloatToString<long double> {
 
       wide_int float_as_int = mantissa;
 
-      float_as_int.shift_left(exponent);
+      float_as_int <<= exponent;
       int_block_index = 0;
 
       while (float_as_int > 0) {
@@ -708,10 +708,11 @@ template <> class FloatToString<long double> {
 
       const int SHIFT_AMOUNT = FLOAT_AS_INT_WIDTH + exponent;
       static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
-      float_as_fixed.shift_left(SHIFT_AMOUNT);
+      float_as_fixed <<= SHIFT_AMOUNT;
 
       // If there are still digits above the decimal point, handle those.
-      if (float_as_fixed.clz() < static_cast<int>(EXTRA_INT_WIDTH)) {
+      if (cpp::countl_zero(float_as_fixed) <
+          static_cast<int>(EXTRA_INT_WIDTH)) {
         UInt<EXTRA_INT_WIDTH> above_decimal_point =
             float_as_fixed >> FLOAT_AS_INT_WIDTH;
 
