@@ -113,6 +113,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_MOVW_UABS_G2_NC:
   case R_AARCH64_MOVW_UABS_G3:
     return R_ABS;
+  case R_AARCH64_AUTH_ABS64:
+    return R_AARCH64_AUTH;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_AARCH64_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
@@ -204,7 +206,7 @@ bool AArch64::usesOnlyLowPageBits(RelType type) const {
 }
 
 RelType AArch64::getDynRel(RelType type) const {
-  if (type == R_AARCH64_ABS64)
+  if (type == R_AARCH64_ABS64 || type == R_AARCH64_AUTH_ABS64)
     return type;
   return R_AARCH64_NONE;
 }

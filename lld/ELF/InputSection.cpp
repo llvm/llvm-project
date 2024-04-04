@@ -676,6 +676,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
+  case R_AARCH64_AUTH:
   case R_RISCV_ADD:
   case R_RISCV_LEB128:
     return sym.getVA(a);
