@@ -86,7 +86,7 @@ add_with_carry(T a, T b, T carry_in, T &carry_out) {
     RETURN_IF(unsigned long long, __builtin_addcll)
 #endif
   }
-  T sum;
+  T sum = {};
   T carry1 = add_overflow(a, b, sum);
   T carry2 = add_overflow(sum, carry_in, sum);
   carry_out = carry1 | carry2;
@@ -112,7 +112,7 @@ sub_with_borrow(T a, T b, T carry_in, T &carry_out) {
     RETURN_IF(unsigned long long, __builtin_subcll)
 #endif
   }
-  T sub;
+  T sub = {};
   T carry1 = sub_overflow(a, b, sub);
   T carry2 = sub_overflow(sub, carry_in, sub);
   carry_out = carry1 | carry2;
