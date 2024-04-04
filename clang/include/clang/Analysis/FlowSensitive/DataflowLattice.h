@@ -17,13 +17,13 @@
 namespace clang {
 namespace dataflow {
 
-/// Effect indicating whether a lattice join operation resulted in a new value.
-// FIXME: Rename to `LatticeEffect` since `widen` uses it as well, and we are
-// likely removing it from `join`.
-enum class LatticeJoinEffect {
+/// Effect indicating whether a lattice operation resulted in a new value.
+enum class LatticeEffect {
   Unchanged,
   Changed,
 };
+// DEPRECATED. Use `LatticeEffect`.
+using LatticeJoinEffect = LatticeEffect;
 
 } // namespace dataflow
 } // namespace clang
