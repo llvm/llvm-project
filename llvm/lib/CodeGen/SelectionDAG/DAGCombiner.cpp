@@ -1164,19 +1164,20 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   SDValue N01 = N0.getOperand(1);
 
   if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N01))) {
+    SDNodeFlags NewFlags;
+    if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
+        Flags.hasNoUnsignedWrap())
+      NewFlags.setNoUnsignedWrap(true);
+
     if (DAG.isConstantIntBuildVectorOrConstantInt(peekThroughBitcasts(N1))) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
       if (SDValue OpNode = DAG.FoldConstantArithmetic(Opc, DL, VT, {N01, N1}))
-        return DAG.getNode(Opc, DL, VT, N00, OpNode);
+        return DAG.getNode(Opc, DL, VT, N00, OpNode, NewFlags);
       return SDValue();
     }
     if (TLI.isReassocProfitable(DAG, N0, N1)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
-      SDNodeFlags NewFlags;
-      if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
-          Flags.hasNoUnsignedWrap())
-        NewFlags.setNoUnsignedWrap(true);
       SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1, NewFlags);
       return DAG.getNode(Opc, DL, VT, OpNode, N01, NewFlags);
     }
