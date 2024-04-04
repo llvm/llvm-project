@@ -1226,6 +1226,7 @@ public:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLArrayRValue:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");

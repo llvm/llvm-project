@@ -234,6 +234,15 @@ std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
   return std::nullopt;
 }
 
+// Returns the endianness if specified in the given entry. If the entry is empty
+// the default endianness represented by an empty attribute is returned.
+Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+
+  return entry.getValue();
+}
+
 // Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
@@ -546,6 +555,22 @@ std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
       return iface.getIndexBitwidth(ty, *this, list);
     return detail::getDefaultIndexBitwidth(ty, *this, list);
   });
+}
+
+mlir::Attribute mlir::DataLayout::getEndianness() const {
+  checkValid();
+  if (endianness)
+    return *endianness;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getEndiannessIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    endianness = iface.getEndianness(entry);
+  else
+    endianness = detail::getDefaultEndianness(entry);
+  return *endianness;
 }
 
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {

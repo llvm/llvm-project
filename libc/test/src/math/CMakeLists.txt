@@ -638,6 +638,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_macros
+    libc.src.errno.errno
+    libc.src.math.exp2m1f
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   exp10f_test
   NEED_MPFR
   SUITE
@@ -1716,6 +1731,19 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.powf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan2f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2f_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
 )
 
