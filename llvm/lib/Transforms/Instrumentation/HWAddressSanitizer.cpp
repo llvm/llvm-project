@@ -187,10 +187,8 @@ static cl::opt<bool>
                               cl::desc("Use selective instrumentation"),
                               cl::Hidden, cl::init(false));
 
-static cl::opt<int> ClHotPercentileCutoff(
-    "hwasan-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff."
-             "By default `-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                          cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
     ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
@@ -1512,12 +1510,8 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     ++NumNoProfileSummaryFuncs;
     return false;
   }
-  auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-  return (
-      (ClHotPercentileCutoff.getNumOccurrences() && ClHotPercentileCutoff >= 0)
-          ? PSI->isFunctionHotInCallGraphNthPercentile(ClHotPercentileCutoff,
-                                                       &F, BFI)
-          : PSI->isFunctionHotInCallGraph(&F, BFI));
+  return PSI->isFunctionHotInCallGraphNthPercentile(
+      ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
