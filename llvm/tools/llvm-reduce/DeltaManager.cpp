@@ -52,6 +52,10 @@
 #include "deltas/StripDebugInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 using namespace llvm;
 
@@ -69,6 +73,9 @@ static cl::list<std::string>
                     cl::desc("Delta passes to not run, separated by commas. By "
                              "default, run all delta passes."),
                     cl::cat(LLVMReduceOptions), cl::CommaSeparated);
+static cl::opt<bool> RunEachDeltaPassInChildProcess(
+    "run-delta-in-child", cl::desc("Run each delta pass in new child process."),
+    cl::init(false), cl::cat(LLVMReduceOptions));
 
 #define DELTA_PASSES                                                           \
   do {                                                                         \
@@ -112,7 +119,7 @@ static cl::list<std::string>
     DELTA_PASS("atomic-ordering", reduceAtomicOrderingDeltaPass)               \
     DELTA_PASS("syncscopes", reduceAtomicSyncScopesDeltaPass)                  \
     DELTA_PASS("instruction-flags", reduceInstructionFlagsDeltaPass)           \
-} while (false)
+  } while (false)
 
 #define DELTA_PASSES_MIR                                                       \
   do {                                                                         \
@@ -148,6 +155,86 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
     FUNC(Tester);                                                              \
     return;                                                                    \
   }
+  if (Tester.getProgram().isMIR()) {
+    DELTA_PASSES_MIR;
+  } else {
+    DELTA_PASSES;
+  }
+#undef DELTA_PASS
+
+  // We should have errored on unrecognized passes before trying to run
+  // anything.
+  llvm_unreachable("unknown delta pass");
+}
+
+static void runAllDeltaPassesInChild(TestRunner &Tester,
+                                     const SmallStringSet &SkipPass) {
+#ifdef _WIN32
+  errs() << "runAllDeltaPassesInChild() is only available on POSIX systems. \n";
+  return;
+#endif
+
+#define DELTA_PASS(NAME, FUNC)                                                 \
+  if (!SkipPass.count(NAME)) {                                                 \
+    pid_t CPid = fork();                                                       \
+    if (CPid == -1) {                                                          \
+      errs() << "Could not create child process. \n";                          \
+      return;                                                                  \
+    }                                                                          \
+    if (CPid == 0) {                                                           \
+      FUNC(Tester);                                                            \
+    } else {                                                                   \
+      /*parent waits for child to finish.*/                                    \
+      int ReturnStatus;                                                        \
+      waitpid(CPid, &ReturnStatus, 0);                                         \
+      if (ReturnStatus != 0) {                                                 \
+        errs() << "Reduction " << NAME << " failed. \n";                       \
+        exit(ReturnStatus);                                                    \
+      }                                                                        \
+      /* if child finishes fine we kill parent otherwise it will overwrite*/   \
+      /* results to output files.*/                                            \
+      exit(0);                                                                 \
+    }                                                                          \
+  }
+
+  if (Tester.getProgram().isMIR()) {
+    DELTA_PASSES_MIR;
+  } else {
+    DELTA_PASSES;
+  }
+#undef DELTA_PASS
+}
+
+static void runDeltaPassNameInChild(TestRunner &Tester, StringRef PassName) {
+#ifdef _WIN32
+  errs() << "runDeltaPassNameInChild() is only available on POSIX systems. \n";
+  return;
+#endif
+
+#define DELTA_PASS(NAME, FUNC)                                                 \
+  if (PassName == NAME) {                                                      \
+    pid_t CPid = fork();                                                       \
+    if (CPid == -1) {                                                          \
+      errs() << "Could not create child process.\n";                           \
+      return;                                                                  \
+    }                                                                          \
+    if (CPid == 0) {                                                           \
+      FUNC(Tester);                                                            \
+      return;                                                                  \
+    } else {                                                                   \
+      /*parent waits for child to finish.*/                                    \
+      int ReturnStatus;                                                        \
+      waitpid(CPid, &ReturnStatus, 0);                                         \
+      if (ReturnStatus != 0) {                                                 \
+        errs() << "Reduction " << NAME << " failed. \n";                       \
+        exit(ReturnStatus);                                                    \
+      }                                                                        \
+      /* if child finishes fine we kill parent otherwise it will overwrite*/   \
+      /* results to output files.*/                                            \
+      exit(0);                                                                 \
+    }                                                                          \
+  }
+
   if (Tester.getProgram().isMIR()) {
     DELTA_PASSES_MIR;
   } else {
@@ -215,11 +302,18 @@ void llvm::runDeltaPasses(TestRunner &Tester, int MaxPassIterations) {
 
   for (int Iter = 0; Iter < MaxPassIterations; ++Iter) {
     if (DeltaPasses.empty()) {
-      runAllDeltaPasses(Tester, SkipPassSet);
+      if (!RunEachDeltaPassInChildProcess)
+        runAllDeltaPasses(Tester, SkipPassSet);
+      else
+        runAllDeltaPassesInChild(Tester, SkipPassSet);
     } else {
       for (StringRef PassName : DeltaPasses) {
-        if (!SkipPassSet.count(PassName))
-          runDeltaPassName(Tester, PassName);
+        if (!SkipPassSet.count(PassName)) {
+          if (!RunEachDeltaPassInChildProcess)
+            runDeltaPassName(Tester, PassName);
+          else
+            runDeltaPassNameInChild(Tester, PassName);
+        }
       }
     }
 

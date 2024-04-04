@@ -3,6 +3,8 @@
 ;
 ; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -implicit-check-not=uninteresting %s < %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --run-delta-in-child --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck -implicit-check-not=uninteresting %s < %t
 
 ; CHECK-INTERESTINGNESS: store i32 0
 ; CHECK-INTERESTINGNESS: store i32 1
