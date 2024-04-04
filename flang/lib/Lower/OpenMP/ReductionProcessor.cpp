@@ -180,13 +180,12 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
     if (auto cplxTy = mlir::dyn_cast<fir::ComplexType>(type)) {
       mlir::Type realTy =
           Fortran::lower::convertReal(builder.getContext(), cplxTy.getFKind());
-      //      mlir::FloatType realTy =
-      //      mlir::dyn_cast<mlir::FloatType>(cplxTy.getElementType());
-      //      const llvm::fltSemantics &sem = (realTy).getFloatSemantics();
-      mlir::Value init = builder.createRealConstant(
+      mlir::Value initRe = builder.createRealConstant(
           loc, realTy, getOperationIdentity(redId, loc));
-      return fir::factory::Complex{builder, loc}.createComplex(type, init,
-                                                               init);
+      mlir::Value initIm = builder.createRealConstant(loc, realTy, 0);
+
+      return fir::factory::Complex{builder, loc}.createComplex(type, initRe,
+                                                               initIm);
     }
     if (type.isa<mlir::FloatType>())
       return builder.create<mlir::arith::ConstantOp>(
