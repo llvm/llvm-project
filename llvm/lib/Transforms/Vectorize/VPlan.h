@@ -2571,8 +2571,9 @@ public:
   }
 };
 
-/// A recipe for converting the canonical IV value to the corresponding value of
-/// an IV with different start and step values, using Start + IV * Step.
+/// A recipe for converting the input value \p IV value to the corresponding
+/// value of an IV with different start and step values, using Start + IV *
+/// Step.
 class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// Kind of the induction.
   const InductionDescriptor::InductionKind Kind;
