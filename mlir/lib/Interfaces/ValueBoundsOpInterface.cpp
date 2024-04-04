@@ -286,18 +286,6 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   Builder b(value.getContext());
   mapOperands.clear();
 
-  if (stopCondition(value, dim)) {
-    // Special case: If the stop condition is satisfied for the input
-    // value/dimension, directly return it.
-    mapOperands.push_back(std::make_pair(value, dim));
-    AffineExpr bound = b.getAffineDimExpr(0);
-    if (type == BoundType::UB)
-      bound = bound + ubAdjustment;
-    resultMap = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0,
-                               b.getAffineDimExpr(0));
-    return success();
-  }
-
   // Process the backward slice of `value` (i.e., reverse use-def chain) until
   // `stopCondition` is met.
   ValueDim valueDim = std::make_pair(value, dim.value_or(kIndexValue));
