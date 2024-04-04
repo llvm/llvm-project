@@ -1973,7 +1973,7 @@ public:
       assert(isa<Instruction>(VL[0]) && "Expected instruction");
       unsigned NumOperands = cast<Instruction>(VL[0])->getNumOperands();
       constexpr unsigned IntrinsicNumOperands = 2;
-      if (auto *CI = dyn_cast<IntrinsicInst>(VL[0]))
+      if (isa<IntrinsicInst>(VL[0]))
         NumOperands = IntrinsicNumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
