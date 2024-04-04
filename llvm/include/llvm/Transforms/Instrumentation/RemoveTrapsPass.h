@@ -25,6 +25,8 @@ namespace llvm {
 class RemoveTrapsPass : public PassInfoMixin<RemoveTrapsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool IsRequested();
 };
 
 } // namespace llvm
