@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_STMTOPENACC_H
 #define LLVM_CLANG_AST_STMTOPENACC_H
 
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
@@ -30,12 +31,22 @@ class OpenACCConstructStmt : public Stmt {
   /// the directive.
   SourceRange Range;
 
-  // TODO OPENACC: Clauses should probably be collected in this class.
+  /// The list of clauses.  This is stored here as an ArrayRef, as this is the
+  /// most convienient place to access the list, however the list itself should
+  /// be stored in leaf nodes, likely in trailing-storage.
+  MutableArrayRef<const OpenACCClause *> Clauses;
 
 protected:
   OpenACCConstructStmt(StmtClass SC, OpenACCDirectiveKind K,
                        SourceLocation Start, SourceLocation End)
       : Stmt(SC), Kind(K), Range(Start, End) {}
+
+  // Used only for initialization, the leaf class can initialize this to
+  // trailing storage.
+  void setClauseList(MutableArrayRef<const OpenACCClause *> NewClauses) {
+    assert(Clauses.empty() && "Cannot change clause list");
+    Clauses = NewClauses;
+  }
 
 public:
   OpenACCDirectiveKind getDirectiveKind() const { return Kind; }
@@ -47,6 +58,7 @@ public:
 
   SourceLocation getBeginLoc() const { return Range.getBegin(); }
   SourceLocation getEndLoc() const { return Range.getEnd(); }
+  const ArrayRef<const OpenACCClause *> clauses() const { return Clauses; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
@@ -101,17 +113,31 @@ public:
 /// those three, as they are semantically identical, and have only minor
 /// differences in the permitted list of clauses, which can be differentiated by
 /// the 'Kind'.
-class OpenACCComputeConstruct : public OpenACCAssociatedStmtConstruct {
+class OpenACCComputeConstruct final
+    : public OpenACCAssociatedStmtConstruct,
+      public llvm::TrailingObjects<OpenACCComputeConstruct,
+                                   const OpenACCClause *> {
   friend class ASTStmtWriter;
   friend class ASTStmtReader;
   friend class ASTContext;
-  OpenACCComputeConstruct()
-      : OpenACCAssociatedStmtConstruct(
-            OpenACCComputeConstructClass, OpenACCDirectiveKind::Invalid,
-            SourceLocation{}, SourceLocation{}, /*AssociatedStmt=*/nullptr) {}
+  OpenACCComputeConstruct(unsigned NumClauses)
+      : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass,
+                                       OpenACCDirectiveKind::Invalid,
+                                       SourceLocation{}, SourceLocation{},
+                                       /*AssociatedStmt=*/nullptr) {
+    // We cannot send the TrailingObjects storage to the base class (which holds
+    // a reference to the data) until it is constructed, so we have to set it
+    // separately here.
+    memset(getTrailingObjects<const OpenACCClause *>(), 0,
+           NumClauses * sizeof(const OpenACCClause *));
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
 
   OpenACCComputeConstruct(OpenACCDirectiveKind K, SourceLocation Start,
-                          SourceLocation End, Stmt *StructuredBlock)
+                          SourceLocation End,
+                          ArrayRef<const OpenACCClause *> Clauses,
+                          Stmt *StructuredBlock)
       : OpenACCAssociatedStmtConstruct(OpenACCComputeConstructClass, K, Start,
                                        End, StructuredBlock) {
     assert((K == OpenACCDirectiveKind::Parallel ||
@@ -119,6 +145,13 @@ class OpenACCComputeConstruct : public OpenACCAssociatedStmtConstruct {
             K == OpenACCDirectiveKind::Kernels) &&
            "Only parallel, serial, and kernels constructs should be "
            "represented by this type");
+
+    // Initialize the trailing storage.
+    for (unsigned I = 0; I < Clauses.size(); ++I)
+      *(getTrailingObjects<const OpenACCClause *>() + I) = Clauses[I];
+
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
   }
 
   void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
@@ -128,10 +161,12 @@ public:
     return T->getStmtClass() == OpenACCComputeConstructClass;
   }
 
-  static OpenACCComputeConstruct *CreateEmpty(const ASTContext &C, EmptyShell);
+  static OpenACCComputeConstruct *CreateEmpty(const ASTContext &C,
+                                              unsigned NumClauses);
   static OpenACCComputeConstruct *
   Create(const ASTContext &C, OpenACCDirectiveKind K, SourceLocation BeginLoc,
-         SourceLocation EndLoc, Stmt *StructuredBlock);
+         SourceLocation EndLoc, ArrayRef<const OpenACCClause *> Clauses,
+         Stmt *StructuredBlock);
 
   Stmt *getStructuredBlock() { return getAssociatedStmt(); }
   const Stmt *getStructuredBlock() const {

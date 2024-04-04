@@ -32,6 +32,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/ODRDiagsEmitter.h"
 #include "clang/AST/ODRHash.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateBase.h"
@@ -53,6 +54,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -11750,4 +11752,68 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
     Data->setAssociatedStmt(readStmt());
   for (unsigned I = 0, E = Data->getNumChildren(); I < E; ++I)
     Data->getChildren()[I] = readStmt();
+}
+
+OpenACCClause *ASTRecordReader::readOpenACCClause() {
+  OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
+  SourceLocation BeginLoc = readSourceLocation();
+  SourceLocation EndLoc = readSourceLocation();
+
+  // TODO OpenACC: We don't have these used anywhere, but eventually we should
+  // be constructing the Clauses with them, so these casts can go away.
+  (void)BeginLoc;
+  (void)EndLoc;
+  switch (ClauseKind) {
+  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Finalize:
+  case OpenACCClauseKind::IfPresent:
+  case OpenACCClauseKind::Seq:
+  case OpenACCClauseKind::Independent:
+  case OpenACCClauseKind::Auto:
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector:
+  case OpenACCClauseKind::NoHost:
+  case OpenACCClauseKind::If:
+  case OpenACCClauseKind::Self:
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::UseDevice:
+  case OpenACCClauseKind::Attach:
+  case OpenACCClauseKind::Delete:
+  case OpenACCClauseKind::Detach:
+  case OpenACCClauseKind::Device:
+  case OpenACCClauseKind::DevicePtr:
+  case OpenACCClauseKind::DeviceResident:
+  case OpenACCClauseKind::FirstPrivate:
+  case OpenACCClauseKind::Host:
+  case OpenACCClauseKind::Link:
+  case OpenACCClauseKind::NoCreate:
+  case OpenACCClauseKind::Present:
+  case OpenACCClauseKind::Private:
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::Reduction:
+  case OpenACCClauseKind::Collapse:
+  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::VectorLength:
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::DeviceNum:
+  case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::Async:
+  case OpenACCClauseKind::Tile:
+  case OpenACCClauseKind::Gang:
+  case OpenACCClauseKind::Wait:
+  case OpenACCClauseKind::Invalid:
+    llvm_unreachable("Clause serialization not yet implemented");
+  }
+  llvm_unreachable("Invalid Clause Kind");
+}
+
+void ASTRecordReader::readOpenACCClauseList(
+    MutableArrayRef<const OpenACCClause *> Clauses) {
+  for (unsigned I = 0; I < Clauses.size(); ++I)
+    Clauses[I] = readOpenACCClause();
 }
