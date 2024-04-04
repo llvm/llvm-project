@@ -1,11 +1,7 @@
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=HOT70
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:                                 | FileCheck %s --check-prefix=HOT99
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-random-skip-rate=0.0 | FileCheck %s --check-prefix=RANDOM0
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-random-skip-rate=1.0 | FileCheck %s --check-prefix=RANDOM1
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=HOT70
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=990000 | FileCheck %s --check-prefix=HOT99
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-skip-rate=0.0 | FileCheck %s --check-prefix=RANDOM0
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-skip-rate=1.0 | FileCheck %s --check-prefix=RANDOM1
 
 ; HOT70: @sanitized
 ; HOT70-NEXT: @__hwasan_tls
