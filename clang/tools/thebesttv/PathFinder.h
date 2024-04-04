@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.h"
+#include <random>
 
 struct ICFGPathFinder {
     const ICFG &icfg;
@@ -87,6 +88,23 @@ struct DfsPathFinder : public ICFGPathFinder {
             return;
         }
 
+        // std::vector<ICFG::Edge> intraEdges, interEdges;
+        // for (const auto &e : icfg.G[u]) {
+        //     if (e.type == ICFG::Edge::Type::INTRA_PROC) {
+        //         intraEdges.push_back(e);
+        //     } else {
+        //         interEdges.push_back(e);
+        //     }
+        // }
+        // // 选择所有过程间的边，再随机选一条过程内的边
+        // std::vector<ICFG::Edge> edgesToVisit = interEdges;
+        // // https://en.cppreference.com/w/cpp/algorithm/sample
+        // std::sample(intraEdges.begin(), intraEdges.end(),
+        //             std::back_inserter(edgesToVisit), 1,
+        //             std::mt19937{std::random_device{}()});
+        // logger.info("Size: {}", edgesToVisit.size());
+
+        // for (const auto &e : edgesToVisit) {
         for (const auto &e : icfg.G[u]) {
             int v = e.target;
             if (visiting[v])
