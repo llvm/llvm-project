@@ -753,7 +753,6 @@ add_fp_unittest(
    exp_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp
    libc.src.__support.FPUtil.fp_bits
 )
@@ -778,7 +777,6 @@ add_fp_unittest(
    exp2_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp2
    libc.src.__support.FPUtil.fp_bits
 )
@@ -814,7 +812,6 @@ add_fp_unittest(
    exp10_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp10
    libc.src.__support.FPUtil.fp_bits
 )

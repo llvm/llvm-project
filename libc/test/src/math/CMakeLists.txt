@@ -618,7 +618,6 @@ add_fp_unittest(
    exp_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp
    libc.src.__support.FPUtil.fp_bits
 )
@@ -645,7 +644,6 @@ add_fp_unittest(
    exp2_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp2
    libc.src.__support.FPUtil.fp_bits
 )
@@ -658,7 +656,6 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
-    libc.include.llvm-libc-macros.math_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f
     libc.src.__support.CPP.array
@@ -687,7 +684,6 @@ add_fp_unittest(
    exp10_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.exp10
    libc.src.__support.FPUtil.fp_bits
 )
@@ -1338,7 +1334,6 @@ add_fp_unittest(
    expm1_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.expm1
    libc.src.__support.FPUtil.fp_bits
 )
@@ -1352,7 +1347,6 @@ add_fp_unittest(
    log_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.log
    libc.src.__support.FPUtil.fp_bits
 )
@@ -1379,7 +1373,6 @@ log2_test
    log2_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.log2
    libc.src.__support.FPUtil.fp_bits
 )
@@ -1406,7 +1399,6 @@ add_fp_unittest(
    log10_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.log10
    libc.src.__support.FPUtil.fp_bits
 )
@@ -1433,7 +1425,6 @@ log1p_test
    log1p_test.cpp
  DEPENDS
    libc.src.errno.errno
-   libc.include.math
    libc.src.math.log1p
    libc.src.__support.FPUtil.fp_bits
 )
