@@ -191,7 +191,7 @@ static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+    ClRandomSkipRate("hwasan-random-skip-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
                               "to skip instrumentation of a function."));
 
