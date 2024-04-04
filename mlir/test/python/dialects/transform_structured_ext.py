@@ -210,7 +210,7 @@ def testVectorizeMixed(target):
     # CHECK: transform.sequence
     # CHECK: %[[V0:.*]] = transform.structured.match
     # CHECK: transform.structured.vectorize
-    # CHECK-SAME:     vector_sizes [%[[V0]] : !transform.any_op, 4]
+    # CHECK-SAME:     vector_sizes [%[[V0]], 4]
 
 
 @run
@@ -223,7 +223,7 @@ def testVectorizeScalable(target):
     # CHECK: transform.sequence
     # CHECK-DAG: %[[V0:.*]] = transform.structured.match
     # CHECK-DAG: transform.structured.vectorize
-    # CHECK-SAME:     vector_sizes [16, [%[[V0]] : !transform.any_op], [4], [8]]
+    # CHECK-SAME:     vector_sizes [16, [%[[V0]]], [4], [8]]
 
 
 @run

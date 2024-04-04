@@ -2146,17 +2146,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
                           $scalable_sizes);
 
   let results = (outs);
-  let assemblyFormat = [{
-      $target oilist(
-      `vector_sizes` custom<DynamicIndexList>($vector_sizes,
-                                              $static_vector_sizes,
-                                              type($vector_sizes),
-                                              $scalable_sizes) |
-      `vectorize_nd_extract` $vectorize_nd_extract
-      )
-      attr-dict
-      `:` type($target)
-  }];
+
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

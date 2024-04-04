@@ -67,7 +67,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %size = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op 
-    transform.structured.vectorize %0 vector_sizes [%size: !transform.any_op] : !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [%size] : !transform.any_op, !transform.any_op
     transform.yield
   }
 }
@@ -104,7 +104,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %vector_size = transform.param.constant 4 : i64 -> !transform.param<i64>
-    transform.structured.vectorize %0 vector_sizes [%vector_size : !transform.param<i64>] : !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [%vector_size] : !transform.any_op, !transform.param<i64>
     transform.yield
   }
 }
@@ -326,7 +326,7 @@ module attributes {transform.with_named_sequence} {
     %vector_size_0 = transform.param.constant 4 : i64 -> !transform.param<i64>
     %vector_size_2 = transform.param.constant 16 : i64 -> !transform.param<i64>
     transform.structured.vectorize %0 vector_sizes
-      [%vector_size_0 : !transform.param<i64>, 8, %vector_size_2: !transform.param<i64>] : !transform.any_op
+      [%vector_size_0, 8, %vector_size_2] : !transform.any_op, !transform.param<i64>, !transform.param<i64>
     transform.yield
   }
 }
