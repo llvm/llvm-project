@@ -322,14 +322,6 @@ if(ICU_FOUND)
   PRIVATE
   ${ICU_LIBRARIES}
   )
-else()
-  # Link iconv library if it is an external library.
-  if(Iconv_FOUND AND NOT Iconv_IS_BUILT_IN)
-    target_link_libraries(LLVMSupport
-    PRIVATE
-    ${Iconv_LIBRARIES}
-    )
-  endif()
 endif()
 
 set(llvm_system_libs ${system_libs})

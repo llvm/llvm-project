@@ -320,7 +320,9 @@ if(LLVM_ENABLE_ICONV)
   else()
     find_package(Iconv)
   endif()
-  set(HAVE_ICONV ${Iconv_FOUND})
+  if(Iconv_FOUND AND Iconv_IS_BUILT_IN)
+    set(HAVE_ICONV 1)
+  endif()
 endif()
 
 # function checks
