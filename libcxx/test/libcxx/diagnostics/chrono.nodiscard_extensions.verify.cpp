@@ -33,9 +33,17 @@ void test() {
   list.cbegin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   list.cend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
+  {
+    const std::chrono::tzdb& t = list.front();
+    t.locate_zone("name"); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    t.current_zone();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+
   namespace crno = std::chrono;
   crno::get_tzdb_list();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   crno::get_tzdb();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  crno::locate_zone("n"); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  crno::current_zone();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   crno::remote_version(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   {
