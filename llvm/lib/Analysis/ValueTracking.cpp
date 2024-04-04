@@ -1727,26 +1727,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const Value *Vec = I->getOperand(0);
     const Value *Elt = I->getOperand(1);
     auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
-    // Early out if the index is non-constant or out-of-range.
     unsigned NumElts = DemandedElts.getBitWidth();
-    if (!CIdx || CIdx->getValue().uge(NumElts)) {
-      Known.resetAll();
-      return;
+    APInt DemandedVecElts = DemandedElts;
+    bool NeedsElt = true;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
+
     Known.One.setAllBits();
     Known.Zero.setAllBits();
-    unsigned EltIdx = CIdx->getZExtValue();
-    // Do we demand the inserted element?
-    if (DemandedElts[EltIdx]) {
+    if (NeedsElt) {
       computeKnownBits(Elt, Known, Depth + 1, Q);
       // If we don't know any bits, early out.
       if (Known.isUnknown())
         break;
     }
-    // We don't need the base vector element that has been inserted.
-    APInt DemandedVecElts = DemandedElts;
-    DemandedVecElts.clearBit(EltIdx);
-    if (!!DemandedVecElts) {
+
+    if (!DemandedVecElts.isZero()) {
       computeKnownBits(Vec, DemandedVecElts, Known2, Depth + 1, Q);
       Known = Known.intersectWith(Known2);
     }
