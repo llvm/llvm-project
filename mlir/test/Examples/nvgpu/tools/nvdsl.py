@@ -150,12 +150,11 @@ class TMA:
         nvgpu.tma_prefetch_descriptor(self.tma_descriptor, predicate=predicate)
 
     def load(self, dest, mbarrier: Mbarriers, coords=[0, 0], predicate=None):
-        coord_ops = [const(c) for c in coords]
         nvgpu.TmaAsyncLoadOp(
             dest,
             mbarrier.mbar_group_op,
             self.tma_descriptor,
-            coordinates=coord_ops,
+            coordinates=map(const, coords),
             mbarId=mbarrier.id_op,
             predicate=predicate,
         )
@@ -199,6 +198,10 @@ class WGMMAMatrix:
         parse_str = f"!nvgpu.warpgroup.descriptor<tensor=memref<{self.M}x{self.N}x{self.desc.memref_ty.element_type}, #gpu.address_space<workgroup>>>"
         return ir.Type.parse(parse_str)
 
+    def store_accumulator(self, dest):
+        assert self.matrix_type == WGMMAType.Accumulator
+        nvgpu.warpgroup_mma_store(self.acc_op, dest)
+
     def update_smem(self, smem):
         self.smem = smem
 
@@ -217,9 +220,10 @@ class WGMMAMatrix:
     def __iadd__(self, matmulResult):
         lhs = matmulResult[0]
         rhs = matmulResult[1]
-        return nvgpu.WarpgroupMmaOp(
+        acc_op = nvgpu.WarpgroupMmaOp(
             self.acc_op.type, lhs, rhs, self.acc_op, transposeB=True
         )
+        return WGMMAMatrix(WGMMAType.Accumulator, acc_op=acc_op)
 
 
 def get_dynamic_shared_memory(shape=None, ty=None, offset: int = 0):

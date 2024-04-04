@@ -91,7 +91,7 @@ def gemm_128_128_64(a, b, d):
         a_smem = get_dynamic_shared_memory((M, K), T.f16())
         b_smem = get_dynamic_shared_memory((K, N), T.f16(), offset=a_size)
 
-        # 1. Execute TMA Load for two input matrices
+        # 1. TMA Load for two input matrices
         tma_load(mbar_group, a_tma, b_tma, isThread0)
 
         # 2. All threads wait TMA load completion
@@ -100,13 +100,13 @@ def gemm_128_128_64(a, b, d):
         # 3. Performs Tensor Core GEMM 128x128x64 by warpgroup
         A = WGMMAMatrix(WGMMAType.Descriptor, [M, K], desc=a_tma, smem=a_smem)
         B = WGMMAMatrix(WGMMAType.Descriptor, [K, N], desc=b_tma, smem=b_smem)
-        C = WGMMAMatrix(WGMMAType.Accumulator, shape=[M, N], ty=T.f32())
+        D = WGMMAMatrix(WGMMAType.Accumulator, shape=[M, N], ty=T.f32())
 
         # Matrix Multiply
-        C += A @ B
+        D += A @ B
 
         # 4. Stores fragmented registers to global memory by warpgroup
-        nvgpu.warpgroup_mma_store(C, d_dev)
+        D.store_accumulator(d_dev)
 
     gemm_tma_kernel()
 

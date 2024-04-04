@@ -49,10 +49,9 @@ def saxpy_tma(x, y, alpha):
         mbar_group = Mbarriers(number_of_barriers=1)
         mbar_group[0].init(1, predicate=isThread0)
 
+        # 2. Execute Tensor Memory Accelerator (TMA) Load
         x_smem = get_dynamic_shared_memory((M, N), T.f32())
         y_smem = get_dynamic_shared_memory((M, N), T.f32(), offset=M * N * 2)
-
-        # 2. Execute Tensor Memory Accelerator (TMA) Load
         x_tma.load(x_smem, mbar_group[0], predicate=isThread0)
         y_tma.load(y_smem, mbar_group[0], predicate=isThread0)
         mbar_group[0].arrive(txcount=M * N * 2 * 4, predicate=isThread0)

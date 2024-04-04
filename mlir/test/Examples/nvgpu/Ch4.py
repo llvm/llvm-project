@@ -154,19 +154,19 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
     # Initialize A and B (input matrices) and C (accumulator)
     A = WGMMAMatrix(WGMMAType.Descriptor, [TILE_M, TILE_K], desc=a_tma)
     B = WGMMAMatrix(WGMMAType.Descriptor, [TILE_K, TILE_N], desc=b_tma)
-    C = WGMMAMatrix(WGMMAType.Accumulator, shape=[TILE_M, TILE_N], ty=T.f32())
+    D = WGMMAMatrix(WGMMAType.Accumulator, shape=[TILE_M, TILE_N], ty=T.f32())
 
-    pp = const(False, ty=T.bool())
+    phase = const(False, ty=T.bool())
 
     # Main Loop
-    for_op = scf.ForOp(const(0), const(K // TILE_K), const(1), [C.acc_op, pp])
+    for_op = scf.ForOp(const(0), const(K // TILE_K), const(1), [D.acc_op, phase])
     with ir.InsertionPoint(for_op.body):
-        pp = for_op.inner_iter_args[1]
+        phase = for_op.inner_iter_args[1]
         iv = for_op.induction_variable
         stage = iv % NUM_STAGES
 
         # Wait for current stage
-        mbar_group[stage].try_wait(phase=pp)
+        mbar_group[stage].try_wait(phase=phase)
 
         # Find shared memory slot
         offset_a = stage * size_a
@@ -177,10 +177,10 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         # Initialize matrices
         A.update_smem(a_smem)
         B.update_smem(b_smem)
-        C.update_accumulator(for_op.inner_iter_args[0])
+        D.update_accumulator(for_op.inner_iter_args[0])
 
         # Matrix Multiply
-        C += A @ B
+        D += A @ B
 
         # Wait Tensor Core for single stage
         if NUM_STAGES == 1:
@@ -193,20 +193,20 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         tma_load(mbar_group, a_tma, b_tma, nextSlot, nextStage, pred)
 
         # Switch phase parity for the mbarrier
-        switched = pp ^ const(True, ty=T.bool())
-        newPP = arith.select(
+        newPhase = arith.select(
             stage == (NUM_STAGES - 1),
-            switched,
-            pp,
+            (phase ^ const(True, ty=T.bool())),
+            phase,
         )
-        scf.yield_([C, newPP])
+        scf.yield_([D.acc_op, newPhase])
 
     nvvm.WgmmaWaitGroupSyncOp(0)
 
-    return for_op.results[0]
+    D.update_accumulator(for_op.results[0])
+    return D
 
 
-def epilogue(D, d_dev):
+def epilogue(D: WGMMAMatrix, d_dev):
     """
     Epilogue of the GEMM kernel. It stores the fragmented registers to global memory.
 
@@ -222,7 +222,7 @@ def epilogue(D, d_dev):
     d_gmem = memref.subview(d_dev, [dimX, dimY], [TILE_M, TILE_N], [1, 1])
 
     # Store (registers -> shared memory)
-    nvgpu.WarpgroupMmaStoreOp(D, d_smem)
+    D.store_accumulator(d_smem)
     gpu.barrier()
 
     # Store (shared memory --> global memory)
