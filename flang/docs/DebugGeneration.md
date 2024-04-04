@@ -297,8 +297,8 @@ variable will be used in the `DISubrangeAttr`. Note that this
 
 #### Assumed Size
 
-This is treated as raw array. Debug information will not provide any bounds
-information.
+This is treated as raw array. Debug information will not provide any upper bound
+information for the last dimension.
 
 #### Assumed Shape
 The assumed shape array will use the similar representation as fixed size
@@ -369,24 +369,22 @@ similar to arrays.
 
 ### Strings
 
-Fixed sized strings will be treated like fixed sizes arrays and
-allocatable strings will be treated like allocatable arrays. Metadata
-will be generated to enable debuggers to find their size.
+The `DIStringTypeAttr` can represent both fixed size and allocatable strings. For
+the allocatable case, the `stringLengthExpression` and `stringLocationExpression`
+are used to provide the length and the location of the string respectively.
 
 ```
   character(len=:), allocatable :: var
   character(len=20) :: fixed
 
 !1 = !DILocalVariable(name: "var", type: !2)
-!2 = !DICompositeType(tag: DW_TAG_array_type, baseType: !3, elements: !4, dataLocation: !6)
-!3 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_unsigned_char)
-!4 = !DISubrange(count: !5, lowerBound: 1)
-!5 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8, DW_OP_deref)
-!6 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!2 = !DIStringType(name: "character(*)", stringLengthExpression: !4, stringLocationExpression: !3 ...)
+!3 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!4 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
 
-!7 = !DILocalVariable(name: "fixed", type: !8)
-!8 = !DICompositeType(tag: DW_TAG_array_type, baseType: !3, size: 160, elements: !9)
-!9 = !DISubrange(count: 20, lowerBound: 1)
+!5 = !DILocalVariable(name: "fixed", type: !6)
+!6 = !DIStringType(name: "character (20)", size: 160)
+
 ```
 
 ### Association
@@ -427,6 +425,7 @@ with fixed sizes arrays. It needs to also accept `DIExpressionAttr` or
 `DILocalVariableAttr` to support assumed shape and adjustable arrays.
 4. The `DICompositeTypeAttr` will need to have field for `datalocation`,
 `rank`, `allocated` and `associated`.
+5. `DIStringTypeAttr`
 
 # Testing
 
