@@ -182,18 +182,11 @@ static cl::opt<bool> ClWithTls(
              "platforms that support this"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<bool>
-    CSelectiveInstrumentation("hwasan-selective-instrumentation",
-                              cl::desc("Use selective instrumentation"),
-                              cl::Hidden, cl::init(false));
-
-static cl::opt<int> ClHotPercentileCutoff(
-    "hwasan-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff."
-             "By default `-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                          cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+    ClRandomSkipRate("hwasan-random-skip-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
                               "to skip instrumentation of a function."));
 
@@ -1505,6 +1498,8 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     std::bernoulli_distribution D(ClRandomSkipRate);
     return (D(*Rng));
   }
+  if (!ClHotPercentileCutoff.getNumOccurrences())
+    return false;
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
@@ -1512,12 +1507,8 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     ++NumNoProfileSummaryFuncs;
     return false;
   }
-  auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-  return (
-      (ClHotPercentileCutoff.getNumOccurrences() && ClHotPercentileCutoff >= 0)
-          ? PSI->isFunctionHotInCallGraphNthPercentile(ClHotPercentileCutoff,
-                                                       &F, BFI)
-          : PSI->isFunctionHotInCallGraph(&F, BFI));
+  return PSI->isFunctionHotInCallGraphNthPercentile(
+      ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
@@ -1533,7 +1524,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
 
-  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+  if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
 
   NumInstrumentedFuncs++;

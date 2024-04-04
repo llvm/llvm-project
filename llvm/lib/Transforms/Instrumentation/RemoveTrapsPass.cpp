@@ -22,13 +22,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "remove-traps"
 
-static cl::opt<int> HotPercentileCutoff(
-    "remove-traps-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff. By default "
-             "`-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> HotPercentileCutoff("remove-traps-percentile-cutoff-hot",
+                                        cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    RandomRate("remove-traps-random-rate", cl::init(0.0),
+    RandomRate("remove-traps-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
                         "unconditional pseudo-random checks removal."));
 
@@ -43,6 +41,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   auto ShouldRemove = [&](bool IsHot) {
     if (!RandomRate.getNumOccurrences())
       return IsHot;
+    assert(HotPercentileCutoff.getNumOccurrences());
     if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
     std::bernoulli_distribution D(RandomRate);
@@ -64,12 +63,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
           uint64_t Count = 0;
           for (const auto *PR : predecessors(&BB))
             Count += BFI.getBlockProfileCount(PR).value_or(0);
-
-          IsHot =
-              HotPercentileCutoff.getNumOccurrences()
-                  ? (HotPercentileCutoff > 0 &&
-                     PSI->isHotCountNthPercentile(HotPercentileCutoff, Count))
-                  : PSI->isHotCount(Count);
+          IsHot = PSI->isHotCountNthPercentile(HotPercentileCutoff, Count);
         }
 
         if (ShouldRemove(IsHot)) {
@@ -101,4 +95,9 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
 
   return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();
+}
+
+bool RemoveTrapsPass::IsRequested() {
+  return RandomRate.getNumOccurrences() ||
+         HotPercentileCutoff.getNumOccurrences();
 }
