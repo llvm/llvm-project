@@ -356,3 +356,71 @@ define i1 @non_eq_xor_common_op_fail(i8 %x, i8 %y, i8 %ww, i8 %a) {
   %r = icmp eq i8 %axy, %axz
   ret i1 %r
 }
+
+define i1 @non_eq_disjoint_or(i8 %x, i8 %yy, i8 %w) {
+; CHECK-LABEL: @non_eq_disjoint_or(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = or disjoint i8 [[Y]], [[W]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %w
+  %val = or disjoint i8 %y, %w
+  %rhs = add i8 %x, %val
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_or_fail(i8 %x, i8 %yy, i8 %w) {
+; CHECK-LABEL: @non_eq_or_fail(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = or i8 [[Y]], [[W]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %w
+  %val = or i8 %y, %w
+  %rhs = add i8 %x, %val
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_xor(i8 %x, i8 %yy, i8 %w) {
+; CHECK-LABEL: @non_eq_xor(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = xor i8 [[Y]], [[W]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %w
+  %val = xor i8 %y, %w
+  %rhs = add i8 %x, %val
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_xor_fail(i8 %x, i8 %yy, i8 %w) {
+; CHECK-LABEL: @non_eq_xor_fail(
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = xor i8 [[Y]], [[W]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[VAL]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nsw i8 %yy, 1
+  %lhs = add i8 %x, %w
+  %val = xor i8 %y, %w
+  %rhs = add i8 %x, %val
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
