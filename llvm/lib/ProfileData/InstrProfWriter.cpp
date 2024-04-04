@@ -558,14 +558,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     }
 
     auto RecordWriter =
-        std::make_unique<memprof::RecordWriterTrait<memprof::Version1>>();
+        std::make_unique<memprof::RecordWriterTrait>(memprof::Version1);
     RecordWriter->Schema = &Schema;
-    OnDiskChainedHashTableGenerator<
-        memprof::RecordWriterTrait<memprof::Version1>>
+    OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
         RecordTableGenerator;
     for (auto &I : MemProfRecordData) {
       // Insert the key (func hash) and value (memprof record).
-      RecordTableGenerator.insert(I.first, I.second);
+      RecordTableGenerator.insert(I.first, I.second, *RecordWriter.get());
     }
     // Release the memory of this MapVector as it is no longer needed.
     MemProfRecordData.clear();
