@@ -5149,6 +5149,17 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::OR:
     return ConsiderFlags && Op->getFlags().hasDisjoint();
 
+  case ISD::SCALAR_TO_VECTOR:
+    // Check if we demand any upper (undef) elements.
+    return !PoisonOnly && DemandedElts.ugt(1);
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // Ensure that the element index is in bounds.
+    EVT VecVT = Op.getOperand(0).getValueType();
+    KnownBits KnownIdx = computeKnownBits(Op.getOperand(1), Depth + 1);
+    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+  }
+
   case ISD::INSERT_VECTOR_ELT:{
     // Ensure that the element index is in bounds.
     EVT VecVT = Op.getOperand(0).getValueType();
