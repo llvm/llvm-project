@@ -30,29 +30,20 @@
 #include <optional>
 #include <vector>
 
-#define GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                         \
-  llvm::Triple::ArchType Arch = getArch();                                     \
-  switch (Arch) {                                                              \
-  case llvm::Triple::dxil:                                                     \
-    return llvm::Intrinsic::dx_##IntrinsicPostfix;                             \
-  case llvm::Triple::spirv:                                                    \
-    return llvm::Intrinsic::spv_##IntrinsicPostfix;                            \
-  default:                                                                     \
-    llvm_unreachable("Intrinsic " #IntrinsicPostfix                            \
-                     " not supported by target architecture");                 \
-  }
-
-// A function generator macro for when there is no builtins or
-// when builtins are mapped to a set of intrinsics for different types.
+// A function generator macro for picking the right intrinsic
+// for the target backend
 #define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
   llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
-    GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                             \
-  }
-
-// A template function generator macro for when we have builtins.
-#define GENERATE_HLSL_INTRINSIC_TEMPLATE(BuiltinName, IntrinsicPostfix)        \
-  template <> llvm::Intrinsic::ID getIntrinsic<Builtin::BI__##BuiltinName>() { \
-    GENERATE_HLSL_INTRINSIC_BASE(IntrinsicPostfix)                             \
+    llvm::Triple::ArchType Arch = getArch();                                   \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil:                                                   \
+      return llvm::Intrinsic::dx_##IntrinsicPostfix;                           \
+    case llvm::Triple::spirv:                                                  \
+      return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
+                       " not supported by target architecture");               \
+    }                                                                          \
   }
 
 namespace llvm {
@@ -81,8 +72,7 @@ public:
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
 
-  template <unsigned BI> llvm::Intrinsic::ID getIntrinsic();
-  GENERATE_HLSL_INTRINSIC_TEMPLATE(builtin_hlsl_elementwise_all, all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
 
   //===----------------------------------------------------------------------===//
