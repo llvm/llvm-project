@@ -116,7 +116,8 @@ static void expandFPToI(Instruction *FPToI) {
   // fp80 conversion is implemented by fpext to fp128 first then do the
   // conversion.
   FPMantissaWidth = FPMantissaWidth == 63 ? 112 : FPMantissaWidth;
-  unsigned FloatWidth = PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
+  unsigned FloatWidth =
+      PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   unsigned ExponentBias = (1 << (ExponentWidth - 1)) - 1;
   Value *ImplicitBit = Builder.CreateShl(
