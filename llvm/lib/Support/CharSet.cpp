@@ -215,7 +215,7 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
   // Setup the output. We directly write into the SmallVector.
   Result.resize_for_overwrite(Source.size());
   size_t Capacity = Result.capacity();
-  char *Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
+  char *Output = static_cast<char *>(Result.data());
   size_t OutputLength = Capacity;
 
   size_t Ret;
@@ -265,7 +265,7 @@ std::error_code CharSetConverterIconv::flush() const {
 
 std::error_code
 CharSetConverterIconv::flush(SmallVectorImpl<char> &Result) const {
-  return convert(nullptr, Result);
+  return convert("", Result, /*ShouldAutoFlush=*/true);
 }
 
 #endif // HAVE_ICONV
