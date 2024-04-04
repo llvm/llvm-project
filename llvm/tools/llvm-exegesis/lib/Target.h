@@ -86,6 +86,14 @@ public:
                 ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID = 0) const;
 
+  virtual bool checkOpcodeSupported(int Opcode,
+                                    const MCSubtargetInfo &SI) const {
+    return true;
+  }
+
+  // Find register by name, NoRegister if not found.
+  virtual unsigned findRegisterByName(const StringRef RegName) const = 0;
+
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}
 
@@ -201,6 +209,14 @@ public:
         "fillMemoryOperands() requires getScratchMemoryRegister() > 0");
   }
 
+  // Generates code to store register into scratch memory with offset.
+  virtual std::vector<MCInst> storeRegValueToScratch(const MCSubtargetInfo &STI,
+                                                     unsigned Reg,
+                                                     unsigned Offset) const {
+    llvm_unreachable(
+        "storeRegValueToScratch() requires getScratchMemoryRegister() > 0");
+  }
+
   // Returns a counter usable as a loop counter.
   virtual unsigned getDefaultLoopCounterRegister(const Triple &) const {
     return 0;
@@ -237,6 +253,9 @@ public:
     return make_error<Failure>(
         "targets with target-specific operands should implement this");
   }
+
+  // Process instructions that used reserved registers.
+  virtual void processInstructionReservedRegs(InstructionTemplate &IT) const {}
 
   // Returns true if this instruction is supported as a back-to-back
   // instructions.

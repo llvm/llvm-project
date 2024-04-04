@@ -168,7 +168,15 @@ void BasicBlockFiller::addInstruction(const MCInst &Inst, const DebugLoc &DL) {
     } else if (Op.isImm()) {
       Builder.addImm(Op.getImm());
     } else if (!Op.isValid()) {
-      llvm_unreachable("Operand is not set");
+      std::string Message;
+      llvm::raw_string_ostream MessageOut(Message);
+      MessageOut << "Operand is not set: Instr: ";
+      Inst.dump_pretty(MessageOut, MCII->getName(Inst.getOpcode()));
+      MessageOut << "; OpIndex: " << OpIndex;
+      const MCOperandInfo &OperandInfo = MCID.operands()[OpIndex];
+      MessageOut << "; OpInfo.OperandType: "
+                 << static_cast<uint32_t>(OperandInfo.OperandType);
+      report_fatal_error(Twine(Message));
     } else {
       llvm_unreachable("Not yet implemented");
     }

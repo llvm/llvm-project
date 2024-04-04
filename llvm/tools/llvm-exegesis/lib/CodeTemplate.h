@@ -35,6 +35,8 @@ struct InstructionTemplate {
   const MCOperand &getValueFor(const Variable &Var) const;
   MCOperand &getValueFor(const Operand &Op);
   const MCOperand &getValueFor(const Operand &Op) const;
+  MCOperand &getValueFor(unsigned OpIdx);
+  const MCOperand &getValueFor(unsigned OpIdx) const;
   bool hasImmediateVariables() const;
   const Instruction &getInstr() const { return *Instr; }
   ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
@@ -132,6 +134,10 @@ struct CodeTemplate {
   // If the template uses the provided scratch memory, the register in which
   // the pointer to this memory is passed in to the function.
   unsigned ScratchSpacePointerInReg = 0;
+
+  // Require to pre-store value of a given register (fisrt)
+  // to scratch memory with given offset (second)
+  SmallVector<std::pair<unsigned, unsigned>, 2> PreinitScratchMemory;
 
 #if defined(__GNUC__) && (defined(__clang__) || LLVM_GNUC_PREREQ(8, 0, 0))
   // FIXME: GCC7 bug workaround. Drop #if after GCC7 no longer supported.

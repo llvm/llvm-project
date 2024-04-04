@@ -747,6 +747,8 @@ private:
                                    const MCInstrInfo &MII,
                                    unsigned LoopRegister) const override;
 
+  unsigned findRegisterByName(const StringRef RegName) const override;
+
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
 
@@ -1018,6 +1020,10 @@ static std::vector<MCInst> loadImmediateSegmentRegister(unsigned Reg,
   llvm_unreachable("Loading immediate segment registers is only supported with "
                    "x86-64 llvm-exegesis");
 #endif // defined(__x86_64__) && defined(__linux__)
+}
+
+unsigned ExegesisX86Target::findRegisterByName(const StringRef RegName) const {
+  return X86::NoRegister;
 }
 
 std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,

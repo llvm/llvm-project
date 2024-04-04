@@ -45,6 +45,10 @@ public:
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
 private:
+  unsigned findRegisterByName(const StringRef RegName) const override {
+    return AArch64::NoRegister;
+  }
+
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override {
     if (AArch64::GPR32RegClass.contains(Reg))

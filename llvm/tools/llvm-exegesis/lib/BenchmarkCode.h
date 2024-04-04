@@ -17,6 +17,11 @@
 namespace llvm {
 namespace exegesis {
 
+struct ScratchMemoryStore {
+  unsigned Reg;
+  unsigned Offset;
+};
+
 // A collection of instructions that are to be assembled, executed and measured.
 struct BenchmarkCode {
   BenchmarkKey Key;

@@ -57,6 +57,14 @@ const MCOperand &InstructionTemplate::getValueFor(const Operand &Op) const {
   return getValueFor(Instr->Variables[Op.getVariableIndex()]);
 }
 
+MCOperand &InstructionTemplate::getValueFor(unsigned OpIdx) {
+  return getValueFor(Instr->Variables[OpIdx]);
+}
+
+const MCOperand &InstructionTemplate::getValueFor(unsigned OpIdx) const {
+  return getValueFor(Instr->Variables[OpIdx]);
+}
+
 bool InstructionTemplate::hasImmediateVariables() const {
   return any_of(Instr->Variables, [this](const Variable &Var) {
     return Instr->getPrimaryOperand(Var).isImmediate();

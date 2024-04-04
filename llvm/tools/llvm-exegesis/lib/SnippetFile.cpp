@@ -37,10 +37,11 @@ namespace {
 // An MCStreamer that reads a BenchmarkCode definition from a file.
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
-  explicit BenchmarkCodeStreamer(MCContext *Context, const LLVMState &State,
-                                 BenchmarkCode *Result)
-      : MCStreamer(*Context), State(State), Result(Result) {}
-
+  explicit BenchmarkCodeStreamer(
+      const ExegesisTarget &Target, MCContext *Context,
+      const LLVMState &State, BenchmarkCode *Result)
+      : MCStreamer(*Context), Target(Target), State(State),
+        Result(Result) {}
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
   void emitInstruction(const MCInst &Instruction,
@@ -208,6 +209,8 @@ private:
                     Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
+    if (unsigned Reg = Target.findRegisterByName(RegName))
+      return Reg;
     std::optional<MCRegister> RegisterNumber =
         State.getRegisterNumberFromName(RegName);
     if (!RegisterNumber.has_value()) {
@@ -218,6 +221,7 @@ private:
     return *RegisterNumber;
   }
 
+  const ExegesisTarget &Target;
   const LLVMState &State;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
@@ -251,7 +255,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
       TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
   Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  BenchmarkCodeStreamer Streamer(&Context, State, &Result);
+  BenchmarkCodeStreamer Streamer(State.getExegesisTarget(), &Context, State, &Result);
 
   std::string Error;
   raw_string_ostream ErrorStream(Error);
