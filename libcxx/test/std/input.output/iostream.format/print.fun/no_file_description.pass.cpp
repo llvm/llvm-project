@@ -58,12 +58,25 @@ static void test_println() {
   assert(file);
 
   std::println(file, "hello world{}", '!');
+  long pos = std::ftell(file);
+  std::fclose(file);
+
+  assert(pos > 0);
+  assert(std::string_view(buffer.data(), pos) == "hello world!\n");
+}
+
+static void test_println_blank_line() {
+  std::array<char, 100> buffer{0};
+
+  FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
+  assert(file);
+
   std::println(file);
   long pos = std::ftell(file);
   std::fclose(file);
 
   assert(pos > 0);
-  assert(std::string_view(buffer.data(), pos) == "hello world!\n\n");
+  assert(std::string_view(buffer.data(), pos) == "\n");
 }
 
 static void test_vprint_unicode() {
@@ -99,6 +112,7 @@ static void test_vprint_nonunicode() {
 int main(int, char**) {
   test_print();
   test_println();
+  test_println_blank_line();
   test_vprint_unicode();
   test_vprint_nonunicode();
 

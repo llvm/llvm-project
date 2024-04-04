@@ -87,11 +87,10 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   }
   // *** println ***
   {
-    expected += "\n\n"; // Tested last since it changes the expected value.
+    expected += '\n'; // Tested last since it changes the expected value.
     stream.str("");
     ;
     std::println(stream, fmt, std::forward<Args>(args)...);
-    std::println(stream);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
                  TEST_WRITE_CONCATENATED(
