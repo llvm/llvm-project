@@ -161,8 +161,10 @@ class Visibility<list<OptionVisibility> visibility> {
 }
 class Group<OptionGroup group> { OptionGroup Group = group; }
 class HelpText<string text> { string HelpText = text; }
-class HelpTextsForVariants<list<HelpTextVariant> texts> {
-  list<HelpTextVariant> HelpTextsForVariants = texts;
+class HelpTextForVariants<list<OptionVisibility> Visibilities, string text> {
+  list<HelpTextVariant> HelpTextsForVariants = [
+    HelpTextVariant<Visibilities, text>
+  ];
 }
 
 class MetaVarName<string name> { string MetaVarName = name; }
