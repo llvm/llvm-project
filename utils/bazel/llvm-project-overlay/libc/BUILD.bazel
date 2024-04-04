@@ -1173,6 +1173,16 @@ libc_function(
 )
 
 libc_function(
+    name = "fesetexcept",
+    srcs = ["src/fenv/fesetexcept.cpp"],
+    hdrs = ["src/fenv/fesetexcept.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+    ],
+)
+
+libc_function(
     name = "fegetexceptflag",
     srcs = ["src/fenv/fegetexceptflag.cpp"],
     hdrs = ["src/fenv/fegetexceptflag.h"],
