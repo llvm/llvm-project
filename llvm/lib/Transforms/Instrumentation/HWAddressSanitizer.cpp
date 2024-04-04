@@ -317,7 +317,7 @@ private:
   };
 
   bool selectiveInstrumentationShouldSkip(Function &F,
-                                          FunctionAnalysisManager &FAM);
+                                          FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -1500,28 +1500,24 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 }
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
-    Function &F, FunctionAnalysisManager &FAM) {
+    Function &F, FunctionAnalysisManager &FAM) const {
   if (ClRandomSkipRate.getNumOccurrences()) {
     std::bernoulli_distribution D(ClRandomSkipRate);
-    if (D(*Rng))
-      return true;
-  } else {
-    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI && PSI->hasProfileSummary()) {
-      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      if ((ClHotPercentileCutoff.getNumOccurrences() &&
-           ClHotPercentileCutoff >= 0)
-              ? PSI->isFunctionHotInCallGraphNthPercentile(
-                    ClHotPercentileCutoff, &F, BFI)
-              : PSI->isFunctionHotInCallGraph(&F, BFI))
-        return true;
-    } else {
-      ++NumNoProfileSummaryFuncs;
-    }
+    return (D(*Rng));
   }
-  return false;
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  ProfileSummaryInfo *PSI =
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!PSI || !PSI->hasProfileSummary()) {
+    ++NumNoProfileSummaryFuncs;
+    return false;
+  }
+  auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
+  return (
+      (ClHotPercentileCutoff.getNumOccurrences() && ClHotPercentileCutoff >= 0)
+          ? PSI->isFunctionHotInCallGraphNthPercentile(ClHotPercentileCutoff,
+                                                       &F, BFI)
+          : PSI->isFunctionHotInCallGraph(&F, BFI));
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
