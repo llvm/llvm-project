@@ -37,7 +37,7 @@ struct DfsPathFinder : public ICFGPathFinder {
         this->target = target;
         this->maxCallDepth = maxCallDepth;
 
-        logger.info("=== ICFGPathFinder ===");
+        logger.info("=== DfsPathFinder ===");
         logger.info("source: {}", source);
         logger.info("target: {}", target);
         logger.info("maxCallDepth: {}", maxCallDepth);
