@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//:vars.bzl", "CMAKE_CXX_STANDARD", "LLVM_VERSION", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX")
+load("//:vars.bzl", "CMAKE_CXX_STANDARD", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -105,31 +105,6 @@ _SCRIPT_PLUGINS = [
     "ScriptInterpreterNone",
 ]
 
-_PLATFORM_SPECIFIC_PLUGINS = select({
-    "@platforms//os:macos": [
-        ":PluginProcessMacOSXKernel",
-        ":PluginSymbolLocatorDebugSymbols",
-        ":PluginSymbolVendorMacOSX",
-    ],
-    "//conditions:default": [],
-})
-
-_DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in _PLUGINS]) + \
-                        "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in _SCRIPT_PLUGINS])
-
-_LOAD_PLUGINS_SUBSTITUTION = select({
-    "@platforms//os:macos": {
-        "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
-LLDB_PLUGIN(ProcessMacOSXKernel)
-LLDB_PLUGIN(SymbolLocatorDebugSymbols)
-LLDB_PLUGIN(SymbolVendorMacOSX)
-""",
-    },
-    "//conditions:default": {
-        "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
-    },
-})
-
 _OBJCPP_COPTS = [
     "-std=c++{}".format(CMAKE_CXX_STANDARD),
     "-fno-objc-exceptions",
@@ -137,10 +112,8 @@ _OBJCPP_COPTS = [
     "-Wno-shorten-64-to-32",
 ]
 
-_LLDB_VERSION = LLVM_VERSION + LLVM_VERSION_SUFFIX
-
 _VERSION_SUBSTITUTIONS = {
-    "@LLDB_VERSION@": _LLDB_VERSION,
+    "@LLDB_VERSION@": PACKAGE_VERSION,
     "@LLDB_VERSION_MAJOR@": LLVM_VERSION_MAJOR,
     "@LLDB_VERSION_MINOR@": LLVM_VERSION_MINOR,
     "@LLDB_VERSION_PATCH@": LLVM_VERSION_PATCH,
@@ -236,13 +209,27 @@ cc_library(
     include_prefix = "lldb/Host",
 )
 
+_DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in _PLUGINS]) + \
+                        "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in _SCRIPT_PLUGINS])
+
 expand_template(
     name = "plugins_config_gen",
     out = "Plugins/Plugins.def",
     substitutions = {
         "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
-    } | _LOAD_PLUGINS_SUBSTITUTION,
+    } | select({
+        "@platforms//os:macos": {
+            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
+LLDB_PLUGIN(ProcessMacOSXKernel)
+LLDB_PLUGIN(SymbolLocatorDebugSymbols)
+LLDB_PLUGIN(SymbolVendorMacOSX)
+""",
+        },
+        "//conditions:default": {
+            "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
+        },
+    }),
     template = "source/Plugins/Plugins.def.in",
 )
 
@@ -1245,7 +1232,14 @@ cc_library(
     ] + [
         ":Plugin{}".format(x)
         for x in _PLUGINS + _SCRIPT_PLUGINS
-    ] + _PLATFORM_SPECIFIC_PLUGINS,
+    ] + select({
+        "@platforms//os:macos": [
+            ":PluginProcessMacOSXKernel",
+            ":PluginSymbolLocatorDebugSymbols",
+            ":PluginSymbolVendorMacOSX",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_shared_library(
@@ -1259,8 +1253,8 @@ cc_shared_library(
         "//conditions:default": [],
     }),
     shared_lib_name = select({
-        "@platforms//os:macos": "liblldb{}.dylib".format(_LLDB_VERSION),
-        "@platforms//os:linux": "liblldb{}.so".format(_LLDB_VERSION),
+        "@platforms//os:macos": "liblldb{}.dylib".format(PACKAGE_VERSION),
+        "@platforms//os:linux": "liblldb{}.so".format(PACKAGE_VERSION),
     }),
     # TODO: Remove once fixed https://github.com/bazelbuild/bazel/issues/21893
     user_link_flags = select({
@@ -3131,7 +3125,7 @@ cc_library(
 
 objc_library(
     name = "DebugServerMacOSX",
-    srcs = glob(["tools/debugserver/source/MacOSX/**/*.mm"]),
+    srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     copts = _OBJCPP_COPTS,
     target_compatible_with = select({
         "@platforms//os:macos": [],

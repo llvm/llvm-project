@@ -125,6 +125,13 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         c["LLVM_VERSION_PATCH"],
     )
 
+    c["PACKAGE_VERSION"] = "{}.{}.{}{}".format(
+        c["LLVM_VERSION_MAJOR"],
+        c["LLVM_VERSION_MINOR"],
+        c["LLVM_VERSION_PATCH"],
+        c["LLVM_VERSION_SUFFIX"],
+    )
+
     return c
 
 def _write_dict_to_file(repository_ctx, filepath, header, vars):
