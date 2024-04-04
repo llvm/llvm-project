@@ -5499,6 +5499,8 @@ RISC-V:
 
 Sparc:
 
+- ``L``: Print the low-order register of a two-register operand.
+- ``H``: Print the high-order register of a two-register operand.
 - ``r``: No effect.
 
 SystemZ:
