@@ -33,6 +33,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -302,11 +303,9 @@ void RISCVInstrInfo::copyPhysRegVector(MachineBasicBlock &MBB,
                                        RISCVII::VLMUL LMul, unsigned NF) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
-  unsigned DstEncoding = TRI->getEncodingValue(DstReg);
-  unsigned LMulVal;
-  bool Fractional;
-  std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
+  uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
+  uint16_t DstEncoding = TRI->getEncodingValue(DstReg);
+  auto [LMulVal, Fractional] = RISCVVType::decodeVLMUL(LMul);
   assert(!Fractional && "It is impossible be fractional lmul here.");
   unsigned NumRegs = NF * LMulVal;
   bool ReversedCopy =
