@@ -32,8 +32,8 @@ Definition::Definition(
     : replacement_{Tokenize({}, repl, firstToken, tokens)} {}
 
 Definition::Definition(const std::vector<std::string> &argNames,
-                       const TokenSequence &repl, std::size_t firstToken,
-                       std::size_t tokens, bool isVariadic)
+    const TokenSequence &repl, std::size_t firstToken, std::size_t tokens,
+    bool isVariadic)
     : isFunctionLike_{true}, isVariadic_{isVariadic}, argNames_{argNames},
       replacement_{Tokenize(argNames, repl, firstToken, tokens)} {}
 
