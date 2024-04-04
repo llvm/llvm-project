@@ -272,7 +272,10 @@ C++26 Specific Configuration Macros
   ``std::basic_string<...>::reserve()``.
 
 **_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM**:
+  This macro is used to re-enable all named declarations in ``<strstream>``.
 
 Libc++ Extensions
 =================
