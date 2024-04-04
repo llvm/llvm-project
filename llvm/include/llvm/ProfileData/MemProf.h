@@ -543,7 +543,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
-    V.serialize(*Schema, Out, Version1);
+    V.serialize(*Schema, Out, Version);
     // Clear the IndexedMemProfRecord which results in clearing/freeing its
     // vectors of allocs and callsites. This is owned by the associated on-disk
     // hash table, but unused after this point. See also the comment added to
