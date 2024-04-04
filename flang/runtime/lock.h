@@ -25,9 +25,7 @@
 #if USE_PTHREADS
 #include <pthread.h>
 #elif defined(_WIN32)
-// Do not define macros for "min" and "max"
-#define NOMINMAX
-#include <windows.h>
+#include "flang/Common/windows-include.h"
 #else
 #include <mutex>
 #endif
