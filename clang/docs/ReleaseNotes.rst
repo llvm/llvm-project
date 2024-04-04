@@ -193,12 +193,11 @@ Non-comprehensive list of changes in this release
   with support for any unsigned integer type. Like the previous builtins, these
   new builtins are constexpr and may be used in constant expressions.
 
+- ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
+  like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
 New Compiler Flags
 ------------------
-- ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
-  sign change.
-- ``-fsanitize=implicit-integer-conversion`` a group that replaces the previous
-  group ``-fsanitize=implicit-conversion``.
 
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
@@ -212,9 +211,6 @@ Modified Compiler Flags
 - Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
   ``-Wreturn-type``, and moved some of the diagnostics previously controlled by
   ``-Wreturn-type`` under this new flag. Fixes #GH72116.
-- ``-fsanitize=implicit-conversion`` is now a group for both
-  ``-fsanitize=implicit-integer-conversion`` and
-  ``-fsanitize=implicit-bitfield-conversion``.
 
 - Added ``-Wcast-function-type-mismatch`` under the ``-Wcast-function-type``
   warning group. Moved the diagnostic previously controlled by
