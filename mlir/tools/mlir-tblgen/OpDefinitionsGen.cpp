@@ -1804,23 +1804,36 @@ void OpEmitter::genAttrGetters() {
 }
 
 void OpEmitter::genAttrSetters() {
+  bool useProperties = op.getDialect().usePropertiesForAttributes();
+
+  // Generate the code to set an attribute.
+  auto emitSetAttr = [&](Method *method, StringRef getterName,
+                         StringRef attrName, StringRef attrVar) {
+    if (useProperties) {
+      method->body() << formatv("  getProperties().{0} = {1};", attrName,
+                                attrVar);
+    } else {
+      method->body() << formatv("  (*this)->setAttr({0}AttrName(), {1});",
+                                getterName, attrVar);
+    }
+  };
+
   // Generate raw named setter type. This is a wrapper class that allows setting
   // to the attributes via setters instead of having to use the string interface
   // for better compile time verification.
   auto emitAttrWithStorageType = [&](StringRef setterName, StringRef getterName,
-                                     Attribute attr) {
+                                     StringRef attrName, Attribute attr) {
     auto *method =
         opClass.addMethod("void", setterName + "Attr",
                           MethodParameter(attr.getStorageType(), "attr"));
     if (method)
-      method->body() << formatv("  (*this)->setAttr({0}AttrName(), attr);",
-                                getterName);
+      emitSetAttr(method, getterName, attrName, "attr");
   };
 
   // Generate a setter that accepts the underlying C++ type as opposed to the
   // attribute type.
   auto emitAttrWithReturnType = [&](StringRef setterName, StringRef getterName,
-                                    Attribute attr) {
+                                    StringRef attrName, Attribute attr) {
     Attribute baseAttr = attr.getBaseAttr();
     if (!canUseUnwrappedRawValue(baseAttr))
       return;
@@ -1849,9 +1862,8 @@ void OpEmitter::genAttrSetters() {
 
     // If the value isn't optional, just set it directly.
     if (!isOptional) {
-      method->body() << formatv(
-          "  (*this)->setAttr({0}AttrName(), {1});", getterName,
-          constBuildAttrFromParam(attr, fctx, "attrValue"));
+      emitSetAttr(method, getterName, attrName,
+                  constBuildAttrFromParam(attr, fctx, "attrValue"));
       return;
     }
 
@@ -1862,13 +1874,25 @@ void OpEmitter::genAttrSetters() {
     // optional but not in the same way as the others (i.e. it uses bool over
     // std::optional<>).
     StringRef paramStr = isUnitAttr ? "attrValue" : "*attrValue";
-    const char *optionalCodeBody = R"(
+    if (!useProperties) {
+      const char *optionalCodeBody = R"(
     if (attrValue)
       return (*this)->setAttr({0}AttrName(), {1});
     (*this)->removeAttr({0}AttrName());)";
-    method->body() << formatv(
-        optionalCodeBody, getterName,
-        constBuildAttrFromParam(baseAttr, fctx, paramStr));
+      method->body() << formatv(
+          optionalCodeBody, getterName,
+          constBuildAttrFromParam(baseAttr, fctx, paramStr));
+    } else {
+      const char *optionalCodeBody = R"(
+    auto &odsProp = getProperties().{0};
+    if (attrValue)
+      odsProp = {1};
+    else
+      odsProp = nullptr;)";
+      method->body() << formatv(
+          optionalCodeBody, attrName,
+          constBuildAttrFromParam(baseAttr, fctx, paramStr));
+    }
   };
 
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
@@ -1876,8 +1900,10 @@ void OpEmitter::genAttrSetters() {
       continue;
     std::string setterName = op.getSetterName(namedAttr.name);
     std::string getterName = op.getGetterName(namedAttr.name);
-    emitAttrWithStorageType(setterName, getterName, namedAttr.attr);
-    emitAttrWithReturnType(setterName, getterName, namedAttr.attr);
+    emitAttrWithStorageType(setterName, getterName, namedAttr.name,
+                            namedAttr.attr);
+    emitAttrWithReturnType(setterName, getterName, namedAttr.name,
+                           namedAttr.attr);
   }
 }
 
