@@ -804,13 +804,13 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
 
 /// Allocate space for privatized reduction variables.
 template <typename T>
-static void
-allocByValReductionVars(T loop, llvm::IRBuilderBase &builder,
-                        LLVM::ModuleTranslation &moduleTranslation,
-                        llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
-                        SmallVector<omp::DeclareReductionOp> &reductionDecls,
-                        SmallVector<llvm::Value *> &privateReductionVariables,
-                        DenseMap<Value, llvm::Value *> &reductionVariableMap) {
+static void allocByValReductionVars(
+    T loop, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation,
+    llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
+    SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
+    SmallVectorImpl<llvm::Value *> &privateReductionVariables,
+    DenseMap<Value, llvm::Value *> &reductionVariableMap) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   builder.restoreIP(allocaIP);
   auto args =
