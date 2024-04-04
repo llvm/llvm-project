@@ -2760,10 +2760,12 @@ ArrayRef<StringRef> cl::CompilerBuildConfig = {
 
 // Utility function for printing the build config.
 void cl::printBuildConfig(raw_ostream &OS) {
+#if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
   OS << "Build config: ";
   llvm::interleaveComma(cl::CompilerBuildConfig, OS,
                         [&OS](const StringRef &Option) { OS << Option; });
   OS << '\n';
+#endif
 }
 
 /// Utility function for printing version number.
