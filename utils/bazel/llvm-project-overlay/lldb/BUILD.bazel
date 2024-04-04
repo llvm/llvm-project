@@ -801,7 +801,6 @@ cc_library(
     hdrs = glob(["source/Plugins/Process/gdb-remote/*.h"]) + [
         "source/Plugins/Process/gdb-remote/GDBRemoteErrno.def",
     ],
-    features = ["-layering_check"],  # TODO: zlib.h comes from the system right now
     strip_include_prefix = "source",
     deps = [
         ":BreakpointHeaders",
@@ -810,13 +809,16 @@ cc_library(
         ":Headers",
         ":Host",
         ":InterpreterHeaders",
+        ":PluginProcessUtility",
         ":ProcessGDBRemoteProperties",
         ":SymbolHeaders",
         ":Target",
         ":TargetHeaders",
         ":Utility",
+        ":UtilityPrivateHeaders",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "@llvm_zlib//:zlib",
     ],
 )
 
@@ -2192,16 +2194,18 @@ cc_library(
     name = "PluginSymbolFileCTF",
     srcs = glob(["source/Plugins/SymbolFile/CTF/*.cpp"]),
     hdrs = glob(["source/Plugins/SymbolFile/CTF/*.h"]),
-    features = ["-layering_check"],  # TODO: zlib.h comes from the system right now
     strip_include_prefix = "source",
     deps = [
         ":Core",
         ":Headers",
         ":Host",
+        ":PluginExpressionParserClangHeaders",
+        ":PluginTypeSystemClangHeaders",
         ":Symbol",
         ":SymbolHeaders",
         ":Utility",
         "//llvm:Support",
+        "@llvm_zlib//:zlib",
     ],
 )
 
