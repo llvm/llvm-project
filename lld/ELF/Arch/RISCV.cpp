@@ -1104,8 +1104,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     case AtomicABI::A7:
       error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
-                  " but " + toString(newSection) +
-                  " has atomic_abi=" + Twine(newTag));
+            " but " + toString(newSection) +
+            " has atomic_abi=" + Twine(newTag));
       return;
     };
 
@@ -1126,8 +1126,8 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     case AtomicABI::A6C:
       error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
-                  " but " + toString(newSection) +
-                  " has atomic_abi=" + Twine(newTag));
+            " but " + toString(newSection) +
+            " has atomic_abi=" + Twine(newTag));
       return;
     };
   default:
