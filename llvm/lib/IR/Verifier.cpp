@@ -1734,8 +1734,28 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  for (const MDNode *MDN : Flags->operands())
+  uint64_t PAuthABIPlatform = -1;
+  uint64_t PAuthABIVersion = -1;
+  for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
+    if (MDN->getNumOperands() != 3)
+      continue;
+    if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
+      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
+        if (const auto *PAP =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIPlatform = PAP->getZExtValue();
+      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
+        if (const auto *PAV =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIVersion = PAV->getZExtValue();
+      }
+    }
+  }
+
+  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+    CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
+                "'aarch64-elf-pauthabi-version' module flags must be present");
 
   // Validate that the requirements in the module are valid.
   for (const MDNode *Requirement : Requirements) {
