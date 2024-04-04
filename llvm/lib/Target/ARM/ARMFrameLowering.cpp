@@ -1665,7 +1665,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
           !isCmseEntry && !isTrap && AFI->getArgumentStackToRestore() == 0 &&
           STI.hasV5TOps() && MBB.succ_empty() && !hasPAC &&
           STI.getPushPopSplitVariation(MF) !=
-               ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
+              ARMSubtarget::PushPopSplitVariation::R11SplitWindowsSEHUnwind) {
         Reg = ARM::PC;
         // Fold the return instruction into the LDM.
         DeleteRet = true;
