@@ -26,6 +26,7 @@
 // These types have "private" constructors.
 extern std::chrono::time_zone tz;
 extern std::chrono::time_zone_link link;
+extern std::chrono::leap_second leap;
 
 void test() {
   std::chrono::tzdb_list& list = std::chrono::get_tzdb_list();
@@ -37,7 +38,15 @@ void test() {
 
   std::chrono::get_tzdb_list();
   std::chrono::get_tzdb();
+  std::chrono::locate_zone("name");
+  std::chrono::current_zone();
   std::chrono::remote_version();
+
+  {
+    const std::chrono::tzdb& t = list.front();
+    t.locate_zone("name");
+    t.current_zone();
+  }
 
   {
     tz.name();
@@ -50,5 +59,10 @@ void test() {
     link.target();
     operator==(link, link);
     operator<=>(link, link);
+  }
+
+  {
+    leap.date();
+    leap.value();
   }
 }

@@ -320,10 +320,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
@@ -345,18 +341,17 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_IMPLICIT_DEF: {
     Register Dst = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(Dst);
-    uint64_t DstMinSize = DstTy.getSizeInBits().getKnownMinValue();
+    unsigned DstMinSize = DstTy.getSizeInBits().getKnownMinValue();
     auto Mapping = GPRValueMapping;
     // FIXME: May need to do a better job determining when to use FPRB.
     // For example, the look through COPY case:
     // %0:_(s32) = G_IMPLICIT_DEF
     // %1:_(s32) = COPY %0
     // $f10_d = COPY %1(s32)
-    if (anyUseOnlyUseFP(Dst, MRI, TRI))
-      Mapping = getFPValueMapping(DstMinSize);
-
     if (DstTy.isVector())
       Mapping = getVRBValueMapping(DstMinSize);
+    else if (anyUseOnlyUseFP(Dst, MRI, TRI))
+      Mapping = getFPValueMapping(DstMinSize);
 
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, Mapping,
                                  NumOperands);
@@ -529,7 +524,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
        if (!Ty.isValid())
          continue;
 
-       if (isPreISelGenericFloatingPointOpcode(Opc))
+       if (Ty.isVector())
+         OpdsMapping[Idx] =
+             getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+       else if (isPreISelGenericFloatingPointOpcode(Opc))
          OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
        else
          OpdsMapping[Idx] = GPRValueMapping;

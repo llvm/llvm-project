@@ -1264,15 +1264,10 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  const llvm::APSInt *PosV =
-      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(1));
-  const llvm::APSInt *WhenceV =
-      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(2));
-
   // Bifurcate the state into failed and non-failed.
-  // Return zero on success, nonzero on error.
-  ProgramStateRef StateNotFailed, StateFailed;
-  std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
+  // Return zero on success, -1 on error.
+  ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, 0);
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
 
   // No failure: Reset the state to opened with no error.
   StateNotFailed =
@@ -1282,12 +1277,10 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   // At error it is possible that fseek fails but sets none of the error flags.
   // If fseek failed, assume that the file position becomes indeterminate in any
   // case.
-  StreamErrorState NewErrS = ErrorNone | ErrorFError;
-  // Setting the position to start of file never produces EOF error.
-  if (!(PosV && *PosV == 0 && WhenceV && *WhenceV == SeekSetVal))
-    NewErrS = NewErrS | ErrorFEof;
-  StateFailed = E.setStreamState(StateFailed,
-                                 StreamState::getOpened(Desc, NewErrS, true));
+  // It is allowed to set the position beyond the end of the file. EOF error
+  // should not occur.
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 

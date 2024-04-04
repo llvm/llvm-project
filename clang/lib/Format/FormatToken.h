@@ -574,6 +574,9 @@ public:
   /// Is optional and can be removed.
   bool Optional = false;
 
+  /// Might be function declaration open/closing paren.
+  bool MightBeFunctionDeclParen = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces

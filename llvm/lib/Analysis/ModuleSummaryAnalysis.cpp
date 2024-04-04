@@ -82,6 +82,8 @@ static cl::opt<std::string> ModuleSummaryDotFile(
 
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -122,6 +124,24 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       }
       if (Visited.insert(Operand).second)
         Worklist.push_back(Operand);
+    }
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    uint32_t ActualNumValueData = 0;
+    uint64_t TotalCount = 0;
+    // MaxNumVTableAnnotations is the maximum number of vtables annotated on
+    // the instruction.
+    auto ValueDataArray =
+        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
+                                 ActualNumValueData, TotalCount);
+
+    if (ValueDataArray.get()) {
+      for (uint32_t j = 0; j < ActualNumValueData; j++) {
+        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                   ValueDataArray[j].Value));
+      }
     }
   }
   return HasBlockAddress;
