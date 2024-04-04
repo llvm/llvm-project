@@ -3805,7 +3805,8 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value realVal = args[0];
   mlir::FloatType realType = realVal.getType().dyn_cast<mlir::FloatType>();
-  mlir::Type intType = builder.getIntegerType(realType.getWidth());
+  const unsigned intWidth = realType.getWidth();
+  mlir::Type intType = builder.getIntegerType(intWidth);
   mlir::Value intVal =
       builder.create<mlir::arith::BitcastOp>(loc, intType, realVal);
   llvm::StringRef tableName = RTNAME_STRING(IeeeClassTable);
@@ -3816,41 +3817,25 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   auto createIntegerConstant = [&](uint64_t k) {
     return builder.createIntegerConstant(loc, intType, k);
   };
+  auto createIntegerConstantAPI = [&](const llvm::APInt &apInt) {
+    return builder.create<mlir::arith::ConstantOp>(
+        loc, intType, builder.getIntegerAttr(intType, apInt));
+  };
   auto getMasksAndShifts = [&](uint64_t totalSize, uint64_t exponentSize,
                                uint64_t significandSize,
                                bool hasExplicitBit = false) {
     assert(1 + exponentSize + significandSize == totalSize &&
            "invalid floating point fields");
-    constexpr uint64_t one = 1; // type promotion
     uint64_t lowSignificandSize = significandSize - hasExplicitBit - 1;
     signShift = createIntegerConstant(totalSize - 1 - hasExplicitBit - 4);
     highSignificandShift = createIntegerConstant(lowSignificandSize);
-    if (totalSize <= 64) {
-      exponentMask =
-          createIntegerConstant(((one << exponentSize) - 1) << significandSize);
-      lowSignificandMask =
-          createIntegerConstant((one << lowSignificandSize) - 1);
-      return;
-    }
-    // Mlir can't directly build large constants. Build them in steps.
-    // The folded end result is the same.
-    mlir::Value sixtyfour = createIntegerConstant(64);
-    exponentMask = createIntegerConstant(((one << exponentSize) - 1)
-                                         << (significandSize - 64));
-    exponentMask =
-        builder.create<mlir::arith::ShLIOp>(loc, exponentMask, sixtyfour);
-    if (lowSignificandSize <= 64) {
-      lowSignificandMask =
-          createIntegerConstant((one << lowSignificandSize) - 1);
-      return;
-    }
-    mlir::Value ones = createIntegerConstant(0xffffffffffffffff);
-    lowSignificandMask =
-        createIntegerConstant((one << (lowSignificandSize - 64)) - 1);
-    lowSignificandMask =
-        builder.create<mlir::arith::ShLIOp>(loc, lowSignificandMask, sixtyfour);
-    lowSignificandMask =
-        builder.create<mlir::arith::OrIOp>(loc, lowSignificandMask, ones);
+    llvm::APInt exponentMaskAPI =
+        llvm::APInt::getBitsSet(intWidth, /*lo=*/significandSize,
+                                /*hi=*/significandSize + exponentSize);
+    exponentMask = createIntegerConstantAPI(exponentMaskAPI);
+    llvm::APInt lowSignificandMaskAPI =
+        llvm::APInt::getLowBitsSet(intWidth, lowSignificandSize);
+    lowSignificandMask = createIntegerConstantAPI(lowSignificandMaskAPI);
   };
   switch (realType.getWidth()) {
   case 16:
