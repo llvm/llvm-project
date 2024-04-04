@@ -53,7 +53,7 @@
 "`4025 <https://wg21.link/LWG4025>`__","Move assignment operator of ``std::expected<cv void, E>`` should not be conditionally deleted","Tokyo March 2024","","",""
 "`4030 <https://wg21.link/LWG4030>`__","Clarify whether arithmetic expressions in ``[numeric.sat.func]`` are mathematical or C++","Tokyo March 2024","|Nothing To Do|","",""
 "`4031 <https://wg21.link/LWG4031>`__","``bad_expected_access<void>`` member functions should be ``noexcept``","Tokyo March 2024","","",""
-"`4035 <https://wg21.link/LWG4035>`__","``single_view`` should provide ``empty``","Tokyo March 2024","","","|ranges|"
+"`4035 <https://wg21.link/LWG4035>`__","``single_view`` should provide ``empty``","Tokyo March 2024","|Complete|","19.0","|ranges|"
 "`4036 <https://wg21.link/LWG4036>`__","``__alignof_is_defined`` is only implicitly specified in C++ and not yet deprecated","Tokyo March 2024","","",""
 "`4037 <https://wg21.link/LWG4037>`__","Static data members of ``ctype_base`` are not yet required to be usable in constant expressions","Tokyo March 2024","","",""
 "`4038 <https://wg21.link/LWG4038>`__","``std::text_encoding::aliases_view`` should have constexpr iterators","Tokyo March 2024","","",""
