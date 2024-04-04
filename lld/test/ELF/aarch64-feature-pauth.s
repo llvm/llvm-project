@@ -36,10 +36,10 @@
 # RUN: ld.lld -z pauth-report=warning noinfo1.o tag1.o noinfo2.o -o /dev/null 2>&1 | FileCheck --check-prefix WARN %s
 # RUN: ld.lld -z pauth-report=none noinfo1.o tag1.o noinfo2.o --fatal-warnings -o /dev/null
 
-# ERR5:      error: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
-# ERR5-NEXT: error: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
-# WARN:      warning: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
-# WARN-NEXT: warning: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while tag1.o has one
+# ERR5:      error: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while 'tag1.o' has one
+# ERR5-NEXT: error: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while 'tag1.o' has one
+# WARN:      warning: noinfo1.o: -z pauth-report: file does not have AArch64 PAuth core info while 'tag1.o' has one
+# WARN-NEXT: warning: noinfo2.o: -z pauth-report: file does not have AArch64 PAuth core info while 'tag1.o' has one
 
 #--- abi-tag-short.s
 

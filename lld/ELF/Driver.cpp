@@ -2690,8 +2690,8 @@ static void readSecurityNotes() {
       reportMissingFeature(config->zPauthReport,
                            toString(f) +
                                ": -z pauth-report: file does not have AArch64 "
-                               "PAuth core info while " +
-                               referenceFileName + " has one");
+                               "PAuth core info while '" +
+                               referenceFileName + "' has one");
       continue;
     }
 
