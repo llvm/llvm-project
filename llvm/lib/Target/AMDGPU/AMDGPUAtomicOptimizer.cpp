@@ -743,7 +743,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
-  
+
   // For atomic sub, perform scan with add operation and allow one lane to
   // subtract the reduced value later.
   AtomicRMWInst::BinOp ScanOp = Op;
@@ -876,7 +876,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   BasicBlock *Predecessor = nullptr;
   if (ValDivergent && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
-    Instruction *Terminator = EntryBB->getTerminator();
+    BranchInst *Terminator = cast<BranchInst>(EntryBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);
@@ -887,10 +887,18 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     B.CreateBr(ComputeLoop);
 
     // Update the dominator tree for new control flow.
-    DTU.applyUpdates(
+    SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
         {{DominatorTree::Insert, EntryBB, ComputeLoop},
-         {DominatorTree::Insert, ComputeLoop, ComputeEnd},
-         {DominatorTree::Delete, EntryBB, SingleLaneTerminator->getParent()}});
+         {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
+
+    // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
+    // the DT edges as well.
+    for (auto *Succ : Terminator->successors()) {
+      DomTreeUpdates.push_back({DominatorTree::Insert, ComputeEnd, Succ});
+      DomTreeUpdates.push_back({DominatorTree::Delete, EntryBB, Succ});
+    }
+
+    DTU.applyUpdates(DomTreeUpdates);
 
     Predecessor = ComputeEnd;
   } else {
