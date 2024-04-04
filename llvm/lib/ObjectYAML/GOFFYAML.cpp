@@ -246,7 +246,7 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
 void MappingTraits<GOFFYAML::Object>::mapping(IO &IO, GOFFYAML::Object &Obj) {
   IO.mapTag("!GOFF", true);
   IO.mapRequired("FileHeader", Obj.Header);
-  IO.mapRequired("Records", Obj.Records);
+  IO.mapOptional("Records", Obj.Records);
 }
 
 } // namespace yaml
