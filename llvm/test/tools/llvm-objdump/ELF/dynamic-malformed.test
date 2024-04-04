@@ -38,7 +38,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=3 -o %t.invalidaddr
 # RUN: llvm-objdump -p %t.invalidaddr | FileCheck %s --check-prefix=ADDR
 # RUN: llvm-objdump -p %t.invalidaddr 2>&1 >/dev/null | \
-# RUN: FileCheck %s -DFILE=%t.invalidaddr --implicit-check-not=warning --check-prefix=ADDR-ERROR
+# RUN:   FileCheck %s -DFILE=%t.invalidaddr --implicit-check-not=warning: --check-prefix=ADDR-ERROR
 
 # ADDR-ERROR: warning: '[[FILE]]': virtual address is not in any segment: 0x474
 # ADDR:       Dynamic Section:
