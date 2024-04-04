@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_ASSERT_H
-#define LLVM_LIBC_ASSERT_H
-
 #include "__llvm-libc-common.h"
 
 // This file may be usefully included multiple times to change assert()'s
@@ -17,5 +14,3 @@
 %%public_api()
 
 #include "llvm-libc-macros/assert-macros.h"
-
-#endif // LLVM_LIBC_ASSERT_H
