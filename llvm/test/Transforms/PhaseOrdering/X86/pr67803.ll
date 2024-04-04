@@ -9,11 +9,7 @@ define <4 x i64> @PR67803(<4 x i64> %x, <4 x i64> %y, <4 x i64> %a, <4 x i64> %b
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64> [[X:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[Y:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <8 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[CMP_I21:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SEXT_I22:%.*]] = sext <4 x i1> [[CMP_I21]] to <4 x i32>
-; CHECK-NEXT:    [[CMP_I:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SEXT_I:%.*]] = sext <4 x i1> [[CMP_I]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[SEXT_I22]], <4 x i32> [[SEXT_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP2]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <32 x i8> [[TMP5]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i64> [[B:%.*]] to <32 x i8>
