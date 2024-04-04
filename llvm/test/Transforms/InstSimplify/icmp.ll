@@ -68,6 +68,7 @@ define i1 @mul_div_cmp_greater(i8 %x) {
   %cmp = icmp ule i8 %div, %x
   ret i1 %cmp
 }
+
 define i1 @mul_div_cmp_ugt(i8 %x) {
 ; CHECK-LABEL: @mul_div_cmp_ugt(
 ; CHECK-NEXT:    ret i1 false
@@ -263,18 +264,153 @@ define i1 @load_ptr(ptr %p) {
 ; CHECK-LABEL: @load_ptr(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %load_p = load ptr, ptr %p, !dereferenceable !{i64 8}
+  %load_p = load ptr, ptr %p, !dereferenceable ! { i64 8}
   %r = icmp ne ptr %load_p, null
   ret i1 %r
 }
 
 define i1 @load_ptr_null_valid(ptr %p) null_pointer_is_valid {
 ; CHECK-LABEL: @load_ptr_null_valid(
-; CHECK-NEXT:    [[LOAD_P:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable !0
+; CHECK-NEXT:    [[LOAD_P:%.*]] = load ptr, ptr [[P:%.*]], align 8, !dereferenceable [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne ptr [[LOAD_P]], null
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
-  %load_p = load ptr, ptr %p, !dereferenceable !{i64 8}
+  %load_p = load ptr, ptr %p, !dereferenceable ! { i64 8}
   %r = icmp ne ptr %load_p, null
+  ret i1 %r
+}
+
+define i1 @non_eq_sub_neg_case_nsw(i8 %x, i8 %yy) {
+; CHECK-LABEL: @non_eq_sub_neg_case_nsw(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub nsw i8 0, [[Y]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %y
+  %suby = sub nsw i8 0, %y
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub_neg_case_no_intmin(i8 %x, i8 %yy) {
+; CHECK-LABEL: @non_eq_sub_neg_case_no_intmin(
+; CHECK-NEXT:    [[Y0:%.*]] = and i8 [[YY:%.*]], 63
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[Y0]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 0, [[Y]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y0 = and i8 %yy, 63
+  %y = add nuw i8 %y0, 1
+  %lhs = add i8 %x, %y
+  %suby = sub i8 0, %y
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub_neg_case_no_intmin2(i8 %x, i8 %yy) {
+; CHECK-LABEL: @non_eq_sub_neg_case_no_intmin2(
+; CHECK-NEXT:    ret i1 false
+;
+  %y = or i8 %yy, -64
+  %lhs = add i8 %x, %y
+  %suby = sub i8 0, %y
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub_neg_case_fail(i8 %x, i8 %yy) {
+; CHECK-LABEL: @non_eq_sub_neg_case_fail(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 0, [[Y]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %y
+  %suby = sub i8 0, %y
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub(i8 %x, i8 %yy, i8 %z) {
+; CHECK-LABEL: @non_eq_sub(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Z]], [[Y]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %z
+  %suby = sub i8 %z, %y
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub2_fail_maybe_2x(i8 %x, i8 %yy, i8 %z) {
+; CHECK-LABEL: @non_eq_sub2_fail_maybe_2x(
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add nuw i8 %yy, 1
+  %lhs = add i8 %x, %z
+  %suby = sub i8 %y, %z
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub2_okay_odd(i8 %x, i8 %yy, i8 %z) {
+; CHECK-LABEL: @non_eq_sub2_okay_odd(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = or i8 %yy, 1
+  %lhs = add i8 %x, %z
+  %suby = sub i8 %y, %z
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
+  ret i1 %r
+}
+
+define i1 @non_eq_sub2_okay_known_not_2x(i8 %x, i8 %yy, i8 %zz) {
+; CHECK-LABEL: @non_eq_sub2_okay_known_not_2x(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 64
+; CHECK-NEXT:    [[Z:%.*]] = and i8 [[ZZ:%.*]], -97
+; CHECK-NEXT:    [[LHS:%.*]] = add i8 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[SUBY:%.*]] = sub i8 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RHS:%.*]] = add i8 [[X]], [[SUBY]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = or i8 %yy, 64
+  %z = and i8 %zz, 159
+  %lhs = add i8 %x, %z
+  %suby = sub i8 %y, %z
+  %rhs = add i8 %x, %suby
+  %r = icmp eq i8 %lhs, %rhs
   ret i1 %r
 }
