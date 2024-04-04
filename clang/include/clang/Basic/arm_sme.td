@@ -146,6 +146,33 @@ let TargetGuard = "sme" in {
                              [IsOverloadNone, IsStreamingCompatible, IsOutZA]>;
 }
 
+let TargetGuard = "sme2p1" in {
+  def SVZERO_ZA64_VG1x2 : SInst<"svzero_za64_vg1x2", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg1x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_7>]>;
+  def SVZERO_ZA64_VG1x4 : SInst<"svzero_za64_vg1x4", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg1x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_7>]>;
+  def SVZERO_ZA64_VG2x1 : SInst<"svzero_za64_vg2x1", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg2x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_7>]>;
+  def SVZERO_ZA64_VG2x2 : SInst<"svzero_za64_vg2x2", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg2x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
+  def SVZERO_ZA64_VG2x4 : SInst<"svzero_za64_vg2x4", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg2x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
+  def SVZERO_ZA64_VG4x1 : SInst<"svzero_za64_vg4x1", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg4x1",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_3>]>;
+  def SVZERO_ZA64_VG4x2 : SInst<"svzero_za64_vg4x2", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg4x2",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+  def SVZERO_ZA64_VG4x4 : SInst<"svzero_za64_vg4x4", "vi", "", MergeNone, "aarch64_sme_zero_za64_vg4x4",
+                            [IsOverloadNone, IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Counting elements in a streaming vector
 
