@@ -563,12 +563,12 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   CodeGenFunction::CleanupDeactivationScope deactivation(CGF);
 
   if (dtorKind) {
-    CodeGenFunction::AllocaTrackerRAII AllocaTracker(CGF);
+    CodeGenFunction::AllocaTrackerRAII allocaTracker(CGF);
     // In principle we could tell the cleanup where we are more
     // directly, but the control flow can get so varied here that it
     // would actually be quite complex.  Therefore we go through an
     // alloca.
-    llvm::Instruction *DominatingIP =
+    llvm::Instruction *dominatingIP =
         Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(CGF.Int8PtrTy));
     endOfInit = CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
                                      "arrayinit.endOfInit");
@@ -577,10 +577,10 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
                                          elementAlign,
                                          CGF.getDestroyer(dtorKind));
     cast<EHCleanupScope>(*CGF.EHStack.find(CGF.EHStack.stable_begin()))
-        .AddAuxAllocas(AllocaTracker.Take());
+        .AddAuxAllocas(allocaTracker.Take());
 
     CGF.DeferredDeactivationCleanupStack.push_back(
-        {CGF.EHStack.stable_begin(), DominatingIP});
+        {CGF.EHStack.stable_begin(), dominatingIP});
   }
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
