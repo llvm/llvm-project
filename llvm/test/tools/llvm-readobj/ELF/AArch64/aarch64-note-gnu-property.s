@@ -1,3 +1,5 @@
+// See tests for GNU_PROPERTY_AARCH64_FEATURE_PAUTH in aarch64-feature-pauth.s
+
 // RUN: llvm-mc -filetype=obj -triple aarch64-linux-gnu %s -o %t
 // RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
 // RUN: llvm-readobj --notes %t | FileCheck %s --check-prefix=LLVM
