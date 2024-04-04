@@ -182,11 +182,6 @@ static cl::opt<bool> ClWithTls(
              "platforms that support this"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<bool>
-    CSelectiveInstrumentation("hwasan-selective-instrumentation",
-                              cl::desc("Use selective instrumentation"),
-                              cl::Hidden, cl::init(false));
-
 static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
 
@@ -1503,6 +1498,8 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     std::bernoulli_distribution D(ClRandomSkipRate);
     return (D(*Rng));
   }
+  if (!ClHotPercentileCutoff.getNumOccurrences())
+    return false;
   auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
@@ -1527,7 +1524,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
 
-  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+  if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
 
   NumInstrumentedFuncs++;
