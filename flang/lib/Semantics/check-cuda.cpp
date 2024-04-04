@@ -417,8 +417,8 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   const evaluate::Assignment *assign = semantics::GetAssignment(x);
-  unsigned nbLhs = evaluate::GetNbOfCUDASymbols(assign->lhs);
-  unsigned nbRhs = evaluate::GetNbOfCUDASymbols(assign->rhs);
+  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
 
   // device to host transfer with more than one device object on the rhs is not

@@ -1227,8 +1227,8 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::string &argName);
 
 // Get the number of symbols with CUDA attribute in the expression.
-template <typename A> inline unsigned GetNbOfCUDASymbols(const A &expr) {
-  unsigned n{0};
+template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
+  int n{0};
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
