@@ -60,7 +60,7 @@ end program
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_11:.*]] = fir.embox %[[VAL_5]]#1(%[[VAL_4]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
+! CHECK:             %[[VAL_11:.*]] = fir.embox %[[VAL_5]]#0(%[[VAL_4]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xi32>>
 ! CHECK:             %[[VAL_12:.*]] = fir.alloca !fir.box<!fir.array<2xi32>>
 ! CHECK:             fir.store %[[VAL_11]] to %[[VAL_12]] : !fir.ref<!fir.box<!fir.array<2xi32>>>
 ! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_2xi32 %[[VAL_12]] -> %[[VAL_13:.*]] : !fir.ref<!fir.box<!fir.array<2xi32>>>)  for  (%[[VAL_14:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
