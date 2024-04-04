@@ -3138,7 +3138,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
       continue;
     } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
       ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
-      assert(params.size() == 1 && "expected a single param");
+      if (params.size() != 1)
+        return emitSilenceableFailure(getLoc()) << "expected a single param";
       vectorSizes.push_back(
           cast<IntegerAttr>(params.front()).getValue().getSExtValue());
       continue;
