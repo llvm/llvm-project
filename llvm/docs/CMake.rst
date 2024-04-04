@@ -654,6 +654,10 @@ enabled sub-projects. Nearly all of these variable names begin with
   Generate dSYM files and strip executables and libraries (Darwin Only).
   Defaults to OFF.
 
+**LLVM_ENABLE_NO_EXPORTED_SYMBOLS**:BOOL
+  When building executables, disable any symbol exports (Darwin Only).
+  Defaults to OFF.
+
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler and standard library versions won't be checked. LLVM
   may not compile at all, or might fail at runtime due to known bugs in these
