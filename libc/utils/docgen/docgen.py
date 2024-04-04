@@ -7,13 +7,14 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 # ==-------------------------------------------------------------------------==#
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
+from typing import Dict
 import sys
 import yaml
 
 
-def load_api(hname):
+def load_api(hname: str) -> Dict:
     p = Path(Path(__file__).parent, Path(hname).with_suffix(".yml"))
     api = p.read_text(encoding="utf-8")
     return yaml.load(api, Loader=yaml.FullLoader)
@@ -21,16 +22,16 @@ def load_api(hname):
 
 # TODO: we may need to get more sophisticated for less generic implementations.
 # Does libc/src/{hname minus .h suffix}/{fname}.cpp exist?
-def is_implemented(hname, fname):
+def is_implemented(hname: str, fname: str) -> bool:
     return Path(
-        Path(__file__).resolve().parent.parent.parent,
+        Path(__file__).parent.parent.parent,
         "src",
         hname.rstrip(".h"),
         fname + ".cpp",
     ).exists()
 
 
-def print_functions(header, functions):
+def print_functions(header: str, functions: Dict):
     for key in sorted(functions.keys()):
         print(f"  * - {key}")
 
@@ -46,7 +47,7 @@ def print_functions(header, functions):
             print("    -")
 
 
-def print_header(header, api):
+def print_header(header: str, api: Dict):
     fns = f"{header} Functions"
     print(fns)
     print("=" * (len(fns)))
@@ -65,13 +66,10 @@ def print_header(header, api):
     print_functions(header, api["functions"])
 
 
-def get_possible_choices():
-    return [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.yml")]
-
-
-def parse_args():
+def parse_args() -> Namespace:
     parser = ArgumentParser()
-    parser.add_argument("header_name", choices=get_possible_choices())
+    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.yml")]
+    parser.add_argument("header_name", choices=choices)
     return parser.parse_args()
 
 
