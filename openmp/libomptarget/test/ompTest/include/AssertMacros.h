@@ -12,7 +12,7 @@
 // Handle a minimum unordered set of events
 // Required events
 #define OMPT_ASSERT_SET_EVENT(Name, Group, EventTy, ...)                       \
-  this->SetAsserter.insert(OmptAssertEvent::EventTy(                           \
+  SetAsserter.insert(OmptAssertEvent::EventTy(                                 \
       Name, Group, OMPTEST_REQUIRE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SET(EventTy, ...)                                          \
   OMPT_ASSERT_SET_EVENT("", "", EventTy, __VA_ARGS__)
@@ -22,7 +22,7 @@
   OMPT_ASSERT_SET_EVENT(Name, "", EventTy, __VA_ARGS__)
 // Excluded ("NOT") events
 #define OMPT_ASSERT_SET_EVENT_NOT(Name, Group, EventTy, ...)                   \
-  this->SetAsserter.insert(OmptAssertEvent::EventTy(                           \
+  SetAsserter.insert(OmptAssertEvent::EventTy(                                 \
       Name, Group, OMPTEST_EXCLUDE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SET_NOT(EventTy, ...)                                      \
   OMPT_ASSERT_SET_EVENT_NOT("", "", EventTy, __VA_ARGS__)
@@ -34,7 +34,7 @@
 // Handle an exact sequence of events
 // Required events
 #define OMPT_ASSERT_SEQUENCE_EVENT(Name, Group, EventTy, ...)                  \
-  this->SequenceAsserter.insert(OmptAssertEvent::EventTy(                      \
+  SequenceAsserter.insert(OmptAssertEvent::EventTy(                            \
       Name, Group, OMPTEST_REQUIRE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SEQUENCE(EventTy, ...)                                     \
   OMPT_ASSERT_SEQUENCE_EVENT("", "", EventTy, __VA_ARGS__)
@@ -44,7 +44,7 @@
   OMPT_ASSERT_SEQUENCE_EVENT(Name, "", EventTy, __VA_ARGS__)
 // Excluded ("NOT") events
 #define OMPT_ASSERT_SEQUENCE_EVENT_NOT(Name, Group, EventTy, ...)              \
-  this->SequenceAsserter.insert(OmptAssertEvent::EventTy(                      \
+  SequenceAsserter.insert(OmptAssertEvent::EventTy(                            \
       Name, Group, OMPTEST_EXCLUDE_EVENT, __VA_ARGS__));
 #define OMPT_ASSERT_SEQUENCE_NOT(EventTy, ...)                                 \
   OMPT_ASSERT_SEQUENCE_EVENT_NOT("", "", EventTy, __VA_ARGS__)
@@ -54,7 +54,7 @@
   OMPT_ASSERT_SEQUENCE_EVENT_NOT(Name, "", EventTy, __VA_ARGS__)
 // Special command: suspend active assertion
 #define OMPT_ASSERT_SEQUENCE_SUSPEND()                                         \
-  this->SequenceAsserter.insert(                                               \
+  SequenceAsserter.insert(                                                     \
       OmptAssertEvent::Asserter("", "", OMPTEST_REQUIRE_EVENT));
 #define OMPT_ASSERT_SEQUENCE_ONLY(EventTy, ...)                                \
   OMPT_ASSERT_SEQUENCE_SUSPEND()                                               \
@@ -70,8 +70,8 @@
   OMPT_ASSERT_SEQUENCE_SUSPEND()
 
 // Enable / disable asserters entirely
-#define OMPT_ASSERTER_DISABLE(AsserterName) this->AsserterName.setActive(false);
-#define OMPT_ASSERTER_ENABLE(AsserterName) this->AsserterName.setActive(true);
+#define OMPT_ASSERTER_DISABLE(Asserter) Asserter.setActive(false);
+#define OMPT_ASSERTER_ENABLE(Asserter) Asserter.setActive(true);
 #define OMPT_ASSERT_SET_DISABLE() OMPT_ASSERTER_DISABLE(SetAsserter)
 #define OMPT_ASSERT_SET_ENABLE() OMPT_ASSERTER_ENABLE(SetAsserter)
 #define OMPT_REPORT_EVENT_DISABLE() OMPT_ASSERTER_DISABLE(EventReporter)
@@ -81,9 +81,9 @@
 
 // Enable / disable certain event types for asserters
 #define OMPT_ASSERTER_PERMIT_EVENT(Asserter, EventTy)                          \
-  this->Asserter.permitEvent(EventTy);
+  Asserter.permitEvent(EventTy);
 #define OMPT_ASSERTER_SUPPRESS_EVENT(Asserter, EventTy)                        \
-  this->Asserter.suppressEvent(EventTy);
+  Asserter.suppressEvent(EventTy);
 #define OMPT_PERMIT_EVENT(EventTy)                                             \
   OMPT_ASSERTER_PERMIT_EVENT(SetAsserter, EventTy);                            \
   OMPT_ASSERTER_PERMIT_EVENT(EventReporter, EventTy);                          \

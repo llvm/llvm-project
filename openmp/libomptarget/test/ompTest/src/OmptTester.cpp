@@ -30,6 +30,7 @@ std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
 static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;
+static bool RunAsTestSuite = false;
 
 // OMPT entry point handles
 static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
@@ -352,6 +353,7 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
 
   UseEMICallbacks = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_EMI");
   UseTracing = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_TRACING");
+  RunAsTestSuite = getBoolEnvironmentVariable("OMPTEST_RUN_AS_TESTSUITE");
 
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);
@@ -381,6 +383,9 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   // Construct & subscribe the reporter, so it will be notified of events
   EventReporter = new OmptEventReporter();
   OmptCallbackHandler::get().subscribe(EventReporter);
+
+  if (RunAsTestSuite)
+    EventReporter->setActive(false);
 
   return 1; // success
 }
@@ -430,6 +435,7 @@ int stop_trace(ompt_device_t *Device) {
 
 // This is primarily used to stop unwanted prints from happening.
 void libomptest_global_eventreporter_set_active(bool State) {
+  assert(EventReporter && "EventReporter should be present at this point");
   EventReporter->setActive(State);
 }
 #ifdef __cplusplus
