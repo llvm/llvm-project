@@ -5157,7 +5157,7 @@ static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
 
     std::string Desc;
     for (uint32_t I = 0, End = Flags.size(); I < End; ++I) {
-      if (!(Version & (1 << I)))
+      if (!(Version & (1ULL << I)))
         Desc += '!';
       Desc +=
           Twine("PointerAuth" + Flags[I] + (I == End - 1 ? "" : ", ")).str();
