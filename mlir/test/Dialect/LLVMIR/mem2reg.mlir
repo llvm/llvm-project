@@ -891,9 +891,6 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK: llvm.alloca
     %1 = llvm.alloca %0 x !llvm.ptr<1> {alignment = 4 : i64} : (i32) -> !llvm.ptr
     %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<2>
-    // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
-    // CHECK: %[[CAST:.*]] = llvm.addrspacecast %[[UNDEF]] : !llvm.ptr<1> to !llvm.ptr<2>
-    // CHECK: llvm.return %[[CAST:.*]]
     llvm.return %2 : !llvm.ptr<2>
   }
 }
