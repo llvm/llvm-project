@@ -42,6 +42,16 @@ LLCAS_PUBLIC void llcas_get_plugin_version(unsigned *major, unsigned *minor);
 LLCAS_PUBLIC void llcas_string_dispose(char *);
 
 /**
+ * Cancels the asynchronous query associated with the \c llcas_cancellable_t.
+ */
+LLCAS_PUBLIC void llcas_cancellable_cancel(llcas_cancellable_t);
+
+/**
+ * Releases memory associated with given \c llcas_cancellable_t.
+ */
+LLCAS_PUBLIC void llcas_cancellable_dispose(llcas_cancellable_t);
+
+/**
  * Options object to configure creation of \c llcas_cas_t. After passing to
  * \c llcas_cas_create, its memory can be released via
  * \c llcas_cas_options_dispose.
@@ -227,10 +237,13 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_cas_load_object(
  * Whether the call is asynchronous or not depends on the implementation.
  *
  * \param ctx_cb pointer to pass to the callback function.
+ *
+ * \param[out] cancel_tok optional pointer to receive a \c llcas_cancellable_t.
  */
 LLCAS_PUBLIC void llcas_cas_load_object_async(llcas_cas_t, llcas_objectid_t,
                                               void *ctx_cb,
-                                              llcas_cas_load_object_cb);
+                                              llcas_cas_load_object_cb,
+                                              llcas_cancellable_t *cancel_tok);
 
 /**
  * Stores the object with the provided data buffer and \c llcas_objectid_t
@@ -300,11 +313,12 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_actioncache_get_for_digest(
  * implementation.
  *
  * \param ctx_cb pointer to pass to the callback function.
+ *
+ * \param[out] cancel_tok optional pointer to receive a \c llcas_cancellable_t.
  */
-LLCAS_PUBLIC void
-llcas_actioncache_get_for_digest_async(llcas_cas_t, llcas_digest_t key,
-                                       bool globally, void *ctx_cb,
-                                       llcas_actioncache_get_cb);
+LLCAS_PUBLIC void llcas_actioncache_get_for_digest_async(
+    llcas_cas_t, llcas_digest_t key, bool globally, void *ctx_cb,
+    llcas_actioncache_get_cb, llcas_cancellable_t *cancel_tok);
 
 /**
  * Associates a \c llcas_objectid_t \p value with a \p key. It is invalid to set
@@ -329,11 +343,12 @@ LLCAS_PUBLIC bool llcas_actioncache_put_for_digest(llcas_cas_t,
  * implementation.
  *
  * \param ctx_cb pointer to pass to the callback function.
+ *
+ * \param[out] cancel_tok optional pointer to receive a \c llcas_cancellable_t.
  */
-LLCAS_PUBLIC void
-llcas_actioncache_put_for_digest_async(llcas_cas_t, llcas_digest_t key,
-                                       llcas_objectid_t value, bool globally,
-                                       void *ctx_cb, llcas_actioncache_put_cb);
+LLCAS_PUBLIC void llcas_actioncache_put_for_digest_async(
+    llcas_cas_t, llcas_digest_t key, llcas_objectid_t value, bool globally,
+    void *ctx_cb, llcas_actioncache_put_cb, llcas_cancellable_t *cancel_tok);
 
 LLVM_C_EXTERN_C_END
 

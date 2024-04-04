@@ -24,6 +24,7 @@
 
 typedef struct llcas_cas_options_s *llcas_cas_options_t;
 typedef struct llcas_cas_s *llcas_cas_t;
+typedef struct llcas_cancellable_s *llcas_cancellable_t;
 
 /**
  * Digest hash bytes.

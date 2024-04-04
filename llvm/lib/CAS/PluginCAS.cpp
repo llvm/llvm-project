@@ -132,10 +132,10 @@ public:
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
   Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
-  void
-  loadIfExistsAsync(ObjectRef Ref,
-                    unique_function<void(Expected<std::optional<ObjectHandle>>)>
-                        Callback) final;
+  void loadIfExistsAsync(
+      ObjectRef Ref,
+      unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback,
+      std::unique_ptr<Cancellable> *CancelObj) final;
   uint64_t getDataSize(ObjectHandle Node) const final;
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
@@ -155,6 +155,19 @@ public:
   PluginObjectStore(std::shared_ptr<PluginCASContext>);
 
   std::shared_ptr<PluginCASContext> Ctx;
+};
+
+class PluginCancellable final : public Cancellable {
+  std::shared_ptr<PluginCASContext> Ctx;
+  llcas_cancellable_t cancel_tok;
+
+public:
+  PluginCancellable(std::shared_ptr<PluginCASContext> Ctx,
+                    llcas_cancellable_t cancel_tok)
+      : Ctx(std::move(Ctx)), cancel_tok(cancel_tok) {}
+
+  ~PluginCancellable() { Ctx->Functions.cancellable_dispose(cancel_tok); }
+  void cancel() override { Ctx->Functions.cancellable_cancel(cancel_tok); }
 };
 
 } // anonymous namespace
@@ -265,7 +278,8 @@ PluginObjectStore::loadIfExists(ObjectRef Ref) {
 
 void PluginObjectStore::loadIfExistsAsync(
     ObjectRef Ref,
-    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback) {
+    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback,
+    std::unique_ptr<Cancellable> *CancelObj) {
   llcas_objectid_t c_id{Ref.getInternalRef(*this)};
 
   struct LoadObjCtx {
@@ -298,7 +312,15 @@ void PluginObjectStore::loadIfExistsAsync(
   };
 
   LoadObjCtx *CallCtx = new LoadObjCtx(shared_from_this(), std::move(Callback));
-  Ctx->Functions.cas_load_object_async(Ctx->c_cas, c_id, CallCtx, LoadObjCB);
+  if (CancelObj && Ctx->Functions.cancellable_cancel) {
+    llcas_cancellable_t cancel_tok = nullptr;
+    Ctx->Functions.cas_load_object_async(Ctx->c_cas, c_id, CallCtx, LoadObjCB,
+                                         &cancel_tok);
+    *CancelObj = std::make_unique<PluginCancellable>(Ctx, cancel_tok);
+  } else {
+    Ctx->Functions.cas_load_object_async(Ctx->c_cas, c_id, CallCtx, LoadObjCB,
+                                         nullptr);
+  }
 }
 
 namespace {
@@ -413,14 +435,16 @@ class PluginActionCache : public ActionCache {
 public:
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
                                          bool Globally) const final;
-  void getImplAsync(ArrayRef<uint8_t> ResolvedKey, bool Globally,
-                    unique_function<void(Expected<std::optional<CASID>>)>
-                        Callback) const final;
+  void
+  getImplAsync(ArrayRef<uint8_t> ResolvedKey, bool Globally,
+               unique_function<void(Expected<std::optional<CASID>>)> Callback,
+               std::unique_ptr<Cancellable> *CancelObj) const final;
 
   Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                 bool Globally) final;
   void putImplAsync(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
-                    bool Globally, unique_function<void(Error)> Callback) final;
+                    bool Globally, unique_function<void(Error)> Callback,
+                    std::unique_ptr<Cancellable> *CancelObj) final;
 
   PluginActionCache(std::shared_ptr<PluginCASContext>);
 
@@ -452,7 +476,8 @@ PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey, bool Globally) const {
 
 void PluginActionCache::getImplAsync(
     ArrayRef<uint8_t> ResolvedKey, bool Globally,
-    unique_function<void(Expected<std::optional<CASID>>)> Callback) const {
+    unique_function<void(Expected<std::optional<CASID>>)> Callback,
+    std::unique_ptr<Cancellable> *CancelObj) const {
 
   struct CacheGetCtx {
     std::shared_ptr<PluginCASContext> CASCtx;
@@ -482,9 +507,16 @@ void PluginActionCache::getImplAsync(
   };
 
   CacheGetCtx *CallCtx = new CacheGetCtx{this->Ctx, std::move(Callback)};
-  Ctx->Functions.actioncache_get_for_digest_async(
-      Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
-      Globally, CallCtx, CacheGetCB);
+  llcas_digest_t c_digest{ResolvedKey.data(), ResolvedKey.size()};
+  if (CancelObj && Ctx->Functions.cancellable_cancel) {
+    llcas_cancellable_t cancel_tok = nullptr;
+    Ctx->Functions.actioncache_get_for_digest_async(
+        Ctx->c_cas, c_digest, Globally, CallCtx, CacheGetCB, &cancel_tok);
+    *CancelObj = std::make_unique<PluginCancellable>(Ctx, cancel_tok);
+  } else {
+    Ctx->Functions.actioncache_get_for_digest_async(
+        Ctx->c_cas, c_digest, Globally, CallCtx, CacheGetCB, nullptr);
+  }
 }
 
 Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
@@ -507,7 +539,8 @@ Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
 
 void PluginActionCache::putImplAsync(ArrayRef<uint8_t> ResolvedKey,
                                      const CASID &Result, bool Globally,
-                                     unique_function<void(Error)> Callback) {
+                                     unique_function<void(Error)> Callback,
+                                     std::unique_ptr<Cancellable> *CancelObj) {
   ArrayRef<uint8_t> Hash = Result.getHash();
   llcas_objectid_t c_value;
   char *c_err = nullptr;
@@ -534,9 +567,17 @@ void PluginActionCache::putImplAsync(ArrayRef<uint8_t> ResolvedKey,
   };
 
   CachePutCtx *CallCtx = new CachePutCtx{this->Ctx, std::move(Callback)};
-  Ctx->Functions.actioncache_put_for_digest_async(
-      Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
-      c_value, Globally, CallCtx, CachePutCB);
+  llcas_digest_t c_digest{ResolvedKey.data(), ResolvedKey.size()};
+  if (CancelObj && Ctx->Functions.cancellable_cancel) {
+    llcas_cancellable_t cancel_tok = nullptr;
+    Ctx->Functions.actioncache_put_for_digest_async(Ctx->c_cas, c_digest,
+                                                    c_value, Globally, CallCtx,
+                                                    CachePutCB, &cancel_tok);
+    *CancelObj = std::make_unique<PluginCancellable>(Ctx, cancel_tok);
+  } else {
+    Ctx->Functions.actioncache_put_for_digest_async(
+        Ctx->c_cas, c_digest, c_value, Globally, CallCtx, CachePutCB, nullptr);
+  }
 }
 
 PluginActionCache::PluginActionCache(std::shared_ptr<PluginCASContext> CASCtx)

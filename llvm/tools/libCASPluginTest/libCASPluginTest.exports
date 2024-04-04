@@ -2,6 +2,8 @@ llcas_actioncache_get_for_digest
 llcas_actioncache_get_for_digest_async
 llcas_actioncache_put_for_digest
 llcas_actioncache_put_for_digest_async
+llcas_cancellable_cancel
+llcas_cancellable_dispose
 llcas_cas_contains_object
 llcas_cas_create
 llcas_cas_dispose

@@ -23,6 +23,7 @@ using namespace llvm::cas;
 
 void CASContext::anchor() {}
 void ObjectStore::anchor() {}
+void Cancellable::anchor() {}
 
 LLVM_DUMP_METHOD void CASID::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void ObjectStore::dump() const { print(dbgs()); }
@@ -60,7 +61,8 @@ void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
 
 void ObjectStore::loadIfExistsAsync(
     ObjectRef Ref,
-    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback) {
+    unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback,
+    std::unique_ptr<Cancellable> *CancelObj) {
   // The default implementation is synchronous.
   Callback(loadIfExists(Ref));
 }
@@ -129,30 +131,34 @@ std::future<AsyncProxyValue> ObjectStore::getProxyFuture(ObjectRef Ref) {
 
 void ObjectStore::getProxyAsync(
     const CASID &ID,
-    unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback) {
+    unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback,
+    std::unique_ptr<Cancellable> *CancelObj) {
   std::optional<ObjectRef> Ref = getReference(ID);
   if (!Ref)
     return Callback(createUnknownObjectError(ID));
-  return getProxyAsync(*Ref, std::move(Callback));
+  return getProxyAsync(*Ref, std::move(Callback), CancelObj);
 }
 
 void ObjectStore::getProxyAsync(
     ObjectRef Ref,
-    unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback) {
+    unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback,
+    std::unique_ptr<Cancellable> *CancelObj) {
   // FIXME: there is potential for use-after-free for the 'this' pointer.
   // Either we should always allocate shared pointers for \c ObjectStore objects
   // and pass \c shared_from_this() or expect that the caller will not release
   // the \c ObjectStore before the callback returns.
   return loadIfExistsAsync(
-      Ref, [this, Ref, Callback = std::move(Callback)](
-               Expected<std::optional<ObjectHandle>> H) mutable {
+      Ref,
+      [this, Ref, Callback = std::move(Callback)](
+          Expected<std::optional<ObjectHandle>> H) mutable {
         if (!H)
           Callback(H.takeError());
         else if (!*H)
           Callback(std::nullopt);
         else
           Callback(ObjectProxy::load(*this, Ref, **H));
-      });
+      },
+      CancelObj);
 }
 
 Error ObjectStore::createUnknownObjectError(const CASID &ID) {

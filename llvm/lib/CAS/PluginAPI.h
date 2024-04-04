@@ -18,6 +18,10 @@ struct llcas_functions_t {
 
   void (*string_dispose)(char *);
 
+  void (*cancellable_cancel)(llcas_cancellable_t);
+
+  void (*cancellable_dispose)(llcas_cancellable_t);
+
   llcas_cas_options_t (*cas_options_create)(void);
 
   void (*cas_options_dispose)(llcas_cas_options_t);
@@ -61,7 +65,8 @@ struct llcas_functions_t {
                                            llcas_loaded_object_t *,
                                            char **error);
   void (*cas_load_object_async)(llcas_cas_t, llcas_objectid_t, void *ctx_cb,
-                                llcas_cas_load_object_cb);
+                                llcas_cas_load_object_cb,
+                                llcas_cancellable_t *);
 
   bool (*cas_store_object)(llcas_cas_t, llcas_data_t,
                            const llcas_objectid_t *refs, size_t refs_count,
@@ -89,7 +94,8 @@ struct llcas_functions_t {
 
   void (*actioncache_get_for_digest_async)(llcas_cas_t, llcas_digest_t key,
                                            bool globally, void *ctx_cb,
-                                           llcas_actioncache_get_cb);
+                                           llcas_actioncache_get_cb,
+                                           llcas_cancellable_t *);
 
   bool (*actioncache_put_for_digest)(llcas_cas_t, llcas_digest_t key,
                                      llcas_objectid_t value, bool globally,
@@ -98,7 +104,8 @@ struct llcas_functions_t {
   void (*actioncache_put_for_digest_async)(llcas_cas_t, llcas_digest_t key,
                                            llcas_objectid_t value,
                                            bool globally, void *ctx_cb,
-                                           llcas_actioncache_put_cb);
+                                           llcas_actioncache_put_cb,
+                                           llcas_cancellable_t *);
 };
 
 #endif // LLVM_LIB_CAS_PLUGINAPI_H
