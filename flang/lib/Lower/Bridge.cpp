@@ -3779,6 +3779,8 @@ private:
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
         if (details->cudaDataAttr()) {
+          if (sym.owner().IsDerivedType() && IsAllocatable(sym.GetUltimate()))
+            TODO(loc, "Device resident allocatable derived-type component");
           // TODO: This should probably being checked in semantic and give a
           // proper error.
           assert(

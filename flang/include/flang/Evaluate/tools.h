@@ -19,6 +19,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include <array>
 #include <optional>
@@ -1251,6 +1252,17 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       if (details->cudaDataAttr()) {
         ++deviceSymbols;
       } else {
+        if (sym.owner().IsDerivedType()) {
+          if (const auto *details =
+                  sym.owner()
+                      .GetSymbol()
+                      ->GetUltimate()
+                      .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr()) {
+              ++deviceSymbols;
+            }
+          }
+        }
         ++hostSymbols;
       }
     }
