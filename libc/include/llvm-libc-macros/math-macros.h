@@ -9,6 +9,9 @@
 #ifndef LLVM_LIBC_MACROS_MATH_MACROS_H
 #define LLVM_LIBC_MACROS_MATH_MACROS_H
 
+// TODO: Remove this. This is a temporary fix for a downstream problem.
+#ifdef LLVM_LIBC_FULLBUILD
+
 #include "limits-macros.h"
 
 #define FP_NAN 0
@@ -78,5 +81,11 @@ template <typename T> inline constexpr bool isnan(T x) {
 #define isnan(x) __builtin_isnan(x)
 
 #endif
+
+#else
+
+#include <math.h>
+
+#endif // LLVM_LIBC_FULLBUILD
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H
