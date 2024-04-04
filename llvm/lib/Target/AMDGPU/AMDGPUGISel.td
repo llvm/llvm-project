@@ -55,6 +55,14 @@ def gi_vop3pmodsneg :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
     GIComplexPatternEquiv<VOP3PModsNeg>;
 
+def gi_vop3pmodsnegs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegs">,
+    GIComplexPatternEquiv<VOP3PModsNegs>;
+
+def gi_dotiuvop3pmodsnegabs :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
+    GIComplexPatternEquiv<VOP3PModsNegAbs>;
+
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -125,6 +133,9 @@ def gi_global_offset :
 def gi_global_saddr :
     GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
     GIComplexPatternEquiv<GlobalSAddr>;
+def gi_global_saddr_glc :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
+    GIComplexPatternEquiv<GlobalSAddrGLC>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -394,6 +405,9 @@ def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
+def gi_as_i1timm_zext : GICustomOperandRenderer<"renderZextBoolTImm">,
+  GISDNodeXFormEquiv<as_i1timm_zext>;
+
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 
@@ -417,3 +431,9 @@ def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameInde
 
 def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
   GISDNodeXFormEquiv<FPPow2ToExponentXForm>;
+
+def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
+  GISDNodeXFormEquiv<PrefetchLoc>;
+
+def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
+  GISDNodeXFormEquiv<MFMALdScaleXForm>;

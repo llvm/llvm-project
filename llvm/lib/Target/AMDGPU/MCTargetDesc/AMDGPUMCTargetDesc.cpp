@@ -22,6 +22,7 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -121,6 +122,9 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
 namespace {
 
 class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
+private:
+  unsigned VgprMSBs = 0;
+
 public:
   explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
       : MCInstrAnalysis(Info) {}
@@ -138,6 +142,43 @@ public:
     APInt SignedOffset(18, Imm * 4, true);
     Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
     return true;
+  }
+
+  void resetState() override { VgprMSBs = 0; }
+
+  void updateState(const MCInst &Inst, uint64_t Addr) override {
+    if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
+      VgprMSBs = Inst.getOperand(0).getImm();
+    else if (isTerminator(Inst))
+      VgprMSBs = 0;
+  }
+
+  void updateInst(MCInst &Inst, const MCContext &Ctx) const override {
+    if (!VgprMSBs)
+      return;
+    auto Ops =
+        AMDGPU::getVGPRLoweringOperandTables(Info->get(Inst.getOpcode()));
+    if (!Ops.first)
+      return;
+
+    const MCRegisterInfo &MRI = *Ctx.getRegisterInfo();
+    for (unsigned I = 0; I < 4; ++I) {
+      unsigned OpMSBs = (VgprMSBs >> (I * 2)) & 3;
+      if (!OpMSBs)
+        continue;
+      for (auto OpNames : { Ops.first, Ops.second }) {
+        if (!OpNames)
+          continue;
+        auto OpIdx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(), OpNames[I]);
+        if (OpIdx == -1)
+          continue;
+        MCOperand &Op = Inst.getOperand(OpIdx);
+        if (!Op.isReg())
+          continue;
+        if (MCRegister Reg = AMDGPU::getVGPRWithMSBs(Op.getReg(), OpMSBs, MRI))
+          Op.setReg(Reg);
+      }
+    }
   }
 };
 

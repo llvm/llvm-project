@@ -215,8 +215,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
+    unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
     MCPhysReg HighestVGPRReg = AMDGPU::NoRegister;
-    for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
+    for (MCPhysReg Reg : reverse(
+             AMDGPU::VGPR_32RegClass.getRegisters().take_front(NumArchVGPRs))) {
       if (MRI.isPhysRegUsed(Reg)) {
         HighestVGPRReg = Reg;
         break;

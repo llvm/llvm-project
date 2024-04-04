@@ -4,6 +4,13 @@ define amdgpu_kernel void @test_kernel() {
 
 ; Test subtarget detection. Disassembly is only supported for GFX8 and beyond.
 ;
+; ----------------------------------GFX13--------------------------------------
+;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1300 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
 ; ----------------------------------GFX12--------------------------------------
 ;
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1201 -filetype=obj -O0 -o %t.o %s
@@ -13,6 +20,11 @@ define amdgpu_kernel void @test_kernel() {
 ;
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1200 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1210 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1210 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
@@ -122,6 +134,11 @@ define amdgpu_kernel void @test_kernel() {
 
 ; ----------------------------------GFX9---------------------------------------
 ;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx950 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx9-generic -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn -mllvm --amdhsa-code-object-version=6 --mcpu=gfx9-generic %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D  -mllvm --amdhsa-code-object-version=6 %t.o > %t-detect.txt

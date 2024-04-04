@@ -41,6 +41,7 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:
@@ -51,6 +52,9 @@ protected:
   bool Has16BitInsts = false;
   bool HasTrue16BitInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16TransInsts = false;
+  bool HasBF16ConversionInsts = false;
+  bool HasBF16PackedInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -165,6 +169,18 @@ public:
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
+
+  bool hasBF16TransInsts() const {
+    return HasBF16TransInsts;
+  }
+
+  bool hasBF16ConversionInsts() const {
+    return HasBF16ConversionInsts;
+  }
+
+  bool hasBF16PackedInsts() const {
+    return HasBF16PackedInsts;
+  }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

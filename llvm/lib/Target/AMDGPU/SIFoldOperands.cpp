@@ -624,8 +624,14 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   }
 
   // Check the case where we might introduce a second constant operand to a
-  // scalar instruction
-  if (TII->isSALU(MI->getOpcode())) {
+  // scalar instruction.
+  //
+  // S_MOV_TO_GLOBAL has an immediate operand that is always encoded in sdst
+  // and confuses this check. It also only has a single "real" source operand
+  // and therefore doesn't need this check anyway.
+  if (TII->isSALU(MI->getOpcode()) &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B32 &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B64) {
     const MCInstrDesc &InstDesc = MI->getDesc();
     const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
 
@@ -815,17 +821,23 @@ void SIFoldOperands::foldOperand(
         return;
     }
 
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
-
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
       UseMI->setDesc(TII->get(NewOpc));
     }
+
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
 
     return;
   }
@@ -1083,7 +1095,7 @@ void SIFoldOperands::foldOperand(
   if (UseOp->getSubReg() && AMDGPU::getRegBitWidth(*FoldRC) == 64) {
     Register UseReg = UseOp->getReg();
     const TargetRegisterClass *UseRC = MRI->getRegClass(UseReg);
-    if (AMDGPU::getRegBitWidth(*UseRC) != 64)
+    if (AMDGPU::getRegBitWidth(*UseRC) != 64 || !OpToFold.isImm())
       return;
 
     APInt Imm(64, OpToFold.getImm());

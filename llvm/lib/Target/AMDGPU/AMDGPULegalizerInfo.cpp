@@ -1033,8 +1033,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
   }
 
-  getActionDefinitionsBuilder(G_FPTRUNC)
-    .legalFor({{S32, S64}, {S16, S32}})
+  auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
+  if (ST.hasCvtPkF16Inst()) {
+    FPTruncActions
+      .legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}, {V2S16, V2S64}});
+  } else {
+    FPTruncActions
+      .legalFor({{S32, S64}, {S16, S32}});
+  }
+  FPTruncActions
     .scalarize(0)
     .lower();
 
@@ -1297,13 +1304,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
+      getActionDefinitionsBuilder(G_ABS)
         .legalFor({S32, S16, V2S16})
         .clampMaxNumElements(0, S16, 2)
         .minScalar(0, S16)
         .widenScalarToNextPow2(0)
         .scalarize(0)
         .lower();
+      if (ST.hasIntMinMax64()) {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+          .legalFor({S32, S16, S64, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      } else {
+        getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+          .legalFor({S32, S16, V2S16})
+          .clampMaxNumElements(0, S16, 2)
+          .minScalar(0, S16)
+          .widenScalarToNextPow2(0)
+          .scalarize(0)
+          .lower();
+      }
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})
@@ -1636,7 +1660,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  if (ST.hasGFX90AInsts()) {
+  if (ST.hasGFX90AInsts() || ST.hasGFX12_10Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
@@ -2833,14 +2857,22 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
     B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
 
-  MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
-    .addDef(PCReg);
+  if (ST.has64BitLiterals()) {
+    assert(GAFlags != SIInstrInfo::MO_NONE);
 
-  MIB.addGlobalAddress(GV, Offset, GAFlags);
-  if (GAFlags == SIInstrInfo::MO_NONE)
-    MIB.addImm(0);
-  else
-    MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET64).addDef(PCReg);
+    MIB.addGlobalAddress(GV, Offset, GAFlags + 2);
+  } else {
+    MachineInstrBuilder MIB =
+        B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET).addDef(PCReg);
+
+    MIB.addGlobalAddress(GV, Offset, GAFlags);
+    if (GAFlags == SIInstrInfo::MO_NONE)
+      MIB.addImm(0);
+    else
+      MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
+  }
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -2855,6 +2887,15 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     Register DstReg, LLT PtrTy, MachineIRBuilder &B, const GlobalValue *GV,
     MachineRegisterInfo &MRI) const {
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
+
+  if (RequiresHighHalf && ST.has64BitLiterals()) {
+    if (!MRI.getRegClassOrNull(DstReg))
+      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    B.buildInstr(AMDGPU::S_MOV_B64)
+        .addDef(DstReg)
+        .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    return;
+  }
 
   LLT S32 = LLT::scalar(32);
 
@@ -4092,6 +4133,9 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
+  if (ST.hasVectorMulU64() && Size == 64)
+    return true;
+
   unsigned NumParts = Size / 32;
   assert((Size % 32) == 0);
   assert(NumParts >= 2);
@@ -4248,6 +4292,20 @@ bool AMDGPULegalizerInfo::loadInputValue(
       AMDGPU::isEntryFunctionCC(CC) && !MFI->hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
+  const ArgDescriptor ClusterWorkGroupIDX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000000Fu);
+  const ArgDescriptor ClusterWorkGroupIDY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
+  const ArgDescriptor ClusterWorkGroupIDZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
+  const ArgDescriptor ClusterNumWorkGroupsX =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
+  const ArgDescriptor ClusterNumWorkGroupsY =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
+  const ArgDescriptor ClusterNumWorkGroupsZ =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
+  const ArgDescriptor ClusterFlatNumWorkGroups =
+      ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
   if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
@@ -4262,6 +4320,41 @@ bool AMDGPULegalizerInfo::loadInputValue(
       break;
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       Arg = &WorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      Arg = &ClusterWorkGroupIDX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      Arg = &ClusterWorkGroupIDY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      Arg = &ClusterWorkGroupIDZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X:
+      Arg = &ClusterNumWorkGroupsX;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y:
+      Arg = &ClusterNumWorkGroupsY;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
+      Arg = &ClusterNumWorkGroupsZ;
+      ArgRC = &AMDGPU::SReg_32RegClass;
+      ArgTy = LLT::scalar(32);
+      break;
+    case AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS:
+      Arg = &ClusterFlatNumWorkGroups;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
@@ -6754,8 +6847,8 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -6891,17 +6984,76 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
-    .addDef(DstReg)
-    .addImm(Opcode);
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addImm(Opcode);
 
   for (Register R : Ops) {
     MIB.addUse(R);
   }
 
-  MIB.addUse(TDescr)
-     .addImm(IsA16 ? 1 : 0)
-     .cloneMemRefs(MI);
+  MIB.addUse(TDescr);
+
+  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register DstOrigin = MI.getOperand(1).getReg();
+  Register DstDir = MI.getOperand(2).getReg();
+  Register NodePtr = MI.getOperand(4).getReg();
+  Register RayExtent = MI.getOperand(5).getReg();
+  Register InstanceMask = MI.getOperand(6).getReg();
+  Register RayOrigin = MI.getOperand(7).getReg();
+  Register RayDir = MI.getOperand(8).getReg();
+  Register Offsets = MI.getOperand(9).getReg();
+  Register TDescr = MI.getOperand(10).getReg();
+
+  if (!AMDGPU::isGFX12Plus(ST)) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
+
+  bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
+                Intrinsic::amdgcn_image_bvh8_intersect_ray;
+  const unsigned NumVDataDwords = 10;
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  SmallVector<Register, 12> Ops;
+  Ops.push_back(NodePtr);
+  Ops.push_back(B.buildMergeLikeInstr(
+                     V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)})
+                    .getReg(0));
+  Ops.push_back(RayOrigin);
+  Ops.push_back(RayDir);
+  Ops.push_back(Offsets);
+
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addDef(DstOrigin)
+                 .addDef(DstDir)
+                 .addImm(Opcode);
+
+  for (Register R : Ops)
+    MIB.addUse(R);
+
+  MIB.addUse(TDescr).cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
@@ -6949,6 +7101,41 @@ bool AMDGPULegalizerInfo::legalizeWaveID(MachineInstr &MI,
   auto LSB = B.buildConstant(S32, 25);
   auto Width = B.buildConstant(S32, 5);
   B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeWavegroupID(MachineInstr &MI,
+                                              MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
+  // WavegroupID is taken from the low order bits of WaveIDInGroup which is in
+  // TTMP8[29:25].
+  LLT S32 = LLT::scalar(32);
+  Register DstReg = MI.getOperand(0).getReg();
+  auto TTMP8 = B.buildCopy(S32, Register(AMDGPU::TTMP8));
+  auto LSB = B.buildConstant(S32, 25);
+  constexpr unsigned WavegroupCount = 4;
+  constexpr unsigned WavegroupCountBits = CTLog2<WavegroupCount>();
+  auto Width = B.buildConstant(S32, WavegroupCountBits);
+  B.buildUbfx(DstReg, TTMP8, LSB, Width);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeWaveIDInWavegroup(MachineInstr &MI,
+                                                    MachineIRBuilder &B) const {
+  if (!ST.hasWavegroups())
+    return false;
+  // WaveIDInWavegroup is in GROUP_INFO[19:16].
+  MachineRegisterInfo &MRI = *B.getMRI();
+  Register DstReg = MI.getOperand(0).getReg();
+  if (!MRI.getRegClassOrNull(DstReg))
+    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+  using namespace AMDGPU::Hwreg;
+  B.buildInstr(AMDGPU::S_GETREG_B32)
+      .addDef(DstReg)
+      .addImm(HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4));
   MI.eraseFromParent();
   return true;
 }
@@ -7123,8 +7310,40 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_workgroup_id_z:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_workgroup_id_x:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+  case Intrinsic::amdgcn_cluster_workgroup_id_y:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+  case Intrinsic::amdgcn_cluster_workgroup_id_z:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+  case Intrinsic::amdgcn_cluster_num_workgroups_x:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X);
+  case Intrinsic::amdgcn_cluster_num_workgroups_y:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y);
+  case Intrinsic::amdgcn_cluster_num_workgroups_z:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z);
+  case Intrinsic::amdgcn_cluster_flat_num_workgroups:
+    return ST.hasGFX12_10Insts() &&
+           legalizePreloadedArgIntrin(
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS);
   case Intrinsic::amdgcn_wave_id:
     return legalizeWaveID(MI, B);
+  case Intrinsic::amdgcn_wavegroup_id:
+    return legalizeWavegroupID(MI, B);
+  case Intrinsic::amdgcn_wave_id_in_wavegroup:
+    return legalizeWaveIDInWavegroup(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::LDS_KERNEL_ID);
@@ -7286,7 +7505,18 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_ds_fmax:
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
-    return legalizeBVHIntrinsic(MI, B);
+    return legalizeBVHIntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
@@ -7301,6 +7531,13 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.getOperand(5).setReg(B.buildAnyExt(S32, Index).getReg(0));
     return true;
   }
+  case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_bf16f32_16x16x64_bf16:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x64_f16:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x256_iu4:
+  case Intrinsic::amdgcn_swmmac_i32_16x16x128_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
   case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4: {

@@ -349,6 +349,11 @@ def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_permlane16_var>;
 def : SourceOfDivergence<int_amdgcn_permlanex16_var>;
+def : SourceOfDivergence<int_amdgcn_permlane_bcast>;
+def : SourceOfDivergence<int_amdgcn_permlane_up>;
+def : SourceOfDivergence<int_amdgcn_permlane_down>;
+def : SourceOfDivergence<int_amdgcn_permlane_xor>;
+def : SourceOfDivergence<int_amdgcn_permlane_idx_gen>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
@@ -361,13 +366,25 @@ foreach intr = AMDGPUMFMAIntrinsics90A in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUMFMAIntrinsics940 in
 def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUMFMAIntrinsics950 in
+def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX11 in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX12 in
 def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUWMMAIntrinsicsGFX1210 in
+def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUSWMMACIntrinsicsGFX1210 in
+def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b64>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b128>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr4_b64>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr6_b96>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr8_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr16_b128>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr4_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr6_b96>;
 
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and
@@ -398,6 +415,8 @@ def : AlwaysUniform<int_amdgcn_readlane>;
 def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
+def : AlwaysUniform<int_amdgcn_s_mov_from_global>;
+def : AlwaysUniform<int_amdgcn_s_swap_to_global>;
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_waterfall_begin>;

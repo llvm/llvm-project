@@ -208,11 +208,17 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
-  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
+
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWavegroupID(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeWaveIDInWavegroup(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;

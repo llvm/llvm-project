@@ -207,6 +207,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX940:
       case CudaArch::GFX941:
       case CudaArch::GFX942:
+      case CudaArch::GFX950:
       case CudaArch::GFX1010:
       case CudaArch::GFX1011:
       case CudaArch::GFX1012:
@@ -226,6 +227,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX1151:
       case CudaArch::GFX1200:
       case CudaArch::GFX1201:
+      case CudaArch::GFX1210:
+      case CudaArch::GFX1300:
       case CudaArch::Generic:
       case CudaArch::LAST:
         break;

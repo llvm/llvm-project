@@ -430,6 +430,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIAnnotateControlFlowPass(*PR);
   initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
+  initializeAMDGPULowerVGPREncodingPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
@@ -556,8 +557,8 @@ static StringRef computeDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
-         "v32:32-v48:64-v96:"
+         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32"
+         "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:"
          "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
          "G1-ni:7:8:9";
 }
@@ -728,7 +729,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
   return (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
           AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
-          AddrSpace == AMDGPUAS::REGION_ADDRESS)
+          AddrSpace == AMDGPUAS::REGION_ADDRESS ||
+          AddrSpace == AMDGPUAS::LANE_SHARED)
              ? -1
              : 0;
 }
@@ -1439,6 +1441,8 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
+
+  addPass(&AMDGPULowerVGPREncodingID);
 
   if (isPassEnabled(EnableInsertSingleUseVDST, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertSingleUseVDSTID);

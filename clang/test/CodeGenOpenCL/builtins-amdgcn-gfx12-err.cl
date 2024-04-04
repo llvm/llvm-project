@@ -94,4 +94,7 @@ void builtin_test_unsupported(double a_double, float a_float,
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8' needs target feature fp8-insts}}
+
+  a = __builtin_amdgcn_wavegroup_id(); // expected-error {{'__builtin_amdgcn_wavegroup_id' needs target feature gfx13-insts}}
+  a = __builtin_amdgcn_wave_id_in_wavegroup(); // expected-error {{'__builtin_amdgcn_wave_id_in_wavegroup' needs target feature gfx13-insts}}
 }

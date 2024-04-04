@@ -536,7 +536,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp) {
     auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
     assert(DppCtrl && DppCtrl->isImm());
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl->getImm())) {
+    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrl->getImm())) {
       LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
                            " control value\n");
       // Let it split, then control may become legal.

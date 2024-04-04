@@ -258,10 +258,13 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
-class DS_BVH_STACK<string opName>
+class DS_BVH_STACK<string opName,
+                   RegisterClass rc,
+                   RegisterClass src>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, Offset:$offset),
+  (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
+   src:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -291,6 +294,12 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
+  }
+}
+
+multiclass DS_1A_RET_NoM0<string opName, RegisterClass rc = VGPR_32> {
+  let has_m0_read = 0 in {
+    def "" : DS_1A_RET<opName, rc>;
   }
 }
 
@@ -325,6 +334,20 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let has_data1 = 0;
   let has_gds = 0;
   let gdsValue = 1;
+}
+
+class DS_1A_Off16_NORET <string opName>
+: DS_Pseudo<opName,
+  (outs),
+  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+  " $addr$offset$gds"> {
+
+  let has_vdst = 0;
+  let has_offset = 1;
+  let has_data0 = 0;
+  let has_data1 = 0;
+  let has_m0_read = 0;
+  let IsAtomicNoRet = 1;
 }
 
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
@@ -716,7 +739,8 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
-def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
+                                        VGPR_32, VReg_128> ;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -725,6 +749,13 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 //===----------------------------------------------------------------------===//
 
 let SubtargetPredicate = isGFX12Plus in {
+
+let OtherPredicates = [HasImageInsts] in {
+def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
+def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+} // End OtherPredicates = [HasImageInsts].
 
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
@@ -743,6 +774,33 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX12_10Plus in {
+
+let WaveSizePredicate = isWave32, mayStore = 0 in {
+defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
+defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
+defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
+} // let WaveSizePredicate = isWave32, mayStore = 0
+
+let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
+def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
+}
+
+def : GCNPat <
+  (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
+  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
+>;
+
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+
+def : GCNPat<
+  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+>;
+
+} //let SubtargetPredicate = isGFX12_10Plus
 
 //===----------------------------------------------------------------------===//
 // DS Patterns
@@ -1181,6 +1239,18 @@ def : GCNPat <
     sub0)
 >;
 
+class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPat <
+  (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (inst $ptr, Offset:$offset, (i1 0))
+>;
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
+def : DSLoadTrPat <DS_LOAD_TR8_B64,   v2i32, int_amdgcn_ds_load_tr8_b64>;
+def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32, int_amdgcn_ds_load_tr4_b64>;
+def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32, int_amdgcn_ds_load_tr6_b96>;
+def : DSLoadTrPat <DS_LOAD_TR16_B128, v8i16, int_amdgcn_ds_load_tr16_b128>;
+} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1189,9 +1259,9 @@ def : GCNPat <
 // Base ENC_DS for GFX6, GFX7, GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
-class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
-                                               string opName = ps.Mnemonic,
-                                               bit hasGDS = true>
+class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op, DS_Pseudo ps, int ef,
+                                                     string opName = ps.Mnemonic,
+                                                     bit hasGDS = true>
     : DS_Real<ps, opName>, SIMCInstr <ps.Mnemonic, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
@@ -1208,41 +1278,76 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 }
 
 //===----------------------------------------------------------------------===//
-// GFX12.
+// GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
 multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX12Plus, DecoderNamespace = "GFX12" in
+  let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" in
     def _gfx12 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
-                                               name, /*hasGDS=*/false>;
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                     SIEncodingFamily.GFX12,
+                                                     name, /*hasGDS=*/false>;
   if !and(needAlias, !ne(ps.Mnemonic, name)) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Plus]>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Only]>;
 }
 
-defm DS_MIN_F32           : DS_Real_gfx12<0x012, "ds_min_num_f32">;
-defm DS_MAX_F32           : DS_Real_gfx12<0x013, "ds_max_num_f32">;
-defm DS_MIN_RTN_F32       : DS_Real_gfx12<0x032, "ds_min_num_rtn_f32">;
-defm DS_MAX_RTN_F32       : DS_Real_gfx12<0x033, "ds_max_num_rtn_f32">;
-defm DS_MIN_F64           : DS_Real_gfx12<0x052, "ds_min_num_f64">;
-defm DS_MAX_F64           : DS_Real_gfx12<0x053, "ds_max_num_f64">;
-defm DS_MIN_RTN_F64       : DS_Real_gfx12<0x072, "ds_min_num_rtn_f64">;
-defm DS_MAX_RTN_F64       : DS_Real_gfx12<0x073, "ds_max_num_rtn_f64">;
-defm DS_COND_SUB_U32      : DS_Real_gfx12<0x098>;
-defm DS_SUB_CLAMP_U32     : DS_Real_gfx12<0x099>;
-defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12<0x0a8>;
-defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12<0x0a9>;
-defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
-defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
-defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
-defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+multiclass DS_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<DS_Pseudo>(NAME);
+  let AssemblerPredicate = isGFX13Only, DecoderNamespace = "GFX13" in
+    def _gfx13 :
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
+                                                     SIEncodingFamily.GFX13,
+                                                     name, /*hasGDS=*/false>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+multiclass DS_Real_gfx12_gfx13<bits<8> op, string name = !tolower(NAME)> :
+  DS_Real_gfx12<op, name>, DS_Real_gfx13<op, name>;
+
+defm DS_MIN_F32           : DS_Real_gfx12_gfx13<0x012, "ds_min_num_f32">;
+defm DS_MAX_F32           : DS_Real_gfx12_gfx13<0x013, "ds_max_num_f32">;
+defm DS_MIN_RTN_F32       : DS_Real_gfx12_gfx13<0x032, "ds_min_num_rtn_f32">;
+defm DS_MAX_RTN_F32       : DS_Real_gfx12_gfx13<0x033, "ds_max_num_rtn_f32">;
+defm DS_MIN_F64           : DS_Real_gfx12_gfx13<0x052, "ds_min_num_f64">;
+defm DS_MAX_F64           : DS_Real_gfx12_gfx13<0x053, "ds_max_num_f64">;
+defm DS_MIN_RTN_F64       : DS_Real_gfx12_gfx13<0x072, "ds_min_num_rtn_f64">;
+defm DS_MAX_RTN_F64       : DS_Real_gfx12_gfx13<0x073, "ds_max_num_rtn_f64">;
+defm DS_COND_SUB_U32      : DS_Real_gfx12_gfx13<0x098>;
+defm DS_SUB_CLAMP_U32     : DS_Real_gfx12_gfx13<0x099>;
+defm DS_COND_SUB_RTN_U32  : DS_Real_gfx12_gfx13<0x0a8>;
+defm DS_SUB_CLAMP_RTN_U32 : DS_Real_gfx12_gfx13<0x0a9>;
+defm DS_PK_ADD_F16        : DS_Real_gfx12_gfx13<0x09a>;
+defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12_gfx13<0x0aa>;
+defm DS_PK_ADD_BF16       : DS_Real_gfx12_gfx13<0x09b>;
+defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12_gfx13<0x0ab>;
+
+defm DS_LOAD_TR4_B64      : DS_Real_gfx12_gfx13<0x0fa>;
+defm DS_LOAD_TR6_B96      : DS_Real_gfx12_gfx13<0x0fb>;
+defm DS_LOAD_TR16_B128    : DS_Real_gfx12_gfx13<0x0fc>;
+defm DS_LOAD_TR8_B64      : DS_Real_gfx12_gfx13<0x0fd>;
+
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+  "ds_bvh_stack_push4_pop1_rtn_b32">;
+defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
+defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
+
+defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
 
 // New aliases added in GFX12 without renaming the instructions.
 def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
 def : MnemonicAlias<"ds_subrev_rtn_u32", "ds_rsub_rtn_u32">, Requires<[isGFX12Plus]>;
 def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
 def : MnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">, Requires<[isGFX12Plus]>;
+
+// Aliases that have existed since these instructions were introduced.
+def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX12_10Plus]>;
+def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX12_10Plus]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.
@@ -1252,8 +1357,9 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
     def _gfx11 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX11,
-                                               name>;
+      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, !cast<DS_Pseudo>(NAME),
+                                                     SIEncodingFamily.GFX11,
+                                                     name>;
   if !ne(ps.Mnemonic, name) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
 }
@@ -1261,56 +1367,59 @@ multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
 multiclass DS_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)>
   : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>;
 
-defm DS_WRITE_B32           : DS_Real_gfx11_gfx12<0x00d, "ds_store_b32">;
-defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12<0x00e, "ds_store_2addr_b32">;
-defm DS_WRITE2ST64_B32      : DS_Real_gfx11_gfx12<0x00f, "ds_store_2addr_stride64_b32">;
-defm DS_WRITE_B8            : DS_Real_gfx11_gfx12<0x01e, "ds_store_b8">;
-defm DS_WRITE_B16           : DS_Real_gfx11_gfx12<0x01f, "ds_store_b16">;
-defm DS_WRXCHG_RTN_B32      : DS_Real_gfx11_gfx12<0x02d, "ds_storexchg_rtn_b32">;
-defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx11_gfx12<0x02e, "ds_storexchg_2addr_rtn_b32">;
-defm DS_WRXCHG2ST64_RTN_B32 : DS_Real_gfx11_gfx12<0x02f, "ds_storexchg_2addr_stride64_rtn_b32">;
-defm DS_READ_B32            : DS_Real_gfx11_gfx12<0x036, "ds_load_b32">;
-defm DS_READ2_B32           : DS_Real_gfx11_gfx12<0x037, "ds_load_2addr_b32">;
-defm DS_READ2ST64_B32       : DS_Real_gfx11_gfx12<0x038, "ds_load_2addr_stride64_b32">;
-defm DS_READ_I8             : DS_Real_gfx11_gfx12<0x039, "ds_load_i8">;
-defm DS_READ_U8             : DS_Real_gfx11_gfx12<0x03a, "ds_load_u8">;
-defm DS_READ_I16            : DS_Real_gfx11_gfx12<0x03b, "ds_load_i16">;
-defm DS_READ_U16            : DS_Real_gfx11_gfx12<0x03c, "ds_load_u16">;
-defm DS_WRITE_B64           : DS_Real_gfx11_gfx12<0x04d, "ds_store_b64">;
-defm DS_WRITE2_B64          : DS_Real_gfx11_gfx12<0x04e, "ds_store_2addr_b64">;
-defm DS_WRITE2ST64_B64      : DS_Real_gfx11_gfx12<0x04f, "ds_store_2addr_stride64_b64">;
-defm DS_WRXCHG_RTN_B64      : DS_Real_gfx11_gfx12<0x06d, "ds_storexchg_rtn_b64">;
-defm DS_WRXCHG2_RTN_B64     : DS_Real_gfx11_gfx12<0x06e, "ds_storexchg_2addr_rtn_b64">;
-defm DS_WRXCHG2ST64_RTN_B64 : DS_Real_gfx11_gfx12<0x06f, "ds_storexchg_2addr_stride64_rtn_b64">;
-defm DS_READ_B64            : DS_Real_gfx11_gfx12<0x076, "ds_load_b64">;
-defm DS_READ2_B64           : DS_Real_gfx11_gfx12<0x077, "ds_load_2addr_b64">;
-defm DS_READ2ST64_B64       : DS_Real_gfx11_gfx12<0x078, "ds_load_2addr_stride64_b64">;
-defm DS_WRITE_B8_D16_HI     : DS_Real_gfx11_gfx12<0x0a0, "ds_store_b8_d16_hi">;
-defm DS_WRITE_B16_D16_HI    : DS_Real_gfx11_gfx12<0x0a1, "ds_store_b16_d16_hi">;
-defm DS_READ_U8_D16         : DS_Real_gfx11_gfx12<0x0a2, "ds_load_u8_d16">;
-defm DS_READ_U8_D16_HI      : DS_Real_gfx11_gfx12<0x0a3, "ds_load_u8_d16_hi">;
-defm DS_READ_I8_D16         : DS_Real_gfx11_gfx12<0x0a4, "ds_load_i8_d16">;
-defm DS_READ_I8_D16_HI      : DS_Real_gfx11_gfx12<0x0a5, "ds_load_i8_d16_hi">;
-defm DS_READ_U16_D16        : DS_Real_gfx11_gfx12<0x0a6, "ds_load_u16_d16">;
-defm DS_READ_U16_D16_HI     : DS_Real_gfx11_gfx12<0x0a7, "ds_load_u16_d16_hi">;
-defm DS_WRITE_ADDTID_B32    : DS_Real_gfx11_gfx12<0x0b0, "ds_store_addtid_b32">;
-defm DS_READ_ADDTID_B32     : DS_Real_gfx11_gfx12<0x0b1, "ds_load_addtid_b32">;
-defm DS_WRITE_B96           : DS_Real_gfx11_gfx12<0x0de, "ds_store_b96">;
-defm DS_WRITE_B128          : DS_Real_gfx11_gfx12<0x0df, "ds_store_b128">;
-defm DS_READ_B96            : DS_Real_gfx11_gfx12<0x0fe, "ds_load_b96">;
-defm DS_READ_B128           : DS_Real_gfx11_gfx12<0x0ff, "ds_load_b128">;
+multiclass DS_Real_gfx11_gfx12_gfx13<bits<8> op, string name = !tolower(NAME)>
+  : DS_Real_gfx11<op, name>, DS_Real_gfx12<op, name>, DS_Real_gfx13<op, name>;
+
+defm DS_WRITE_B32           : DS_Real_gfx11_gfx12_gfx13<0x00d, "ds_store_b32">;
+defm DS_WRITE2_B32          : DS_Real_gfx11_gfx12_gfx13<0x00e, "ds_store_2addr_b32">;
+defm DS_WRITE2ST64_B32      : DS_Real_gfx11_gfx12_gfx13<0x00f, "ds_store_2addr_stride64_b32">;
+defm DS_WRITE_B8            : DS_Real_gfx11_gfx12_gfx13<0x01e, "ds_store_b8">;
+defm DS_WRITE_B16           : DS_Real_gfx11_gfx12_gfx13<0x01f, "ds_store_b16">;
+defm DS_WRXCHG_RTN_B32      : DS_Real_gfx11_gfx12_gfx13<0x02d, "ds_storexchg_rtn_b32">;
+defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx11_gfx12_gfx13<0x02e, "ds_storexchg_2addr_rtn_b32">;
+defm DS_WRXCHG2ST64_RTN_B32 : DS_Real_gfx11_gfx12_gfx13<0x02f, "ds_storexchg_2addr_stride64_rtn_b32">;
+defm DS_READ_B32            : DS_Real_gfx11_gfx12_gfx13<0x036, "ds_load_b32">;
+defm DS_READ2_B32           : DS_Real_gfx11_gfx12_gfx13<0x037, "ds_load_2addr_b32">;
+defm DS_READ2ST64_B32       : DS_Real_gfx11_gfx12_gfx13<0x038, "ds_load_2addr_stride64_b32">;
+defm DS_READ_I8             : DS_Real_gfx11_gfx12_gfx13<0x039, "ds_load_i8">;
+defm DS_READ_U8             : DS_Real_gfx11_gfx12_gfx13<0x03a, "ds_load_u8">;
+defm DS_READ_I16            : DS_Real_gfx11_gfx12_gfx13<0x03b, "ds_load_i16">;
+defm DS_READ_U16            : DS_Real_gfx11_gfx12_gfx13<0x03c, "ds_load_u16">;
+defm DS_WRITE_B64           : DS_Real_gfx11_gfx12_gfx13<0x04d, "ds_store_b64">;
+defm DS_WRITE2_B64          : DS_Real_gfx11_gfx12_gfx13<0x04e, "ds_store_2addr_b64">;
+defm DS_WRITE2ST64_B64      : DS_Real_gfx11_gfx12_gfx13<0x04f, "ds_store_2addr_stride64_b64">;
+defm DS_WRXCHG_RTN_B64      : DS_Real_gfx11_gfx12_gfx13<0x06d, "ds_storexchg_rtn_b64">;
+defm DS_WRXCHG2_RTN_B64     : DS_Real_gfx11_gfx12_gfx13<0x06e, "ds_storexchg_2addr_rtn_b64">;
+defm DS_WRXCHG2ST64_RTN_B64 : DS_Real_gfx11_gfx12_gfx13<0x06f, "ds_storexchg_2addr_stride64_rtn_b64">;
+defm DS_READ_B64            : DS_Real_gfx11_gfx12_gfx13<0x076, "ds_load_b64">;
+defm DS_READ2_B64           : DS_Real_gfx11_gfx12_gfx13<0x077, "ds_load_2addr_b64">;
+defm DS_READ2ST64_B64       : DS_Real_gfx11_gfx12_gfx13<0x078, "ds_load_2addr_stride64_b64">;
+defm DS_WRITE_B8_D16_HI     : DS_Real_gfx11_gfx12_gfx13<0x0a0, "ds_store_b8_d16_hi">;
+defm DS_WRITE_B16_D16_HI    : DS_Real_gfx11_gfx12_gfx13<0x0a1, "ds_store_b16_d16_hi">;
+defm DS_READ_U8_D16         : DS_Real_gfx11_gfx12_gfx13<0x0a2, "ds_load_u8_d16">;
+defm DS_READ_U8_D16_HI      : DS_Real_gfx11_gfx12_gfx13<0x0a3, "ds_load_u8_d16_hi">;
+defm DS_READ_I8_D16         : DS_Real_gfx11_gfx12_gfx13<0x0a4, "ds_load_i8_d16">;
+defm DS_READ_I8_D16_HI      : DS_Real_gfx11_gfx12_gfx13<0x0a5, "ds_load_i8_d16_hi">;
+defm DS_READ_U16_D16        : DS_Real_gfx11_gfx12_gfx13<0x0a6, "ds_load_u16_d16">;
+defm DS_READ_U16_D16_HI     : DS_Real_gfx11_gfx12_gfx13<0x0a7, "ds_load_u16_d16_hi">;
+defm DS_WRITE_ADDTID_B32    : DS_Real_gfx11_gfx12_gfx13<0x0b0, "ds_store_addtid_b32">;
+defm DS_READ_ADDTID_B32     : DS_Real_gfx11_gfx12_gfx13<0x0b1, "ds_load_addtid_b32">;
+defm DS_WRITE_B96           : DS_Real_gfx11_gfx12_gfx13<0x0de, "ds_store_b96">;
+defm DS_WRITE_B128          : DS_Real_gfx11_gfx12_gfx13<0x0df, "ds_store_b128">;
+defm DS_READ_B96            : DS_Real_gfx11_gfx12_gfx13<0x0fe, "ds_load_b96">;
+defm DS_READ_B128           : DS_Real_gfx11_gfx12_gfx13<0x0ff, "ds_load_b128">;
 
 // DS_CMPST_* are renamed to DS_CMPSTORE_* in GFX11, but also the data operands (src and cmp) are swapped
 // comparing to pre-GFX11.
 // Note: the mnemonic alias is not generated to avoid a potential ambiguity due to the semantics change.
 
-defm DS_CMPSTORE_B32                     : DS_Real_gfx11_gfx12<0x010>;
+defm DS_CMPSTORE_B32                     : DS_Real_gfx11_gfx12_gfx13<0x010>;
 defm DS_CMPSTORE_F32                     : DS_Real_gfx11<0x011>;
-defm DS_CMPSTORE_RTN_B32                 : DS_Real_gfx11_gfx12<0x030>;
+defm DS_CMPSTORE_RTN_B32                 : DS_Real_gfx11_gfx12_gfx13<0x030>;
 defm DS_CMPSTORE_RTN_F32                 : DS_Real_gfx11<0x031>;
-defm DS_CMPSTORE_B64                     : DS_Real_gfx11_gfx12<0x050>;
+defm DS_CMPSTORE_B64                     : DS_Real_gfx11_gfx12_gfx13<0x050>;
 defm DS_CMPSTORE_F64                     : DS_Real_gfx11<0x051>;
-defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11_gfx12<0x070>;
+defm DS_CMPSTORE_RTN_B64                 : DS_Real_gfx11_gfx12_gfx13<0x070>;
 defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11_gfx12<0x079>;
@@ -1324,12 +1433,15 @@ defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
 
 let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass DS_Real_gfx10<bits<8> op>  {
-    def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+    def _gfx10 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.GFX10>;
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
-defm DS_ADD_RTN_F32      : DS_Real_gfx10<0x055>;
+multiclass DS_Real_gfx10_gfx13<bits<8> op> :
+  DS_Real_gfx10<op>, DS_Real_gfx13<op>;
+
+defm DS_ADD_RTN_F32      : DS_Real_gfx10_gfx13<0x055>;
 defm DS_WRITE_B8_D16_HI  : DS_Real_gfx10<0x0a0>;
 defm DS_WRITE_B16_D16_HI : DS_Real_gfx10<0x0a1>;
 defm DS_READ_U8_D16      : DS_Real_gfx10<0x0a2>;
@@ -1345,16 +1457,16 @@ defm DS_READ_ADDTID_B32  : DS_Real_gfx10<0x0b1>;
 // GFX10, GFX11, GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>;
+multiclass DS_Real_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>, DS_Real_gfx13<op>;
 
 multiclass DS_Real_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx10<op>, DS_Real_gfx11<op>;
 
-defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12<0x015>;
+defm DS_ADD_F32          : DS_Real_gfx10_gfx11_gfx12_gfx13<0x015>;
 defm DS_ADD_SRC2_F32     : DS_Real_gfx10<0x095>;
-defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12<0x0b2>;
-defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3>;
+defm DS_PERMUTE_B32      : DS_Real_gfx10_gfx11_gfx12_gfx13<0x0b2>;
+defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12_gfx13<0x0b3>;
 
 //===----------------------------------------------------------------------===//
 // GFX7, GFX10, GFX11, GFX12.
@@ -1362,13 +1474,14 @@ defm DS_BPERMUTE_B32     : DS_Real_gfx10_gfx11_gfx12<0x0b3>;
 
 let AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7" in {
   multiclass DS_Real_gfx7<bits<8> op> {
-    def _gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+    def _gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX7Only, DecoderNamespace = "GFX7"
 
-multiclass DS_Real_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+multiclass DS_Real_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx7<op>, DS_Real_gfx10<op>, DS_Real_gfx11<op>, DS_Real_gfx12<op>,
+  DS_Real_gfx13<op>;
 
 multiclass DS_Real_gfx7_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx7<op>, DS_Real_gfx10_gfx11<op>;
@@ -1379,7 +1492,7 @@ multiclass DS_Real_gfx7_gfx10<bits<8> op> :
 // FIXME-GFX7: Add tests when upstreaming this part.
 defm DS_GWS_SEMA_RELEASE_ALL : DS_Real_gfx7_gfx10_gfx11<0x018>;
 defm DS_WRAP_RTN_B32         : DS_Real_gfx7_gfx10_gfx11<0x034>;
-defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12<0x07e>;
+defm DS_CONDXCHG32_RTN_B64   : DS_Real_gfx7_gfx10_gfx11_gfx12_gfx13<0x07e>;
 defm DS_WRITE_B96            : DS_Real_gfx7_gfx10<0x0de>;
 defm DS_WRITE_B128           : DS_Real_gfx7_gfx10<0x0df>;
 defm DS_READ_B96             : DS_Real_gfx7_gfx10<0x0fe>;
@@ -1391,13 +1504,14 @@ defm DS_READ_B128            : DS_Real_gfx7_gfx10<0x0ff>;
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
   multiclass DS_Real_gfx6_gfx7<bits<8> op> {
-    def _gfx6_gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op,
+    def _gfx6_gfx7 : Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op,
       !cast<DS_Pseudo>(NAME), SIEncodingFamily.SI>;
   }
 } // End AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7"
 
-multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op> :
-  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11_gfx12<op>;
+multiclass DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op> :
+  DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>, DS_Real_gfx11<op>,
+  DS_Real_gfx12<op>, DS_Real_gfx13<op>;
 
 multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10_gfx11<op>;
@@ -1405,19 +1519,19 @@ multiclass DS_Real_gfx6_gfx7_gfx10_gfx11<bits<8> op> :
 multiclass DS_Real_gfx6_gfx7_gfx10<bits<8> op> :
   DS_Real_gfx6_gfx7<op>, DS_Real_gfx10<op>;
 
-defm DS_ADD_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x000>;
-defm DS_SUB_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x001>;
-defm DS_RSUB_U32            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x002>;
-defm DS_INC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x003>;
-defm DS_DEC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x004>;
-defm DS_MIN_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x005>;
-defm DS_MAX_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x006>;
-defm DS_MIN_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x007>;
-defm DS_MAX_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x008>;
-defm DS_AND_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x009>;
-defm DS_OR_B32              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00a>;
-defm DS_XOR_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00b>;
-defm DS_MSKOR_B32           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00c>;
+defm DS_ADD_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x000>;
+defm DS_SUB_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x001>;
+defm DS_RSUB_U32            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x002>;
+defm DS_INC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x003>;
+defm DS_DEC_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x004>;
+defm DS_MIN_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x005>;
+defm DS_MAX_I32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x006>;
+defm DS_MIN_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x007>;
+defm DS_MAX_U32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x008>;
+defm DS_AND_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x009>;
+defm DS_OR_B32              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00a>;
+defm DS_XOR_B32             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00b>;
+defm DS_MSKOR_B32           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00c>;
 
 defm DS_WRITE_B32           : DS_Real_gfx6_gfx7_gfx10<0x00d>;
 defm DS_WRITE2_B32          : DS_Real_gfx6_gfx7_gfx10<0x00e>;
@@ -1427,7 +1541,7 @@ defm DS_CMPST_F32           : DS_Real_gfx6_gfx7_gfx10<0x011>;
 
 defm DS_MIN_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x012>;
 defm DS_MAX_F32             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x013>;
-defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014>;
+defm DS_NOP                 : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x014>;
 defm DS_GWS_INIT            : DS_Real_gfx6_gfx7_gfx10_gfx11<0x019>;
 defm DS_GWS_SEMA_V          : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01a>;
 defm DS_GWS_SEMA_BR         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01b>;
@@ -1437,19 +1551,19 @@ defm DS_GWS_BARRIER         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x01d>;
 defm DS_WRITE_B8            : DS_Real_gfx6_gfx7_gfx10<0x01e>;
 defm DS_WRITE_B16           : DS_Real_gfx6_gfx7_gfx10<0x01f>;
 
-defm DS_ADD_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x020>;
-defm DS_SUB_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x021>;
-defm DS_RSUB_RTN_U32        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x022>;
-defm DS_INC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x023>;
-defm DS_DEC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x024>;
-defm DS_MIN_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x025>;
-defm DS_MAX_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x026>;
-defm DS_MIN_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x027>;
-defm DS_MAX_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x028>;
-defm DS_AND_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x029>;
-defm DS_OR_RTN_B32          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02a>;
-defm DS_XOR_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02b>;
-defm DS_MSKOR_RTN_B32       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x02c>;
+defm DS_ADD_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x020>;
+defm DS_SUB_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x021>;
+defm DS_RSUB_RTN_U32        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x022>;
+defm DS_INC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x023>;
+defm DS_DEC_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x024>;
+defm DS_MIN_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x025>;
+defm DS_MAX_RTN_I32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x026>;
+defm DS_MIN_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x027>;
+defm DS_MAX_RTN_U32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x028>;
+defm DS_AND_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x029>;
+defm DS_OR_RTN_B32          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02a>;
+defm DS_XOR_RTN_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02b>;
+defm DS_MSKOR_RTN_B32       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x02c>;
 
 defm DS_WRXCHG_RTN_B32      : DS_Real_gfx6_gfx7_gfx10<0x02d>;
 defm DS_WRXCHG2_RTN_B32     : DS_Real_gfx6_gfx7_gfx10<0x02e>;
@@ -1459,7 +1573,7 @@ defm DS_CMPST_RTN_F32       : DS_Real_gfx6_gfx7_gfx10<0x031>;
 
 defm DS_MIN_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x032>;
 defm DS_MAX_RTN_F32         : DS_Real_gfx6_gfx7_gfx10_gfx11<0x033>;
-defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x035>;
+defm DS_SWIZZLE_B32         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x035>;
 
 defm DS_READ_B32            : DS_Real_gfx6_gfx7_gfx10<0x036>;
 defm DS_READ2_B32           : DS_Real_gfx6_gfx7_gfx10<0x037>;
@@ -1469,22 +1583,22 @@ defm DS_READ_U8             : DS_Real_gfx6_gfx7_gfx10<0x03a>;
 defm DS_READ_I16            : DS_Real_gfx6_gfx7_gfx10<0x03b>;
 defm DS_READ_U16            : DS_Real_gfx6_gfx7_gfx10<0x03c>;
 
-defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03d>;
-defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x03e>;
+defm DS_CONSUME             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x03d>;
+defm DS_APPEND              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x03e>;
 defm DS_ORDERED_COUNT       : DS_Real_gfx6_gfx7_gfx10_gfx11<0x03f>;
-defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x040>;
-defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x041>;
-defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x042>;
-defm DS_INC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x043>;
-defm DS_DEC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x044>;
-defm DS_MIN_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x045>;
-defm DS_MAX_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x046>;
-defm DS_MIN_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x047>;
-defm DS_MAX_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x048>;
-defm DS_AND_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x049>;
-defm DS_OR_B64              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04a>;
-defm DS_XOR_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04b>;
-defm DS_MSKOR_B64           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x04c>;
+defm DS_ADD_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x040>;
+defm DS_SUB_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x041>;
+defm DS_RSUB_U64            : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x042>;
+defm DS_INC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x043>;
+defm DS_DEC_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x044>;
+defm DS_MIN_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x045>;
+defm DS_MAX_I64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x046>;
+defm DS_MIN_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x047>;
+defm DS_MAX_U64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x048>;
+defm DS_AND_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x049>;
+defm DS_OR_B64              : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04a>;
+defm DS_XOR_B64             : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04b>;
+defm DS_MSKOR_B64           : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x04c>;
 
 defm DS_WRITE_B64           : DS_Real_gfx6_gfx7_gfx10<0x04d>;
 defm DS_WRITE2_B64          : DS_Real_gfx6_gfx7_gfx10<0x04e>;
@@ -1494,19 +1608,19 @@ defm DS_CMPST_F64           : DS_Real_gfx6_gfx7_gfx10<0x051>;
 
 defm DS_MIN_F64             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x052>;
 defm DS_MAX_F64             : DS_Real_gfx6_gfx7_gfx10_gfx11<0x053>;
-defm DS_ADD_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x060>;
-defm DS_SUB_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x061>;
-defm DS_RSUB_RTN_U64        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x062>;
-defm DS_INC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x063>;
-defm DS_DEC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x064>;
-defm DS_MIN_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x065>;
-defm DS_MAX_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x066>;
-defm DS_MIN_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x067>;
-defm DS_MAX_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x068>;
-defm DS_AND_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x069>;
-defm DS_OR_RTN_B64          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06a>;
-defm DS_XOR_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06b>;
-defm DS_MSKOR_RTN_B64       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x06c>;
+defm DS_ADD_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x060>;
+defm DS_SUB_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x061>;
+defm DS_RSUB_RTN_U64        : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x062>;
+defm DS_INC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x063>;
+defm DS_DEC_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x064>;
+defm DS_MIN_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x065>;
+defm DS_MAX_RTN_I64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x066>;
+defm DS_MIN_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x067>;
+defm DS_MAX_RTN_U64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x068>;
+defm DS_AND_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x069>;
+defm DS_OR_RTN_B64          : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06a>;
+defm DS_XOR_RTN_B64         : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06b>;
+defm DS_MSKOR_RTN_B64       : DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x06c>;
 
 defm DS_WRXCHG_RTN_B64      : DS_Real_gfx6_gfx7_gfx10<0x06d>;
 defm DS_WRXCHG2_RTN_B64     : DS_Real_gfx6_gfx7_gfx10<0x06e>;

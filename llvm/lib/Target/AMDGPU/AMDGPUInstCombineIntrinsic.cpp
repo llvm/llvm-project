@@ -503,7 +503,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_sqrt:
-  case Intrinsic::amdgcn_rsq: {
+  case Intrinsic::amdgcn_rsq:
+  case Intrinsic::amdgcn_tanh: {
     Value *Src = II.getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
@@ -1211,6 +1212,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     break;
+  }
+  case Intrinsic::amdgcn_prng_b32: {
+    auto *Src = II.getArgOperand(0);
+    if (isa<UndefValue>(Src)) {
+      return IC.replaceInstUsesWith(II, Src);
+    }
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

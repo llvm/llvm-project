@@ -45,6 +45,8 @@ enum {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
+  GFX12_10 = 12,
+  GFX13 = 13,
 };
 }
 
@@ -97,6 +99,8 @@ enum : uint64_t {
   // VINTERP instruction format.
   VINTERP = 1 << 29,
 
+  VOPD3 = 1 << 30,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
@@ -112,8 +116,7 @@ enum : uint64_t {
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
+  ASYNC_CNT = UINT64_C(1) << 41,
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
@@ -196,7 +199,7 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
@@ -207,6 +210,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_BF16_DEFERRED,
   OPERAND_REG_IMM_FP16_DEFERRED,
   OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_FP64_DEFERRED,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
@@ -233,6 +237,7 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
   OPERAND_REG_INLINE_AC_INT16,
@@ -266,7 +271,7 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
 };
 
@@ -357,6 +362,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
@@ -368,9 +374,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR_OR_AGPR = 1 << 8,
-  IS_HI = 1 << 9, // High 16-bit register.
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR_OR_AGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI = 1 << 12, // High 16-bit register.
 };
 } // namespace HWEncoding
 
@@ -410,15 +418,21 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
-  SCOPE = 0x3 << 3, // All Scope bits
-  SCOPE_CU = 0 << 3,
-  SCOPE_SE = 1 << 3,
-  SCOPE_DEV = 2 << 3,
-  SCOPE_SYS = 3 << 3,
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
+
+  NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
 
-  ALL = TH | SCOPE,
+  SCAL = 1 << 11, // Scale offset bit
+
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
@@ -462,6 +476,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1210
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -526,6 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_SCHED_MODE = 26,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_SHADER_CYCLES = 29,
   ID_SHADER_CYCLES_HI = 30,
@@ -543,6 +560,9 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_PRIV = 17,
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
+
+  // Register numbers reused in GFX13+
+  ID_WAVE_GROUP_INFO = 27,
 
   // GFX940 specific registers
   ID_XCC_ID = 20,
@@ -575,7 +595,17 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
-  CSP_MASK = 0x7u << 29 // Bits 29..31
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1210
+  DST_VGPR_MSB = 1 << 12,
+  SRC0_VGPR_MSB = 1 << 13,
+  SRC1_VGPR_MSB = 1 << 14,
+  SRC2_VGPR_MSB = 1 << 15,
+  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
 };
 
 } // namespace Hwreg
@@ -999,6 +1029,27 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_DEFAULT = 0,
+  MATRIX_SCALE_ROW1 = 1,
+  MATRIX_SCALE_WORD1 = 2,
+  MATRIX_SCALE_ROW1_WORD1 = 3,
+  MATRIX_SCALE_BYTE1 = 4,
+  MATRIX_SCALE_ROW1_BYTE1 = 5,
+  MATRIX_SCALE_WORD1_BYTE1 = 6,
+  MATRIX_SCALE_ROW1_WORD1_BYTE1 = 7
+};
+} // namespace WMMA
+
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
@@ -1025,6 +1076,18 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
+
+namespace MFMAScaleFormats {
+// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
+// format.
+enum MFMAScaleFormats {
+  FP8_E4M3 = 0,
+  FP8_E5M2 = 1,
+  FP6_E2M3 = 2,
+  FP6_E3M2 = 3,
+  FP4_E2M1 = 4
+};
+} // namespace MFMAScaleFormats
 
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during

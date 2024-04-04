@@ -23,7 +23,6 @@ body: |
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_CLAMP [[FMUL]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_f32_known_nnan_ieee_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -69,7 +68,6 @@ body: |
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[AMDGPU_CLAMP]](s16)
     ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_f16_known_nnan_ieee_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -118,7 +116,6 @@ body: |
     ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMINNUM_IEEE]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -164,7 +161,6 @@ body: |
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -214,7 +210,6 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
     ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FMED3 [[FMUL]], [[COPY2]], [[COPY3]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_f32_maybe_NaN_ieee_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -263,7 +258,6 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
     ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FMED3 [[FMINNUM_IEEE]], [[COPY2]], [[COPY3]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
@@ -309,7 +303,6 @@ body: |
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    ;
     ; GFX12-LABEL: name: test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}

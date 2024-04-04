@@ -889,12 +889,18 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
-    // LDS is allocated in 64 dword blocks.
-    LDSAlignShift = 8;
-  } else {
+  if (STM.getFeatureBits().test(FeatureLocalMemorySize393216)) {
+    // LDS is allocated in 256 dword blocks.
+    LDSAlignShift = 10;
+  } else if (STM.getFeatureBits().test(FeatureLocalMemorySize163840)) {
+    // LDS is allocated in 320 dword blocks.
+    LDSAlignShift = 11;
+  } else if (STM.getFeatureBits().test(FeatureLocalMemorySize65536)) {
     // LDS is allocated in 128 dword blocks.
     LDSAlignShift = 9;
+  } else {
+    // LDS is allocated in 64 dword blocks.
+    LDSAlignShift = 8;
   }
 
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
@@ -917,8 +923,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.ScratchBlocks = divideCeil(
       ProgInfo.ScratchSize * STM.getWavefrontSize(), 1ULL << ScratchAlignShift);
 
-  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
+  if (STM.supportsWGP()) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
+  }
+
+  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.MemOrdered = 1;
   }
 
@@ -1057,6 +1066,9 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+
+    if (ST.isDynamicVGPREnabled())
+      MD->setComputeRegisters(".dynamic_vgpr_en", true);
 
     MD->setHwStage(CC, ".lds_size",
                    (unsigned)(CurrentProgramInfo.LdsSize *

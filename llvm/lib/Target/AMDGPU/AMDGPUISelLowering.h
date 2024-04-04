@@ -538,6 +538,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+  PC_ADD_REL_OFFSET64,
   LDS,
   FPTRUNC_ROUND_UPWARD,
   FPTRUNC_ROUND_DOWNWARD,

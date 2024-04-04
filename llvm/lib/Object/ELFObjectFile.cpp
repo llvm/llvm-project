@@ -548,6 +548,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
+    return "gfx950";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -592,6 +594,12 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1200";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201:
     return "gfx1201";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210:
+    return "gfx1210";
+
+  // AMDGCN GFX13.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300:
+    return "gfx1300";
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:

@@ -204,6 +204,10 @@ def : ProcessorModel<"gfx942", SIDPGFX940FullSpeedModel,
   FeatureISAVersion9_4_2.Features
 >;
 
+def : ProcessorModel<"gfx950", SIDPGFX950FullSpeedModel,
+  FeatureISAVersion9_5_0.Features
+>;
+
 // [gfx900, gfx902, gfx904, gfx906, gfx909, gfx90c]
 def : ProcessorModel<"gfx9-generic", SIQuarterSpeedModel,
   FeatureISAVersion9_Generic.Features
@@ -312,4 +316,16 @@ def : ProcessorModel<"gfx1200", GFX12SpeedModel,
 
 def : ProcessorModel<"gfx1201", GFX12SpeedModel,
   FeatureISAVersion12.Features
+>;
+
+def : ProcessorModel<"gfx1210", GFX12SpeedModel,
+  FeatureISAVersion12_10.Features
+>;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX13.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1300", GFX12SpeedModel,
+  FeatureISAVersion13.Features
 >;

@@ -107,6 +107,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx940"},    {"gfx940"},  GK_GFX940,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx941"},    {"gfx941"},  GK_GFX941,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx942"},    {"gfx942"},  GK_GFX942,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
+  {{"gfx950"},    {"gfx950"},  GK_GFX950,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx1010"},   {"gfx1010"}, GK_GFX1010, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx1011"},   {"gfx1011"}, GK_GFX1011, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx1012"},   {"gfx1012"}, GK_GFX1012, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -126,6 +127,8 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -255,6 +258,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX940:  return {9, 4, 0};
   case GK_GFX941:  return {9, 4, 1};
   case GK_GFX942:  return {9, 4, 2};
+  case GK_GFX950:  return {9, 5, 0};
   case GK_GFX1010: return {10, 1, 0};
   case GK_GFX1011: return {10, 1, 1};
   case GK_GFX1012: return {10, 1, 2};
@@ -274,6 +278,8 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
+  case GK_GFX1210: return {12, 1, 0};
+  case GK_GFX1300: return {13, 0, 0};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -302,7 +308,6 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   auto ProcKind = T.isAMDGCN() ? parseArchAMDGCN(Arch) : parseArchR600(Arch);
   if (ProcKind == GK_NONE)
     return StringRef();
-
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
@@ -311,6 +316,32 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1300:
+      Features["gfx13-insts"] = true;
+      [[fallthrough]];
+    case GK_GFX1210:
+      Features["ci-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["gfx12-insts"] = true;
+      Features["gfx12-10-insts"] = true;
+      Features["bitop3-insts"] = true;
+      Features["prng-inst"] = true;
+      Features["tanh-insts"] = true;
+      Features["bf16-trans-insts"] = true;
+      Features["bf16-cvt-insts"] = true;
+      Features["bf16-pk-insts"] = true;
+      Features["fp8-conversion-insts"] = true;
+      Features["permlane16-swap"] = true;
+      break;
     case GK_GFX1201:
     case GK_GFX1200:
       Features["ci-insts"] = true;
@@ -412,6 +443,12 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
       break;
+    case GK_GFX950:
+      Features["prng-inst"] = true;
+      Features["permlane16-swap"] = true;
+      Features["permlane32-swap"] = true;
+      Features["gfx950-insts"] = true;
+      [[fallthrough]];
     case GK_GFX942:
     case GK_GFX941:
     case GK_GFX940:
@@ -535,6 +572,8 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1300:
+    case GK_GFX1210:
     case GK_GFX1201:
     case GK_GFX1200:
     case GK_GFX1151:

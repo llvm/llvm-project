@@ -236,7 +236,9 @@ public:
                                  AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
+  MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+  MCOperand decodeLiteral64Constant() const;
 
   MCOperand decodeSrcOp(
       const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
@@ -277,6 +279,8 @@ public:
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
+  bool isGFX12_10() const;
+  bool isGFX13() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

@@ -6490,6 +6490,16 @@ A managed variable can be accessed in both device and host code.
   }];
 }
 
+def HIPLaneSharedAttrDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__lane_shared__`` attribute can be applied to a global variable declaration in HIP.
+A lane-shared variable is shared among threads in a wave-group with the SAME lane-id.
+Threads in a wave-group however with different lane-ids do NOT share the variable.
+A lane-shared variable is allocated by the compiler, and can only be accessed in device code.
+  }];
+}
+
 def LifetimeOwnerDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

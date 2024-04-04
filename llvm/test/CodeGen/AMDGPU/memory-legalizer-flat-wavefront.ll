@@ -13316,3 +13316,4 @@ entry:
   store i32 %val0, ptr %out, align 4
   ret void
 }
+

@@ -205,16 +205,20 @@ public:
     MO_GOTPCREL32_LO = 2,
     // MO_GOTPCREL32_HI -> symbol@gotpcrel32@hi -> R_AMDGPU_GOTPCREL32_HI.
     MO_GOTPCREL32_HI = 3,
+    // MO_GOTPCREL64 -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
+    MO_GOTPCREL64 = 4,
     // MO_REL32_LO -> symbol@rel32@lo -> R_AMDGPU_REL32_LO.
-    MO_REL32 = 4,
-    MO_REL32_LO = 4,
+    MO_REL32 = 5,
+    MO_REL32_LO = 5,
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
-    MO_REL32_HI = 5,
+    MO_REL32_HI = 6,
+    MO_REL64 = 7,
 
-    MO_FAR_BRANCH_OFFSET = 6,
+    MO_FAR_BRANCH_OFFSET = 8,
 
-    MO_ABS32_LO = 8,
-    MO_ABS32_HI = 9,
+    MO_ABS32_LO = 9,
+    MO_ABS32_HI = 10,
+    MO_ABS64 = 11,
   };
 
   explicit SIInstrInfo(const GCNSubtarget &ST);
@@ -1052,6 +1056,12 @@ public:
   bool usesConstantBus(const MachineRegisterInfo &MRI,
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
+
+  bool usesConstantBus(const MachineRegisterInfo &MRI, const MachineInstr &MI,
+                       int OpIdx) const {
+    return usesConstantBus(MRI, MI.getOperand(OpIdx),
+                           MI.getDesc().operands()[OpIdx]);
+  }
 
   /// Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.

@@ -97,6 +97,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:  AK = GK_GFX940;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:  AK = GK_GFX941;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:  AK = GK_GFX942;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:  AK = GK_GFX950;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010: AK = GK_GFX1010; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011: AK = GK_GFX1011; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
@@ -116,6 +117,8 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200: AK = GK_GFX1200; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201: AK = GK_GFX1201; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210: AK = GK_GFX1210; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300: AK = GK_GFX1300; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:     AK = GK_GFX9_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC:  AK = GK_GFX10_1_GENERIC; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC:  AK = GK_GFX10_3_GENERIC; break;
@@ -179,6 +182,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX940:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX940;
   case GK_GFX941:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX941;
   case GK_GFX942:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX942;
+  case GK_GFX950:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX950;
   case GK_GFX1010: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010;
   case GK_GFX1011: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011;
   case GK_GFX1012: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012;
@@ -198,6 +202,8 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1151: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151;
   case GK_GFX1200: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200;
   case GK_GFX1201: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1201;
+  case GK_GFX1210: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1210;
+  case GK_GFX1300: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1300;
   case GK_GFX9_GENERIC:     return ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC;
   case GK_GFX10_1_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC;
   case GK_GFX10_3_GENERIC:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC;
@@ -340,9 +346,15 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   KD.kernarg_size->print(OS, MAI);
   OS << '\n';
 
-  PrintField(
-      KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_SHIFT,
-      amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
+  if (isGFX12_10(STI)) {
+    PrintField(
+        KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
+  } else {
+    PrintField(
+        KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_SHIFT,
+        amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");
+  }
 
   if (!hasArchitectedFlatScratch(STI))
     PrintField(
@@ -496,11 +508,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PrintField(KD.compute_pgm_rsrc3,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, ".amdhsa_tg_split");
-  if (IVersion.Major >= 10) {
+  if (AMDGPU::supportsWGP(STI))
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
                ".amdhsa_workgroup_processor_mode");
+  if (IVersion.Major >= 10) {
     PrintField(KD.compute_pgm_rsrc1,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED_SHIFT,
                amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED,

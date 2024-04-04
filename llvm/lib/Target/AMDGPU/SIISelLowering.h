@@ -81,6 +81,8 @@ private:
                                         unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 

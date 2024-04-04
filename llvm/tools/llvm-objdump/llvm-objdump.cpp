@@ -2245,6 +2245,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);
 
+          if (Disassembled && DT->InstrAnalysis)
+            DT->InstrAnalysis->updateInst(Inst, *DT->Context);
+
           DT->InstPrinter->setCommentStream(CommentStream);
 
           DT->Printer->printInst(

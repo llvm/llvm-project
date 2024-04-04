@@ -369,6 +369,9 @@ extern char &AMDGPUInsertDelayAluID;
 void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
 extern char &AMDGPUInsertSingleUseVDSTID;
 
+void initializeAMDGPULowerVGPREncodingPass(PassRegistry &);
+extern char &AMDGPULowerVGPREncodingID;
+
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
@@ -437,25 +440,27 @@ inline bool isExtendedGlobalAddrSpace(unsigned AS) {
 }
 
 static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 9, "Addr space out of range");
+  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= AMDGPUAS::MAX_AMDGPU_ADDRESS,
+                "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return true;
 
-  // This array is indexed by address space value enum elements 0 ... to 9
+  // This array is indexed by address space value enum elements 0 ... to 10
   // clang-format off
-  static const bool ASAliasRules[10][10] = {
-    /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */
-    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true},
-    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Region   */            {false, false, true,  false, false, false, false, false, false, false},
-    /* Group    */            {true,  false, false, true,  false, false, false, false, false, false},
-    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true},
-    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false},
-    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true},
-    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true},
-    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true},
+  static const bool ASAliasRules[11][11] = {
+    /*                       Flat   Global Region  Group Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared*/
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false},
+    /* Group    */            {true,  false, false, true,  false, false, false, false, false, false, false},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true,  false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true,  false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
+    /* Lane Shared */         {true,  false, false, false, false, false, false, false, false, false, true},
   };
   // clang-format on
 

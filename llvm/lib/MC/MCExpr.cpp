@@ -383,6 +383,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_AMDGPU_REL64: return "rel64";
   case VK_AMDGPU_ABS32_LO: return "abs32@lo";
   case VK_AMDGPU_ABS32_HI: return "abs32@hi";
+  case VK_AMDGPU_ABS64: return "abs64";
   case VK_VE_HI32: return "hi";
   case VK_VE_LO32: return "lo";
   case VK_VE_PC_HI32: return "pc_hi";
@@ -521,6 +522,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("rel64", VK_AMDGPU_REL64)
     .Case("abs32@lo", VK_AMDGPU_ABS32_LO)
     .Case("abs32@hi", VK_AMDGPU_ABS32_HI)
+    .Case("abs64", VK_AMDGPU_ABS64)
     .Case("hi", VK_VE_HI32)
     .Case("lo", VK_VE_LO32)
     .Case("pc_hi", VK_VE_PC_HI32)

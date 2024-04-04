@@ -48,6 +48,7 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   default:
     return MCSymbolRefExpr::VK_None;
   case SIInstrInfo::MO_GOTPCREL:
+  case SIInstrInfo::MO_GOTPCREL64:
     return MCSymbolRefExpr::VK_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
     return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
@@ -57,10 +58,14 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
     return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+  case SIInstrInfo::MO_REL64:
+    return MCSymbolRefExpr::VK_AMDGPU_REL64;
   case SIInstrInfo::MO_ABS32_LO:
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
     return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+  case SIInstrInfo::MO_ABS64:
+    return MCSymbolRefExpr::VK_AMDGPU_ABS64;
   }
 }
 
@@ -267,6 +272,13 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
       return;
+    }
+
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+      unsigned V = MI->getOperand(0).getImm();
+      OutStreamer->AddComment(
+          " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
+          " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
     }
 
     MCInst TmpInst;

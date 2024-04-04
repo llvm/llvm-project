@@ -38,11 +38,11 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
-      UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
-      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
-      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
-      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+      GlobalRegisterPSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
+      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -103,14 +103,13 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
                                MaxKernArgAlign);
 
-    if (ST.hasGFX90AInsts() &&
-        ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-        !mayUseAGPRs(F))
+    if (ST.hasGFX90AInsts() && ST.getMaxNumVGPRs(F) <= 256 && !mayUseAGPRs(F))
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
-  if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+  bool HasArchitectedSGPRs =
+      CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs();
+  if (!AMDGPU::isGraphics(CC) || HasArchitectedSGPRs) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 

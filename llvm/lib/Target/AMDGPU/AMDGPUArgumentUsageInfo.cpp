@@ -108,6 +108,28 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
     return std::tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+    return std::tuple(ClusterWorkGroupIDX ? &ClusterWorkGroupIDX : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+    return std::tuple(ClusterWorkGroupIDY ? &ClusterWorkGroupIDY : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+    return std::tuple(ClusterWorkGroupIDZ ? &ClusterWorkGroupIDZ : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X:
+    return std::tuple(ClusterNumWorkGroupsX ? &ClusterNumWorkGroupsX : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y:
+    return std::tuple(ClusterNumWorkGroupsY ? &ClusterNumWorkGroupsY : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
+    return std::tuple(ClusterNumWorkGroupsZ ? &ClusterNumWorkGroupsZ : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS:
+    return std::tuple(ClusterFlatNumWorkGroups ? &ClusterFlatNumWorkGroups
+                                               : nullptr,
+                      &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
   case AMDGPUFunctionArgInfo::LDS_KERNEL_ID:
     return std::tuple(LDSKernelId ? &LDSKernelId : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));

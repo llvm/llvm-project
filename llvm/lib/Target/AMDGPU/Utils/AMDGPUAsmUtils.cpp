@@ -62,6 +62,8 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
   {{"MSG_RTN_GET_TBA_TO_PC"},   ID_RTN_GET_TBA_TO_PC,       isGFX11Plus},
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
+  {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
+                                                            isGFX12_10},
 };
 // clang-format on
 // NOLINTEND
@@ -119,7 +121,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
-  {{""}},
+  {{"HW_REG_SCHED_MODE"},    ID_SCHED_MODE,  isGFX12Plus},
   {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA_gfx11, isGFX11},
   {{""}},
   {{"HW_REG_SHADER_CYCLES"},    ID_SHADER_CYCLES,    isGFX10_3_GFX11},
@@ -141,6 +143,9 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_SCRATCH_BASE_LO"},     ID_FLAT_SCR_LO,         isGFX12Plus},
   {{"HW_REG_SCRATCH_BASE_HI"},     ID_FLAT_SCR_HI,         isGFX12Plus},
   {{"HW_REG_SHADER_CYCLES_LO"},    ID_SHADER_CYCLES,       isGFX12Plus},
+
+  // Register numbers reused in GFX13+
+  {{"HW_REG_WAVE_GROUP_INFO"},     ID_WAVE_GROUP_INFO,     isGFX13Plus},
 
   // GFX940 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},

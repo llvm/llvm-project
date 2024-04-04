@@ -589,6 +589,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_BASE);
   reserveRegisterTuples(Reserved, AMDGPU::SRC_PRIVATE_LIMIT);
 
+  // Reserve async counters pseudo registers
+  reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
+  reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
+
   // Reserve src_pops_exiting_wave_id - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_POPS_EXITING_WAVE_ID);
 
@@ -678,7 +682,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
   unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -693,9 +697,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
+      if (MaxNumVGPRs > NumArchVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - NumArchVGPRs;
+        MaxNumVGPRs = NumArchVGPRs;
       } else
         MaxNumAGPRs = 0;
     }
@@ -2735,6 +2739,10 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
+unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
+  return getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
+}
+
 unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
@@ -2813,6 +2821,40 @@ SIRegisterInfo::getVGPRClassForBitWidth(unsigned BitWidth) const {
     return &AMDGPU::VGPR_32RegClass;
   return ST.needsAlignedVGPRs() ? getAlignedVGPRClassForBitWidth(BitWidth)
                                 : getAnyVGPRClassForBitWidth(BitWidth);
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const {
+  if (BitWidth <= 32)
+    return &AMDGPU::VGPR_32_Lo256RegClass;
+  if (BitWidth <= 64)
+    return &AMDGPU::VReg_64_Lo256_Align2RegClass;
+  if (BitWidth <= 96)
+    return &AMDGPU::VReg_96_Lo256_Align2RegClass;
+  if (BitWidth <= 128)
+    return &AMDGPU::VReg_128_Lo256_Align2RegClass;
+  if (BitWidth <= 160)
+    return &AMDGPU::VReg_160_Lo256_Align2RegClass;
+  if (BitWidth <= 192)
+    return &AMDGPU::VReg_192_Lo256_Align2RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::VReg_224_Lo256_Align2RegClass;
+  if (BitWidth <= 256)
+    return &AMDGPU::VReg_256_Lo256_Align2RegClass;
+  if (BitWidth <= 288)
+    return &AMDGPU::VReg_288_Lo256_Align2RegClass;
+  if (BitWidth <= 320)
+    return &AMDGPU::VReg_320_Lo256_Align2RegClass;
+  if (BitWidth <= 352)
+    return &AMDGPU::VReg_352_Lo256_Align2RegClass;
+  if (BitWidth <= 384)
+    return &AMDGPU::VReg_384_Lo256_Align2RegClass;
+  if (BitWidth <= 512)
+    return &AMDGPU::VReg_512_Lo256_Align2RegClass;
+  if (BitWidth <= 1024)
+    return &AMDGPU::VReg_1024_Lo256_Align2RegClass;
+
+  return nullptr;
 }
 
 static const TargetRegisterClass *
