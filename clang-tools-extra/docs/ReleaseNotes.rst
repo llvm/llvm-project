@@ -251,6 +251,10 @@ Changes in existing checks
   analyzed, se the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
 
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by resolving crash
+  at include directives that form the filename using macro.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
@@ -269,10 +273,6 @@ Changes in existing checks
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
-
-- Improved :doc:`readability-duplicate-include
-  <clang-tidy/checks/readability/duplicate-include>` check by resolving crash
-  at include directives that form the filename using macro.
 
 Removed checks
 ^^^^^^^^^^^^^^
