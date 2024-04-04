@@ -1069,6 +1069,12 @@ Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
 
+  CCState State(*const_cast<CGFunctionInfo *>(CGF.CurFnInfo));
+  ABIArgInfo AI = classifyArgumentType(Ty, State, /*ArgIndex*/ 0);
+  // Empty records are ignored for parameter passing purposes.
+  if (AI.isIgnore())
+    return CGF.CreateMemTemp(Ty);
+
   // x86-32 changes the alignment of certain arguments on the stack.
   //
   // Just messing with TypeInfo like this works because we never pass
