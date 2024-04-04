@@ -851,25 +851,11 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     return true;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntrID = N->getConstantOperandVal(0);
-    switch (IntrID) {
-    case Intrinsic::amdgcn_readfirstlane:
-    case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_waterfall_readfirstlane:
-    case Intrinsic::amdgcn_waterfall_begin:
-    case Intrinsic::amdgcn_waterfall_last_use:
-      return true;
-    }
-    return false;
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntrID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-    switch (IntrID) {
-    case Intrinsic::amdgcn_waterfall_readfirstlane:
-    case Intrinsic::amdgcn_waterfall_begin:
-    case Intrinsic::amdgcn_waterfall_last_use:
-      return true;
-    }
-    return false;
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
   case ISD::LOAD:
     if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==

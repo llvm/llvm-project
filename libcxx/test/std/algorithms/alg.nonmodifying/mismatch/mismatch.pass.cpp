@@ -184,5 +184,33 @@ int main(int, char**) {
     }
   }
 
+  { // check the tail of the vectorized loop
+    for (size_t vec_size = 1; vec_size != 256; ++vec_size) {
+      {
+        std::vector<char> lhs(256);
+        std::vector<char> rhs(256);
+
+        check<char*>(lhs, rhs, lhs.size());
+        lhs.back() = 1;
+        check<char*>(lhs, rhs, lhs.size() - 1);
+        lhs.back() = 0;
+        rhs.back() = 1;
+        check<char*>(lhs, rhs, lhs.size() - 1);
+        rhs.back() = 0;
+      }
+      {
+        std::vector<int> lhs(256);
+        std::vector<int> rhs(256);
+
+        check<int*>(lhs, rhs, lhs.size());
+        lhs.back() = 1;
+        check<int*>(lhs, rhs, lhs.size() - 1);
+        lhs.back() = 0;
+        rhs.back() = 1;
+        check<int*>(lhs, rhs, lhs.size() - 1);
+        rhs.back() = 0;
+      }
+    }
+  }
   return 0;
 }

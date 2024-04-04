@@ -40,7 +40,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
 }
 
 def GFX13Gen             : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
-def GFX12_10Gen          : GFXGen<isGFX12_10Plus, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
+def GFX12_10Gen          : GFXGen<isGFX12_10Only, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
 def GFX12PlusNot12_10Gen : GFXGen<isGFX12PlusNot12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen             : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX11Gen             : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
@@ -1797,39 +1797,49 @@ multiclass VOP3Only_Realtriple_t16_gfx11<bits<10> op, string asmName,
     : VOP3Only_Realtriple_with_name<GFX11Gen, op, opName, asmName>;
 
 //===----------------------------------------------------------------------===//
-// VOP3 GFX12
+// VOP3 GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX12Gen, op, isSingle>;
+multiclass VOP3Only_Realtriple_gfx12_gfx13<bits<10> op, bit isSingle = 0> :
+  VOP3_Realtriple<GFX12Gen, op, isSingle>,
+  VOP3_Realtriple<GFX13Gen, op, isSingle>;
 
 // IsSingle is captured from the vopprofile for these instructions, but the
 // following alternative is more explicit
 multiclass VOP3Only_Real_Base_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
 
-multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op> :
-  VOP3Only_Realtriple<GFX12Gen, op>;
+multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> op> :
+  VOP3Only_Real_Base_gfx12<op>,
+  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> op> :
+  VOP3Only_Realtriple<GFX12Gen, op>,
+  VOP3Only_Realtriple<GFX13Gen, op>;
 
 multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX12_10Gen, op, isSingle>;
 
-multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
-                                       string asmName, bit isSingle = 0> {
+multiclass VOP3be_Real_with_name_gfx12_gfx13<
+    bits<10> op, string opName, string asmName, bit isSingle = 0> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   defm NAME : VOP3be_Realtriple<GFX12Gen, op, !or(isSingle, ps.Pfl.IsSingle),
                                 opName, asmName>;
-  def : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Only]>;
+  defm NAME : VOP3be_Realtriple<GFX13Gen, op, !or(isSingle, ps.Pfl.IsSingle),
+                                opName, asmName>;
+  def : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Plus]>;
 }
 
-multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,
-                                           string asmName, bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, isSingle>;
+multiclass VOP3_Realtriple_with_name_gfx12_gfx13<
+    bits<10> op, string opName, string asmName, bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, isSingle>,
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, isSingle>;
 
-multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
-                                                     string asmName> :
+multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12_gfx13<
+    bits<10> op, string opName, string asmName> :
   VOP3Only_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
-  VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
+  VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>,
+  VOP3Only_Realtriple_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP3Only_Realtriple_with_name_t16_gfx12<bits<10> op, string asmName,
                                      string opName = NAME>
