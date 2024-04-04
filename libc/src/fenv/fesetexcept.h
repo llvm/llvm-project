@@ -1,4 +1,4 @@
-//===-- Implementation of fesetenv function -----------------------------===//
+//===-- Implementation header for fesetexcept -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/fenv/fesetenv.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/common.h"
-
-#include <fenv.h>
+#ifndef LLVM_LIBC_SRC_FENV_FESETEXCEPT_H
+#define LLVM_LIBC_SRC_FENV_FESETEXCEPT_H
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, fesetenv, (const fenv_t *envp)) {
-  return fputil::set_env(envp);
-}
+int fesetexcept(int excepts);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_FENV_FESETEXCEPT_H
