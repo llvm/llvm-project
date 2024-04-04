@@ -301,11 +301,8 @@ class alignas(8) EHCleanupScope : public EHScope {
                      llvm::SetVector<llvm::Instruction *> &Uses) {
       if (!I || !Uses.insert(I))
         return;
-      for (auto *User : I->users()) {
-        if (auto *UserI = dyn_cast<llvm::Instruction>(User)) {
-          CollectUses(UserI, Uses);
-        }
-      }
+      for (auto *User : I->users())
+        CollectUses(cast<llvm::Instruction>(User), Uses);
     }
   };
   mutable struct AuxillaryAllocas *AuxAllocas;
