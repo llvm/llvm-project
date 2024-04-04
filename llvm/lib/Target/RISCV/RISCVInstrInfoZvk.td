@@ -630,6 +630,19 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (riscv_ext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs1),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
                  (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
                  (wti.Vector wti.RegClass:$merge),
@@ -639,7 +652,29 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
                  (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
                  (wti.Vector wti.RegClass:$merge),
                  (vti.Mask V0), VLOpFrag),
