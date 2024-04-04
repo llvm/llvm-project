@@ -309,6 +309,14 @@ them.
  Compress DWARF debug sections in the output, using the specified format.
  Supported formats are ``zlib`` and ``zstd``. Use ``zlib`` if ``<format>`` is omitted.
 
+.. option:: --compress-sections <section>=<format>
+
+ Compress or decompress sections matched by ``<section>`` using the specified
+ format. Supported formats are ``zlib`` and ``zstd``. Specify ``none`` for
+ decompression. When a section is matched by multiple options, the last one
+ wins. A wildcard ``<section>`` starting with '!' is disallowed.
+ Sections within a segment cannot be (de)compressed.
+
 .. option:: --decompress-debug-sections
 
  Decompress any compressed DWARF debug sections in the output.
