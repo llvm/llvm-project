@@ -12,10 +12,10 @@ fenv.h Functions
     - Implemented
     - Standard
   * - fe_dec_getround
-    - |check|
+    -
     - 7.6.5.3
   * - fe_dec_setround
-    - |check|
+    -
     - 7.6.5.6
   * - feclearexcept
     - |check|
@@ -27,7 +27,7 @@ fenv.h Functions
     - |check|
     - 7.6.4.2
   * - fegetmode
-    - |check|
+    -
     - 7.6.5.1
   * - fegetround
     - |check|
@@ -42,13 +42,13 @@ fenv.h Functions
     - |check|
     - 7.6.6.3
   * - fesetexcept
-    - |check|
+    -
     - 7.6.4.4
   * - fesetexceptflag
     - |check|
     - 7.6.4.5
   * - fesetmode
-    - |check|
+    -
     - 7.6.5.4
   * - fesetround
     - |check|
@@ -57,7 +57,7 @@ fenv.h Functions
     - |check|
     - 7.6.4.7
   * - fetestexceptflag
-    - |check|
+    -
     - 7.6.4.6
   * - feupdateenv
     - |check|
