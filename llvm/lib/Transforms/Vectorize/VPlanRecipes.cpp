@@ -286,6 +286,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
+  case VPInstruction::ExplicitVectorLength:
     return true;
   default:
     return false;
@@ -385,6 +386,33 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
+  }
+  case VPInstruction::ExplicitVectorLength: {
+    // Compute EVL
+    auto GetEVL = [=](VPTransformState &State, Value *AVL) {
+      assert(AVL->getType()->isIntegerTy() &&
+             "Requested vector length should be an integer.");
+
+      // TODO: Add support for MaxSafeDist for correct loop emission.
+      assert(State.VF.isScalable() && "Expected scalable vector factor.");
+      Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
+
+      Value *EVL = State.Builder.CreateIntrinsic(
+          State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
+          {AVL, VFArg, State.Builder.getTrue()});
+      return EVL;
+    };
+    // TODO: Restructure this code with an explicit remainder loop, vsetvli can
+    // be outside of the main loop.
+    assert(Part == 0 && "No unrolling expected for predicated vectorization.");
+    // Compute VTC - IV as the AVL (requested vector length).
+    Value *Index = State.get(getOperand(0), VPIteration(0, 0));
+    Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
+    Value *AVL = State.Builder.CreateSub(TripCount, Index);
+    Value *EVL = GetEVL(State, AVL);
+    assert(!State.EVL && "multiple EVL recipes");
+    State.EVL = this;
+    return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
@@ -592,6 +620,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
@@ -627,6 +656,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ExplicitVectorLength:
+    O << "EXPLICIT-VECTOR-LENGTH";
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
@@ -1184,7 +1216,7 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "= DERIVED-IV ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
-  getCanonicalIV()->printAsOperand(O, SlotTracker);
+  getOperand(1)->printAsOperand(O, SlotTracker);
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 }
@@ -1968,6 +2000,28 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
 void VPActiveLaneMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "ACTIVE-LANE-MASK-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPEVLBasedIVPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  assert(State.UF == 1 && "Expected unroll factor 1 for VP vectorization.");
+  Value *Start = State.get(getOperand(0), VPIteration(0, 0));
+  PHINode *EntryPart =
+      State.Builder.CreatePHI(Start->getType(), 2, "evl.based.iv");
+  EntryPart->addIncoming(Start, VectorPH);
+  EntryPart->setDebugLoc(getDebugLoc());
+  State.set(this, EntryPart, 0, /*IsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

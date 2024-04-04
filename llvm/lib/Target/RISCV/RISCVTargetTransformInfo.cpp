@@ -245,6 +245,10 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+  return ST->hasVInstructions();
+}
+
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
