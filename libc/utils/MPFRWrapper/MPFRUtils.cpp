@@ -89,7 +89,8 @@ public:
   // precision.
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<float, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -99,7 +100,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -109,7 +111,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -119,7 +122,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<float>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -130,6 +134,12 @@ public:
   MPFRNumber(const MPFRNumber &other)
       : mpfr_precision(other.mpfr_precision),
         mpfr_rounding(other.mpfr_rounding) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set(value, other.value, mpfr_rounding);
+  }
+
+  MPFRNumber(const MPFRNumber &other, unsigned int precision)
+      : mpfr_precision(precision), mpfr_rounding(other.mpfr_rounding) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set(value, other.value, mpfr_rounding);
   }
@@ -227,6 +237,36 @@ public:
     MPFRNumber result(*this);
     mpfr_exp2(result.value, value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber exp2m1() const {
+    // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    MPFRNumber result(*this);
+    mpfr_exp2m1(result.value, value, mpfr_rounding);
+    return result;
+#else
+    unsigned int prec = mpfr_precision * 3;
+    MPFRNumber result(*this, prec);
+
+    float f = mpfr_get_flt(abs().value, mpfr_rounding);
+    if (f > 0.5f && f < 0x1.0p30f) {
+      mpfr_exp2(result.value, value, mpfr_rounding);
+      mpfr_sub_ui(result.value, result.value, 1, mpfr_rounding);
+      return result;
+    }
+
+    MPFRNumber ln2(2.0f, prec);
+    // log(2)
+    mpfr_log(ln2.value, ln2.value, mpfr_rounding);
+    // x * log(2)
+    mpfr_mul(result.value, value, ln2.value, mpfr_rounding);
+    // e^(x * log(2)) - 1
+    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+    mpfr_subnormalize(result.value, ex, mpfr_rounding);
+    return result;
+#endif
   }
 
   MPFRNumber exp10() const {
@@ -570,6 +610,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp();
   case Operation::Exp2:
     return mpfrInput.exp2();
+  case Operation::Exp2m1:
+    return mpfrInput.exp2m1();
   case Operation::Exp10:
     return mpfrInput.exp10();
   case Operation::Expm1:
