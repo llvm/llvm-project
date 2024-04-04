@@ -689,6 +689,9 @@ struct tzdb {                                                                   
   vector<time_zone>      zones;
   vector<time_zone_link> links;
   vector<leap_second>    leap_seconds;
+
+  const time_zone* locate_zone(string_view tz_name) const;
+  const time_zone* current_zone() const;
 };
 
 class tzdb_list {                                                                // C++20
@@ -714,6 +717,8 @@ public:
 // [time.zone.db.access], time zone database access
 const tzdb& get_tzdb();                                                          // C++20
 tzdb_list& get_tzdb_list();                                                      // C++20
+const time_zone* locate_zone(string_view tz_name);                               // C++20
+const time_zone* current_zone()                                                  // C++20
 
 // [time.zone.db.remote], remote time zone database support
 const tzdb& reload_tzdb();                                                       // C++20
