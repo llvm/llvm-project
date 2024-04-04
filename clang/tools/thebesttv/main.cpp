@@ -97,6 +97,7 @@ struct VarLocResult {
     int fid, bid;
 
     VarLocResult() : fid(-1), bid(-1) {}
+    VarLocResult(int fid, int bid) : fid(fid), bid(bid) {}
     VarLocResult(const FunctionInfo *fi, const CFGBlock *block)
         : fid(Global.getIdOfFunction(fi->signature)), bid(block->getBlockID()) {
     }
@@ -447,29 +448,62 @@ void saveAsJson(const std::set<std::vector<int>> &results,
 }
 
 static void findPathBetween(const VarLocResult &from, VarLocResult to,
-                            const std::vector<VarLocResult> &path,
+                            const std::vector<VarLocResult> &_pointsToPass,
+                            const std::vector<VarLocResult> &_pointsToAvoid,
                             const std::string &type, ordered_json &jResults) {
     requireTrue(from.isValid(), "FROM location is invalid");
-    if (!to.isValid()) {
-        logger.warn("Missing sink! Using exit of source instead");
-        to.fid = from.fid;
-        to.bid = Global.icfg.entryExitOfFunction[from.fid].second;
-    }
+    requireTrue(to.isValid(), "TO location is invalid");
 
     ICFG &icfg = Global.icfg;
     int u = icfg.getNodeId(from.fid, from.bid);
     int v = icfg.getNodeId(to.fid, to.bid);
 
-    std::vector<int> pathFilter;
-    for (const auto &loc : path) {
+    std::vector<int> pointsToPass, pointsToAvoid;
+    for (const auto &loc : _pointsToPass) {
         requireTrue(loc.isValid());
-        pathFilter.push_back(icfg.getNodeId(loc.fid, loc.bid));
+        pointsToPass.push_back(icfg.getNodeId(loc.fid, loc.bid));
+    }
+    for (const auto &loc : _pointsToAvoid) {
+        requireTrue(loc.isValid());
+        pointsToAvoid.push_back(icfg.getNodeId(loc.fid, loc.bid));
     }
 
     auto pFinder = DijPathFinder(icfg);
-    pFinder.search(u, v, pathFilter, {}, 3);
+    pFinder.search(u, v, pointsToPass, pointsToAvoid, 3);
 
     saveAsJson(pFinder.results, type, jResults);
+}
+
+void handleInputEntry(const VarLocResult &from, VarLocResult to,
+                      const std::vector<VarLocResult> &path,
+                      const std::string &type, ordered_json &jResults) {
+    int fromFid = from.fid;
+
+    VarLocResult sourceExit(fromFid,
+                            Global.icfg.entryExitOfFunction[fromFid].second);
+    // 位于 source 所在函数的路径
+    std::vector<VarLocResult> pathInSourceFunction;
+    for (auto &p : path)
+        if (p.fid == fromFid)
+            pathInSourceFunction.push_back(p);
+
+    if (type == "npe") {
+        logger.info("Handle known type: {}", type);
+
+        logger.info("Generating NPE bug version ...");
+        findPathBetween(from, to, path, {}, "npe-bug", jResults);
+
+        logger.info("Generating NPE fix version ...");
+        findPathBetween(from, sourceExit, pathInSourceFunction, {to}, "npe-fix",
+                        jResults);
+    } else {
+        logger.info("Handle unknown type: {}", type);
+        if (!to.isValid()) {
+            logger.warn("Missing sink! Using exit of source instead");
+            to = sourceExit;
+        }
+        findPathBetween(from, to, path, {}, type, jResults);
+    }
 }
 
 /**
@@ -571,7 +605,7 @@ int main(int argc, const char **argv) {
                 }
             }
 
-            findPathBetween(from, to, path, type, output["results"]);
+            handleInputEntry(from, to, path, type, output["results"]);
         }
 
         std::ofstream o(jsonResult);

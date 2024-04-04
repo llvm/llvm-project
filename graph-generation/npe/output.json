@@ -163,7 +163,7 @@
             ]
         },
         {
-            "type": "npe",
+            "type": "npe-bug",
             "nodes": [
                 8,
                 22,
@@ -386,6 +386,86 @@
                     "endColumn": 17,
                     "content": "return value",
                     "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "npe-fix",
+            "nodes": [
+                8,
+                7,
+                6,
+                5
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 16,
+                    "content": "int x = 42;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 5,
+                    "endLine": 5,
+                    "endColumn": 22,
+                    "content": "A *p = new A(&x);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 5,
+                    "endLine": 7,
+                    "endColumn": 21,
+                    "content": "modifyPointer(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 14,
+                    "content": "A *q = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "useAlias(*q)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 13,
+                    "beginColumn": 5,
+                    "endLine": 13,
+                    "endColumn": 13,
+                    "content": "return 0",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 1,
+                    "endLine": 14,
+                    "endColumn": 2,
+                    "content": "int main() {\n    int x = 42;\n    A *p = new A(&x);\n\n    modifyPointer(p);\n\n    A ..."
                 }
             ]
         }
