@@ -467,10 +467,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   Module *CurrentCXXNamedModule = nullptr;
 
   class FunctionEffectSetUniquing {
-    llvm::DenseSet<llvm::ArrayRef<const FunctionEffect>> Set;
+    llvm::DenseSet<llvm::ArrayRef<FunctionEffect>> Set;
 
   public:
-    FunctionEffectSet getUniqued(llvm::ArrayRef<const FunctionEffect> FX);
+    FunctionEffectSet getUniqued(llvm::ArrayRef<FunctionEffect> FX);
 
     ~FunctionEffectSetUniquing();
   };
@@ -1084,7 +1084,7 @@ public:
 
   /// Get or create a uniqued, immutable FunctionEffectSet.
   FunctionEffectSet
-  getUniquedFunctionEffectSet(llvm::ArrayRef<const FunctionEffect> FX) {
+  getUniquedFunctionEffectSet(llvm::ArrayRef<FunctionEffect> FX) {
     return UniquedFunctionEffectSet.getUniqued(FX);
   }
 

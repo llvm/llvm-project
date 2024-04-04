@@ -13808,7 +13808,7 @@ StringRef ASTContext::getCUIDHash() const {
   return CUIDHash;
 }
 
-using FunctionEffectSpan = llvm::ArrayRef<const FunctionEffect>;
+using FunctionEffectSpan = llvm::ArrayRef<FunctionEffect>;
 
 llvm::hash_code hash_value(const FunctionEffect &Effect) {
   return llvm::hash_value(Effect.opaqueRepr());
@@ -13854,7 +13854,7 @@ ASTContext::getUniquedFunctionEffectSet(llvm::ArrayRef<uint32_t> FX) {
 }
 
 FunctionEffectSet ASTContext::FunctionEffectSetUniquing::getUniqued(
-    llvm::ArrayRef<const FunctionEffect> FX) {
+    llvm::ArrayRef<FunctionEffect> FX) {
   if (FX.empty()) {
     return {};
   }
@@ -13870,7 +13870,7 @@ FunctionEffectSet ASTContext::FunctionEffectSetUniquing::getUniqued(
   std::copy(FX.begin(), FX.end(), Storage);
 
   // Make a new wrapper and insert it into the set.
-  llvm::ArrayRef<const FunctionEffect> Arr(Storage, FX.size());
+  llvm::ArrayRef<FunctionEffect> Arr(Storage, FX.size());
   auto [InsIter, _] = Set.insert(Arr);
   return FunctionEffectSet(*InsIter);
 }

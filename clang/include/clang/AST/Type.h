@@ -4578,9 +4578,7 @@ public:
 
   MutableFunctionEffectSet &operator|=(FunctionEffectSet RHS);
 
-  operator llvm::ArrayRef<const FunctionEffect>() const {
-    return {data(), size()};
-  }
+  operator llvm::ArrayRef<FunctionEffect>() const { return {data(), size()}; }
 };
 
 /// A constant, uniqued set of FunctionEffect instances.
@@ -4590,11 +4588,11 @@ class FunctionEffectSet {
 private:
   friend class ASTContext; // so it can call the private constructor
 
-  explicit FunctionEffectSet(llvm::ArrayRef<const FunctionEffect> Array)
+  explicit FunctionEffectSet(llvm::ArrayRef<FunctionEffect> Array)
       : Impl(Array) {}
 
   // Points to a separately allocated array, uniqued.
-  llvm::ArrayRef<const FunctionEffect> Impl;
+  llvm::ArrayRef<FunctionEffect> Impl;
 
 public:
   using Differences = SmallVector<std::pair<FunctionEffect, /*added=*/bool>>;
@@ -4618,7 +4616,7 @@ public:
 
   iterator end() const { return Impl.end(); }
 
-  ArrayRef<const FunctionEffect> items() const { return Impl; }
+  ArrayRef<FunctionEffect> items() const { return Impl; }
 
   bool operator==(const FunctionEffectSet &RHS) const {
     return Impl.data() == RHS.Impl.data();
