@@ -2917,16 +2917,17 @@ multiclass VPseudoVMAX_VV_VF {
 
 multiclass VPseudoVALU_VV_VF_RM {
   foreach m = MxListF in {
-    defm "" : VPseudoBinaryFV_VV_RM<m>,
-              SchedBinary<"WriteVFALUV", "ReadVFALUV", "ReadVFALUV", m.MX,
-                          forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1>.val in
+      defm "" : VPseudoBinaryFV_VV_RM<m, "", sew=e>,
+                SchedBinary<"WriteVFALUV", "ReadVFALUV", "ReadVFALUV", m.MX, e,
+                            forceMergeOpRead=true>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
+                            f.SEW, forceMergeOpRead=true>;
     }
   }
 }
@@ -2934,9 +2935,9 @@ multiclass VPseudoVALU_VV_VF_RM {
 multiclass VPseudoVALU_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
+                            f.SEW, forceMergeOpRead=true>;
     }
   }
 }
@@ -7061,11 +7062,12 @@ defm : VPatBinaryV_WV_WX_WI_RM<"int_riscv_vnclip", "PseudoVNCLIP",
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD",
-                            AllFloatVectors>;
-defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfsub", "PseudoVFSUB",
-                            AllFloatVectors>;
-defm : VPatBinaryV_VX_RM<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD", AllFloatVectors,
+                            isSEWAware = 1>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors,
+                            isSEWAware = 1>;
+defm : VPatBinaryV_VX_RM<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors,
+                         isSEWAware = 1>;
 
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
