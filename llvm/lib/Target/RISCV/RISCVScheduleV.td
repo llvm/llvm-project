@@ -415,8 +415,8 @@ defm "" : LMULSEWSchedWritesF<"WriteVFALUF">;
 defm "" : LMULSEWSchedWritesFW<"WriteVFWALUV">;
 defm "" : LMULSEWSchedWritesFW<"WriteVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm "" : LMULSchedWrites<"WriteVFMulV">;
-defm "" : LMULSchedWrites<"WriteVFMulF">;
+defm "" : LMULSEWSchedWritesF<"WriteVFMulV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFMulF">;
 defm "" : LMULSEWSchedWritesF<"WriteVFDivV">;
 defm "" : LMULSEWSchedWritesF<"WriteVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
@@ -640,8 +640,8 @@ defm "" : LMULSEWSchedReadsF<"ReadVFALUF">;
 defm "" : LMULSEWSchedReadsFW<"ReadVFWALUV">;
 defm "" : LMULSEWSchedReadsFW<"ReadVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm "" : LMULSchedReads<"ReadVFMulV">;
-defm "" : LMULSchedReads<"ReadVFMulF">;
+defm "" : LMULSEWSchedReadsF<"ReadVFMulV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFMulF">;
 defm "" : LMULSEWSchedReadsF<"ReadVFDivV">;
 defm "" : LMULSEWSchedReadsF<"ReadVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
@@ -884,8 +884,8 @@ defm "" : LMULSEWWriteResF<"WriteVFALUV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFALUF", []>;
 defm "" : LMULSEWWriteResFW<"WriteVFWALUV", []>;
 defm "" : LMULSEWWriteResFW<"WriteVFWALUF", []>;
-defm "" : LMULWriteRes<"WriteVFMulV", []>;
-defm "" : LMULWriteRes<"WriteVFMulF", []>;
+defm "" : LMULSEWWriteResF<"WriteVFMulV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFMulF", []>;
 defm "" : LMULSEWWriteResF<"WriteVFDivV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFDivF", []>;
 defm "" : LMULSEWWriteResFW<"WriteVFWMulV", []>;
@@ -1040,8 +1040,8 @@ defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUF", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMulF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMulF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivF", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulV", 0>;
