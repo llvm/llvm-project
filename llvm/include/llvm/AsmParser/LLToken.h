@@ -370,6 +370,7 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importAsDec,
   kw_function,
   kw_insts,
   kw_funcFlags,

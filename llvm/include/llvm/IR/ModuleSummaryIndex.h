@@ -472,14 +472,20 @@ public:
     /// means the symbol was externally visible.
     unsigned CanAutoHide : 1;
 
+    /// This field is written by the ThinLTO indexing step to postlink
+    /// per-module summary. It indicates whether a global value (function or
+    /// function alias, etc) should be imported as a definition or declaration.
+    unsigned ImportAsDec : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide)
+                     bool CanAutoHide, bool ImportAsDec)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
-          DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
+          DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
+          ImportAsDec(ImportAsDec) {}
   };
 
 private:
@@ -563,6 +569,8 @@ public:
   void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
+
+  bool shouldImportAsDec() const { return Flags.ImportAsDec; }
 
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;
@@ -813,7 +821,7 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false),
+            /*CanAutoHide=*/false, /*ImportAsDec=*/false),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
