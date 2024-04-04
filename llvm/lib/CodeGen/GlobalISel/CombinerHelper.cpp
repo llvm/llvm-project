@@ -6273,15 +6273,14 @@ bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
 bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
-    if (MRI.getVRegDef(LHS)->getOpcode() !=
-        TargetOpcode::G_CONSTANT_FOLD_BARRIER)
-      return false;
-  }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  auto *LHSDef = MRI.getVRegDef(LHS);
+  if (getIConstantVRegVal(LHS, MRI).has_value())
+    return true;
+
+  // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute
+  // as long as we don't already have a constant on the RHS.
+  if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
+    return false;
   return MRI.getVRegDef(RHS)->getOpcode() !=
              TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
          !getIConstantVRegVal(RHS, MRI);
