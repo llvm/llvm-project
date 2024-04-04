@@ -54,6 +54,13 @@ RecordContext *APIRecord::castToRecordContext(const APIRecord *Record) {
   }
 }
 
+void RecordContext::stealRecordChain(RecordContext &Other) {
+  First = Other.First;
+  Last = Other.Last;
+  Other.First = nullptr;
+  Other.Last = nullptr;
+}
+
 void RecordContext::addToRecordChain(APIRecord *Record) const {
   if (!First) {
     First = Record;
@@ -95,6 +102,7 @@ SymbolReference APISet::createSymbolReference(StringRef Name, StringRef USR,
 }
 
 APIRecord::~APIRecord() {}
+TagRecord::~TagRecord() {}
 RecordRecord::~RecordRecord() {}
 RecordFieldRecord::~RecordFieldRecord() {}
 ObjCContainerRecord::~ObjCContainerRecord() {}
