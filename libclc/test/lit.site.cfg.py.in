@@ -1,0 +1,23 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
+config.llvm_libs_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
+config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
+config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.host_arch = "@HOST_ARCH@"
+config.python_executable = "@Python3_EXECUTABLE@"
+config.libclc_src_dir = path(r"@LIBCLC_SOURCE_DIR@")
+config.test_run_dir = path(r"@LIBCLC_BINARY_DIR@")
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+# Let the main config do the real work.
+lit_config.load_config(
+    config, os.path.join(config.libclc_src_dir, "test/lit.cfg.py"))
