@@ -2832,16 +2832,17 @@ multiclass VPseudoVDIV_VV_VX {
 
 multiclass VPseudoVFMUL_VV_VF_RM {
   foreach m = MxListF in {
-    defm "" : VPseudoBinaryFV_VV_RM<m>,
-              SchedBinary<"WriteVFMulV", "ReadVFMulV", "ReadVFMulV", m.MX,
-                          forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1>.val in
+      defm "" : VPseudoBinaryFV_VV_RM<m, "", sew=e>,
+                SchedBinary<"WriteVFMulV", "ReadVFMulV", "ReadVFMulV", m.MX, e,
+                            forceMergeOpRead=true>;
   }
 
   foreach f = FPList in {
     foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF_RM<m, f>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, "", sew=f.SEW>,
                 SchedBinary<"WriteVFMulF", "ReadVFMulV", "ReadVFMulF", m.MX,
-                            forceMergeOpRead=true>;
+                            f.SEW, forceMergeOpRead=true>;
     }
   }
 }
@@ -7106,7 +7107,7 @@ defm : VPatBinaryW_WV_WX_RM<"int_riscv_vfwsub_w", "PseudoVFWSUB",
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfmul", "PseudoVFMUL",
-                            AllFloatVectors>;
+                            AllFloatVectors, isSEWAware=1>;
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfdiv", "PseudoVFDIV",
                             AllFloatVectors, isSEWAware=1>;
 defm : VPatBinaryV_VX_RM<"int_riscv_vfrdiv", "PseudoVFRDIV",
