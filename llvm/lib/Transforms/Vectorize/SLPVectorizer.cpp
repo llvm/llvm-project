@@ -14141,6 +14141,16 @@ bool BoUpSLP::collectValuesToDemote(
       }))
     return FinalAnalysis();
 
+  if (!all_of(I->users(),
+              [=](User *U) {
+                return getTreeEntry(U) ||
+                       (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                       (U->getType()->isSized() &&
+                        DL->getTypeSizeInBits(U->getType()) <= BitWidth);
+              }) &&
+      !IsPotentiallyTruncated(I, BitWidth))
+    return false;
+
   unsigned Start = 0;
   unsigned End = I->getNumOperands();
 
