@@ -307,6 +307,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
 //===----------------------------------------------------------------------===//
 // RecursionPruner
 //===----------------------------------------------------------------------===//
+
 /// Get the `getRecSelf` constructor for the translated type of `node` if its
 /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
 static function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
