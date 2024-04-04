@@ -774,6 +774,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp2m1f
+)
+
+add_fp_unittest(
   exp10f_test
   SUITE
     libc-math-smoke-tests

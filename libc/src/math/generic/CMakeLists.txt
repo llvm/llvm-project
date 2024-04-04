@@ -838,6 +838,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp2m1f
+  SRCS
+    exp2m1f.cpp
+  HDRS
+    ../exp2m1f.h
+  DEPENDS
+    .explogxf
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   exp10
   SRCS
     exp10.cpp
