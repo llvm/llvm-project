@@ -11545,30 +11545,32 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
                              unsigned OperandNo) {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
-  if (auto *Const = isConstOrConstSplat(V)) {
+  if (auto *ConstV = isConstOrConstSplat(V, /*AllowUndefs*/ false,
+                                         /*AllowTruncation*/ true)) {
+    APInt Const = ConstV->getAPIntValue().trunc(V.getScalarValueSizeInBits());
     switch (Opcode) {
     case ISD::ADD:
     case ISD::OR:
     case ISD::XOR:
     case ISD::UMAX:
-      return Const->isZero();
+      return Const.isZero();
     case ISD::MUL:
-      return Const->isOne();
+      return Const.isOne();
     case ISD::AND:
     case ISD::UMIN:
-      return Const->isAllOnes();
+      return Const.isAllOnes();
     case ISD::SMAX:
-      return Const->isMinSignedValue();
+      return Const.isMinSignedValue();
     case ISD::SMIN:
-      return Const->isMaxSignedValue();
+      return Const.isMaxSignedValue();
     case ISD::SUB:
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:
-      return OperandNo == 1 && Const->isZero();
+      return OperandNo == 1 && Const.isZero();
     case ISD::UDIV:
     case ISD::SDIV:
-      return OperandNo == 1 && Const->isOne();
+      return OperandNo == 1 && Const.isOne();
     }
   } else if (auto *ConstFP = isConstOrConstSplatFP(V)) {
     switch (Opcode) {
