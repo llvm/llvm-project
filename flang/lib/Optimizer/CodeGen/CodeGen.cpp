@@ -95,7 +95,7 @@ static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
 /// Extract constant from a value that must be the result of one of the
 /// ConstantOp operations.
 static int64_t getConstantIntValue(mlir::Value val) {
-  if (auto constVal = fir::factory::getIfConstantIntValue(val))
+  if (auto constVal = fir::getIntIfConstant(val))
     return *constVal;
   fir::emitFatalError(val.getLoc(), "must be a constant");
 }
@@ -647,7 +647,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
                << " -> " << toTy;
 
       // Do folding for constant inputs.
-      if (auto constVal = fir::factory::getIfConstantIntValue(op0)) {
+      if (auto constVal = fir::getIntIfConstant(op0)) {
         mlir::Value normVal =
             genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
         rewriter.replaceOp(convert, normVal);
