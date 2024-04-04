@@ -193,7 +193,7 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
                           MachineRegisterInfo *DefMRI, SPIRVGlobalRegistry &GR,
                           MachineInstr &FunDef) {
   const Function *F = GR.getFunctionByDefinition(&FunDef);
-  if (SmallVector<MachineInstr *> *FwdCalls = GR.getForwardCalls(F))
+  if (SmallPtrSet<MachineInstr *, 8> *FwdCalls = GR.getForwardCalls(F))
     for (MachineInstr *FunCall : *FwdCalls) {
       MachineRegisterInfo *CallMRI =
           &FunCall->getParent()->getParent()->getRegInfo();
