@@ -3,4 +3,4 @@
 
 # CHECK: clang version
 # When assertions are enabled, we should have a build configuration line that reflects that
-# CHECK: Build configuration: {{.*}}+assertions
+# CHECK: Build config: {{.*}}+assertions

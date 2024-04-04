@@ -2762,8 +2762,7 @@ ArrayRef<StringRef> cl::CompilerBuildConfig = {
 void cl::printBuildConfig(raw_ostream &OS) {
 #if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
   OS << "Build config: ";
-  llvm::interleaveComma(cl::CompilerBuildConfig, OS,
-                        [&OS](const StringRef &Option) { OS << Option; });
+  llvm::interleaveComma(cl::CompilerBuildConfig, OS);
   OS << '\n';
 #endif
 }
