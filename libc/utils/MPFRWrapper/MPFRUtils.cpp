@@ -351,6 +351,12 @@ public:
     return result;
   }
 
+  MPFRNumber roundeven() const {
+    MPFRNumber result(*this);
+    mpfr_roundeven(result.value, value);
+    return result;
+  }
+
   bool round_to_long(long &result) const {
     // We first calculate the rounded value. This way, when converting
     // to long using mpfr_get_si, the rounding direction of MPFR_RNDN
@@ -634,6 +640,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.mod_pi_over_4();
   case Operation::Round:
     return mpfrInput.round();
+  case Operation::RoundEven:
+    return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinh:
