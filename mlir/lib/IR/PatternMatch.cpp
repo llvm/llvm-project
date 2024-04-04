@@ -11,6 +11,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -248,6 +249,14 @@ void RewriterBase::finalizeOpModification(Operation *op) {
   // Notify the listener that the operation was modified.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
     rewriteListener->notifyOperationModified(op);
+}
+
+void RewriterBase::replaceAllUsesExcept(
+    Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
+  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+    Operation *user = use.getOwner();
+    return !preservedUsers.contains(user);
+  });
 }
 
 void RewriterBase::replaceUsesWithIf(Value from, Value to,
