@@ -1777,8 +1777,8 @@ void SplitPtrStructs::processFunction(Function &F) {
     Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
-    assert((Rsrc && Off) ||
-           (!Rsrc && !Off) && "Can't have a resource but no offset");
+    assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
+           "Can't have a resource but no offset");
     if (Rsrc)
       RsrcParts[I] = Rsrc;
     if (Off)
