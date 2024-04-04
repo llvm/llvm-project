@@ -101,51 +101,49 @@ static bool spelledInMacroDefinition(SourceLocation Loc,
   return false;
 }
 
-// Returns the expansion loc of `Loc` if `Loc` is the location of the `>` token
-// of an inner nested template, where the inner and outer templates end brackets
-// are spelled as `>>`.
-//
-// Clang handles the `>>` in nested templates by placing the `SourceLocation`
-// of the inner template end bracket in scratch space. This forces it to be a
-// separate token (otherwise it would be lexed as `>>`), but that means it also
-// looks like a macro.
-static std::optional<SourceLocation> getExpansionForNestedTemplateGreater(
-    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+// Returns the expansion char-range of `Loc` if `Loc` is a split token. For
+// example, `>>` in nested templates needs the first `>` to be split, otherwise
+// the `SourceLocation` of the token would lex as `>>` instead of `>`.
+static std::optional<CharSourceRange>
+getExpansionForSplitToken(SourceLocation Loc, const SourceManager &SM,
+                          const LangOptions &LangOpts) {
   if (Loc.isMacroID()) {
-    auto SpellingLoc = SM.getSpellingLoc(Loc);
-    auto ExpansionLoc = SM.getExpansionLoc(Loc);
-    Token SpellingTok, ExpansionTok;
-    if (Lexer::getRawToken(SpellingLoc, SpellingTok, SM, LangOpts,
-                           /*IgnoreWhiteSpace=*/false)) {
+    bool Invalid = false;
+    auto &SLoc = SM.getSLocEntry(SM.getFileID(Loc), &Invalid);
+    if (Invalid)
       return std::nullopt;
-    }
-    if (Lexer::getRawToken(ExpansionLoc, ExpansionTok, SM, LangOpts,
-                           /*IgnoreWhiteSpace=*/false)) {
-      return std::nullopt;
-    }
-    if (SpellingTok.getKind() == tok::greater &&
-        ExpansionTok.getKind() == tok::greatergreater) {
-      return ExpansionLoc;
+    if (auto &Expansion = SLoc.getExpansion();
+        !Expansion.isExpansionTokenRange()) {
+      // A char-range expansion is only used where a token-range would be
+      // incorrect, and so identifies this as a split token (and importantly,
+      // not as a macro).
+      return Expansion.getExpansionLocRange();
     }
   }
   return std::nullopt;
 }
 
-// Returns `Range`, but adjusted to smooth over oddities introduced by Clang.
-static CharSourceRange
-cleanRangeForAvoidingMacros(CharSourceRange Range, const SourceManager &SM,
-                            const LangOptions &LangOpts) {
+// If `Range` covers a split token, returns the expansion range, otherwise
+// returns `Range`.
+static CharSourceRange getRangeForSplitTokens(CharSourceRange Range,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
   if (Range.isTokenRange()) {
-    auto B =
-        getExpansionForNestedTemplateGreater(Range.getBegin(), SM, LangOpts);
-    auto E = getExpansionForNestedTemplateGreater(Range.getEnd(), SM, LangOpts);
-    if (E) {
-      // We can't use the expansion location with a token range, because that
-      // will lex as `>>`. So we instead convert to a char range.
-      return CharSourceRange::getCharRange(B.value_or(Range.getBegin()),
-                                           E->getLocWithOffset(1));
-    } else if (B) {
-      return CharSourceRange::getTokenRange(*B, Range.getEnd());
+    auto BeginToken = getExpansionForSplitToken(Range.getBegin(), SM, LangOpts);
+    auto EndToken = getExpansionForSplitToken(Range.getEnd(), SM, LangOpts);
+    if (EndToken) {
+      SourceLocation BeginLoc =
+          BeginToken ? BeginToken->getBegin() : Range.getBegin();
+      // We can't use the expansion location with a token-range, because that
+      // will incorrectly lex the end token, so use a char-range that ends at
+      // the split.
+      return CharSourceRange::getCharRange(BeginLoc, EndToken->getEnd());
+    } else if (BeginToken) {
+      // Since the end token is not split, the whole range covers the split, so
+      // the only adjustment we make is to use the expansion location of the
+      // begin token.
+      return CharSourceRange::getTokenRange(BeginToken->getBegin(),
+                                            Range.getEnd());
     }
   }
   return Range;
@@ -159,7 +157,7 @@ static CharSourceRange getRange(const CharSourceRange &EditRange,
   if (IncludeMacroExpansion) {
     Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   } else {
-    auto AdjustedRange = cleanRangeForAvoidingMacros(EditRange, SM, LangOpts);
+    auto AdjustedRange = getRangeForSplitTokens(EditRange, SM, LangOpts);
     if (spelledInMacroDefinition(AdjustedRange.getBegin(), SM) ||
         spelledInMacroDefinition(AdjustedRange.getEnd(), SM))
       return {};
