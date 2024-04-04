@@ -1177,9 +1177,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPop(MF)) {
         if (STI.getPushPopSplitVariation(MF) ==
-            ARMSubtarget::PushPopSplitVariation::R7Split)
+            ARMSubtarget::PushPopSplitVariation::R7Split) {
           unsigned DwarfReg = MRI->getDwarfRegNum(
               Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true);
           unsigned Offset = MFI.getObjectOffset(FI);

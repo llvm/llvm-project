@@ -506,8 +506,7 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   // can't access the high registers. This is also required when R7 is the frame
   // pointer and frame pointer elimiination is disabled, or branch signing is
   // enabled and AAPCS is disabled.
-  if ((MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-       !createAAPCSFrameChain()) ||
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() ||
       (getFramePointerReg() == ARM::R7 &&
        MF.getTarget().Options.DisableFramePointerElim(MF)) ||
       isThumb1Only())
