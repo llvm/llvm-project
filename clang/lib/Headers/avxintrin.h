@@ -207,6 +207,8 @@ _mm256_div_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the greater
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMAXPD </c> instruction.
@@ -225,6 +227,8 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the greater
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -245,6 +249,8 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the lesser
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMINPD </c> instruction.
@@ -263,6 +269,8 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the lesser
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1604,9 +1612,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [2 x double] vector consisting of two doubles corresponding to
-///    the two comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1663,9 +1671,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [4 x float] vector consisting of four floats corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1721,9 +1729,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    256-bit vectors of [4 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [4 x double] vector consisting of four doubles corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1781,9 +1789,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [8 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [8 x float] vector consisting of eight floats corresponding to
-///    the eight comparison results: zero if the comparison is false, and all
-///    1's if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1842,8 +1850,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    If the result is true, all 64 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1900,8 +1909,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
 ///
-///    If the result is true, all 32 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///

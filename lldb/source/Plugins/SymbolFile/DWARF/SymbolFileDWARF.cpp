@@ -693,6 +693,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
+  ElapsedTime elapsed(m_parse_time);
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
@@ -3419,8 +3420,8 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     const DWARFDataExtractor &data = die.GetData();
 
-    uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(data, block_offset, block_length), die.GetCU());
   }
@@ -3449,9 +3450,9 @@ GetExprListFromAtConstValue(DWARFFormValue form_value, ModuleSP module,
   const DWARFDataExtractor &debug_info_data = die.GetData();
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     // Retrieve the value as a block expression.
-    uint32_t block_offset =
+    uint64_t block_offset =
         form_value.BlockData() - debug_info_data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(debug_info_data, block_offset, block_length),
         die.GetCU());
@@ -4060,8 +4061,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
       if (!DWARFFormValue::IsBlockForm(form_value.Form()))
         return {};
       auto data = child.GetData();
-      uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-      uint32_t block_length = form_value.Unsigned();
+      uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+      uint64_t block_length = form_value.Unsigned();
       return DWARFExpressionList(
           module, DataExtractor(data, block_offset, block_length),
           child.GetCU());
@@ -4166,8 +4167,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
         }
 
         auto data = child.GetData();
-        uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-        uint32_t block_length = form_value.Unsigned();
+        uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+        uint64_t block_length = form_value.Unsigned();
         call_target = DWARFExpressionList(
             module, DataExtractor(data, block_offset, block_length),
             child.GetCU());
@@ -4377,26 +4378,38 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
+    FileSpec dwp_filespec;
     for (const auto &symfile : symfiles.files()) {
       module_spec.GetSymbolFileSpec() =
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
       LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
                module_spec.GetSymbolFileSpec());
-      FileSpec dwp_filespec =
+      dwp_filespec =
           PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       if (FileSystem::Instance().Exists(dwp_filespec)) {
-        LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
-        DataBufferSP dwp_file_data_sp;
-        lldb::offset_t dwp_file_data_offset = 0;
-        ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
-            GetObjectFile()->GetModule(), &dwp_filespec, 0,
-            FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
-            dwp_file_data_offset);
-        if (dwp_obj_file) {
-          m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
-              *this, dwp_obj_file, DIERef::k_file_index_mask);
-          break;
-        }
+        break;
+      }
+    }
+    if (!FileSystem::Instance().Exists(dwp_filespec)) {
+      LLDB_LOG(log, "No DWP file found locally");
+      // Fill in the UUID for the module we're trying to match for, so we can
+      // find the correct DWP file, as the Debuginfod plugin uses *only* this
+      // data to correctly match the DWP file with the binary.
+      module_spec.GetUUID() = m_objfile_sp->GetUUID();
+      dwp_filespec =
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+    }
+    if (FileSystem::Instance().Exists(dwp_filespec)) {
+      LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
+      DataBufferSP dwp_file_data_sp;
+      lldb::offset_t dwp_file_data_offset = 0;
+      ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
+          GetObjectFile()->GetModule(), &dwp_filespec, 0,
+          FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
+          dwp_file_data_offset);
+      if (dwp_obj_file) {
+        m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
+            *this, dwp_obj_file, DIERef::k_file_index_mask);
       }
     }
     if (!m_dwp_symfile) {

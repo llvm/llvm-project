@@ -80,8 +80,10 @@ if (PopulateClassToPassNames) {
 #define ADD_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                        \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
-    if (!Params)                                                               \
+    if (!Params) {                                                             \
+      errs() << NAME ": " << toString(Params.takeError()) << '\n';             \
       return false;                                                            \
+    }                                                                          \
     PM.addPass(CREATE_PASS(Params.get()));                                     \
     return true;                                                               \
   }

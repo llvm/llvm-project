@@ -676,6 +676,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_DTPREL:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
+  case R_AARCH64_AUTH:
   case R_RISCV_ADD:
   case R_RISCV_LEB128:
     return sym.getVA(a);
@@ -1258,10 +1259,10 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
       msg = "CIE/FDE too small";
       break;
     }
-    uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
+    uint64_t size = endian::read32<ELFT::Endianness>(d.data());
     if (size == 0) // ZERO terminator
       break;
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(d.data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(d.data() + 4);
     size += 4;
     if (LLVM_UNLIKELY(size > d.size())) {
       // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,

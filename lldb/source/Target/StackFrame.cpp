@@ -1800,7 +1800,6 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
     return;
 
   ExecutionContext exe_ctx(shared_from_this());
-  StreamString s;
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
@@ -1922,7 +1921,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file, start_line, m_sc.line_entry.column,
+                  m_sc.line_entry.GetFile(), start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;

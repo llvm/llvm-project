@@ -9,6 +9,11 @@
 #ifndef LLVM_LIBC_MACROS_MATH_MACROS_H
 #define LLVM_LIBC_MACROS_MATH_MACROS_H
 
+// TODO: Remove this. This is a temporary fix for a downstream problem.
+// This cannot be left permanently since it would require downstream users to
+// define this macro.
+#ifdef LIBC_FULL_BUILD
+
 #include "limits-macros.h"
 
 #define FP_NAN 0
@@ -16,6 +21,12 @@
 #define FP_ZERO 2
 #define FP_SUBNORMAL 3
 #define FP_NORMAL 4
+
+#define FP_INT_UPWARD 0
+#define FP_INT_DOWNWARD 1
+#define FP_INT_TOWARDZERO 2
+#define FP_INT_TONEARESTFROMZERO 3
+#define FP_INT_TONEAREST 4
 
 #define MATH_ERRNO 1
 #define MATH_ERREXCEPT 2
@@ -25,14 +36,15 @@
 #define NAN __builtin_nanf("")
 
 #define FP_ILOGB0 (-INT_MAX - 1)
-#define FP_ILOGBNAN INT_MAX
-
 #define FP_LLOGB0 (-LONG_MAX - 1)
-#define FP_LLOGBNAN LONG_MAX
 
-#define isfinite(x) __builtin_isfinite(x)
-#define isinf(x) __builtin_isinf(x)
-#define isnan(x) __builtin_isnan(x)
+#ifdef __FP_LOGBNAN_MIN
+#define FP_ILOGBNAN (-INT_MAX - 1)
+#define FP_LLOGBNAN (-LONG_MAX - 1)
+#else
+#define FP_ILOGBNAN INT_MAX
+#define FP_LLOGBNAN LONG_MAX
+#endif
 
 #ifdef __FAST_MATH__
 #define math_errhandling 0
@@ -43,5 +55,39 @@
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
+
+// These must be type-generic functions.  The C standard specifies them as
+// being macros rather than functions, in fact.  However, in C++ it's important
+// that there be function declarations that don't interfere with other uses of
+// the identifier, even in places with parentheses where a function-like macro
+// will be expanded (such as a function declaration in a C++ namespace).
+
+#ifdef __cplusplus
+
+template <typename T> inline constexpr bool isfinite(T x) {
+  return __builtin_isfinite(x);
+}
+
+template <typename T> inline constexpr bool isinf(T x) {
+  return __builtin_isinf(x);
+}
+
+template <typename T> inline constexpr bool isnan(T x) {
+  return __builtin_isnan(x);
+}
+
+#else
+
+#define isfinite(x) __builtin_isfinite(x)
+#define isinf(x) __builtin_isinf(x)
+#define isnan(x) __builtin_isnan(x)
+
+#endif
+
+#else // LIBC_FULL_BUILD
+
+#include <math.h>
+
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H

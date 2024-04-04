@@ -123,6 +123,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check.
+
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
@@ -138,6 +144,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-assert-side-effect
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
+
+- Improved :doc:`bugprone-inc-dec-in-conditions
+  <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
+  within unevaluated contexts, such as ``decltype``.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
@@ -176,13 +186,13 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
   return type in lambdas and in nested functions.
 
-- Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
+- Improved :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check
   by removing enforcement of rule `C.48
   <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
   which was deprecated since :program:`clang-tidy` 17. This rule is now covered
   by :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` and fixes
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`. Fixed
   incorrect hints when using list-initialization.
 
 - Improved :doc:`google-build-namespaces
@@ -196,6 +206,9 @@ Changes in existing checks
 - Improved :doc:`google-global-names-in-headers
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
+  check performance through optimizations.
 
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
@@ -229,11 +242,19 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
   whitespace when deleting the ``virtual`` keyword.
 
+- Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
+  check by adding support for detection of typedefs declared on function level.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
   detecting more cases of constant access. In particular, pointers can be
   analyzed, se the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
+  mode by resolving symbolic links to header files. Fixed handling of Hungarian
+  Prefix when configured to `LowerCase`.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
@@ -244,10 +265,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
 
-- Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
-  mode by resolving symbolic links to header files. Fixed handling of Hungarian
-  Prefix when configured to `LowerCase`.
+- Improved :doc:`readability-static-definition-in-anonymous-namespace
+  <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
+  check by resolving fix-it overlaps in template code by disregarding implicit
+  instances.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -258,9 +279,9 @@ Removed checks
 Miscellaneous
 ^^^^^^^^^^^^^
 
-- Fixed incorrect formatting in ``clang-apply-replacements`` when no ``--format``
-  option is specified. Now ``clang-apply-replacements`` applies formatting only with
-  the option.
+- Fixed incorrect formatting in :program:`clang-apply-replacements` when no
+  ``--format`` option is specified. Now :program:`clang-apply-replacements`
+  applies formatting only with the option.
 
 Improvements to include-fixer
 -----------------------------

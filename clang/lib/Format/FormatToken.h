@@ -152,6 +152,7 @@ namespace format {
   TYPE(TableGenCondOperatorComma)                                              \
   TYPE(TableGenDAGArgCloser)                                                   \
   TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListColonToAlign)                                         \
   TYPE(TableGenDAGArgListComma)                                                \
   TYPE(TableGenDAGArgListCommaToBreak)                                         \
   TYPE(TableGenDAGArgOpener)                                                   \
@@ -572,6 +573,9 @@ public:
 
   /// Is optional and can be removed.
   bool Optional = false;
+
+  /// Might be function declaration open/closing paren.
+  bool MightBeFunctionDeclParen = false;
 
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace

@@ -181,10 +181,11 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
 #elif defined(__s390__)  // Covers both s390 and s390x.
   // Return the CPU clock.
   uint64_t tsc;
-#if defined(BENCHMARK_OS_ZOS) && defined(COMPILER_IBMXL)
-  // z/OS XL compiler HLASM syntax.
+#if defined(BENCHMARK_OS_ZOS)
+  // z/OS HLASM syntax.
   asm(" stck %0" : "=m"(tsc) : : "cc");
 #else
+  // Linux on Z syntax.
   asm("stck %0" : "=Q"(tsc) : : "cc");
 #endif
   return tsc;

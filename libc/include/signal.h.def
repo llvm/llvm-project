@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SIGNAL_H
 #define LLVM_LIBC_SIGNAL_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 #define __need_size_t
 #include <stddef.h>
 
-#include <llvm-libc-macros/signal-macros.h>
+#include "llvm-libc-macros/signal-macros.h"
 
 %%public_api()
 
