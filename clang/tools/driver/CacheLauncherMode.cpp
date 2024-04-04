@@ -125,6 +125,7 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
 /// Arguments specific to \p clang-cache compiler launcher functionality.
 static void addLauncherArgs(SmallVectorImpl<const char *> &Args,
                             llvm::StringSaver &Saver) {
+
   if (const char *DaemonPath =
           ::getenv("CLANG_CACHE_SCAN_DAEMON_SOCKET_PATH")) {
     // Instruct clang to connect to scanning daemon that is listening on the
@@ -162,12 +163,26 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &Args,
       Args.push_back(Saver.save("-fdepscan-prefix-map=" + PrefixMap).data());
     }
   }
-  if (const char *ServicePath =
-          ::getenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH")) {
+
+  const char *ServicePath = ::getenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH");
+
+  if (ServicePath) {
     Args.append({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
                  ServicePath});
   }
   Args.append({"-greproducible"});
+
+  if (!llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS") &&
+      !ServicePath) {
+    Args.push_back("-Xclang");
+    Args.push_back("-fcas-backend");
+    if (llvm::sys::Process::GetEnv("CLANG_CACHE_VERIFY_MCCAS")) {
+      Args.push_back("-Xclang");
+      Args.push_back("-fcas-backend-mode=verify");
+    }
+    Args.push_back("-mllvm");
+    Args.push_back("-cas-friendly-debug-info");
+  }
 }
 
 static void addScanServerArgs(const char *SocketPath,
