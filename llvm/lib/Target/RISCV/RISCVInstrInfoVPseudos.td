@@ -3287,10 +3287,10 @@ multiclass VPseudoTernaryW_VV<LMULInfo m> {
                                       constraint, /*Commutable*/ 0, TargetConstraintType=3>;
 }
 
-multiclass VPseudoTernaryW_VV_RM<LMULInfo m> {
+multiclass VPseudoTernaryW_VV_RM<LMULInfo m, int sew = 0> {
   defvar constraint = "@earlyclobber $rd";
   defm _VV : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
-                                                  constraint, /* Commutable */ 0,
+                                                  constraint, sew, /* Commutable */ 0,
                                                   TargetConstraintType=3>;
 }
 
@@ -3306,11 +3306,11 @@ multiclass VPseudoTernaryW_VF<LMULInfo m, FPR_Info f, int TargetConstraintType =
                                               m.vrclass, m, constraint, /*Commutable*/ 0, TargetConstraintType>;
 }
 
-multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f> {
+multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew = 0> {
   defvar constraint = "@earlyclobber $rd";
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
                                                           m.vrclass, m, constraint,
-                                                          /* Commutable */ 0,
+                                                          sew, /* Commutable */ 0,
                                                           TargetConstraintType=3>;
 }
 
@@ -3396,16 +3396,17 @@ multiclass VPseudoVWMAC_VX {
 
 multiclass VPseudoVWMAC_VV_VF_RM {
   foreach m = MxListFW in {
-    defm "" : VPseudoTernaryW_VV_RM<m>,
-              SchedTernary<"WriteVFWMulAddV", "ReadVFWMulAddV",
-                           "ReadVFWMulAddV", "ReadVFWMulAddV", m.MX>;
+    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
+      defm "" : VPseudoTernaryW_VV_RM<m, sew=e>,
+                SchedTernary<"WriteVFWMulAddV", "ReadVFWMulAddV",
+                             "ReadVFWMulAddV", "ReadVFWMulAddV", m.MX, e>;
   }
 
   foreach f = FPListW in {
     foreach m = f.MxListFW in {
-      defm "" : VPseudoTernaryW_VF_RM<m, f>,
+      defm "" : VPseudoTernaryW_VF_RM<m, f, sew=f.SEW>,
                 SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
-                             "ReadVFWMulAddF", "ReadVFWMulAddV", m.MX>;
+                             "ReadVFWMulAddF", "ReadVFWMulAddV", m.MX, f.SEW>;
     }
   }
 }
@@ -3413,17 +3414,18 @@ multiclass VPseudoVWMAC_VV_VF_RM {
 multiclass VPseudoVWMAC_VV_VF_BF_RM {
   foreach m = MxListFW in {
     defvar mx = m.MX;
-    defm "" : VPseudoTernaryW_VV_RM<m>,
-              SchedTernary<"WriteVFWMulAddV", "ReadVFWMulAddV",
-                           "ReadVFWMulAddV", "ReadVFWMulAddV", mx>;
+    foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in
+      defm "" : VPseudoTernaryW_VV_RM<m, sew=e>,
+                SchedTernary<"WriteVFWMulAddV", "ReadVFWMulAddV",
+                             "ReadVFWMulAddV", "ReadVFWMulAddV", mx, e>;
   }
 
   foreach f = BFPListW in {
     foreach m = f.MxListFW in {
       defvar mx = m.MX;
-      defm "" : VPseudoTernaryW_VF_RM<m, f>,
+      defm "" : VPseudoTernaryW_VF_RM<m, f, sew=f.SEW>,
                 SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
-                             "ReadVFWMulAddF", "ReadVFWMulAddV", mx>;
+                             "ReadVFWMulAddF", "ReadVFWMulAddV", mx, f.SEW>;
     }
   }
 }
@@ -5703,7 +5705,7 @@ multiclass VPatTernaryW_VV<string intrinsic, string instruction,
 }
 
 multiclass VPatTernaryW_VV_RM<string intrinsic, string instruction,
-                           list<VTypeInfoToWide> vtilist> {
+                           list<VTypeInfoToWide> vtilist, bit isSEWAware = 0> {
   foreach vtiToWti = vtilist in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
@@ -5712,7 +5714,8 @@ multiclass VPatTernaryW_VV_RM<string intrinsic, string instruction,
     defm : VPatTernaryWithPolicyRoundingMode<intrinsic, instruction, "VV",
                                              wti.Vector, vti.Vector, vti.Vector,
                                              vti.Mask, vti.Log2SEW, vti.LMul,
-                                             wti.RegClass, vti.RegClass, vti.RegClass>;
+                                             wti.RegClass, vti.RegClass,
+                                             vti.RegClass, isSEWAware>;
   }
 }
 
@@ -5731,19 +5734,18 @@ multiclass VPatTernaryW_VX<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatTernaryW_VX_RM<string intrinsic, string instruction,
-                           list<VTypeInfoToWide> vtilist> {
+multiclass
+    VPatTernaryW_VX_RM<string intrinsic, string instruction,
+                       list<VTypeInfoToWide> vtilist, bit isSEWAware = 0> {
   foreach vtiToWti = vtilist in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in
-    defm : VPatTernaryWithPolicyRoundingMode<intrinsic, instruction,
-                                             "V"#vti.ScalarSuffix,
-                                             wti.Vector, vti.Scalar, vti.Vector,
-                                             vti.Mask, vti.Log2SEW, vti.LMul,
-                                             wti.RegClass, vti.ScalarRegClass,
-                                             vti.RegClass>;
+                                 GetVTypePredicates<wti>.Predicates) in defm
+        : VPatTernaryWithPolicyRoundingMode<
+              intrinsic, instruction, "V" #vti.ScalarSuffix, wti.Vector,
+              vti.Scalar, vti.Vector, vti.Mask, vti.Log2SEW, vti.LMul,
+              wti.RegClass, vti.ScalarRegClass, vti.RegClass, isSEWAware>;
   }
 }
 
@@ -5775,9 +5777,9 @@ multiclass VPatTernaryW_VV_VX<string intrinsic, string instruction,
       VPatTernaryW_VX<intrinsic, instruction, vtilist>;
 
 multiclass VPatTernaryW_VV_VX_RM<string intrinsic, string instruction,
-                              list<VTypeInfoToWide> vtilist>
-    : VPatTernaryW_VV_RM<intrinsic, instruction, vtilist>,
-      VPatTernaryW_VX_RM<intrinsic, instruction, vtilist>;
+                              list<VTypeInfoToWide> vtilist, bit isSEWAware = 1>
+    : VPatTernaryW_VV_RM<intrinsic, instruction, vtilist, isSEWAware>,
+      VPatTernaryW_VX_RM<intrinsic, instruction, vtilist, isSEWAware>;
 
 multiclass VPatBinaryM_VV_VX<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
@@ -7154,16 +7156,16 @@ defm : VPatTernaryV_VV_VX_AAXA_RM<"int_riscv_vfnmsub", "PseudoVFNMSUB",
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmacc", "PseudoVFWMACC",
-                             AllWidenableFloatVectors>;
+                             AllWidenableFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmacc", "PseudoVFWNMACC",
-                             AllWidenableFloatVectors>;
+                             AllWidenableFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmsac", "PseudoVFWMSAC",
-                             AllWidenableFloatVectors>;
+                             AllWidenableFloatVectors, isSEWAware=1>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmsac", "PseudoVFWNMSAC",
-                             AllWidenableFloatVectors>;
+                             AllWidenableFloatVectors, isSEWAware=1>;
 let Predicates = [HasStdExtZvfbfwma] in
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
-                              AllWidenableBFloatToFloatVectors>;
+                              AllWidenableBFloatToFloatVectors, isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
 // 13.8. Vector Floating-Point Square-Root Instruction
