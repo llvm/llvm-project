@@ -25,6 +25,7 @@ static_library("readability") {
     "DeleteNullPointerCheck.cpp",
     "DuplicateIncludeCheck.cpp",
     "ElseAfterReturnCheck.cpp",
+    "EnumInitialValueCheck.cpp",
     "FunctionCognitiveComplexityCheck.cpp",
     "FunctionSizeCheck.cpp",
     "IdentifierLengthCheck.cpp",
