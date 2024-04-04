@@ -15,7 +15,7 @@
 #ifndef __INTRIN0_H
 #define __INTRIN0_H
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__arm64ec__)
 #include <adcintrin.h>
 #endif
 
@@ -55,7 +55,7 @@ unsigned __int64 __shiftright128(unsigned __int64 _LowPart,
                                  unsigned char _Shift);
 #endif
 
-#if defined(__x86_64__) || defined(__i386__)
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 void _mm_pause(void);
 #endif
 
