@@ -320,20 +320,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
-  case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
                                  NumOperands);
-  case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT: {
-    // Handle vector extends in the default case below.
-    if (MRI.getType(MI.getOperand(0).getReg()).isVector())
-      break;
-    return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
-                                 NumOperands);
-  }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
