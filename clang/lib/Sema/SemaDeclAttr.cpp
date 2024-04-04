@@ -7403,41 +7403,36 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
     }
     switch (RC) {
     case llvm::hlsl::ResourceClass::SRV: {
-      if (Slot.substr(0, 1) != "t")
+      if (Slot[0] != 't')
         S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
             << Slot.substr(0, 1) << varTy << "t";
       break;
     }
     case llvm::hlsl::ResourceClass::UAV: {
-      if (Slot.substr(0, 1) != "u")
+      if (Slot[0] != 'u')
         S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
             << Slot.substr(0, 1) << varTy << "u";
       break;
     }
     case llvm::hlsl::ResourceClass::CBuffer: {
-      if (Slot.substr(0, 1) != "b")
+      if (Slot[0] != 'b')
         S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
             << Slot.substr(0, 1) << varTy << "b";
       break;
     }
     case llvm::hlsl::ResourceClass::Sampler: {
-      if (Slot.substr(0, 1) != "s")
+      if (Slot[0] != 's')
         S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
             << Slot.substr(0, 1) << varTy << "s";
       break;
     }
-    case llvm::hlsl::ResourceClass::Invalid: {
+    default: {
       llvm_unreachable("Resource class should be valid.");
       break;
     }
-
-    default:
-      break;
     }
   }
 
-  // FIXME: check reg type match decl. Issue
-  // https://github.com/llvm/llvm-project/issues/57886.
   HLSLResourceBindingAttr *NewAttr =
       HLSLResourceBindingAttr::Create(S.getASTContext(), Slot, Space, AL);
   if (NewAttr)

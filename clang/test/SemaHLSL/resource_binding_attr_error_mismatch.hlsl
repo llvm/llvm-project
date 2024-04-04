@@ -63,3 +63,11 @@ tbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2DArray' (expected 'b' or 'c' or 'i')}}
 // NOT YET IMPLEMENTED FeedbackTexture2DArray<float> FBTex2DArr[3][2][] : register(u0, space27);
+
+
+// empty binding prefix cases:
+// expected-error@+1 {{expected identifier}}
+RWBuffer<int> c: register();
+
+// expected-error@+1 {{expected identifier}}
+RWBuffer<int> d: register("");
