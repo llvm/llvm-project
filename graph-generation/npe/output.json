@@ -217,9 +217,9 @@
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
                     "beginLine": 19,
                     "beginColumn": 1,
-                    "endLine": 24,
+                    "endLine": 28,
                     "endColumn": 2,
-                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    getPtr( ..."
+                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    int x = ..."
                 },
                 {
                     "type": "stmt",
@@ -227,9 +227,9 @@
                     "beginLine": 21,
                     "beginColumn": 5,
                     "endLine": 21,
-                    "endColumn": 13,
-                    "content": "getPtr()",
-                    "stmtKind": "CallExpr"
+                    "endColumn": 16,
+                    "content": "int x = 10;",
+                    "stmtKind": "DeclStmt"
                 },
                 {
                     "type": "stmt",
@@ -237,9 +237,9 @@
                     "beginLine": 22,
                     "beginColumn": 5,
                     "endLine": 22,
-                    "endColumn": 21,
-                    "content": "ASSIGN_NULL(ptr)",
-                    "stmtKind": "CXXBoolLiteralExpr"
+                    "endColumn": 11,
+                    "content": "x += 1",
+                    "stmtKind": "CompoundAssignOperator"
                 },
                 {
                     "type": "stmt",
@@ -247,6 +247,46 @@
                     "beginLine": 23,
                     "beginColumn": 5,
                     "endLine": 23,
+                    "endColumn": 11,
+                    "content": "x += 2",
+                    "stmtKind": "CompoundAssignOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 24,
+                    "beginColumn": 5,
+                    "endLine": 24,
+                    "endColumn": 11,
+                    "content": "x += 3",
+                    "stmtKind": "CompoundAssignOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 25,
+                    "beginColumn": 5,
+                    "endLine": 25,
+                    "endColumn": 13,
+                    "content": "getPtr()",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 26,
+                    "beginColumn": 5,
+                    "endLine": 26,
+                    "endColumn": 21,
+                    "content": "ASSIGN_NULL(ptr)",
+                    "stmtKind": "CXXBoolLiteralExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 27,
+                    "beginColumn": 5,
+                    "endLine": 27,
                     "endColumn": 11,
                     "content": "return",
                     "stmtKind": "ReturnStmt"
@@ -256,9 +296,9 @@
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
                     "beginLine": 19,
                     "beginColumn": 1,
-                    "endLine": 24,
+                    "endLine": 28,
                     "endColumn": 2,
-                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    getPtr( ..."
+                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    int x = ..."
                 },
                 {
                     "type": "stmt",
