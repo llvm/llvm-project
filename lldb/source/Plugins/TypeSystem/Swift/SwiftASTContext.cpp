@@ -1749,11 +1749,17 @@ void SwiftASTContext::FilterClangImporterOptions(
   // Copy back a filtered version of ExtraArgs.
   std::vector<std::string> orig_args(std::move(extra_args));
   for (auto &arg : orig_args) {
+    StringRef arg_sr(arg);
+    // LLDB wants to control implicit/explicit modules build flags.
+    if (arg_sr == "-fno-implicit-modules" ||
+        arg_sr == "-fno-implicit-module-maps")
+      continue;
+
     // The VFS options turn into fatal errors when the referenced file
     // is not found. Since the Xcode build system tends to create a
     // lot of VFS overlays by default, stat them and emit a warning if
     // the yaml file couldn't be found.
-    if (StringRef(arg).startswith("-ivfs")) {
+    if (arg_sr.startswith("-ivfs")) {
       // Stash the argument.
       ivfs_arg = arg;
       continue;
