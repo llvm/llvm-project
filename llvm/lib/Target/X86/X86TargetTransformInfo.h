@@ -294,12 +294,12 @@ public:
 
 private:
   bool supportsGather() const;
-  InstructionCost getGSScalarCost(unsigned Opcode, Type *DataTy,
-                                  bool VariableMask, Align Alignment,
-                                  unsigned AddressSpace);
-  InstructionCost getGSVectorCost(unsigned Opcode, Type *DataTy,
-                                  const Value *Ptr, Align Alignment,
-                                  unsigned AddressSpace);
+  InstructionCost getGSScalarCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                  Type *DataTy, bool VariableMask,
+                                  Align Alignment, unsigned AddressSpace);
+  InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                  Type *DataTy, const Value *Ptr,
+                                  Align Alignment, unsigned AddressSpace);
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;
