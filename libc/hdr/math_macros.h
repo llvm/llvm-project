@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_HDR_MATH_MACROS_H
 #define LLVM_LIBC_HDR_MATH_MACROS_H
 
-#ifdef LLVM_LIBC_FULL_BUILD
+#ifdef LIBC_FULL_BUILD
 
 #include "include/llvm-libc-macros/math-macros.h"
 
