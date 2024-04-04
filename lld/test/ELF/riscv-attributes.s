@@ -63,10 +63,10 @@
 # RUN: llvm-readobj -A atomic_abi_A6C_unknown | FileCheck %s --check-prefixes=UNKNOWN_A6C
 
 # RUN: ld.lld atomic_abi_unknown.o diff_stack_align.o -o atomic_abi_none_unknown
-# RUN: llvm-readobj -A atomic_abi_none_unknown | FileCheck %s --check-prefixes=UNKNOWN_UNKNOWN
+# RUN: llvm-readobj -A atomic_abi_none_unknown | FileCheck %s --check-prefixes=UNKNOWN_NONE
 
-# RUN: ld.lld diff_stack_align.o atomic_abi_A6C.o -o atomic_abi_A6C_unknown
-# RUN: llvm-readobj -A atomic_abi_A6C_unknown | FileCheck %s --check-prefixes=NONE_A6C
+# RUN: ld.lld diff_stack_align.o atomic_abi_A6C.o -o atomic_abi_A6C_none
+# RUN: llvm-readobj -A atomic_abi_A6C_none | FileCheck %s --check-prefixes=NONE_A6C
 
 # RUN: ld.lld atomic_abi_unknown.o atomic_abi_A6S.o -o atomic_abi_A6S_unknown
 # RUN: llvm-readobj -A atomic_abi_A6S_unknown | FileCheck %s --check-prefix=UNKNOWN_A6S
@@ -347,24 +347,23 @@
 #--- atomic_abi_A7.s
 .attribute atomic_abi, 3
 
-
-#      UNKNOWN_UNKNOWN: BuildAttributes {
-# UNKNOWN_UNKNOWN-NEXT:   FormatVersion: 0x41
-# UNKNOWN_UNKNOWN-NEXT:   Section 1 {
-# UNKNOWN_UNKNOWN-NEXT:     SectionLength: 17
-# UNKNOWN_UNKNOWN-NEXT:     Vendor: riscv
-# UNKNOWN_UNKNOWN-NEXT:     Tag: Tag_File (0x1)
-# UNKNOWN_UNKNOWN-NEXT:     Size: 7
-# UNKNOWN_UNKNOWN-NEXT:     FileAttributes {
-# UNKNOWN_UNKNOWN-NEXT:       Attribute {
-# UNKNOWN_UNKNOWN-NEXT:         Tag: 4
-# UNKNOWN_UNKNOWN-NEXT:         Value: 32
-# UNKNOWN_UNKNOWN-NEXT:         TagName: stack_align
-# UNKNOWN_UNKNOWN-NEXT:         Description: Stack alignment is 32-bytes
-# UNKNOWN_UNKNOWN-NEXT:       }
-# UNKNOWN_UNKNOWN-NEXT:     }
-# UNKNOWN_UNKNOWN-NEXT:   }
-# UNKNOWN_UNKNOWN-NEXT: }
+#      UNKNOWN_NONE: BuildAttributes {
+# UNKNOWN_NONE-NEXT:   FormatVersion: 0x41
+# UNKNOWN_NONE-NEXT:   Section 1 {
+# UNKNOWN_NONE-NEXT:     SectionLength: 17
+# UNKNOWN_NONE-NEXT:     Vendor: riscv
+# UNKNOWN_NONE-NEXT:     Tag: Tag_File (0x1)
+# UNKNOWN_NONE-NEXT:     Size: 7
+# UNKNOWN_NONE-NEXT:     FileAttributes {
+# UNKNOWN_NONE-NEXT:       Attribute {
+# UNKNOWN_NONE-NEXT:         Tag: 4
+# UNKNOWN_NONE-NEXT:         Value: 32
+# UNKNOWN_NONE-NEXT:         TagName: stack_align
+# UNKNOWN_NONE-NEXT:         Description: Stack alignment is 32-bytes
+# UNKNOWN_NONE-NEXT:       }
+# UNKNOWN_NONE-NEXT:     }
+# UNKNOWN_NONE-NEXT:   }
+# UNKNOWN_NONE-NEXT: }
 
 #      NONE_A6C: BuildAttributes {
 # NONE_A6C-NEXT:   FormatVersion: 0x41
