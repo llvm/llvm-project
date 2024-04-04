@@ -141,11 +141,6 @@ private:
   llvm::SmallVector<Buffer> Buffers;
 };
 
-// Default implementation
-template <unsigned BI> llvm::Intrinsic::ID CGHLSLRuntime::getIntrinsic() {
-  static_assert(false, "getIntrinsic is only allowed on specialized templates");
-}
-
 } // namespace CodeGen
 } // namespace clang
 
