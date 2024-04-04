@@ -305,10 +305,13 @@ def CSR_ATPCS_SplitPush_SwiftTail : CalleeSavedRegs<(sub CSR_ATPCS_SplitPush,
 // pointer even for Thumb targets, where split pushes are necessary.
 // This AAPCS alternative makes sure the frame index slots match the push
 // order in that case.
-def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R11,
-                                               R7, R6, R5, R4,
-                                               R10, R9, R8,
+def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add R10, R9, R8, R7, R6, R5, R4,
+                                               LR, R11,
                                                (sequence "D%u", 15, 8))>;
+def CSR_AAPCS_SplitPush_Thumb : CalleeSavedRegs<(add LR, R11,
+                                                     R7, R6, R5, R4,
+                                                     R10, R9, R8,
+                                                     (sequence "D%u", 15, 8))>;
 
 // Constructors and destructors return 'this' in the ARM C++ ABI; since 'this'
 // and the pointer return value are both passed in R0 in these cases, this can
