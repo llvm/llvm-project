@@ -155,7 +155,10 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
 
     SIFunctionResourceInfo &Info = CI.first->second;
     MachineFunction *MF = MMI.getMachineFunction(*F);
-    assert(MF && "function must have been generated already");
+    // It's possible that the unreachable function is not generated at all. We
+    // don't need to count resource usage in that case anyway.
+    if (!MF)
+      continue;
     Info = analyzeResourceUsage(*MF, TM, AssumedStackSizeForDynamicSizeObjects,
                                 AssumedStackSizeForExternalCall);
     HasIndirectCall |= Info.HasIndirectCall;

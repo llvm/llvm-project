@@ -471,6 +471,11 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  // It is possible that an unreachable function is not emitted so we don't need
+  // to print it anyway.
+  if (MF.empty())
+    return false;
+
   // Init target streamer lazily on the first function so that previous passes
   // can set metadata.
   if (!IsTargetStreamerInitialized)
