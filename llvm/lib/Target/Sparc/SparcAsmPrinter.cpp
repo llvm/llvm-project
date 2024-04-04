@@ -451,7 +451,7 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
                                                   &SP::IntPairRegClass);
         if (!MOReg) {
-          SMLoc Loc = SMLoc();
+          SMLoc Loc;
           OutContext.reportError(
               Loc, "Hi part of pair should point to an even-numbered register");
           OutContext.reportError(
