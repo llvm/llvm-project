@@ -15,16 +15,14 @@
 #include "parse-tree.h"
 #include "provenance.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Parser/preprocessor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace Fortran::parser {
-
-class Preprocessor;
 
 struct Options {
   Options() {}
@@ -87,7 +85,7 @@ private:
   const char *finalRestingPlace_{nullptr};
   std::optional<Program> parseTree_;
   ParsingLog log_;
-  std::unique_ptr<Preprocessor> preprocessor_;
+  Preprocessor preprocessor_{allCooked_.allSources()};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PARSING_H_
