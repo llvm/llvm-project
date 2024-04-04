@@ -51,7 +51,10 @@ template <typename T> struct DoubleWide final : cpp::array<T, 2> {
 // Converts an unsigned value into a DoubleWide<half_width_t<T>>.
 template <typename T> LIBC_INLINE constexpr auto split(T value) {
   static_assert(cpp::is_unsigned_v<T>);
-  return cpp::bit_cast<DoubleWide<half_width_t<T>>>(value);
+  using half_type = half_width_t<T>;
+  return DoubleWide<half_type>(
+      half_type(value),
+      half_type(value >> cpp::numeric_limits<half_type>::digits));
 }
 
 // The low part of a DoubleWide value.
