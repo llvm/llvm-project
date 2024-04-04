@@ -2767,13 +2767,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
-  script->addScriptReferencedSymbolsToSymTable();
-
-  // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
-      sym->isUsedInRegularObj = true;
-
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab.find(config->entry))
     handleUndefined(sym, "--entry");
@@ -2781,6 +2774,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
+
+  // After potential archive member extraction involving ENTRY and
+  // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
+  // RHS may refer to definitions in just extracted object files).
+  script->addScriptReferencedSymbolsToSymTable();
+
+  // Prevent LTO from removing any definition referenced by -u.
+  for (StringRef name : config->undefined)
+    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+      sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
   if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))
