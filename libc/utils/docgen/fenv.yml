@@ -1,0 +1,91 @@
+macros:
+  - __STDC_VERSION_FENV_H__
+functions:
+  feclearexcept:
+    returns: int
+    params:
+      - int
+    defined: '7.6.4.1'
+  fegetexceptflag:
+    returns: int
+    params:
+      - fexcept_t*
+      - int
+    defined: '7.6.4.2'
+  feraiseexcept:
+    returns: int
+    params:
+      - int
+    defined: '7.6.4.3'
+  fesetexcept:
+    returns: int
+    params:
+      - int
+    defined: '7.6.4.4'
+  fesetexceptflag:
+    returns: int
+    params:
+      - const fexcept_t*
+      - int
+    defined: '7.6.4.5'
+  fetestexceptflag:
+    returns: int
+    params:
+      - const fexcept_t*
+      - int
+    defined: '7.6.4.6'
+  fetestexcept:
+    returns: int
+    params:
+      - int
+    defined: '7.6.4.7'
+  fegetmode:
+    returns: int
+    params:
+      - femode_t*
+    defined: '7.6.5.1'
+  fegetround:
+    returns: int
+    params: []
+    defined: '7.6.5.2'
+  fe_dec_getround:
+    returns: int
+    params: []
+    defined: '7.6.5.3'
+  fesetmode:
+    returns: int
+    params:
+      - const femode_t*
+    defined: '7.6.5.4'
+  fesetround:
+    returns: int
+    params:
+      - int
+    defined: '7.6.5.5'
+  fe_dec_setround:
+    returns: int
+    params:
+      - int
+    defined: '7.6.5.6'
+  fegetenv:
+    returns: int
+    params:
+      - fenv_t*
+    defined: '7.6.6.1'
+  feholdexcept:
+    returns: int
+    params:
+      - fenv_t*
+    defined: '7.6.6.2'
+  fesetenv:
+    returns: int
+    params:
+      - const fentv_t*
+    defined: '7.6.6.3'
+  feupdateenv:
+    returns: int
+    params:
+      - const fenv_t*
+    defined: '7.6.6.4'
+
+# TODO: yay fill out moar stuff!!!1

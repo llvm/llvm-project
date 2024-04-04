@@ -13,8 +13,8 @@ import sys
 import yaml
 
 
-def load_api():
-    p = Path(Path(__file__).resolve().parent, "api.yml")
+def load_api(hname):
+    p = Path(Path(__file__).parent, Path(hname).with_suffix(".yml"))
     api = p.read_text(encoding="utf-8")
     return yaml.load(api, Loader=yaml.FullLoader)
 
@@ -64,14 +64,18 @@ def print_header(header, api):
     print_functions(header, api["functions"])
 
 
-def parse_args(header_choices):
+def get_possible_choices():
+    return [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.yml")]
+
+
+def parse_args():
     parser = ArgumentParser()
-    parser.add_argument("header_name", choices=header_choices)
+    parser.add_argument("header_name", choices=get_possible_choices())
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    api = load_api()
-    args = parse_args(api.keys())
+    args = parse_args()
+    api = load_api(args.header_name)
 
-    print_header(args.header_name, api[args.header_name])
+    print_header(args.header_name, api)
