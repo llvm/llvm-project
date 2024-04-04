@@ -99,15 +99,13 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   bool isStaticOrExplicitContext = SemaRef.CXXThisTypeOverride.isNull();
 
   if (auto *MD = dyn_cast<CXXMethodDecl>(DC)) {
-    if (!MD->isStatic() && !MD->isExplicitObjectMemberFunction())
+    if (MD->isImplicitObjectMemberFunction()) {
       isStaticOrExplicitContext = false;
-
-    // A dependent class scope function template explicit specialization
-    // which has no explicit object parameter and is declared without 'static'
-    // could instantiate to either a static or non-static member function.
-    if (MD->getDependentSpecializationInfo() && !MD->isStatic() &&
-        !MD->isExplicitObjectMemberFunction())
-      couldInstantiateToStatic = true;
+      // A dependent class scope function template explicit specialization
+      // that is neither declared 'static' nor with an explicit object
+      // parameter could instantiate to a static or non-static member function.
+      couldInstantiateToStatic = MD->getDependentSpecializationInfo();
+    }
   }
 
   if (R.isUnresolvableResult())
