@@ -517,16 +517,11 @@ public:
   // we must use a default constructor with no params for the writer trait so we
   // have a public member which must be initialized by the user.
   MemProfSchema *Schema = nullptr;
-  // The MemProf version to use for the serialization.  The initialization here
-  // is not used.
-  IndexedVersion Version = static_cast<IndexedVersion>(MinimumSupportedVersion);
+  // The MemProf version to use for the serialization.
+  IndexedVersion Version;
 
-  RecordWriterTrait() {
-    // Crash if anybody calls
-    // OnDiskChainedHashTableGenerator::insert(key_type_ref, data_type_ref),
-    // which default-constructs RecordWriterTrait without a version number.
-    llvm_unreachable("The default constructor must not be called.");
-  }
+  // We do not support the default constructor, which does not set Version.
+  RecordWriterTrait() = delete;
   RecordWriterTrait(IndexedVersion V) : Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
