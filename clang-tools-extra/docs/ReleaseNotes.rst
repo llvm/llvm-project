@@ -270,6 +270,10 @@ Changes in existing checks
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
 
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by resolving crash
+  at include directives that form the filename using macro.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
