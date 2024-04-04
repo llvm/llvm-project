@@ -225,10 +225,13 @@ struct DijPathFinder : public ICFGPathFinder {
             ptp.push_back(x);
         }
         ptp.push_back(target);
-        removeConsecutiveDuplicates(ptp);
 
         logger.info("=== DijPathFinder ===");
-        logger.info("path: {}", fmt::join(ptp, " "));
+        logger.info("Original path to search: {}", fmt::join(ptp, " "));
+
+        removeConsecutiveDuplicates(ptp);
+
+        logger.info("Deduplicated path: {}", fmt::join(ptp, " "));
 
         std::vector<int> path;
         for (int i = 0; i < ptp.size() - 1; i++) {
