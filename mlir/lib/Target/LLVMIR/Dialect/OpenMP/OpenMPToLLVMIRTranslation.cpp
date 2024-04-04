@@ -877,6 +877,32 @@ static void collectReductionInfo(
   }
 }
 
+/// handling of DeclareReductionOp's cleanup region
+static LogicalResult inlineReductionCleanup(
+    llvm::SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
+    llvm::ArrayRef<llvm::Value *> privateReductionVariables,
+    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder) {
+  for (auto [i, reductionDecl] : llvm::enumerate(reductionDecls)) {
+    Region &cleanupRegion = reductionDecl.getCleanupRegion();
+    if (cleanupRegion.empty())
+      continue;
+
+    // map the argument to the cleanup region
+    Block &entry = cleanupRegion.front();
+    moduleTranslation.mapValue(entry.getArgument(0),
+                               privateReductionVariables[i]);
+
+    if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
+                                       builder, moduleTranslation)))
+      return failure();
+
+    // clear block argument mapping in case it needs to be re-created with a
+    // different source for another use of the same reduction decl
+    moduleTranslation.forgetMapping(cleanupRegion);
+  }
+  return success();
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1072,7 +1098,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   tempTerminator->eraseFromParent();
   builder.restoreIP(nextInsertionPoint);
 
-  return success();
+  // after the workshare loop, deallocate private reduction variables
+  return inlineReductionCleanup(reductionDecls, privateReductionVariables,
+                                moduleTranslation, builder);
 }
 
 /// A RAII class that on construction replaces the region arguments of the
@@ -1125,13 +1153,13 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   LogicalResult bodyGenStatus = success();
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
-  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
-    // Collect reduction declarations
-    SmallVector<omp::DeclareReductionOp> reductionDecls;
-    collectReductionDecls(opInst, reductionDecls);
+  // Collect reduction declarations
+  SmallVector<omp::DeclareReductionOp> reductionDecls;
+  collectReductionDecls(opInst, reductionDecls);
+  SmallVector<llvm::Value *> privateReductionVariables;
 
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
-    SmallVector<llvm::Value *> privateReductionVariables;
     DenseMap<Value, llvm::Value *> reductionVariableMap;
     if (!isByRef) {
       allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
@@ -1331,7 +1359,18 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   // TODO: Perform finalization actions for variables. This has to be
   // called for variables which have destructors/finalizers.
-  auto finiCB = [&](InsertPointTy codeGenIP) {};
+  auto finiCB = [&](InsertPointTy codeGenIP) {
+    InsertPointTy oldIP = builder.saveIP();
+    builder.restoreIP(codeGenIP);
+
+    // if the reduction has a cleanup region, inline it here to finalize the
+    // reduction variables
+    if (failed(inlineReductionCleanup(reductionDecls, privateReductionVariables,
+                                      moduleTranslation, builder)))
+      bodyGenStatus = failure();
+
+    builder.restoreIP(oldIP);
+  };
 
   llvm::Value *ifCond = nullptr;
   if (auto ifExprVar = opInst.getIfExprVar())
