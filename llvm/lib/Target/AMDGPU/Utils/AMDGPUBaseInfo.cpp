@@ -182,6 +182,8 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
     return 4;
   case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
     return 5;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    return 6;
   default:
     return getDefaultAMDHSACodeObjectVersion();
   }
@@ -499,9 +501,7 @@ bool isVOPC64DPP(unsigned Opc) {
   return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
-bool isVOPCAsmOnly(unsigned Opc) {
-  return isVOPCAsmOnlyOpcodeHelper(Opc) || isVOP3CAsmOnlyOpcodeHelper(Opc);
-}
+bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
@@ -1214,6 +1214,9 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1261,6 +1264,9 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    // On GFX12 we can allocate at most 8 blocks of VGPRs.
+    return 8 * getVGPRAllocGranule(STI);
   return getAddressableNumArchVGPRs(STI);
 }
 
