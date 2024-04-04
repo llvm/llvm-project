@@ -1981,20 +1981,34 @@ static void handleWeakRefAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) WeakRefAttr(S.Context, AL));
 }
 
-// Mark alias/ifunc target as used. For C++, we look up the demangled name
-// ignoring parameters. This should handle the majority of use cases while
-// leaveing false positives for namespace scope names and false negatives in
-// the presence of overloads.
+// Mark alias/ifunc target as used. Due to name mangling, we look up the
+// demangled name ignoring parameters. This should handle the majority of use
+// cases while leaving namespace scope names unmarked.
 static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
                                     StringRef Str) {
-  char *Demangled = llvm::itaniumDemangle(Str, /*ParseParams=*/false);
-  if (Demangled)
-    Str = Demangled;
-  const DeclarationNameInfo target(&S.Context.Idents.get(Str), AL.getLoc());
+  char *Demangled = nullptr;
+  if (S.getASTContext().getCXXABIKind() != TargetCXXABI::Microsoft)
+    Demangled = llvm::itaniumDemangle(Str, /*ParseParams=*/false);
+  std::unique_ptr<MangleContext> MC;
+  MC.reset(S.getASTContext().createMangleContext());
+  SmallString<256> Name;
+
+  const DeclarationNameInfo target(
+      &S.Context.Idents.get(Demangled ? Demangled : Str), AL.getLoc());
   LookupResult LR(S, target, Sema::LookupOrdinaryName);
-  if (S.LookupQualifiedName(LR, S.getCurLexicalContext()))
-    for (NamedDecl *ND : LR)
-      ND->markUsed(S.Context);
+  if (S.LookupName(LR, S.TUScope)) {
+    for (NamedDecl *ND : LR) {
+      if (MC->shouldMangleDeclName(ND)) {
+        llvm::raw_svector_ostream Out(Name);
+        Name.clear();
+        MC->mangleName(GlobalDecl(ND), Out);
+      } else {
+        Name = ND->getIdentifier()->getName();
+      }
+      if (Name == Str)
+        ND->markUsed(S.Context);
+    }
+  }
   free(Demangled);
 }
 
@@ -5991,6 +6005,20 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) BuiltinAliasAttr(S.Context, AL, Ident));
 }
 
+static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (AL.isUsedAsTypeAttr())
+    return;
+
+  if (auto *CRD = dyn_cast<CXXRecordDecl>(D);
+      !CRD || !(CRD->isClass() || CRD->isStruct())) {
+    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type_str)
+        << AL << AL.isRegularKeywordAttribute() << "classes";
+    return;
+  }
+
+  handleSimpleAttribute<TypeNullableAttr>(S, D, AL);
+}
+
 static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.hasParsedType()) {
     S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
@@ -9941,6 +9969,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_TypeNullable:
+    handleNullableTypeAttr(S, D, AL);
     break;
   }
 }
