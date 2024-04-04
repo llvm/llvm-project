@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_OPERATION_TRAITS_H
-#define _LIBCPP___TYPE_TRAITS_OPERATION_TRAITS_H
+#ifndef _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
+#define _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
 
 #include <__config>
-#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,8 +32,8 @@ struct __plus_tag {};
 // predicate being passed is actually going to call a builtin operator, or has
 // some specific semantics.
 template <class _CanonicalTag, class _Operation, class... _Args>
-struct __desugars_to : false_type {};
+inline const bool __desugars_to_v = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_OPERATION_TRAITS_H
+#endif // _LIBCPP___TYPE_TRAITS_DESUGARS_TO_H
