@@ -52,11 +52,6 @@
 #define STD_STRCPY_UNSUPPORTED 1
 #endif
 
-#if !defined(STD_STRCMP_UNSUPPORTED) && \
-    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
-#define STD_STRCMP_UNSUPPORTED 1
-#endif
-
 namespace Fortran::runtime {
 
 #if STD_FILL_N_UNSUPPORTED
@@ -180,20 +175,6 @@ static inline RT_API_ATTRS char *strcpy(char *dest, const char *src) {
 #else // !STD_STRCPY_UNSUPPORTED
 using std::strcpy;
 #endif // !STD_STRCPY_UNSUPPORTED
-
-#if STD_STRCMP_UNSUPPORTED
-// Provides alternative implementation for std::strcmp(), if
-// it is not supported.
-static inline RT_API_ATTRS int strcmp(const char *lhs, const char *rhs) {
-  while (*lhs != '\0' && *lhs == *rhs) {
-    ++lhs;
-    ++rhs;
-  }
-  return static_cast<unsigned char>(*lhs) - static_cast<unsigned char>(*rhs);
-}
-#else // !STD_STRCMP_UNSUPPORTED
-using std::strcmp;
-#endif // !STD_STRCMP_UNSUPPORTED
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
