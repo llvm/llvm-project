@@ -557,9 +557,11 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.write(static_cast<uint64_t>(Id));
     }
 
-    auto RecordWriter = std::make_unique<memprof::RecordWriterTrait>();
+    auto RecordWriter =
+        std::make_unique<memprof::RecordWriterTrait<memprof::Version1>>();
     RecordWriter->Schema = &Schema;
-    OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
+    OnDiskChainedHashTableGenerator<
+        memprof::RecordWriterTrait<memprof::Version1>>
         RecordTableGenerator;
     for (auto &I : MemProfRecordData) {
       // Insert the key (func hash) and value (memprof record).
