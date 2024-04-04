@@ -1,5 +1,5 @@
-//===-- Unittests for feclearexcept, feraiseexcept, fetestexpect -------===//
-//===-- and fesetexcept ------------------------------------------------===//
+//===-- Unittests for feclearexcept, feraiseexcept, fetestexpect ----------===//
+//===-- and fesetexcept ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -144,8 +144,8 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   int s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
   ASSERT_EQ(s, ALL_EXCEPTS);
 
-  int r1 = LIBC_NAMESPACE::fesetexcept(ALL_EXCEPTS);
+  r = LIBC_NAMESPACE::fesetexcept(ALL_EXCEPTS);
   ASSERT_EQ(r, 0);
-  int s1 = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
+  s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
   ASSERT_EQ(s, ALL_EXCEPTS);
 }
