@@ -23,6 +23,9 @@ namespace mlir {
 /// Creates a pass that bufferizes the SCF dialect.
 std::unique_ptr<Pass> createSCFBufferizePass();
 
+/// Creates a pass that preprocesses SCF loop before One-Shot Bufferize.
+std::unique_ptr<Pass> createSCFLoopBufferizationPreprocessingPass();
+
 /// Creates a pass that specializes for loop for unrolling and
 /// vectorization.
 std::unique_ptr<Pass> createForLoopSpecializationPass();
