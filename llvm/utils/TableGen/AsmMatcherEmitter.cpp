@@ -2886,7 +2886,8 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
   OS << "    "
      << getMinimalTypeForRange(
             std::distance(Info.Classes.begin(), Info.Classes.end()) +
-            2 /* Include 'InvalidMatchClass' and 'OptionalMatchClass' */)
+            3) /* Include 'InvalidMatchClass', 'OptionalMatchClass', and
+                  'NumMatchClassKinds' */
      << " Class;\n";
   OS << "    " << getMinimalTypeForRange(MaxFeaturesIndex)
      << " RequiredFeaturesIdx;\n\n";
@@ -3518,7 +3519,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    "
      << getMinimalTypeForRange(
             std::distance(Info.Classes.begin(), Info.Classes.end()) +
-            2 /* Include 'InvalidMatchClass' and 'OptionalMatchClass' */)
+            3) /* Include 'InvalidMatchClass', 'OptionalMatchClass', and
+                  'NumMatchClassKinds' */
      << " Classes[" << MaxNumOperands << "];\n";
   OS << "    StringRef getMnemonic() const {\n";
   OS << "      return StringRef(MnemonicTable + Mnemonic + 1,\n";
