@@ -1100,6 +1100,25 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
   EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &KB));
 }
 
+static void AddRangeMetadata(LLVMContext &Context, MachineInstr *Load) {
+  IntegerType *Int8Ty = Type::getInt8Ty(Context);
+
+  // Value must be in [0, 2)
+  Metadata *LowAndHigh[] = {
+      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 0)),
+      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 2))};
+  auto NewMDNode = MDNode::get(Context, LowAndHigh);
+  const MachineMemOperand *OldMMO = *Load->memoperands_begin();
+  MachineMemOperand *NewMMO =
+      Load->getParent()->getParent()->getMachineMemOperand(
+          OldMMO->getPointerInfo(), OldMMO->getFlags(), OldMMO->getMemoryType(),
+          OldMMO->getAlign(), OldMMO->getAAInfo(), NewMDNode);
+  MachineIRBuilder MIB(*Load);
+  MIB.buildLoadInstr(Load->getOpcode(), Load->getOperand(0),
+                     Load->getOperand(1), *NewMMO);
+  Load->eraseFromParent();
+}
+
 TEST_F(AArch64GISelMITest, TestMetadata) {
   StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
                         "  %load:_(s8) = G_LOAD %imp(p0) :: (load (s8))\n"
@@ -1120,20 +1139,7 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
   MachineInstr *And = MRI->getVRegDef(SrcReg);
   MachineInstr *Ext = MRI->getVRegDef(And->getOperand(1).getReg());
   MachineInstr *Load = MRI->getVRegDef(Ext->getOperand(1).getReg());
-  IntegerType *Int8Ty = Type::getInt8Ty(Context);
-
-  // Value must be in [0, 2)
-  Metadata *LowAndHigh[] = {
-      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 0)),
-      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 2))};
-  auto NewMDNode = MDNode::get(Context, LowAndHigh);
-  const MachineMemOperand *OldMMO = *Load->memoperands_begin();
-  MachineMemOperand NewMMO(OldMMO->getPointerInfo(), OldMMO->getFlags(),
-                           OldMMO->getSizeInBits(), OldMMO->getAlign(),
-                           OldMMO->getAAInfo(), NewMDNode);
-  MachineIRBuilder MIB(*Load);
-  MIB.buildLoad(Load->getOperand(0), Load->getOperand(1), NewMMO);
-  Load->eraseFromParent();
+  AddRangeMetadata(Context, Load);
 
   GISelKnownBits Info(*MF);
   KnownBits Res = Info.getKnownBits(And->getOperand(1).getReg());
@@ -1146,6 +1152,66 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
   APInt Mask(Res.getBitWidth(), 1);
   Mask.flipAllBits();
   EXPECT_EQ(Mask.getZExtValue(), Res.Zero.getZExtValue());
+}
+
+TEST_F(AArch64GISelMITest, TestMetadataExt) {
+  StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
+                        "  %load:_(s32) = G_LOAD %imp(p0) :: (load (s8))\n"
+                        "  %copy:_(s32) = COPY %load(s32)\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  MachineInstr *Load = MRI->getVRegDef(SrcReg);
+  AddRangeMetadata(Context, Load);
+
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(SrcReg);
+  EXPECT_TRUE(Res.One.isZero());
+  EXPECT_EQ(Res.Zero.getZExtValue(), 0xfeu);
+}
+
+TEST_F(AArch64GISelMITest, TestMetadataZExt) {
+  StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
+                        "  %load:_(s32) = G_ZEXTLOAD %imp(p0) :: (load (s8))\n"
+                        "  %copy:_(s32) = COPY %load(s32)\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  MachineInstr *Load = MRI->getVRegDef(SrcReg);
+  AddRangeMetadata(Context, Load);
+
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(SrcReg);
+  EXPECT_TRUE(Res.One.isZero());
+  EXPECT_EQ(Res.Zero.getZExtValue(), 0xfffffffe);
+}
+
+TEST_F(AArch64GISelMITest, TestMetadataSExt) {
+  StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
+                        "  %load:_(s32) = G_SEXTLOAD %imp(p0) :: (load (s8))\n"
+                        "  %copy:_(s32) = COPY %load(s32)\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  MachineInstr *Load = MRI->getVRegDef(SrcReg);
+  AddRangeMetadata(Context, Load);
+
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(SrcReg);
+  EXPECT_TRUE(Res.One.isZero());
+  EXPECT_EQ(Res.Zero.getZExtValue(), 0xfffffffe);
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsExt) {

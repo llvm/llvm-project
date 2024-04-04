@@ -1,4 +1,3 @@
-XFAIL: system-aix
 RUN: llvm-objdump --macho --objc-meta-data    %p/Inputs/rel-method-lists-arm64_32.dylib | FileCheck %s --check-prefix=CHK32
 RUN: llvm-otool -ov                           %p/Inputs/rel-method-lists-arm64_32.dylib | FileCheck %s --check-prefix=CHK32
 

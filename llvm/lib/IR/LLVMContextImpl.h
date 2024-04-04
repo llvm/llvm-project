@@ -58,7 +58,7 @@ class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
 struct DiagnosticHandler;
-class DPMarker;
+class DbgMarker;
 class ElementCount;
 class Function;
 class GlobalObject;
@@ -441,7 +441,7 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
   bool IsUnsigned;
 
   MDNodeKeyImpl(APInt Value, bool IsUnsigned, MDString *Name)
-      : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
+      : Value(std::move(Value)), Name(Name), IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
       : Value(APInt(64, Value, !IsUnsigned)), Name(Name),
         IsUnsigned(IsUnsigned) {}
@@ -1675,29 +1675,29 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate &);
 
-  /// Mapping of blocks to collections of "trailing" DPValues. As part of the
-  /// "RemoveDIs" project, debug-info variable location records are going to
-  /// cease being instructions... which raises the problem of where should they
-  /// be recorded when we remove the terminator of a blocks, such as:
+  /// Mapping of blocks to collections of "trailing" DbgVariableRecords. As part
+  /// of the "RemoveDIs" project, debug-info variable location records are going
+  /// to cease being instructions... which raises the problem of where should
+  /// they be recorded when we remove the terminator of a blocks, such as:
   ///
   ///    %foo = add i32 0, 0
   ///    br label %bar
   ///
   /// If the branch is removed, a legitimate transient state while editing a
   /// block, any debug-records between those two instructions will not have a
-  /// location. Each block thus records any DPValue records that "trail" in
-  /// such a way. These are stored in LLVMContext because typically LLVM only
-  /// edits a small number of blocks at a time, so there's no need to bloat
-  /// BasicBlock with such a data structure.
-  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDbgRecords;
+  /// location. Each block thus records any DbgVariableRecord records that
+  /// "trail" in such a way. These are stored in LLVMContext because typically
+  /// LLVM only edits a small number of blocks at a time, so there's no need to
+  /// bloat BasicBlock with such a data structure.
+  SmallDenseMap<BasicBlock *, DbgMarker *> TrailingDbgRecords;
 
   // Set, get and delete operations for TrailingDbgRecords.
-  void setTrailingDbgRecords(BasicBlock *B, DPMarker *M) {
+  void setTrailingDbgRecords(BasicBlock *B, DbgMarker *M) {
     assert(!TrailingDbgRecords.count(B));
     TrailingDbgRecords[B] = M;
   }
 
-  DPMarker *getTrailingDbgRecords(BasicBlock *B) {
+  DbgMarker *getTrailingDbgRecords(BasicBlock *B) {
     return TrailingDbgRecords.lookup(B);
   }
 

@@ -983,7 +983,8 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
+static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
+                                      bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
   StringRef Name = F->getName();
@@ -1056,6 +1057,19 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   }
   case 'd':
     if (Name.consume_front("dbg.")) {
+      // Mark debug intrinsics for upgrade to new debug format.
+      if (CanUpgradeDebugIntrinsicsToRecords &&
+          F->getParent()->IsNewDbgInfoFormat) {
+        if (Name == "addr" || Name == "value" || Name == "assign" ||
+            Name == "declare" || Name == "label") {
+          // There's no function to replace these with.
+          NewFn = nullptr;
+          // But we do want these to get upgraded.
+          return true;
+        }
+      }
+      // Update llvm.dbg.addr intrinsics even in "new debug mode"; they'll get
+      // converted to DbgVariableRecords later.
       if (Name == "addr" || (Name == "value" && F->arg_size() == 4)) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::dbg_value);
@@ -1401,9 +1415,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   return false;
 }
 
-bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
+bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                    bool CanUpgradeDebugIntrinsicsToRecords) {
   NewFn = nullptr;
-  bool Upgraded = upgradeIntrinsicFunction1(F, NewFn);
+  bool Upgraded =
+      upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
   assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
@@ -2332,6 +2348,59 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
 }
 
+/// Helper to unwrap intrinsic call MetadataAsValue operands.
+template <typename MDType>
+static MDType *unwrapMAVOp(CallBase *CI, unsigned Op) {
+  if (MetadataAsValue *MAV = dyn_cast<MetadataAsValue>(CI->getArgOperand(Op)))
+    return dyn_cast<MDType>(MAV->getMetadata());
+  return nullptr;
+}
+
+/// Convert debug intrinsic calls to non-instruction debug records.
+/// \p Name - Final part of the intrinsic name, e.g. 'value' in llvm.dbg.value.
+/// \p CI - The debug intrinsic call.
+static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
+  DbgRecord *DR = nullptr;
+  if (Name == "label") {
+    DR = new DbgLabelRecord(unwrapMAVOp<DILabel>(CI, 0), CI->getDebugLoc());
+  } else if (Name == "assign") {
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
+        unwrapMAVOp<DIExpression>(CI, 2), unwrapMAVOp<DIAssignID>(CI, 3),
+        unwrapMAVOp<Metadata>(CI, 4), unwrapMAVOp<DIExpression>(CI, 5),
+        CI->getDebugLoc());
+  } else if (Name == "declare") {
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, 1),
+        unwrapMAVOp<DIExpression>(CI, 2), CI->getDebugLoc(),
+        DbgVariableRecord::LocationType::Declare);
+  } else if (Name == "addr") {
+    // Upgrade dbg.addr to dbg.value with DW_OP_deref.
+    DIExpression *Expr = unwrapMAVOp<DIExpression>(CI, 2);
+    Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
+    DR = new DbgVariableRecord(unwrapMAVOp<Metadata>(CI, 0),
+                               unwrapMAVOp<DILocalVariable>(CI, 1), Expr,
+                               CI->getDebugLoc());
+  } else if (Name == "value") {
+    // An old version of dbg.value had an extra offset argument.
+    unsigned VarOp = 1;
+    unsigned ExprOp = 2;
+    if (CI->arg_size() == 4) {
+      auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1));
+      // Nonzero offset dbg.values get dropped without a replacement.
+      if (!Offset || !Offset->isZeroValue())
+        return;
+      VarOp = 2;
+      ExprOp = 3;
+    }
+    DR = new DbgVariableRecord(
+        unwrapMAVOp<Metadata>(CI, 0), unwrapMAVOp<DILocalVariable>(CI, VarOp),
+        unwrapMAVOp<DIExpression>(CI, ExprOp), CI->getDebugLoc());
+  }
+  assert(DR && "Unhandled intrinsic kind in upgrade to DbgRecord");
+  CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -2347,6 +2416,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
+    bool FallthroughToDefaultUpgrade = false;
     // Get the Function's name.
     StringRef Name = F->getName();
 
@@ -2357,6 +2427,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsNVVM = Name.consume_front("nvvm.");
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
+    bool IsDbg = Name.consume_front("dbg.");
 
     if (IsX86 && Name.starts_with("sse4a.movnt.")) {
       SmallVector<Metadata *, 1> Elts;
@@ -2461,7 +2532,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
 
-    Value *Rep;
+    Value *Rep = nullptr;
     // Upgrade packed integer vector compare intrinsics to compare instructions.
     if (IsX86 && (Name.starts_with("sse2.pcmp") ||
                   Name.starts_with("avx2.pcmp"))) {
@@ -4196,14 +4267,30 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
+    } else if (IsDbg) {
+      // We might have decided we don't want the new format after all between
+      // first requesting the upgrade and now; skip the conversion if that is
+      // the case, and check here to see if the intrinsic needs to be upgraded
+      // normally.
+      if (!CI->getModule()->IsNewDbgInfoFormat) {
+        bool NeedsUpgrade =
+            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+        if (!NeedsUpgrade)
+          return;
+        FallthroughToDefaultUpgrade = true;
+      } else {
+        upgradeDbgIntrinsicToDbgRecord(Name, CI);
+      }
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (Rep)
-      CI->replaceAllUsesWith(Rep);
-    CI->eraseFromParent();
-    return;
+    if (!FallthroughToDefaultUpgrade) {
+      if (Rep)
+        CI->replaceAllUsesWith(Rep);
+      CI->eraseFromParent();
+      return;
+    }
   }
 
   const auto &DefaultCase = [&]() -> void {

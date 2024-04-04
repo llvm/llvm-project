@@ -148,6 +148,14 @@ inline Expr<SomeType> AsGenericExpr(Expr<SomeType> &&x) { return std::move(x); }
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&);
 std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
 
+// Propagate std::optional from input to output.
+template <typename A>
+std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
+  if (!x)
+    return std::nullopt;
+  return AsGenericExpr(std::move(*x));
+}
+
 template <typename A>
 common::IfNoLvalue<Expr<SomeKind<ResultType<A>::category>>, A> AsCategoryExpr(
     A &&x) {

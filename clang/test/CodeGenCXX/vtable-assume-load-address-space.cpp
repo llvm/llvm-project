@@ -25,7 +25,7 @@ void g(A *a) { a->foo(); }
 // CHECK1-LABEL: define{{.*}} void @_ZN5test14fooAEv()
 // CHECK1: call void @_ZN5test11AC1Ev(ptr
 // CHECK1: %[[VTABLE:.*]] = load ptr addrspace(1), ptr %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11AE, i32 0, inrange i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11AE, i32 0, i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
@@ -37,7 +37,7 @@ void fooA() {
 // CHECK1-LABEL: define{{.*}} void @_ZN5test14fooBEv()
 // CHECK1: call void @_ZN5test11BC1Ev(ptr {{[^,]*}} %{{.*}})
 // CHECK1: %[[VTABLE:.*]] = load ptr addrspace(1), ptr %{{.*}}
-// CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11BE, i32 0, inrange i32 0, i32 2)
+// CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11BE, i32 0, i32 0, i32 2)
 // CHECK1: call void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
@@ -71,12 +71,12 @@ void h(B *b) { b->bar(); }
 // CHECK2-LABEL: define{{.*}} void @_ZN5test24testEv()
 // CHECK2: call void @_ZN5test21CC1Ev(ptr
 // CHECK2: %[[VTABLE:.*]] = load ptr addrspace(1), ptr {{.*}}
-// CHECK2: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, inrange i32 0, i32 2)
+// CHECK2: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, i32 0, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP]])
 
 // CHECK2: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 8
 // CHECK2: %[[VTABLE2:.*]] = load ptr addrspace(1), ptr %[[ADD_PTR]]
-// CHECK2: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, inrange i32 1, i32 2)
+// CHECK2: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, i32 1, i32 2)
 // CHECK2: call void @llvm.assume(i1 %[[CMP2]])
 
 // CHECK2: call void @_ZN5test21gEPNS_1AE(
@@ -107,7 +107,7 @@ void g(B *a) { a->foo(); }
 
 // CHECK3-LABEL: define{{.*}} void @_ZN5test34testEv()
 // CHECK3: call void @_ZN5test31CC1Ev(ptr
-// CHECK3: %[[CMP:.*]] = icmp eq ptr addrspace(1) %{{.*}}, getelementptr inbounds ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test31CE, i32 0, inrange i32 0, i32 3)
+// CHECK3: %[[CMP:.*]] = icmp eq ptr addrspace(1) %{{.*}}, getelementptr inbounds inrange(-24, 8) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test31CE, i32 0, i32 0, i32 3)
 // CHECK3: call void @llvm.assume(i1 %[[CMP]])
 // CHECK3-LABLEL: }
 void test() {
@@ -136,11 +136,11 @@ void g(C *c) { c->foo(); }
 // CHECK4-LABEL: define{{.*}} void @_ZN5test44testEv()
 // CHECK4: call void @_ZN5test41CC1Ev(ptr
 // CHECK4: %[[VTABLE:.*]] = load ptr addrspace(1), ptr %{{.*}}
-// CHECK4: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
+// CHECK4: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP]]
 
 // CHECK4: %[[VTABLE2:.*]] = load ptr addrspace(1), ptr %{{.*}}
-// CHECK4: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, inrange i32 0, i32 4)
+// CHECK4: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, i32 0, i32 4)
 // CHECK4: call void @llvm.assume(i1 %[[CMP2]])
 // CHECK4-LABEL: {{^}}}
 

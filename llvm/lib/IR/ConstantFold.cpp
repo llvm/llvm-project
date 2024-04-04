@@ -1468,6 +1468,10 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   if (PointeeTy != GEP->getResultElementType())
     return nullptr;
 
+  // Leave inrange handling to DL-aware constant folding.
+  if (GEP->getInRange())
+    return nullptr;
+
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idx0->isNullValue()) {
     // Handle the simple case of a zero index.
@@ -1477,7 +1481,7 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
     NewIndices.append(Idxs.begin() + 1, Idxs.end());
     return ConstantExpr::getGetElementPtr(
         GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
-        NewIndices, InBounds && GEP->isInBounds(), GEP->getInRangeIndex());
+        NewIndices, InBounds && GEP->isInBounds());
   }
 
   gep_type_iterator LastI = gep_type_end(GEP);
@@ -1526,21 +1530,14 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   NewIndices.push_back(ConstantExpr::get(Instruction::Add, Idx0, LastIdx));
   NewIndices.append(Idxs.begin() + 1, Idxs.end());
 
-  // The combined GEP normally inherits its index inrange attribute from
-  // the inner GEP, but if the inner GEP's last index was adjusted by the
-  // outer GEP, any inbounds attribute on that index is invalidated.
-  std::optional<unsigned> IRIndex = GEP->getInRangeIndex();
-  if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
-    IRIndex = std::nullopt;
-
   return ConstantExpr::getGetElementPtr(
       GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
-      NewIndices, InBounds && GEP->isInBounds(), IRIndex);
+      NewIndices, InBounds && GEP->isInBounds());
 }
 
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
-                                          std::optional<unsigned> InRangeIndex,
+                                          std::optional<ConstantRange> InRange,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 
@@ -1556,7 +1553,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
   auto IsNoOp = [&]() {
     // Avoid losing inrange information.
-    if (InRangeIndex)
+    if (InRange)
       return false;
 
     return all_of(Idxs, [](Value *Idx) {
@@ -1594,12 +1591,6 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     if (!isa<ConstantInt>(Idxs[i - 1]) && !isa<ConstantDataVector>(Idxs[i - 1]))
       // Skip if the type of the previous index is not supported.
       continue;
-    if (InRangeIndex && i == *InRangeIndex + 1) {
-      // If an index is marked inrange, we cannot apply this canonicalization to
-      // the following index, as that will cause the inrange index to point to
-      // the wrong element.
-      continue;
-    }
     if (isa<StructType>(Ty)) {
       // The verify makes sure that GEPs into a struct are in range.
       continue;
@@ -1621,16 +1612,16 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       }
     } else {
       auto *CV = cast<ConstantDataVector>(Idxs[i]);
-      bool InRange = true;
+      bool IsInRange = true;
       for (unsigned I = 0, E = CV->getNumElements(); I != E; ++I) {
         auto *CI = cast<ConstantInt>(CV->getElementAsConstant(I));
-        InRange &= isIndexInRangeOfArrayType(STy->getNumElements(), CI);
+        IsInRange &= isIndexInRangeOfArrayType(STy->getNumElements(), CI);
         if (CI->isNegative()) {
           Unknown = true;
           break;
         }
       }
-      if (InRange || Unknown)
+      if (IsInRange || Unknown)
         // It's in range, skip to the next index.
         // It's out of range and negative, don't try to factor it.
         continue;
@@ -1720,7 +1711,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     for (unsigned i = 0, e = Idxs.size(); i != e; ++i)
       if (!NewIdxs[i]) NewIdxs[i] = cast<Constant>(Idxs[i]);
     return ConstantExpr::getGetElementPtr(PointeeTy, C, NewIdxs, InBounds,
-                                          InRangeIndex);
+                                          InRange);
   }
 
   // If all indices are known integers and normalized, we can do a simple
@@ -1730,7 +1721,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
           isInBoundsIndices(Idxs))
         return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
-                                              /*InBounds=*/true, InRangeIndex);
+                                              /*InBounds=*/true, InRange);
 
   return nullptr;
 }

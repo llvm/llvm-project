@@ -285,8 +285,7 @@ module {
     %has_runtime = sparse_tensor.has_runtime_library
     scf.if %has_runtime {
       // sparse_tensor.assemble copies buffers when running with the runtime
-      // library. Deallocations are needed not needed when running in codgen
-      // mode.
+      // library. Deallocations are not needed when running in codegen mode.
       bufferization.dealloc_tensor %s4 : tensor<10x10xf64, #SortedCOO>
       bufferization.dealloc_tensor %s5 : tensor<10x10xf64, #SortedCOOI32>
       bufferization.dealloc_tensor %csr : tensor<2x2xf64, #CSR>

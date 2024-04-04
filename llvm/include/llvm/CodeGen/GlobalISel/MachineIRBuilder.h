@@ -1165,6 +1165,17 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildVScale(const DstOp &Res, const ConstantInt &MinElts);
 
+  /// Build and insert \p Res = G_VSCALE \p MinElts
+  ///
+  /// G_VSCALE puts the value of the runtime vscale multiplied by \p MinElts
+  /// into \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildVScale(const DstOp &Res, const APInt &MinElts);
+
   /// Build and insert a G_INTRINSIC instruction.
   ///
   /// There are four different opcodes based on combinations of whether the
@@ -1322,9 +1333,9 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder
-  buildAtomicCmpXchgWithSuccess(Register OldValRes, Register SuccessRes,
-                                Register Addr, Register CmpVal, Register NewVal,
-                                MachineMemOperand &MMO);
+  buildAtomicCmpXchgWithSuccess(const DstOp &OldValRes, const DstOp &SuccessRes,
+                                const SrcOp &Addr, const SrcOp &CmpVal,
+                                const SrcOp &NewVal, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMIC_CMPXCHG Addr, CmpVal, NewVal,
   /// MMO`.
@@ -1340,8 +1351,9 @@ public:
   ///      registers of the same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicCmpXchg(Register OldValRes, Register Addr,
-                                         Register CmpVal, Register NewVal,
+  MachineInstrBuilder buildAtomicCmpXchg(const DstOp &OldValRes,
+                                         const SrcOp &Addr, const SrcOp &CmpVal,
+                                         const SrcOp &NewVal,
                                          MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_<Opcode> Addr, Val, MMO`.
@@ -2111,6 +2123,11 @@ public:
                                   MachineMemOperand &SrcMMO) {
     return buildMemTransferInst(TargetOpcode::G_MEMCPY, DstPtr, SrcPtr, Size,
                                 DstMMO, SrcMMO);
+  }
+
+  /// Build and insert G_TRAP or G_DEBUGTRAP
+  MachineInstrBuilder buildTrap(bool Debug = false) {
+    return buildInstr(Debug ? TargetOpcode::G_DEBUGTRAP : TargetOpcode::G_TRAP);
   }
 
   /// Build and insert \p Dst = G_SBFX \p Src, \p LSB, \p Width.
