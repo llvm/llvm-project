@@ -109,6 +109,8 @@ void IoErrorHandler::SignalPendingError() {
   SignalError(error);
 }
 
+RT_OFFLOAD_API_GROUP_END
+
 void IoErrorHandler::SignalErrno() { SignalError(errno); }
 
 bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
@@ -125,10 +127,7 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
   // in LLVM v9.0.1 with inadequate modification for Fortran,
   // since rectified.
   bool ok{false};
-#if defined(RT_DEVICE_COMPILATION)
-  // strerror_r is not available on device.
-  msg = "errno description is not available on device";
-#elif HAVE_STRERROR_R
+#if HAVE_STRERROR_R
   // strerror_r is thread-safe.
 #if defined(__GLIBC__) && defined(_GNU_SOURCE)
   // glibc defines its own incompatible version of strerror_r
@@ -158,6 +157,4 @@ bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
     return false;
   }
 }
-
-RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io
