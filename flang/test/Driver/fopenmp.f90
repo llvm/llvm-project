@@ -8,12 +8,13 @@
 ! RUN: %flang -target x86_64-freebsd -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-NO-OPENMP
 ! RUN: %flang -target x86_64-freebsd -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-OPENMP
 ! RUN: %flang -target x86_64-windows-gnu -fopenmp=libomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-OPENMP
-! RUN: %flang -target x86_64-windows-gnu -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-NO-OPENMP
+! RUN: %flang -target x86_64-windows-gnu -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-NO-OPENMP --check-prefix=CHECK-WARNING
 ! RUN: %flang -target x86_64-windows-gnu -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FC1-OPENMP
 
 ! CHECK-FC1-OPENMP: "-fc1"
 ! CHECK-FC1-OPENMP: "-fopenmp"
 !
+! CHECK-WARNING: warning: The library '-fopenmp=={{.*}}' is not supported, openmp is not be enabled
 ! CHECK-FC1-NO-OPENMP: "-fc1"
 ! CHECK-FC1-NO-OPENMP-NOT: "-fopenmp"
 !

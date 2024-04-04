@@ -777,6 +777,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       // FIXME: It would be better to have a mode which *only* omits IR
       // generation based on the OpenMP support so that we get consistent
       // semantic analysis, etc.
+      const Arg *A = Args.getLastArg(options::OPT_fopenmp_EQ);
+      D.Diag(diag::warn_drv_unsupported_openmp_library)
+          << A->getSpelling() << A->getValue();
       break;
     }
   }
