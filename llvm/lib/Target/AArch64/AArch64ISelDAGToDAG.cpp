@@ -462,7 +462,7 @@ private:
                          SDValue &Offset, SDValue &SignExtend,
                          SDValue &DoShift);
   bool isWorthFoldingALU(SDValue V, bool LSL = false) const;
-  bool isWorthFoldingAddr(SDValue V) const;
+  bool isWorthFoldingAddr(SDValue V, unsigned Size) const;
   bool SelectExtendedSHL(SDValue N, unsigned Size, bool WantExtend,
                          SDValue &Offset, SDValue &SignExtend);
 
@@ -674,17 +674,22 @@ static bool isWorthFoldingSHL(SDValue V) {
 
 /// Determine whether it is worth to fold V into an extended register addressing
 /// mode.
-bool AArch64DAGToDAGISel::isWorthFoldingAddr(SDValue V) const {
+bool AArch64DAGToDAGISel::isWorthFoldingAddr(SDValue V, unsigned Size) const {
   // Trivial if we are optimizing for code size or if there is only
   // one use of the value.
   if (CurDAG->shouldOptForSize() || V.hasOneUse())
     return true;
-  // If a subtarget has a fastpath LSL we can fold a logical shift into
-  // the addressing mode and save a cycle.
-  if (Subtarget->hasAddrLSLFast() && V.getOpcode() == ISD::SHL &&
-      isWorthFoldingSHL(V))
+
+  // If a subtarget has a slow shift, folding a shift into multiple loads
+  // costs additional micro-ops.
+  if (Subtarget->hasAddrLSLSlow14() && (Size == 2 || Size == 16))
+    return false;
+
+  // Check whether we're going to emit the address arithmetic anyway because
+  // it's used by a non-address operation.
+  if (V.getOpcode() == ISD::SHL && isWorthFoldingSHL(V))
     return true;
-  if (Subtarget->hasAddrLSLFast() && V.getOpcode() == ISD::ADD) {
+  if (V.getOpcode() == ISD::ADD) {
     const SDValue LHS = V.getOperand(0);
     const SDValue RHS = V.getOperand(1);
     if (LHS.getOpcode() == ISD::SHL && isWorthFoldingSHL(LHS))
@@ -1203,7 +1208,7 @@ bool AArch64DAGToDAGISel::SelectExtendedSHL(SDValue N, unsigned Size,
   if (ShiftVal != 0 && ShiftVal != LegalShiftVal)
     return false;
 
-  return isWorthFoldingAddr(N);
+  return isWorthFoldingAddr(N, Size);
 }
 
 bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
@@ -1231,7 +1236,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   }
 
   // Remember if it is worth folding N when it produces extended register.
-  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N);
+  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N, Size);
 
   // Try to match a shifted extend on the RHS.
   if (IsExtendedRegisterWorthFolding && RHS.getOpcode() == ISD::SHL &&
@@ -1261,7 +1266,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
     Offset = narrowIfNeeded(CurDAG, LHS.getOperand(0));
     SignExtend = CurDAG->getTargetConstant(Ext == AArch64_AM::SXTW, dl,
                                            MVT::i32);
-    if (isWorthFoldingAddr(LHS))
+    if (isWorthFoldingAddr(LHS, Size))
       return true;
   }
 
@@ -1273,7 +1278,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
     Offset = narrowIfNeeded(CurDAG, RHS.getOperand(0));
     SignExtend = CurDAG->getTargetConstant(Ext == AArch64_AM::SXTW, dl,
                                            MVT::i32);
-    if (isWorthFoldingAddr(RHS))
+    if (isWorthFoldingAddr(RHS, Size))
       return true;
   }
 
@@ -1343,7 +1348,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   }
 
   // Remember if it is worth folding N when it produces extended register.
-  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N);
+  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N, Size);
 
   // Try to match a shifted extend on the RHS.
   if (IsExtendedRegisterWorthFolding && RHS.getOpcode() == ISD::SHL &&
