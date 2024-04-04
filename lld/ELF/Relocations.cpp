@@ -898,9 +898,9 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, offsetInSec});
+          {&isec, isec.relocs().size() - 1});
     else
-      part.relrDyn->relocs.push_back({&isec, offsetInSec});
+      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(target->relativeRel, isec, offsetInSec,
@@ -1154,6 +1154,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         // relative relocation. Use a symbolic relocation instead.
         if (sym.isPreemptible) {
           part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+          // When symbol values are determined in
+          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
+          // may be moved to .rela.dyn.
+          sec->addReloc({expr, type, offset, addend, &sym});
+          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
                                   DynamicReloc::AddendOnlyWithTargetVA, sym,
