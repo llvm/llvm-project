@@ -25,6 +25,7 @@
 ; SAMPLE_USE_PRE_LINK: Running pass: SROAPass
 ; SAMPLE_USE_PRE_LINK: Running pass: EarlyCSEPass
 ; SAMPLE_USE: Running pass: SampleProfileLoaderPass
+; SAMPLE_USE: Running pass: UnpredictableProfileLoaderPass
 ; SAMPLE_USE_O: Running pass: PGOIndirectCallPromotion
 ; SAMPLE_USE_POST_LINK-NOT: Running pass: GlobalOptPass
 ; SAMPLE_USE_POST_LINK: Running pass: PGOIndirectCallPromotion
