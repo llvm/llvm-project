@@ -641,6 +641,25 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
   }
 }
 
+static void recursivelyDeleteDeadRecipes(VPValue *V) {
+  SmallVector<VPValue *> WorkList;
+  SmallPtrSet<VPValue *, 8> Seen;
+  WorkList.push_back(V);
+
+  while (!WorkList.empty()) {
+    VPValue *Cur = WorkList.pop_back_val();
+    if (!Seen.insert(Cur).second)
+      continue;
+    VPRecipeBase *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (!isDeadRecipe(*R))
+      continue;
+    WorkList.append(R->op_begin(), R->op_end());
+    R->eraseFromParent();
+  }
+}
+
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -674,7 +693,11 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   auto *BOC =
       new VPInstruction(VPInstruction::BranchOnCond,
                         {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))});
+
+  SmallVector<VPValue *> PossiblyDead(Term->operands());
   Term->eraseFromParent();
+  for (VPValue *Op : PossiblyDead)
+    recursivelyDeleteDeadRecipes(Op);
   ExitingVPBB->appendRecipe(BOC);
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);
