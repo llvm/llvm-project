@@ -12,9 +12,43 @@ define i16 @helper(i16 %0, i64 %x) {
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [2 x i8], align 2
 ; CHECK-NEXT:    store i16 [[TMP0:%.*]], ptr [[DATA]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[X:%.*]], 12
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 1, [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt ptr [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[X]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 2, [[X]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DATA]], i64 [[TMP5]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP]]
+; CHECK-NEXT:    [[OR_COND7:%.*]] = or i1 [[OR_COND]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[OR_COND7]], label [[BB6_I_I_PREHEADER:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[X]], -4
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -3
 ; CHECK-NEXT:    br label [[BB6_I_I:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[BB6_I_I]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i64 0, [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [0 x i8], ptr [[DATA]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP7]], align 2, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [0 x i8], ptr [[INVARIANT_GEP]], i64 0, i64 [[TMP6]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[GEP]], align 2, !alias.scope [[META3]]
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD3]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i8> [[REVERSE]], ptr [[TMP7]], align 2, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i8> [[REVERSE4]], ptr [[GEP]], align 2, !alias.scope [[META3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[BB6_I_I]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[X]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[BB6_I_I_PREHEADER]]
+; CHECK:       bb6.i.i.preheader:
+; CHECK-NEXT:    [[ITER_SROA_0_07_I_I_PH:%.*]] = phi i64 [ 0, [[START:%.*]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[BB6_I_I1:%.*]]
 ; CHECK:       bb6.i.i:
-; CHECK-NEXT:    [[ITER_SROA_0_07_I_I:%.*]] = phi i64 [ [[TMP2:%.*]], [[BB6_I_I]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    [[ITER_SROA_0_07_I_I:%.*]] = phi i64 [ [[TMP2:%.*]], [[BB6_I_I1]] ], [ [[ITER_SROA_0_07_I_I_PH]], [[BB6_I_I_PREHEADER]] ]
 ; CHECK-NEXT:    [[_40_I_I:%.*]] = sub nsw i64 0, [[ITER_SROA_0_07_I_I]]
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw i64 [[ITER_SROA_0_07_I_I]], 1
 ; CHECK-NEXT:    [[_34_I_I:%.*]] = getelementptr inbounds [0 x i8], ptr [[DATA]], i64 0, i64 [[ITER_SROA_0_07_I_I]]
@@ -23,8 +57,8 @@ define i16 @helper(i16 %0, i64 %x) {
 ; CHECK-NEXT:    [[TMP2_0_COPYLOAD_I_I_I_I:%.*]] = load i8, ptr [[_39_I_I]], align 1
 ; CHECK-NEXT:    store i8 [[TMP2_0_COPYLOAD_I_I_I_I]], ptr [[_34_I_I]], align 1
 ; CHECK-NEXT:    store i8 [[TMP_0_COPYLOAD_I_I_I_I]], ptr [[_39_I_I]], align 1
-; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[TMP2]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I_I]], label [[EXIT:%.*]], label [[BB6_I_I]]
+; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[TMP2]], [[X]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I_I]], label [[EXIT]], label [[BB6_I_I1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[DOTSROA_0_0_COPYLOAD:%.*]] = load i16, ptr [[DATA]], align 2
 ; CHECK-NEXT:    ret i16 [[DOTSROA_0_0_COPYLOAD]]
