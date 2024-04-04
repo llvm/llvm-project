@@ -25,9 +25,10 @@ namespace scudo {
 // Fatal internal map() error (potentially OOM related).
 void NORETURN reportMapError(uptr SizeIfOOM) {
   ScopedString Error;
-  Error.append("Scudo ERROR: internal map failure");
+  Error.append("Scudo ERROR: internal map failure (error desc=%s)",
+               strerror(errno));
   if (SizeIfOOM) {
-    Error.append(" (NO MEMORY) requesting %zuKB", SizeIfOOM >> 10);
+    Error.append(" requesting %zuKB", SizeIfOOM >> 10);
   }
   Error.append("\n");
   reportRawError(Error.data());
