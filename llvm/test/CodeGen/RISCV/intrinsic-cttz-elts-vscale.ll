@@ -18,14 +18,12 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV32-NEXT:    vand.vv v8, v11, v8
+; RV32-NEXT:    vmerge.vvm v8, v8, v11, v0
 ; RV32-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    lui a1, 16
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_nxv4i32:
@@ -41,14 +39,12 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64-NEXT:    vand.vv v8, v11, v8
+; RV64-NEXT:    vmerge.vvm v8, v8, v11, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
-; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32> %a, i1 0)
   ret i32 %res
@@ -158,8 +154,7 @@ define i32 @ctz_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 ; RV64-NEXT:    li a1, -1
 ; RV64-NEXT:    vmadd.vx v16, a1, v8
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64-NEXT:    vand.vv v8, v16, v8
+; RV64-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    subw a0, a0, a1
