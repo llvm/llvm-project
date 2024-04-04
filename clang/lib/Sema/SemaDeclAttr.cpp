@@ -1989,13 +1989,12 @@ static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
   char *Demangled = nullptr;
   if (S.getASTContext().getCXXABIKind() != TargetCXXABI::Microsoft)
     Demangled = llvm::itaniumDemangle(Str, /*ParseParams=*/false);
-  std::unique_ptr<MangleContext> MC;
-  MC.reset(S.getASTContext().createMangleContext());
+  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
   SmallString<256> Name;
 
-  const DeclarationNameInfo target(
+  const DeclarationNameInfo Target(
       &S.Context.Idents.get(Demangled ? Demangled : Str), AL.getLoc());
-  LookupResult LR(S, target, Sema::LookupOrdinaryName);
+  LookupResult LR(S, Target, Sema::LookupOrdinaryName);
   if (S.LookupName(LR, S.TUScope)) {
     for (NamedDecl *ND : LR) {
       if (MC->shouldMangleDeclName(ND)) {
