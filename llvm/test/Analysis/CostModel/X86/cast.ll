@@ -374,7 +374,7 @@ define i32 @masks4(<4 x i1> %in) {
 ;
 ; AVX1-LABEL: 'masks4'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %Z = zext <4 x i1> %in to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %S = sext <4 x i1> %in to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %S = sext <4 x i1> %in to <4 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'masks4'
