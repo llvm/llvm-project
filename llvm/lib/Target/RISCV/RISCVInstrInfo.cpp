@@ -1472,7 +1472,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::STATEPOINT: {
     // The size of the statepoint intrinsic is the number of bytes requested
     unsigned NumBytes = StatepointOpers(&MI).getNumPatchBytes();
-    // No patch bytes means a PseudoCall is emitted
+    // No patch bytes means at most a PseudoCall is emitted
     return std::max(NumBytes, 8U);
   }
   default:

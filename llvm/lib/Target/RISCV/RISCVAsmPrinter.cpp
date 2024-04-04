@@ -165,14 +165,20 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
       // Materialize the jump address:
       SmallVector<MCInst, 8> Seq;
       RISCVMatInt::generateMCInstSeq(CallTarget, *STI, RISCV::X1, Seq);
-      for (MCInst &Inst : Seq)
+      for (MCInst &Inst : Seq) {
+        MCInst CInst;
+        bool compressed = RISCVRVC::compress(CInst, Inst, *STI);
         EmitToStreamer(OutStreamer, Inst);
-      EncodedBytes += Seq.size() * 4;
-      EmitToStreamer(OutStreamer, MCInstBuilder(RISCV::JALR)
-                                      .addReg(RISCV::X1)
-                                      .addReg(RISCV::X1)
-                                      .addImm(0));
-      EncodedBytes += 4;
+        EncodedBytes += compressed ? 2 : 4;
+      }
+      MCInst CInst;
+      MCInst Inst = MCInstBuilder(RISCV::JALR)
+                        .addReg(RISCV::X1)
+                        .addReg(RISCV::X1)
+                        .addImm(0);
+      bool compressed = RISCVRVC::compress(CInst, Inst, *STI);
+      EmitToStreamer(OutStreamer, Inst);
+      EncodedBytes += compressed ? 2 : 4;
     }
   } else if (CalleeMO.isGlobal()) {
     MCOperand CallTargetMCOp;
