@@ -147,3 +147,105 @@ struct DfsPathFinder : public ICFGPathFinder {
         }
     }
 };
+
+struct DijPathFinder : public ICFGPathFinder {
+    const int INF = 0x3f3f3f3f;
+    std::vector<int> d, fa;
+
+    DijPathFinder(const ICFG &icfg)
+        : ICFGPathFinder(icfg), d(icfg.n), fa(icfg.n) {}
+
+    struct Node {
+        int u, d, fa;
+        bool operator<(const Node &b) const { return d > b.d; }
+    };
+
+    void dij(int s) {
+        std::fill(d.begin(), d.end(), INF);
+        d[s] = 0;
+
+        std::fill(fa.begin(), fa.end(), -1);
+
+        std::priority_queue<Node> q;
+        q.push({s, 0, -1});
+
+        while (!q.empty()) {
+            Node p = q.top();
+            q.pop();
+            int u = p.u;
+            if (p.d != d[u])
+                continue;
+
+            fa[u] = p.fa;
+
+            for (const auto &e : icfg.G[u]) {
+                int v = e.target;
+                if (d[v] > d[u] + 1) {
+                    d[v] = d[u] + 1;
+                    q.push({v, d[v], u});
+                }
+            }
+        }
+    }
+
+    std::vector<int> trace(int u) {
+        std::vector<int> path;
+        while (u != -1) {
+            path.push_back(u);
+            u = fa[u];
+        }
+        std::reverse(path.begin(), path.end());
+        return path;
+    }
+
+    void removeConsecutiveDuplicates(std::vector<int> &v) {
+        if (v.size() <= 1)
+            return;
+        std::vector<int> res;
+        res.push_back(v[0]);
+        for (int i = 1; i < v.size(); i++) {
+            if (v[i] != v[i - 1]) {
+                res.push_back(v[i]);
+            }
+        }
+        v = res;
+    }
+
+    void search(int source, int target, const std::vector<int> &pointsToPass,
+                const std::vector<int> &pointsToAvoid,
+                int maxCallDepth) override {
+        if (source == target) {
+            results.insert({source});
+            return;
+        }
+
+        std::vector<int> ptp;
+        ptp.push_back(source);
+        for (int x : pointsToPass) {
+            ptp.push_back(x);
+        }
+        ptp.push_back(target);
+        removeConsecutiveDuplicates(ptp);
+
+        logger.info("=== DijPathFinder ===");
+        logger.info("path: {}", fmt::join(ptp, " "));
+
+        std::vector<int> path;
+        for (int i = 0; i < ptp.size() - 1; i++) {
+            int u = ptp[i], v = ptp[i + 1];
+            dij(u);
+            if (d[v] == INF) {
+                logger.warn("No path from {} to {}", u, v);
+                return;
+            }
+            std::vector<int> p = trace(v);
+            p.pop_back();
+            path.insert(path.end(), p.begin(), p.end());
+            logger.info("Path {} -> {}, d = {}, p: {}", u, v, d[v],
+                        fmt::join(p, " "));
+        }
+        path.push_back(target);
+
+        results.insert(path);
+    }
+};
