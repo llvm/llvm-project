@@ -2340,7 +2340,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       Wait.BvhCnt = 0;
   }
 
-  // Combine or remove any redundant waitcnts ar the end of the block.
+  // Combine or remove any redundant waitcnts at the end of the block.
   Modified |= generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
                               OldWaitcntInstr);
 
