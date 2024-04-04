@@ -2767,7 +2767,7 @@ NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
   if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
     return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex,
                                   NTTP->getDepth());
-  return nullptr;
+  llvm_unreachable("Unhandled template parameter types");
 }
 
 Expr *transformRequireClause(Sema &SemaRef, FunctionTemplateDecl *FTD,
@@ -3035,14 +3035,14 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 }
 
 // Build an aggregate deduction guide for a type alias template.
-FunctionTemplateDecl *DeclareAggrecateDeductionGuideForTypeAlias(
+FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     MutableArrayRef<QualType> ParamTypes, SourceLocation Loc) {
   TemplateDecl *RHSTemplate =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
   if (!RHSTemplate)
     return nullptr;
-  auto *RHSDeductionGuide = SemaRef.DeclareImplicitDeductionGuideFromInitList(
+  auto *RHSDeductionGuide = SemaRef.DeclareAggregateDeductionGuideFromInitList(
       RHSTemplate, ParamTypes, Loc);
   if (!RHSDeductionGuide)
     return nullptr;
@@ -3105,8 +3105,7 @@ FunctionTemplateDecl *DeclareAggrecateDeductionGuideForTypeAlias(
 
 } // namespace
 
-// FIXME: rename to DeclareAggrecateDeductionGuide.
-FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
+FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
     TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
     SourceLocation Loc) {
   llvm::FoldingSetNodeID ID;
@@ -3122,7 +3121,7 @@ FunctionTemplateDecl *Sema::DeclareImplicitDeductionGuideFromInitList(
   }
 
   if (auto *AliasTemplate = llvm::dyn_cast<TypeAliasTemplateDecl>(Template)) {
-    if (auto *FTD = DeclareAggrecateDeductionGuideForTypeAlias(
+    if (auto *FTD = DeclareAggregateDeductionGuideForTypeAlias(
             *this, AliasTemplate, ParamTypes, Loc)) {
       auto *GD = cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
       GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);

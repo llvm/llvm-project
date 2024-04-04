@@ -10931,7 +10931,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           }
 
         if (FunctionTemplateDecl *TD =
-                DeclareImplicitDeductionGuideFromInitList(
+                DeclareAggregateDeductionGuideFromInitList(
                     LookupTemplateDecl, ElementTypes,
                     TSInfo->getTypeLoc().getEndLoc())) {
           auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
