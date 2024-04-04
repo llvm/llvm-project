@@ -737,6 +737,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(live);
   KEYWORD(dsoLocal);
   KEYWORD(canAutoHide);
+  KEYWORD(importAsDec);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
