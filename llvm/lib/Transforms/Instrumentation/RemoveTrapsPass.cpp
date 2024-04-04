@@ -26,7 +26,7 @@ static cl::opt<int> HotPercentileCutoff("remove-traps-percentile-cutoff-hot",
                                         cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    RandomRate("remove-traps-random-rate", cl::init(0.0),
+    RandomRate("remove-traps-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
                         "unconditional pseudo-random checks removal."));
 
