@@ -68,7 +68,6 @@ libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
-    defines = ["__FP_LOGBNAN_MIN"],
 )
 
 libc_support_library(
@@ -1000,8 +999,8 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_osutil_quick_exit",
-    hdrs = ["src/__support/OSUtil/quick_exit.h"],
     srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
+    hdrs = ["src/__support/OSUtil/quick_exit.h"],
     deps = [
         ":__support_osutil_syscall",
     ],
