@@ -206,9 +206,7 @@ define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
 ;
   %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-  %splat.insert = insertelement <vscale x 1 x i64> poison, i64 3, i64 0
-  %splat = shufflevector <vscale x 1 x i64> %splat.insert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %offset = shl <vscale x 1 x i64> %step, %splat
+  %offset = shl <vscale x 1 x i64> %step, splat (i64 3)
   %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offset
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
@@ -222,17 +220,13 @@ define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
 define <vscale x 1 x i64> @neg_shl_is_not_commutative(ptr %p) {
 ; CHECK-LABEL: @neg_shl_is_not_commutative(
 ; CHECK-NEXT:    [[STEP:%.*]] = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-; CHECK-NEXT:    [[SPLAT_INSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 3, i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[SPLAT_INSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-; CHECK-NEXT:    [[OFFSET:%.*]] = shl <vscale x 1 x i64> [[SPLAT]], [[STEP]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = shl <vscale x 1 x i64> shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 3, i64 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer), [[STEP]]
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr i32, ptr [[P:%.*]], <vscale x 1 x i64> [[OFFSET]]
 ; CHECK-NEXT:    [[X:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[PTRS]], i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
 ;
   %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-  %splat.insert = insertelement <vscale x 1 x i64> poison, i64 3, i64 0
-  %splat = shufflevector <vscale x 1 x i64> %splat.insert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %offset = shl <vscale x 1 x i64> %splat, %step
+  %offset = shl <vscale x 1 x i64> splat (i64 3), %step
   %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offset
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,
