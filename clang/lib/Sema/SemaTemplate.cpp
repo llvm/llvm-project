@@ -2711,7 +2711,6 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
-      TTP->getIndex();
       MarkAppeared(TTP->getDecl());
       return true;
     }
