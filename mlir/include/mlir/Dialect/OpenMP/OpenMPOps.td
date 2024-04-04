@@ -2135,8 +2135,8 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
   let summary = "declares a reduction kind";
 
   let description = [{
-    Declares an OpenMP reduction kind. This requires two mandatory and one
-    optional region.
+    Declares an OpenMP reduction kind. This requires two mandatory and two
+    optional regions.
 
       1. The initializer region specifies how to initialize the thread-local
          reduction value. This is usually the neutral element of the reduction.
@@ -2149,6 +2149,10 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
       3. The atomic reduction region is optional and specifies how two values
          can be combined atomically given local accumulator variables. It is
          expected to store the combined value in the first accumulator variable.
+      4. The cleanup region is optional and specifies how to clean up any memory
+         allocated by the initializer region. The region has an argument that
+         contains the value of the thread-local reduction accumulator. This will
+         be executed after the reduction has completed.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -2163,12 +2167,14 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
 
   let regions = (region AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
-                        AnyRegion:$atomicReductionRegion);
+                        AnyRegion:$atomicReductionRegion,
+                        AnyRegion:$cleanupRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
-                       "custom<AtomicReductionRegion>($atomicReductionRegion)";
+                       "custom<AtomicReductionRegion>($atomicReductionRegion) "
+                       "custom<CleanupReductionRegion>($cleanupRegion)";
 
   let extraClassDeclaration = [{
     PointerLikeType getAccumulatorType() {
