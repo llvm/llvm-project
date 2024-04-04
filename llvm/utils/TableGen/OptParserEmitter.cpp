@@ -236,7 +236,7 @@ static void EmitHelpTextsForVariants(
     OS << "}}, ";
 
     if (Help.size())
-      OS << "\"" << Help << "\"";
+      write_cstring(OS, Help);
     else
       OS << "nullptr";
     OS << ")";
