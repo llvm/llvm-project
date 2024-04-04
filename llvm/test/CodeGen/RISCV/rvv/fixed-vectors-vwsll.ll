@@ -19,10 +19,9 @@ define <4 x i64> @vwsll_vv_v4i64_sext(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v4i64_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i32> %a to <4 x i64>
   %y = sext <4 x i32> %b to <4 x i64>
@@ -41,10 +40,9 @@ define <4 x i64> @vwsll_vv_v4i64_zext(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v4i64_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i32> %a to <4 x i64>
   %y = zext <4 x i32> %b to <4 x i64>
@@ -62,9 +60,9 @@ define <4 x i64> @vwsll_vx_i64_v4i64(<4 x i32> %a, i64 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i64_v4i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vx v8, v10, a0
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <4 x i64> %head, <4 x i64> poison, <4 x i32> zeroinitializer
@@ -88,10 +86,8 @@ define <4 x i64> @vwsll_vx_i32_v4i64_sext(<4 x i32> %a, i32 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <4 x i32> %head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -116,10 +112,8 @@ define <4 x i64> @vwsll_vx_i32_v4i64_zext(<4 x i32> %a, i32 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <4 x i32> %head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -142,12 +136,9 @@ define <4 x i64> @vwsll_vx_i16_v4i64_sext(<4 x i32> %a, i16 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i16_v4i64_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf4 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <4 x i16> %head, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -170,12 +161,9 @@ define <4 x i64> @vwsll_vx_i16_v4i64_zext(<4 x i32> %a, i16 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i16_v4i64_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf4 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <4 x i16> %head, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -198,12 +186,9 @@ define <4 x i64> @vwsll_vx_i8_v4i64_sext(<4 x i32> %a, i8 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i8_v4i64_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf8 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <4 x i8> %head, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -226,12 +211,9 @@ define <4 x i64> @vwsll_vx_i8_v4i64_zext(<4 x i32> %a, i8 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i8_v4i64_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf8 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <4 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <4 x i8> %head, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -251,9 +233,9 @@ define <4 x i64> @vwsll_vi_v4i64(<4 x i32> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v4i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vi v10, v8, 2
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <4 x i32> %a to <4 x i64>
   %z = shl <4 x i64> %x, splat (i64 2)
@@ -275,10 +257,9 @@ define <8 x i32> @vwsll_vv_v8i32_sext(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v8i32_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <8 x i16> %a to <8 x i32>
   %y = sext <8 x i16> %b to <8 x i32>
@@ -297,10 +278,9 @@ define <8 x i32> @vwsll_vv_v8i32_zext(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v8i32_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <8 x i16> %a to <8 x i32>
   %y = zext <8 x i16> %b to <8 x i32>
@@ -318,9 +298,9 @@ define <8 x i32> @vwsll_vx_i64_v8i32(<8 x i16> %a, i64 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i64_v8i32:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vx v8, v10, a0
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <8 x i64> %head, <8 x i64> poison, <8 x i32> zeroinitializer
@@ -340,9 +320,9 @@ define <8 x i32> @vwsll_vx_i32_v8i32(<8 x i16> %a, i32 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i32_v8i32:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vx v8, v10, a0
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <8 x i32> %head, <8 x i32> poison, <8 x i32> zeroinitializer
@@ -366,10 +346,8 @@ define <8 x i32> @vwsll_vx_i16_v8i32_sext(<8 x i16> %a, i16 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <8 x i16> %head, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -394,10 +372,8 @@ define <8 x i32> @vwsll_vx_i16_v8i32_zext(<8 x i16> %a, i16 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <8 x i16> %head, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -420,12 +396,9 @@ define <8 x i32> @vwsll_vx_i8_v8i32_sext(<8 x i16> %a, i8 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i8_v8i32_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf4 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <8 x i8> %head, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -448,12 +421,9 @@ define <8 x i32> @vwsll_vx_i8_v8i32_zext(<8 x i16> %a, i8 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i8_v8i32_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf4 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <8 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <8 x i8> %head, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -473,9 +443,9 @@ define <8 x i32> @vwsll_vi_v8i32(<8 x i16> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v8i32:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vi v10, v8, 2
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <8 x i16> %a to <8 x i32>
   %z = shl <8 x i32> %x, splat (i32 2)
@@ -497,10 +467,9 @@ define <16 x i16> @vwsll_vv_v16i16_sext(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v16i16_sext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <16 x i8> %a to <16 x i16>
   %y = sext <16 x i8> %b to <16 x i16>
@@ -519,10 +488,9 @@ define <16 x i16> @vwsll_vv_v16i16_zext(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_v16i16_zext:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <16 x i8> %a to <16 x i16>
   %y = zext <16 x i8> %b to <16 x i16>
@@ -552,12 +520,9 @@ define <16 x i16> @vwsll_vx_i32_v16i16(<16 x i8> %a, i32 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i32_v16i16:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vmv.v.x v12, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v8
+; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <16 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <16 x i32> %head, <16 x i32> poison, <16 x i32> zeroinitializer
@@ -577,9 +542,9 @@ define <16 x i16> @vwsll_vx_i16_v16i16(<16 x i8> %a, i16 %b) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i16_v16i16:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vx v8, v10, a0
+; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vx v10, v8, a0
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <16 x i16> poison, i16 %b, i32 0
   %splat = shufflevector <16 x i16> %head, <16 x i16> poison, <16 x i32> zeroinitializer
@@ -603,10 +568,8 @@ define <16 x i16> @vwsll_vx_i8_v16i16_sext(<16 x i8> %a, i8 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <16 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <16 x i8> %head, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -631,10 +594,8 @@ define <16 x i16> @vwsll_vx_i8_v16i16_zext(<16 x i8> %a, i8 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v9, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vzext.vf2 v12, v9
-; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v12
+; CHECK-ZVBB-NEXT:    vwsll.vv v10, v8, v9
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <16 x i8> poison, i8 %b, i32 0
   %splat = shufflevector <16 x i8> %head, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -654,9 +615,9 @@ define <16 x i16> @vwsll_vi_v16i16(<16 x i8> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_v16i16:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 2
+; CHECK-ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vwsll.vi v10, v8, 2
+; CHECK-ZVBB-NEXT:    vmv2r.v v8, v10
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <16 x i8> %a to <16 x i16>
   %z = shl <16 x i16> %x, splat (i16 2)
