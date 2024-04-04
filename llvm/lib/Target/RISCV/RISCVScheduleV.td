@@ -253,6 +253,18 @@ multiclass LMULReadAdvanceFW<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
 class LMULSchedWriteListFW<list<string> names> : LMULSchedWriteListImpl<names, SchedMxListFW>;
 
+multiclass LMULSEWSchedWritesFW<string name>
+    : LMULSEWSchedWritesImpl<name, SchedMxListFW, isF = 1, isWidening = 1>;
+multiclass LMULSEWSchedReadsFW<string name>
+    : LMULSEWSchedReadsImpl<name, SchedMxListFW, isF = 1, isWidening = 1>;
+multiclass LMULSEWWriteResFW<string name, list<ProcResourceKind> resources>
+    : LMULSEWWriteResImpl<name, resources, SchedMxListFW, isF = 1,
+                          isWidening = 1>;
+multiclass
+    LMULSEWReadAdvanceFW<string name, int val, list<SchedWrite> writes = []>
+    : LMULSEWReadAdvanceImpl<name, val, writes, SchedMxListFW, isF = 1,
+                             isWidening = 1>;
+
 // 3.6 Vector Byte Length vlenb
 def WriteRdVLENB      : SchedWrite;
 
@@ -400,16 +412,16 @@ defm "" : LMULSchedWritesW<"WriteVNClipI">;
 defm "" : LMULSEWSchedWritesF<"WriteVFALUV">;
 defm "" : LMULSEWSchedWritesF<"WriteVFALUF">;
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
-defm "" : LMULSchedWritesFW<"WriteVFWALUV">;
-defm "" : LMULSchedWritesFW<"WriteVFWALUF">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFWALUV">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedWrites<"WriteVFMulV">;
 defm "" : LMULSchedWrites<"WriteVFMulF">;
 defm "" : LMULSEWSchedWritesF<"WriteVFDivV">;
 defm "" : LMULSEWSchedWritesF<"WriteVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
-defm "" : LMULSchedWritesFW<"WriteVFWMulV">;
-defm "" : LMULSchedWritesFW<"WriteVFWMulF">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFWMulV">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFWMulF">;
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 defm "" : LMULSchedWrites<"WriteVFMulAddV">;
 defm "" : LMULSchedWrites<"WriteVFMulAddF">;
@@ -625,16 +637,16 @@ defm "" : LMULSchedReadsW<"ReadVNClipX">;
 defm "" : LMULSEWSchedReadsF<"ReadVFALUV">;
 defm "" : LMULSEWSchedReadsF<"ReadVFALUF">;
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
-defm "" : LMULSchedReadsFW<"ReadVFWALUV">;
-defm "" : LMULSchedReadsFW<"ReadVFWALUF">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFWALUV">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedReads<"ReadVFMulV">;
 defm "" : LMULSchedReads<"ReadVFMulF">;
 defm "" : LMULSEWSchedReadsF<"ReadVFDivV">;
 defm "" : LMULSEWSchedReadsF<"ReadVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
-defm "" : LMULSchedReadsFW<"ReadVFWMulV">;
-defm "" : LMULSchedReadsFW<"ReadVFWMulF">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFWMulV">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFWMulF">;
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 defm "" : LMULSchedReads<"ReadVFMulAddV">;
 defm "" : LMULSchedReads<"ReadVFMulAddF">;
@@ -870,14 +882,14 @@ defm "" : LMULWriteResW<"WriteVNClipI", []>;
 // 13. Vector Floating-Point Instructions
 defm "" : LMULSEWWriteResF<"WriteVFALUV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFALUF", []>;
-defm "" : LMULWriteResFW<"WriteVFWALUV", []>;
-defm "" : LMULWriteResFW<"WriteVFWALUF", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFWALUV", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFWALUF", []>;
 defm "" : LMULWriteRes<"WriteVFMulV", []>;
 defm "" : LMULWriteRes<"WriteVFMulF", []>;
 defm "" : LMULSEWWriteResF<"WriteVFDivV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFDivF", []>;
-defm "" : LMULWriteResFW<"WriteVFWMulV", []>;
-defm "" : LMULWriteResFW<"WriteVFWMulF", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFWMulV", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFWMulF", []>;
 defm "" : LMULWriteRes<"WriteVFMulAddV", []>;
 defm "" : LMULWriteRes<"WriteVFMulAddF", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulAddV", []>;
@@ -1026,14 +1038,14 @@ defm "" : LMULReadAdvanceW<"ReadVNClipX", 0>;
 // 13. Vector Floating-Point Instructions
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWALUV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWALUF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWALUF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFDivF", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWMulF", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulAddV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulAddF", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulAddV", 0>;
