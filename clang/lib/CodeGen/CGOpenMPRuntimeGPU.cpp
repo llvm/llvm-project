@@ -571,7 +571,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
       }
       return false;
     case OMPD_target_teams:
-      return isOpenMPParallelDirective(DKind);
+      return isOpenMPParallelDirective(DKind) || (DKind == OMPD_loop);
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:

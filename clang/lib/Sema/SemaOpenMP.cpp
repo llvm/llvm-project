@@ -6210,6 +6210,23 @@ static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
   return Checker.teamsLoopCanBeParallelFor();
 }
 
+static bool loopCloselyNestedInTargetTeams(Sema &SemaRef, DSAStackTy *Stack) {
+  const OpenMPDirectiveKind ParentDirective = Stack->getParentDirective();
+  const llvm::Triple &T = SemaRef.Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      SemaRef.getLangOpts().OpenMPIsTargetDevice && T.isAMDGCN();
+
+  // Under the assumption that we are checking the parent directive of
+  // a 'loop' directive: for AMD GPU and options to enable no-loop
+  // kernels, return true if loop directive is closely nested inside
+  // target-teams.
+  return (ParentDirective == OMPD_target_teams &&
+          SemaRef.getLangOpts().OpenMPTargetIgnoreEnvVars &&
+          SemaRef.getLangOpts().OpenMPNoNestedParallelism &&
+          SemaRef.getLangOpts().OpenMPNoThreadState &&
+          IsOpenMPGPUTarget);
+}
+
 bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                             ArrayRef<OMPClause *> Clauses,
                             OpenMPBindClauseKind &BindKind,
@@ -6223,6 +6240,9 @@ bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
 
   // Restricting to "#pragma omp loop bind"
   if (getLangOpts().OpenMP >= 50 && Kind == OMPD_loop) {
+    // Don't bind target teams/loop as it can (likely) be optimized.
+    if (loopCloselyNestedInTargetTeams(*this, DSAStack))
+      return UseClausesWithoutBind;
 
     const OpenMPDirectiveKind ParentDirective = DSAStack->getParentDirective();
 
