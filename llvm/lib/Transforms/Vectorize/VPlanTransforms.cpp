@@ -1209,6 +1209,45 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
+/// Replaces (ICMP_ULE, WideCanonicalIV, backedge-taken-count) pattern using
+/// the given \p Idiom.
+static void
+replaceHeaderPredicateWith(VPlan &Plan, VPValue &Idiom,
+                           function_ref<bool(VPUser &, unsigned)> Cond = {}) {
+  auto *FoundWidenCanonicalIVUser =
+      find_if(Plan.getCanonicalIV()->users(),
+              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  if (FoundWidenCanonicalIVUser == Plan.getCanonicalIV()->users().end())
+    return;
+  auto *WideCanonicalIV =
+      cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+  // Walk users of WideCanonicalIV and replace all compares of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with
+  // the given idiom VPValue.
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  for (VPUser *U : SmallVector<VPUser *>(WideCanonicalIV->users())) {
+    auto *CompareToReplace = dyn_cast<VPInstruction>(U);
+    if (!CompareToReplace ||
+        CompareToReplace->getOpcode() != Instruction::ICmp ||
+        CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
+        CompareToReplace->getOperand(1) != BTC)
+      continue;
+
+    assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
+           "WidenCanonicalIV must be the first operand of the compare");
+    if (Cond) {
+      CompareToReplace->replaceUsesWithIf(&Idiom, Cond);
+      if (!CompareToReplace->getNumUsers())
+        CompareToReplace->eraseFromParent();
+    } else {
+      CompareToReplace->replaceAllUsesWith(&Idiom);
+      CompareToReplace->eraseFromParent();
+    }
+  }
+  if (!WideCanonicalIV->getNumUsers())
+    WideCanonicalIV->eraseFromParent();
+}
+
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
     bool DataAndControlFlowWithoutRuntimeCheck) {
@@ -1238,20 +1277,77 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  for (VPUser *U : SmallVector<VPUser *>(WideCanonicalIV->users())) {
-    auto *CompareToReplace = dyn_cast<VPInstruction>(U);
-    if (!CompareToReplace ||
-        CompareToReplace->getOpcode() != Instruction::ICmp ||
-        CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
-        CompareToReplace->getOperand(1) != BTC)
-      continue;
+  replaceHeaderPredicateWith(Plan, *LaneMask);
+}
 
-    assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
-           "WidenCanonicalIV must be the first operand of the compare");
-    CompareToReplace->replaceAllUsesWith(LaneMask);
-    CompareToReplace->eraseFromParent();
+/// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+/// replaces all uses except the canonical IV increment of
+/// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
+/// is used only for loop iterations counting after this transformation.
+///
+/// The function uses the following definitions:
+///  %StartV is the canonical induction start value.
+///
+/// The function adds the following recipes:
+///
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
+/// ...
+///
+void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  auto *CanonicalIVPHI = Plan.getCanonicalIV();
+  VPValue *StartV = CanonicalIVPHI->getStartValue();
+
+  // TODO: revisit this and try to remove the mask operand.
+  // Walk VPWidenMemoryInstructionRecipe users of WideCanonicalIV and replace
+  // all compares of the form (ICMP_ULE, WideCanonicalIV, backedge-taken-count),
+  // used as mask in VPWidenMemoryInstructionRecipe, with an all-true-mask.
+  Value *TrueMask =
+      ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
+  VPValue *VPTrueMask = Plan.getOrAddLiveIn(TrueMask);
+  replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
+    return isa<VPWidenMemoryInstructionRecipe>(U);
+  });
+  // Now create the ExplicitVectorLengthPhi recipe in the main loop.
+  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
+  EVLPhi->insertAfter(CanonicalIVPHI);
+  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
+                                  {EVLPhi, Plan.getTripCount()});
+  VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
+
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  VPSingleDefRecipe *OpVPEVL = VPEVL;
+  if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
+      IVSize != 32) {
+    OpVPEVL = new VPScalarCastRecipe(IVSize < 32 ? Instruction::Trunc
+                                                 : Instruction::ZExt,
+                                     OpVPEVL, CanonicalIVPHI->getScalarType());
+    OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
+  auto *NextEVLIV =
+      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi},
+                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                         CanonicalIVIncrement->hasNoSignedWrap()},
+                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
+  NextEVLIV->insertBefore(CanonicalIVIncrement);
+  EVLPhi->addOperand(NextEVLIV);
+
+  // Replace all uses of VPCanonicalIVPHIRecipe by
+  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
+  CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  // TODO: support unroll factor > 1.
+  Plan.setUF(1);
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
@@ -1277,9 +1373,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // handled.
       if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
           isa<VPInterleaveRecipe>(CurRec) ||
-          isa<VPScalarIVStepsRecipe>(CurRec) ||
-          isa<VPCanonicalIVPHIRecipe>(CurRec) ||
-          isa<VPActiveLaneMaskPHIRecipe>(CurRec))
+          isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
         continue;
 
       // This recipe contributes to the address computation of a widen
