@@ -667,7 +667,7 @@ cc_shared_library(
     user_link_flags = select({
         "@platforms//os:macos": [
             "$(location :HostMacOSXObjCXX)",
-            "$(location :PluginPlatformMacOSXObjCXX)",
+            "$(location //lldb/source/Plugins:PluginPlatformMacOSXObjCXX)",
         ],
         "//conditions:default": [],
     }),
