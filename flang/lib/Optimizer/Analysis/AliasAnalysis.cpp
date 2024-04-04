@@ -91,8 +91,14 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
+             llvm::dbgs() << "  lhsSrc kind: " << EnumToString(lhsSrc.kind) << "\n";
+             llvm::dbgs() << "  lhsSrc pointer: " << lhsSrc.attributes.test(Attribute::Pointer) << "\n";
+             llvm::dbgs() << "  lhsSrc target: " << lhsSrc.attributes.test(Attribute::Target) << "\n";
              llvm::dbgs() << "  rhs: " << rhs << "\n";
              llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
+             llvm::dbgs() << "  rhsSrc kind: " << EnumToString(rhsSrc.kind) << "\n";
+             llvm::dbgs() << "  rhsSrc pointer: " << rhsSrc.attributes.test(Attribute::Pointer) << "\n";
+             llvm::dbgs() << "  rhsSrc target: " << rhsSrc.attributes.test(Attribute::Target) << "\n";
              llvm::dbgs() << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
@@ -101,8 +107,10 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
   }
 
-  // SourceKind::Direct is set for the addresses wrapped in a global boxes.
-  // ie: fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>>
+  // SourceKind::Direct is set for the addresses wrapped in a box, perhaps from
+  // a global or an argument.
+  // e.g.: fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>>
+  // e.g.: %arg0: !fir.ref<!fir.box<!fir.ptr<f32>>>
   // Though nothing is known about them, they would only alias with targets or
   // pointers
   bool directSourceToNonTargetOrPointer = false;
@@ -399,16 +407,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   if (!defOp && type == SourceKind::Unknown)
     // Check if the memory source is coming through a dummy argument.
     if (isDummyArgument(v)) {
-      type = SourceKind::Argument;
       ty = v.getType();
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
-
       if (Source::isPointerReference(ty))
         attributes.set(Attribute::Pointer);
+      if (followBoxAddr && attributes.test(Attribute::Pointer))
+        type = SourceKind::Direct;
+      else
+        type = SourceKind::Argument;
     }
 
-  if (type == SourceKind::Global || type == SourceKind::Direct)
+  if (global)
     return {global, type, ty, attributes, approximateSource};
 
   return {v, type, ty, attributes, approximateSource};

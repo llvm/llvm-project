@@ -44,7 +44,7 @@
 // pointer arguments
 // CHECK-DAG: arg2.addr#0 <-> func.region0#0: MayAlias
 // CHECK-DAG: arg2.addr#0 <-> func.region0#1: MayAlias
-// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MustAlias
+// CHECK-DAG: arg2.addr#0 <-> func.region0#2: MayAlias
 // CHECK-DAG: boxp1.addr#0 <-> arg2.addr#0: MayAlias
 
 func.func @_QFPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "v2", fir.target}, %arg2: !fir.ref<!fir.box<!fir.ptr<f32>>> ) attributes {test.ptr = "func"} {

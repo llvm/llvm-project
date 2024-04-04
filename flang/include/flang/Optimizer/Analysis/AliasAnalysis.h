@@ -36,8 +36,8 @@ struct AliasAnalysis {
              /// Represents memory allocated outside of a function
              /// and passed to the function via host association tuple.
              HostAssoc,
-             /// Represents direct memory access whose source cannot be further
-             /// determined
+             /// Memory address retrieved from a box, perhaps from a global or
+             /// an argument.
              Direct,
              /// Represents memory allocated by unknown means and
              /// with the memory address defined by a memory reading
