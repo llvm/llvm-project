@@ -56,8 +56,20 @@ auto test_exception = []<class... Args>(std::string_view, std::string_view, Args
   // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
+void test_println_blank_line() {
+  std::string expected{'\n'};
+
+  std::stringstream sstr;
+  std::println(sstr);
+
+  std::string out = sstr.str();
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED("\nExpected output ", expected, "\nActual output   ", out, '\n'));
+};
+
 int main(int, char**) {
   print_tests(test_file, test_exception);
+  test_println_blank_line();
 
   return 0;
 }
