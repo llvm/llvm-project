@@ -39,7 +39,8 @@ def print_functions(header, functions):
         else:
             print("    -")
 
-        if "defined" in functions[key]:
+        # defined is optional. Having any content is optional.
+        if functions[key] is not None and "defined" in functions[key]:
             print(f'    - {functions[key]["defined"]}')
         else:
             print("    -")

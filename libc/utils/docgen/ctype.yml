@@ -1,14 +1,6 @@
 functions:
-  isalnum:
-    returns: int
-    params:
-      - int
-  isalpha:
-    returns: int
-    params:
-      - int
-  isblank:
-    returns: int
-    params:
-      - int
+  isalnum: ~
+  isalpha: ~
+  isblank: ~
+
 # TODO: fill me out!
