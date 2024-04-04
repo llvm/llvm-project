@@ -58,7 +58,7 @@ struct ForOpInterface
     ValueDimList boundOperands;
     LogicalResult status = ValueBoundsConstraintSet::computeBound(
         bound, boundOperands, BoundType::EQ, yieldedValue, dim,
-        [&](Value v, std::optional<int64_t> d) {
+        [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
           // Stop when reaching a block argument of the loop body.
           if (auto bbArg = llvm::dyn_cast<BlockArgument>(v))
             return bbArg.getOwner()->getParentOp() == forOp;
