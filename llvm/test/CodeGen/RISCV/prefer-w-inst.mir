@@ -3,8 +3,6 @@
 # RUN:   -mattr=+m -o - | FileCheck %s -check-prefixes=NO-PREFER-W-INST
 # RUN: llc %s -mtriple=riscv64 -run-pass=riscv-opt-w-instrs -verify-machineinstrs \
 # RUN:   -mattr=+m,+prefer-w-inst -o - | FileCheck %s -check-prefixes=PREFER-W-INST
-# RUN: llc %s -mtriple=riscv64 -run-pass=riscv-opt-w-instrs -verify-machineinstrs \
-# RUN:   -mattr=+m -riscv-enable-append-w-suffix -o - | FileCheck %s -check-prefixes=PREFER-W-INST
 
 ---
 name: addi

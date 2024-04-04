@@ -55,9 +55,6 @@ static cl::opt<bool> DisableSExtWRemoval("riscv-disable-sextw-removal",
 static cl::opt<bool> DisableStripWSuffix("riscv-disable-strip-w-suffix",
                                          cl::desc("Disable strip W suffix"),
                                          cl::init(false), cl::Hidden);
-static cl::opt<bool> EnableAppendWSuffix("riscv-enable-append-w-suffix",
-                                         cl::desc("Enable append W suffix"),
-                                         cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -778,7 +775,7 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   if (!(DisableStripWSuffix || ST.preferWInst()))
     MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
 
-  if (EnableAppendWSuffix || ST.preferWInst())
+  if (ST.preferWInst())
     MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
 
   return MadeChange;

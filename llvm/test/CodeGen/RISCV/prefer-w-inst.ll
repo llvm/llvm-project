@@ -5,8 +5,6 @@
 ; RUN:   | FileCheck -check-prefixes=NO-STRIP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+prefer-w-inst -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=PREFER-W-INST %s
-; RUN: llc -mtriple=riscv64 -mattr=+m -riscv-enable-append-w-suffix -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=PREFER-W-INST %s
 
 define i32 @addiw(i32 %a) {
 ; NO-PREFER-W-INST-LABEL: addiw:
