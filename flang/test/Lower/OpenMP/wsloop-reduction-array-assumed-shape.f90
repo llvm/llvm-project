@@ -29,8 +29,9 @@ end program
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_3]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.array<?xf64>, %[[VAL_4]]#1 {bindc_name = ".tmp"}
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.ref<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
+! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK:           %[[TRUE:.*]]  = arith.constant true
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.heap<!fir.array<?xf64>>)
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_7]]#0 : f64, !fir.box<!fir.array<?xf64>>
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
 ! CHECK:           fir.store %[[VAL_7]]#0 to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
@@ -53,6 +54,18 @@ end program
 ! CHECK:             fir.store %[[VAL_13]] to %[[VAL_9]] : !fir.ref<f64>
 ! CHECK:           }
 ! CHECK:           omp.yield(%[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
+! CHECK:         }  cleanup {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>):
+! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
+! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<?xf64>>) -> i64
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
+! CHECK:           fir.if %[[VAL_5]] {
+! CHECK:             %[[VAL_6:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+! CHECK:             fir.freemem %[[VAL_6]] : !fir.heap<!fir.array<?xf64>>
+! CHECK:           }
+! CHECK:           omp.yield
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func private @_QFPreduce(
