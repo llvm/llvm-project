@@ -57,6 +57,7 @@ define dso_local void @write_int(i32 signext %in) {
 ; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL killed %[[SCRATCH1]], @i
 ; CHECK32LARGE-NEXT: STW %{{[0-9]+}}, 0, killed %[[SCRATCH2]] :: (store (s32) into @i)
 
+; FIXME: peephole optimization opportunity for lower part relocation @l to the consuming stw
 ; TEST32LARGE:         .write_int:
 ; TEST32LARGE:          addis 4, i[TD]@u(2)
 ; TEST32LARGE-NEXT:	la 4, i[TD]@l(4)
@@ -127,6 +128,7 @@ define dso_local float @read_float() {
 ; CHECK32LARGE-NEXT: %[[SCRATCH2:[0-9]+]]:gprc_and_gprc_nor0 = ADDItocL killed %[[SCRATCH1]], @f
 ; CHECK32LARGE-NEXT: LFS 0, killed %[[SCRATCH2]] :: (dereferenceable load (s32) from @f)
 
+; FIXME: peephole optimization opportunity for lower part relocation @l to the consuming lfs
 ; TEST32LARGE:         .read_float:
 ; TEST32LARGE:          addis 3, f[TD]@u(2)
 ; TEST32LARGE-NEXT:	la 3, f[TD]@l(3)
