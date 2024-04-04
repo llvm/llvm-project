@@ -35,12 +35,12 @@
 #define INFINITY __builtin_inf()
 #define NAN __builtin_nanf("")
 
-#define FP_ILOGB0 (-INT_MAX - 1)
-#define FP_LLOGB0 (-LONG_MAX - 1)
+#define FP_ILOGB0 INT_MIN
+#define FP_LLOGB0 LONG_MIN
 
 #ifdef __FP_LOGBNAN_MIN
-#define FP_ILOGBNAN (-INT_MAX - 1)
-#define FP_LLOGBNAN (-LONG_MAX - 1)
+#define FP_ILOGBNAN INT_MIN
+#define FP_LLOGBNAN LONG_MIN
 #else
 #define FP_ILOGBNAN INT_MAX
 #define FP_LLOGBNAN LONG_MAX
