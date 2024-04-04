@@ -1,5 +1,5 @@
 include "config/public_api.td"
-
+include "spec/posix.td"
 include "spec/stdc.td"
 include "spec/stdc_ext.td"
 include "spec/bsd_ext.td"
