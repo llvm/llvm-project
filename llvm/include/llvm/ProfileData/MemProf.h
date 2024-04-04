@@ -460,7 +460,8 @@ public:
   using offset_type = uint64_t;
 
   RecordLookupTrait() = delete;
-  RecordLookupTrait(const MemProfSchema &S) : Schema(S) {}
+  RecordLookupTrait(IndexedVersion V, const MemProfSchema &S)
+      : Version(V), Schema(S) {}
 
   static bool EqualKey(uint64_t A, uint64_t B) { return A == B; }
   static uint64_t GetInternalKey(uint64_t K) { return K; }
@@ -487,11 +488,13 @@ public:
 
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
-    Record = IndexedMemProfRecord::deserialize(Schema, D, Version1);
+    Record = IndexedMemProfRecord::deserialize(Schema, D, Version);
     return Record;
   }
 
 private:
+  // Holds the MemProf version.
+  IndexedVersion Version;
   // Holds the memprof schema used to deserialize records.
   MemProfSchema Schema;
   // Holds the records from one function deserialized from the indexed format.
@@ -499,7 +502,7 @@ private:
 };
 
 // Trait for writing IndexedMemProfRecord data to the on-disk hash table.
-class RecordWriterTrait {
+template <IndexedVersion Version> class RecordWriterTrait {
 public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
@@ -526,7 +529,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize(Version1);
+    offset_type M = V.serializedSize(Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
