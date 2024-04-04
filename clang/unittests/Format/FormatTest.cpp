@@ -7976,6 +7976,43 @@ TEST_F(FormatTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
 }
 
+TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_FALSE(Style.BreakFunctionDefinitionParameters);
+  StringRef Input = "void functionDecl(paramA, paramB, paramC);\n"
+                    "void emptyFunctionDefinition() {}\n"
+                    "void functionDefinition(int A, int B, int C) {}\n"
+                    "Class::Class(int A, int B) : m_A(A), m_B(B) {}\n";
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(int A, int B, int C) {}\n"
+                         "Class::Class(int A, int B) : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(\n"
+                         "    int A, int B, int C) {}\n"
+                         "Class::Class(\n"
+                         "    int A, int B)\n"
+                         "    : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+  // Test the style where all parameters are on their own lines
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+  Style.BinPackParameters = false;
+  verifyFormat(StringRef("void functionDecl(paramA, paramB, paramC);\n"
+                         "void emptyFunctionDefinition() {}\n"
+                         "void functionDefinition(\n"
+                         "    int A,\n"
+                         "    int B,\n"
+                         "    int C) {}\n"
+                         "Class::Class(\n"
+                         "    int A,\n"
+                         "    int B)\n"
+                         "    : m_A(A), m_B(B) {}\n"),
+               Input, Style);
+}
+
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeInlineASMColon = FormatStyle::BBIAS_Never;
@@ -12075,6 +12112,7 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   verifyFormat("SomeType s [[gnu::unused]] (InitValue);");
   verifyFormat("SomeType s [[using gnu: unused]] (InitValue);");
   verifyFormat("[[gsl::suppress(\"clang-tidy-check-name\")]] void f() {}");
+  verifyFormat("[[suppress(type.5)]] int uninitialized_on_purpose;");
   verifyFormat("void f() [[deprecated(\"so sorry\")]];");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "    [[unused]] aaaaaaaaaaaaaaaaaaaaaaa(int i);");
@@ -19066,6 +19104,11 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int    a(int x);\n"
                "double b();",
                Alignment);
+  verifyFormat("int    a(const Test & = Test());\n"
+               "int    a1(int &foo, const Test & = Test());\n"
+               "int    a2(int &foo, const Test &name = Test());\n"
+               "double b();",
+               Alignment);
   verifyFormat("struct Test {\n"
                "  Test(const Test &) = default;\n"
                "  ~Test() = default;\n"
@@ -19101,6 +19144,13 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   verifyFormat("int function(\n"
                "    int  x,\n"
                "    bool y);",
+               Alignment);
+  // Set ColumnLimit low so that we break the argument list in multiple lines.
+  Alignment.ColumnLimit = 35;
+  verifyFormat("int    a3(SomeTypeName1 &x,\n"
+               "          SomeTypeName2 &y,\n"
+               "          const Test & = Test());\n"
+               "double b();",
                Alignment);
   Alignment.ColumnLimit = OldColumnLimit;
   // Ensure function pointers don't screw up recursive alignment
@@ -19287,6 +19337,10 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "int    foobar;",
                AlignmentLeft);
 
+  verifyFormat("int    a(SomeType& foo, const Test& = Test());\n"
+               "double b();",
+               AlignmentLeft);
+
   // PAS_Middle
   FormatStyle AlignmentMiddle = Alignment;
   AlignmentMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -19345,6 +19399,10 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "int *   b;\n"
                "int *** c;\n"
                "int     foobar;",
+               AlignmentMiddle);
+
+  verifyFormat("int    a(SomeType & foo, const Test & = Test());\n"
+               "double b();",
                AlignmentMiddle);
 
   Alignment.AlignConsecutiveAssignments.Enabled = false;

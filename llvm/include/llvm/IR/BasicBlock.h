@@ -791,7 +791,7 @@ template <> struct DenseMapInfo<BasicBlock::iterator> {
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^
-           It.getHeadBit();
+           (unsigned)It.getHeadBit();
   }
 
   static bool isEqual(const BasicBlock::iterator &LHS,

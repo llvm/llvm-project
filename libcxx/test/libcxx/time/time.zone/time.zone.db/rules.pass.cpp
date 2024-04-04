@@ -17,7 +17,7 @@
 // Tests the IANA database rules parsing and operations.
 // This is not part of the public tzdb interface.
 // The test uses private implementation headers.
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../src/include
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/include
 
 #include <chrono>
 #include <fstream>

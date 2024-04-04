@@ -6895,6 +6895,11 @@ AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
   return TPIDR2Obj;
 }
 
+static bool isPassedInFPR(EVT VT) {
+  return VT.isFixedLengthVector() ||
+         (VT.isFloatingPoint() && !VT.isScalableVector());
+}
+
 SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -7031,6 +7036,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         // This will be the new Chain/Root node.
         ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT, Glue);
         Glue = ArgValue.getValue(2);
+        if (isPassedInFPR(ArgValue.getValueType())) {
+          ArgValue =
+              DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                          DAG.getVTList(ArgValue.getValueType(), MVT::Glue),
+                          {ArgValue, Glue});
+          Glue = ArgValue.getValue(1);
+        }
       } else
         ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
@@ -7400,11 +7412,6 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   if (!MemOps.empty()) {
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOps);
   }
-}
-
-static bool isPassedInFPR(EVT VT) {
-  return VT.isFixedLengthVector() ||
-         (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
 /// LowerCallResult - Lower the result values of a call into the
@@ -8212,9 +8219,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // Call site info is used for function's parameter entry value
         // tracking. For now we track only simple cases when parameter
         // is transferred through whole register.
-        llvm::erase_if(CSInfo, [&VA](MachineFunction::ArgRegPair ArgReg) {
-          return ArgReg.Reg == VA.getLocReg();
-        });
+        llvm::erase_if(CSInfo.ArgRegPairs,
+                       [&VA](MachineFunction::ArgRegPair ArgReg) {
+                         return ArgReg.Reg == VA.getLocReg();
+                       });
       } else {
         // Add an extra level of indirection for streaming mode changes by
         // using a pseudo copy node that cannot be rematerialised between a
@@ -8226,7 +8234,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
         if (Options.EmitCallSiteInfo)
-          CSInfo.emplace_back(VA.getLocReg(), i);
+          CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
       }
     } else {
       assert(VA.isMemLoc());
@@ -8632,6 +8640,10 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   SmallVector<SDValue, 4> RetOps(1, Chain);
   for (auto &RetVal : RetVals) {
+    if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface() &&
+        isPassedInFPR(RetVal.second.getValueType()))
+      RetVal.second = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                                  RetVal.second.getValueType(), RetVal.second);
     Chain = DAG.getCopyToReg(Chain, DL, RetVal.first, RetVal.second, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(

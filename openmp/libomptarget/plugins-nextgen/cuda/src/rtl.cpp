@@ -255,8 +255,8 @@ private:
 /// generic device class.
 struct CUDADeviceTy : public GenericDeviceTy {
   // Create a CUDA device with a device id and the default CUDA grid values.
-  CUDADeviceTy(int32_t DeviceId, int32_t NumDevices)
-      : GenericDeviceTy(DeviceId, NumDevices, NVPTXGridValues),
+  CUDADeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices)
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, NVPTXGridValues),
         CUDAStreamManager(*this), CUDAEventManager(*this) {}
 
   ~CUDADeviceTy() {}
@@ -471,7 +471,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Allocate and construct a CUDA kernel.
   Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the CUDA kernel.
-    CUDAKernelTy *CUDAKernel = PluginTy::get().allocate<CUDAKernelTy>();
+    CUDAKernelTy *CUDAKernel = Plugin.allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
@@ -529,8 +529,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return std::move(Err);
 
     // Allocate and initialize the image object.
-    CUDADeviceImageTy *CUDAImage =
-        PluginTy::get().allocate<CUDADeviceImageTy>();
+    CUDADeviceImageTy *CUDAImage = Plugin.allocate<CUDADeviceImageTy>();
     new (CUDAImage) CUDADeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the CUDA module.
@@ -1373,8 +1372,9 @@ struct CUDAPluginTy final : public GenericPluginTy {
   Error deinitImpl() override { return Plugin::success(); }
 
   /// Creates a CUDA device to use for offloading.
-  GenericDeviceTy *createDevice(int32_t DeviceId, int32_t NumDevices) override {
-    return new CUDADeviceTy(DeviceId, NumDevices);
+  GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
+                                int32_t NumDevices) override {
+    return new CUDADeviceTy(Plugin, DeviceId, NumDevices);
   }
 
   /// Creates a CUDA global handler.

@@ -1,4 +1,52 @@
 add_entrypoint_object(
+  canonicalize
+  SRCS
+    canonicalize.cpp
+  HDRS
+    ../canonicalize.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizef
+  SRCS
+    canonicalizef.cpp
+  HDRS
+    ../canonicalizef.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizef128
+  SRCS
+    canonicalizef128.cpp
+  HDRS
+    ../canonicalizef128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  canonicalizel
+  SRCS
+    canonicalizel.cpp
+  HDRS
+    ../canonicalizel.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   ceil
   SRCS
     ceil.cpp
@@ -2804,6 +2852,24 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
+)
+
+add_entrypoint_object(
+  atan2f
+  SRCS
+    atan2f.cpp
+  HDRS
+    ../atan2f.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(

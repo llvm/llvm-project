@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___LOCALE
 #define _LIBCPP___LOCALE
 
-#include <__availability>
 #include <__config>
 #include <__locale_dir/locale_base_api.h>
 #include <__memory/shared_ptr.h> // __shared_count

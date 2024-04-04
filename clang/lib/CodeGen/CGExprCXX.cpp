@@ -354,8 +354,12 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     if (IsImplicitObjectCXXThis || isa<DeclRefExpr>(IOA))
       SkippedChecks.set(SanitizerKind::Null, true);
   }
-  EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc, This,
-                C.getRecordType(CalleeDecl->getParent()), SkippedChecks);
+
+  if (sanitizePerformTypeCheck())
+    EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc,
+                  This.emitRawPointer(*this),
+                  C.getRecordType(CalleeDecl->getParent()),
+                  /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
   // C++ [class.virtual]p12:
   //   Explicit qualification with the scope operator (5.1) suppresses the
@@ -1072,8 +1076,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // Move past these elements.
       InitListElements =
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
-              ->getSize()
-              .getZExtValue();
+              ->getZExtSize();
       CurPtr = Builder.CreateConstInBoundsGEP(
           CurPtr, InitListElements, "string.init.end");
 
@@ -1587,8 +1590,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
         isa<StringLiteral>(IgnoreParen) || isa<ObjCEncodeExpr>(IgnoreParen)) {
       minElements =
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
-              ->getSize()
-              .getZExtValue();
+              ->getZExtSize();
     } else if (ILE || CPLIE) {
       minElements = ILE ? ILE->getNumInits() : CPLIE->getInitExprs().size();
     }

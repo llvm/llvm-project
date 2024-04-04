@@ -792,7 +792,8 @@ EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
 
 Value *CodeGenFunction::EmitVAStartEnd(Value *ArgValue, bool IsStart) {
   Intrinsic::ID inst = IsStart ? Intrinsic::vastart : Intrinsic::vaend;
-  return Builder.CreateCall(CGM.getIntrinsic(inst), ArgValue);
+  return Builder.CreateCall(CGM.getIntrinsic(inst, {ArgValue->getType()}),
+                            ArgValue);
 }
 
 /// Checks if using the result of __builtin_object_size(p, @p From) in place of
@@ -1130,7 +1131,91 @@ struct BitTest {
 
   static BitTest decodeBitTestBuiltin(unsigned BuiltinID);
 };
+
+// Returns the first convergence entry/loop/anchor instruction found in |BB|.
+// std::nullptr otherwise.
+llvm::IntrinsicInst *getConvergenceToken(llvm::BasicBlock *BB) {
+  for (auto &I : *BB) {
+    auto *II = dyn_cast<llvm::IntrinsicInst>(&I);
+    if (II && isConvergenceControlIntrinsic(II->getIntrinsicID()))
+      return II;
+  }
+  return nullptr;
+}
+
 } // namespace
+
+llvm::CallBase *
+CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input,
+                                            llvm::Value *ParentToken) {
+  llvm::Value *bundleArgs[] = {ParentToken};
+  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
+  auto Output = llvm::CallBase::addOperandBundle(
+      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input);
+  Input->replaceAllUsesWith(Output);
+  Input->eraseFromParent();
+  return Output;
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
+                                          llvm::Value *ParentToken) {
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  Builder.SetInsertPoint(&BB->front());
+  auto CB = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_loop, {}, {});
+  Builder.restoreIP(IP);
+
+  auto I = addConvergenceControlToken(CB, ParentToken);
+  return cast<llvm::IntrinsicInst>(I);
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
+  auto *BB = &F->getEntryBlock();
+  auto *token = getConvergenceToken(BB);
+  if (token)
+    return token;
+
+  // Adding a convergence token requires the function to be marked as
+  // convergent.
+  F->setConvergent();
+
+  CGBuilderTy::InsertPoint IP = Builder.saveIP();
+  Builder.SetInsertPoint(&BB->front());
+  auto I = Builder.CreateIntrinsic(
+      llvm::Intrinsic::experimental_convergence_entry, {}, {});
+  assert(isa<llvm::IntrinsicInst>(I));
+  Builder.restoreIP(IP);
+
+  return cast<llvm::IntrinsicInst>(I);
+}
+
+llvm::IntrinsicInst *
+CodeGenFunction::getOrEmitConvergenceLoopToken(const LoopInfo *LI) {
+  assert(LI != nullptr);
+
+  auto *token = getConvergenceToken(LI->getHeader());
+  if (token)
+    return token;
+
+  llvm::IntrinsicInst *PII =
+      LI->getParent()
+          ? emitConvergenceLoopToken(
+                LI->getHeader(), getOrEmitConvergenceLoopToken(LI->getParent()))
+          : getOrEmitConvergenceEntryToken(LI->getHeader()->getParent());
+
+  return emitConvergenceLoopToken(LI->getHeader(), PII);
+}
+
+llvm::CallBase *
+CodeGenFunction::addControlledConvergenceToken(llvm::CallBase *Input) {
+  llvm::Value *ParentToken =
+      LoopStack.hasInfo()
+          ? getOrEmitConvergenceLoopToken(&LoopStack.getInfo())
+          : getOrEmitConvergenceEntryToken(Input->getFunction());
+  return addConvergenceControlToken(Input, ParentToken);
+}
 
 BitTest BitTest::decodeBitTestBuiltin(unsigned BuiltinID) {
   switch (BuiltinID) {
@@ -3018,7 +3103,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_va_copy: {
     Value *DstPtr = EmitVAListRef(E->getArg(0)).emitRawPointer(*this);
     Value *SrcPtr = EmitVAListRef(E->getArg(1)).emitRawPointer(*this);
-    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy), {DstPtr, SrcPtr});
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy, {DstPtr->getType()}),
+                       {DstPtr, SrcPtr});
     return RValue::get(nullptr);
   }
   case Builtin::BIabs:
@@ -5749,7 +5835,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
     }
-    [[fallthrough]];
+    llvm_unreachable("Unexpected enqueue_kernel signature");
   }
   // OpenCL v2.0 s6.13.17.6 - Kernel query functions need bitcast of block
   // parameter.
@@ -5806,7 +5892,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             Name),
         {NDRange, Kernel, Block}));
   }
-
   case Builtin::BI__builtin_store_half:
   case Builtin::BI__builtin_store_halff: {
     Value *Val = EmitScalarExpr(E->getArg(0));
@@ -7196,8 +7281,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vabdq_f16, NEON::BI__builtin_neon_vabdq_v, },
   { NEON::BI__builtin_neon_vabs_f16, NEON::BI__builtin_neon_vabs_v, },
   { NEON::BI__builtin_neon_vabsq_f16, NEON::BI__builtin_neon_vabsq_v, },
-  { NEON::BI__builtin_neon_vbsl_f16, NEON::BI__builtin_neon_vbsl_v, },
-  { NEON::BI__builtin_neon_vbslq_f16, NEON::BI__builtin_neon_vbslq_v, },
   { NEON::BI__builtin_neon_vcage_f16, NEON::BI__builtin_neon_vcage_v, },
   { NEON::BI__builtin_neon_vcageq_f16, NEON::BI__builtin_neon_vcageq_v, },
   { NEON::BI__builtin_neon_vcagt_f16, NEON::BI__builtin_neon_vcagt_v, },
@@ -7216,8 +7299,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vclezq_f16, NEON::BI__builtin_neon_vclezq_v, },
   { NEON::BI__builtin_neon_vcltz_f16, NEON::BI__builtin_neon_vcltz_v, },
   { NEON::BI__builtin_neon_vcltzq_f16, NEON::BI__builtin_neon_vcltzq_v, },
-  { NEON::BI__builtin_neon_vext_f16, NEON::BI__builtin_neon_vext_v, },
-  { NEON::BI__builtin_neon_vextq_f16, NEON::BI__builtin_neon_vextq_v, },
   { NEON::BI__builtin_neon_vfma_f16, NEON::BI__builtin_neon_vfma_v, },
   { NEON::BI__builtin_neon_vfma_lane_f16, NEON::BI__builtin_neon_vfma_lane_v, },
   { NEON::BI__builtin_neon_vfma_laneq_f16, NEON::BI__builtin_neon_vfma_laneq_v, },
@@ -7320,12 +7401,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vst4_lane_bf16, NEON::BI__builtin_neon_vst4_lane_v },
   { NEON::BI__builtin_neon_vst4q_bf16, NEON::BI__builtin_neon_vst4q_v },
   { NEON::BI__builtin_neon_vst4q_lane_bf16, NEON::BI__builtin_neon_vst4q_lane_v },
-  { NEON::BI__builtin_neon_vtrn_f16, NEON::BI__builtin_neon_vtrn_v, },
-  { NEON::BI__builtin_neon_vtrnq_f16, NEON::BI__builtin_neon_vtrnq_v, },
-  { NEON::BI__builtin_neon_vuzp_f16, NEON::BI__builtin_neon_vuzp_v, },
-  { NEON::BI__builtin_neon_vuzpq_f16, NEON::BI__builtin_neon_vuzpq_v, },
-  { NEON::BI__builtin_neon_vzip_f16, NEON::BI__builtin_neon_vzip_v, },
-  { NEON::BI__builtin_neon_vzipq_f16, NEON::BI__builtin_neon_vzipq_v, },
   // The mangling rules cause us to have one ID for each type for vldap1(q)_lane
   // and vstl1(q)_lane, but codegen is equivalent for all of them. Choose an
   // arbitrary one to be handled as tha canonical variation.
@@ -18222,6 +18297,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(), Intrinsic::dx_rsqrt,
         ArrayRef<Value *>{Op0}, nullptr, "dx.rsqrt");
   }
+  case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
+    auto *CI = EmitRuntimeCall(CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(IntTy, {}, false), "__hlsl_wave_get_lane_index",
+        {}, false, true));
+    if (getTarget().getTriple().isSPIRVLogical())
+      CI = dyn_cast<CallInst>(addControlledConvergenceToken(CI));
+    return CI;
+  }
   }
   return nullptr;
 }
@@ -18551,31 +18634,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16: {
 
     Intrinsic::ID IID;
-    llvm::Type *ArgTy;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
-      ArgTy = llvm::Type::getInt32Ty(getLLVMContext());
-      IID = Intrinsic::amdgcn_global_load_tr_b64;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt16Ty(getLLVMContext()), 4);
-      IID = Intrinsic::amdgcn_global_load_tr_b128;
-      break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt16Ty(getLLVMContext()), 8);
       IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
     }
-
+    llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
+    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
