@@ -50,6 +50,15 @@ struct CallsVisitor : TestVisitor<CallsVisitor> {
   std::function<void(CallExpr *, ASTContext *Context)> OnCall;
 };
 
+struct TypeLocVisitor : TestVisitor<TypeLocVisitor> {
+  bool VisitTypeLoc(TypeLoc TL) {
+    OnCall(TL, Context);
+    return true;
+  }
+
+  std::function<void(TypeLoc, ASTContext *Context)> OnCall;
+};
+
 // Equality matcher for `clang::CharSourceRange`, which lacks `operator==`.
 MATCHER_P(EqualsRange, R, "") {
   return arg.isTokenRange() == R.isTokenRange() &&
@@ -508,6 +517,26 @@ int c = M3(3);
         getFileRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
   };
   Visitor.runOver(Code.code());
+}
+
+TEST(SourceCodeTest, InnerNestedTemplate) {
+  llvm::Annotations Code(R"cc(
+  template <typename T>
+  struct S {};
+
+  void f(S<S<S<int>>>);
+)cc");
+
+  TypeLocVisitor Visitor;
+  Visitor.OnCall = [](TypeLoc TL, ASTContext *Context) {
+    if (TL.getSourceRange().isInvalid())
+      return;
+    auto Range = CharSourceRange::getTokenRange(TL.getSourceRange());
+    EXPECT_TRUE(getFileRangeForEdit(Range, *Context,
+                                    /*IncludeMacroExpansion=*/false))
+        << TL.getSourceRange().printToString(Context->getSourceManager());
+  };
+  Visitor.runOver(Code.code(), TypeLocVisitor::Lang_CXX11);
 }
 
 TEST_P(GetFileRangeForEditTest, EditPartialMacroExpansionShouldFail) {

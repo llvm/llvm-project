@@ -101,6 +101,56 @@ static bool spelledInMacroDefinition(SourceLocation Loc,
   return false;
 }
 
+// Returns the expansion loc of `Loc` if `Loc` is the location of the `>` token
+// of an inner nested template, where the inner and outer templates end brackets
+// are spelled as `>>`.
+//
+// Clang handles the `>>` in nested templates by placing the `SourceLocation`
+// of the inner template end bracket in scratch space. This forces it to be a
+// separate token (otherwise it would be lexed as `>>`), but that means it also
+// looks like a macro.
+static std::optional<SourceLocation> getExpansionForNestedTemplateGreater(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  if (Loc.isMacroID()) {
+    auto SpellingLoc = SM.getSpellingLoc(Loc);
+    auto ExpansionLoc = SM.getExpansionLoc(Loc);
+    Token SpellingTok, ExpansionTok;
+    if (Lexer::getRawToken(SpellingLoc, SpellingTok, SM, LangOpts,
+                           /*IgnoreWhiteSpace=*/false)) {
+      return std::nullopt;
+    }
+    if (Lexer::getRawToken(ExpansionLoc, ExpansionTok, SM, LangOpts,
+                           /*IgnoreWhiteSpace=*/false)) {
+      return std::nullopt;
+    }
+    if (SpellingTok.getKind() == tok::greater &&
+        ExpansionTok.getKind() == tok::greatergreater) {
+      return ExpansionLoc;
+    }
+  }
+  return std::nullopt;
+}
+
+// Returns `Range`, but adjusted to smooth over oddities introduced by Clang.
+static CharSourceRange
+cleanRangeForAvoidingMacros(CharSourceRange Range, const SourceManager &SM,
+                            const LangOptions &LangOpts) {
+  if (Range.isTokenRange()) {
+    auto B =
+        getExpansionForNestedTemplateGreater(Range.getBegin(), SM, LangOpts);
+    auto E = getExpansionForNestedTemplateGreater(Range.getEnd(), SM, LangOpts);
+    if (E) {
+      // We can't use the expansion location with a token range, because that
+      // will lex as `>>`. So we instead convert to a char range.
+      return CharSourceRange::getCharRange(B.value_or(Range.getBegin()),
+                                           E->getLocWithOffset(1));
+    } else if (B) {
+      return CharSourceRange::getTokenRange(*B, Range.getEnd());
+    }
+  }
+  return Range;
+}
+
 static CharSourceRange getRange(const CharSourceRange &EditRange,
                                 const SourceManager &SM,
                                 const LangOptions &LangOpts,
@@ -109,13 +159,14 @@ static CharSourceRange getRange(const CharSourceRange &EditRange,
   if (IncludeMacroExpansion) {
     Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   } else {
-    if (spelledInMacroDefinition(EditRange.getBegin(), SM) ||
-        spelledInMacroDefinition(EditRange.getEnd(), SM))
+    auto AdjustedRange = cleanRangeForAvoidingMacros(EditRange, SM, LangOpts);
+    if (spelledInMacroDefinition(AdjustedRange.getBegin(), SM) ||
+        spelledInMacroDefinition(AdjustedRange.getEnd(), SM))
       return {};
 
-    auto B = SM.getSpellingLoc(EditRange.getBegin());
-    auto E = SM.getSpellingLoc(EditRange.getEnd());
-    if (EditRange.isTokenRange())
+    auto B = SM.getSpellingLoc(AdjustedRange.getBegin());
+    auto E = SM.getSpellingLoc(AdjustedRange.getEnd());
+    if (AdjustedRange.isTokenRange())
       E = Lexer::getLocForEndOfToken(E, 0, SM, LangOpts);
     Range = CharSourceRange::getCharRange(B, E);
   }
