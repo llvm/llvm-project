@@ -2484,11 +2484,10 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
   // Atomic instructions already bypass caches to the scope specified by the
   // SyncScope operand. Only non-atomic volatile and nontemporal/last-use
   // instructions need additional treatment.
-  // SyncScope operand. Only non-atomic volatile and nontemporal instructions
-  // need additional treatment.
-  Changed |= CC->enableVolatileAndOrNonTemporal(MI, MOI.getInstrAddrSpace(),
-                                                SIMemOp::LOAD, MOI.isVolatile(),
-                                                MOI.isNonTemporal());
+  Changed |= CC->enableVolatileAndOrNonTemporal(
+      MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
+      MOI.isNonTemporal(), MOI.isLastUse());
+
   return Changed;
 }
 

@@ -2306,15 +2306,11 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 #endif
 
     if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
-      ++Iter;
-      if (!isWaitInstr(*Iter)) {
-        AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
-            Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
-        ScoreBrackets.simplifyWaitcnt(Wait);
-        Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
-                                    ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
-      }
-      --Iter;
+      AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
+          Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
+      ScoreBrackets.simplifyWaitcnt(Wait);
+      Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
+                                  ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
     }
 
     LLVM_DEBUG({
