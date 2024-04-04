@@ -2006,8 +2006,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // behavior. Intended for identifying the source of issues when reproducing
   // changes.
   SmallVector<StringRef> BuildOptions = {
-#if __GNUC__ && !__OPTIMIZE__
-    // FIXME: __OPTIMIZE__ is not available on MSVC, this will never show there
+#if !LLVM_IS_DEBUG_BUILD
     "+unoptimized",
 #endif
 #ifndef NDEBUG
