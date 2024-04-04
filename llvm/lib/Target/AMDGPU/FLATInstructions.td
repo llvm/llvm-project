@@ -2577,7 +2577,7 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op,
 
 multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
                                     string name = get_FLAT_ps<NAME>.Mnemonic,
-                                    string alias = ""> :
+                                    string alias = name> :
   VFLAT_Real_Base_gfx12<op, name, alias> {
   defm _RTN : VFLAT_Real_gfx12<op, name>;
 }
@@ -2600,7 +2600,7 @@ multiclass VGLOBAL_Real_AllAddr_gfx12_w64<bits<8> op,
 
 multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op,
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
-                                      string alias = ""> :
+                                      string alias = name> :
   VGLOBAL_Real_AllAddr_gfx12<op, name, alias> {
   defm _RTN : VFLAT_Real_gfx12<op, name>;
   defm _SADDR_RTN : VFLAT_Real_gfx12<op, name>;
