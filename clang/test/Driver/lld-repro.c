@@ -1,6 +1,11 @@
 // REQUIRES: lld
 // UNSUPPORTED: target={{.*-(ps4|ps5)}}
 
+// Swift LLVM fork downstream change start
+// lld from the Swift LLVM fork does not support linking Darwin Mach-O files
+// UNSUPPORTED: *
+// Swift LLVM fork downstream change end
+
 // RUN: echo "-nostartfiles -nostdlib -fuse-ld=lld -gen-reproducer=error -fcrash-diagnostics-dir=%t" \
 // RUN:   | sed -e 's/\\/\\\\/g' > %t.rsp
 
