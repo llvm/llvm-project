@@ -736,13 +736,10 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
   // LookupTemplateName/LookupParsedName don't expect these both to exist
   // simultaneously.
   QualType ObjectType = SS.isSet() ? QualType() : RTy;
-  if (HasTemplateArgs || TemplateKWLoc.isValid()) {
-    bool MOUS;
+  if (HasTemplateArgs || TemplateKWLoc.isValid())
     return SemaRef.LookupTemplateName(R,
                                       /*S=*/nullptr, SS, ObjectType,
-                                      /*EnteringContext=*/false, MOUS,
-                                      TemplateKWLoc);
-  }
+                                      /*EnteringContext=*/false, TemplateKWLoc);
 
   SemaRef.LookupParsedName(R, /*S=*/nullptr, &SS, ObjectType);
 
@@ -1014,16 +1011,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                bool SuppressQualifierCheck,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
   assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
-  if (R.wasNotFoundInCurrentInstantiation() ||
-#if 0
-      (SS.isValid() && !computeDeclContext(SS, false))) {
-#else
-      false) {
-#endif
+  if (R.wasNotFoundInCurrentInstantiation())
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     R.getLookupNameInfo(), TemplateArgs);
-  }
 
   QualType BaseType = BaseExprType;
   if (IsArrow) {
@@ -1031,6 +1022,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     BaseType = BaseType->castAs<PointerType>()->getPointeeType();
   }
   R.setBaseObjectType(BaseType);
+
+  assert((SS.isEmpty()
+              ? !BaseType->isDependentType() || computeDeclContext(BaseType)
+              : !isDependentScopeSpecifier(SS) || computeDeclContext(SS)) &&
+         "dependent lookup context that isn't the current instantiation?");
 
   // C++1z [expr.ref]p2:
   //   For the first option (dot) the first expression shall be a glvalue [...]
@@ -1330,10 +1326,6 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     return ExprError();
 
   QualType BaseType = BaseExpr.get()->getType();
-
-#if 0
-  assert(!BaseType->isDependentType());
-#endif
 
   DeclarationName MemberName = R.getLookupName();
   SourceLocation MemberLoc = R.getNameLoc();

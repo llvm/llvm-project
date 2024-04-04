@@ -2998,8 +2998,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         << TokenName << TagName << getLangOpts().CPlusPlus
         << FixItHint::CreateInsertion(Tok.getLocation(), FixitTagName);
 
-      if (Actions.LookupParsedName(R, getCurScope(), SS,
-                                   /*ObjectType=*/QualType())) {
+      if (Actions.LookupName(R, getCurScope())) {
         for (LookupResult::iterator I = R.begin(), IEnd = R.end();
              I != IEnd; ++I)
           Diag((*I)->getLocation(), diag::note_decl_hiding_tag_type)
