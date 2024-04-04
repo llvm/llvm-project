@@ -1226,18 +1226,18 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-// Get the number of symbols with CUDA attribute in the expression.
+// Get the number of distinct symbols with CUDA attribute in the expression.
 template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
-  int n{0};
+  semantics::UnorderedSymbolSet symbols;
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
       if (details->cudaDataAttr()) {
-        ++n;
+        symbols.insert(sym);
       }
     }
   }
-  return n;
+  return symbols.size();
 }
 
 // Check if any of the symbols part of the expression has a CUDA data
