@@ -2734,6 +2734,38 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
     CommonOptions->CategorizedHiddenPrinter.printHelp();
 }
 
+ArrayRef<StringRef> cl::CompilerBuildConfig = {
+#if LLVM_IS_DEBUG_BUILD
+    "+unoptimized",
+#endif
+#ifndef NDEBUG
+    "+assertions",
+#endif
+#ifdef EXPENSIVE_CHECKS
+    "+expensive-checks",
+#endif
+#if __has_feature(address_sanitizer)
+    "+asan",
+#endif
+#if __has_feature(undefined_behavior_sanitizer)
+    "+ubsan",
+#endif
+#if __has_feature(memory_sanitizer)
+    "+msan",
+#endif
+#if __has_feature(dataflow_sanitizer)
+    "+dfsan",
+#endif
+};
+
+// Utility function for printing the build config.
+void cl::printBuildConfig(raw_ostream &OS) {
+  OS << "Build config: ";
+  llvm::interleaveComma(cl::CompilerBuildConfig, OS,
+                        [&OS](const StringRef &Option) { OS << Option; });
+  OS << '\n';
+}
+
 /// Utility function for printing version number.
 void cl::PrintVersionMessage() {
   CommonOptions->VersionPrinterInstance.print(CommonOptions->ExtraVersionPrinters);

@@ -2002,40 +2002,11 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // Print out the install directory.
   OS << "InstalledDir: " << Dir << '\n';
 
-  // Print out build configuration options that impact the compiler's runtime
-  // behavior. Intended for identifying the source of issues when reproducing
-  // changes.
-  SmallVector<StringRef> BuildOptions = {
-#if __GNUC__ && !__OPTIMIZE__
-    // FIXME: __OPTIMIZE__ is not available on MSVC, this will never show there
-    "+unoptimized",
-#endif
-#ifndef NDEBUG
-    "+assertions",
-#endif
-#ifdef EXPENSIVE_CHECKS
-    "+expensive-checks",
-#endif
-#if __has_feature(address_sanitizer)
-    "+asan",
-#endif
-#if __has_feature(undefined_behavior_sanitizer)
-    "+ubsan",
-#endif
-#if __has_feature(memory_sanitizer)
-    "+msan",
-#endif
-#if __has_feature(dataflow_sanitizer)
-    "+dfsan",
-#endif
-  };
-  if (!BuildOptions.empty()) {
-    OS << "Build config: ";
-    llvm::interleaveComma(BuildOptions, OS, [&OS](const StringRef &Option) {
-        OS << Option;
-    });
-    OS << '\n';
-  }
+  // Print the build config if it's non-default.
+  // Intended to help LLVM developers understand the configs of compilers
+  // they're investigating.
+  if (!llvm::cl::CompilerBuildConfig.empty())
+    llvm::cl::printBuildConfig(OS);
 
   // If configuration files were used, print their paths.
   for (auto ConfigFile : ConfigFiles)
