@@ -300,9 +300,6 @@ public:
   IEEEFloat(const fltSemantics &, integerPart);
   IEEEFloat(const fltSemantics &, uninitializedTag);
   IEEEFloat(const fltSemantics &, const APInt &);
-#ifdef __FLOAT128__
-  explicit IEEEFloat(float128 ld);
-#endif
   explicit IEEEFloat(double d);
   explicit IEEEFloat(float f);
   IEEEFloat(const IEEEFloat &);
@@ -949,9 +946,6 @@ public:
   APFloat(const fltSemantics &Semantics, uninitializedTag)
       : U(Semantics, uninitialized) {}
   APFloat(const fltSemantics &Semantics, const APInt &I) : U(Semantics, I) {}
-#ifdef __FLOAT128__
-  explicit APFloat(float128 ld) : U(IEEEFloat(ld), IEEEquad()) {}
-#endif
   explicit APFloat(double d) : U(IEEEFloat(d), IEEEdouble()) {}
   explicit APFloat(float f) : U(IEEEFloat(f), IEEEsingle()) {}
   APFloat(const APFloat &RHS) = default;

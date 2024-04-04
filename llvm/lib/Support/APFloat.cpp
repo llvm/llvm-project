@@ -3967,12 +3967,6 @@ IEEEFloat::IEEEFloat(double d) {
   initFromAPInt(&semIEEEdouble, APInt::doubleToBits(d));
 }
 
-#ifdef __FLOAT128__
-IEEEFloat::IEEEFloat(float128 ld) {
-  initFromAPInt(&semIEEEquad, APInt::longDoubleToBits(ld));
-}
-#endif
-
 namespace {
   void append(SmallVectorImpl<char> &Buffer, StringRef Str) {
     Buffer.append(Str.begin(), Str.end());

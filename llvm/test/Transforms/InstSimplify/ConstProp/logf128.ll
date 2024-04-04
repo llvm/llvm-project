@@ -38,7 +38,7 @@ define fp128 @log_e_smallest_positive_normal_number(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_largest_normal_number(){
+define fp128 @log_e_largest_normal_number(){
 ; CHECK-LABEL: define fp128 @log_e_largest_normal_number() {
 ; CHECK-NEXT:    ret fp128 0xLF000000000000000400C62E42FEFA39E
 ;
@@ -46,7 +46,7 @@ define  fp128 @log_e_largest_normal_number(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_largest_number_less_than_one(){
+define fp128 @log_e_largest_number_less_than_one(){
 ; CHECK-LABEL: define fp128 @log_e_largest_number_less_than_one() {
 ; CHECK-NEXT:    ret fp128 0xL0000000000000000BF8E000000000000
 ;
@@ -54,7 +54,7 @@ define  fp128 @log_e_largest_number_less_than_one(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_1(){
+define fp128 @log_e_1(){
 ; CHECK-LABEL: define fp128 @log_e_1() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000000
 ;
@@ -62,7 +62,7 @@ define  fp128 @log_e_1(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_smallest_number_larger_than_one(){
+define fp128 @log_e_smallest_number_larger_than_one(){
 ; CHECK-LABEL: define fp128 @log_e_smallest_number_larger_than_one() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000003F8F000000000000
 ;
@@ -70,7 +70,7 @@ define  fp128 @log_e_smallest_number_larger_than_one(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_negative_2(){
+define fp128 @log_e_negative_2(){
 ; CHECK-LABEL: define fp128 @log_e_negative_2() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
 ;
@@ -78,7 +78,7 @@ define  fp128 @log_e_negative_2(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_0(){
+define fp128 @log_e_0(){
 ; CHECK-LABEL: define fp128 @log_e_0() {
 ; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
 ;
@@ -86,7 +86,7 @@ define  fp128 @log_e_0(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_negative_0(){
+define fp128 @log_e_negative_0(){
 ; CHECK-LABEL: define fp128 @log_e_negative_0() {
 ; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
 ;
@@ -94,7 +94,7 @@ define  fp128 @log_e_negative_0(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_infinity(){
+define fp128 @log_e_infinity(){
 ; CHECK-LABEL: define fp128 @log_e_infinity() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF000000000000
 ;
@@ -102,7 +102,7 @@ define  fp128 @log_e_infinity(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_negative_infinity(){
+define fp128 @log_e_negative_infinity(){
 ; CHECK-LABEL: define fp128 @log_e_negative_infinity() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
 ;
@@ -110,7 +110,7 @@ define  fp128 @log_e_negative_infinity(){
   ret fp128 %A
 }
 
-define  fp128 @log_e_nan(){
+define fp128 @log_e_nan(){
 ; CHECK-LABEL: define fp128 @log_e_nan() {
 ; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000001
 ;

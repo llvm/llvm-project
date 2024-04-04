@@ -1703,16 +1703,6 @@ public:
     return APInt(sizeof(float) * CHAR_BIT, llvm::bit_cast<uint32_t>(V));
   }
 
-#ifdef __FLOAT128__
-  static APInt longDoubleToBits(float128 V) {
-    const uint64_t Words[2] = {
-        static_cast<uint64_t>(V),
-        static_cast<uint64_t>(llvm::bit_cast<__uint128_t>(V) >> 64),
-    };
-    return APInt(sizeof(float128) * CHAR_BIT, 2, Words);
-  }
-#endif
-
   /// @}
   /// \name Mathematics Operations
   /// @{
