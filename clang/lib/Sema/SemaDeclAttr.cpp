@@ -7426,7 +7426,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
             << Slot.substr(0, 1) << varTy << "s";
       break;
     }
-    default: {
+    case llvm::hlsl::ResourceClass::Invalid: {
       llvm_unreachable("Resource class should be valid.");
       break;
     }
