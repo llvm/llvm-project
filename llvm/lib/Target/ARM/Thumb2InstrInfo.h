@@ -68,10 +68,6 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
-  bool isSchedulingBoundary(const MachineInstr &MI,
-                            const MachineBasicBlock *MBB,
-                            const MachineFunction &MF) const override;
-
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
