@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_FSEEKO_H
 
 #include <stdio.h>
+#include <unistd.h>
 
 namespace LIBC_NAMESPACE {
 
