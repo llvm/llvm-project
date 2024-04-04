@@ -30,6 +30,10 @@
 #include <limits>
 #include <type_traits>
 
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
+
 namespace Fortran::decimal {
 
 static constexpr std::uint64_t TenToThe(int power) {
