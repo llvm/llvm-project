@@ -296,6 +296,30 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
 
+struct SummaryImportInfo {
+  enum class ImportType : uint8_t {
+    NotImported = 0,
+    Declaration = 1,
+    Definition = 2,
+  };
+  unsigned Type : 3;
+  SummaryImportInfo() : Type(static_cast<unsigned>(ImportType::NotImported)) {}
+  SummaryImportInfo(ImportType Type) : Type(static_cast<unsigned>(Type)) {}
+
+  // FIXME: delete the first two set* helper function.
+  void updateType(ImportType InputType) {
+    Type = std::max(Type, static_cast<unsigned>(InputType));
+  }
+
+  bool isDefinition() const {
+    return static_cast<ImportType>(Type) == ImportType::Definition;
+  }
+
+  bool isDeclaration() const {
+    return static_cast<ImportType>(Type) == ImportType::Declaration;
+  }
+};
+
 /// Summary of memprof callsite metadata.
 struct CallsiteInfo {
   // Actual callee function.

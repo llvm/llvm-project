@@ -33,7 +33,14 @@ class FunctionImporter {
 public:
   /// Set of functions to import from a source module. Each entry is a set
   /// containing all the GUIDs of all functions to import for a source module.
-  using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
+  using FunctionsToImportTy = DenseMap<GlobalValue::GUID, SummaryImportInfo>;
+
+  // FIXME: Remove this.
+  enum ImportStatus {
+    NotImported,
+    ImportDeclaration,
+    ImportDefinition,
+  };
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -99,8 +106,10 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The set contains an entry for every global value the module exports.
-  using ExportSetTy = DenseSet<ValueInfo>;
+  /// The map contains an entry for every global value the module exports, the
+  /// key being the value info, and the value is the summary-based import info.
+  /// FIXME: Does this set need to be a map?
+  using ExportSetTy = DenseMap<ValueInfo, SummaryImportInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
@@ -211,7 +220,8 @@ void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    ModuleToGVSummaryPtrSet &ModuleToDecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(

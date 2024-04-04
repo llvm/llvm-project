@@ -376,7 +376,7 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
 
     auto &Entry =
         ImportList[FileNameStringCache.insert(FileName).first->getKey()];
-    Entry.insert(F->getGUID());
+    Entry[F->getGUID()].updateType(SummaryImportInfo::ImportType::Definition);
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(std::string(Identifier));

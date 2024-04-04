@@ -159,7 +159,7 @@ void llvm::computeLTOCacheKey(
   std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
   for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
+    auto GUID = VI.first.getGUID();
     ExportsGUID.push_back(GUID);
   }
 
@@ -205,7 +205,7 @@ void llvm::computeLTOCacheKey(
 
     AddUint64(Entry.getFunctions().size());
     for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn);
+      AddUint64(Fn.first);
   }
 
   // Include the hash for the resolved ODR.
@@ -277,7 +277,7 @@ void llvm::computeLTOCacheKey(
   for (const ImportModule &ImpM : ImportModulesVector)
     for (auto &ImpF : ImpM.getFunctions()) {
       GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
+          Index.findSummaryInModule(ImpF.first, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.
@@ -1389,15 +1389,18 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+    ModuleToGVSummaryPtrSet ModuleToDeclarationSummaries;
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex);
+                                     ImportList, ModuleToSummariesForIndex,
+                                     ModuleToDeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                     &ModuleToDeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",

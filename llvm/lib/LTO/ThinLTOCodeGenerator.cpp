@@ -794,9 +794,11 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
+  ModuleToGVSummaryPtrSet ModuleToDecSummaries;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex,
+      ModuleToDecSummaries);
 }
 
 /**
@@ -833,9 +835,12 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
                            ExportLists);
 
   std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  // FIXME: Pass on `ModuleToDecSummaries` to `EmitImportFiles` below.
+  ModuleToGVSummaryPtrSet ModuleToDecSummaries;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex,
+      ModuleToDecSummaries);
 
   std::error_code EC;
   if ((EC = EmitImportsFiles(ModuleIdentifier, OutputName,
