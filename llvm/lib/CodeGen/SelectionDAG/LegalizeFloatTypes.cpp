@@ -53,6 +53,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
+    // clang-format off
   default:
 #ifndef NDEBUG
     dbgs() << "SoftenFloatResult #" << ResNo << ": ";
@@ -115,9 +116,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FPOWI:
     case ISD::FLDEXP:
     case ISD::STRICT_FLDEXP: R = SoftenFloatRes_ExpOp(N); break;
-    case ISD::FFREXP:
-      R = SoftenFloatRes_FFREXP(N);
-      break;
+    case ISD::FFREXP:        R = SoftenFloatRes_FFREXP(N); break;
     case ISD::STRICT_FREM:
     case ISD::FREM:        R = SoftenFloatRes_FREM(N); break;
     case ISD::STRICT_FRINT:
@@ -150,14 +149,11 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::VECREDUCE_FMIN:
     case ISD::VECREDUCE_FMAX:
     case ISD::VECREDUCE_FMAXIMUM:
-    case ISD::VECREDUCE_FMINIMUM:
-      R = SoftenFloatRes_VECREDUCE(N);
-      break;
+    case ISD::VECREDUCE_FMINIMUM: R = SoftenFloatRes_VECREDUCE(N); break;
     case ISD::VECREDUCE_SEQ_FADD:
-    case ISD::VECREDUCE_SEQ_FMUL:
-      R = SoftenFloatRes_VECREDUCE_SEQ(N);
-      break;
-  }
+    case ISD::VECREDUCE_SEQ_FMUL: R = SoftenFloatRes_VECREDUCE_SEQ(N); break;
+      // clang-format on
+    }
 
   // If R is null, the sub-method took care of registering the result.
   if (R.getNode()) {
