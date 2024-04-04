@@ -1538,6 +1538,21 @@ static void printAtomicReductionRegion(OpAsmPrinter &printer,
   printer.printRegion(region);
 }
 
+static ParseResult parseCleanupReductionRegion(OpAsmParser &parser,
+                                               Region &region) {
+  if (parser.parseOptionalKeyword("cleanup"))
+    return success();
+  return parser.parseRegion(region);
+}
+
+static void printCleanupReductionRegion(OpAsmPrinter &printer,
+                                        DeclareReductionOp op, Region &region) {
+  if (region.empty())
+    return;
+  printer << "cleanup ";
+  printer.printRegion(region);
+}
+
 LogicalResult DeclareReductionOp::verifyRegions() {
   if (getInitializerRegion().empty())
     return emitOpError() << "expects non-empty initializer region";
@@ -1571,21 +1586,29 @@ LogicalResult DeclareReductionOp::verifyRegions() {
                               "of the reduction type";
   }
 
-  if (getAtomicReductionRegion().empty())
-    return success();
+  if (!getAtomicReductionRegion().empty()) {
+    Block &atomicReductionEntryBlock = getAtomicReductionRegion().front();
+    if (atomicReductionEntryBlock.getNumArguments() != 2 ||
+        atomicReductionEntryBlock.getArgumentTypes()[0] !=
+            atomicReductionEntryBlock.getArgumentTypes()[1])
+      return emitOpError() << "expects atomic reduction region with two "
+                              "arguments of the same type";
+    auto ptrType = llvm::dyn_cast<PointerLikeType>(
+        atomicReductionEntryBlock.getArgumentTypes()[0]);
+    if (!ptrType ||
+        (ptrType.getElementType() && ptrType.getElementType() != getType()))
+      return emitOpError() << "expects atomic reduction region arguments to "
+                              "be accumulators containing the reduction type";
+  }
 
-  Block &atomicReductionEntryBlock = getAtomicReductionRegion().front();
-  if (atomicReductionEntryBlock.getNumArguments() != 2 ||
-      atomicReductionEntryBlock.getArgumentTypes()[0] !=
-          atomicReductionEntryBlock.getArgumentTypes()[1])
-    return emitOpError() << "expects atomic reduction region with two "
-                            "arguments of the same type";
-  auto ptrType = llvm::dyn_cast<PointerLikeType>(
-      atomicReductionEntryBlock.getArgumentTypes()[0]);
-  if (!ptrType ||
-      (ptrType.getElementType() && ptrType.getElementType() != getType()))
-    return emitOpError() << "expects atomic reduction region arguments to "
-                            "be accumulators containing the reduction type";
+  if (getCleanupRegion().empty())
+    return success();
+  Block &cleanupEntryBlock = getCleanupRegion().front();
+  if (cleanupEntryBlock.getNumArguments() != 1 ||
+      cleanupEntryBlock.getArgument(0).getType() != getType())
+    return emitOpError() << "expects cleanup region with one argument "
+                            "of the reduction type";
+
   return success();
 }
 
