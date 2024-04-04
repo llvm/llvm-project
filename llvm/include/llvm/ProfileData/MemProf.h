@@ -502,7 +502,7 @@ private:
 };
 
 // Trait for writing IndexedMemProfRecord data to the on-disk hash table.
-template <IndexedVersion Version> class RecordWriterTrait {
+class RecordWriterTrait {
 public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
@@ -517,12 +517,16 @@ public:
   // we must use a default constructor with no params for the writer trait so we
   // have a public member which must be initialized by the user.
   MemProfSchema *Schema = nullptr;
+  // The MemProf version to use for the serialization.
+  IndexedVersion Version;
 
-  RecordWriterTrait() = default;
+  // We do not support the default constructor, which does not set Version.
+  RecordWriterTrait() = delete;
+  RecordWriterTrait(IndexedVersion V) : Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
