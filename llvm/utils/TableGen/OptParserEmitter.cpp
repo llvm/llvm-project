@@ -198,6 +198,10 @@ static void EmitHelpTextsForVariants(
   const unsigned MaxVisibilityPerHelp = 2;
   const unsigned MaxVisibilityHelp = 1;
 
+  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
+         "Too many help text variants to store in "
+         "OptTable::HelpTextsForVariants");
+
   // This function must initialise any unused elements of those arrays.
   for (auto [Visibilities, _] : HelpTextsForVariants)
     while (Visibilities.size() < MaxVisibilityPerHelp)
@@ -210,12 +214,9 @@ static void EmitHelpTextsForVariants(
   OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
      << ">, const char*>, " << MaxVisibilityHelp << ">{{ ";
 
-  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
-         "Too many help text variants to store in "
-         "OptTable::HelpTextsForVariants");
-
+  auto VisibilityHelpEnd = HelpTextsForVariants.cend();
   for (auto VisibilityHelp = HelpTextsForVariants.cbegin();
-       VisibilityHelp != HelpTextsForVariants.cend(); ++VisibilityHelp) {
+       VisibilityHelp != VisibilityHelpEnd; ++VisibilityHelp) {
     auto [Visibilities, Help] = *VisibilityHelp;
 
     assert(Visibilities.size() <= MaxVisibilityPerHelp &&
@@ -224,10 +225,11 @@ static void EmitHelpTextsForVariants(
     OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
        << ">{{";
 
-    for (auto Visibility = Visibilities.cbegin();
-         Visibility != Visibilities.cend(); ++Visibility) {
+    auto VisibilityEnd = Visibilities.cend();
+    for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
+         ++Visibility) {
       OS << *Visibility;
-      if (std::next(Visibility) != Visibilities.cend())
+      if (std::next(Visibility) != VisibilityEnd)
         OS << ", ";
     }
 
@@ -239,7 +241,7 @@ static void EmitHelpTextsForVariants(
       OS << "nullptr";
     OS << ")";
 
-    if (std::next(VisibilityHelp) != HelpTextsForVariants.cend())
+    if (std::next(VisibilityHelp) != VisibilityHelpEnd)
       OS << ", ";
   }
   OS << " }})";
