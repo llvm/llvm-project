@@ -434,18 +434,16 @@ void arith::MulIOp::getAsmResultNames(
     return op && op->getName().getStringRef() == "vector.vscale";
   };
 
-  // Name `base * vscale` or `vscale * base` as `c<base_value>_vscale`.
   IntegerAttr baseValue;
-  if (matchPattern(getLhs(), m_Constant(&baseValue)) &&
-      isVscale(getRhs().getDefiningOp())) {
-    // base * vscale
-  } else if (isVscale(getLhs().getDefiningOp()) &&
-             matchPattern(getRhs(), m_Constant(&baseValue))) {
-    // vscale * base
-  } else {
-    return;
-  }
+  auto isVscaleExpr = [&](Value a, Value b) {
+    return matchPattern(a, m_Constant(&baseValue)) &&
+           isVscale(b.getDefiningOp());
+  };
 
+  if (!isVscaleExpr(getLhs(), getRhs()) && !isVscaleExpr(getRhs(), getLhs()))
+    return;
+
+  // Name `base * vscale` or `vscale * base` as `c<base_value>_vscale`.
   SmallString<32> specialNameBuffer;
   llvm::raw_svector_ostream specialName(specialNameBuffer);
   specialName << 'c' << baseValue.getInt() << "_vscale";
