@@ -306,15 +306,10 @@ struct GOFFSection {
 // "true" underlying symbol, the second one represents any indirect
 // references to that symbol.
 class GOFFObjectWriter : public MCObjectWriter {
-  typedef DenseMap<MCSymbol const *, uint32_t> SymbolMapType;
   typedef DenseMap<MCSection const *, GOFFSection> SectionMapType;
 
   // The target specific GOFF writer instance.
   std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
-
-  /// Lookup table for MCSymbols to the ESD IDs of the associated
-  /// GOFF Symbol.
-  SymbolMapType SymbolMap;
 
   /// Lookup table for MCSections to GOFFSections.  Needed to determine
   /// SymbolType on GOFFSymbols that reside in GOFFSections.
@@ -353,7 +348,7 @@ private:
   // data of the section.
   void writeSectionSymbols(MCAssembler &Asm, const MCAsmLayout &Layout);
 
-  void writeText(const MCSectionGOFF *MCSec, uint32_t EsdId, bool IsStructured,
+  void writeText(const MCSectionGOFF *MCSec, uint32_t EsdId, GOFF::TXTRecordStyle RecordStyle,
                  MCAssembler &Asm, const MCAsmLayout &Layout);
 
   void writeEnd();
@@ -587,7 +582,6 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
     LD.ADAEsdId = ADAPREsdId;
 
     LD.MCSym = &Symbol;
-    SymbolMap.insert(std::make_pair(&Symbol, LD.EsdId));
     writeSymbol(LD, Layout);
   } else if ((Kind.isBSS() || Kind.isData() || Kind.isThreadData()) && Symbol.isAlias()) {
     // Alias to variable at the object file level.
@@ -619,7 +613,6 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
     writeSymbol(ED, Layout);
     writeSymbol(PR, Layout);
 
-    SymbolMap.insert(std::make_pair(&Symbol, PR.EsdId));
     GOFFSection GoffSec = GOFFSection(PR.EsdId, PR.EsdId, SD.EsdId);
     SectionMap.insert(std::make_pair(&Section, GoffSec));
   } else
@@ -634,14 +627,12 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
   GOFF::ESDExecutable Exec = Symbol.getExecutable();
 
   GOFFSymbol GSym;
-  uint32_t GSymEsdId = 0;
   switch (Exec) {
   case GOFF::ESD_EXE_CODE:
   case GOFF::ESD_EXE_Unspecified: {
     GOFFSymbol ER = createERSymbol(Symbol.getName(), SD.EsdId, &Symbol);
     ER.BindingScope = GOFF::ESD_BSC_ImportExport;
     GSym = ER;
-    GSymEsdId = ER.EsdId;
     break;
   }
   case GOFF::ESD_EXE_DATA: {
@@ -654,7 +645,6 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
                        GOFFSymbol::setGOFFAlignment(SymbAlign),
                        GOFF::ESD_BSC_ImportExport, 0);
     GSym = PR;
-    GSymEsdId = PR.EsdId;
     break;
   }
   }
@@ -662,7 +652,6 @@ void GOFFObjectWriter::writeSymbolDeclaredInModule(const MCSymbolGOFF &Symbol,
   GSym.BindingScope =
       Symbol.isExported() ? GOFF::ESD_BSC_ImportExport : GOFF::ESD_BSC_Library;
 
-  SymbolMap.insert(std::make_pair(&Symbol, GSymEsdId));
   writeSymbol(GSym, Layout);
 }
 
@@ -1055,10 +1044,9 @@ void TextStream::write_impl(const char *Ptr, size_t Size) {
 } // namespace
 
 void GOFFObjectWriter::writeText(const MCSectionGOFF *MCSec, uint32_t EsdId,
-                                 bool IsStructured, MCAssembler &Asm,
+                                 GOFF::TXTRecordStyle RecordStyle, MCAssembler &Asm,
                                  const MCAsmLayout &Layout) {
-  TextStream S(OS, EsdId,
-               IsStructured ? GOFF::TXT_RS_Structured : GOFF::TXT_RS_Byte);
+  TextStream S(OS, EsdId, RecordStyle);
   Asm.writeSectionData(S, MCSec, Layout);
 }
 
@@ -1108,8 +1096,8 @@ uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
        GSecIter++) {
     auto &MCGOFFSec = cast<MCSectionGOFF>(*(GSecIter->first));
     GOFFSection &CurrGSec = GSecIter->second;
-    bool IsStructured = MCGOFFSec.getName().equals("B_IDRL");
-    writeText(&MCGOFFSec, CurrGSec.PEsdId, IsStructured, Asm, Layout);
+    auto TextStyle = static_cast<GOFF::TXTRecordStyle>(MCGOFFSec.getTextStyle());
+    writeText(&MCGOFFSec, CurrGSec.PEsdId, TextStyle, Asm, Layout);
   }
 
   writeEnd();

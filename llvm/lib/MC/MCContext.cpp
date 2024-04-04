@@ -664,7 +664,7 @@ MCSectionGOFF *MCContext::getGOFFSection(
     bool isRooted) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool = GOFFUniquingMap.insert(std::make_pair(
-      GOFFSectionKey{Section.str(), GOFF::GOFFSectionType::Other, false},
+      GOFFSectionKey{Section.str(), SectionType, (Parent != nullptr)},
       nullptr));
   auto Iter = IterBool.first;
   if (!IterBool.second)
