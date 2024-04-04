@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
@@ -15,6 +17,42 @@ package(
 licenses(["notice"])
 
 exports_files(["LICENSE.TXT"])
+
+bool_flag(
+    name = "enable_curses",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "curses_enabled_setting",
+    flag_values = {":enable_curses": "true"},
+)
+
+selects.config_setting_group(
+    name = "curses_enabled",
+    match_any = [
+        ":curses_enabled_setting",
+        "@platforms//os:macos",
+    ],
+)
+
+bool_flag(
+    name = "enable_libedit",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libedit_enabled_setting",
+    flag_values = {":enable_libedit": "true"},
+)
+
+selects.config_setting_group(
+    name = "libedit_enabled",
+    match_any = [
+        ":libedit_enabled_setting",
+        "@platforms//os:macos",
+    ],
+)
 
 _VERSION_SUBSTITUTIONS = {
     "@LLDB_VERSION@": PACKAGE_VERSION,
@@ -57,9 +95,6 @@ expand_template(
     out = "include/lldb/Host/Config.h",
     substitutions = {
         "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
-        "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 1",
-        "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
-        "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 1",
         "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
 
         # TODO: Add LZMA support by including the library in bazel
@@ -102,6 +137,22 @@ expand_template(
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
             "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
+        },
+    }) | select({
+        ":curses_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 0",
+        },
+    }) | select({
+        ":libedit_enabled": {
+            "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 1",
+            "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 0",
+            "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
         },
     }),
     template = "include/lldb/Host/Config.h.cmake",
@@ -448,18 +499,22 @@ cc_library(
     linkopts = select({
         "@platforms//os:macos": [
             "-lcompression",
-            "-lcurses",
-            "-ledit",
-            "-lpanel",
             "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
         ],
-        "@platforms//os:linux": [
+        "//conditions:default": [],
+    }) + select({
+        ":curses_enabled": [
             "-lcurses",
-            "-ledit",
             "-lpanel",
         ],
+        "//conditions:default": [],
+    }) + select({
+        ":libedit_enabled": [
+            "-ledit",
+        ],
+        "//conditions:default": [],
     }),
     strip_include_prefix = "include",
     deps = [
