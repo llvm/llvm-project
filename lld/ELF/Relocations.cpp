@@ -995,7 +995,8 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (e == R_GOT || e == R_PLT)
     return target->usesOnlyLowPageBits(type) || !config->isPic;
 
-  if (sym.isPreemptible)
+  // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
+  if (sym.isPreemptible || e == R_AARCH64_AUTH)
     return false;
   if (!config->isPic)
     return true;
@@ -1141,12 +1142,26 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         (rel == target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       return;
-    } else if (rel != 0) {
+    }
+    if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target->symbolicRel)
         rel = target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
-      sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
-                                                  addend, type);
+      Partition &part = sec->getPartition();
+      if (config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64) {
+        // For a preemptible symbol, we can't use a relative relocation. For an
+        // undefined symbol, we can't compute offset at link-time and use a
+        // relative relocation. Use a symbolic relocation instead.
+        if (sym.isPreemptible) {
+          part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else {
+          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
+                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
+                                  addend, R_ABS});
+        }
+        return;
+      }
+      part.relaDyn->addSymbolReloc(rel, *sec, offset, sym, addend, type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
@@ -1171,7 +1186,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
-  if (!config->shared && sym.isShared()) {
+  // Copy relocations/canonical PLT entries are unsupported for
+  // R_AARCH64_AUTH_ABS64.
+  if (!config->shared && sym.isShared() &&
+      !(config->emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
                   getLocation(*sec, sym, offset));

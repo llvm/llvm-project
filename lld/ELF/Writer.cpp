@@ -24,6 +24,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
@@ -564,7 +565,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   in.iplt = std::make_unique<IpltSection>();
   add(*in.iplt);
 
-  if (config->andFeatures)
+  if (config->andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
     add(*make<GnuPropertySection>());
 
   // .note.GNU-stack is always added when we are creating a re-linkable
