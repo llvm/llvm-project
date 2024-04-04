@@ -523,11 +523,16 @@ void ReductionProcessor::addDeclareReduction(
     if (reductionSymbols)
       reductionSymbols->push_back(symbol);
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
-    auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    mlir::Type eleType;
+    auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
+    if (refType)
+      eleType = refType.getEleTy();
+    else
+      eleType = symVal.getType();
 
     // all arrays must be boxed so that we have convenient access to all the
     // information needed to iterate over the array
-    if (mlir::isa<fir::SequenceType>(redType.getEleTy())) {
+    if (mlir::isa<fir::SequenceType>(eleType)) {
       // For Host associated symbols, use `SymbolBox` instead
       Fortran::lower::SymbolBox symBox =
           converter.lookupOneLevelUpSymbol(*symbol);
@@ -542,10 +547,24 @@ void ReductionProcessor::addDeclareReduction(
       builder.create<fir::StoreOp>(currentLocation, box, alloca);
 
       symVal = alloca;
-      redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
+      // boxed arrays are passed as values not by reference. Unfortunately,
+      // we can't pass a box by value to omp.redution_declare, so turn it
+      // into a reference
+
+      auto alloca =
+          builder.create<fir::AllocaOp>(currentLocation, symVal.getType());
+      builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
+      symVal = alloca;
     } else if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>()) {
       symVal = declOp.getBase();
     }
+
+    // this isn't the same as the by-val and by-ref passing later in the
+    // pipeline. Both styles assume that the variable is a reference at
+    // this point
+    assert(mlir::isa<fir::ReferenceType>(symVal.getType()) &&
+           "reduction input var is a reference");
 
     reductionVars.push_back(symVal);
   }
