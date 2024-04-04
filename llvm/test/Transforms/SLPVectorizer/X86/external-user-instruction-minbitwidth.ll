@@ -14,17 +14,13 @@ define i8 @test() {
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[CONV]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i32> [[TMP3]] to <8 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = or <8 x i16> [[TMP4]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 -32767>
+; CHECK-NEXT:    [[TMP4:%.*]] = or <8 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 32769>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> poison, i32 [[CONV1]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP7]] to <8 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i16> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <8 x i32> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[CONV4_30:%.*]] = trunc i32 [[TMP11]] to i8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <8 x i16> [[TMP5]], i32 7
-; CHECK-NEXT:    [[TMP13:%.*]] = sext i16 [[TMP12]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i32> [[TMP4]], i32 7
 ; CHECK-NEXT:    [[XOR_31:%.*]] = and i32 [[TMP13]], -2
 ; CHECK-NEXT:    store i32 [[XOR_31]], ptr @d, align 4
 ; CHECK-NEXT:    ret i8 [[CONV4_30]]
