@@ -56,12 +56,12 @@ def saxpy(x, y, alpha):
 M = 256
 N = 32
 alpha = 2.0
-x = np.ones((M, N), np.float32)
+x = np.random.randn(M, N).astype(np.float32)
 y = np.ones((M, N), np.float32)
-ref = np.ones((M, N), np.float32)
 saxpy(x, y, alpha)
 
 #  4. Verify MLIR with reference computation
+ref = np.ones((M, N), np.float32)
 ref += x * alpha
 np.testing.assert_allclose(y, ref, rtol=5e-03, atol=1e-01)
 print("PASS")

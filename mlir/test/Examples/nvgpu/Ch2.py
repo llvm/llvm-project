@@ -24,7 +24,7 @@ import numpy as np
 
 
 @NVDSL.mlir_func
-def saxpy_tma(x, y, alpha):
+def saxpy(x, y, alpha):
     token_ty = ir.Type.parse("!gpu.async.token")
     t1 = gpu.wait(token_ty, [])
     x_dev, t2 = gpu.alloc(x.type, token_ty, [t1], [], [])
@@ -33,13 +33,15 @@ def saxpy_tma(x, y, alpha):
     t5 = gpu.memcpy(token_ty, [t4], y_dev, y)
     t6 = gpu.wait(token_ty, [t5])
 
-    x_tma = TMA((M, N), x.type)
-    y_tma = TMA((M, N), y.type)
+    x_tma = TMA([1, N], x.type)
+    y_tma = TMA([1, N], y.type)
     x_tma.create_descriptor(x_dev)
     y_tma.create_descriptor(y_dev)
-    smem_size_in_bytes = get_type_size(x.type) + get_type_size(y.type)
+    sz_x = get_type_size(x_tma.tma_memref)
+    sz_y = get_type_size(x_tma.tma_memref)
+    sz = sz_x + sz_y
 
-    @NVDSL.mlir_gpu_launch(grid=(M, 1, 1), block=(N, 1, 1), smem=smem_size_in_bytes)
+    @NVDSL.mlir_gpu_launch(grid=(M, 1, 1), block=(N, 1, 1), smem=sz)
     def saxpy_tma_kernel():
         bidx = gpu.block_id(gpu.Dimension.x)
         tidx = gpu.thread_id(gpu.Dimension.x)
@@ -50,17 +52,17 @@ def saxpy_tma(x, y, alpha):
         mbar_group[0].init(1, predicate=isThread0)
 
         # 2. Execute Tensor Memory Accelerator (TMA) Load
-        x_smem = get_dynamic_shared_memory((M, N), T.f32())
-        y_smem = get_dynamic_shared_memory((M, N), T.f32(), offset=M * N * 2)
-        x_tma.load(x_smem, mbar_group[0], predicate=isThread0)
-        y_tma.load(y_smem, mbar_group[0], predicate=isThread0)
-        mbar_group[0].arrive(txcount=M * N * 2 * 4, predicate=isThread0)
+        x_smem = get_dynamic_shared_memory([1, N], T.f32())
+        y_smem = get_dynamic_shared_memory([1, N], T.f32(), offset=sz_x)
+        x_tma.load(x_smem, mbar_group[0], coords=[0, bidx], predicate=isThread0)
+        y_tma.load(y_smem, mbar_group[0], coords=[0, bidx], predicate=isThread0)
+        mbar_group[0].arrive(txcount=sz, predicate=isThread0)
 
         # 3. Wait for completion of TMA load with mbarrier
         mbar_group[0].try_wait()
 
-        x_val = memref.load(x_smem, [bidx, tidx])
-        y_val = memref.load(y_smem, [bidx, tidx])
+        x_val = memref.load(x_smem, [const(0), tidx])
+        y_val = memref.load(y_smem, [const(0), tidx])
 
         # SAXPY: y[i] += a * x[i];
         y_val += x_val * alpha
@@ -73,15 +75,16 @@ def saxpy_tma(x, y, alpha):
     gpu.wait(token_ty, [t7])
 
 
+# 3. Pass numpy arrays to MLIR
 M = 256
 N = 32
 alpha = 2.0
-x = np.ones((M, N), np.float32)
+x = np.random.randn(M, N).astype(np.float32)
 y = np.ones((M, N), np.float32)
-ref = np.ones((M, N), np.float32)
-saxpy_tma(x, y, alpha)
+saxpy(x, y, alpha)
 
 #  4. Verify MLIR with reference computation
+ref = np.ones((M, N), np.float32)
 ref += x * alpha
 np.testing.assert_allclose(y, ref, rtol=5e-03, atol=1e-01)
 print("PASS")

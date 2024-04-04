@@ -8,7 +8,6 @@ from mlir.extras import types as T
 from mlir import runtime as rt
 from tools import nvgpucompiler
 
-DEBUG = True
 MLIR_DYNAMIC = -9223372036854775808
 
 
@@ -124,13 +123,20 @@ class TMA:
     @property
     def tensormap_descriptor_ty(self):
         """Returns a tensormap descriptor type."""
-        memref_str = f"memref<{self.tma_shape[0]}x{self.tma_shape[1]}x{self.memref_ty.element_type}, 3>"
-        parse_str = f"!nvgpu.tensormap.descriptor<tensor = {memref_str},\
-                                              swizzle = {self.swizzle},\
-                                              l2promo = {self.l2promo},\
-                                              oob = {self.oob},\
-                                              interleave = {self.interleave}>"
-
+        memref_str = (
+            "memref<"
+            + "x".join(map(str, self.tma_shape))
+            + "x"
+            + str(self.memref_ty.element_type)
+            + ", 3>"
+        )
+        parse_str = (
+            f"!nvgpu.tensormap.descriptor<tensor = {memref_str}, "
+            f"swizzle = {self.swizzle}, "
+            f"l2promo = {self.l2promo}, "
+            f"oob = {self.oob}, "
+            f"interleave = {self.interleave}>"
+        )
         return ir.Type.parse(parse_str)
 
     def create_descriptor(self, device_ptr):
@@ -149,7 +155,7 @@ class TMA:
     def prefetch(self, predicate=None):
         nvgpu.tma_prefetch_descriptor(self.tma_descriptor, predicate=predicate)
 
-    def load(self, dest, mbarrier: Mbarriers, coords=[0, 0], predicate=None):
+    def load(self, dest, mbarrier: Mbarriers, coords=[0], predicate=None):
         nvgpu.TmaAsyncLoadOp(
             dest,
             mbarrier.mbar_group_op,
