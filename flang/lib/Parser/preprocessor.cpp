@@ -12,7 +12,6 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -24,6 +23,7 @@
 #include <optional>
 #include <set>
 #include <utility>
+#include <vector>
 
 namespace Fortran::parser {
 
@@ -51,9 +51,6 @@ bool Definition::set_isDisabled(bool disable) {
 
 void Definition::Print(
     llvm::raw_ostream &out, llvm::StringRef macroName) const {
-  if (isDisabled_) {
-    return;
-  }
   if (!isFunctionLike_) {
     // If it's not a function-like macro, then just print the replacement.
     out << ' ' << replacement_.ToString();
@@ -63,16 +60,16 @@ void Definition::Print(
   // The sequence of characters from which argument names will be created.
   static llvm::StringRef charSeq{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"};
 
-  auto couldCollide = [&](llvm::StringRef str) {
+  auto couldCollide{[&](llvm::StringRef str) {
     return !str.empty() && llvm::all_of(str, [&](char c) {
       return charSeq.find(c) != llvm::StringRef::npos;
     });
-  };
+  }};
 
   // For function-like macros we need to invent valid argument names (they
   // are represented as ~A, ~B, ...). These invented names cannot collide
   // with any other tokens in the macro definitions.
-  llvm::SmallSet<std::string, 10> usedNames;
+  std::set<std::string> usedNames;
   for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
     std::string tok{replacement_.TokenAt(i).ToString()};
     if (tok.empty()) {
@@ -91,7 +88,7 @@ void Definition::Print(
   // Given a string that is either empty, or composed from characters
   // from `charSeq`, create the next string in the lexicographical
   // order.
-  auto getNextString = [&](llvm::StringRef str) {
+  auto getNextString{[&](llvm::StringRef str) {
     if (str.empty()) {
       return charSeq.take_front().str();
     }
@@ -100,22 +97,22 @@ void Definition::Print(
     }
     size_t idx{charSeq.find(str.back())};
     return (llvm::Twine(str.drop_back()) + charSeq.substr(idx + 1, 1)).str();
-  };
+  }};
 
   // Generate consecutive arg names, until we get one that works
   // (i.e. doesn't collide with existing names). Give up after 4096
   // attempts.
-  auto genArgName = [&](std::string name) {
+  auto genArgName{[&](std::string name) {
     for (size_t x{0}; x != 4096; ++x) {
       name = getNextString(name);
-      if (!usedNames.contains(name))
+      if (usedNames.count(name) == 0)
         return name;
     }
     return std::string();
-  };
+  }};
 
   std::string nextName;
-  llvm::SmallVector<std::string> argNames;
+  std::vector<std::string> argNames;
   for (size_t i{0}; i != argumentCount_; ++i) {
     nextName = genArgName(nextName);
     if (nextName.empty()) {
@@ -138,18 +135,22 @@ void Definition::Print(
   }
   out << ") ";
 
+  auto getArgumentIndex{[&](llvm::StringRef name) -> size_t {
+    if (name.size() >= 2 && name[0] == '~') {
+      // `name` should be an argument name. The `Tokenize` function only
+      // generates a single character.
+      return static_cast<size_t>(name[1] - 'A');
+    }
+    return argumentCount_;
+  }};
+
   for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
     std::string tok{replacement_.TokenAt(i).ToString()};
-    if (tok.size() >= 2 && tok[0] == '~') {
-      // This should be an argument name. The `Tokenize` function only
-      // generates a single character.
-      size_t idx{static_cast<size_t>(tok[1] - 'A')};
-      if (idx < argumentCount_) {
-        out << argNames[idx];
-        continue;
-      }
+    if (size_t idx = getArgumentIndex(tok); idx < argumentCount_) {
+      out << argNames[idx];
+    } else {
+      out << tok;
     }
-    out << tok;
   }
 }
 
@@ -821,22 +822,16 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
 }
 
 void Preprocessor::PrintMacros(llvm::raw_ostream &out) const {
-  // Sort the entries by macro name.
-  llvm::SmallVector<decltype(definitions_)::const_iterator> entries;
-  for (auto it{definitions_.begin()}, e{definitions_.end()}; it != e; ++it) {
-    entries.push_back(it);
+  // std::set is ordered. Use that to print the macros in an
+  // alphabetical order.
+  std::set<std::string> macroNames;
+  for (const auto &[name, _] : definitions_) {
+    macroNames.insert(name.ToString());
   }
-  llvm::sort(entries, [](const auto it1, const auto it2) {
-    return it1->first.ToString() < it2->first.ToString();
-  });
 
-  for (auto &&it : entries) {
-    const auto &[name, def]{*it};
-    if (def.isDisabled()) {
-      continue;
-    }
+  for (const std::string &name : macroNames) {
     out << "#define " << name;
-    def.Print(out, name.ToString());
+    definitions_.at(name).Print(out, name);
     out << '\n';
   }
 }
