@@ -33,7 +33,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cstdint>
 
 using namespace llvm;
 
