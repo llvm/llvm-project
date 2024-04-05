@@ -1484,9 +1484,14 @@ public:
     return tmp;
   }
 
-  iterator_wrapper& operator+=(difference_type i) {
+  Derived& operator+=(difference_type i) {
     iter_ += i;
-    return *this;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived& operator-=(difference_type i) {
+    iter_ -= i;
+    return static_cast<Derived&>(*this);
   }
 
   friend decltype(iter_ - iter_) operator-(const iterator_wrapper& lhs, const iterator_wrapper& rhs) {
@@ -1503,8 +1508,17 @@ public:
     return iter;
   }
 
+  friend Derived operator+(difference_type i, Derived iter) {
+    return iter + i;
+  }
+
   friend bool operator==(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ == rhs.iter_; }
   friend bool operator!=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ != rhs.iter_; }
+
+  friend bool operator>(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ > rhs.iter_; }
+  friend bool operator<(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ < rhs.iter_; }
+  friend bool operator<=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ <= rhs.iter_; }
+  friend bool operator>=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ >= rhs.iter_; }
 };
 
 class iterator_error : std::runtime_error {

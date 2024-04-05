@@ -15,6 +15,7 @@
 #include <__algorithm/pstl_transform.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -69,6 +70,10 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator
 move(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "move requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "move requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(std::move(*__first)), "move requires an OutputIterator");
   auto __res = std::__move(__policy, std::move(__first), std::move(__last), std::move(__result));
   if (!__res)
     std::__throw_bad_alloc();
