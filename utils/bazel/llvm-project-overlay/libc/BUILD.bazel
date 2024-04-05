@@ -1146,6 +1146,16 @@ libc_function(
 )
 
 libc_function(
+    name = "fetestexceptflag",
+    srcs = ["src/fenv/fetestexceptflag.cpp"],
+    hdrs = ["src/fenv/fetestexceptflag.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+    ],
+)
+
+libc_function(
     name = "feclearexcept",
     srcs = ["src/fenv/feclearexcept.cpp"],
     hdrs = ["src/fenv/feclearexcept.h"],

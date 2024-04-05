@@ -1,4 +1,5 @@
-//===-- Unittests for fegetexceptflag and fesetexceptflag -----------------===//
+//===-- Unittests for fegetexceptflag, fesetexceptflag and ----------------===//
+//===-- fetestexceptflag --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +10,12 @@
 #include "hdr/types/fexcept_t.h"
 #include "src/fenv/fegetexceptflag.h"
 #include "src/fenv/fesetexceptflag.h"
+#include "src/fenv/fetestexceptflag.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
+TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlagAndTestExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
@@ -39,6 +41,11 @@ TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
     ASSERT_EQ(LIBC_NAMESPACE::fesetexceptflag(&eflags, FE_ALL_EXCEPT), 0);
     ASSERT_NE(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) & e, 0);
 
+    // Exception flags are exactly the flags corresponding to the previously
+    // raised exception.
+    ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&eflags, FE_ALL_EXCEPT),
+              LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT));
+
     // Cleanup. We clear all excepts as raising excepts like FE_OVERFLOW
     // can also raise FE_INEXACT.
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
@@ -48,6 +55,8 @@ TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
   LIBC_NAMESPACE::fputil::raise_except(FE_INVALID);
   fexcept_t eflags;
   LIBC_NAMESPACE::fegetexceptflag(&eflags, FE_ALL_EXCEPT);
+  ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&eflags, FE_ALL_EXCEPT),
+            FE_INVALID);
   // Clear all exceptions and raise two other exceptions.
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   LIBC_NAMESPACE::fputil::raise_except(FE_OVERFLOW | FE_INEXACT);
