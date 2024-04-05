@@ -24,6 +24,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -67,6 +68,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -1470,11 +1472,22 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
+
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
-
   if (executable_sp) {
+    TelemetryEventStats load_executable_stats(std::chrono::steady_clock::now());
+    m_debugger.GetTelemetryLogger()->LogMainExecutableLoadStart(
+        executable_sp, load_executable_stats);
+
+    auto log_on_exit = llvm::make_scope_exit([&]() {
+      load_executable_stats.m_end = std::chrono::steady_clock::now();
+      m_debugger.GetTelemetryLogger()->LogMainExecutableLoadEnd(
+          executable_sp, load_executable_stats);
+    });
+
     ElapsedTime elapsed(m_stats.GetCreateTime());
+
     LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
 
@@ -1486,6 +1499,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     // what we found in the executable module.
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
+      // executable_sp->GetArchitecture().GetSpec().GetArchitectureName();
+      //  m_arch.
       LLDB_LOG(log,
                "Target::SetExecutableModule setting architecture to {0} ({1}) "
                "based on executable file",

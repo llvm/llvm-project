@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DAP.h"
+#include "LLDBUtils.h"
+#include "lldb/API/SBStructuredData.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <chrono>
 #include <cstdarg>
 #include <fstream>
 #include <mutex>
 #include <sstream>
-
-#include "DAP.h"
-#include "LLDBUtils.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -570,17 +570,25 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 }
 
 bool DAP::HandleObject(const llvm::json::Object &object) {
+  // auto start_time = std::chrono::steady_clock::now();
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
     auto handler_pos = request_handlers.find(std::string(command));
     if (handler_pos != request_handlers.end()) {
       handler_pos->second(object);
+      // auto end_time = std::chrono::steady_clock::now();
+      // TODO: fill in the SBStructuredData and send it.
+      // debugger.SendTelemetry(...);
       return true; // Success
     } else {
+      // auto end_time = std::chrono::steady_clock::now();
       if (log)
         *log << "error: unhandled command \"" << command.data() << "\""
              << std::endl;
+      // auto end_time = std::chrono::steady_clock::now();
+      // TODO: fill in the SBStructuredData and send it.
+      // debugger.SendTelemetry(...);
       return false; // Fail
     }
   }

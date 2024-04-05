@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -450,7 +451,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_run_thread_plan_lock(),
-      m_can_jit(eCanJITDontKnow) {
+      m_can_jit(eCanJITDontKnow),
+      m_event_stats(std::chrono::steady_clock::now()) {
   CheckInWithManager();
 
   Log *log = GetLog(LLDBLog::Object);
@@ -1058,6 +1060,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
 
+  m_event_stats.m_end = std::chrono::steady_clock::now();
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
            GetPluginName(), status, exit_string);
@@ -1071,6 +1074,8 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
         GetPluginName());
     return false;
   }
+  GetTarget().GetDebugger().GetTelemetryLogger()->LogProcessExit(
+      status, exit_string, m_event_stats, &GetTarget());
 
   m_exit_status = status;
   if (!exit_string.empty())

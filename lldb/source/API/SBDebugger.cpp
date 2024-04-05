@@ -34,6 +34,7 @@
 #include "lldb/API/SBTypeNameSpecifier.h"
 #include "lldb/API/SBTypeSummary.h"
 #include "lldb/API/SBTypeSynthetic.h"
+#include <iostream>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
@@ -963,6 +964,14 @@ SBTarget SBDebugger::GetDummyTarget() {
             static_cast<void *>(m_opaque_sp.get()),
             static_cast<void *>(sb_target.GetSP().get()));
   return sb_target;
+}
+
+void SBDebugger::SendTelemetry(SBStructuredData *entry) {
+  if (lldb_private::Debugger *debugger = this->get()) {
+    debugger->SendClientTelemetry(entry->m_impl_up->GetObjectSP().get());
+  } else {
+    std::cerr << " --- cannot log dap request - debugger is null\n";
+  }
 }
 
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {

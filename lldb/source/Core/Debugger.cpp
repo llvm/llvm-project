@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
@@ -733,12 +734,23 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
+  SteadyTimePoint start_time = std::chrono::steady_clock::now();
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
+  debugger_sp->stats.m_start = start_time;
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     g_debugger_list_ptr->push_back(debugger_sp);
   }
   debugger_sp->InstanceInitialize();
+  TelemetryEventStats init_stats(start_time, std::chrono::steady_clock::now());
+
+  // TODO: we could split up the logging:
+  // - LogStartup_start: called at the beginning
+  // - LogStartup_end: called at the end
+  // This way if the init crashes, we still have some logging.
+  debugger_sp->m_telemetry_logger->LogStartup(
+      HostInfo::GetProgramFileSpec().GetPathAsConstString().GetCString(),
+      std::move(init_stats));
   return debugger_sp;
 }
 
@@ -847,7 +859,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
                     GetStaticBroadcasterClass().AsCString()),
-      m_forward_listener_sp(), m_clear_once() {
+      m_forward_listener_sp(), m_clear_once(),
+      m_telemetry_logger(TelemetryLogger::CreateInstance(this)) {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
   m_collection_sp->Initialize(g_debugger_properties);
@@ -939,6 +952,18 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
+    // Log the "quit" event.
+    // Note: this session_stats include the time since LLDB starts till quit
+    // (now).
+    // TBD: we could also record stats for *just* the quit action, if needed?
+    //      (ie., how long it takes to run all these cleanup functions?)
+    TelemetryEventStats session_stats{
+        /*start_session*/ stats.m_start,
+        /*end_session*/ std::chrono::steady_clock::now()};
+    m_telemetry_logger->LogExit(
+        HostInfo::GetProgramFileSpec().GetPathAsConstString().GetCString(),
+        session_stats);
+
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
@@ -2196,6 +2221,11 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   repl_sp->RunLoop();
 
   return err;
+}
+
+void Debugger::SendClientTelemetry(
+    lldb_private::StructuredData::Object *entry) {
+  m_telemetry_logger->LogClientTelemetry(entry);
 }
 
 llvm::ThreadPoolInterface &Debugger::GetThreadPool() {

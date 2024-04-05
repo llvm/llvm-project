@@ -28,6 +28,7 @@
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/UserSettingsController.h"
@@ -3249,6 +3250,8 @@ private:
 
   Process(const Process &) = delete;
   const Process &operator=(const Process &) = delete;
+
+  TelemetryEventStats m_event_stats;
 };
 
 /// RAII guard that should be acquired when an utility function is called within
