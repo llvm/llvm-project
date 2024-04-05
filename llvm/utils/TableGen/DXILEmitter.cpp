@@ -184,13 +184,20 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   std::vector<Record *> OverloadTypeRecs =
       R->getValueAsListOfDefs("OpOverloadTypes");
   // Sort records in ascending order of Shader Model version
-  std::sort(
-      OverloadTypeRecs.begin(), OverloadTypeRecs.end(),
-      [](Record *a, Record *b) {
-        return (
-            a->getValueAsDef("ShaderModel")->getValueAsInt("MajorAndMinor") <
-            b->getValueAsDef("ShaderModel")->getValueAsInt("MajorAndMinor"));
-      });
+  std::sort(OverloadTypeRecs.begin(), OverloadTypeRecs.end(),
+            [](Record *RecA, Record *RecB) {
+              uint16_t RecAMaj =
+                  RecA->getValueAsDef("ShaderModel")->getValueAsInt("Major");
+              uint16_t RecAMin =
+                  RecA->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
+              uint16_t RecBMaj =
+                  RecB->getValueAsDef("ShaderModel")->getValueAsInt("Major");
+              uint16_t RecBMin =
+                  RecB->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
+
+              return (COMPUTE_SM_VERSION_VALUE(RecAMaj, RecAMin) <
+                      COMPUTE_SM_VERSION_VALUE(RecBMaj, RecBMin));
+            });
   unsigned OverloadTypeRecsSize = OverloadTypeRecs.size();
   // Populate OpOverloads with
   for (unsigned I = 0; I < OverloadTypeRecsSize; I++) {
@@ -255,6 +262,11 @@ static std::string getParameterKindStr(ParameterKind Kind) {
   llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
 
+/// Return a string representation of OverloadKind enum that maps to
+/// input LLVMType record
+/// \param R TableGen def record of class LLVMType
+/// \return std::string string representation of OverloadKind
+
 static std::string getOverloadKindStr(const Record *R) {
   Record *VTRec = R->getValueAsDef("VT");
   switch (getValueType(VTRec)) {
@@ -293,10 +305,12 @@ static std::string getOverloadKindStrs(const SmallVector<Record *> Recs) {
   OverloadString.append("{");
   for (auto OvRec : Recs) {
     OverloadString.append(Prefix).append("{");
-    OverloadString
-        .append(std::to_string(OvRec->getValueAsDef("ShaderModel")
-                                   ->getValueAsInt("MajorAndMinor")))
-        .append(", ");
+    uint16_t RecAMaj =
+        OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Major");
+    uint16_t RecAMin =
+        OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
+    uint16_t RecMajMin = COMPUTE_SM_VERSION_VALUE(RecAMaj, RecAMin);
+    OverloadString.append(std::to_string(RecMajMin)).append(", ");
     auto OverloadTys = OvRec->getValueAsListOfDefs("OpOverloads");
     auto Iter = OverloadTys.begin();
     OverloadString.append(getOverloadKindStr(*Iter++));

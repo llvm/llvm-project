@@ -16,7 +16,8 @@ include "llvm/IR/Intrinsics.td"
 // Abstract class to demarcate minimum Shader model version required
 // to support DXIL Op
 class DXILShaderModel<int major, int minor> {
-  int MajorAndMinor = !add(!mul(major, 10), minor);
+  int Major = major;
+  int Minor = minor;
 }
 
 // Valid minimum Shader model version records
@@ -25,7 +26,7 @@ class DXILShaderModel<int major, int minor> {
 foreach i = 0...9 in {
   def SM6_#i : DXILShaderModel<6, i>;
 }
-// Shader Mode 7.x - for now 7.0 is defined. Extend as needed
+// Shader Model 7.x - for now 7.0 is defined. Extend as needed
 foreach i = 0 in {
   def SM7_#i : DXILShaderModel<7, i>;
 }
