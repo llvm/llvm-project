@@ -191,12 +191,12 @@ public:
   static constexpr IntType topBit{IntType{1} << (precision - 1)};
   static constexpr IntType mask{topBit + (topBit - 1)};
 
-  IntermediateFloat() {}
+  RT_API_ATTRS IntermediateFloat() {}
   IntermediateFloat(const IntermediateFloat &) = default;
 
   // Assumes that exponent_ is valid on entry, and may increment it.
   // Returns the number of guard_ bits that have been determined.
-  template <typename UINT> bool SetTo(UINT n) {
+  template <typename UINT> RT_API_ATTRS bool SetTo(UINT n) {
     static constexpr int nBits{CHAR_BIT * sizeof n};
     if constexpr (precision >= nBits) {
       value_ = n;
@@ -218,14 +218,14 @@ public:
     }
   }
 
-  void ShiftIn(int bit = 0) { value_ = value_ + value_ + bit; }
-  bool IsFull() const { return value_ >= topBit; }
-  void AdjustExponent(int by) { exponent_ += by; }
-  void SetGuard(int g) {
+  RT_API_ATTRS void ShiftIn(int bit = 0) { value_ = value_ + value_ + bit; }
+  RT_API_ATTRS bool IsFull() const { return value_ >= topBit; }
+  RT_API_ATTRS void AdjustExponent(int by) { exponent_ += by; }
+  RT_API_ATTRS void SetGuard(int g) {
     guard_ |= (static_cast<GuardType>(g & 6) << (guardBits - 3)) | (g & 1);
   }
 
-  ConversionToBinaryResult<PREC> ToBinary(
+  RT_API_ATTRS ConversionToBinaryResult<PREC> ToBinary(
       bool isNegative, FortranRounding) const;
 
 private:
@@ -241,7 +241,7 @@ private:
 // The standard says that these overflow cases round to "representable"
 // numbers, and some popular compilers interpret that to mean +/-HUGE()
 // rather than +/-Inf.
-static inline constexpr bool RoundOverflowToHuge(
+static inline RT_API_ATTRS constexpr bool RoundOverflowToHuge(
     enum FortranRounding rounding, bool isNegative) {
   return rounding == RoundToZero || (!isNegative && rounding == RoundDown) ||
       (isNegative && rounding == RoundUp);
@@ -531,6 +531,8 @@ template ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding, const char *end);
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 enum ConversionResultFlags ConvertDecimalToFloat(
     const char **p, float *f, enum FortranRounding rounding) {
   auto result{Fortran::decimal::ConvertToBinary<24>(*p, rounding)};
@@ -552,5 +554,7 @@ enum ConversionResultFlags ConvertDecimalToLongDouble(
       reinterpret_cast<const void *>(&result.binary), sizeof *ld);
   return result.flags;
 }
-}
+
+RT_EXT_API_GROUP_END
+} // extern "C"
 } // namespace Fortran::decimal
