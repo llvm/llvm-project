@@ -247,10 +247,10 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   if (ReportProfileStaleness || PersistProfileStaleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
-  // Run profile matching for checksum mismatched profile, currently only
-  // support for pseudo-probe.
-  if (SalvageStaleProfile && FunctionSamples::ProfileIsProbeBased &&
-      !ProbeManager->profileIsValid(F, *FSFlattened)) {
+  // For probe-based profiles, run matching only when the current profile is not
+  // valid.
+  if (SalvageStaleProfile && (!FunctionSamples::ProfileIsProbeBased ||
+                              !ProbeManager->profileIsValid(F, *FSFlattened))) {
     // For imported functions, the checksum metadata(pseudo_probe_desc) are
     // dropped, so we leverage function attribute(profile-checksum-mismatch) to
     // transfer the info: add the attribute during pre-link phase and check it

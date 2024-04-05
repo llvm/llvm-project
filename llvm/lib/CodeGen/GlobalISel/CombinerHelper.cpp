@@ -4058,6 +4058,14 @@ void CombinerHelper::applyBuildFn(
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
+                                    BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  Builder.setInstrAndDebugLoc(*Root);
+  MatchInfo(Builder);
+  Root->eraseFromParent();
+}
+
 void CombinerHelper::applyBuildFnNoErase(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   MatchInfo(Builder);
@@ -5193,10 +5201,7 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
 
     // Calculate the multiplicative inverse modulo BW.
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
-    unsigned W = Divisor.getBitWidth();
-    APInt Factor = Divisor.zext(W + 1)
-                       .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
-                       .trunc(W);
+    APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
     Factors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
     return true;
