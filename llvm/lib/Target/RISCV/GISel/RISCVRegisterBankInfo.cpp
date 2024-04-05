@@ -529,7 +529,10 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
        if (!Ty.isValid())
          continue;
 
-       if (isPreISelGenericFloatingPointOpcode(Opc))
+       if (Ty.isVector())
+         OpdsMapping[Idx] =
+             getVRBValueMapping(Ty.getSizeInBits().getKnownMinValue());
+       else if (isPreISelGenericFloatingPointOpcode(Opc))
          OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
        else
          OpdsMapping[Idx] = GPRValueMapping;
