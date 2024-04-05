@@ -193,8 +193,12 @@ TYPED_TEST(LlvmLibcUIntClassTest, Masks, Types) {
 TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
   if constexpr (!T::SIGNED) {
     for (size_t i = 0; i <= T::BITS; ++i) {
-      const auto l_one = T::all_ones() << i; // 0b111...000
-      const auto r_one = T::all_ones() >> i; // 0b000...111
+      const auto zero_or = [i](T value) {
+        // Prevent UB when i == T::BITS.
+        return i == T::BITS ? 0 : value;
+      };
+      const auto l_one = zero_or(T::all_ones() << i); // 0b111...000
+      const auto r_one = zero_or(T::all_ones() >> i); // 0b000...111
       const int zeros = i;
       const int ones = T::BITS - zeros;
       ASSERT_EQ(cpp::countr_one(r_one), ones);
@@ -559,10 +563,6 @@ TEST(LlvmLibcUIntClassTest, ShiftLeftTests) {
   LL_UInt128 result5({0, 0x2468ace000000000});
   EXPECT_EQ((val2 << 100), result5);
 
-  LL_UInt128 result6({0, 0});
-  EXPECT_EQ((val2 << 128), result6);
-  EXPECT_EQ((val2 << 256), result6);
-
   LL_UInt192 val3({1, 0, 0});
   LL_UInt192 result7({0, 1, 0});
   EXPECT_EQ((val3 << 64), result7);
@@ -588,10 +588,6 @@ TEST(LlvmLibcUIntClassTest, ShiftRightTests) {
 
   LL_UInt128 result5({0x0000000001234567, 0});
   EXPECT_EQ((val2 >> 100), result5);
-
-  LL_UInt128 result6({0, 0});
-  EXPECT_EQ((val2 >> 128), result6);
-  EXPECT_EQ((val2 >> 256), result6);
 
   LL_UInt128 v1({0x1111222233334444, 0xaaaabbbbccccdddd});
   LL_UInt128 r1({0xaaaabbbbccccdddd, 0});
