@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -18185,6 +18186,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
+        CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.all");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -18663,7 +18671,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16: {
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
 
     Intrinsic::ID IID;
     switch (BuiltinID) {
@@ -18694,6 +18706,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
       IID = Intrinsic::amdgcn_ds_load_tr16_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr4_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr8_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+      IID = Intrinsic::amdgcn_ds_read_tr6_b96;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
+      IID = Intrinsic::amdgcn_ds_read_tr16_b64;
       break;
     }
     llvm::Type *LoadTy = ConvertType(E->getType());

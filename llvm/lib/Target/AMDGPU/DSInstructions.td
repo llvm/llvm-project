@@ -802,6 +802,13 @@ def : GCNPat<
 
 } //let SubtargetPredicate = isGFX12_10Plus
 
+let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
+  defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
+  defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", VReg_64>;
+  defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", VReg_64>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
+}
+
 //===----------------------------------------------------------------------===//
 // DS Patterns
 //===----------------------------------------------------------------------===//
@@ -1250,6 +1257,13 @@ def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32, int_amdgcn_ds_load_tr4_b64>;
 def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32, int_amdgcn_ds_load_tr6_b96>;
 def : DSLoadTrPat <DS_LOAD_TR16_B128, v8i16, int_amdgcn_ds_load_tr16_b128>;
 } //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus
+
+let SubtargetPredicate = HasGFX950Insts in {
+  def : DSLoadTrPat <DS_READ_B64_TR_B4,  v2i32, int_amdgcn_ds_read_tr4_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B8,  v2i32, int_amdgcn_ds_read_tr8_b64>;
+  def : DSLoadTrPat <DS_READ_B96_TR_B6,  v3i32, int_amdgcn_ds_read_tr6_b96>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4i16, int_amdgcn_ds_read_tr16_b64>;
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
@@ -1834,3 +1848,11 @@ def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
 def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
+
+//===----------------------------------------------------------------------===//
+// GFX950.
+//===----------------------------------------------------------------------===//
+def DS_READ_B64_TR_B4_vi  : DS_Real_vi<0x0e0, DS_READ_B64_TR_B4>;
+def DS_READ_B96_TR_B6_vi  : DS_Real_vi<0x0e1, DS_READ_B96_TR_B6>;
+def DS_READ_B64_TR_B8_vi  : DS_Real_vi<0x0e2, DS_READ_B64_TR_B8>;
+def DS_READ_B64_TR_B16_vi : DS_Real_vi<0x0e3, DS_READ_B64_TR_B16>;
