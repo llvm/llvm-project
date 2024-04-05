@@ -11,7 +11,7 @@
 #include "src/__support/integer_literals.h"        // parse_unsigned_bigint
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-#include "include/llvm-libc-macros/math-macros.h" // HUGE_VALF, HUGE_VALF
+#include "hdr/math_macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {

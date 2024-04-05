@@ -381,6 +381,7 @@ endforeach()
 
 add_subdirectory(include)
 add_subdirectory(config)
+add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 
