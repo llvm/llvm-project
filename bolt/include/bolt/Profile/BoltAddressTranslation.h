@@ -127,7 +127,8 @@ public:
   /// For a given \p Symbol in the output binary, returns a corresponding pair
   /// of parent BinaryFunction and secondary entry point in it.
   std::pair<const BinaryFunction *, unsigned>
-  translateSymbol(const BinaryContext &BC, const MCSymbol &Symbol) const;
+  translateSymbol(const BinaryContext &BC, const MCSymbol &Symbol,
+                  uint32_t Offset) const;
 
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
