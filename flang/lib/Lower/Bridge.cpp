@@ -3772,7 +3772,7 @@ private:
     localSymbols.pushScope();
     auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
         builder.getContext(), fir::CUDADataTransferKind::DeviceHost);
-    unsigned nbDeviceResidentObject = 0;
+    [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
     for (const Fortran::semantics::Symbol &sym :
          Fortran::evaluate::CollectSymbols(assign.rhs)) {
       if (const auto *details =
