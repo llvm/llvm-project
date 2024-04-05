@@ -337,6 +337,7 @@ it is succeeded by an array of
 **DxilContainerRootDescriptorTable.DescriptorRangesOffset**.
 
 The layout could be look like this for the MyRS in above example:
+
 .. code-block:: c++
 
   struct SerializedRS {
@@ -433,7 +434,7 @@ It will defined as below.
 
 .. code-block::
 
-    def HLSLEntryRootSignature: InheriableAttr {
+    def HLSLEntryRootSignature: InheritableAttr {
       let Spellings = [GNU<"RootSignature">];
       let Subjects = Subjects<[HLSLEntry]>;
       let LangOpts = [HLSL];
