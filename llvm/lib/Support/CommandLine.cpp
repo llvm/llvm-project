@@ -2736,6 +2736,10 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
 
 ArrayRef<StringRef> cl::getCompilerBuildConfig() {
   static const StringRef Config[] = {
+      // Placeholder to ensure the array always has elements, since it's an
+      // error to have a zero-sized array. Slice this off before returning.
+      "",
+      // Actual compiler build config feature list:
 #if LLVM_IS_DEBUG_BUILD
       "+unoptimized",
 #endif
@@ -2764,7 +2768,7 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
       "+ubsan",
 #endif
   };
-  return Config;
+  return ArrayRef(Config).drop_front(1);
 }
 
 // Utility function for printing the build config.
