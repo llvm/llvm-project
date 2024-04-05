@@ -334,6 +334,10 @@ Improvements to Clang's diagnostics
 - Clang now emits ``unused argument`` warning when the -fmodule-output flag is used
   with an input that is not of type c++-module.
 
+- Clang emits a ``-Wunused-but-set-variable`` warning on C++ variables whose declaration
+  (with initializer) entirely consist the condition expression of a if/while/for construct
+  but are not actually used in the body of the if/while/for construct. Fixes #GH41447
+
 Improvements to Clang's time-trace
 ----------------------------------
 
