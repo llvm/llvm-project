@@ -215,22 +215,23 @@ private:
       return InstructionCost::getInvalid();
 
     auto *VT = cast<FixedVectorType>(DataTy);
+    unsigned VF = VT->getNumElements();
+
     // Assume the target does not have support for gather/scatter operations
     // and provide a rough estimate.
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
         IsGatherScatter
-            ? getVectorInstrCost(Instruction::ExtractElement,
-                                 FixedVectorType::get(
-                                     PointerType::get(VT->getElementType(), 0),
-                                     VT->getNumElements()),
-                                 CostKind, -1, nullptr, nullptr)
+            ? getVectorInstrCost(
+                  Instruction::ExtractElement,
+                  FixedVectorType::get(
+                      PointerType::get(VT->getElementType(), 0), VF),
+                  CostKind, -1, nullptr, nullptr)
             : 0;
     InstructionCost LoadCost =
-        VT->getNumElements() *
-        (AddrExtractCost +
-         getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind));
+        VF * (AddrExtractCost + getMemoryOpCost(Opcode, VT->getElementType(),
+                                                Alignment, 0, CostKind));
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -246,11 +247,10 @@ private:
       // operations accurately is quite difficult and the current solution
       // provides a very rough estimate only.
       ConditionalCost =
-          VT->getNumElements() *
+          VF *
           (getVectorInstrCost(
                Instruction::ExtractElement,
-               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()),
-                                    VT->getNumElements()),
+               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
                CostKind, -1, nullptr, nullptr) +
            getCFInstrCost(Instruction::Br, CostKind) +
            getCFInstrCost(Instruction::PHI, CostKind));
