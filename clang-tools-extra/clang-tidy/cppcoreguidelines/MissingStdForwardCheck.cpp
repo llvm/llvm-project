@@ -79,6 +79,8 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
   return Node.getCaptureDefault() == Kind;
 }
 
+AST_MATCHER(ParmVarDecl, hasAnyName) { return !Node.getName().empty(); }
+
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
@@ -125,12 +127,13 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                    hasAncestor(expr(hasUnevaluatedContext())))));
 
   Finder->addMatcher(
-      parmVarDecl(parmVarDecl().bind("param"), isTemplateTypeParameter(),
-                  hasAncestor(functionDecl().bind("func")),
-                  hasAncestor(functionDecl(
-                      isDefinition(), equalsBoundNode("func"), ToParam,
-                      unless(anyOf(isDeleted(), hasDescendant(std::move(
-                                                    ForwardCallMatcher))))))),
+      parmVarDecl(
+          parmVarDecl().bind("param"), hasAnyName(), isTemplateTypeParameter(),
+          hasAncestor(functionDecl().bind("func")),
+          hasAncestor(functionDecl(
+              isDefinition(), equalsBoundNode("func"), ToParam,
+              unless(anyOf(isDeleted(),
+                           hasDescendant(std::move(ForwardCallMatcher))))))),
       this);
 }
 

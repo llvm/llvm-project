@@ -182,6 +182,10 @@ Changes in existing checks
   giving false positives for deleted functions and fix false negative when some
   parameters are forwarded, but other aren't.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by ignoring
+  parameters without a name (unused arguments).
+
 - Improved :doc:`cppcoreguidelines-owning-memory
   <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
   return type in lambdas and in nested functions.

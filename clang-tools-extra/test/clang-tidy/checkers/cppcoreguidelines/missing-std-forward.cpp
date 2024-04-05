@@ -198,3 +198,6 @@ struct S {
 };
 
 } // namespace deleted_functions
+
+template<typename F>
+void unused_argument(F&&) {}
