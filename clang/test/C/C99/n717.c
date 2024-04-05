@@ -48,15 +48,21 @@ M(\u0060) // expected-error {{character '`' cannot be specified by a universal c
 M(\U00000040) // expected-error {{character '@' cannot be specified by a universal character name}}
 M(\U00000060) // expected-error {{character '`' cannot be specified by a universal character name}}
 
-// This falls outside of the expected range.
-M(\U110000) // expected-warning {{incomplete universal character name; treating as '\' followed by identifier}}
+// UCNs outside of identifiers are handled in Phase 5 of translation, so we
+// cannot use the macro expansion to test their behavior.
+
+// This is outside of the range of values specified by ISO 10646.
+int c1 = '\U00110000'; // expected-error {{invalid universal character}}
+// FIXME: this does not fall outside of the range and should work fine. This
+// character constant in C has type 'int' which can hold that value.
+int c2 = '\U0010FFFF'; // expected-error {{character too large for enclosing character literal type}}
 
 // These should always be accepted because they're a valid in a character
 // constant.
-M('\u0024')
-M('\u0040')
-M('\u0060')
+int c3 = '\u0024';
+int c4 = '\u0040';
+int c5 = '\u0060';
 
-M('\U00000024')
-M('\U00000040')
-M('\U00000060')
+int c6 = '\U00000024';
+int c7 = '\U00000040';
+int c8 = '\U00000060';
