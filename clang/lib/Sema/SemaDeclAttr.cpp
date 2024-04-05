@@ -1982,18 +1982,19 @@ static void handleWeakRefAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 // Mark alias/ifunc target as used. Due to name mangling, we look up the
-// demangled name ignoring parameters. This should handle the majority of use
-// cases while leaving namespace scope names unmarked.
+// demangled name ignoring parameters (not supported by microsoftDemangle). This
+// should handle the majority of use cases while leaving namespace scope names
+// unmarked.
 static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
                                     StringRef Str) {
-  char *Demangled = nullptr;
+  std::unique_ptr<char, llvm::FreeDeleter> Demangled;
   if (S.getASTContext().getCXXABIKind() != TargetCXXABI::Microsoft)
-    Demangled = llvm::itaniumDemangle(Str, /*ParseParams=*/false);
+    Demangled.reset(llvm::itaniumDemangle(Str, /*ParseParams=*/false));
   std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
   SmallString<256> Name;
 
   const DeclarationNameInfo Target(
-      &S.Context.Idents.get(Demangled ? Demangled : Str), AL.getLoc());
+      &S.Context.Idents.get(Demangled ? Demangled.get() : Str), AL.getLoc());
   LookupResult LR(S, Target, Sema::LookupOrdinaryName);
   if (S.LookupName(LR, S.TUScope)) {
     for (NamedDecl *ND : LR) {
@@ -2008,7 +2009,6 @@ static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
         ND->markUsed(S.Context);
     }
   }
-  free(Demangled);
 }
 
 static void handleIFuncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

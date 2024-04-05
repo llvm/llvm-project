@@ -32,7 +32,7 @@ static int (*resolver1())() { return f; } // cxx-warning{{unused function 'resol
 static int (*resolver1(int))() { return f; }
 int ifunc1() __attribute__((ifunc("_ZL9resolver1i")));
 
-/// We should report "unused function" for f3(int).
+/// TODO: We should report "unused function" for f3(int).
 namespace ns {
 static int f3(int) { return 42; } // cxx-warning{{unused function 'f3'}}
 static int f3() { return 42; } // cxx-warning{{unused function 'f3'}}
@@ -42,6 +42,7 @@ int g3() __attribute__((alias("_ZN2nsL2f3Ev")));
 template <class T>
 static void *f4(T) { return nullptr; }
 static void *f4() { return nullptr; } // cxx-warning{{unused function 'f4'}}
-extern void g4() __attribute__((ifunc("_ZL2f4IiEPvT_")));
-void *use3 = f4(0);
+extern void g4_int() __attribute__((ifunc("_ZL2f4IiEPvT_")));
+extern void g4_char() __attribute__((ifunc("_ZL2f4IcEPcT_"))); // rejected by CodeGen
+void *use4 = f4(0);
 #endif
