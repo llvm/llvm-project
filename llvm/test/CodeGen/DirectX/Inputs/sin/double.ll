@@ -1,7 +1,3 @@
-; RUN: not opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
-
-; DXIL operation sin does not support double overload type
-; CHECK: LLVM ERROR: Invalid Overload
 
 define noundef double @sin_double(double noundef %a) #0 {
 entry:
