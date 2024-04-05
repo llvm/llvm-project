@@ -8,6 +8,11 @@
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c,+f,+d -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IFDC %s
 ;
+; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=+zca,+f,+d -filetype=obj \
+; RUN:   -disable-block-placement < %s \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+zca,+f,+d -M no-aliases - \
+; RUN:   | FileCheck -check-prefix=RV32IFDC %s
+;
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d -mattr=-c,+f,+d -filetype=obj \
 ; RUN:   -disable-block-placement < %s \
 ; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=-c,+f,+d -M no-aliases - \
