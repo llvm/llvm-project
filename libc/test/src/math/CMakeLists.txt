@@ -318,7 +318,6 @@ add_fp_unittest(
   HDRS
   RoundEvenTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.roundeven
     libc.src.__support.FPUtil.fp_bits
 )
@@ -333,7 +332,6 @@ add_fp_unittest(
   HDRS
   RoundEvenTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.roundevenf
     libc.src.__support.FPUtil.fp_bits
 )
@@ -348,7 +346,6 @@ add_fp_unittest(
   HDRS
   RoundEvenTest.h
   DEPENDS
-    libc.include.math
     libc.src.math.roundevenl
     libc.src.__support.FPUtil.fp_bits
 )
