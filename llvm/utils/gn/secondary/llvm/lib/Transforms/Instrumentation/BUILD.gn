@@ -23,7 +23,7 @@ static_library("Instrumentation") {
     "InstrProfiling.cpp",
     "Instrumentation.cpp",
     "KCFI.cpp",
-    "LowerBuiltinAllowCheckPass.cpp",
+    "LowerAllowCheckPass.cpp",
     "MemProfiler.cpp",
     "MemorySanitizer.cpp",
     "PGOForceFunctionAttrs.cpp",

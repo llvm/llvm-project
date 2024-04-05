@@ -1,4 +1,4 @@
-//===- LowerBuiltinAllowCheckPass.cpp ---------------------------*- C++ -*-===//
+//===- LowerAllowCheckPass.cpp ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/LowerBuiltinAllowCheckPass.h"
+#include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -91,8 +91,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   return !ReplaceWithValue.empty();
 }
 
-PreservedAnalyses LowerBuiltinAllowCheckPass::run(Function &F,
-                                                  FunctionAnalysisManager &AM) {
+PreservedAnalyses LowerAllowCheckPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
   if (F.isDeclaration())
     return PreservedAnalyses::all();
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -104,7 +104,7 @@ PreservedAnalyses LowerBuiltinAllowCheckPass::run(Function &F,
                                        : PreservedAnalyses::all();
 }
 
-bool LowerBuiltinAllowCheckPass::IsRequested() {
+bool LowerAllowCheckPass::IsRequested() {
   return RandomRate.getNumOccurrences() ||
          HotPercentileCutoff.getNumOccurrences();
 }

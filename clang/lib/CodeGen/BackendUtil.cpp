@@ -73,7 +73,7 @@
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
-#include "llvm/Transforms/Instrumentation/LowerBuiltinAllowCheckPass.h"
+#include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -746,13 +746,13 @@ static void addSanitizers(const Triple &TargetTriple,
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
 
-  if (LowerBuiltinAllowCheckPass::IsRequested()) {
+  if (LowerAllowCheckPass::IsRequested()) {
     // We can optimize after inliner, and PGO profile matching. The hook below
     // is called at the end `buildFunctionSimplificationPipeline`, which called
     // from `buildInlinerPipeline`, which called after profile matching.
     PB.registerScalarOptimizerLateEPCallback(
         [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(LowerBuiltinAllowCheckPass());
+          FPM.addPass(LowerAllowCheckPass());
         });
   }
 }
