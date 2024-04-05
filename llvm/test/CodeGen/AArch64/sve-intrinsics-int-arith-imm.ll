@@ -1063,7 +1063,8 @@ define <vscale x 16 x i8> @sqadd_b_lowimm(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @sqadd_b_negimm(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sqadd_b_negimm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqadd z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sqadd z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 16 x i8> undef, i8 -1, i32 0
   %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
@@ -1204,7 +1205,8 @@ define <vscale x 16 x i8> @sqsub_b_lowimm(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @sqsub_b_negimm(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: sqsub_b_negimm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqsub z0.b, z0.b, #255 // =0xff
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    sqsub z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 16 x i8> undef, i8 -1, i32 0
   %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer

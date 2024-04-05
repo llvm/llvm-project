@@ -249,6 +249,11 @@ def SVEAddSubImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i16>", [
 def SVEAddSubImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubImm<MVT::i32>", []>;
 def SVEAddSubImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubImm<MVT::i64>", []>;
 
+def SVEAddSubSSatImm8Pat  : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i8>", []>;
+def SVEAddSubSSatImm16Pat : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i16>", []>;
+def SVEAddSubSSatImm32Pat : ComplexPattern<i32, 2, "SelectSVEAddSubSSatImm<MVT::i32>", []>;
+def SVEAddSubSSatImm64Pat : ComplexPattern<i64, 2, "SelectSVEAddSubSSatImm<MVT::i64>", []>;
+
 def SVECpyDupImm8Pat  : ComplexPattern<i32, 2, "SelectSVECpyDupImm<MVT::i8>", []>;
 def SVECpyDupImm16Pat : ComplexPattern<i32, 2, "SelectSVECpyDupImm<MVT::i16>", []>;
 def SVECpyDupImm32Pat : ComplexPattern<i32, 2, "SelectSVECpyDupImm<MVT::i32>", []>;
@@ -4773,6 +4778,18 @@ multiclass sve_int_arith_imm0<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubImm16Pat, !cast<Instruction>(NAME # _H)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubImm32Pat, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubImm64Pat, !cast<Instruction>(NAME # _D)>;
+}
+
+multiclass sve_int_arith_imm0_ssat<bits<3> opc, string asm, SDPatternOperator op> {
+  def _B : sve_int_arith_imm0<0b00, opc, asm, ZPR8,  addsub_imm8_opt_lsl_i8>;
+  def _H : sve_int_arith_imm0<0b01, opc, asm, ZPR16, addsub_imm8_opt_lsl_i16>;
+  def _S : sve_int_arith_imm0<0b10, opc, asm, ZPR32, addsub_imm8_opt_lsl_i32>;
+  def _D : sve_int_arith_imm0<0b11, opc, asm, ZPR64, addsub_imm8_opt_lsl_i64>;
+
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv16i8, op, ZPR8,  i32, SVEAddSubSSatImm8Pat,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv8i16, op, ZPR16, i32, SVEAddSubSSatImm16Pat, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv4i32, op, ZPR32, i32, SVEAddSubSSatImm32Pat, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Imm_OptLsl_Pat<nxv2i64, op, ZPR64, i64, SVEAddSubSSatImm64Pat, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_arith_imm<bits<2> sz8_64, bits<6> opc, string asm,
