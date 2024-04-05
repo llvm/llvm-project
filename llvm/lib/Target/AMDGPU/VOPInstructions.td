@@ -1902,6 +1902,7 @@ include "VOP2Instructions.td"
 include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
 include "VOPDInstructions.td"
+include "VOPMInstructions.td"
 
 class ClassPat<Instruction inst, ValueType vt> : GCNPat <
   (is_fpclass (vt (VOP3ModsNonCanonicalizing vt:$src0, i32:$src0_mods)), (i32 timm:$mask)),

@@ -2980,6 +2980,51 @@ def int_amdgcn_wave_id_in_wavegroup :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
+def int_amdgcn_permute_pair_2src_rotate_group_b32 :
+  ClangBuiltin<"__builtin_amdgcn_permute_pair_2src_rotate_group_b32">,
+  DefaultAttrsIntrinsic<
+    [llvm_i32_ty], // %dst
+    [
+      llvm_i32_ty, // %src0
+      llvm_i32_ty, // %src1
+      llvm_i32_ty  // %aux_data
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<2>>]
+  >;
+
+def int_amdgcn_bpermute_b32 :
+  ClangBuiltin<"__builtin_amdgcn_bpermute_b32">,
+  DefaultAttrsIntrinsic<
+    [llvm_i32_ty], // %dst
+    [
+      llvm_i32_ty, // %src0
+      llvm_i32_ty  // %src1
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  >;
+
+def int_amdgcn_permute_pair_gensgpr_b32 :
+  ClangBuiltin<"__builtin_amdgcn_permute_pair_gensgpr_b32">,
+  DefaultAttrsIntrinsic<
+    [llvm_i32_ty], // %dst
+    [
+      llvm_i32_ty, // %src0
+      llvm_i64_ty, // %src1
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  >;
+
+def int_amdgcn_permute_pair_bcast_b32 :
+  ClangBuiltin<"__builtin_amdgcn_permute_pair_bcast_b32">,
+  DefaultAttrsIntrinsic<
+    [llvm_i32_ty], // %dst
+    [
+      llvm_i32_ty, // %src0
+      llvm_i32_ty  // %aux_data
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+  >;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

@@ -181,6 +181,7 @@ public:
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
     ImmTyScaleSel,
+    ImmTyAuxData
   };
 
   // Immediate operand kind.
@@ -443,6 +444,7 @@ public:
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
   bool isScaleSel() const { return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm()); }
+  bool isAuxData() const { return isImmTy(ImmTyAuxData); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1199,6 +1201,7 @@ public:
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
+    case ImmTyAuxData: OS << "ImmTyAuxData"; break;
     }
     // clang-format on
   }
@@ -1744,6 +1747,8 @@ public:
   ParseStatus parseFlatOffset(OperandVector &Operands);
   ParseStatus parseR128A16(OperandVector &Operands);
   ParseStatus parseBLGP(OperandVector &Operands);
+  ParseStatus parseAuxData(OperandVector &Operands);
+
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
@@ -1864,6 +1869,7 @@ private:
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   bool validateSetVgprMSB(const MCInst &Inst, const OperandVector &Operands);
+  bool validateAuxData(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
@@ -5406,6 +5412,12 @@ bool AMDGPUAsmParser::validateSetVgprMSB(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateAuxData(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  // TODO-GFX13: Validate.
+  return true;
+}
+
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
@@ -5529,6 +5541,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateSetVgprMSB(Inst, Operands)) {
+    return false;
+  }
+  if (!validateAuxData(Inst, Operands)) {
     return false;
   }
 

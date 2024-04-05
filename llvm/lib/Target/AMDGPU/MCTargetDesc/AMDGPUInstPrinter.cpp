@@ -779,6 +779,16 @@ void AMDGPUInstPrinter::printABID(const MCInst *MI, unsigned OpNo,
   O << " abid:" << Imm;
 }
 
+void AMDGPUInstPrinter::printAuxData(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " aux_data:" << Imm;
+}
+
 void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {

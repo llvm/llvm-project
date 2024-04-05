@@ -1174,6 +1174,7 @@ def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
 def ScaleSel : CustomOperand<i8, 1, "ScaleSel">;
 def scalesel_0 : DefaultOperand<ScaleSel, 0>;
+def AuxData : NamedIntOperand<i32, "aux_data">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
