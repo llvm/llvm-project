@@ -228,6 +228,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses lambda function expressions being implicitly cast to boolean values, under ``-Wpointer-bool-conversion``.
   Fixes #GH82512.
 
+- The ``-Wunused-member-function`` diagnostic now prints a message specific to the constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
