@@ -111,66 +111,6 @@ struct ForOpInterface
   }
 };
 
-struct IfOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<IfOpInterface, IfOp> {
-
-  static void populateBounds(scf::IfOp ifOp, Value value,
-                             std::optional<int64_t> dim,
-                             ValueBoundsConstraintSet &cstr) {
-    unsigned int resultNum = cast<OpResult>(value).getResultNumber();
-    Value thenValue = ifOp.thenYield().getResults()[resultNum];
-    Value elseValue = ifOp.elseYield().getResults()[resultNum];
-
-    // Populate constraints for the yielded value (and all values on the
-    // backward slice, as long as the current stop condition is not satisfied).
-    cstr.populateConstraints(thenValue, dim);
-    cstr.populateConstraints(elseValue, dim);
-    auto boundsBuilder = cstr.bound(value);
-    if (dim)
-      boundsBuilder[*dim];
-
-    // Compare yielded values.
-    // If thenValue <= elseValue:
-    // * result <= elseValue
-    // * result >= thenValue
-    if (cstr.compare(thenValue, dim,
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     elseValue, dim)) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(thenValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(elseValue, dim);
-      } else {
-        cstr.bound(value) >= thenValue;
-        cstr.bound(value) <= elseValue;
-      }
-    }
-    // If elseValue <= thenValue:
-    // * result <= thenValue
-    // * result >= elseValue
-    if (cstr.compare(elseValue, dim,
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     thenValue, dim)) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(elseValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(thenValue, dim);
-      } else {
-        cstr.bound(value) >= elseValue;
-        cstr.bound(value) <= thenValue;
-      }
-    }
-  }
-
-  void populateBoundsForIndexValue(Operation *op, Value value,
-                                   ValueBoundsConstraintSet &cstr) const {
-    populateBounds(cast<IfOp>(op), value, /*dim=*/std::nullopt, cstr);
-  }
-
-  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
-                                       ValueBoundsConstraintSet &cstr) const {
-    populateBounds(cast<IfOp>(op), value, dim, cstr);
-  }
-};
-
 } // namespace
 } // namespace scf
 } // namespace mlir
@@ -179,6 +119,5 @@ void mlir::scf::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
     scf::ForOp::attachInterface<scf::ForOpInterface>(*ctx);
-    scf::IfOp::attachInterface<scf::IfOpInterface>(*ctx);
   });
 }
