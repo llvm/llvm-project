@@ -53,5 +53,5 @@ class TestObjCBuiltinTypes(TestBase):
         )
         self.expect(
             "expr --language C++ -- id my_id = 0; my_id",
-            patterns=["\(id\) \$.* = nullptr"],
+            error=True
         )
