@@ -793,9 +793,8 @@ llvm.func @store_int_to_vector(%arg: i32) -> vector<4xi8> {
   %1 = llvm.alloca %0 x vector<2xi16> {alignment = 4 : i64} : (i32) -> !llvm.ptr
   llvm.store %arg, %1 {alignment = 4 : i64} : i32, !llvm.ptr
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> vector<4xi8>
-  // CHECK: %[[BITCAST0:.*]] = llvm.bitcast %[[ARG]] : i32 to vector<2xi16>
-  // CHECK: %[[BITCAST1:.*]] = llvm.bitcast %[[BITCAST0]] : vector<2xi16> to vector<4xi8>
-  // CHECK: llvm.return %[[BITCAST1]]
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG]] : i32 to vector<4xi8>
+  // CHECK: llvm.return %[[BITCAST]]
   llvm.return %2 : vector<4xi8>
 }
 
