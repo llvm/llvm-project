@@ -3379,12 +3379,17 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
       for (auto &DependantEDU : MI.DependantEDUs) {
 
         // Remove DependantEDU from all of its users DependantEDUs lists.
-        for (auto &[JD, Syms] : DependantEDU->Dependencies) {
-          for (auto Sym : Syms) {
-            assert(JD->Symbols.count(SymbolStringPtr(Sym)) && "Sym not in JD?");
-            assert(JD->MaterializingInfos.count(SymbolStringPtr(Sym)) &&
+        for (auto &[DepJD, DepSyms] : DependantEDU->Dependencies) {
+          for (auto DepSym : DepSyms) {
+            // Skip self-reference to avoid invalidating the MI.DependantEDUs
+            // map. We'll clear this later.
+            if (DepJD == &JD && DepSym == Name)
+              continue;
+            assert(DepJD->Symbols.count(SymbolStringPtr(DepSym)) &&
+                   "DepSym not in DepJD?");
+            assert(DepJD->MaterializingInfos.count(SymbolStringPtr(DepSym)) &&
                    "DependantEDU not registered with symbol it depends on");
-            auto SymMI = JD->MaterializingInfos[SymbolStringPtr(Sym)];
+            auto &SymMI = DepJD->MaterializingInfos[SymbolStringPtr(DepSym)];
             assert(SymMI.DependantEDUs.count(DependantEDU) &&
                    "DependantEDU missing from DependantEDUs list");
             SymMI.DependantEDUs.erase(DependantEDU);
