@@ -57,10 +57,7 @@ def MathAPI : PublicAPI<"math.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Types = [
-    "size_t",
-    "off_t",
-  ];
+  let Types = ["size_t"];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {

@@ -37,6 +37,7 @@ enum class Operation : int {
   Erf,
   Exp,
   Exp2,
+  Exp2m1,
   Exp10,
   Expm1,
   Floor,
