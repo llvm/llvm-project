@@ -182,18 +182,11 @@ static cl::opt<bool> ClWithTls(
              "platforms that support this"),
     cl::Hidden, cl::init(true));
 
-static cl::opt<bool>
-    CSelectiveInstrumentation("hwasan-selective-instrumentation",
-                              cl::desc("Use selective instrumentation"),
-                              cl::Hidden, cl::init(false));
-
-static cl::opt<int> ClHotPercentileCutoff(
-    "hwasan-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff."
-             "By default `-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
+                                          cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate", cl::init(0),
+    ClRandomSkipRate("hwasan-random-skip-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
                               "to skip instrumentation of a function."));
 
@@ -317,7 +310,7 @@ private:
   };
 
   bool selectiveInstrumentationShouldSkip(Function &F,
-                                          FunctionAnalysisManager &FAM);
+                                          FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -422,6 +415,7 @@ private:
   bool InstrumentLandingPads;
   bool InstrumentWithCalls;
   bool InstrumentStack;
+  bool InstrumentGlobals;
   bool DetectUseAfterScope;
   bool UsePageAliases;
   bool UseMatchAllCallback;
@@ -639,11 +633,13 @@ void HWAddressSanitizer::initializeModule() {
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = optOr(ClInstrumentLandingPads, !NewRuntime);
 
+  InstrumentGlobals =
+      !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
+
   if (!CompileKernel) {
     createHwasanCtorComdat();
-    bool InstrumentGlobals = optOr(ClGlobals, NewRuntime);
 
-    if (InstrumentGlobals && !UsePageAliases)
+    if (InstrumentGlobals)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -787,6 +783,13 @@ bool HWAddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
     if (SSI && SSI->stackAccessIsSafe(*Inst))
       return true;
   }
+
+  if (isa<GlobalVariable>(getUnderlyingObject(Ptr))) {
+    if (!InstrumentGlobals)
+      return true;
+    // TODO: Optimize inbound global accesses, like Asan `instrumentMop`.
+  }
+
   return false;
 }
 
@@ -1104,8 +1107,6 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     // FIXME: the interceptor is not as fast as real memset. Consider lowering
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
-    // Mechanical proof of this address calculation can be found at:
-    // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
     if (ShadowSize)
       IRB.CreateMemSet(ShadowPtr, Tag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
@@ -1302,6 +1303,22 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
       // The use of AShr instead of LShr is due to
       //   https://bugs.llvm.org/show_bug.cgi?id=39030
       // Runtime library makes sure not to use the highest bit.
+      //
+      // Mechanical proof of this address calculation can be found at:
+      // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
+      //
+      // Example of the wrap case for N = 1
+      // Pointer:   0x01AAAAAAAAAAAFF8
+      //                     +
+      //            0x0000000000000008
+      //                     =
+      //            0x01AAAAAAAAAAB000
+      //                     &
+      // WrapMask:  0xFFFFFFFFFFFFF000
+      //                     =
+      //            0x01AAAAAAAAAAA000
+      //
+      // Then the WrapMask will be a no-op until the next wrap case.
       Value *WrapMask = IRB.CreateXor(
           IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
           ConstantInt::get(IntptrTy, (uint64_t)-1));
@@ -1476,28 +1493,22 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 }
 
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
-    Function &F, FunctionAnalysisManager &FAM) {
+    Function &F, FunctionAnalysisManager &FAM) const {
   if (ClRandomSkipRate.getNumOccurrences()) {
     std::bernoulli_distribution D(ClRandomSkipRate);
-    if (D(*Rng))
-      return true;
-  } else {
-    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-    ProfileSummaryInfo *PSI =
-        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-    if (PSI && PSI->hasProfileSummary()) {
-      auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-      if ((ClHotPercentileCutoff.getNumOccurrences() &&
-           ClHotPercentileCutoff >= 0)
-              ? PSI->isFunctionHotInCallGraphNthPercentile(
-                    ClHotPercentileCutoff, &F, BFI)
-              : PSI->isFunctionHotInCallGraph(&F, BFI))
-        return true;
-    } else {
-      ++NumNoProfileSummaryFuncs;
-    }
+    return (D(*Rng));
   }
-  return false;
+  if (!ClHotPercentileCutoff.getNumOccurrences())
+    return false;
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  ProfileSummaryInfo *PSI =
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  if (!PSI || !PSI->hasProfileSummary()) {
+    ++NumNoProfileSummaryFuncs;
+    return false;
+  }
+  return PSI->isFunctionHotInCallGraphNthPercentile(
+      ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
@@ -1513,7 +1524,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   NumTotalFuncs++;
 
-  if (CSelectiveInstrumentation && selectiveInstrumentationShouldSkip(F, FAM))
+  if (selectiveInstrumentationShouldSkip(F, FAM))
     return;
 
   NumInstrumentedFuncs++;

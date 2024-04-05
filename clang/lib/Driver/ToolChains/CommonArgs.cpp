@@ -758,15 +758,15 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfo &Input, bool IsThinLTO) {
-  const bool IsOSAIX = ToolChain.getTriple().isOSAIX();
-  const bool IsAMDGCN = ToolChain.getTriple().isAMDGCN();
+  const llvm::Triple &Triple = ToolChain.getTriple();
+  const bool IsOSAIX = Triple.isOSAIX();
+  const bool IsAMDGCN = Triple.isAMDGCN();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" &&
-      !ToolChain.getTriple().isOSOpenBSD()) {
+      llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -835,7 +835,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the plugin.
 
   // Handle flags for selecting CPU variants.
-  std::string CPU = getCPUName(D, Args, ToolChain.getTriple());
+  std::string CPU = getCPUName(D, Args, Triple);
   if (!CPU.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
@@ -966,10 +966,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
                                  options::OPT_mno_xcoff_roptr, false);
     StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
-
     if (!IsOSAIX)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << OptStr << ToolChain.getTriple().str();
+          << OptStr << Triple.str();
 
     if (HasRoptr) {
       // The data sections option is on by default on AIX. We only need to error
@@ -1032,7 +1031,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
-                   ToolChain.getTriple().hasDefaultEmulatedTLS())) {
+                   Triple.hasDefaultEmulatedTLS())) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-emulated-tls"));
   }
@@ -1076,14 +1075,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
 
 /// Adds the '-lcgpu' and '-lmgpu' libraries to the compilation to include the
 /// LLVM C library for GPUs.
-static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
+static void addOpenMPDeviceLibC(const Compilation &C, const ArgList &Args,
                                 ArgStringList &CmdArgs) {
   if (Args.hasArg(options::OPT_nogpulib) || Args.hasArg(options::OPT_nolibc))
     return;
 
   // Check the resource directory for the LLVM libc GPU declarations. If it's
   // found we can assume that LLVM was built with support for the GPU libc.
-  SmallString<256> LibCDecls(TC.getDriver().ResourceDir);
+  SmallString<256> LibCDecls(C.getDriver().ResourceDir);
   llvm::sys::path::append(LibCDecls, "include", "llvm_libc_wrappers",
                           "llvm-libc-decls");
   bool HasLibC = llvm::sys::fs::exists(LibCDecls) &&
@@ -1091,38 +1090,23 @@ static void addOpenMPDeviceLibC(const ToolChain &TC, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_gpulibc, options::OPT_nogpulibc, HasLibC))
     return;
 
-  // We don't have access to the offloading toolchains here, so determine from
-  // the arguments if we have any active NVPTX or AMDGPU toolchains.
-  llvm::DenseSet<const char *> Libraries;
-  if (const Arg *Targets = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
-    if (llvm::any_of(Targets->getValues(),
-                     [](auto S) { return llvm::Triple(S).isAMDGPU(); })) {
-      Libraries.insert("-lcgpu-amdgpu");
-      Libraries.insert("-lmgpu-amdgpu");
-    }
-    if (llvm::any_of(Targets->getValues(),
-                     [](auto S) { return llvm::Triple(S).isNVPTX(); })) {
-      Libraries.insert("-lcgpu-nvptx");
-      Libraries.insert("-lmgpu-nvptx");
-    }
-  }
+  SmallVector<const ToolChain *> ToolChains;
+  auto TCRange = C.getOffloadToolChains(Action::OFK_OpenMP);
+  for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
+    ToolChains.push_back(TI->second);
 
-  for (StringRef Arch : Args.getAllArgValues(options::OPT_offload_arch_EQ)) {
-    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
-          return IsAMDGpuArch(StringToCudaArch(Str));
-        })) {
-      Libraries.insert("-lcgpu-amdgpu");
-      Libraries.insert("-lmgpu-amdgpu");
-    }
-    if (llvm::any_of(llvm::split(Arch, ","), [](StringRef Str) {
-          return IsNVIDIAGpuArch(StringToCudaArch(Str));
-        })) {
-      Libraries.insert("-lcgpu-nvptx");
-      Libraries.insert("-lmgpu-nvptx");
-    }
+  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
+        return TC->getTriple().isAMDGPU();
+      })) {
+    CmdArgs.push_back("-lcgpu-amdgpu");
+    CmdArgs.push_back("-lmgpu-amdgpu");
   }
-
-  llvm::append_range(CmdArgs, Libraries);
+  if (llvm::any_of(ToolChains, [](const ToolChain *TC) {
+        return TC->getTriple().isNVPTX();
+      })) {
+    CmdArgs.push_back("-lcgpu-nvptx");
+    CmdArgs.push_back("-lmgpu-nvptx");
+  }
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1154,9 +1138,10 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
-bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
-                             const ArgList &Args, bool ForceStaticHostRuntime,
-                             bool IsOffloadingHost, bool GompNeedsRT) {
+bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
+                             const ToolChain &TC, const ArgList &Args,
+                             bool ForceStaticHostRuntime, bool IsOffloadingHost,
+                             bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false))
     return false;
@@ -1197,7 +1182,7 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
     CmdArgs.push_back("-lomptarget.devicertl");
 
   if (IsOffloadingHost)
-    addOpenMPDeviceLibC(TC, Args, CmdArgs);
+    addOpenMPDeviceLibC(C, Args, CmdArgs);
 
   addArchSpecificRPath(TC, Args, CmdArgs);
   addOpenMPRuntimeLibraryPath(TC, Args, CmdArgs);

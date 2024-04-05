@@ -193,6 +193,9 @@ Non-comprehensive list of changes in this release
   with support for any unsigned integer type. Like the previous builtins, these
   new builtins are constexpr and may be used in constant expressions.
 
+- ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
+  like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
 New Compiler Flags
 ------------------
 
@@ -253,6 +256,21 @@ Attribute Changes in Clang
   added a new extension query ``__has_extension(swiftcc)`` corresponding to the
   ``__attribute__((swiftcc))`` attribute.
 
+- The ``_Nullable`` and ``_Nonnull`` family of type attributes can now apply
+  to certain C++ class types, such as smart pointers:
+  ``void useObject(std::unique_ptr<Object> _Nonnull obj);``.
+
+  This works for standard library types including ``unique_ptr``, ``shared_ptr``,
+  and ``function``. See
+  `the attribute reference documentation <https://llvm.org/docs/AttributeReference.html#nullability-attributes>`_
+  for the full list.
+
+- The ``_Nullable`` attribute can be applied to C++ class declarations:
+  ``template <class T> class _Nullable MySmartPointer {};``.
+
+  This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
+  apply to this class.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -304,6 +322,18 @@ Improvements to Clang's diagnostics
   annotated with the ``clang::always_destroy`` attribute.
   Fixes #GH68686, #GH86486
 
+- ``-Wmicrosoft``, ``-Wgnu``, or ``-pedantic`` is now required to diagnose C99
+  flexible array members in a union or alone in a struct. Fixes GH#84565.
+
+- Clang now no longer diagnoses type definitions in ``offsetof`` in C23 mode.
+  Fixes #GH83658.
+
+- New ``-Wformat-signedness`` diagnostic that warn if the format string requires an
+  unsigned argument and the argument is signed and vice versa.
+
+- Clang now emits ``unused argument`` warning when the -fmodule-output flag is used
+  with an input that is not of type c++-module.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -353,6 +383,9 @@ Bug Fixes in This Version
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
+
+- Fixed a regression in CTAD that a friend declaration that befriends itself may cause
+  incorrect constraint substitution. (#GH86769).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -454,6 +487,13 @@ Bug Fixes to C++ Support
 - Fix a crash when instantiating a lambda that captures ``this`` outside of its context. Fixes (#GH85343).
 - Fix an issue where a namespace alias could be defined using a qualified name (all name components
   following the first `::` were ignored).
+- Fix an out-of-bounds crash when checking the validity of template partial specializations. (part of #GH86757).
+- Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
+- Fixed a bug that prevented member function templates of class templates declared with a deduced return type
+  from being explicitly specialized for a given implicit instantiation of the class template.
+
+- Fix crash when inheriting from a cv-qualified type. Fixes:
+  (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

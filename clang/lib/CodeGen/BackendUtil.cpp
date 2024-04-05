@@ -100,21 +100,17 @@ using namespace llvm;
 namespace llvm {
 extern cl::opt<bool> PrintPipelinePasses;
 
-cl::opt<bool> ClRemoveTraps("clang-remove-traps", cl::Optional,
-                            cl::desc("Insert remove-traps pass."),
-                            cl::init(false));
-
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
-    cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
+    cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 
 // Re-link builtin bitcodes after optimization
 cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     "relink-builtin-bitcode-postop", cl::Optional,
-    cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
+    cl::desc("Re-link builtin bitcodes after optimization."));
 } // namespace llvm
 
 namespace {
@@ -751,7 +747,7 @@ static void addSanitizers(const Triple &TargetTriple,
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
 
-  if (ClRemoveTraps) {
+  if (RemoveTrapsPass::IsRequested()) {
     // We can optimize after inliner, and PGO profile matching. The hook below
     // is called at the end `buildFunctionSimplificationPipeline`, which called
     // from `buildInlinerPipeline`, which called after profile matching.
