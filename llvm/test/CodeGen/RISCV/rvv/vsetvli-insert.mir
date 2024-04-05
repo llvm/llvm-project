@@ -464,7 +464,7 @@ body:             |
   ; CHECK-NEXT:   %cond:gpr = COPY $x10
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVMV_V_I_MF2_:%[0-9]+]]:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.2
+  ; CHECK-NEXT:   PseudoBEQ %cond, $x0, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -475,7 +475,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BEQ %cond, $x0, %bb.4
+  ; CHECK-NEXT:   PseudoBEQ %cond, $x0, %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
@@ -491,11 +491,11 @@ body:             |
     liveins: $x10
     %cond:gpr = COPY $x10
     %1:vr = PseudoVMV_V_I_MF2 $noreg, 1, 2, 5, 0
-    BEQ %cond, $x0, %bb.2
+    PseudoBEQ %cond, $x0, %bb.2
   bb.1:
     %2:vr = PseudoVMV_V_I_M1 $noreg, 1, 2, 6, 0
   bb.2: ; the exit info here should have sew/lmul ratio only
-    BEQ %cond, $x0, %bb.4
+    PseudoBEQ %cond, $x0, %bb.4
   bb.3:
     PseudoCALL $noreg, csr_ilp32_lp64
   bb.4: ; this block will have PRE attempted on it

@@ -541,7 +541,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // Compare the hashes and trap if there's a mismatch.
   MCSymbol *Pass = OutContext.createTempSymbol();
   EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(RISCV::BEQ)
+                 MCInstBuilder(RISCV::PseudoBEQ)
                      .addReg(ScratchRegs[0])
                      .addReg(ScratchRegs[1])
                      .addExpr(MCSymbolRefExpr::create(Pass, OutContext)));
@@ -618,7 +618,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     MCSymbol *HandleMismatchOrPartialSym = OutContext.createTempSymbol();
     // X7 contains tag from memory, while X6 contains tag from the pointer
     OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BNE)
+        MCInstBuilder(RISCV::PseudoBNE)
             .addReg(RISCV::X7)
             .addReg(RISCV::X6)
             .addExpr(MCSymbolRefExpr::create(HandleMismatchOrPartialSym,
@@ -640,7 +640,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                  MCSTI);
     MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
     OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BGEU)
+        MCInstBuilder(RISCV::PseudoBGEU)
             .addReg(RISCV::X6)
             .addReg(RISCV::X28)
             .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
@@ -657,7 +657,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                        .addImm(Size - 1),
                                    MCSTI);
     OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BGE)
+        MCInstBuilder(RISCV::PseudoBGE)
             .addReg(RISCV::X28)
             .addReg(RISCV::X6)
             .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
@@ -670,7 +670,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         MCInstBuilder(RISCV::LBU).addReg(RISCV::X6).addReg(RISCV::X6).addImm(0),
         MCSTI);
     OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::BEQ)
+        MCInstBuilder(RISCV::PseudoBEQ)
             .addReg(RISCV::X6)
             .addReg(RISCV::X7)
             .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),

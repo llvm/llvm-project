@@ -17265,7 +17265,7 @@ static MachineBasicBlock *emitReadCounterWidePseudo(MachineInstr &MI,
       .addImm(HiCounter)
       .addReg(RISCV::X0);
 
-  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+  BuildMI(LoopMBB, DL, TII->get(RISCV::PseudoBNE))
       .addReg(HiReg)
       .addReg(ReadAgainReg)
       .addMBB(LoopMBB);
@@ -17794,7 +17794,7 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
     MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
 
   // Insert branch.
-  BuildMI(MBB, DL, TII.get(RISCV::BEQ))
+  BuildMI(MBB, DL, TII.get(RISCV::PseudoBEQ))
       .addReg(CmpReg)
       .addReg(RISCV::X0)
       .addMBB(DoneMBB);

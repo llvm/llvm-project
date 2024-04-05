@@ -495,6 +495,13 @@ def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins simm12_lsb0:$offset),
 def C_BEQZ : Bcz<0b110, "c.beqz", GPRC>, Sched<[WriteJmp, ReadJmp]>;
 def C_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp, ReadJmp]>;
 
+// CodeGenOnly versions of the above that compress/uncompress to/from
+// PseudoBEQ/BNE.
+let isCodeGenOnly = 1 in {
+def PseudoC_BEQZ : Bcz<0b110, "c.beqz", GPRC>, Sched<[WriteJmp, ReadJmp]>;
+def PseudoC_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp, ReadJmp]>;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                         (ins GPRNoX0:$rd, uimmlog2xlennonzero:$imm),
@@ -956,14 +963,28 @@ def : CompressPat<(JAL X0, simm12_lsb0:$offset),
                   (C_J simm12_lsb0:$offset)>;
 def : CompressPat<(BEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
-let isCompressOnly = true in
+def : CompressPat<(PseudoBEQ GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (PseudoC_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in {
 def : CompressPat<(BEQ X0, GPRC:$rs1, simm9_lsb0:$imm),
                   (C_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(PseudoBEQ X0, GPRC:$rs1, simm9_lsb0:$imm),
+                  (PseudoC_BEQZ GPRC:$rs1, simm9_lsb0:$imm)>;
+}
 def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
                   (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
-let isCompressOnly = true in
+def : CompressPat<(PseudoBNE GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (PseudoC_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(BNE GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(PseudoBNE GPRC:$rs1, X0, simm9_lsb0:$imm),
+                  (PseudoC_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+let isCompressOnly = true in {
 def : CompressPat<(BNE X0, GPRC:$rs1, simm9_lsb0:$imm),
                   (C_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+def : CompressPat<(PseudoBNE X0, GPRC:$rs1, simm9_lsb0:$imm),
+                  (PseudoC_BNEZ GPRC:$rs1, simm9_lsb0:$imm)>;
+}
 } // Predicates = [HasStdExtCOrZca]
 
 // Quadrant 2

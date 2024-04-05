@@ -54,7 +54,7 @@ body:             |
     %29:vr = PseudoVSSRA_VI_M1 %pt8, %3, 2, 0, 1, 6 /* e64 */, 0
     %pt9:vr = IMPLICIT_DEF
     %30:vr = PseudoVMV_V_I_M1 %pt9, 0, 1, 6 /* e64 */, 0
-    BGEU %1, $x0, %bb.2
+    PseudoBGEU %1, $x0, %bb.2
 
   bb.1.entry:
 
@@ -63,7 +63,7 @@ body:             |
 
     %31:vr = PHI %30, %bb.0, %29, %bb.1
     %32:gpr = ADDI $x0, 128
-    BGEU %1, %32, %bb.4
+    PseudoBGEU %1, %32, %bb.4
 
   bb.3.entry:
 

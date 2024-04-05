@@ -628,6 +628,17 @@ def BGE  : BranchCC_rri<0b101, "bge">;
 def BLTU : BranchCC_rri<0b110, "bltu">;
 def BGEU : BranchCC_rri<0b111, "bgeu">;
 
+let isCodeGenOnly = 1 in {
+// CodeGenOnly versions of the above that are ignored by MC layer relaxing to
+// PseudoLongB*. We use the BranchRelaxation pass for CodeGen.
+def PseudoBEQ  : BranchCC_rri<0b000, "beq">;
+def PseudoBNE  : BranchCC_rri<0b001, "bne">;
+def PseudoBLT  : BranchCC_rri<0b100, "blt">;
+def PseudoBGE  : BranchCC_rri<0b101, "bge">;
+def PseudoBLTU : BranchCC_rri<0b110, "bltu">;
+def PseudoBGEU : BranchCC_rri<0b111, "bgeu">;
+}
+
 let IsSignExtendingOpW = 1 in {
 def LB  : Load_ri<0b000, "lb">, Sched<[WriteLDB, ReadMemBase]>;
 def LH  : Load_ri<0b001, "lh">, Sched<[WriteLDH, ReadMemBase]>;
@@ -911,6 +922,19 @@ def : InstAlias<"bltz $rs, $offset",
                 (BLT GPR:$rs,      X0, simm13_lsb0:$offset)>;
 def : InstAlias<"bgtz $rs, $offset",
                 (BLT      X0, GPR:$rs, simm13_lsb0:$offset)>;
+
+def : InstAlias<"beqz $rs, $offset",
+                (PseudoBEQ GPR:$rs,      X0, simm13_lsb0:$offset)>;
+def : InstAlias<"bnez $rs, $offset",
+                (PseudoBNE GPR:$rs,      X0, simm13_lsb0:$offset)>;
+def : InstAlias<"blez $rs, $offset",
+                (PseudoBGE      X0, GPR:$rs, simm13_lsb0:$offset)>;
+def : InstAlias<"bgez $rs, $offset",
+                (PseudoBGE GPR:$rs,      X0, simm13_lsb0:$offset)>;
+def : InstAlias<"bltz $rs, $offset",
+                (PseudoBLT GPR:$rs,      X0, simm13_lsb0:$offset)>;
+def : InstAlias<"bgtz $rs, $offset",
+                (PseudoBLT      X0, GPR:$rs, simm13_lsb0:$offset)>;
 
 // Always output the canonical mnemonic for the pseudo branch instructions.
 // The GNU tools emit the canonical mnemonic for the branch pseudo instructions
@@ -1412,16 +1436,16 @@ class BrccCompressOpt<CondCode Cond, RVInstB Inst>
           (Inst (XLenVT (ADDI GPR:$lhs, (NegImm simm12:$Constant))),
                 (XLenVT X0), bb:$place)>;
 
-defm : BccPat<SETEQ, BEQ>;
-defm : BccPat<SETNE, BNE>;
-defm : BccPat<SETLT, BLT>;
-defm : BccPat<SETGE, BGE>;
-defm : BccPat<SETULT, BLTU>;
-defm : BccPat<SETUGE, BGEU>;
+defm : BccPat<SETEQ, PseudoBEQ>;
+defm : BccPat<SETNE, PseudoBNE>;
+defm : BccPat<SETLT, PseudoBLT>;
+defm : BccPat<SETGE, PseudoBGE>;
+defm : BccPat<SETULT, PseudoBLTU>;
+defm : BccPat<SETUGE, PseudoBGEU>;
 
 let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
-  def : BrccCompressOpt<SETEQ, BEQ>;
-  def : BrccCompressOpt<SETNE, BNE>;
+  def : BrccCompressOpt<SETEQ, PseudoBEQ>;
+  def : BrccCompressOpt<SETNE, PseudoBNE>;
 }
 
 class LongBccPseudo : Pseudo<(outs),

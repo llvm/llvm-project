@@ -20,7 +20,7 @@ body:             |
     liveins: $x10
     %10:gpr = COPY $x10
     %20:gpr = LUI 1, implicit $x0
-    BEQ %10, %10, %bb.2
+    PseudoBEQ %10, %10, %bb.2
     PseudoBR %bb.1
   bb.1:
     liveins: $x0

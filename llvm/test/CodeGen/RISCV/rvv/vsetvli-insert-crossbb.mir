@@ -189,7 +189,7 @@ body:             |
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVLE64_V_M1_:%[0-9]+]]:vr = PseudoVLE64_V_M1 %pt, [[COPY2]], $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ [[COPY3]], [[COPY4]], %bb.2
+  ; CHECK-NEXT:   PseudoBEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.then:
@@ -220,7 +220,7 @@ body:             |
     %pt:vr = IMPLICIT_DEF
     %0:vr = PseudoVLE64_V_M1 %pt, %5, %7, 6, 0
     %8:gpr = COPY $x0
-    BEQ %4, %8, %bb.2
+    PseudoBEQ %4, %8, %bb.2
     PseudoBR %bb.1
 
   bb.1.if.then:
@@ -274,7 +274,7 @@ body:             |
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVLE32_V_MF2_:%[0-9]+]]:vr = PseudoVLE32_V_MF2 %pt, [[COPY2]], $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ [[COPY3]], [[COPY4]], %bb.2
+  ; CHECK-NEXT:   PseudoBEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.then:
@@ -307,7 +307,7 @@ body:             |
     %pt:vr = IMPLICIT_DEF
     %0:vr = PseudoVLE32_V_MF2 %pt, %5, %7, 5, 0
     %8:gpr = COPY $x0
-    BEQ %4, %8, %bb.2
+    PseudoBEQ %4, %8, %bb.2
     PseudoBR %bb.1
 
   bb.1.if.then:
@@ -358,7 +358,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v8
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ [[COPY3]], [[COPY4]], %bb.2
+  ; CHECK-NEXT:   PseudoBEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.then:
@@ -390,7 +390,7 @@ body:             |
     %4:vr = COPY $v8
     %3:gpr = COPY $x10
     %7:gpr = COPY $x0
-    BEQ %3, %7, %bb.2
+    PseudoBEQ %3, %7, %bb.2
     PseudoBR %bb.1
 
   bb.1.if.then:
@@ -443,7 +443,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[PseudoVSETVLI:%[0-9]+]]:gprnox0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ [[COPY3]], [[COPY4]], %bb.2
+  ; CHECK-NEXT:   PseudoBEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.then:
@@ -473,7 +473,7 @@ body:             |
     %4:gpr = COPY $x10
     %0:gprnox0 = PseudoVSETVLI %7, 88, implicit-def dead $vl, implicit-def dead $vtype
     %8:gpr = COPY $x0
-    BEQ %4, %8, %bb.2
+    PseudoBEQ %4, %8, %bb.2
     PseudoBR %bb.1
 
   bb.1.if.then:
@@ -533,7 +533,7 @@ body:             |
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSEQ_VI_MF2_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ killed [[PseudoVCPOP_M_B1_]], [[COPY2]], %bb.3
+  ; CHECK-NEXT:   PseudoBEQ killed [[PseudoVCPOP_M_B1_]], [[COPY2]], %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -568,7 +568,7 @@ body:             |
     %6:vrnov0 = PseudoVLE32_V_MF2_MASK %4, killed %0, $v0, -1, 5, 0
     %7:gpr = PseudoVCPOP_M_B1 %5, -1, 0
     %8:gpr = COPY $x0
-    BEQ killed %7, %8, %bb.3
+    PseudoBEQ killed %7, %8, %bb.3
     PseudoBR %bb.2
 
   bb.2:
@@ -623,7 +623,7 @@ body:             |
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:gpr = ADD [[COPY]], [[MUL]]
   ; CHECK-NEXT:   PseudoVSE32_V_MF2 killed [[PseudoVADD_VX_M1_]], killed [[ADD]], -1, 5 /* e32 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
-  ; CHECK-NEXT:   BLTU [[ADDI]], [[COPY1]], %bb.1
+  ; CHECK-NEXT:   PseudoBLTU [[ADDI]], [[COPY1]], %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -648,7 +648,7 @@ body:             |
     %9:gpr = ADD %0:gpr, %8:gpr
     PseudoVSE32_V_MF2 killed %7:vr, killed %9:gpr, -1, 5
     %10:gpr = ADDI %6:gpr, 1
-    BLTU %10:gpr, %3:gpr, %bb.1
+    PseudoBLTU %10:gpr, %3:gpr, %bb.1
     PseudoBR %bb.2
 
   bb.2:
@@ -699,7 +699,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BLTU [[ADDI]], [[COPY1]], %bb.1
+  ; CHECK-NEXT:   PseudoBLTU [[ADDI]], [[COPY1]], %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -727,7 +727,7 @@ body:             |
 
   bb.3:
     successors: %bb.1, %bb.2
-    BLTU %10:gpr, %3:gpr, %bb.1
+    PseudoBLTU %10:gpr, %3:gpr, %bb.1
     PseudoBR %bb.2
 
   bb.2:
@@ -799,7 +799,7 @@ body:             |
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = nsw ADDI [[PHI1]], -4
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI [[PHI]], 16
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BNE [[ADDI]], [[COPY4]], %bb.1
+  ; CHECK-NEXT:   PseudoBNE [[ADDI]], [[COPY4]], %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.middle.block:
@@ -836,7 +836,7 @@ body:             |
     %4:gpr = nsw ADDI %1, -4
     %5:gpr = ADDI %0, 16
     %18:gpr = COPY $x0
-    BNE %4, %18, %bb.1
+    PseudoBNE %4, %18, %bb.1
     PseudoBR %bb.2
 
   bb.2.middle.block:
@@ -875,7 +875,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   %t2:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ %a, %t2, %bb.3
+  ; CHECK-NEXT:   PseudoBEQ %a, %t2, %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -913,7 +913,7 @@ body:             |
 
     %mask:vr = PseudoVMANDN_MM_MF8 %t6, %t3, -1, 0
     %t2:gpr = COPY $x0
-    BEQ %a, %t2, %bb.3
+    PseudoBEQ %a, %t2, %bb.3
     PseudoBR %bb.2
 
   bb.2:
@@ -965,7 +965,7 @@ body:             |
   ; CHECK-NEXT:   [[PseudoVMSLTU_VX_M1_:%[0-9]+]]:vr = PseudoVMSLTU_VX_M1 [[PseudoVADD_VX_M1_]], [[COPY1]], -1, 6 /* e64 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSLTU_VX_M1_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ killed [[PseudoVCPOP_M_B1_]], [[COPY4]], %bb.3
+  ; CHECK-NEXT:   PseudoBEQ killed [[PseudoVCPOP_M_B1_]], [[COPY4]], %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -984,7 +984,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.4(0x04000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ADD3:%[0-9]+]]:gpr = ADD [[PHI]], %inc
-  ; CHECK-NEXT:   BLTU [[ADD3]], %tc, %bb.1
+  ; CHECK-NEXT:   PseudoBLTU [[ADD3]], %tc, %bb.1
   ; CHECK-NEXT:   PseudoBR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -1016,7 +1016,7 @@ body:             |
     %62:vr = PseudoVMSLTU_VX_M1 %27, %11, -1, 6
     %63:gpr = PseudoVCPOP_M_B1 %62, -1, 0
     %64:gpr = COPY $x0
-    BEQ killed %63, %64, %bb.3
+    PseudoBEQ killed %63, %64, %bb.3
     PseudoBR %bb.2
 
   bb.2:
@@ -1034,7 +1034,7 @@ body:             |
     successors: %bb.1(0x7c000000), %bb.4(0x04000000)
 
     %28:gpr = ADD %26, %inc
-    BLTU %28, %tc, %bb.1
+    PseudoBLTU %28, %tc, %bb.1
     PseudoBR %bb.4
 
   bb.4:

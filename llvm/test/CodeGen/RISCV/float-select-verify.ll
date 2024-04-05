@@ -17,7 +17,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   [[FMV_W_X2:%[0-9]+]]:fpr32 = FMV_W_X killed [[LUI]]
   ; CHECK-NEXT:   [[FSGNJX_S:%[0-9]+]]:fpr32 = FSGNJX_S [[FMV_W_X1]], [[FMV_W_X1]]
   ; CHECK-NEXT:   [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S]], [[FMV_W_X2]]
-  ; CHECK-NEXT:   BEQ [[FLT_S]], $x0, %bb.2
+  ; CHECK-NEXT:   PseudoBEQ [[FLT_S]], $x0, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -30,7 +30,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr32 = PHI [[FMV_W_X1]], %bb.0, [[FSGNJ_S]], %bb.1
-  ; CHECK-NEXT:   BNE [[ANDI]], $x0, %bb.4
+  ; CHECK-NEXT:   PseudoBNE [[ANDI]], $x0, %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.entry:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
@@ -41,7 +41,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:fpr32 = PHI [[PHI]], %bb.2, [[FMV_W_X1]], %bb.3
   ; CHECK-NEXT:   [[FSGNJX_S1:%[0-9]+]]:fpr32 = FSGNJX_S [[FMV_W_X]], [[FMV_W_X]]
   ; CHECK-NEXT:   [[FLT_S1:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S1]], [[FMV_W_X2]]
-  ; CHECK-NEXT:   BEQ [[FLT_S1]], $x0, %bb.6
+  ; CHECK-NEXT:   PseudoBEQ [[FLT_S1]], $x0, %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.entry:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
@@ -54,7 +54,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:fpr32 = PHI [[FMV_W_X]], %bb.4, [[FSGNJ_S1]], %bb.5
-  ; CHECK-NEXT:   BNE [[ANDI]], $x0, %bb.8
+  ; CHECK-NEXT:   PseudoBNE [[ANDI]], $x0, %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.entry:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)

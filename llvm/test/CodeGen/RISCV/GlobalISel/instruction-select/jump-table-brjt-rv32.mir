@@ -65,7 +65,7 @@ body:             |
   ; RV32-SMALL-NEXT:   [[ADDI6:%[0-9]+]]:gpr = ADDI $x0, 4
   ; RV32-SMALL-NEXT:   [[ADDI7:%[0-9]+]]:gpr = ADDI $x0, 1000
   ; RV32-SMALL-NEXT:   [[ADDI8:%[0-9]+]]:gpr = ADDI [[COPY]], -1
-  ; RV32-SMALL-NEXT:   BLTU [[ADDI]], [[ADDI8]], %bb.8
+  ; RV32-SMALL-NEXT:   PseudoBLTU [[ADDI]], [[ADDI8]], %bb.8
   ; RV32-SMALL-NEXT: {{  $}}
   ; RV32-SMALL-NEXT: bb.1.entry:
   ; RV32-SMALL-NEXT:   successors: %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x15555555), %bb.6(0x15555555), %bb.7(0x15555555)
@@ -120,7 +120,7 @@ body:             |
   ; RV32-MEDIUM-NEXT:   [[ADDI6:%[0-9]+]]:gpr = ADDI $x0, 4
   ; RV32-MEDIUM-NEXT:   [[ADDI7:%[0-9]+]]:gpr = ADDI $x0, 1000
   ; RV32-MEDIUM-NEXT:   [[ADDI8:%[0-9]+]]:gpr = ADDI [[COPY]], -1
-  ; RV32-MEDIUM-NEXT:   BLTU [[ADDI]], [[ADDI8]], %bb.8
+  ; RV32-MEDIUM-NEXT:   PseudoBLTU [[ADDI]], [[ADDI8]], %bb.8
   ; RV32-MEDIUM-NEXT: {{  $}}
   ; RV32-MEDIUM-NEXT: bb.1.entry:
   ; RV32-MEDIUM-NEXT:   successors: %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x15555555), %bb.6(0x15555555), %bb.7(0x15555555)

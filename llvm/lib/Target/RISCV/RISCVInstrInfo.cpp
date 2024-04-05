@@ -876,17 +876,17 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return RISCVCC::COND_INVALID;
-  case RISCV::BEQ:
+  case RISCV::PseudoBEQ:
     return RISCVCC::COND_EQ;
-  case RISCV::BNE:
+  case RISCV::PseudoBNE:
     return RISCVCC::COND_NE;
-  case RISCV::BLT:
+  case RISCV::PseudoBLT:
     return RISCVCC::COND_LT;
-  case RISCV::BGE:
+  case RISCV::PseudoBGE:
     return RISCVCC::COND_GE;
-  case RISCV::BLTU:
+  case RISCV::PseudoBLTU:
     return RISCVCC::COND_LTU;
-  case RISCV::BGEU:
+  case RISCV::PseudoBGEU:
     return RISCVCC::COND_GEU;
   }
 }
@@ -911,17 +911,17 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    return RISCV::BEQ;
+    return RISCV::PseudoBEQ;
   case RISCVCC::COND_NE:
-    return RISCV::BNE;
+    return RISCV::PseudoBNE;
   case RISCVCC::COND_LT:
-    return RISCV::BLT;
+    return RISCV::PseudoBLT;
   case RISCVCC::COND_GE:
-    return RISCV::BGE;
+    return RISCV::PseudoBGE;
   case RISCVCC::COND_LTU:
-    return RISCV::BLTU;
+    return RISCV::PseudoBLTU;
   case RISCVCC::COND_GEU:
-    return RISCV::BGEU;
+    return RISCV::PseudoBGEU;
   }
 }
 
@@ -1294,12 +1294,12 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("Unexpected opcode!");
-  case RISCV::BEQ:
-  case RISCV::BNE:
-  case RISCV::BLT:
-  case RISCV::BGE:
-  case RISCV::BLTU:
-  case RISCV::BGEU:
+  case RISCV::PseudoBEQ:
+  case RISCV::PseudoBNE:
+  case RISCV::PseudoBLT:
+  case RISCV::PseudoBGE:
+  case RISCV::PseudoBLTU:
+  case RISCV::PseudoBGEU:
     return isIntN(13, BrOffset);
   case RISCV::JAL:
   case RISCV::PseudoBR:
