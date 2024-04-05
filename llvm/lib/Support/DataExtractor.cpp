@@ -48,7 +48,7 @@ T DataExtractor::getU(uint64_t *offset_ptr, Error *Err) const {
   if (!prepareRead(offset, sizeof(T), Err))
     return val;
   std::memcpy(&val, &Data.data()[offset], sizeof(val));
-  if (sys::IsLittleEndianHost != IsLittleEndian)
+  if (!IsLittleEndian)
     sys::swapByteOrder(val);
 
   // Advance the offset
@@ -101,8 +101,8 @@ uint16_t *DataExtractor::getU16(uint64_t *offset_ptr, uint16_t *dst,
 
 uint32_t DataExtractor::getU24(uint64_t *OffsetPtr, Error *Err) const {
   uint24_t ExtractedVal = getU<uint24_t>(OffsetPtr, Err);
-  // The 3 bytes are in the correct byte order for the host.
-  return ExtractedVal.getAsUint32(sys::IsLittleEndianHost);
+  // The 3 bytes are in the correct byte order with the given endianness.
+  return ExtractedVal.getAsUint32(IsLittleEndian);
 }
 
 uint32_t DataExtractor::getU32(uint64_t *offset_ptr, llvm::Error *Err) const {
