@@ -2352,7 +2352,9 @@ public:
   }
 
   /// Generate the wide load/store.
-  void execute(VPTransformState &State) override = 0;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
+  }
 
   Instruction &getIngredient() const { return Ingredient; }
 };

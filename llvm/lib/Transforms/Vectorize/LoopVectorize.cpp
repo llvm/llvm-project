@@ -9465,18 +9465,17 @@ static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   // Attempt to issue a wide load.
-  LoadInst *LI = cast<LoadInst>(&Ingredient);
+  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
-  bool isMaskRequired = getMask();
-  if (isMaskRequired) {
+  bool IsMaskRequired = getMask();
+  if (IsMaskRequired) {
     // Mask reversal is only needed for non-all-one (null) masks, as reverse of
     // a null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -9506,19 +9505,19 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
       // is not nullptr it also implies preference for predicated
       // vectorization.
       // FIXME: Support reverse loading after vp_reverse is added.
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *MaskPart = IsMaskRequired ? BlockInMaskParts[Part] : nullptr;
       NewLI = lowerLoadUsingVectorIntrinsics(
           Builder, DataTy, State.get(getAddr(), Part, !CreateGather),
           CreateGather, MaskPart, EVL, Alignment);
     } else if (CreateGather) {
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *MaskPart = IsMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(getAddr(), Part);
       NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, MaskPart,
                                          nullptr, "wide.masked.gather");
       State.addMetadata(NewLI, LI);
     } else {
       auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (isMaskRequired)
+      if (IsMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
             DataTy, VecPtr, Alignment, BlockInMaskParts[Part],
             PoisonValue::get(DataTy), "wide.masked.load");
@@ -9537,16 +9536,16 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
+  auto *SI = cast<StoreInst>(&Ingredient);
+
   VPValue *StoredValue = getStoredValue();
-
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateScatter = !isConsecutive();
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
-  StoreInst *SI = cast<StoreInst>(&Ingredient);
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
-  bool isMaskRequired = getMask();
-  if (isMaskRequired) {
+  bool IsMaskRequired = getMask();
+  if (IsMaskRequired) {
     // Mask reversal is only needed for non-all-one (null) masks, as reverse of
     // a null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -9576,12 +9575,12 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
       // is not nullptr it also implies preference for predicated
       // vectorization.
       // FIXME: Support reverse store after vp_reverse is added.
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *MaskPart = IsMaskRequired ? BlockInMaskParts[Part] : nullptr;
       NewSI = lowerStoreUsingVectorIntrinsics(
           Builder, State.get(getAddr(), Part, !CreateScatter), StoredVal,
           CreateScatter, MaskPart, EVL, Alignment);
     } else if (CreateScatter) {
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *MaskPart = IsMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(getAddr(), Part);
       NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
                                           MaskPart);
@@ -9594,7 +9593,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
         // another expression. So don't call resetVectorValue(StoredVal).
       }
       auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (isMaskRequired)
+      if (IsMaskRequired)
         NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                           BlockInMaskParts[Part]);
       else
