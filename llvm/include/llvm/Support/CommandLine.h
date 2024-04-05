@@ -2005,7 +2005,7 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// An array of optional enabled settings in the LLVM build configuration,
 /// which may be of interest to compiler developers. For example, includes
 /// "+assertions" if assertions are enabled. Used by printBuildConfig.
-extern ArrayRef<StringRef> CompilerBuildConfig;
+ArrayRef<StringRef> getCompilerBuildConfig();
 
 /// Prints the compiler build configuration.
 /// Designed for compiler developers, not compiler end-users.

@@ -2734,35 +2734,44 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
     CommonOptions->CategorizedHiddenPrinter.printHelp();
 }
 
-ArrayRef<StringRef> cl::CompilerBuildConfig = {
+ArrayRef<StringRef> cl::getCompilerBuildConfig() {
+  static const StringRef Config[] = {
 #if LLVM_IS_DEBUG_BUILD
-    "+unoptimized",
+      "+unoptimized",
 #endif
 #ifndef NDEBUG
-    "+assertions",
+      "+assertions",
 #endif
 #ifdef EXPENSIVE_CHECKS
-    "+expensive-checks",
+      "+expensive-checks",
 #endif
 #if __has_feature(address_sanitizer)
-    "+asan",
-#endif
-#if __has_feature(undefined_behavior_sanitizer)
-    "+ubsan",
-#endif
-#if __has_feature(memory_sanitizer)
-    "+msan",
+      "+asan",
 #endif
 #if __has_feature(dataflow_sanitizer)
-    "+dfsan",
+      "+dfsan",
 #endif
-};
+#if __has_feature(hwaddress_sanitizer)
+      "+hwasan",
+#endif
+#if __has_feature(memory_sanitizer)
+      "+msan",
+#endif
+#if __has_feature(thread_sanitizer)
+      "+tsan",
+#endif
+#if __has_feature(undefined_behavior_sanitizer)
+      "+ubsan",
+#endif
+  };
+  return Config;
+}
 
 // Utility function for printing the build config.
 void cl::printBuildConfig(raw_ostream &OS) {
 #if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
   OS << "Build config: ";
-  llvm::interleaveComma(cl::CompilerBuildConfig, OS);
+  llvm::interleaveComma(cl::getCompilerBuildConfig(), OS);
   OS << '\n';
 #endif
 }

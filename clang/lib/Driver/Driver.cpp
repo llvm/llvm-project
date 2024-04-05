@@ -2005,7 +2005,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   // Print the build config if it's non-default.
   // Intended to help LLVM developers understand the configs of compilers
   // they're investigating.
-  if (!llvm::cl::CompilerBuildConfig.empty())
+  if (!llvm::cl::getCompilerBuildConfig().empty())
     llvm::cl::printBuildConfig(OS);
 
   // If configuration files were used, print their paths.
