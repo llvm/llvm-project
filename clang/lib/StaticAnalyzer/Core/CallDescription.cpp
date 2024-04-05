@@ -89,7 +89,7 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
   // FIXME This comparison is way SLOWER than comparing pointers.
   // At some point in the future, we should compare FunctionDecl pointers.
   return Name.getAsString() == getFunctionName();
-};
+}
 
 bool ento::CallDescription::matchQualifiedNameParts(const Decl *D) const {
   const auto FindNextNamespaceOrRecord =
@@ -115,7 +115,7 @@ bool ento::CallDescription::matchQualifiedNameParts(const Decl *D) const {
 
   // We matched if we consumed all expected qualifier segments.
   return QualifierPartsIt == QualifierPartsEndIt;
-};
+}
 
 bool ento::CallDescription::matchesImpl(const FunctionDecl *FD, size_t ArgCount,
                                         size_t ParamCount) const {
