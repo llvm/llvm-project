@@ -1846,6 +1846,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   if (!CheckThis(S, OpPC, This))
     return false;
 
+  // Ensure the This pointer has been cast to the correct base.
+  if (!This.isDummy()) {
+    assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
+    assert(This.getRecord());
+    assert(
+        This.getRecord()->getDecl() ==
+        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+  }
+
   S.Stk.push<Pointer>(This);
   return true;
 }
