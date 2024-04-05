@@ -2014,7 +2014,6 @@ module std [system] {
     module std_private_type_traits_nat                                       [system] { header "__type_traits/nat.h" }
     module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
     module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
-    module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
     module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
     module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
     module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }
@@ -2025,6 +2024,7 @@ module std [system] {
       export std_private_type_traits_remove_const
       export std_private_type_traits_remove_volatile
     }
+    module std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
     module std_private_type_traits_remove_cvref                              [system] { header "__type_traits/remove_cvref.h" }
     module std_private_type_traits_remove_extent                             [system] { header "__type_traits/remove_extent.h" }
     module std_private_type_traits_remove_pointer                            [system] { header "__type_traits/remove_pointer.h" }
@@ -2089,6 +2089,7 @@ module std [system] {
     }
     module std_private_utility_to_underlying          [system] { header "__utility/to_underlying.h" }
     module std_private_utility_unreachable            [system] { header "__utility/unreachable.h" }
+    module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
 
     module std_private_variant_monostate [system] { header "__variant/monostate.h" }
 
