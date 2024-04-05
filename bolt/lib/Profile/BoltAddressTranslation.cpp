@@ -578,40 +578,6 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
   }
 }
 
-std::unordered_map<uint32_t, std::vector<uint32_t>>
-BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
-  std::unordered_map<uint32_t, std::vector<uint32_t>> Branches;
-  std::vector<uint32_t> InputOffsets;
-
-  auto populateInputOffsets = [&](uint64_t FuncAddress) {
-    auto It = Maps.find(FuncAddress);
-    assert(It != Maps.end());
-    for (const auto &KV : It->second)
-      InputOffsets.emplace_back(KV.second);
-  };
-
-  // Add input offsets for the function itself
-  populateInputOffsets(OutputAddress);
-
-  // Add input offsets for any split fragments
-  for (const auto &[ColdAddress, HotAddress] : ColdPartSource)
-    if (HotAddress == OutputAddress)
-      populateInputOffsets(ColdAddress);
-
-  // Sort with LSB BRANCHENTRY bit.
-  llvm::sort(InputOffsets);
-  uint32_t BBOffset{0};
-  for (uint32_t InOffset : InputOffsets) {
-    bool IsBranchEntry = InOffset & BRANCHENTRY;
-    if (!IsBranchEntry)
-      BBOffset = InOffset >> 1;
-    // Add basic block offset as well because call information is attached to it
-    // for call instructions (that don't have BAT entries).
-    Branches[BBOffset].push_back(InOffset >> 1);
-  }
-  return Branches;
-}
-
 unsigned
 BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
                                                  uint32_t Offset) const {
