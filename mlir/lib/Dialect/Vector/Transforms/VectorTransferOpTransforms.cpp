@@ -88,6 +88,46 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
   return false;
 }
 
+/// Walk up the source chain until an operation that changes/defines the view of
+/// memory is found (i.e. skip operations that alias the entire view).
+Value skipFullyAliasingOperations(Value source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
+        subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
+      // A `memref.subview` with an all zero offset, and all unit strides, still
+      // points to the same memory.
+      source = subViewOp.getSource();
+    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
+      // A `memref.cast` still points to the same memory.
+      source = castOp.getSource();
+    } else {
+      return source;
+    }
+  }
+  return source;
+}
+
+/// Checks if two (memref) values are are the same, or are statically known to
+/// alias the same region of memory.
+bool isSameViewOrTrivialAlias(Value a, Value b) {
+  return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
+}
+
+/// Walk up the source chain until something an op other than a `memref.subview`
+/// or `memref.cast` is found.
+Value skipSubViewsAndCasts(Value source) {
+  while (auto op = source.getDefiningOp()) {
+    if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
+      source = subView.getSource();
+    } else if (auto cast = dyn_cast<memref::CastOp>(op)) {
+      source = cast.getSource();
+    } else {
+      return source;
+    }
+  }
+  return source;
+}
+
 /// For transfer_write to overwrite fully another transfer_write must:
 /// 1. Access the same memref with the same indices and vector type.
 /// 2. Post-dominate the other transfer_write operation.
@@ -104,10 +144,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
                     << "\n");
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
-  Value source = write.getSource();
-  // Skip subview ops.
-  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
-    source = subView.getSource();
+  Value source = skipSubViewsAndCasts(write.getSource());
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -116,8 +153,8 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
-      users.append(subView->getUsers().begin(), subView->getUsers().end());
+    if (isa<memref::SubViewOp, memref::CastOp>(user)) {
+      users.append(user->getUsers().begin(), user->getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user))
@@ -126,7 +163,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
       continue;
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
       // Check candidate that can override the store.
-      if (write.getSource() == nextWrite.getSource() &&
+      if (isSameViewOrTrivialAlias(nextWrite.getSource(), write.getSource()) &&
           checkSameValueWAW(nextWrite, write) &&
           postDominators.postDominates(nextWrite, write)) {
         if (firstOverwriteCandidate == nullptr ||
@@ -191,10 +228,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
                     << "\n");
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  Value source = read.getSource();
-  // Skip subview ops.
-  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
-    source = subView.getSource();
+  Value source = skipSubViewsAndCasts(read.getSource());
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -203,12 +237,8 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
-      users.append(subView->getUsers().begin(), subView->getUsers().end());
-      continue;
-    }
-    if (auto collapsed = dyn_cast<memref::CollapseShapeOp>(user)) {
-      users.append(collapsed->getUsers().begin(), collapsed->getUsers().end());
+    if (isa<memref::SubViewOp, memref::CollapseShapeOp, memref::CastOp>(user)) {
+      users.append(user->getUsers().begin(), user->getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
@@ -221,7 +251,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
               cast<VectorTransferOpInterface>(read.getOperation()),
               /*testDynamicValueUsingBounds=*/true))
         continue;
-      if (write.getSource() == read.getSource() &&
+      if (isSameViewOrTrivialAlias(read.getSource(), write.getSource()) &&
           dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
         if (lastwrite == nullptr || dominators.dominates(lastwrite, write))
           lastwrite = write;
