@@ -22,6 +22,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
@@ -319,7 +320,13 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
       // base type.
       if ((*i)->isBitField()) {
         const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
-        if (Info.Offset != 0)
+        // For big endian targets the first bitfield in the consecutive run is
+        // at the most-significant end; see CGRecordLowering::setBitFieldInfo
+        // for more information.
+        bool IsBE = Context.getTargetInfo().isBigEndian();
+        bool IsFirst = IsBE ? Info.StorageSize - (Info.Offset + Info.Size) == 0
+                            : Info.Offset == 0;
+        if (!IsFirst)
           continue;
         unsigned CurrentBitFieldSize = Info.StorageSize;
         uint64_t Size =
