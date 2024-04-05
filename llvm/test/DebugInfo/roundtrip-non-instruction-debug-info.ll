@@ -18,6 +18,14 @@
 ; RUN: opt --passes=verify -S --try-experimental-debuginfo-iterators --write-experimental-debuginfo=true < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,NEWDBG --implicit-check-not=llvm.dbg --implicit-check-not=#dbg
 
+;; Test that the preserving flag overrides the write flag.
+; RUN: opt --passes=verify -S --preserve-input-debuginfo-format=true --write-experimental-debuginfo=true < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,OLDDBG  --implicit-check-not=llvm.dbg --implicit-check-not=#dbg
+
+; RUN: opt --passes=verify -S --write-experimental-debuginfo=true < %s \
+; RUN:   | opt --passes=verify -S --preserve-input-debuginfo-format=true --write-experimental-debuginfo=false \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,NEWDBG  --implicit-check-not=llvm.dbg --implicit-check-not=#dbg
+
 ; CHECK: @f(i32 %[[VAL_A:[0-9a-zA-Z]+]])
 ; CHECK-NEXT: entry:
 ; OLDDBG-NEXT: call void @llvm.dbg.value(metadata i32 %[[VAL_A]], metadata ![[VAR_A:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_1:[0-9]+]]

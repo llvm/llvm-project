@@ -2910,22 +2910,6 @@ multiclass VPseudoVMAX_VV_VF {
   }
 }
 
-multiclass VPseudoVALU_VV_VF {
-  foreach m = MxListF in {
-    defm "" : VPseudoBinaryFV_VV<m>,
-              SchedBinary<"WriteVFALUV", "ReadVFALUV", "ReadVFALUV", m.MX,
-                          forceMergeOpRead=true>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF<m, f>,
-                SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
-    }
-  }
-}
-
 multiclass VPseudoVALU_VV_VF_RM {
   foreach m = MxListF in {
     defm "" : VPseudoBinaryFV_VV_RM<m>,
@@ -2936,16 +2920,6 @@ multiclass VPseudoVALU_VV_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "" : VPseudoBinaryV_VF_RM<m, f>,
-                SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
-    }
-  }
-}
-
-multiclass VPseudoVALU_VF {
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF<m, f>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
                             forceMergeOpRead=true>;
     }
@@ -2982,12 +2956,6 @@ multiclass VPseudoVWALU_VV_VX {
     defm "" : VPseudoBinaryW_VX<m>, 
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx,
                           forceMergeOpRead=true>;
-  }
-}
-
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
-  foreach m = MxListW in {
-    defm "" : VPseudoBinaryW_VI<ImmType, m>;
   }
 }
 

@@ -1,9 +1,6 @@
 ; RUN: opt < %s -passes=pgo-instr-gen -enable-vtable-value-profiling -S 2>&1 | FileCheck %s --check-prefix=GEN --implicit-check-not="VTable value profiling is presently not supported"
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -enable-vtable-value-profiling -S 2>&1 | FileCheck %s --check-prefix=LOWER --implicit-check-not="VTable value profiling is presently not supported"
 
-; __llvm_prf_vnm stores zlib-compressed vtable names.
-; REQUIRES: zlib
-
 source_filename = "vtable_local.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -59,7 +56,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; LOWER: $"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E" = comdat nodeduplicate
 ; LOWER: @__profvt__ZTV7Derived = global { i64, ptr, i32 } { i64 -4576307468236080025, ptr @_ZTV7Derived, i32 48 }, section "__llvm_prf_vtab", comdat, align 8
 ; LOWER: @"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E" = internal global { i64, ptr, i32 } { i64 1419990121885302679, ptr @_ZTVN12_GLOBAL__N_15Base2E, i32 24 }, section "__llvm_prf_vtab", comdat, align 8
-; LOWER: @__llvm_prf_vnm = private constant [64 x i8] c"7>x\DA\8B\8F\0A\093wI-\CA,KMa,+IL\CAI\8D\CF\C9ON\CC\D1\CB\C9\B1\8E\07J\FA\19\1A\C5\BB\FB\F8;9\FA\C4\C7\FB\C5\1B\9A:%\16\A7\1A\B9\02\00\19:\12o", section "__llvm_prf_vns", align 1
+; LOWER: @__llvm_prf_vnm = private constant {{.*}}, section "__llvm_prf_vns", align 1
 ; LOWER: @llvm.used = appending global [5 x ptr] [ptr @__profvt__ZTV7Derived, ptr @"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E", ptr @__llvm_prf_vnodes, ptr @__llvm_prf_nm, ptr @__llvm_prf_vnm], section "llvm.metadata"
 
 define i32 @_Z4funci(i32 %a) {
