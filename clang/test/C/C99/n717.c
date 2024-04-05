@@ -27,16 +27,6 @@ M(\U1234567)   // expected-warning {{incomplete universal character name; treati
 M(\U12345678)  // Okay
 M(\U123456789) // Okay-ish, two tokens (valid-per-spec-but-actually-invalid UCN followed by 9)
 
-// C99 6.4.3p2:
-// A universal character name shall not specify a character whose short
-// identifier is less than 00A0 other than 0024 ($), 0040 (@), or 0060 (‘), nor
-// one in the range D800 through DFFF inclusive.
-//
-// We use a python script to generate the test contents for the large ranges
-// without edge cases.
-// RUN: %python %S/n717.py >%t.inc
-// RUN: %clang_cc1 -verify -std=c99 -Wno-unicode-whitespace -Wno-unicode-homoglyph -Wno-unicode-zero-width -Wno-mathematical-notation-identifier-extension %t.inc
-
 // Now test the ones that should work. Note, these work in C17 and earlier but
 // are part of the basic character set in C23 and thus should be diagnosed in
 // that mode. They're valid in a character constant, but not valid in an
@@ -57,6 +47,9 @@ M(\u0040) // expected-error {{character '@' cannot be specified by a universal c
 M(\u0060) // expected-error {{character '`' cannot be specified by a universal character name}}
 M(\U00000040) // expected-error {{character '@' cannot be specified by a universal character name}}
 M(\U00000060) // expected-error {{character '`' cannot be specified by a universal character name}}
+
+// This falls outside of the expected range.
+M(\U110000) // expected-warning {{incomplete universal character name; treating as '\' followed by identifier}}
 
 // These should always be accepted because they're a valid in a character
 // constant.
