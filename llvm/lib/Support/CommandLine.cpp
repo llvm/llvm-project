@@ -2739,7 +2739,7 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
       // Placeholder to ensure the array always has elements, since it's an
       // error to have a zero-sized array. Slice this off before returning.
       "",
-      // Actual compiler build config feature list:
+  // Actual compiler build config feature list:
 #if LLVM_IS_DEBUG_BUILD
       "+unoptimized",
 #endif
