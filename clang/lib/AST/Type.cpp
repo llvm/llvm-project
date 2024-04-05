@@ -5112,17 +5112,33 @@ FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
   return OverrideResult::Ignore;
 }
 
-bool FunctionEffect::canInferOnFunction(QualType QT,
-                                        const TypeSourceInfo *FType) const {
+bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
   switch (type()) {
   case Type::NonAllocating:
   case Type::NonBlocking: {
-    // Does the sugar have nonblocking(false) / nonallocating(false) ?
-    if (QT->hasAttr(type() == Type::NonBlocking ? attr::Kind::Blocking
-                                                : attr::Kind::Allocating)) {
-      return false;
-    }
+    // Do any of the callee's Decls have type sugar for blocking or allocating?
+    for (const Decl *D : Callee.redecls()) {
+      QualType QT;
+      if (auto *FD = D->getAsFunction()) {
+        QT = FD->getType();
+      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
+        if (auto *TSI = BD->getSignatureAsWritten())
+          QT = TSI->getType();
+        else
+          continue;
+      } else
+        continue;
 
+      // c.f. Sema::getCallingConvAttributedType
+      const AttributedType *AT = QT->getAs<AttributedType>();
+      while (AT) {
+        if (AT->getAttrKind() == attr::Allocating)
+          return false;
+        if (type() == Type::NonBlocking && AT->getAttrKind() == attr::Blocking)
+          return false;
+        AT = AT->getModifiedType()->getAs<AttributedType>();
+      }
+    }
     return true;
   }
 

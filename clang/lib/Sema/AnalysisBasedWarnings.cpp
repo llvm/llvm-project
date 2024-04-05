@@ -2458,7 +2458,6 @@ struct CallableInfo {
   SpecialFuncType FuncType = SpecialFuncType::None;
   FunctionEffectSet Effects;
   CallType CType = CallType::Unknown;
-  QualType QT;
 
   CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
@@ -2475,16 +2474,13 @@ struct CallableInfo {
           CType = CallType::Virtual;
         }
       }
-      QT = FD->getType();
       Effects = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
       CType = CallType::Block;
-      QT = BD->getSignatureAsWritten()->getType();
       Effects = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
-      // ValueDecl is function, enum, or variable, so just look at the type.
-      QT = VD->getType();
-      Effects = FunctionEffectSet::get(QT);
+      // ValueDecl is function, enum, or variable, so just look at its type.
+      Effects = FunctionEffectSet::get(VD->getType());
     }
   }
 
@@ -2624,17 +2620,9 @@ public:
 
     // Check for effects we are not allowed to infer
     MutableFunctionEffectSet FX;
-    TypeSourceInfo *TSI = nullptr;
-    if (const auto *DD = dyn_cast<DeclaratorDecl>(CInfo.CDecl)) {
-      TSI = DD->getTypeSourceInfo();
-    } else if (const auto *BD = dyn_cast<BlockDecl>(CInfo.CDecl)) {
-      TSI = BD->getSignatureAsWritten();
-    }
-    // N.B. TSI can be null for things like an implicit constructor (despite
-    // having a valid QualifiedType).
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnFunction(CInfo.QT, TSI)) {
+      if (effect.canInferOnFunction(*CInfo.CDecl)) {
         FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to

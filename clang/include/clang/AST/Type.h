@@ -4534,15 +4534,12 @@ public:
                                         const CXXMethodDecl &NewMethod,
                                         FunctionEffectSet NewFX) const;
 
-  /// Return true if the effect is allowed to be inferred on a Decl of the
-  /// specified type (generally a FunctionProtoType but TypeSourceInfo is
-  /// provided so any AttributedType sugar can be examined). TSI can be null
-  /// on an implicit function like a default constructor.
-  ///
+  /// Return true if the effect is allowed to be inferred on the callee,
+  /// which is either a FunctionDecl or BlockDecl.
   /// This is only used if the effect has FE_InferrableOnCallees flag set.
   /// Example: This allows nonblocking(false) to prevent inference for the
   /// function.
-  bool canInferOnFunction(QualType QT, const TypeSourceInfo *FType) const;
+  bool canInferOnFunction(const Decl &Callee) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate

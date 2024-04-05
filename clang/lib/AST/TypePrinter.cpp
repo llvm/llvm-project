@@ -1933,6 +1933,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
+  case attr::NonBlocking:
+  case attr::NonAllocating:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
