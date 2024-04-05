@@ -72,6 +72,10 @@ static cl::opt<bool> EnableTfrCleanup("hexagon-tfr-cleanup", cl::init(true),
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
                                    cl::desc("Enable early if-conversion"));
 
+static cl::opt<bool> EnableCopyHoist("hexagon-copy-hoist", cl::init(true),
+                                     cl::Hidden, cl::ZeroOrMore,
+                                     cl::desc("Enable Hexagon copy hoisting"));
+
 static cl::opt<bool> EnableGenInsert("hexagon-insert", cl::init(true),
   cl::Hidden, cl::desc("Generate \"insert\" instructions"));
 
@@ -152,9 +156,11 @@ SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
                     createVLIWMachineSched);
 
 namespace llvm {
+  extern char &HexagonCopyHoistingID;
   extern char &HexagonExpandCondsetsID;
   extern char &HexagonTfrCleanupID;
   void initializeHexagonBitSimplifyPass(PassRegistry&);
+  void initializeHexagonCopyHoistingPass(PassRegistry&);
   void initializeHexagonConstExtendersPass(PassRegistry&);
   void initializeHexagonConstPropagationPass(PassRegistry&);
   void initializeHexagonCopyToCombinePass(PassRegistry&);
@@ -184,6 +190,7 @@ namespace llvm {
   FunctionPass *createHexagonCommonGEP();
   FunctionPass *createHexagonConstExtenders();
   FunctionPass *createHexagonConstPropagationPass();
+  FunctionPass *createHexagonCopyHoisting();
   FunctionPass *createHexagonCopyToCombine();
   FunctionPass *createHexagonEarlyIfConversion();
   FunctionPass *createHexagonFixupHwLoops();
@@ -260,6 +267,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
+  initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initializeHexagonLoopAlignPass(*PassRegistry::getPassRegistry());
   initializeHexagonTfrCleanupPass(*PassRegistry::getPassRegistry());
@@ -433,6 +441,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
+    if (EnableCopyHoist)
+      insertPass(&RegisterCoalescerID, &HexagonCopyHoistingID);
     if (EnableTfrCleanup)
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
     if (!DisableStoreWidening)
