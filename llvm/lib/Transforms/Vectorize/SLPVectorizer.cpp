@@ -14369,8 +14369,7 @@ bool BoUpSLP::collectValuesToDemote(
       break;
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(IC, TLI);
     if (ID != Intrinsic::abs && ID != Intrinsic::smin &&
-        ID != Intrinsic::smax && ID != Intrinsic::umin &&
-        ID != Intrinsic::umax)
+        ID != Intrinsic::smax && ID != Intrinsic::umin && ID != Intrinsic::umax)
       break;
     SmallVector<Value *> Operands(1, I->getOperand(0));
     End = 1;
@@ -14402,7 +14401,7 @@ bool BoUpSLP::collectValuesToDemote(
       }
       return false;
     };
-    [[maybe_unused]]bool NeedToExit;
+    [[maybe_unused]] bool NeedToExit;
     (void)AttemptCheckBitwidth(Checker, NeedToExit);
     BitWidth = BestBitWidth;
     return TryProcessInstruction(I, *ITE, BitWidth, Operands);
