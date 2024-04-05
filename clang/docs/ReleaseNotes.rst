@@ -138,6 +138,9 @@ Improvements to Clang's diagnostics
 - A statement attribute applied to a ``case`` label no longer suppresses
   'bypassing variable initialization' diagnostics (#84072).
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
