@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -35,9 +36,11 @@ STATISTIC(NumChecksRemoved, "Number of removed checks");
 
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI) {
-  SmallVector<IntrinsicInst *, 16> Remove;
+  SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
+  // TODO:
+  // https://github.com/llvm/llvm-project/pull/84858#discussion_r1520603139
   auto ShouldRemove = [&](bool IsHot) {
     if (!RandomRate.getNumOccurrences())
       return IsHot;
@@ -54,21 +57,23 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
         continue;
       auto ID = II->getIntrinsicID();
       switch (ID) {
-      case Intrinsic::ubsantrap: {
+      case Intrinsic::allow_ubsan_check:
+      case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
         bool IsHot = false;
         if (PSI) {
-          uint64_t Count = 0;
-          for (const auto *PR : predecessors(&BB))
-            Count += BFI.getBlockProfileCount(PR).value_or(0);
+          uint64_t Count = BFI.getBlockProfileCount(&BB).value_or(0);
           IsHot = PSI->isHotCountNthPercentile(HotPercentileCutoff, Count);
         }
 
-        if (ShouldRemove(IsHot)) {
-          Remove.push_back(II);
+        bool ToRemove = ShouldRemove(IsHot);
+        ReplaceWithValue.push_back({
+            II,
+            ToRemove,
+        });
+        if (ToRemove)
           ++NumChecksRemoved;
-        }
         break;
       }
       default:
@@ -77,10 +82,12 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     }
   }
 
-  for (IntrinsicInst *I : Remove)
+  for (auto [I, V] : ReplaceWithValue) {
+    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), !V));
     I->eraseFromParent();
+  }
 
-  return !Remove.empty();
+  return !ReplaceWithValue.empty();
 }
 
 PreservedAnalyses RemoveTrapsPass::run(Function &F,
