@@ -1441,7 +1441,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_global_load_tr6_b96:
   case Intrinsic::amdgcn_global_load_tr4_b64:
   case Intrinsic::amdgcn_global_load_tr_b64:
-  case Intrinsic::amdgcn_global_load_tr_b128: {
+  case Intrinsic::amdgcn_global_load_tr_b128:
+  case Intrinsic::amdgcn_ds_read_tr4_b64:
+  case Intrinsic::amdgcn_ds_read_tr6_b96:
+  case Intrinsic::amdgcn_ds_read_tr8_b64:
+  case Intrinsic::amdgcn_ds_read_tr16_b64: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1594,6 +1598,10 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr6_b96:
+  case Intrinsic::amdgcn_ds_read_tr4_b64:
+  case Intrinsic::amdgcn_ds_read_tr6_b96:
+  case Intrinsic::amdgcn_ds_read_tr8_b64:
+  case Intrinsic::amdgcn_ds_read_tr16_b64:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
@@ -4119,9 +4127,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
-  if (!IsTailCall)
-    Ops.push_back(CLI.ConvergenceControlToken);
-
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
     // this information must travel along with the operation for eventual
@@ -4148,6 +4153,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
+
+  // NOTE: This potentially results in *two* glue operands, and the wrong one
+  // might possibly show up where the other was intended. In particular,
+  // Emitter::EmitMachineNode() expects only the glued convergence token if it
+  // exists. Similarly, the selection of the call expects to match only the
+  // InGlue operand if it exists.
+  if (SDValue Token = CLI.ConvergenceControlToken) {
+    Ops.push_back(SDValue(DAG.getMachineNode(TargetOpcode::CONVERGENCECTRL_GLUE,
+                                             DL, MVT::Glue, Token),
+                          0));
+  }
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
@@ -5529,24 +5545,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MI.getOperand(I);
-      if (I != 2) {
-        MIB.add(MO);
-        continue;
-      }
-    }
-
-    MachineOperand &MO = MI.getOperand(2);
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-    // The token operand is always a register, whose definition is IMPLICIT_DEF
-    // iff there was no token on the call.
-    if (MachineInstr *Def = MRI.getVRegDef(MO.getReg())) {
-      if (Def->getOpcode() != TargetOpcode::IMPLICIT_DEF) {
-        MO.setImplicit();
-        MIB.add(MO);
-      }
-    }
+    for (const MachineOperand &MO : MI.operands())
+      MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
     MI.eraseFromParent();

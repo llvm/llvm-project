@@ -123,6 +123,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check.
+
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
@@ -203,6 +209,10 @@ Changes in existing checks
 
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
+
+- Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
+  check by ignoring other functions with same prefixes as the target specific
+  functions.
 
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local

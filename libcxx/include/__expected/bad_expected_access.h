@@ -27,6 +27,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Err>
 class bad_expected_access;
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 template <>
 class bad_expected_access<void> : public exception {
 protected:
@@ -44,6 +46,7 @@ public:
   // it adds deployment target restrictions.
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override { return "bad access to std::expected"; }
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 template <class _Err>
 class bad_expected_access : public bad_expected_access<void> {

@@ -6456,7 +6456,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       // Non-virtual base classes are initialized in the order in the class
       // definition. We have already checked for virtual base classes.
       assert(!BaseIt->isVirtual() && "virtual base for literal type");
-      assert(Info.Ctx.hasSameType(BaseIt->getType(), BaseType) &&
+      assert(Info.Ctx.hasSameUnqualifiedType(BaseIt->getType(), BaseType) &&
              "base class initializers not in expected order");
       ++BaseIt;
 #endif
@@ -11699,6 +11699,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::IncompleteArray:
   case Type::FunctionNoProto:
   case Type::FunctionProto:
+  case Type::ArrayParameter:
     return GCCTypeClass::Pointer;
 
   case Type::MemberPointer:
@@ -14085,6 +14086,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
+  case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_MemberPointerToBoolean:
@@ -14913,6 +14915,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
+  case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_Dependent:

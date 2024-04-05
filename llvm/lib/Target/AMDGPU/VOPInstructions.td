@@ -1914,7 +1914,6 @@ class AsmOnlyInfoTable <string Format, string Class>: GenericTable {
 }
 
 def VOPCAsmOnlyInfoTable : AsmOnlyInfoTable <"VOPC", "VOPC_DPPe_Common">;
-def VOP3CAsmOnlyInfoTable : AsmOnlyInfoTable <"VOP3C", "VOP3_DPPe_Common_Base">;
 
 def VOPTrue16Table : GenericTable {
   let FilterClass = "VOP_Pseudo";

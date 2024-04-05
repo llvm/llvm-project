@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -5848,7 +5849,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         EmitLifetimeEnd(TmpSize, TmpPtr);
       return Call;
     }
-    [[fallthrough]];
+    llvm_unreachable("Unexpected enqueue_kernel signature");
   }
   // OpenCL v2.0 s6.13.17.6 - Kernel query functions need bitcast of block
   // parameter.
@@ -7294,8 +7295,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vabdq_f16, NEON::BI__builtin_neon_vabdq_v, },
   { NEON::BI__builtin_neon_vabs_f16, NEON::BI__builtin_neon_vabs_v, },
   { NEON::BI__builtin_neon_vabsq_f16, NEON::BI__builtin_neon_vabsq_v, },
-  { NEON::BI__builtin_neon_vbsl_f16, NEON::BI__builtin_neon_vbsl_v, },
-  { NEON::BI__builtin_neon_vbslq_f16, NEON::BI__builtin_neon_vbslq_v, },
   { NEON::BI__builtin_neon_vcage_f16, NEON::BI__builtin_neon_vcage_v, },
   { NEON::BI__builtin_neon_vcageq_f16, NEON::BI__builtin_neon_vcageq_v, },
   { NEON::BI__builtin_neon_vcagt_f16, NEON::BI__builtin_neon_vcagt_v, },
@@ -7314,8 +7313,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vclezq_f16, NEON::BI__builtin_neon_vclezq_v, },
   { NEON::BI__builtin_neon_vcltz_f16, NEON::BI__builtin_neon_vcltz_v, },
   { NEON::BI__builtin_neon_vcltzq_f16, NEON::BI__builtin_neon_vcltzq_v, },
-  { NEON::BI__builtin_neon_vext_f16, NEON::BI__builtin_neon_vext_v, },
-  { NEON::BI__builtin_neon_vextq_f16, NEON::BI__builtin_neon_vextq_v, },
   { NEON::BI__builtin_neon_vfma_f16, NEON::BI__builtin_neon_vfma_v, },
   { NEON::BI__builtin_neon_vfma_lane_f16, NEON::BI__builtin_neon_vfma_lane_v, },
   { NEON::BI__builtin_neon_vfma_laneq_f16, NEON::BI__builtin_neon_vfma_laneq_v, },
@@ -7418,12 +7415,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vst4_lane_bf16, NEON::BI__builtin_neon_vst4_lane_v },
   { NEON::BI__builtin_neon_vst4q_bf16, NEON::BI__builtin_neon_vst4q_v },
   { NEON::BI__builtin_neon_vst4q_lane_bf16, NEON::BI__builtin_neon_vst4q_lane_v },
-  { NEON::BI__builtin_neon_vtrn_f16, NEON::BI__builtin_neon_vtrn_v, },
-  { NEON::BI__builtin_neon_vtrnq_f16, NEON::BI__builtin_neon_vtrnq_v, },
-  { NEON::BI__builtin_neon_vuzp_f16, NEON::BI__builtin_neon_vuzp_v, },
-  { NEON::BI__builtin_neon_vuzpq_f16, NEON::BI__builtin_neon_vuzpq_v, },
-  { NEON::BI__builtin_neon_vzip_f16, NEON::BI__builtin_neon_vzip_v, },
-  { NEON::BI__builtin_neon_vzipq_f16, NEON::BI__builtin_neon_vzipq_v, },
   // The mangling rules cause us to have one ID for each type for vldap1(q)_lane
   // and vstl1(q)_lane, but codegen is equivalent for all of them. Choose an
   // arbitrary one to be handled as tha canonical variation.
@@ -18195,6 +18186,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
+        CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.all");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -18673,7 +18671,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16: {
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
 
     Intrinsic::ID IID;
     switch (BuiltinID) {
@@ -18705,6 +18707,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
       IID = Intrinsic::amdgcn_ds_load_tr16_b128;
       break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr4_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+      IID = Intrinsic::amdgcn_ds_read_tr8_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+      IID = Intrinsic::amdgcn_ds_read_tr6_b96;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
+      IID = Intrinsic::amdgcn_ds_read_tr16_b64;
+      break;
     }
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
@@ -18722,55 +18736,40 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b128: {
 
     Intrinsic::ID IID;
-    llvm::Type *ResultTy;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_global_load_monitor_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_global_load_monitor_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_global_load_monitor_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_flat_load_monitor_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_flat_load_monitor_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_flat_load_monitor_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_flat_load_monitor_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
-      ResultTy = llvm::Type::getInt32Ty(getLLVMContext());
       IID = Intrinsic::amdgcn_cluster_load_b32;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 2);
       IID = Intrinsic::amdgcn_cluster_load_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_b128:
-      ResultTy = llvm::FixedVectorType::get(
-          llvm::Type::getInt32Ty(getLLVMContext()), 4);
       IID = Intrinsic::amdgcn_cluster_load_b128;
       break;
     }
 
+    llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Value *Val  = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {ResultTy});
+    llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, Val});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:

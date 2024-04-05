@@ -84,7 +84,7 @@ template <class charT> charT tolower(charT c, const locale& loc);
 template<class Codecvt, class Elem = wchar_t,
          class Wide_alloc = allocator<Elem>,
          class Byte_alloc = allocator<char>>
-class wstring_convert
+class wstring_convert                                      // Removed in C++26
 {
 public:
     typedef basic_string<char, char_traits<char>, Byte_alloc> byte_string;
@@ -119,7 +119,7 @@ public:
 };
 
 template <class Codecvt, class Elem = wchar_t, class Tr = char_traits<Elem>>
-class wbuffer_convert
+class wbuffer_convert                                               // Removed in C++26
     : public basic_streambuf<Elem, Tr>
 {
 public:
@@ -3107,6 +3107,8 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #endif
 
+#if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
+
 template <class _Codecvt,
           class _Elem      = wchar_t,
           class _WideAlloc = allocator<_Elem>,
@@ -3711,6 +3713,8 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>* wbuffer_convert<_Codecvt, _Elem, _Tr>::__
 }
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
+
+#endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
 
 _LIBCPP_END_NAMESPACE_STD
 

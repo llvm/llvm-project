@@ -1492,7 +1492,7 @@ Error GenericPluginTy::init() {
   GlobalHandler = createGlobalHandler();
   assert(GlobalHandler && "Invalid global handler");
 
-  RPCServer = new RPCServerTy();
+  RPCServer = new RPCServerTy(*this);
   assert(RPCServer && "Invalid RPC server");
 
   return Plugin::success();

@@ -68,7 +68,6 @@ libc_support_library(
     name = "llvm_libc_macros_math_macros",
     hdrs = ["include/llvm-libc-macros/math-macros.h"],
     deps = [":llvm_libc_macros_limits_macros"],
-    defines = ["__FP_LOGBNAN_MIN"],
 )
 
 libc_support_library(
@@ -95,6 +94,10 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_types_float128",
     hdrs = ["include/llvm-libc-types/float128.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":llvm_libc_macros_float_macros"],
 )
 
@@ -973,11 +976,17 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_syscall",
     hdrs = ["src/__support/OSUtil/syscall.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/syscall.h",
-        "src/__support/OSUtil/linux/aarch64/syscall.h",
-        "src/__support/OSUtil/linux/x86_64/syscall.h",
-    ],
+    textual_hdrs = select({
+        "@platforms//os:macos": [
+            "src/__support/OSUtil/darwin/syscall.h",
+            "src/__support/OSUtil/darwin/arm/syscall.h",
+        ],
+        "@platforms//os:linux": [
+            "src/__support/OSUtil/linux/syscall.h",
+            "src/__support/OSUtil/linux/aarch64/syscall.h",
+            "src/__support/OSUtil/linux/x86_64/syscall.h",
+        ],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
@@ -987,9 +996,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_io",
     hdrs = ["src/__support/OSUtil/io.h"],
-    textual_hdrs = [
-        "src/__support/OSUtil/linux/io.h",
-    ],
+    textual_hdrs = select({
+        "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
+        "@platforms//os:linux": ["src/__support/OSUtil/linux/io.h"],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_string_view",
@@ -1000,8 +1010,12 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_osutil_quick_exit",
-    hdrs = ["src/__support/OSUtil/quick_exit.h"],
     srcs = ["src/__support/OSUtil/linux/quick_exit.cpp"],
+    hdrs = ["src/__support/OSUtil/quick_exit.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_osutil_syscall",
     ],
@@ -1020,6 +1034,10 @@ libc_support_library(
         "src/__support/StringUtil/error_to_string.h",
         "src/__support/StringUtil/signal_to_string.h",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_span",
@@ -1037,6 +1055,10 @@ libc_support_library(
         "src/__support/threads/mutex.h",
         "src/__support/threads/mutex_common.h",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     textual_hdrs = [
         "src/__support/threads/linux/mutex.h",
         "src/__support/threads/linux/futex_word.h",
@@ -1166,6 +1188,16 @@ libc_function(
     name = "feupdateenv",
     srcs = ["src/fenv/feupdateenv.cpp"],
     hdrs = ["src/fenv/feupdateenv.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+    ],
+)
+
+libc_function(
+    name = "fesetexcept",
+    srcs = ["src/fenv/fesetexcept.cpp"],
+    hdrs = ["src/fenv/fesetexcept.h"],
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
@@ -1701,11 +1733,15 @@ libc_math_function(name = "fabsf")
 
 libc_math_function(name = "fabsl")
 
+libc_math_function(name = "fabsf128")
+
 libc_math_function(name = "fdim")
 
 libc_math_function(name = "fdimf")
 
 libc_math_function(name = "fdiml")
+
+libc_math_function(name = "fdimf128")
 
 libc_math_function(
     name = "ceil",
@@ -1730,6 +1766,8 @@ libc_math_function(
     ],
 )
 
+libc_math_function(name = "ceilf128")
+
 libc_math_function(
     name = "floor",
     specializations = [
@@ -1748,11 +1786,15 @@ libc_math_function(
 
 libc_math_function(name = "floorl")
 
+libc_math_function(name = "floorf128")
+
 libc_math_function(name = "ldexp")
 
 libc_math_function(name = "ldexpf")
 
 libc_math_function(name = "ldexpl")
+
+libc_math_function(name = "ldexpf128")
 
 libc_math_function(
     name = "trunc",
@@ -1772,6 +1814,8 @@ libc_math_function(
 
 libc_math_function(name = "truncl")
 
+libc_math_function(name = "truncf128")
+
 libc_math_function(
     name = "round",
     specializations = [
@@ -1789,6 +1833,8 @@ libc_math_function(
 )
 
 libc_math_function(name = "roundl")
+
+libc_math_function(name = "roundf128")
 
 libc_math_function(
     name = "fmod",
@@ -1810,6 +1856,8 @@ libc_math_function(name = "frexpf")
 
 libc_math_function(name = "frexpl")
 
+libc_math_function(name = "frexpf128")
+
 libc_math_function(name = "hypot")
 
 libc_math_function(
@@ -1825,11 +1873,15 @@ libc_math_function(name = "logbf")
 
 libc_math_function(name = "logbl")
 
+libc_math_function(name = "logbf128")
+
 libc_math_function(name = "modf")
 
 libc_math_function(name = "modff")
 
 libc_math_function(name = "modfl")
+
+libc_math_function(name = "modff128")
 
 libc_math_function(name = "remquo")
 
@@ -1849,11 +1901,15 @@ libc_math_function(name = "fminf")
 
 libc_math_function(name = "fminl")
 
+libc_math_function(name = "fminf128")
+
 libc_math_function(name = "fmax")
 
 libc_math_function(name = "fmaxf")
 
 libc_math_function(name = "fmaxl")
+
+libc_math_function(name = "fmaxf128")
 
 libc_math_function(
     name = "cosf",
@@ -1927,13 +1983,25 @@ libc_math_function(
     ],
 )
 
+libc_math_function(
+    name = "sqrtf128",
+    additional_deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
 libc_math_function(name = "copysign")
 
 libc_math_function(name = "copysignf")
 
 libc_math_function(name = "copysignl")
 
-libc_math_function(name = "copysignf128")
+libc_math_function(
+    name = "copysignf128",
+    additional_deps = [
+        ":llvm_libc_types_float128",
+    ],
+)
 
 libc_math_function(name = "ilogb")
 
@@ -1941,11 +2009,15 @@ libc_math_function(name = "ilogbf")
 
 libc_math_function(name = "ilogbl")
 
+libc_math_function(name = "ilogbf128")
+
 libc_math_function(name = "rint")
 
 libc_math_function(name = "rintf")
 
 libc_math_function(name = "rintl")
+
+libc_math_function(name = "rintf128")
 
 libc_math_function(name = "lrint")
 
@@ -1953,11 +2025,15 @@ libc_math_function(name = "lrintf")
 
 libc_math_function(name = "lrintl")
 
+libc_math_function(name = "lrintf128")
+
 libc_math_function(name = "llrint")
 
 libc_math_function(name = "llrintf")
 
 libc_math_function(name = "llrintl")
+
+libc_math_function(name = "llrintf128")
 
 libc_math_function(name = "lround")
 
@@ -1965,11 +2041,15 @@ libc_math_function(name = "lroundf")
 
 libc_math_function(name = "lroundl")
 
+libc_math_function(name = "lroundf128")
+
 libc_math_function(name = "llround")
 
 libc_math_function(name = "llroundf")
 
 libc_math_function(name = "llroundl")
+
+libc_math_function(name = "llroundf128")
 
 libc_math_function(
     name = "nan",
@@ -1995,6 +2075,14 @@ libc_math_function(
     ],
 )
 
+libc_math_function(
+    name = "nanf128",
+    additional_deps = [
+        ":__support_str_to_float",
+        ":errno",
+    ],
+)
+
 libc_math_function(name = "nearbyint")
 
 libc_math_function(name = "nearbyintf")
@@ -2006,6 +2094,8 @@ libc_math_function(name = "nextafter")
 libc_math_function(name = "nextafterf")
 
 libc_math_function(name = "nextafterl")
+
+libc_math_function(name = "nextafterf128")
 
 libc_math_function(name = "nexttoward")
 
@@ -2598,6 +2688,10 @@ libc_function(
     name = "open",
     srcs = ["src/fcntl/linux/open.cpp"],
     hdrs = ["src/fcntl/open.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2609,6 +2703,10 @@ libc_function(
     name = "openat",
     srcs = ["src/fcntl/linux/openat.cpp"],
     hdrs = ["src/fcntl/openat.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2688,6 +2786,10 @@ libc_function(
     name = "dup3",
     srcs = ["src/unistd/linux/dup3.cpp"],
     hdrs = ["src/unistd/dup3.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2857,6 +2959,10 @@ libc_function(
     name = "pread",
     srcs = ["src/unistd/linux/pread.cpp"],
     hdrs = ["src/unistd/pread.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -2868,6 +2974,10 @@ libc_function(
     name = "pwrite",
     srcs = ["src/unistd/linux/pwrite.cpp"],
     hdrs = ["src/unistd/pwrite.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3041,6 +3151,7 @@ libc_support_library(
     deps = [
         ":__support_arg_list",
         ":__support_common",
+        ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_cpp_optional",
         ":__support_cpp_string_view",
@@ -3270,6 +3381,10 @@ libc_function(
     name = "rename",
     srcs = ["src/stdio/linux/rename.cpp"],
     hdrs = ["src/stdio/rename.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_osutil_syscall",
@@ -3308,6 +3423,10 @@ libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
     hdrs = ["src/sys/epoll/epoll_wait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     weak = True,
     deps = [
         ":__support_osutil_syscall",
@@ -3319,6 +3438,10 @@ libc_function(
     name = "epoll_pwait",
     srcs = ["src/sys/epoll/linux/epoll_pwait.cpp"],
     hdrs = ["src/sys/epoll/epoll_pwait.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     weak = True,
     deps = [
         ":__support_osutil_syscall",

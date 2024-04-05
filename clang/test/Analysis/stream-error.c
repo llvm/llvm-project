@@ -365,27 +365,22 @@ void error_fseek(void) {
     return;
   int rc = fseek(F, 1, SEEK_SET);
   if (rc) {
+    clang_analyzer_eval(rc == -1);     // expected-warning {{TRUE}}
     int IsFEof = feof(F), IsFError = ferror(F);
-    // Get feof or ferror or no error.
-    clang_analyzer_eval(IsFEof || IsFError);
-    // expected-warning@-1 {{FALSE}}
-    // expected-warning@-2 {{TRUE}}
-    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Get ferror or no error.
+    clang_analyzer_eval(IsFError);     // expected-warning {{FALSE}} \
+                                       // expected-warning {{TRUE}}
+    clang_analyzer_eval(IsFEof);       // expected-warning {{FALSE}}
     // Error flags should not change.
-    if (IsFEof)
-      clang_analyzer_eval(feof(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
     if (IsFError)
-      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(ferror(F));  // expected-warning {{TRUE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));    // expected-warning {{FALSE}}
     // Error flags should not change.
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));    // expected-warning {{FALSE}}
   }
   fclose(F);
 }
@@ -396,15 +391,13 @@ void error_fseeko(void) {
     return;
   int rc = fseeko(F, 1, SEEK_SET);
   if (rc) {
-    int IsFEof = feof(F), IsFError = ferror(F);
-    // Get feof or ferror or no error.
-    clang_analyzer_eval(IsFEof || IsFError);
-    // expected-warning@-1 {{FALSE}}
-    // expected-warning@-2 {{TRUE}}
-    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Get ferror or no error.
+    clang_analyzer_eval(ferror(F));  // expected-warning {{FALSE}} \
+                                     // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F));    // expected-warning {{FALSE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));    // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));  // expected-warning {{FALSE}}
   }
   fclose(F);
 }
@@ -414,7 +407,7 @@ void error_fseek_0(void) {
   if (!F)
     return;
   int rc = fseek(F, 0, SEEK_SET);
-  if (rc) {
+  if (rc == -1) {
     int IsFEof = feof(F), IsFError = ferror(F);
     // Get ferror or no error, but not feof.
     clang_analyzer_eval(IsFError);

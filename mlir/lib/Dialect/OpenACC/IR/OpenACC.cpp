@@ -457,7 +457,7 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
 }
 
 static bool isComputeOperation(Operation *op) {
-  return isa<acc::ParallelOp>(op) || isa<acc::LoopOp>(op);
+  return isa<acc::ParallelOp, acc::LoopOp>(op);
 }
 
 namespace {

@@ -14,7 +14,6 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
-#include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
