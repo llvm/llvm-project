@@ -559,6 +559,42 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits::mulhu,
       [](const APInt &N1, const APInt &N2) { return APIntOps::mulhu(N1, N2); },
       checkCorrectnessOnlyBinary);
+
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::avgFloorS(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::avgFloorS(N1, N2);
+      },
+      checkCorrectnessOnlyBinary);
+
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::avgFloorU(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::avgFloorU(N1, N2);
+      },
+      checkCorrectnessOnlyBinary);
+
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::avgCeilU(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::avgCeilU(N1, N2);
+      },
+      checkCorrectnessOnlyBinary);
+
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::avgCeilS(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return APIntOps::avgCeilS(N1, N2);
+      },
+      checkCorrectnessOnlyBinary);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
