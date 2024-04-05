@@ -101,6 +101,18 @@ llvm.func @fold_bitcast2(%x : i32) -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_bitcast_chain
+// CHECK-SAME: %[[a0:arg[0-9]+]]
+llvm.func @fold_bitcast_chain(%x : i32) -> vector<2xi16> {
+  %c = llvm.bitcast %x : i32 to f32
+  %d = llvm.bitcast %c : f32 to vector<2xi16>
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[a0]] : i32 to vector<2xi16>
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %d : vector<2xi16>
+}
+
+// -----
+
 // CHECK-LABEL: fold_addrcast
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
@@ -116,6 +128,18 @@ llvm.func @fold_addrcast2(%x : !llvm.ptr) -> !llvm.ptr {
   %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<5>
   %d = llvm.addrspacecast %c : !llvm.ptr<5> to !llvm.ptr
   llvm.return %d : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: fold_addrcast_chain
+// CHECK-SAME: %[[a0:arg[0-9]+]]
+llvm.func @fold_addrcast_chain(%x : !llvm.ptr) -> !llvm.ptr<2> {
+  %c = llvm.addrspacecast %x : !llvm.ptr to !llvm.ptr<1>
+  %d = llvm.addrspacecast %c : !llvm.ptr<1> to !llvm.ptr<2>
+  // CHECK: %[[ADDRCAST:.*]] = llvm.addrspacecast %[[a0]] : !llvm.ptr to !llvm.ptr<2>
+  // CHECK: llvm.return %[[ADDRCAST]]
+  llvm.return %d : !llvm.ptr<2>
 }
 
 // -----
