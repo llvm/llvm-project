@@ -61,7 +61,26 @@ class ParentMapContext::ParentMap {
   template <typename, typename...> friend struct ::MatchParents;
 
   /// Contains parents of a node.
-  using ParentVector = llvm::SmallVector<DynTypedNode, 2>;
+  class ParentVector {
+  public:
+    ParentVector() = default;
+    explicit ParentVector(size_t N, const DynTypedNode &Value) {
+      Items.reserve(N);
+      for (; N > 0; --N)
+        push_back(Value);
+    }
+    bool contains(const DynTypedNode &Value) {
+      return Seen.contains(Value);
+    }
+    void push_back(const DynTypedNode &Value) {
+      if (!Value.getMemoizationData() || Seen.insert(Value).second)
+        Items.push_back(Value);
+    }
+    llvm::ArrayRef<DynTypedNode> view() const { return Items; }
+  private:
+    llvm::SmallVector<DynTypedNode, 2> Items;
+    llvm::SmallDenseSet<DynTypedNode, 2> Seen;
+  };
 
   /// Maps from a node to its parents. This is used for nodes that have
   /// pointer identity only, which are more common and we can save space by
@@ -99,7 +118,7 @@ class ParentMapContext::ParentMap {
       return llvm::ArrayRef<DynTypedNode>();
     }
     if (const auto *V = I->second.template dyn_cast<ParentVector *>()) {
-      return llvm::ArrayRef(*V);
+      return V->view();
     }
     return getSingleDynTypedNodeFromParentMap(I->second);
   }
@@ -252,7 +271,7 @@ public:
       const auto *S = It->second.dyn_cast<const Stmt *>();
       if (!S) {
         if (auto *Vec = It->second.dyn_cast<ParentVector *>())
-          return llvm::ArrayRef(*Vec);
+          return Vec->view();
         return getSingleDynTypedNodeFromParentMap(It->second);
       }
       const auto *P = dyn_cast<Expr>(S);
