@@ -1270,9 +1270,10 @@ bool SymbolFileDWARFDebugMap::GetCompileOption(const char *option,
                                                std::string &value,
                                                CompileUnit *cu) {
   bool success = false;
-  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
     success |= oso_dwarf->GetCompileOption(option, value, cu);
-    return success;
+    return success ? IterationAction::Stop
+                              : IterationAction::Continue;
   });
   return success;
 }
