@@ -51,9 +51,20 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
 
   auto *GV = dyn_cast<GlobalVariable>(GO);
 
+  auto IsPrefix = [](StringRef Name, StringRef Prefix) {
+    return Name.consume_front(Prefix) && (Name.empty() || Name[0] == '.');
+  };
+
   // Functions/GlobalIFuncs are only large under the large code model.
-  if (!GV)
+  if (!GV) {
+    // Handle explicit sections as we do for GlobalVariables with an explicit
+    // section, see comments below.
+    if (GO->hasSection()) {
+      StringRef Name = GO->getSection();
+      return IsPrefix(Name, ".ltext");
+    }
     return getCodeModel() == CodeModel::Large;
+  }
 
   if (GV->isThreadLocal())
     return false;
@@ -73,11 +84,8 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   // data sections. The code model attribute overrides this above.
   if (GV->hasSection()) {
     StringRef Name = GV->getSection();
-    auto IsPrefix = [&](StringRef Prefix) {
-      StringRef S = Name;
-      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-    };
-    return IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata");
+    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
+           IsPrefix(Name, ".lrodata");
   }
 
   // Respect large data threshold for medium and large code models.
