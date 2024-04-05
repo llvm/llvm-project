@@ -19,7 +19,7 @@ signature constituent components.
 
 There are two mechanisms to compile an HLSL root signature. First, it is 
 possible to attach a root signature string to a particular shader via the 
-RootSignature attribute (in the following example, using the MyRS1 entry 
+RootSignature attribute (in the following example, using the main entry 
 point):
 
 .. code-block::
@@ -41,7 +41,7 @@ point):
               "              addressU = TEXTURE_ADDRESS_CLAMP, " \ 
               "              filter = FILTER_MIN_MAG_MIP_LINEAR )"
 
-    [RootSignature(RS)]
+    [RootSignature(MyRS)]
     float4 main(float4 coord : COORD) : SV_Target
     {
     …
@@ -61,26 +61,22 @@ string is specified via the usual -E argument. For example:
 Note that the root signature string define can also be passed on the command 
 line, e.g, -D MyRS1=”…”.
 
+Root signature could also used in form of StateObject like this:
 
-Life of a Root Signature
-========================
+.. code-block::
 
-The root signature in a compiler begins with a string in the root signature 
-attribute and ends with a serialized root signature in the DXContainer.
+  GlobalRootSignature MyGlobalRootSignature =
+  {
+      "DescriptorTable(UAV(u0)),"                     // Output texture
+      "SRV(t0),"                                      // Acceleration structure
+      "CBV(b0),"                                      // Scene constants
+      "DescriptorTable(SRV(t1, numDescriptors = 2))"  // Static index and vertex buffers.
+  };
 
-To report errors as early as possible, root signature string parsing should 
-occur in Sema. 
-To prevent redundant work, this parsing should only be performed in Sema. 
-Consequently, the parsed root signature information must be stored in the AST.
-
-To ensure that a used resource has a binding in the root signature, this 
-information should be accessible in the backend to facilitate early error 
-reporting. 
-
-Since only the binding information is necessary for validation, one 
-approach could be to store the binding information separately for backend 
-verification and serialize the root signature information promptly, as it 
-constitutes the final output and is not utilized by any compiler passes.
+  LocalRootSignature MyLocalRootSignature = 
+  {
+      "RootConstants(num32BitConstants = 4, b1)"  // Cube constants 
+  };
 
 
 Root Signature Grammar
@@ -237,48 +233,84 @@ It will be look like this:
 
 .. code-block:: c++
 
-  struct DxilContainerRootDescriptor1 {
-    uint32_t ShaderRegister;
-    uint32_t RegisterSpace;
-    uint32_t Flags;
-  };
+  namespace dxbc {
+    namespace SerializedRootSignature {
+      namespace v_1_0 {
+      
+        struct DxilContainerDescriptorRange {
+          uint32_t RangeType;
+          uint32_t NumDescriptors;
+          uint32_t BaseShaderRegister;
+          uint32_t RegisterSpace;
+          uint32_t OffsetInDescriptorsFromTableStart;
+        };
 
-  struct DxilContainerDescriptorRange {
-    uint32_t RangeType;
-    uint32_t NumDescriptors;
-    uint32_t BaseShaderRegister;
-    uint32_t RegisterSpace;
-    uint32_t OffsetInDescriptorsFromTableStart;
-  };
+        struct ContainerRootDescriptor {
+          uint32_t ShaderRegister;
+          uint32_t RegisterSpace;
+        };
+      }
+      namespace v_1_1 {
 
-  struct DxilContainerDescriptorRange1 {
-    uint32_t RangeType;
-    uint32_t NumDescriptors;
-    uint32_t BaseShaderRegister;
-    uint32_t RegisterSpace;
-    uint32_t Flags;
-    uint32_t OffsetInDescriptorsFromTableStart;
-  };
+        struct ContainerDescriptorRange {
+          uint32_t RangeType;
+          uint32_t NumDescriptors;
+          uint32_t BaseShaderRegister;
+          uint32_t RegisterSpace;
+          uint32_t Flags;
+          uint32_t OffsetInDescriptorsFromTableStart;
+        };
 
-  struct DxilContainerRootDescriptorTable {
-    uint32_t NumDescriptorRanges;
-    uint32_t DescriptorRangesOffset;
-  };
+        struct ContainerRootDescriptor {
+          uint32_t ShaderRegister;
+          uint32_t RegisterSpace;
+          uint32_t Flags;
+        };
+      }
 
-  struct DxilContainerRootParameter {
-    uint32_t ParameterType;
-    uint32_t ShaderVisibility;
-    uint32_t PayloadOffset;
-  };
+      struct ContainerRootDescriptorTable {
+        uint32_t NumDescriptorRanges;
+        uint32_t DescriptorRangesOffset;
+      };
 
-  struct DxilContainerRootSignatureDesc {
-    uint32_t Version;
-    uint32_t NumParameters;
-    uint32_t RootParametersOffset;
-    uint32_t NumStaticSamplers;
-    uint32_t StaticSamplersOffset;
-    uint32_t Flags;
-  };
+      struct RootConstants {
+        uint32_t ShaderRegister;
+        uint32_t RegisterSpace = 0;
+        uint32_t Num32BitValues;
+      };
+
+      struct ContainerRootParameter {
+        uint32_t ParameterType;
+        uint32_t ShaderVisibility;
+        uint32_t PayloadOffset;
+      };
+
+      struct StaticSamplerDesc {
+        Filter Filter = Filter::ANISOTROPIC;
+        TextureAddressMode AddressU = TextureAddressMode::Wrap;
+        TextureAddressMode AddressV = TextureAddressMode::Wrap;
+        TextureAddressMode AddressW = TextureAddressMode::Wrap;
+        float MipLODBias = 0.f;
+        uint32_t MaxAnisotropy = 16;
+        ComparisonFunc ComparisonFunc = ComparisonFunc::LessEqual;
+        StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+        float MinLOD = 0.f;
+        float MaxLOD = MaxLOD;
+        uint32_t ShaderRegister;
+        uint32_t RegisterSpace = 0;
+        ShaderVisibility ShaderVisibility = ShaderVisibility::All;
+      };
+
+      struct ContainerRootSignatureDesc {
+        uint32_t Version;
+        uint32_t NumParameters;
+        uint32_t RootParametersOffset;
+        uint32_t NumStaticSamplers;
+        uint32_t StaticSamplersOffset;
+        uint32_t Flags;
+      };
+    }
+  }
 
 
 The binary representation begins with a **DxilContainerRootSignatureDesc** 
@@ -288,6 +320,10 @@ The object will be followed by an array of
 **DxilContainerRootParameter/Parameter1** objects located at 
 **DxilContainerRootSignatureDesc::RootParametersOffset**, which corresponds to 
 the size of **DxilContainerRootSignatureDesc**.
+
+Then it will be an array of 
+**DxilStaticSamplerDesc** at 
+**DxilContainerRootSignatureDesc::StaticSamplersOffset**.
 
 Subsequently, there will be detailed object (**DxilRootConstants**, 
 **DxilContainerRootDescriptorTable**, or 
@@ -300,105 +336,130 @@ it is succeeded by an array of
 **DxilContainerDescriptorRange/DxilContainerDescriptorRange1** at 
 **DxilContainerRootDescriptorTable.DescriptorRangesOffset**.
 
-The binary representation is finalized with an array of 
-**DxilStaticSamplerDesc** at 
-**DxilContainerRootSignatureDesc::StaticSamplersOffset**.
+The layout could be look like this for the MyRS in above example:
+.. code-block:: c++
+
+  struct SerializedRS {
+    ContainerRootSignatureDesc RSDesc;
+    ContainerRootParameter  rootParameters[6];
+    StaticSamplerDesc  samplers[2];
+
+    // Extra part for each RootParameter in rootParameters.
+
+    // RootConstants/RootDescriptorTable/RootDescriptor dependent on ParameterType.
+    // For RootDescriptorTable, the extra part will be like
+
+    // struct {
+
+    //   RootDescriptorTable table;
+
+    //   ContainerDescriptorRange ranges[NumDescriptorRangesForTheTable];
+
+    // };
+
+    struct {
+
+      RootConstants b0;
+
+      ContainerRootDescriptor t1;
+
+      ContainerRootDescriptor u1;
+
+      struct {
+
+        ContainerRootDescriptor tab0;
+
+        ContainerDescriptorRange tab0Ranges[2];
+
+      } table0;
+
+      struct {
+
+        ContainerRootDescriptor tab1;
+
+        ContainerDescriptorRange tab1Ranges[1];
+
+      } table1;
+
+      RootConstants b10;
+
+    };
+
+  };
+
+
+Life of a Root Signature
+========================
+
+The root signature in a compiler begins with a string in the root signature 
+attribute and ends with a serialized root signature in the DXContainer.
+
+To report errors as early as possible, root signature string parsing should 
+occur in Sema.
+
+To ensure that a used resource has a binding in the root signature, this 
+information should be accessible in the backend to make sure legal dxil is 
+generated.
+
 
 Implementation Details
 ======================
 
 The root signature string will be parsed in Clang. 
 The parsing 
-will happened when build HLSLRootSignatureAttr or when build standalone root 
-signature blob. 
+will happened when build HLSLRootSignatureAttr, standalone root signature blob 
+or local/global root signature.
 
-The root signature parsing will generate a HLSLRootSignatureAttr with member 
-represents the root signature string and the parsed information for each 
-resource in the root signature. It will bind to the entry function in the AST. 
-HLSLRootSignatureAttr will be something like this:
-Note, VersionedRootSignatureDesc is not D3D12_ROOT_SIGNATURE_DESC, it is just 
-a simple struct to collect all the information in the root signature string.
+A new AST node HLSLRootSignatureDecl will be added to represent the root 
+signature in the AST.
 
-.. code-block:: c++
+Assuming the cost to parse root signature string is cheap,
+HLSLRootSignatureDecl will follow common Clang approach which only save the 
+string in the AST.
+A root signature will be parsed twice, once in Sema for diagnostic and once in 
+clang code generation for generating the serialized root signature.
+The first parsing will check register overlap and run on all root signatures 
+in the translation unit.
+The second parsing will calculate the offset for serialized root signature and 
+only run on the root signature for the entry function or local/global root 
+signature which used in SubobjectToExportsAssociation.
 
-    struct DescriptorRange {
-      DescriptorRangeType RangeType;
-      uint32_t NumDescriptors = 1;
-      uint32_t BaseShaderRegister;
-      uint32_t RegisterSpace = 0;
-      DescriptorRangeFlags Flags = DescriptorRangeFlags::None;
-      uint32_t OffsetInDescriptorsFromTableStart = DescriptorRangeOffsetAppend;
-    };
+HLSLRootSignatureDecl will have method to parse the string for diagnostic and 
+generate the SerializedRS mentioned above.
 
-    struct RootDescriptorTable {
-      std::vector<DescriptorRange> DescriptorRanges;
-    };
-    struct RootConstants {
-      uint32_t ShaderRegister;
-      uint32_t RegisterSpace = 0;
-      uint32_t Num32BitValues;
-    };
-
-    struct RootDescriptor {
-      uint32_t ShaderRegister;
-      uint32_t RegisterSpace = 0;
-      RootDescriptorFlags Flags = RootDescriptorFlags::None;
-    };
-    struct RootParameter {
-      RootParameterType ParameterType;
-      std::variant<RootDescriptorTable, RootConstants, RootDescriptor>
-            Parameter;
-      ShaderVisibility ShaderVisibility = ShaderVisibility::All;
-    };
-
-    struct StaticSamplerDesc {
-      Filter Filter = Filter::ANISOTROPIC;
-      TextureAddressMode AddressU = TextureAddressMode::Wrap;
-      TextureAddressMode AddressV = TextureAddressMode::Wrap;
-      TextureAddressMode AddressW = TextureAddressMode::Wrap;
-      float MipLODBias = 0.f;
-      uint32_t MaxAnisotropy = 16;
-      ComparisonFunc ComparisonFunc = ComparisonFunc::LessEqual;
-      StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
-      float MinLOD = 0.f;
-      float MaxLOD = MaxLOD;
-      uint32_t ShaderRegister;
-      uint32_t RegisterSpace = 0;
-      ShaderVisibility ShaderVisibility = ShaderVisibility::All;
-    };
-
-    struct RootSignatureDesc {
-      std::vector<RootParameter> Parameters;
-      std::vector<StaticSamplerDesc> StaticSamplers;
-      RootSignatureFlags Flags;
-    };
-
-    enum class RootSignatureVersion {
-      Version_1 = 1,
-      Version_1_0 = 1,
-      Version_1_1 = 2
-    };
-
-    struct VersionedRootSignatureDesc {
-      RootSignatureVersion Version;
-      RootSignatureDesc Desc;
-    };
-
-    class HLSLRootSignatureAttr : public InheritableAttr {
-    protected:
-      std::string RootSignatureStr;
-      VersionedRootSignatureDesc RootSignature;
-    };
-
+A HLSLRootSignatureAttr will be created when meet RootSignature attribute in 
+HLSL. 
+It will defined as below.
 
 .. code-block::
 
-    def HLSLEntryRootSignature: HLSLRootSignatureAttr {
+    def HLSLEntryRootSignature: InheriableAttr {
       let Spellings = [GNU<"RootSignature">];
       let Subjects = Subjects<[HLSLEntry]>;
       let LangOpts = [HLSL];
-      let Args = [StringArgument<"InputString">];
+      let Args = [StringArgument<"InputString">, DeclArgument<HLSLRootSignature, "RootSignature", 0, /*fake*/ 1>];
     }
+
+Because the RootSignature attribute in hlsl only have the string, it is easier
+to add a StringArgument to save the string first.
+A HLSLRootSignatureDecl will be created for diagnostic and saved to the 
+HLSLEntryRootSignatureAttr for clang code generation. 
+The HLSLRootSignatureDecl will save StringLiteral instead StringRef for diagnostic.
+
+The AST for the attribute will be like this:
+
+.. code-block::
+
+    HLSLEntryRootSignatureAttr 
+      "RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | DENY_VERTEX_SHADER_ROOT_ACCESS), 
+       CBV(b0, space = 1, flags = DATA_STATIC), SRV(t0), UAV(u0), 
+       DescriptorTable( CBV(b1), SRV(t1, numDescriptors = 8,flags = DESCRIPTORS_VOLATILE), 
+       UAV(u1, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE)), 
+       DescriptorTable(Sampler(s0, space=1, numDescriptors = 4)), 
+       RootConstants(num32BitConstants=3, b10), 
+       StaticSampler(s1),
+       StaticSampler(s2, addressU = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR )" 
+       HLSLRootSignature 'main.RS'
 
 For case compile to a standalone root signature blob, the 
 HLSLRootSignatureAttr will be bind to a fake empty entry.
@@ -406,31 +467,78 @@ HLSLRootSignatureAttr will be bind to a fake empty entry.
 In clang code generation, the HLSLRootSignatureAttr in AST will be translated 
 into a global variable with struct type to express the layout and metadata to 
 save things like static sampler, root flags, space and NumDescriptors in LLVM IR. 
-The struct type will be look like this:
+The global variable will be look like this for the example above:
 
 .. code-block:: llvm
 
-  %struct.TABLE0 = type { target("dx.rs.desc"),
-                          target("dx.rs.sampler")}
+  ; %0 is the type for the whole serialzed root signature.
+  %0 = type { %"dxbc::RootSignature::ContainerRootSignatureDesc", 
+              [6 x %"dxbc::RootSignature::ContainerRootParameter"], 
+              [2 x %"dxbc::RootSignature::StaticSamplerDesc"], 
+              %1 }
+  ; %1 is the type for extra parameter information for each RootParameter in rootParameters.
+  %1 = type { %"dxbc::RootSignature::ContainerRootDescriptor", 
+              %"dxbc::RootSignature::ContainerRootDescriptor", 
+              %"dxbc::RootSignature::ContainerRootDescriptor", 
+              %2, 
+              %3, 
+              %"dxbc::RootSignature::ContainerRootConstants" }
+  ; %2 is the type for first DescriptorTable in RootParameter.
+  %2 = type { %"dxbc::RootSignature::ContainerRootDescriptorTable", [3 x %"dxbc::RootSignature::ContainerDescriptorRange"] }
+  ; %3 is the type for second DescriptorTable in RootParameter.
+  %3 = type { %"dxbc::RootSignature::ContainerRootDescriptorTable", [1 x %"dxbc::RootSignature::ContainerDescriptorRange"] }
 
-  %struct.RS = type { target("dx.rs.rootconstant", 4), 
-                      %struct.TABLE0,
-                      target("dx.rs.rootdescriptor") }
-
-The metadata will be look like this:
-
-.. code-block::
-
-  !1 = !{ data for static sampler } ; Save informations for single static 
-                                    ; sampler
-  !2 = !{!1} ; All static samplers
-  !3 = !{ data for descriptors } ; Save informations for single descriptor 
-  !4 = !{ !3 } ; All descriptors
-  !5 = !{void ()* @main, %struct.RS undef, i32 rootFlags, !2, !4}
+  %"dxbc::RootSignature::ContainerRootSignatureDesc" = type { i32, i32, i32, i32, i32, i32 }
+  %"dxbc::RootSignature::ContainerRootParameter" = type { i32, i32, i32 }
+  %"dxbc::RootSignature::StaticSamplerDesc" = type { i32, i32, i32, i32, float, i32, i32, i32, float, float, i32, i32, i32 }
+  %"dxbc::RootSignature::ContainerRootDescriptor" = type { i32, i32, i32 }
+  %"dxbc::RootSignature::ContainerRootDescriptorTable" = type { i32, i32 }
+  %"dxbc::RootSignature::ContainerDescriptorRange" = type { i32, i32, i32, i32, i32, i32 }
+  %"dxbc::RootSignature::ContainerRootConstants" = type { i32, i32, i32 }
+  ; The global variable which save the serialized root signature ConstantStruct as init.
+  @RootSig = internal constant %0 { 
+    %"dxbc::RootSignature::ContainerRootSignatureDesc" { i32 2, i32 0, i32 24, i32 0, i32 96, i32 3 }, 
+    [6 x %"dxbc::RootSignature::ContainerRootParameter"] 
+      [%"dxbc::RootSignature::ContainerRootParameter" { i32 2, i32 0, i32 200 }, 
+       %"dxbc::RootSignature::ContainerRootParameter" { i32 3, i32 0, i32 212 }, 
+       %"dxbc::RootSignature::ContainerRootParameter" { i32 4, i32 0, i32 224 }, 
+       %"dxbc::RootSignature::ContainerRootParameter" { i32 0, i32 0, i32 236 }, 
+       %"dxbc::RootSignature::ContainerRootParameter" { i32 0, i32 0, i32 316 }, 
+       %"dxbc::RootSignature::ContainerRootParameter" { i32 1, i32 0, i32 348 }], 
+    [2 x %"dxbc::RootSignature::StaticSamplerDesc"] 
+      [%"dxbc::RootSignature::StaticSamplerDesc" { i32 85, i32 1, i32 1, i32 1, float 0.000000e+00, i32 16, i32 4, i32 2, float 0.000000e+00, float 0x47EFFFFFE0000000, i32 1, i32 0, i32 0 }, 
+       %"dxbc::RootSignature::StaticSamplerDesc" { i32 21, i32 3, i32 1, i32 1, float 0.000000e+00, i32 16, i32 4, i32 2, float 0.000000e+00, float 0x47EFFFFFE0000000, i32 2, i32 0, i32 0 }], 
+    %1 { 
+      %"dxbc::RootSignature::ContainerRootDescriptor" { i32 0, i32 1, i32 8 }, 
+      %"dxbc::RootSignature::ContainerRootDescriptor" zeroinitializer, 
+      %"dxbc::RootSignature::ContainerRootDescriptor" zeroinitializer, 
+      %2 { %"dxbc::RootSignature::ContainerRootDescriptorTable" { i32 3, i32 244 }, 
+        [3 x %"dxbc::RootSignature::ContainerDescriptorRange"] 
+          [%"dxbc::RootSignature::ContainerDescriptorRange" { i32 2, i32 1, i32 1, i32 0, i32 0, i32 -1 }, 
+          %"dxbc::RootSignature::ContainerDescriptorRange" { i32 0, i32 8, i32 1, i32 0, i32 1, i32 -1 }, 
+          %"dxbc::RootSignature::ContainerDescriptorRange" { i32 1, i32 -1, i32 1, i32 0, i32 1, i32 -1 }] }, 
+      %3 { %"dxbc::RootSignature::ContainerRootDescriptorTable" { i32 1, i32 324 }, 
+        [1 x %"dxbc::RootSignature::ContainerDescriptorRange"] 
+          [%"dxbc::RootSignature::ContainerDescriptorRange" { i32 3, i32 4, i32 0, i32 1, i32 0, i32 -1 }] }, 
+      %"dxbc::RootSignature::ContainerRootConstants" { i32 10, i32 0, i32 3 } } }
 
 
 CGHLSLRuntime will generate metadata to link the global variable as root 
 signature for given entry function. 
+
+.. code-block::
+
+  ; named metadata for entry root signature
+  !hlsl.entry.rootsignatures = !{!2}
+  …
+  ; link the global variable to entry function
+  !2 = !{ptr @main, ptr @RootSig}
+
+To make sure the emitted DXIL is legal, the root signature information will be 
+validated after all optimizations in the DXIL backend. 
+For all resources used in the shader, the root signature will be checked to 
+ensure that the resource is in the root signature. 
+The binding information will be collected from the root signature ConstantStruct.
 
 In LLVM DirectX backend, the global variable will be serialized and saved as 
 another global variable with section 'RTS0' with the serialized root signature 
@@ -442,7 +550,7 @@ correct part based on the section name given to the global.
 In DXIL validation for DXC, the root signature part will be deserialized and 
 check if resource used in the shader (the information is in pipeline state 
 validation part) exists in the root signature. 
-For LLVM DirectX backend, this could be done in IR pass before emit DXIL 
+For LLVM DirectX backend, this will be done in IR pass before emit DXIL 
 instead of validation.
 
 Same check could be done in Sema as well. But at AST level, it is impossible 
