@@ -269,22 +269,16 @@ multiclass VPseudoBinaryV_S_NoMask_Zvk<LMULInfo m> {
 multiclass VPseudoVALU_V_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm "" : VPseudoBinaryV_V_NoMask_Zvk<m>,
-              Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx>;
   }
 }
 
 multiclass VPseudoVALU_S_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm "" : VPseudoBinaryV_S_NoMask_Zvk<m>,
-              Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx>;
   }
 }
 
@@ -294,59 +288,46 @@ multiclass VPseudoVALU_V_S_NoMask_Zvk
 multiclass VPseudoVALU_VV_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm _VV : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
-               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+               SchedTernary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", "ReadVIALUV", mx>;
   }
 }
 
 multiclass VPseudoVALU_VI_NoMask_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm _VI : VPseudoTernaryNoMask_Zvk<m.vrclass, m.vrclass, uimm5, m>,
-               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+               SchedTernary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", "ReadVIALUV", mx>;
   }
 }
 
 multiclass VPseudoVALU_VI_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm _VI : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, uimm5, m>,
-               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+               SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVALU_VV_NoMaskTU_Zvk {
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm _VV : VPseudoBinaryNoMaskTU_Zvk<m.vrclass, m.vrclass, m.vrclass, m>,
-               Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+               SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVCLMUL_VV_VX {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar WriteVIALUX_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-    defvar ReadVIALUX_MX = !cast<SchedRead>("ReadVIALUX_" # mx);
-
     defm "" : VPseudoBinaryV_VV<m>,
-              Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-              Sched<[WriteVIALUX_MX, ReadVIALUV_MX, ReadVIALUX_MX, ReadVMask]>;
+              SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", mx,
+                          forceMergeOpRead=true>;
   }
 }
 
@@ -362,11 +343,17 @@ multiclass VPseudoUnaryV_V<LMULInfo m> {
 multiclass VPseudoVALU_V {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVIALUV_MX = !cast<SchedWrite>("WriteVIALUV_" # mx);
-    defvar ReadVIALUV_MX = !cast<SchedRead>("ReadVIALUV_" # mx);
-
     defm "" : VPseudoUnaryV_V<m>,
-              Sched<[WriteVIALUV_MX, ReadVIALUV_MX, ReadVIALUV_MX, ReadVMask]>;
+              SchedUnary<"WriteVIALUV", "ReadVIALUV", mx,
+                         forceMergeOpRead=true>;
+  }
+}
+
+multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
+  foreach m = MxListW in {
+    defm "" : VPseudoBinaryW_VI<ImmType, m>,
+              SchedUnary<"WriteVIWALUV", "ReadVIWALUV", m.MX,
+                         forceMergeOpRead=true>;
   }
 }
 
@@ -643,6 +630,19 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (riscv_ext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs1),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
                  (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
                  (wti.Vector wti.RegClass:$merge),
@@ -652,7 +652,29 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
                  (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
                  (wti.Vector wti.RegClass:$merge),
                  (vti.Mask V0), VLOpFrag),

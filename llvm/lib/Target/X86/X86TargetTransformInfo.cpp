@@ -2664,9 +2664,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   7 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
@@ -5698,8 +5698,10 @@ int X86TTIImpl::getScatterOverhead() const {
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
 // FIXME: Add TargetCostKind support.
-InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
-                                            const Value *Ptr, Align Alignment,
+InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind,
+                                            Type *SrcVTy, const Value *Ptr,
+                                            Align Alignment,
                                             unsigned AddressSpace) {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
@@ -5750,8 +5752,8 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
     // Handle splitting of vector of pointers
     auto *SplitSrcTy =
         FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
-    return SplitFactor * getGSVectorCost(Opcode, SplitSrcTy, Ptr, Alignment,
-                                         AddressSpace);
+    return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
+                                         Alignment, AddressSpace);
   }
 
   // The gather / scatter cost is given by Intel architects. It is a rough
@@ -5771,15 +5773,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
 /// VariableMask - The mask is non-constant at compile time.
 /// Alignment - Alignment for one element.
 /// AddressSpace - pointer[s] address space.
-///
-/// FIXME: Add TargetCostKind support.
-InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
-                                            bool VariableMask, Align Alignment,
+/// TODO: Remove this and use getCommonMaskedMemoryOpCost directly.
+InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind,
+                                            Type *SrcVTy, bool VariableMask,
+                                            Align Alignment,
                                             unsigned AddressSpace) {
   Type *ScalarTy = SrcVTy->getScalarType();
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
   APInt DemandedElts = APInt::getAllOnes(VF);
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   InstructionCost MaskUnpackCost = 0;
   if (VariableMask) {
@@ -5848,10 +5850,11 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
                                     Align(Alignment)))))
-    return getGSScalarCost(Opcode, SrcVTy, VariableMask, Alignment,
+    return getGSScalarCost(Opcode, CostKind, SrcVTy, VariableMask, Alignment,
                            AddressSpace);
 
-  return getGSVectorCost(Opcode, SrcVTy, Ptr, Alignment, AddressSpace);
+  return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
+                         AddressSpace);
 }
 
 bool X86TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
