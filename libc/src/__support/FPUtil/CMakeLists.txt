@@ -201,8 +201,8 @@ add_header_library(
   DEPENDS
     .fp_bits
     .multiply_add
+    libc.src.__support.big_int
     libc.src.__support.common
-    libc.src.__support.uint
     libc.src.__support.macros.optimization
 )
 

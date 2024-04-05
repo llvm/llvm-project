@@ -69,7 +69,7 @@ libc_test(
         "//libc:__support_cpp_string_view",
         "//libc:__support_integer_literals",
         "//libc:__support_integer_to_string",
-        "//libc:__support_uint",
+        "//libc:__support_big_int",
         "//libc:__support_uint128",
     ],
 )
@@ -89,7 +89,7 @@ libc_test(
         "//libc:__support_cpp_optional",
         "//libc:__support_integer_literals",
         "//libc:__support_macros_properties_types",
-        "//libc:__support_uint",
+        "//libc:__support_big_int",
         "//libc:llvm_libc_macros_math_macros",
     ],
 )
