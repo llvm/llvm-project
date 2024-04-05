@@ -397,11 +397,13 @@ void dumpICFGNode(int u, ordered_json &jPath) {
 /**
  * 删除路径中连续重复的 stmt
  */
-void deduplicateLocations(ordered_json &locations) {
+void deduplicateAndFixLocations(ordered_json &locations, int fromLine,
+                                int toLine) {
     std::set<std::string> interestedFields = {
         "type", "file", "beginLine", "beginColumn", "endLine", "endColumn"};
 
-    ordered_json result, lastEntry;
+    std::deque<ordered_json> result;
+    ordered_json lastEntry;
     for (const auto &j : locations) {
         if (j["type"] != "stmt") {
             result.push_back(j);
@@ -418,10 +420,20 @@ void deduplicateLocations(ordered_json &locations) {
         result.push_back(j);
         lastEntry = j;
     }
+
+    // 输出会包含 BB 中的所有语句。
+    // 如果 source 不是 BB 中第一条，它前面的语句也会被输出。
+    // 这里删除路径中，可能存在的 source 之前的、sink 之后的语句。
+    while (!result.empty() && result.front()["beginLine"] < fromLine)
+        result.pop_front();
+    while (!result.empty() && result.back()["beginLine"] > toLine)
+        result.pop_back();
+
     locations = result;
 }
 
-void saveAsJson(const std::set<std::vector<int>> &results,
+void saveAsJson(int fromLine, int toLine,
+                const std::set<std::vector<int>> &results,
                 const std::string &type, ordered_json &jResults) {
     std::vector<std::vector<int>> sortedResults(results.begin(), results.end());
     // sort based on length
@@ -439,13 +451,14 @@ void saveAsJson(const std::set<std::vector<int>> &results,
         for (int x : path) {
             dumpICFGNode(x, locations);
         }
-        deduplicateLocations(locations);
+        deduplicateAndFixLocations(locations, fromLine, toLine);
         jPath["locations"] = locations;
         jResults.push_back(jPath);
     }
 }
 
-static void findPathBetween(const VarLocResult &from, VarLocResult to,
+static void findPathBetween(const VarLocResult &from, int fromLine,
+                            VarLocResult to, int toLine,
                             const std::vector<VarLocResult> &_pointsToPass,
                             const std::vector<VarLocResult> &_pointsToAvoid,
                             const std::string &type, ordered_json &jResults) {
@@ -470,11 +483,11 @@ static void findPathBetween(const VarLocResult &from, VarLocResult to,
     auto pFinder = DijPathFinder(icfg);
     pFinder.search(u, v, pointsToPass, pointsToAvoid, 3);
 
-    saveAsJson(pFinder.results, type, jResults);
+    saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
 }
 
-void handleInputEntry(const VarLocResult &from, VarLocResult to,
-                      const std::vector<VarLocResult> &path,
+void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
+                      int toLine, const std::vector<VarLocResult> &path,
                       const std::string &type, ordered_json &jResults) {
     int fromFid = from.fid;
 
@@ -490,23 +503,24 @@ void handleInputEntry(const VarLocResult &from, VarLocResult to,
         logger.info("Handle known type: {}", type);
 
         logger.info("Generating NPE bug version ...");
-        findPathBetween(from, to, path, {}, "npe-bug", jResults);
+        findPathBetween(from, fromLine, to, toLine, path, {}, "npe-bug",
+                        jResults);
 
         logger.info("Generating NPE fix version ...");
-        findPathBetween(from,
-                        // 如果中间路径中没有 source 所在函数中的语句，就用 exit
-                        // 否则，用中间路径的最后一条
-                        pathInSourceFunction.empty()
-                            ? sourceExit
-                            : pathInSourceFunction.back(),
-                        pathInSourceFunction, {to}, "npe-fix", jResults);
+        findPathBetween(
+            from, fromLine,
+            // 如果中间路径中没有 source 所在函数中的语句，就用 exit
+            // 否则，用中间路径的最后一条
+            pathInSourceFunction.empty() ? sourceExit
+                                         : pathInSourceFunction.back(),
+            INT_MAX, pathInSourceFunction, {to}, "npe-fix", jResults);
     } else {
         logger.info("Handle unknown type: {}", type);
         if (!to.isValid()) {
             logger.warn("Missing sink! Using exit of source instead");
             to = sourceExit;
         }
-        findPathBetween(from, to, path, {}, type, jResults);
+        findPathBetween(from, fromLine, to, toLine, path, {}, type, jResults);
     }
 }
 
@@ -582,6 +596,7 @@ int main(int argc, const char **argv) {
 
             ordered_json &locations = result["locations"];
             VarLocResult from, to;
+            int fromLine, toLine;
             std::vector<VarLocResult> path;
             for (const ordered_json &loc : locations) {
                 std::string type = loc["type"].template get<std::string>();
@@ -593,8 +608,8 @@ int main(int argc, const char **argv) {
                 // 目前把 source 和 sink 都当作 stmt 来处理，
                 // 精确匹配不上的话，就模糊匹配
                 bool isStmt = true; // type == "stmt";
-                VarLocResult varLoc =
-                    locateVariable(locator, Location(loc), isStmt);
+                Location jsonLoc(loc);
+                VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
                 if (!varLoc.isValid()) {
                     logger.error("Error: cannot locate {} at {}", type,
                                  loc.dump(4, ' ', false,
@@ -604,8 +619,10 @@ int main(int argc, const char **argv) {
 
                 if (type == "source") {
                     from = varLoc;
+                    fromLine = jsonLoc.line;
                 } else if (type == "sink") {
                     to = varLoc;
+                    toLine = jsonLoc.line;
                     // sink is the last stmt
                     break;
                 } else {
@@ -616,7 +633,8 @@ int main(int argc, const char **argv) {
                 }
             }
 
-            handleInputEntry(from, to, path, type, output["results"]);
+            handleInputEntry(from, fromLine, to, toLine, path, type,
+                             output["results"]);
         }
 
         std::ofstream o(jsonResult);
