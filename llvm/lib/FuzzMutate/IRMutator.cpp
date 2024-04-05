@@ -542,8 +542,7 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   if (&BB == &BB.getParent()->getEntryBlock())
     return;
   Type *Ty = IB.randomType();
-  PHINode *PHI =
-      PHINode::Create(Ty, llvm::pred_size(&BB), "", BB.getFirstInsertionPt());
+  PHINode *PHI = PHINode::Create(Ty, llvm::pred_size(&BB), "", BB.begin());
 
   // Use a map to make sure the same incoming basic block has the same value.
   DenseMap<BasicBlock *, Value *> IncomingValues;
