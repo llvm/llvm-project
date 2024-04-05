@@ -1003,6 +1003,9 @@ private:
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
 
+  llvm::BumpPtrAllocator BumpAlloc;
+  llvm::StringSaver Saver{BumpAlloc};
+
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
   void addTypeForNEON(MVT VT);
