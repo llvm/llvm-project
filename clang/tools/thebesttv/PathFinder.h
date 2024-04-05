@@ -231,6 +231,7 @@ struct DijPathFinder : public ICFGPathFinder {
         }
 
         if (source == target) {
+            logger.info("Source the same as target, skip searching");
             results.insert({source});
             return;
         }
