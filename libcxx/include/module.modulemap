@@ -1145,6 +1145,7 @@ module std_private_chrono_high_resolution_clock  [system] {
   export std_private_chrono_steady_clock
   export std_private_chrono_system_clock
 }
+module std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
 module std_private_chrono_literals               [system] { header "__chrono/literals.h" }
 module std_private_chrono_month                  [system] { header "__chrono/month.h" }
 module std_private_chrono_month_weekday          [system] { header "__chrono/month_weekday.h" }
@@ -1738,7 +1739,10 @@ module std_private_ranges_transform_view             [system] {
 }
 module std_private_ranges_view_interface             [system] { header "__ranges/view_interface.h" }
 module std_private_ranges_views                      [system] { header "__ranges/views.h" }
-module std_private_ranges_zip_view                   [system] { header "__ranges/zip_view.h" }
+module std_private_ranges_zip_view                   [system] {
+  header "__ranges/zip_view.h"
+  export std_private_utility_pair
+}
 
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
 
@@ -1863,6 +1867,7 @@ module std_private_type_traits_decay                                     [system
   export std_private_type_traits_add_pointer
 }
 module std_private_type_traits_dependent_type                            [system] { header "__type_traits/dependent_type.h" }
+module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
 module std_private_type_traits_disjunction                               [system] { header "__type_traits/disjunction.h" }
 module std_private_type_traits_enable_if                                 [system] { header "__type_traits/enable_if.h" }
 module std_private_type_traits_extent                                    [system] { header "__type_traits/extent.h" }
@@ -2013,7 +2018,6 @@ module std_private_type_traits_maybe_const                               [system
 module std_private_type_traits_nat                                       [system] { header "__type_traits/nat.h" }
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
-module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }

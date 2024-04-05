@@ -426,7 +426,7 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
   for (const auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
     const uint64_t HotAddress = fetchParentAddress(Address);
-    bool IsHotFunction = HotAddress == 0;
+    const bool IsHotFunction = HotAddress == 0;
     OS << "Function Address: 0x" << Twine::utohexstr(Address);
     if (IsHotFunction)
       OS << formatv(", hash: {0:x}", getBFHash(Address));
