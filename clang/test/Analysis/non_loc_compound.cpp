@@ -1,4 +1,3 @@
-// REQUIRES: crash-recovery, asserts
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=alpha.cplusplus.InvalidatedIterator \
 // RUN:   -analyzer-config aggressive-binary-operation-simplification=true \
