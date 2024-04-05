@@ -17,6 +17,7 @@
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -30,13 +31,13 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Index, class _Brick>
+template <class _Backend, class _Index, class _Brick>
 _LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
   std::atomic<bool> __found(false);
-  auto __ret = __par_backend::__parallel_for(__first, __last, [__f, &__found](_Index __i, _Index __j) {
+  auto __ret = __pstl::__cpu_traits<_Backend>::__for_each(__first, __last, [__f, &__found](_Index __i, _Index __j) {
     if (!__found.load(std::memory_order_relaxed) && __f(__i, __j)) {
       __found.store(true, std::memory_order_relaxed);
-      __par_backend::__cancel_execution();
+      __pstl::__cpu_traits<_Backend>::__cancel_execution();
     }
   });
   if (!__ret)
@@ -74,7 +75,7 @@ _LIBCPP_HIDE_FROM_ABI optional<bool>
 __pstl_any_of(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__parallel_or(
+    return std::__parallel_or<__cpu_backend_tag>(
         __first, __last, [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
           auto __res = std::__pstl_any_of<__remove_parallel_policy_t<_ExecutionPolicy>>(
               __cpu_backend_tag{}, __brick_first, __brick_last, __pred);

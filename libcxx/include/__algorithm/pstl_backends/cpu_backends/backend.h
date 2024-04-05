@@ -30,9 +30,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct __cpu_backend_tag {};
-
-inline constexpr size_t __lane_size = 64;
+#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL)
+using __cpu_backend_tag = __pstl::__serial_backend_tag;
+#  elif defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
+using __cpu_backend_tag = __pstl::__std_thread_backend_tag;
+#  elif defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+using __cpu_backend_tag = __pstl::__libdispatch_backend_tag;
+#  endif
 
 _LIBCPP_END_NAMESPACE_STD
 

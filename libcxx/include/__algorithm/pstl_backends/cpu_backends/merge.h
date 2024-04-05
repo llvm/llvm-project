@@ -13,6 +13,7 @@
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <optional>
@@ -45,7 +46,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_merge(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    auto __res = __par_backend::__parallel_merge(
+    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__merge(
         __first1,
         __last1,
         __first2,

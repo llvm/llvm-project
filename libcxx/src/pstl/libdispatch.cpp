@@ -12,8 +12,7 @@
 #include <dispatch/dispatch.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-namespace __par_backend::inline __libdispatch {
+namespace __pstl::__libdispatch {
 
 void __dispatch_apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
@@ -29,7 +28,5 @@ __chunk_partitions __partition_chunks(ptrdiff_t element_count) noexcept {
   return partitions;
 }
 
-// NOLINTNEXTLINE(llvm-namespace-comment) // This is https://llvm.org/PR56804
-} // namespace __par_backend::inline __libdispatch
-
+} // namespace __pstl::__libdispatch
 _LIBCPP_END_NAMESPACE_STD

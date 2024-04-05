@@ -10,6 +10,7 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
     ignore = [
         "__debug_utils/.+",
         "__fwd/get[.]h",
+        "__pstl/.+",
         "__support/.+",
     ]
     if any(re.match(pattern, header) for pattern in ignore):
