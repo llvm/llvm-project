@@ -16,8 +16,13 @@ licenses(["notice"])
         deps = [
             "//compiler-rt:orc_rt",
             "//compiler-rt:orc_rt_common_headers",
+            "//third-party/unittest:gtest",
             "//third-party/unittest:gtest_main",
         ],
     )
-    for file in glob(["*.cpp"])
+    for file in glob(
+        ["*.cpp"],
+        # TODO: Broken with older libc++ versions, currently unused anyways
+        exclude = ["interval_set_test.cpp"],
+    )
 ]
