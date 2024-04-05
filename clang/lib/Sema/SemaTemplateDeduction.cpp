@@ -3178,7 +3178,7 @@ DeduceTemplateArguments(Sema &S, T *Partial,
 
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
   Sema::InstantiatingTemplate Inst(S, Info.getLocation(), Partial, DeducedArgs,
-                             Info);
+                                   Info);
   if (Inst.isInvalid())
     return TemplateDeductionResult::InstantiationDepth;
 
