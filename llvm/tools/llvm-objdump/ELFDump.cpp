@@ -232,15 +232,15 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
       Expected<StringRef> StrTabOrErr = getDynamicStrTab(Elf);
       if (StrTabOrErr) {
         const char *Data = StrTabOrErr->data();
-        outs() << format(TagFmt.c_str(), Str.c_str());
-        outs() << Data + Dyn.getVal() << "\n";
+        outs() << format(TagFmt.c_str(), Str.c_str()) << Data + Dyn.getVal()
+               << "\n";
         continue;
       }
       reportWarning(toString(StrTabOrErr.takeError()), Obj.getFileName());
       consumeError(StrTabOrErr.takeError());
     }
-    outs() << format(TagFmt.c_str(), Str.c_str());
-    outs() << format(Fmt, (uint64_t)Dyn.getVal());
+    outs() << format(TagFmt.c_str(), Str.c_str())
+           << format(Fmt, (uint64_t)Dyn.getVal());
   }
 }
 
