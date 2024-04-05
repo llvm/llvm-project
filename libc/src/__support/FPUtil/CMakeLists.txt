@@ -4,7 +4,7 @@ add_header_library(
     FEnvImpl.h
   DEPENDS
     libc.include.fenv
-    libc.include.math
+    libc.hdr.math_macros
     libc.src.__support.macros.attributes
     libc.src.errno.errno
 )
@@ -15,7 +15,6 @@ add_header_library(
     rounding_mode.h
   DEPENDS
     libc.include.fenv
-    libc.include.math
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer
@@ -59,9 +58,9 @@ add_header_library(
     .fp_bits
     .fenv_impl
     .rounding_mode
+    libc.hdr.math_macros
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
-    libc.include.math
     libc.src.errno.errno
 )
 
@@ -216,12 +215,12 @@ add_header_library(
     .dyadic_float
     .nearest_integer_operations
     .normal_float
+    libc.hdr.math_macros
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
     libc.src.__support.macros.optimization
-    libc.include.math
     libc.src.errno.errno
 )
 
