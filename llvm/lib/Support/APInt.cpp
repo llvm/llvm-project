@@ -1247,7 +1247,7 @@ APInt APInt::sqrt() const {
 /// however we simplify it to speed up calculating only the inverse, and take
 /// advantage of div+rem calculations. We also use some tricks to avoid copying
 /// (potentially large) APInts around.
-APInt APInt::multiplicativeInverse(const APInt& Modulus) const {
+APInt APInt::multiplicativeInverse(const APInt &Modulus) const {
   assert(ult(Modulus) && "This APInt must be smaller than the modulus");
 
   // Using the properties listed at the following web page (accessed 06/21/08):
@@ -1257,18 +1257,18 @@ APInt APInt::multiplicativeInverse(const APInt& Modulus) const {
   // below. More precisely, this number of bits suffice if the multiplicative
   // inverse exists, but may not suffice for the general extended Euclidean
   // algorithm.
-  APInt R[2] = { Modulus, *this };
-  APInt T[2] = { APInt(BitWidth, 0), APInt(BitWidth, 1) };
+  APInt R[2] = {Modulus, *this};
+  APInt T[2] = {APInt(BitWidth, 0), APInt(BitWidth, 1)};
   APInt Q(BitWidth, 0);
 
   unsigned i;
-  for (i = 0; R[i^1] != 0; i ^= 1) {
+  for (i = 0; R[i ^ 1] != 0; i ^= 1) {
     // An overview of the math without the confusing bit-flipping:
     // Q = R[i-2] / R[i-1]
     // R[i] = R[i-2] % R[i-1]
     // T[i] = T[i-2] - T[i-1] * Q
-    udivrem(R[i], R[i^1], Q, R[i]);
-    T[i] -= T[i^1] * Q;
+    udivrem(R[i], R[i ^ 1], Q, R[i]);
+    T[i] -= T[i ^ 1] * Q;
   }
 
   // If this APInt and the modulus are not coprime, there is no multiplicative
