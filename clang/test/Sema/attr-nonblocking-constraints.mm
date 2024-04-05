@@ -6,6 +6,9 @@
 #error "the 'nonblocking' attribute is not available"
 #endif
 
+// This diagnostic is re-enabled and exercised in isolation later in this file.
+#pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
+
 // --- CONSTRAINTS ---
 
 void nl1() [[clang::nonblocking]]
@@ -188,3 +191,10 @@ void nl18(void (^block)() [[clang::nonblocking]]) [[clang::nonblocking]]
 	ref();
 }
 
+
+// --- nonblocking implies noexcept ---
+#pragma clang diagnostic warning "-Wperf-constraint-implies-noexcept"
+
+void nl19() [[clang::nonblocking]] // expected-warning {{'nonblocking' function should be declared noexcept}}
+{
+}

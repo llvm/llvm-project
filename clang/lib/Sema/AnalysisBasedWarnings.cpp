@@ -2746,18 +2746,6 @@ public:
   }
 };
 
-/*
-        TODO: nonblocking and nonallocating imply noexcept
-        if (auto* Method = dyn_cast<CXXMethodDecl>(CInfo.CDecl)) {
-          if (Method->getType()->castAs<FunctionProtoType>()->canThrow()
-              != clang::CT_Cannot) {
-            S.Diag(Callable->getBeginLoc(),
-              diag::warn_perf_annotation_implies_noexcept)
-              << getPerfAnnotationSpelling(CInfo.PerfAnnot);
-          }
-        }
-*/
-
 const Decl *CanonicalFunctionDecl(const Decl *D) {
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     FD = FD->getCanonicalDecl();
@@ -2919,10 +2907,32 @@ private:
   // Verify a single Decl. Return the pending structure if that was the result,
   // else null. This method must not recurse.
   PendingFunctionAnalysis *verifyDecl(const Decl *D) {
+    CallableInfo CInfo(*D);
+
+    // If any of the Decl's declared effects forbid throwing (e.g. nonblocking)
+    // then the function should also be declared noexcept.
+    for (const auto &Effect : CInfo.Effects) {
+      if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
+        continue;
+
+      const FunctionProtoType *FPT = nullptr;
+      if (auto *FD = D->getAsFunction()) {
+        FPT = FD->getType()->getAs<FunctionProtoType>();
+      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
+        if (auto *TSI = BD->getSignatureAsWritten()) {
+          FPT = TSI->getType()->getAs<FunctionProtoType>();
+        }
+      }
+      if (FPT && FPT->canThrow() != clang::CT_Cannot) {
+        Sem.Diag(D->getBeginLoc(), diag::warn_perf_constraint_implies_noexcept)
+            << Effect.name();
+      }
+      break;
+    }
+
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       tmp_assert(FD->getBuiltinID() == 0);
     }
-    CallableInfo CInfo(*D);
 
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
     // complete, we'll have avoided a heap allocation; if it's incomplete, it's
