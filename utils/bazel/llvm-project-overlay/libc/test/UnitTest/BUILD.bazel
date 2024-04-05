@@ -76,6 +76,7 @@ libc_support_library(
     deps = [
         ":LibcUnitTest",
         ":string_utils",
+        "//libc:__support_cpp_array",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_span",

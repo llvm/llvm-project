@@ -548,6 +548,12 @@ def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
   "in api extraction; use '-x %2' to override">;
 
+def err_drv_missing_symbol_graph_dir: Error<
+  "Must provide a symbol graph output directory using --symbol-graph-dir=<directory>">;
+
+def err_drv_unexpected_symbol_graph_output : Error<
+  "Unexpected output symbol graph '%1'; please provide --symbol-graph-dir=<directory> instead">;
+
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
 def note_use_dashdash : Note<
@@ -753,7 +759,8 @@ def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
   "%select{shader model|Vulkan environment|shader stage}0 is required as %select{OS|environment}1 in target '%2' for HLSL code generation">;
-
+def err_drv_hlsl_16bit_types_unsupported: Error<
+  "'%0' option requires target HLSL Version >= 2018%select{| and shader model >= 6.2}1, but HLSL Version is '%2'%select{| and shader model is '%3'}1">;
 def err_drv_hlsl_bad_shader_unsupported : Error<
   "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "

@@ -6895,6 +6895,11 @@ AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
   return TPIDR2Obj;
 }
 
+static bool isPassedInFPR(EVT VT) {
+  return VT.isFixedLengthVector() ||
+         (VT.isFloatingPoint() && !VT.isScalableVector());
+}
+
 SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -7031,6 +7036,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         // This will be the new Chain/Root node.
         ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT, Glue);
         Glue = ArgValue.getValue(2);
+        if (isPassedInFPR(ArgValue.getValueType())) {
+          ArgValue =
+              DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                          DAG.getVTList(ArgValue.getValueType(), MVT::Glue),
+                          {ArgValue, Glue});
+          Glue = ArgValue.getValue(1);
+        }
       } else
         ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
@@ -7400,11 +7412,6 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   if (!MemOps.empty()) {
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOps);
   }
-}
-
-static bool isPassedInFPR(EVT VT) {
-  return VT.isFixedLengthVector() ||
-         (VT.isFloatingPoint() && !VT.isScalableVector());
 }
 
 /// LowerCallResult - Lower the result values of a call into the
@@ -8212,9 +8219,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // Call site info is used for function's parameter entry value
         // tracking. For now we track only simple cases when parameter
         // is transferred through whole register.
-        llvm::erase_if(CSInfo, [&VA](MachineFunction::ArgRegPair ArgReg) {
-          return ArgReg.Reg == VA.getLocReg();
-        });
+        llvm::erase_if(CSInfo.ArgRegPairs,
+                       [&VA](MachineFunction::ArgRegPair ArgReg) {
+                         return ArgReg.Reg == VA.getLocReg();
+                       });
       } else {
         // Add an extra level of indirection for streaming mode changes by
         // using a pseudo copy node that cannot be rematerialised between a
@@ -8226,7 +8234,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
         if (Options.EmitCallSiteInfo)
-          CSInfo.emplace_back(VA.getLocReg(), i);
+          CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
       }
     } else {
       assert(VA.isMemLoc());
@@ -8632,6 +8640,10 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   SmallVector<SDValue, 4> RetOps(1, Chain);
   for (auto &RetVal : RetVals) {
+    if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface() &&
+        isPassedInFPR(RetVal.second.getValueType()))
+      RetVal.second = DAG.getNode(AArch64ISD::COALESCER_BARRIER, DL,
+                                  RetVal.second.getValueType(), RetVal.second);
     Chain = DAG.getCopyToReg(Chain, DL, RetVal.first, RetVal.second, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(
@@ -18629,12 +18641,16 @@ static SDValue performConcatVectorsCombine(SDNode *N,
     }
   }
 
-  if (N->getOperand(0).getValueType() == MVT::v4i8) {
+  if (N->getOperand(0).getValueType() == MVT::v4i8 ||
+      N->getOperand(0).getValueType() == MVT::v2i16 ||
+      N->getOperand(0).getValueType() == MVT::v2i8) {
+    EVT SrcVT = N->getOperand(0).getValueType();
     // If we have a concat of v4i8 loads, convert them to a buildvector of f32
     // loads to prevent having to go through the v4i8 load legalization that
     // needs to extend each element into a larger type.
-    if (N->getNumOperands() % 2 == 0 && all_of(N->op_values(), [](SDValue V) {
-          if (V.getValueType() != MVT::v4i8)
+    if (N->getNumOperands() % 2 == 0 &&
+        all_of(N->op_values(), [SrcVT](SDValue V) {
+          if (V.getValueType() != SrcVT)
             return false;
           if (V.isUndef())
             return true;
@@ -18642,19 +18658,18 @@ static SDValue performConcatVectorsCombine(SDNode *N,
           return LD && V.hasOneUse() && LD->isSimple() && !LD->isIndexed() &&
                  LD->getExtensionType() == ISD::NON_EXTLOAD;
         })) {
-      EVT NVT =
-          EVT::getVectorVT(*DAG.getContext(), MVT::f32, N->getNumOperands());
+      EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
+      EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
       SmallVector<SDValue> Ops;
 
       for (unsigned i = 0; i < N->getNumOperands(); i++) {
         SDValue V = N->getOperand(i);
         if (V.isUndef())
-          Ops.push_back(DAG.getUNDEF(MVT::f32));
+          Ops.push_back(DAG.getUNDEF(FVT));
         else {
           LoadSDNode *LD = cast<LoadSDNode>(V);
-          SDValue NewLoad =
-              DAG.getLoad(MVT::f32, dl, LD->getChain(), LD->getBasePtr(),
-                          LD->getMemOperand());
+          SDValue NewLoad = DAG.getLoad(FVT, dl, LD->getChain(),
+                                        LD->getBasePtr(), LD->getMemOperand());
           DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
           Ops.push_back(NewLoad);
         }

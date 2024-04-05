@@ -1825,7 +1825,24 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+  // Change order of instructions if needed: all OpVariable instructions in a
+  // function must be the first instructions in the first block
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  auto It = MBB->SkipPHIsAndLabels(MBB->begin()), E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return BuildMI(*MBB, It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
@@ -1897,7 +1914,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // FIXME: don't use MachineIRBuilder here, replace it with BuildMI.
   MachineIRBuilder MIRBuilder(I);
   const GlobalValue *GV = I.getOperand(1).getGlobal();
-  Type *GVType = GV->getValueType();
+  Type *GVType = GR.getDeducedGlobalValueType(GV);
   SPIRVType *PointerBaseType;
   if (GVType->isArrayTy()) {
     SPIRVType *ArrayElementType =
