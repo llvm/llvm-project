@@ -9,12 +9,14 @@
 #include "check-cuda.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 
 // Once labeled DO constructs have been canonicalized and their parse subtrees
 // transformed into parser::DoConstructs, scan the parser::Blocks of the program
@@ -410,6 +412,20 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
+  }
+}
+
+void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
+  const evaluate::Assignment *assign{semantics::GetAssignment(x)};
+  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
+  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
+
+  // device to host transfer with more than one device object on the rhs is not
+  // legal.
+  if (nbLhs == 0 && nbRhs > 1) {
+    context_.Say(lhsLoc,
+        "More than one reference to a CUDA object on the right hand side of the assigment"_err_en_US);
   }
 }
 
