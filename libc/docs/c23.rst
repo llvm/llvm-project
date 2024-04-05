@@ -54,7 +54,7 @@ Additions:
   * pown*
   * powr*
   * rootn*
-  * roundeven*
+  * roundeven* |check|
   * fromfp*
   * ufromfp*
   * fromfpx*
