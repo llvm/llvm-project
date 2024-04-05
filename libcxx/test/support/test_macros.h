@@ -386,7 +386,7 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #endif
 
 #if defined(_LIBCPP_HAS_OPEN_WITH_WCHAR)
-#   define TEST_HAS_OPEN_WITH_WCHAR
+#  define TEST_HAS_OPEN_WITH_WCHAR
 #endif
 
 #if defined(_LIBCPP_HAS_NO_INT128) || defined(_MSVC_STL_VERSION)
