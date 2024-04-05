@@ -842,6 +842,55 @@ llvm.func @load_ptr_addrspace_cast() -> !llvm.ptr<2> {
 
 // -----
 
+// CHECK-LABEL: @stores_with_different_types
+// CHECK-SAME: %[[ARG0:.*]]: i64
+// CHECK-SAME: %[[ARG1:.*]]: f64
+llvm.func @stores_with_different_types(%arg0: i64, %arg1: f64, %cond: i1) -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
+  // CHECK: llvm.br ^[[BB3:.*]](%[[ARG0]]
+  llvm.br ^bb3
+^bb2:
+  llvm.store %arg1, %1 {alignment = 4 : i64} : f64, !llvm.ptr
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG1]] : f64 to i64
+  // CHECK: llvm.br ^[[BB3]](%[[BITCAST]]
+  llvm.br ^bb3
+// CHECK: ^[[BB3]](%[[BLOCK_ARG:.*]]: i64)
+^bb3:
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[BLOCK_ARG]] : i64 to f64
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %2 : f64
+}
+
+// -----
+
+// Verifies that stores with smaller bitsize inputs are not replaced. A trivial
+// implementation will be incorrect due to endianness considerations.
+
+// CHECK-LABEL: @stores_with_different_type_sizes
+llvm.func @stores_with_different_type_sizes(%arg0: i64, %arg1: f32, %cond: i1) -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
+  llvm.br ^bb3
+^bb2:
+  llvm.store %arg1, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.br ^bb3
+^bb3:
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  llvm.return %2 : f64
+}
+
+// -----
+
 // CHECK-LABEL: @load_smaller_int
 llvm.func @load_smaller_int() -> i16 {
   %0 = llvm.mlir.constant(1 : i32) : i32
