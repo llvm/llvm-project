@@ -332,9 +332,9 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
                                       transform::TransformState &state) {
   LogicalResult result(failure());
   if (scf::ForOp scfForOp = dyn_cast<scf::ForOp>(op))
-    result = coalescePerfectlyNestedLoops(scfForOp);
+    result = coalescePerfectlyNestedSCFForLoops(scfForOp);
   else if (AffineForOp affineForOp = dyn_cast<AffineForOp>(op))
-    result = coalescePerfectlyNestedLoops(affineForOp);
+    result = coalescePerfectlyNestedAffineLoops(affineForOp);
 
   results.push_back(op);
   if (failed(result)) {
