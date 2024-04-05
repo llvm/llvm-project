@@ -5773,6 +5773,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
 /// VariableMask - The mask is non-constant at compile time.
 /// Alignment - Alignment for one element.
 /// AddressSpace - pointer[s] address space.
+/// TODO: Remove this and use getCommonMaskedMemoryOpCost directly.
 InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
                                             Type *SrcVTy, bool VariableMask,
