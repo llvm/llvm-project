@@ -128,7 +128,7 @@ static bool verifyVPBasicBlock(const VPBasicBlock *VPBB,
       }
       return true;
     }
-    if (isa<VPWidenMemoryInstructionRecipe>(R))
+    if (isa<VPWidenMemoryRecipe>(R))
       VPWidenMemRecipe = R;
     return true;
   };

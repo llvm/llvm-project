@@ -9471,7 +9471,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
 
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGatherScatter = !isConsecutive();
+  bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
@@ -9508,9 +9508,9 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
       // FIXME: Support reverse loading after vp_reverse is added.
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       NewLI = lowerLoadUsingVectorIntrinsics(
-          Builder, DataTy, State.get(getAddr(), Part, !CreateGatherScatter),
-          CreateGatherScatter, MaskPart, EVL, Alignment);
-    } else if (CreateGatherScatter) {
+          Builder, DataTy, State.get(getAddr(), Part, !CreateGather),
+          CreateGather, MaskPart, EVL, Alignment);
+    } else if (CreateGather) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(getAddr(), Part);
       NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, MaskPart,
@@ -9540,7 +9540,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
 
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGatherScatter = !isConsecutive();
+  bool CreateScatter = !isConsecutive();
 
   StoreInst *SI = cast<StoreInst>(&Ingredient);
   auto &Builder = State.Builder;
@@ -9557,52 +9557,50 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
     }
   }
 
-    State.setDebugLocFrom(getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
 
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Instruction *NewSI = nullptr;
-      Value *StoredVal = State.get(StoredValue, Part);
-      // TODO: split this into several classes for better design.
-      if (State.EVL) {
-        assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                                "explicit vector length.");
-        assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                   VPInstruction::ExplicitVectorLength &&
-               "EVL must be VPInstruction::ExplicitVectorLength.");
-        Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-        // If EVL is not nullptr, then EVL must be a valid value set during plan
-        // creation, possibly default value = whole vector register length. EVL
-        // is created only if TTI prefers predicated vectorization, thus if EVL
-        // is not nullptr it also implies preference for predicated
-        // vectorization.
-        // FIXME: Support reverse store after vp_reverse is added.
-        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-        NewSI = lowerStoreUsingVectorIntrinsics(
-            Builder, State.get(getAddr(), Part, !CreateGatherScatter),
-            StoredVal, CreateGatherScatter, MaskPart, EVL, Alignment);
-      } else if (CreateGatherScatter) {
-        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-        Value *VectorGep = State.get(getAddr(), Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
-                                            MaskPart);
-      } else {
-        if (isReverse()) {
-          // If we store to reverse consecutive memory locations, then we need
-          // to reverse the order of elements in the stored value.
-          StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-          // We don't want to update the value in the map as it might be used in
-          // another expression. So don't call resetVectorValue(StoredVal).
-        }
-        auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-        if (isMaskRequired)
-          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
-                                            BlockInMaskParts[Part]);
-        else
-          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Instruction *NewSI = nullptr;
+    Value *StoredVal = State.get(StoredValue, Part);
+    // TODO: split this into several classes for better design.
+    if (State.EVL) {
+      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                              "explicit vector length.");
+      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
+                 VPInstruction::ExplicitVectorLength &&
+             "EVL must be VPInstruction::ExplicitVectorLength.");
+      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
+      // If EVL is not nullptr, then EVL must be a valid value set during plan
+      // creation, possibly default value = whole vector register length. EVL
+      // is created only if TTI prefers predicated vectorization, thus if EVL
+      // is not nullptr it also implies preference for predicated
+      // vectorization.
+      // FIXME: Support reverse store after vp_reverse is added.
+      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      NewSI = lowerStoreUsingVectorIntrinsics(
+          Builder, State.get(getAddr(), Part, !CreateScatter), StoredVal,
+          CreateScatter, MaskPart, EVL, Alignment);
+    } else if (CreateScatter) {
+      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      Value *VectorGep = State.get(getAddr(), Part);
+      NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
+                                          MaskPart);
+    } else {
+      if (isReverse()) {
+        // If we store to reverse consecutive memory locations, then we need
+        // to reverse the order of elements in the stored value.
+        StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
+        // We don't want to update the value in the map as it might be used in
+        // another expression. So don't call resetVectorValue(StoredVal).
       }
-      State.addMetadata(NewSI, SI);
+      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
+      if (isMaskRequired)
+        NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
+                                          BlockInMaskParts[Part]);
+      else
+        NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
     }
-    return;
+    State.addMetadata(NewSI, SI);
   }
 }
 

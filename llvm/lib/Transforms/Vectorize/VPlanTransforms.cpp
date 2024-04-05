@@ -1314,7 +1314,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
   VPValue *VPTrueMask = Plan.getOrAddLiveIn(TrueMask);
   replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
-    return isa<VPWidenMemoryInstructionRecipe>(U);
+    return isa<VPWidenMemoryRecipe>(U);
   });
   // Now create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());

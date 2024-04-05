@@ -2296,10 +2296,6 @@ protected:
     addOperand(Mask);
   }
 
-  bool isMasked() const {
-    return isStore() ? getNumOperands() == 3 : getNumOperands() == 2;
-  }
-
 public:
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
@@ -2316,18 +2312,17 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenLoadSC;
   }
 
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
+  /// Returns true if the recipe is masked.
+  virtual bool isMasked() const = 0;
+
   /// Return the address accessed by this recipe.
   virtual VPValue *getAddr() const = 0;
 
-  /// Return the mask used by this recipe. Note that a full mask is represented
-  /// by a nullptr.
-  VPValue *getMask() const {
-    // Mask is optional and therefore the last operand.
-    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
-  }
-
-  /// Returns true if this recipe is a store.
-  bool isStore() const { return isa<StoreInst>(Ingredient); }
 
   // Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
@@ -2336,13 +2331,20 @@ public:
   // order.
   bool isReverse() const { return Reverse; }
 
+  /// Return the mask used by this recipe. Note that a full mask is represented
+  /// by a nullptr.
+  VPValue *getMask() const {
+    // Mask is optional and therefore the last operand.
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+
   /// Generate the wide load/store.
   void execute(VPTransformState &State) override = 0;
 
   Instruction &getIngredient() const { return Ingredient; }
 };
 
-struct VPWidenLoadRecipe : public VPWidenMemoryRecipe, public VPValue {
+struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
                     bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
@@ -2358,9 +2360,10 @@ struct VPWidenLoadRecipe : public VPWidenMemoryRecipe, public VPValue {
                                  getDebugLoc());
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
+
+  /// Returns true if the recipe is masked.
+  bool isMasked() const override { return getNumOperands() == 2; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const override {
@@ -2388,7 +2391,7 @@ struct VPWidenLoadRecipe : public VPWidenMemoryRecipe, public VPValue {
   }
 };
 
-struct VPWidenStoreRecipe : public VPWidenMemoryRecipe {
+struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *StoredVal, VPValue *Addr,
                      VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {StoredVal, Addr},
@@ -2403,9 +2406,10 @@ struct VPWidenStoreRecipe : public VPWidenMemoryRecipe {
                                   getDebugLoc());
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenStoreSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
+
+  /// Returns true if the recipe is masked.
+  bool isMasked() const override { return getNumOperands() == 3; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const override { return getOperand(1); }

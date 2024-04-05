@@ -35,7 +35,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    WIDEN ir<[[ADD:%.+]]> = add nsw ir<[[LD2]]>, ir<[[LD1]]>
 ; IF-EVL-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
-; IF-EVL-NEXT:    WIDEN store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[MASK]]>
+; IF-EVL-NEXT:    WIDEN store ir<[[ADD]]>, vp<[[PTR3]]>, vp<[[MASK]]>
 ; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT:%[0-9]+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT]]>, vp<[[VTC]]>
 ; IF-EVL-NEXT:  No successors
@@ -62,7 +62,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add nsw ir<[[LD2]]>, ir<[[LD1]]>
 ; NO-VP-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; NO-VP-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer ir<[[GEP3]]>
-; NO-VP-NEXT:    WIDEN store vp<[[PTR3]]>, ir<[[ADD]]>
+; NO-VP-NEXT:    WIDEN store ir<[[ADD]]>, vp<[[PTR3]]>
 ; NO-VP-NEXT:    EMIT vp<[[IV_NEXT:%[0-9]+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
 ; NO-VP-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT]]>, vp<[[VTC]]>
 ; NO-VP-NEXT:  No successors
