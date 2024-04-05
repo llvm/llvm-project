@@ -110,11 +110,22 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (FName.starts_with("__inline") && FName.contains(Name))
     return true;
 
-  if (FName.starts_with("__") && FName.ends_with("_chk") &&
-      FName.contains(Name))
-    return true;
-
   return false;
+}
+
+bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
+                                         StringRef Name) {
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  auto CompletelyMatchesParts = [II](auto... Parts) -> bool {
+    StringRef FName = II->getName();
+    return (FName.consume_front(Parts) && ...) && FName.empty();
+  };
+
+  return CompletelyMatchesParts("__", Name, "_chk") ||
+         CompletelyMatchesParts("__builtin_", "__", Name, "_chk");
 }
 
 StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
