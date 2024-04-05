@@ -3425,7 +3425,8 @@ defm openmp_extensions: BoolFOption<"openmp-extensions",
           "Enable all Clang extensions for OpenMP directives and clauses">,
   NegFlag<SetFalse, [NoArgumentUnused], [ClangOption, CC1Option],
           "Disable all Clang extensions for OpenMP directives and clauses">>;
-def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
+def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
