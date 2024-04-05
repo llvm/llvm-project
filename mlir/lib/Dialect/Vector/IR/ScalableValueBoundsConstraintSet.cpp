@@ -59,16 +59,12 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
   ScalableValueBoundsConstraintSet scalableCstr(
       value.getContext(), stopCondition ? stopCondition : defaultStopCondition,
       vscaleMin, vscaleMax);
-  int64_t pos = scalableCstr.insert(value, dim, /*isSymbol=*/false);
-  scalableCstr.processWorklist();
+  int64_t pos = scalableCstr.populateConstraintsSet(value, dim);
 
-  // Project out all columns apart from vscale and the starting point
-  // (value/dim). This should result in constraints in terms of vscale only.
+  // Project out all variables apart from vscale.
+  // This should result in constraints in terms of vscale only.
   auto projectOutFn = [&](ValueDim p) {
-    bool isStartingPoint =
-        p.first == value &&
-        p.second == dim.value_or(ValueBoundsConstraintSet::kIndexValue);
-    return p.first != scalableCstr.getVscaleValue() && !isStartingPoint;
+    return p.first != scalableCstr.getVscaleValue();
   };
   scalableCstr.projectOut(projectOutFn);
 
@@ -76,7 +72,7 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
              scalableCstr.positionToValueDim.size() &&
          "inconsistent mapping state");
 
-  // Check that the only columns left are vscale and the starting point.
+  // Check that the only symbols left are vscale.
   for (int64_t i = 0; i < scalableCstr.cstr.getNumDimAndSymbolVars(); ++i) {
     if (i == pos)
       continue;
