@@ -2094,10 +2094,3 @@ module std [system] {
 
     module std_private_vector_fwd [system] { header "__fwd/vector.h" }
 } // module std
-
-// Convenience method to get all of the above modules in a single import statement.
-    // Importing only the needed modules is likely to be more performant.
-    module std_clang [system] {
-      header "__std_clang_module"
-      export *
-    }

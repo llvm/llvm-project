@@ -13,6 +13,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
+// Workaround for compilers that do not support builtin detection.
+// FIXME: This is only required for the GPU portion which should be moved.
+#ifndef __has_builtin
+#define __has_builtin(b) 0
+#endif
+
 // Compiler feature-detection.
 // clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension
 #ifdef __has_feature

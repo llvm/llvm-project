@@ -8219,9 +8219,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // Call site info is used for function's parameter entry value
         // tracking. For now we track only simple cases when parameter
         // is transferred through whole register.
-        llvm::erase_if(CSInfo, [&VA](MachineFunction::ArgRegPair ArgReg) {
-          return ArgReg.Reg == VA.getLocReg();
-        });
+        llvm::erase_if(CSInfo.ArgRegPairs,
+                       [&VA](MachineFunction::ArgRegPair ArgReg) {
+                         return ArgReg.Reg == VA.getLocReg();
+                       });
       } else {
         // Add an extra level of indirection for streaming mode changes by
         // using a pseudo copy node that cannot be rematerialised between a
@@ -8233,7 +8234,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
         if (Options.EmitCallSiteInfo)
-          CSInfo.emplace_back(VA.getLocReg(), i);
+          CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
       }
     } else {
       assert(VA.isMemLoc());
@@ -26024,7 +26025,7 @@ static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
 Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the stack cookie. See the definition
   // of TLS_SLOT_STACK_GUARD in
-  // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
+  // https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/tls_defines.h
   if (Subtarget->isTargetAndroid())
     return UseTlsOffset(IRB, 0x28);
 
