@@ -493,8 +493,13 @@ void handleInputEntry(const VarLocResult &from, VarLocResult to,
         findPathBetween(from, to, path, {}, "npe-bug", jResults);
 
         logger.info("Generating NPE fix version ...");
-        findPathBetween(from, sourceExit, pathInSourceFunction, {to}, "npe-fix",
-                        jResults);
+        findPathBetween(from,
+                        // 如果中间路径中没有 source 所在函数中的语句，就用 exit
+                        // 否则，用中间路径的最后一条
+                        pathInSourceFunction.empty()
+                            ? sourceExit
+                            : pathInSourceFunction.back(),
+                        pathInSourceFunction, {to}, "npe-fix", jResults);
     } else {
         logger.info("Handle unknown type: {}", type);
         if (!to.isValid()) {
