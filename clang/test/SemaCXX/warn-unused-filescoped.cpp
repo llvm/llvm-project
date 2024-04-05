@@ -80,15 +80,15 @@ struct S {
   struct CS {
     CS() {}
     CS(bool a) {}
-    CS(int b) {} // expected-warning{{unused constructor 'CS'}}
+    CS(int b) {} // expected-warning{{unused constructor}}
     CS(float c);
   };
 
   struct DCS : public CS {
-    DCS() = default; // expected-warning{{unused constructor 'DCS'}}
-    DCS(bool a) : CS(a) {} // expected-warning{{unused constructor 'DCS'}}
+    DCS() = default; // expected-warning{{unused constructor}}
+    DCS(bool a) : CS(a) {} // expected-warning{{unused constructor}}
     DCS(const DCS&) {}
-    DCS(DCS&&) {} // expected-warning{{unused constructor 'DCS'}}
+    DCS(DCS&&) {} // expected-warning{{unused constructor}}
   };
 
   template<typename T>
@@ -96,12 +96,12 @@ struct S {
     TCS();
   };
   template <typename T> TCS<T>::TCS() {}
-  template <> TCS<int>::TCS() {} // expected-warning{{unused constructor 'TCS'}}
+  template <> TCS<int>::TCS() {} // expected-warning{{unused constructor}}
 }
 
 void S::m3() {} // expected-warning{{unused member function 'm3'}}
 
-CS::CS(float c) {} // expected-warning{{unused constructor 'CS'}}
+CS::CS(float c) {} // expected-warning{{unused constructor}}
 
 static inline void f4() {} // expected-warning{{unused function 'f4'}}
 const unsigned int cx = 0; // expected-warning{{unused variable 'cx'}}

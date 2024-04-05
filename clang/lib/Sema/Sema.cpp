@@ -1399,11 +1399,12 @@ void Sema::ActOnEndOfTranslationUnit() {
             Diag(DiagD->getLocation(), diag::warn_unused_template)
                 << /*function=*/0 << DiagD << DiagRange;
           else {
-            if (isa<CXXMethodDecl>(DiagD))
+            if (isa<CXXConstructorDecl>(DiagD))
               Diag(DiagD->getLocation(), diag::warn_unused_member_function)
-                  << (!isa<CXXConstructorDecl>(DiagD) ? /*member function=*/0
-                                                      : /*constructor=*/1)
-                  << DiagD << DiagRange;
+                  << /*constructor=*/0 << DiagRange;
+            else if (isa<CXXMethodDecl>(DiagD))
+              Diag(DiagD->getLocation(), diag::warn_unused_member_function)
+                  << /*member function=*/1 << DiagD << DiagRange;
             else
               Diag(DiagD->getLocation(), diag::warn_unused_function)
                   << DiagD << DiagRange;
