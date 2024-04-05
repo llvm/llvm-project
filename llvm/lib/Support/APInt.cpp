@@ -1240,15 +1240,15 @@ APInt APInt::sqrt() const {
   return x_old + 1;
 }
 
-/// Computes the multiplicative inverse of this APInt for a given modulo. The
-/// iterative extended Euclidean algorithm is used to solve for this value,
+/// Computes the multiplicative inverse of this APInt for a given modululus,
+/// or returns 0 if no multiplicative inverse exists.
+///
+/// The iterative extended Euclidean algorithm is used to solve for this value,
 /// however we simplify it to speed up calculating only the inverse, and take
 /// advantage of div+rem calculations. We also use some tricks to avoid copying
 /// (potentially large) APInts around.
-/// WARNING: a value of '0' may be returned,
-///          signifying that no multiplicative inverse exists!
-APInt APInt::multiplicativeInverse(const APInt& modulo) const {
-  assert(ult(modulo) && "This APInt must be smaller than the modulo");
+APInt APInt::multiplicativeInverse(const APInt& Modulus) const {
+  assert(ult(Modulus) && "This APInt must be smaller than the modulus");
 
   // Using the properties listed at the following web page (accessed 06/21/08):
   //   http://www.numbertheory.org/php/euclid.html
@@ -1257,36 +1257,35 @@ APInt APInt::multiplicativeInverse(const APInt& modulo) const {
   // below. More precisely, this number of bits suffice if the multiplicative
   // inverse exists, but may not suffice for the general extended Euclidean
   // algorithm.
-
-  APInt r[2] = { modulo, *this };
-  APInt t[2] = { APInt(BitWidth, 0), APInt(BitWidth, 1) };
-  APInt q(BitWidth, 0);
+  APInt R[2] = { Modulus, *this };
+  APInt T[2] = { APInt(BitWidth, 0), APInt(BitWidth, 1) };
+  APInt Q(BitWidth, 0);
 
   unsigned i;
-  for (i = 0; r[i^1] != 0; i ^= 1) {
+  for (i = 0; R[i^1] != 0; i ^= 1) {
     // An overview of the math without the confusing bit-flipping:
-    // q = r[i-2] / r[i-1]
-    // r[i] = r[i-2] % r[i-1]
-    // t[i] = t[i-2] - t[i-1] * q
-    udivrem(r[i], r[i^1], q, r[i]);
-    t[i] -= t[i^1] * q;
+    // Q = R[i-2] / R[i-1]
+    // R[i] = R[i-2] % R[i-1]
+    // T[i] = T[i-2] - T[i-1] * Q
+    udivrem(R[i], R[i^1], Q, R[i]);
+    T[i] -= T[i^1] * Q;
   }
 
-  // If this APInt and the modulo are not coprime, there is no multiplicative
+  // If this APInt and the modulus are not coprime, there is no multiplicative
   // inverse, so return 0. We check this by looking at the next-to-last
-  // remainder, which is the gcd(*this,modulo) as calculated by the Euclidean
+  // remainder, which is the gcd(*this, modulus) as calculated by the Euclidean
   // algorithm.
-  if (r[i] != 1)
+  if (R[i] != 1)
     return APInt(BitWidth, 0);
 
   // The next-to-last t is the multiplicative inverse.  However, we are
   // interested in a positive inverse. Calculate a positive one from a negative
-  // one if necessary. A simple addition of the modulo suffices because
+  // one if necessary. A simple addition of the modulus suffices because
   // abs(t[i]) is known to be less than *this/2 (see the link above).
-  if (t[i].isNegative())
-    t[i] += modulo;
+  if (T[i].isNegative())
+    T[i] += Modulus;
 
-  return std::move(t[i]);
+  return std::move(T[i]);
 }
 
 /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.

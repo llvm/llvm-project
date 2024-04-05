@@ -3248,21 +3248,58 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
     Iterate(i);
 }
 
-TEST(APIntTest, MultiplicativeInverseExaustive) {
-  for (unsigned BitWidth = 1; BitWidth <= 16; ++BitWidth) {
-    for (unsigned Value = 0; Value < (1u << BitWidth); ++Value) {
+TEST(APIntTest, MultiplicativeInverseExaustivePowerOfTwo) {
+  for (unsigned BitWidth = 1; BitWidth <= 8; ++BitWidth) {
+    for (unsigned Value = 1; Value < (1u << BitWidth); Value += 2) {
+      // Multiplicative inverse exists for all odd numbers.
       APInt V = APInt(BitWidth, Value);
-      APInt MulInv =
-          V.zext(BitWidth + 1)
-              .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
-              .trunc(BitWidth);
-      APInt One = V * MulInv;
-      if (V[0]) {
-        // Multiplicative inverse exists for all odd numbers.
-        EXPECT_TRUE(One.isOne());
-        EXPECT_TRUE((V * V.multiplicativeInverse()).isOne());
+      EXPECT_EQ(V * V.multiplicativeInverse(), 1);
+    }
+  }
+}
+
+TEST(APIntTest, ModularMultiplicativeInverseSpecific) {
+  // Test a single modulus for all known inverses and non-inverses.
+  int BitWidth = 8;
+  APInt Modulus(BitWidth, 26);
+  int Values[12] = {1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25};
+  int Inverses[12] = {1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25};
+  int NonInvertibleElements[14] = {0,  2,  4,  6,  8,  10, 12,
+                                   13, 14, 16, 18, 20, 22, 24};
+
+  for (size_t i = 0; i < 12; ++i) {
+    APInt V(BitWidth, Values[i]);
+    APInt Inv = V.multiplicativeInverse(Modulus);
+    EXPECT_EQ(Inv, Inverses[i]);
+  }
+
+  for (size_t i = 0; i < 14; ++i) {
+    APInt V(BitWidth, NonInvertibleElements[i]);
+    APInt Inv = V.multiplicativeInverse(Modulus);
+    EXPECT_EQ(Inv, 0);
+  }
+}
+
+TEST(APIntTest, ModularMultiplicativeInverseExaustive) {
+  // Test all moduli and all values up to 8 bits using a gcd test to determine
+  // if a multiplicative inverse exists.
+  int BitWidth = 8;
+  for (unsigned Modulus = 2; Modulus < (1u << BitWidth); ++Modulus) {
+    for (unsigned Value = 0; Value < Modulus; ++Value) {
+      APInt M(BitWidth, Modulus);
+      APInt V(BitWidth, Value);
+      EXPECT_TRUE(V.ult(M))
+          << "Expected " << V << " ult " << M << ", but it was not";
+      APInt MulInv = V.multiplicativeInverse(M);
+      if (APIntOps::GreatestCommonDivisor(V, M).isOne()) {
+        EXPECT_FALSE(MulInv.isZero());
+        // Multiplication verification must take place in a larger bit width
+        APInt Actual = (V.zext(2 * BitWidth) * MulInv.zext(2 * BitWidth))
+                           .urem(M.zext(2 * BitWidth));
+        EXPECT_TRUE(Actual.isOne())
+            << "Expected " << V << " * " << MulInv << " = 1 mod " << M
+            << ", but it was " << Actual;
       } else {
-        // Multiplicative inverse does not exist for even numbers (and 0).
         EXPECT_TRUE(MulInv.isZero());
       }
     }
