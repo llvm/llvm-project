@@ -2631,6 +2631,11 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
   return false;
 }
 
+static bool isLogicOp(unsigned Opcode) {
+  // TODO: Add support for X86ISD::FAND/FOR/FXOR/FANDN with test coverage.
+  return ISD::isBitwiseLogicOp(Opcode) || X86ISD::ANDNP == Opcode;
+}
+
 static bool isTargetShuffle(unsigned Opcode) {
   switch(Opcode) {
   default: return false;
@@ -39956,8 +39961,10 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
                                          const SDLoc &DL) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ShuffleVT = N.getValueType();
+  unsigned Opc = N.getOpcode();
 
-  auto IsMergeableWithShuffle = [&DAG](SDValue Op, bool FoldLoad = false) {
+  auto IsMergeableWithShuffle = [Opc, &DAG](SDValue Op, bool FoldShuf = true,
+                                            bool FoldLoad = false) {
     // AllZeros/AllOnes constants are freely shuffled and will peek through
     // bitcasts. Other constant build vectors do not peek through bitcasts. Only
     // merge with target shuffles if it has one use so shuffle combining is
@@ -39967,20 +39974,19 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
            ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
            getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
+           (Op.getOpcode() == Opc && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
-           (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
+           (FoldShuf && isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
            (FoldLoad && isShuffleFoldableLoad(Op)) ||
            DAG.isSplatValue(Op, /*AllowUndefs*/ false);
   };
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
     // Ensure we only shuffle whole vector src elements, unless its a logical
     // binops where we can more aggressively move shuffles from dst to src.
-    return BinOp == ISD::AND || BinOp == ISD::OR || BinOp == ISD::XOR ||
-           BinOp == X86ISD::ANDNP ||
+    return isLogicOp(BinOp) ||
            (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
   };
 
-  unsigned Opc = N.getOpcode();
   switch (Opc) {
   // Unary and Unary+Permute Shuffles.
   case X86ISD::PSHUFB: {
@@ -40006,8 +40012,10 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
-        if (IsMergeableWithShuffle(Op00, Opc != X86ISD::PSHUFB) ||
-            IsMergeableWithShuffle(Op01, Opc != X86ISD::PSHUFB)) {
+        if (IsMergeableWithShuffle(Op00, Opc != X86ISD::VPERMI,
+                                   Opc != X86ISD::PSHUFB) ||
+            IsMergeableWithShuffle(Op01, Opc != X86ISD::VPERMI,
+                                   Opc != X86ISD::PSHUFB)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
@@ -42717,6 +42725,8 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   switch (Op.getOpcode()) {
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
+  case X86ISD::UNPCKH:
+  case X86ISD::UNPCKL:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -43995,6 +44005,50 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
                      Extract->getOperand(1));
 }
 
+// If this extract is from a loaded vector value and will be used as an
+// integer, that requires a potentially expensive XMM -> GPR transfer.
+// Additionally, if we can convert to a scalar integer load, that will likely
+// be folded into a subsequent integer op.
+// Note: SrcVec might not have a VecVT type, but it must be the same size.
+// Note: Unlike the related fold for this in DAGCombiner, this is not limited
+//       to a single-use of the loaded vector. For the reasons above, we
+//       expect this to be profitable even if it creates an extra load.
+static SDValue
+combineExtractFromVectorLoad(SDNode *N, EVT VecVT, SDValue SrcVec, uint64_t Idx,
+                             const SDLoc &dl, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+         "Only EXTRACT_VECTOR_ELT supported so far");
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = N->getValueType(0);
+
+  bool LikelyUsedAsVector = any_of(N->uses(), [](SDNode *Use) {
+    return Use->getOpcode() == ISD::STORE ||
+           Use->getOpcode() == ISD::INSERT_VECTOR_ELT ||
+           Use->getOpcode() == ISD::SCALAR_TO_VECTOR;
+  });
+
+  auto *LoadVec = dyn_cast<LoadSDNode>(SrcVec);
+  if (LoadVec && ISD::isNormalLoad(LoadVec) && VT.isInteger() &&
+      VecVT.getVectorElementType() == VT &&
+      VecVT.getSizeInBits() == SrcVec.getValueSizeInBits() &&
+      DCI.isAfterLegalizeDAG() && !LikelyUsedAsVector && LoadVec->isSimple()) {
+    SDValue NewPtr = TLI.getVectorElementPointer(
+        DAG, LoadVec->getBasePtr(), VecVT, DAG.getVectorIdxConstant(Idx, dl));
+    unsigned PtrOff = VT.getSizeInBits() * Idx / 8;
+    MachinePointerInfo MPI = LoadVec->getPointerInfo().getWithOffset(PtrOff);
+    Align Alignment = commonAlignment(LoadVec->getAlign(), PtrOff);
+    SDValue Load =
+        DAG.getLoad(VT, dl, LoadVec->getChain(), NewPtr, MPI, Alignment,
+                    LoadVec->getMemOperand()->getFlags(), LoadVec->getAAInfo());
+    DAG.makeEquivalentMemoryOrdering(LoadVec, Load);
+    return Load;
+  }
+
+  return SDValue();
+}
+
 // Attempt to peek through a target shuffle and extract the scalar from the
 // source.
 static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
@@ -44190,6 +44244,11 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   ExtractIdx = ExtractIdx % Mask.size();
   if (SDValue V = GetLegalExtract(SrcOp, ExtractVT, ExtractIdx))
     return DAG.getZExtOrTrunc(V, dl, VT);
+
+  if (N->getOpcode() == ISD::EXTRACT_VECTOR_ELT && ExtractVT == SrcVT)
+    if (SDValue V = combineExtractFromVectorLoad(
+            N, SrcVT, peekThroughBitcasts(SrcOp), ExtractIdx, dl, DAG, DCI))
+      return V;
 
   return SDValue();
 }
@@ -44600,6 +44659,12 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = scalarizeExtEltFP(N, DAG, Subtarget))
     return V;
 
+  if (CIdx)
+    if (SDValue V = combineExtractFromVectorLoad(
+            N, InputVector.getValueType(), InputVector, CIdx->getZExtValue(),
+            dl, DAG, DCI))
+      return V;
+
   // Attempt to extract a i1 element by using MOVMSK to extract the signbits
   // and then testing the relevant element.
   //
@@ -44643,34 +44708,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
         return SDValue(N, 0);
       }
     }
-  }
-
-  // If this extract is from a loaded vector value and will be used as an
-  // integer, that requires a potentially expensive XMM -> GPR transfer.
-  // Additionally, if we can convert to a scalar integer load, that will likely
-  // be folded into a subsequent integer op.
-  // Note: Unlike the related fold for this in DAGCombiner, this is not limited
-  //       to a single-use of the loaded vector. For the reasons above, we
-  //       expect this to be profitable even if it creates an extra load.
-  bool LikelyUsedAsVector = any_of(N->uses(), [](SDNode *Use) {
-    return Use->getOpcode() == ISD::STORE ||
-           Use->getOpcode() == ISD::INSERT_VECTOR_ELT ||
-           Use->getOpcode() == ISD::SCALAR_TO_VECTOR;
-  });
-  auto *LoadVec = dyn_cast<LoadSDNode>(InputVector);
-  if (LoadVec && CIdx && ISD::isNormalLoad(LoadVec) && VT.isInteger() &&
-      SrcVT.getVectorElementType() == VT && DCI.isAfterLegalizeDAG() &&
-      !LikelyUsedAsVector && LoadVec->isSimple()) {
-    SDValue NewPtr =
-        TLI.getVectorElementPointer(DAG, LoadVec->getBasePtr(), SrcVT, EltIdx);
-    unsigned PtrOff = VT.getSizeInBits() * CIdx->getZExtValue() / 8;
-    MachinePointerInfo MPI = LoadVec->getPointerInfo().getWithOffset(PtrOff);
-    Align Alignment = commonAlignment(LoadVec->getAlign(), PtrOff);
-    SDValue Load =
-        DAG.getLoad(VT, dl, LoadVec->getChain(), NewPtr, MPI, Alignment,
-                    LoadVec->getMemOperand()->getFlags(), LoadVec->getAAInfo());
-    DAG.makeEquivalentMemoryOrdering(LoadVec, Load);
-    return Load;
   }
 
   return SDValue();
@@ -47406,10 +47443,13 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::VSRAV, DL, N->getVTList(), N0, ShrAmtVal);
   }
 
-  // fold (ashr (shl, a, [56,48,32,24,16]), SarConst)
-  // into (shl, (sext (a), [56,48,32,24,16] - SarConst)) or
-  // into (lshr, (sext (a), SarConst - [56,48,32,24,16]))
-  // depending on sign of (SarConst - [56,48,32,24,16])
+  // fold (SRA (SHL X, ShlConst), SraConst)
+  // into (SHL (sext_in_reg X), ShlConst - SraConst)
+  //   or (sext_in_reg X)
+  //   or (SRA (sext_in_reg X), SraConst - ShlConst)
+  // depending on relation between SraConst and ShlConst.
+  // We only do this if (Size - ShlConst) is equal to 8, 16 or 32. That allows
+  // us to do the sext_in_reg from corresponding bit.
 
   // sexts in X86 are MOVs. The MOVs have the same code size
   // as above SHIFTs (only SHIFT on 1 has lower code size).
@@ -47425,29 +47465,29 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
   SDValue N00 = N0.getOperand(0);
   SDValue N01 = N0.getOperand(1);
   APInt ShlConst = N01->getAsAPIntVal();
-  APInt SarConst = N1->getAsAPIntVal();
+  APInt SraConst = N1->getAsAPIntVal();
   EVT CVT = N1.getValueType();
 
-  if (SarConst.isNegative())
+  if (CVT != N01.getValueType())
+    return SDValue();
+  if (SraConst.isNegative())
     return SDValue();
 
   for (MVT SVT : { MVT::i8, MVT::i16, MVT::i32 }) {
     unsigned ShiftSize = SVT.getSizeInBits();
-    // skipping types without corresponding sext/zext and
-    // ShlConst that is not one of [56,48,32,24,16]
+    // Only deal with (Size - ShlConst) being equal to 8, 16 or 32.
     if (ShiftSize >= Size || ShlConst != Size - ShiftSize)
       continue;
     SDLoc DL(N);
     SDValue NN =
         DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N00, DAG.getValueType(SVT));
-    SarConst = SarConst - (Size - ShiftSize);
-    if (SarConst == 0)
+    if (SraConst.eq(ShlConst))
       return NN;
-    if (SarConst.isNegative())
+    if (SraConst.ult(ShlConst))
       return DAG.getNode(ISD::SHL, DL, VT, NN,
-                         DAG.getConstant(-SarConst, DL, CVT));
+                         DAG.getConstant(ShlConst - SraConst, DL, CVT));
     return DAG.getNode(ISD::SRA, DL, VT, NN,
-                       DAG.getConstant(SarConst, DL, CVT));
+                       DAG.getConstant(SraConst - ShlConst, DL, CVT));
   }
   return SDValue();
 }
@@ -48270,7 +48310,7 @@ static SDValue combineAndShuffleNot(SDNode *N, SelectionDAG &DAG,
 
   // We do not split for SSE at all, but we need to split vectors for AVX1 and
   // AVX2.
-  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() && 
+  if (!Subtarget.useAVX512Regs() && VT.is512BitVector() &&
       TLI.isTypeLegal(VT.getHalfNumVectorElementsVT(*DAG.getContext()))) {
     SDValue LoX, HiX;
     std::tie(LoX, HiX) = splitVector(X, DAG, DL);
@@ -55529,7 +55569,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     // Due to VADD, VSUB, VMUL can executed on more ports than VINSERT and
-    // their latency are short, so here we don't replace them.
+    // their latency are short, so here we don't replace them unless we won't
+    // introduce extra VINSERT.
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+      if (!IsSplat && (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1)) &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
     case ISD::FDIV:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {

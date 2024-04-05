@@ -106,3 +106,13 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(fsblkcnt_t HDR fsblkcnt_t.h)
+add_header(fsfilcnt_t HDR fsfilcnt_t.h)
+add_header(
+  struct_statvfs 
+HDR 
+  struct_statvfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
+)

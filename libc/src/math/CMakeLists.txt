@@ -59,6 +59,11 @@ add_math_entrypoint_object(atan2f)
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
 
+add_math_entrypoint_object(canonicalize)
+add_math_entrypoint_object(canonicalizef)
+add_math_entrypoint_object(canonicalizef128)
+add_math_entrypoint_object(canonicalizel)
+
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
@@ -82,6 +87,8 @@ add_math_entrypoint_object(expf)
 
 add_math_entrypoint_object(exp2)
 add_math_entrypoint_object(exp2f)
+
+add_math_entrypoint_object(exp2m1f)
 
 add_math_entrypoint_object(exp10)
 add_math_entrypoint_object(exp10f)
@@ -116,6 +123,46 @@ add_math_entrypoint_object(fmin)
 add_math_entrypoint_object(fminf)
 add_math_entrypoint_object(fminl)
 add_math_entrypoint_object(fminf128)
+
+add_math_entrypoint_object(fmaximum)
+add_math_entrypoint_object(fmaximumf)
+add_math_entrypoint_object(fmaximuml)
+add_math_entrypoint_object(fmaximumf128)
+
+add_math_entrypoint_object(fmaximum_num)
+add_math_entrypoint_object(fmaximum_numf)
+add_math_entrypoint_object(fmaximum_numl)
+add_math_entrypoint_object(fmaximum_numf128)
+
+add_math_entrypoint_object(fmaximum_mag)
+add_math_entrypoint_object(fmaximum_magf)
+add_math_entrypoint_object(fmaximum_magl)
+add_math_entrypoint_object(fmaximum_magf128)
+
+add_math_entrypoint_object(fmaximum_mag_num)
+add_math_entrypoint_object(fmaximum_mag_numf)
+add_math_entrypoint_object(fmaximum_mag_numl)
+add_math_entrypoint_object(fmaximum_mag_numf128)
+
+add_math_entrypoint_object(fminimum)
+add_math_entrypoint_object(fminimumf)
+add_math_entrypoint_object(fminimuml)
+add_math_entrypoint_object(fminimumf128)
+
+add_math_entrypoint_object(fminimum_num)
+add_math_entrypoint_object(fminimum_numf)
+add_math_entrypoint_object(fminimum_numl)
+add_math_entrypoint_object(fminimum_numf128)
+
+add_math_entrypoint_object(fminimum_mag)
+add_math_entrypoint_object(fminimum_magf)
+add_math_entrypoint_object(fminimum_magl)
+add_math_entrypoint_object(fminimum_magf128)
+
+add_math_entrypoint_object(fminimum_mag_num)
+add_math_entrypoint_object(fminimum_mag_numf)
+add_math_entrypoint_object(fminimum_mag_numl)
+add_math_entrypoint_object(fminimum_mag_numf128)
 
 add_math_entrypoint_object(fmod)
 add_math_entrypoint_object(fmodf)

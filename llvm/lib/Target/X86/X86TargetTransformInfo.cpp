@@ -2664,9 +2664,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   7 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
@@ -5659,7 +5659,7 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;

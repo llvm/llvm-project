@@ -1507,14 +1507,29 @@ def extract_api : Flag<["-"], "extract-api">,
 def product_name_EQ: Joined<["--"], "product-name=">,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ProductName">>;
-def emit_symbol_graph_EQ: JoinedOrSeparate<["--"], "emit-symbol-graph=">,
+def emit_symbol_graph: Flag<["-"], "emit-symbol-graph">,
   Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Generate Extract API information as a side effect of compilation.">,
-    MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+  HelpText<"Generate Extract API information as a side effect of compilation.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraph">>;
+def emit_extension_symbol_graphs: Flag<["--"], "emit-extension-symbol-graphs">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate additional symbol graphs for extended modules.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitExtensionSymbolGraphs">>;
 def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
+def symbol_graph_dir_EQ: Joined<["--"], "symbol-graph-dir=">,
+   Visibility<[ClangOption, CC1Option]>,
+   HelpText<"Directory in which to emit symbol graphs.">,
+   MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+def emit_pretty_sgf: Flag<["--"], "pretty-sgf">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Emit pretty printed symbol graphs">,
+    MarshallingInfoFlag<FrontendOpts<"EmitPrettySymbolGraphs">>;
+def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for-testing">,
+   Visibility<[CC1Option]>,
+   MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
 def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3635,6 +3650,9 @@ defm preserve_as_comments : BoolFOption<"preserve-as-comments",
           "Do not preserve comments in inline assembly">,
   PosFlag<SetTrue>>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
+def reexport_framework : Separate<["-"], "reexport_framework">, Flags<[LinkerInput]>;
+def reexport_l : Joined<["-"], "reexport-l">, Flags<[LinkerInput]>;
+def reexport_library : JoinedOrSeparate<["-"], "reexport_library">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -4105,12 +4123,8 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
-let Group = f_Group in {
-  let Visibility = [ClangOption,CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
-  }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -4511,6 +4525,9 @@ def mwindows : Joined<["-"], "mwindows">, Group<m_Group>;
 def mdll : Joined<["-"], "mdll">, Group<m_Group>;
 def municode : Joined<["-"], "municode">, Group<m_Group>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
+def marm64x : Joined<["-"], "marm64x">, Group<m_Group>,
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Link as a hybrid ARM64X image">;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
@@ -8311,6 +8328,7 @@ def _SLASH_Fi : CLCompileJoined<"Fi">,
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file (with /c)">,
   MetaVarName<"<file or dir/>">;
+def _SLASH_Fo_COLON : CLCompileJoined<"Fo:">, Alias<_SLASH_Fo>;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. "
            "Enable EH Continuation Guard with /guard:ehcont">;

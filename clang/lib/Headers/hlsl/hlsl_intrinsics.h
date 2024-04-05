@@ -243,15 +243,6 @@ float3 ceil(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 float4 ceil(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double ceil(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double2 ceil(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double3 ceil(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double4 ceil(double4);
-
 //===----------------------------------------------------------------------===//
 // clamp builtins
 //===----------------------------------------------------------------------===//
@@ -391,15 +382,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float3 cos(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float4 cos(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double cos(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double2 cos(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double3 cos(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double4 cos(double4);
 
 //===----------------------------------------------------------------------===//
 // dot product builtins
@@ -593,15 +575,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double floor(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double2 floor(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double3 floor(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double4 floor(double4);
 
 //===----------------------------------------------------------------------===//
 // frac builtins
@@ -1158,19 +1131,6 @@ float4 pow(float4, float4);
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t reversebits(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t2 reversebits(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t3 reversebits(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t4 reversebits(int16_t4);
-
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint16_t reversebits(uint16_t);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
@@ -1184,15 +1144,6 @@ uint16_t4 reversebits(uint16_t4);
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int reversebits(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int2 reversebits(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int3 reversebits(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int4 reversebits(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint reversebits(uint);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint2 reversebits(uint2);
@@ -1200,15 +1151,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint3 reversebits(uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint4 reversebits(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t reversebits(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t2 reversebits(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t3 reversebits(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t4 reversebits(int64_t4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t reversebits(uint64_t);
@@ -1306,25 +1248,25 @@ float4 rsqrt(float4);
 /// rounded to the nearest even value.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 half round(half);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 half2 round(half2);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 half3 round(half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 half4 round(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float round(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float2 round(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float3 round(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_round)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
 float4 round(float4);
 
 //===----------------------------------------------------------------------===//
@@ -1366,14 +1308,26 @@ float4 sin(float4);
 /// \param Val The input value.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
-half sqrt(half In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half sqrt(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half2 sqrt(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half3 sqrt(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half4 sqrt(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
-float sqrt(float In);
-
-_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
-double sqrt(double In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float sqrt(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float2 sqrt(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float3 sqrt(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float4 sqrt(float4);
 
 //===----------------------------------------------------------------------===//
 // trunc builtins
@@ -1417,7 +1371,12 @@ float4 trunc(float4);
 /// true, across all active lanes in the current wave.
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
-uint WaveActiveCountBits(bool Val);
+__attribute__((convergent)) uint WaveActiveCountBits(bool Val);
+
+/// \brief Returns the index of the current lane within the current wave.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
+__attribute__((convergent)) uint WaveGetLaneIndex();
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
