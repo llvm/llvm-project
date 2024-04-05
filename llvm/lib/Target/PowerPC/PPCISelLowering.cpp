@@ -15691,13 +15691,13 @@ static void fixupShuffleMaskForPermutedSToV(
     SmallVectorImpl<int> &ShuffV, int LHSFirstElt, int LHSLastElt,
     int RHSFirstElt, int RHSLastElt, int HalfVec, unsigned LHSNumValidElts,
     unsigned RHSNumValidElts, const PPCSubtarget &Subtarget) {
-  for (int i = 0, e = ShuffV.size(); i < e; i++) {
-    int Idx = ShuffV[i];
+  for (int I = 0, E = ShuffV.size(); I < E; ++I) {
+    int Idx = ShuffV[I];
     if (Idx >= LHSFirstElt && Idx <= LHSLastElt)
-      ShuffV[i] +=
+      ShuffV[I] +=
           Subtarget.isLittleEndian() ? HalfVec : HalfVec - LHSNumValidElts;
     if (Idx >= RHSFirstElt && Idx <= RHSLastElt)
-      ShuffV[i] +=
+      ShuffV[I] +=
           Subtarget.isLittleEndian() ? HalfVec : HalfVec - RHSNumValidElts;
   }
 }
@@ -15740,8 +15740,8 @@ static SDValue getSToVPermuted(SDValue OrigSToV, SelectionDAG &DAG,
 static bool isShuffleMaskInRange(const SmallVectorImpl<int> &ShuffV,
                                  int HalfVec, int LHSLastElementDefined,
                                  int RHSLastElementDefined) {
-  for (int i : seq<int>(0, ShuffV.size())) {
-    int Index = ShuffV[i];
+  for (int I : seq<int>(0, ShuffV.size())) {
+    int Index = ShuffV[I];
     if (Index < 0) // Skip explicitly undefined mask indices.
       continue;
     // Handle first input vector of the vector_shuffle.
