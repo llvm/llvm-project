@@ -928,6 +928,14 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (!this->emitPopPtr(E))
         return false;
     } else {
+      assert(!Init->getType()->isRecordType() ||
+             getRecord(FieldToInit->Decl->getType()) ==
+                 getRecord(Init->getType()));
+      assert(
+          !Init->getType()->isArrayType() ||
+          (FieldToInit->Decl->getType()->isArrayType() &&
+           Init->getType()->getArrayElementTypeNoTypeQual() ==
+               FieldToInit->Decl->getType()->getArrayElementTypeNoTypeQual()));
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
       if (!this->emitGetPtrField(FieldToInit->Offset, Init))
