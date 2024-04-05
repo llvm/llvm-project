@@ -83,3 +83,8 @@ global: amd_comgr_populate_name_expression_map;
 @amd_comgr_NAME@_2.7 {
 global: amd_comgr_map_elf_virtual_address_to_code_object_offset;
 } @amd_comgr_NAME@_2.6;
+
+@amd_comgr_NAME@_2.8 {
+global: amd_comgr_action_info_set_bundle_entry_ids;
+        amd_comgr_action_info_get_bundle_entry_ids;
+} @amd_comgr_NAME@_2.7;

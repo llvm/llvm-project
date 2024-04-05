@@ -58,11 +58,28 @@ endmacro()
 # Creates target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BUNDLES target list.
-macro(add_test_input_bundle name input output)
+macro(add_test_input_bitcode_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
     --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+    -o "${output}"
+    VERBATIM
+    DEPENDS clang lld "${input}")
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input}")
+  list(APPEND TEST_INPUT_BUNDLES "${name}")
+endmacro()
+
+# Creates target ${name} which depends on a clang command to compile ${input} to
+# ${output}, with any additional arguments from ${ARGN}, and add it to the
+# TEST_INPUT_BUNDLES target list.
+macro(add_test_input_object_file_bundle name input output)
+  add_custom_command(
+    OUTPUT "${output}"
+    COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 --gpu-bundle-output
+    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -236,10 +253,10 @@ add_comgr_test(compile_source_to_executable c)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
-  add_test_input_bundle(cube source/cube.hip source/cube.bc)
-  add_test_input_bundle(square source/square.hip source/square.bc)
-  add_test_input_bundle(double source/double.hip source/double.bc)
+  add_test_input_bitcode_bundle(square source/square.hip source/square.bc)
+  add_test_input_object_file_bundle(double source/double.hip source/double.o)
 
+  add_test_input_bitcode_bundle(cube source/cube.hip source/cube.bc)
   add_test_archive(cube_archive cube source/cube.bc source/cube.a)
 
   add_comgr_test(compile_hip_test c)

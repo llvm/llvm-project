@@ -230,10 +230,15 @@ struct DataAction {
   // as no other option APIs are called.
   llvm::ArrayRef<std::string> getOptions(bool IsDeviceLibs = false);
 
+  amd_comgr_status_t setBundleEntryIDs(llvm::ArrayRef<const char *> EntryIDs);
+  llvm::ArrayRef<std::string> getBundleEntryIDs();
+
   char *IsaName;
   char *Path;
   amd_comgr_language_t Language;
   bool Logging;
+
+  std::vector<std::string> BundleEntryIDs;
 
 private:
   bool AreOptionsList;

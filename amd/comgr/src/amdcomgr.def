@@ -46,3 +46,5 @@ amd_comgr_index_list_metadata
 amd_comgr_iterate_symbols
 amd_comgr_symbol_lookup
 amd_comgr_symbol_get_info
+amd_comgr_action_info_set_bundle_entry_ids
+amd_comgr_action_info_get_bundle_entry_ids

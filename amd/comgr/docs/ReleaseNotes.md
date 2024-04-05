@@ -94,6 +94,10 @@ New APIs
 - amd\_comgr\_map\_elf\_virtual\_address\_to\_code\_object\_offset() (v2.7)
     - For a given executable and ELF virtual address, return a code object
     offset. This API will benifet the ROCm debugger and profilier
+- amd\_comgr\_action\_info\_set\_bundle\_entry\_ids() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_ids() (v2.8)
+    - A user can provide a set of bundle entry IDs, which are processed when
+    calling the AMD\_COMGR\_UNBUNDLE action
 
 
 Deprecated APIs
@@ -119,6 +123,13 @@ action, and Comgr will internally unbundle and link via the OffloadBundler and l
 - (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_EXECUTABLE
   - This action allows compilation from source directly to executable, including
   linking device libraries.
+- (Action) AMD\_COMGR\_ACTION\_UNBUNDLE
+  - This accepts a set of bitcode bundles, object file bundles, and archive
+  bundles,and returns set of unbundled bitcode, object files, and archives,
+  selecting bundles based on the bundle entry IDs provided.
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_OBJ\_BUNDLE
+  - This data kind represents a clang-offload-bundle of object files, and can be
+  passed when calling the AMD\_COMGR\_ACTION\_UNBUNDLE action
 
 
 Deprecated Comgr Actions and Data Types

@@ -54,6 +54,7 @@
 #include <fstream>
 #include <mutex>
 #include <string>
+#include <iostream>
 
 #include "time-stat/ts-interface.h"
 
@@ -164,6 +165,8 @@ dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.preprocessToSource();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
     return Compiler.compileToBitcode();
+  case AMD_COMGR_ACTION_UNBUNDLE:
+    return Compiler.unbundle();
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
     return Compiler.linkBitcodeToBitcode();
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
@@ -246,6 +249,8 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE";
+  case AMD_COMGR_ACTION_UNBUNDLE:
+    return "AMD_COMGR_ACTION_UNBUNDLE";
   }
 
   llvm_unreachable("invalid action");
@@ -526,6 +531,19 @@ ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
   }
 
   return ListOptions;
+}
+
+amd_comgr_status_t DataAction::setBundleEntryIDs(
+  ArrayRef<const char *> EntryIDs) {
+  BundleEntryIDs.clear();
+  for (auto &ID: EntryIDs) {
+    BundleEntryIDs.push_back(ID);
+  }
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+ArrayRef<std::string> DataAction::getBundleEntryIDs() {
+  return BundleEntryIDs;
 }
 
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
@@ -1194,6 +1212,48 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_bundle_entry_ids
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t *Size, char *EntryIDs[]) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || !Size) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ArrayRef<std::string> ActionBundleEntryIDs = ActionP->getBundleEntryIDs();
+
+  *Size = 0;
+  std::vector<char *> cstrings;
+  for (int i = 0; i < (int) ActionBundleEntryIDs.size(); i++) {
+    cstrings.push_back(
+      const_cast<char*>(ActionBundleEntryIDs.data()[i].c_str()));
+    *Size += strlen(cstrings[i]) + 1;
+  }
+
+  if (EntryIDs) {
+    memcpy(EntryIDs, &cstrings[0], sizeof(cstrings));
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_bundle_entry_ids
+    //
+    (amd_comgr_action_info_t ActionInfo, const char *EntryIDs[], size_t Count) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP || (!EntryIDs && Count)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  return ActionP->setBundleEntryIDs(ArrayRef<const char *>(EntryIDs, Count));
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_working_directory_path
     //
     (amd_comgr_action_info_t ActionInfo, const char *Path) {
@@ -1357,6 +1417,7 @@ amd_comgr_status_t AMD_COMGR_API
       break;
     case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
+    case AMD_COMGR_ACTION_UNBUNDLE:
     case AMD_COMGR_ACTION_LINK_BC_TO_BC:
     case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY:

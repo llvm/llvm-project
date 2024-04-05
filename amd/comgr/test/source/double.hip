@@ -23,7 +23,7 @@ THE SOFTWARE.
 #include "hip/hip_runtime.h"
 
 /*
- * Square each element in the array A and write to array C.
+ * Double each element in the array A and write to array C.
  */
 
 __device__ bool test_flag = true;
