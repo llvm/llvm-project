@@ -193,7 +193,9 @@ bool LLVM::StoreOp::canUsesBeRemoved(
   // fine, provided we are currently promoting its target value. Don't allow a
   // store OF the slot pointer, only INTO the slot pointer.
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getValue() != slot.ptr && !getVolatile_();
+         getValue() != slot.ptr &&
+         areCastCompatible(dataLayout, slot.elemType, getValue().getType()) &&
+         !getVolatile_();
 }
 
 DeletionKind LLVM::StoreOp::removeBlockingUses(
