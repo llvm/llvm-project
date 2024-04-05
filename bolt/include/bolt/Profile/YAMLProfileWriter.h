@@ -35,6 +35,13 @@ public:
   static yaml::bolt::BinaryFunctionProfile
   convert(const BinaryFunction &BF, bool UseDFS,
           const BoltAddressTranslation *BAT = nullptr);
+
+  /// Set CallSiteInfo destination fields from \p Symbol and return a target
+  /// BinaryFunction for that symbol.
+  static const BinaryFunction *
+  setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+                    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+                    uint32_t Offset = 0);
 };
 
 } // namespace bolt

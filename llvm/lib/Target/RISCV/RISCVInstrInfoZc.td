@@ -71,10 +71,11 @@ def rlist : Operand<OtherVT> {
   }];
 }
 
-def stackadj : Operand<OtherVT> {
+def stackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = StackAdjAsmOperand;
   let PrintMethod = "printStackAdj";
   let DecoderMethod = "decodeZcmpSpimm";
+  let OperandType = "OPERAND_SPIMM";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -83,10 +84,11 @@ def stackadj : Operand<OtherVT> {
   }];
 }
 
-def negstackadj : Operand<OtherVT> {
+def negstackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = NegStackAdjAsmOperand;
   let PrintMethod = "printNegStackAdj";
   let DecoderMethod = "decodeZcmpSpimm";
+  let OperandType = "OPERAND_SPIMM";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))

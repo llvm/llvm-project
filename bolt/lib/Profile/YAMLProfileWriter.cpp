@@ -26,48 +26,21 @@ extern llvm::cl::opt<bool> ProfileUseDFS;
 namespace llvm {
 namespace bolt {
 
-/// Set CallSiteInfo destination fields from \p Symbol and return a target
-/// BinaryFunction for that symbol.
-static const BinaryFunction *
-setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
-                  const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
+const BinaryFunction *YAMLProfileWriter::setCSIDestination(
+    const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+    uint32_t Offset) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
-  auto setBATSecondaryEntry = [&](const BinaryFunction *const Callee) {
-    // The symbol could be a secondary entry in a cold fragment.
-    ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Symbol);
-    if (SymbolValue.getError())
-      return;
-
-    // Containing function, not necessarily the same as symbol value.
-    const uint64_t CalleeAddress = Callee->getAddress();
-    const uint32_t OutputOffset = SymbolValue.get() - CalleeAddress;
-
-    const uint64_t ParentAddress = BAT->fetchParentAddress(CalleeAddress);
-    const uint64_t HotAddress = ParentAddress ? ParentAddress : CalleeAddress;
-
-    if (const BinaryFunction *ParentBF =
-            BC.getBinaryFunctionAtAddress(HotAddress))
-      CSI.DestId = ParentBF->getFunctionNumber();
-
-    const uint32_t InputOffset =
-        BAT->translate(CalleeAddress, OutputOffset, /*IsBranchSrc*/ false);
-
-    if (!InputOffset)
-      return;
-
-    CSI.EntryDiscriminator =
-        BAT->getSecondaryEntryPointId(HotAddress, InputOffset) + 1;
-  };
 
   if (Symbol) {
     uint64_t EntryID = 0;
-    if (const BinaryFunction *const Callee =
+    if (const BinaryFunction *Callee =
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
-      if (BAT && BAT->isBATFunction(Callee->getAddress()))
-        setBATSecondaryEntry(Callee);
       return Callee;
     }
   }
