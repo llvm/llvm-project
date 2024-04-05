@@ -1,4 +1,4 @@
-//===- RemoveTrapsPass.cpp --------------------------------------*- C++ -*-===//
+//===- LowerAllowCheckPass.cpp ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/RemoveTrapsPass.h"
+#include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,13 +21,14 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "remove-traps"
+#define DEBUG_TYPE "lower-allow-check"
 
-static cl::opt<int> HotPercentileCutoff("remove-traps-percentile-cutoff-hot",
-                                        cl::desc("Hot percentile cuttoff."));
+static cl::opt<int>
+    HotPercentileCutoff("lower-allow-check-percentile-cutoff-hot",
+                        cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    RandomRate("remove-traps-random-rate",
+    RandomRate("lower-allow-check-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
                         "unconditional pseudo-random checks removal."));
 
@@ -90,8 +91,8 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   return !ReplaceWithValue.empty();
 }
 
-PreservedAnalyses RemoveTrapsPass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
+PreservedAnalyses LowerAllowCheckPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
   if (F.isDeclaration())
     return PreservedAnalyses::all();
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
@@ -103,7 +104,7 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
                                        : PreservedAnalyses::all();
 }
 
-bool RemoveTrapsPass::IsRequested() {
+bool LowerAllowCheckPass::IsRequested() {
   return RandomRate.getNumOccurrences() ||
          HotPercentileCutoff.getNumOccurrences();
 }
