@@ -1302,7 +1302,7 @@ public:
 
     if ((isSVEPredicateAsCounterReg<Class>() ||
          isSVEPredicateVectorRegOfWidth<ElementWidth, Class>()) &&
-        (Reg.ElementWidth == ElementWidth))
+        Reg.ElementWidth == ElementWidth)
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
