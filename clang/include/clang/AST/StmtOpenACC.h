@@ -17,6 +17,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include <memory>
 
 namespace clang {
 /// This is the base class for an OpenACC statement-level construct, other
@@ -58,7 +59,7 @@ public:
 
   SourceLocation getBeginLoc() const { return Range.getBegin(); }
   SourceLocation getEndLoc() const { return Range.getEnd(); }
-  const ArrayRef<const OpenACCClause *> clauses() const { return Clauses; }
+  ArrayRef<const OpenACCClause *> clauses() const { return Clauses; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
@@ -128,8 +129,9 @@ class OpenACCComputeConstruct final
     // We cannot send the TrailingObjects storage to the base class (which holds
     // a reference to the data) until it is constructed, so we have to set it
     // separately here.
-    memset(getTrailingObjects<const OpenACCClause *>(), 0,
-           NumClauses * sizeof(const OpenACCClause *));
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   NumClauses));
   }
@@ -147,8 +149,8 @@ class OpenACCComputeConstruct final
            "represented by this type");
 
     // Initialize the trailing storage.
-    for (unsigned I = 0; I < Clauses.size(); ++I)
-      *(getTrailingObjects<const OpenACCClause *>() + I) = Clauses[I];
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
 
     setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
                                   Clauses.size()));

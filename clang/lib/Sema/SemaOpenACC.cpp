@@ -97,7 +97,8 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
     // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
         getASTContext(), K, StartLoc, EndLoc,
-        /*Clauses=*/{}, AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
+        /*Clauses=*/std::nullopt,
+        AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
