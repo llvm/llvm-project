@@ -585,7 +585,9 @@ int main(int argc, const char **argv) {
                     continue;
                 }
 
-                bool isStmt = type == "stmt";
+                // 目前把 source 和 sink 都当作 stmt 来处理，
+                // 精确匹配不上的话，就模糊匹配
+                bool isStmt = true; // type == "stmt";
                 VarLocResult varLoc =
                     locateVariable(locator, Location(loc), isStmt);
                 if (!varLoc.isValid()) {
