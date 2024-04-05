@@ -166,17 +166,16 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
   return JoinedVal;
 }
 
-// When widening does not change `Current`, return value will equal `&Prev`.
-static Value &widenDistinctValues(QualType Type, Value &Prev,
-                                  const Environment &PrevEnv, Value &Current,
-                                  Environment &CurrentEnv,
-                                  Environment::ValueModel &Model) {
+static WidenResult widenDistinctValues(QualType Type, Value &Prev,
+                                       const Environment &PrevEnv,
+                                       Value &Current, Environment &CurrentEnv,
+                                       Environment::ValueModel &Model) {
   // Boolean-model widening.
   if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
-    // If previous value was already Top, re-use that to (implicitly) indicate
-    // that no change occurred.
     if (isa<TopBoolValue>(Prev))
-      return Prev;
+      // Safe to return `Prev` here, because Top is never dependent on the
+      // environment.
+      return {&Prev, LatticeEffect::Unchanged};
 
     // We may need to widen to Top, but before we do so, check whether both
     // values are implied to be either true or false in the current environment.
@@ -185,22 +184,24 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
     bool TruePrev = PrevEnv.proves(PrevBool->formula());
     bool TrueCur = CurrentEnv.proves(CurBool.formula());
     if (TruePrev && TrueCur)
-      return CurrentEnv.getBoolLiteralValue(true);
+      return {&CurrentEnv.getBoolLiteralValue(true), LatticeEffect::Unchanged};
     if (!TruePrev && !TrueCur &&
         PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
         CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
-      return CurrentEnv.getBoolLiteralValue(false);
+      return {&CurrentEnv.getBoolLiteralValue(false), LatticeEffect::Unchanged};
 
-    return CurrentEnv.makeTopBoolValue();
+    return {&CurrentEnv.makeTopBoolValue(), LatticeEffect::Changed};
   }
 
   // FIXME: Add other built-in model widening.
 
   // Custom-model widening.
-  if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
-    return *W;
+  if (auto Result = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
+    return *Result;
 
-  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
+  return {&Current, equateUnknownValues(Prev.getKind())
+                        ? LatticeEffect::Unchanged
+                        : LatticeEffect::Changed};
 }
 
 // Returns whether the values in `Map1` and `Map2` compare equal for those
@@ -271,7 +272,7 @@ llvm::MapVector<Key, Value *>
 widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
                    const llvm::MapVector<Key, Value *> &PrevMap,
                    Environment &CurEnv, const Environment &PrevEnv,
-                   Environment::ValueModel &Model, LatticeJoinEffect &Effect) {
+                   Environment::ValueModel &Model, LatticeEffect &Effect) {
   llvm::MapVector<Key, Value *> WidenedMap;
   for (auto &Entry : CurMap) {
     Key K = Entry.first;
@@ -290,11 +291,11 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
       continue;
     }
 
-    Value &WidenedVal = widenDistinctValues(K->getType(), *PrevIt->second,
-                                            PrevEnv, *Val, CurEnv, Model);
-    WidenedMap.insert({K, &WidenedVal});
-    if (&WidenedVal != PrevIt->second)
-      Effect = LatticeJoinEffect::Changed;
+    auto [WidenedVal, ValEffect] = widenDistinctValues(
+        K->getType(), *PrevIt->second, PrevEnv, *Val, CurEnv, Model);
+    WidenedMap.insert({K, WidenedVal});
+    if (ValEffect == LatticeEffect::Changed)
+      Effect = LatticeEffect::Changed;
   }
 
   return WidenedMap;
@@ -617,15 +618,15 @@ bool Environment::equivalentTo(const Environment &Other,
   return true;
 }
 
-LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
-                                     Environment::ValueModel &Model) {
+LatticeEffect Environment::widen(const Environment &PrevEnv,
+                                 Environment::ValueModel &Model) {
   assert(DACtx == PrevEnv.DACtx);
   assert(ReturnVal == PrevEnv.ReturnVal);
   assert(ReturnLoc == PrevEnv.ReturnLoc);
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
   assert(CallStack == PrevEnv.CallStack);
 
-  auto Effect = LatticeJoinEffect::Unchanged;
+  auto Effect = LatticeEffect::Unchanged;
 
   // By the API, `PrevEnv` is a previous version of the environment for the same
   // block, so we have some guarantees about its shape. In particular, it will
@@ -646,7 +647,7 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
       ExprToVal.size() != PrevEnv.ExprToVal.size() ||
       LocToVal.size() != PrevEnv.LocToVal.size())
-    Effect = LatticeJoinEffect::Changed;
+    Effect = LatticeEffect::Changed;
 
   return Effect;
 }

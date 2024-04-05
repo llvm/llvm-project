@@ -64,11 +64,7 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
   ];
-  let Types = [
-    "FILE",
-    "off_t",
-    "size_t",
-  ];
+  let Types = ["size_t", "FILE"];
 }
 
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
