@@ -1992,15 +1992,15 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+  case attr::Blocking:
+    OS << "clang_blocking";
+    break;
+  case attr::Allocating:
+    OS << "clang_allocating";
+    break;
 
   // Nothing to print for this attribute.
   case attr::HLSLParamModifier:
-    break;
-  case attr::NonBlocking:
-    OS << "clang_nonblocking(false)";
-    break;
-  case attr::NonAllocating:
-    OS << "clang_nonallocating(false)";
     break;
   }
   OS << "))";

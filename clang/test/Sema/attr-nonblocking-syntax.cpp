@@ -17,10 +17,6 @@ void nl_function() [[clang::nonblocking]];
 void (*nl_func_a)() [[clang::nonblocking]];
 // CHECK: VarDecl {{.*}} nl_func_a 'void (*)() __attribute__((clang_nonblocking))'
 
-// Check alternate attribute type and placement
-__attribute__((clang_nonblocking)) void (*nl_func_b)();
-// CHECK: VarDecl {{.*}} nl_func_b 'void (*)() __attribute__((clang_nonblocking))'
-
 // On the type of the ParmVarDecl of a function parameter
 static void nlReceiver(void (*nl_func)() [[clang::nonblocking]]);
 // CHECK: ParmVarDecl {{.*}} nl_func 'void (*)() __attribute__((clang_nonblocking))'
@@ -84,12 +80,12 @@ auto nl_lambda = []() [[clang::nonblocking]] {};
 // =========================================================================================
 // Square brackets, false
 
-void nl_func_false() [[clang::nonblocking(false)]];
-// CHECK: FunctionDecl {{.*}} nl_func_false 'void () __attribute__((clang_nonblocking(false)))'
+void nl_func_false() [[clang::blocking]];
+// CHECK: FunctionDecl {{.*}} nl_func_false 'void () __attribute__((clang_blocking))'
 
 // TODO: This exposes a bug where a type attribute is lost when inferring a lambda's
 // return type.
-auto nl_lambda_false = []() [[clang::nonblocking(false)]] {};
+auto nl_lambda_false = []() [[clang::blocking]] {};
 
 } // namespace square_brackets
 
@@ -112,7 +108,9 @@ __attribute__((clang_nonblocking)) void nl_function();
 void (*nl_func_a)() __attribute__((clang_nonblocking));
 // CHECK: VarDecl {{.*}} nl_func_a 'void (*)() __attribute__((clang_nonblocking))'
 
-
+// Alternate attribute placement on VarDecl
+__attribute__((clang_nonblocking)) void (*nl_func_b)();
+// CHECK: VarDecl {{.*}} nl_func_b 'void (*)() __attribute__((clang_nonblocking))'
 
 } // namespace gnu_style
 

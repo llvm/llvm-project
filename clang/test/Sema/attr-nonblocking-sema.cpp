@@ -14,23 +14,23 @@ struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'nonblocking' a
 // --- ATTRIBUTE SYNTAX: COMBINATIONS ---
 // Check invalid combinations of nonblocking/nonallocating attributes
 
-void nl_true_false_1() [[clang::nonblocking(true)]] [[clang::nonblocking(false)]]; // expected-error {{nonblocking(true) and nonblocking(false) attributes are not compatible}}
-void nl_true_false_2() [[clang::nonblocking(false)]] [[clang::nonblocking(true)]]; // expected-error {{nonblocking(true) and nonblocking(false) attributes are not compatible}}
+void nl_true_false_1() [[clang::nonblocking(true)]] [[clang::blocking]]; // expected-error {{nonblocking(true) and blocking attributes are not compatible}}
+void nl_true_false_2() [[clang::blocking]] [[clang::nonblocking(true)]]; // expected-error {{nonblocking(true) and blocking attributes are not compatible}}
 
-void na_true_false_1() [[clang::nonallocating(true)]] [[clang::nonallocating(false)]]; // expected-error {{nonallocating(true) and nonallocating(false) attributes are not compatible}}
-void na_true_false_2() [[clang::nonallocating(false)]] [[clang::nonallocating(true)]]; // expected-error {{nonallocating(true) and nonallocating(false) attributes are not compatible}}
+void na_true_false_1() [[clang::nonallocating(true)]] [[clang::allocating]]; // expected-error {{nonallocating(true) and allocating attributes are not compatible}}
+void na_true_false_2() [[clang::allocating]] [[clang::nonallocating(true)]]; // expected-error {{nonallocating(true) and allocating attributes are not compatible}}
 
 void nl_true_na_true_1() [[clang::nonblocking]] [[clang::nonallocating]];
 void nl_true_na_true_2() [[clang::nonallocating]] [[clang::nonblocking]];
 
-void nl_true_na_false_1() [[clang::nonblocking]] [[clang::nonallocating(false)]]; // expected-error {{nonblocking(true) and nonallocating(false) attributes are not compatible}}
-void nl_true_na_false_2() [[clang::nonallocating(false)]] [[clang::nonblocking]]; // expected-error {{nonblocking(true) and nonallocating(false) attributes are not compatible}}
+void nl_true_na_false_1() [[clang::nonblocking]] [[clang::allocating]]; // expected-error {{nonblocking(true) and allocating attributes are not compatible}}
+void nl_true_na_false_2() [[clang::allocating]] [[clang::nonblocking]]; // expected-error {{nonblocking(true) and allocating attributes are not compatible}}
 
-void nl_false_na_true_1() [[clang::nonblocking(false)]] [[clang::nonallocating]];
-void nl_false_na_true_2() [[clang::nonallocating]] [[clang::nonblocking(false)]];
+void nl_false_na_true_1() [[clang::blocking]] [[clang::nonallocating]];
+void nl_false_na_true_2() [[clang::nonallocating]] [[clang::blocking]];
 
-void nl_false_na_false_1() [[clang::nonblocking(false)]] [[clang::nonallocating(false)]];
-void nl_false_na_false_2() [[clang::nonallocating(false)]] [[clang::nonblocking(false)]];
+void nl_false_na_false_1() [[clang::blocking]] [[clang::allocating]];
+void nl_false_na_false_2() [[clang::allocating]] [[clang::blocking]];
 
 // --- TYPE CONVERSIONS ---
 

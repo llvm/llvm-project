@@ -11151,8 +11151,6 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
     return;
   }
 
-  // Filter out declarations that the FunctionEffect analysis should skip
-  // and not verify.
   AllEffectsToVerify |= FX;
 
   // Record the declaration for later analysis.

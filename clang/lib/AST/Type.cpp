@@ -3733,7 +3733,6 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // whether the following bool is the EH spec or part of the arguments.
 
   ID.AddPointer(epi.FunctionEffects.getOpaqueValue());
-
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
     ID.AddPointer(ArgTys[i].getAsOpaquePtr());
@@ -5027,7 +5026,7 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
 }
 
 FunctionEffect::FunctionEffect(Type T)
-    : Type_(unsigned(T)), Flags_(0), Padding(0) {
+    : Type_(static_cast<unsigned>(T)), Flags_(0), Padding(0) {
   switch (T) {
   case Type::NonBlocking:
     Flags_ = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
@@ -5104,8 +5103,8 @@ FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
   switch (type()) {
   case Type::NonAllocating:
   case Type::NonBlocking:
-    // nonblocking/nonallocating can't be removed from an override
-    // adding -> false, removing -> true (diagnose)
+    // if added on an override, that's fine and not diagnosed.
+    // if missing from an override (removed), propagate from base to derived.
     return Adding ? OverrideResult::Ignore : OverrideResult::Propagate;
   default:
     break;
@@ -5119,8 +5118,8 @@ bool FunctionEffect::canInferOnFunction(QualType QT,
   case Type::NonAllocating:
   case Type::NonBlocking: {
     // Does the sugar have nonblocking(false) / nonallocating(false) ?
-    if (QT->hasAttr(type() == Type::NonBlocking ? attr::Kind::NonBlocking
-                                                : attr::Kind::NonAllocating)) {
+    if (QT->hasAttr(type() == Type::NonBlocking ? attr::Kind::Blocking
+                                                : attr::Kind::Allocating)) {
       return false;
     }
 
@@ -5264,7 +5263,7 @@ bool FunctionEffectSet::operator<(const FunctionEffectSet &RHS) const {
                                       RHS.end());
 }
 
-void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
   bool First = true;
   for (const auto &Effect : *this) {
