@@ -11,13 +11,13 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Dict
 import sys
-import yaml
+import json
 
 
 def load_api(hname: str) -> Dict:
-    p = Path(Path(__file__).parent, Path(hname).with_suffix(".yml"))
+    p = Path(__file__).parent / Path(hname).with_suffix(".json")
     api = p.read_text(encoding="utf-8")
-    return yaml.load(api, Loader=yaml.FullLoader)
+    return json.loads(api)
 
 
 # TODO: we may need to get more sophisticated for less generic implementations.
@@ -68,7 +68,7 @@ def print_header(header: str, api: Dict):
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.yml")]
+    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
     parser.add_argument("header_name", choices=choices)
     return parser.parse_args()
 
