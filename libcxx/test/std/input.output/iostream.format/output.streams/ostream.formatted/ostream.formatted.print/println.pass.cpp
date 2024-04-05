@@ -64,7 +64,7 @@ void test_println_blank_line() {
 
   std::string out = sstr.str();
   TEST_REQUIRE(out == expected,
-               TEST_WRITE_CONCATENATED("\nExpected output ", expected, "\nActual output   ", out, '\n'));
+               TEST_WRITE_CONCATENATED("\nExpected output (blank line) ", expected, "\nActual output   ", out, '\n'));
 };
 
 int main(int, char**) {

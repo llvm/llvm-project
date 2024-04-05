@@ -104,7 +104,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
     std::println(stream);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
-                 TEST_WRITE_CONCATENATED("\nExpected output ", expected, "\nActual output   ", out, '\n'));
+                 TEST_WRITE_CONCATENATED("\nExpected output (blank line) ", expected, "\nActual output   ", out, '\n'));
   }
 }
 
