@@ -354,16 +354,16 @@ public:
   /// Compute knownbits resulting from llvm.usub.sat(LHS, RHS)
   static KnownBits usub_sat(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from (C1 & C2) + (C1 ^ C2).ashr(1)
+  /// Compute knownbits resulting from APIntOps::avgFloorS
   static KnownBits avgFloorS(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from (C1 & C2) + (C1 ^ C2).lshr(1)
+  /// Compute knownbits resulting from APIntOps::avgFloorU
   static KnownBits avgFloorU(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from (C1 & C2) - (C1 ^ C2).ashr(1)
+  /// Compute knownbits resulting from APIntOps::avgCelS
   static KnownBits avgCeilS(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute knownbits resulting from (C1 & C2) - (C1 ^ C2).lshr(1)
+  /// Compute knownbits resulting from APIntOps::avgCelU
   static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits resulting from multiplying LHS and RHS.

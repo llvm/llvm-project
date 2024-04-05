@@ -768,8 +768,7 @@ KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.ashrInPlace(1);
   xorResult.One.ashrInPlace(1);
-  return computeForSatAddSub(/*Add*/ true, /*Signed*/ true, andResult,
-                             xorResult);
+  return computeForAddSub(/*Add*/ true, /*Signed*/ true, andResult, xorResult);
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
@@ -778,8 +777,7 @@ KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.lshrInPlace(1);
   xorResult.One.lshrInPlace(1);
-  return computeForSatAddSub(/*Add*/ true, /*Signed*/ false, andResult,
-                             xorResult);
+  return computeForAddSub(/*Add*/ true, /*Signed*/ false, andResult, xorResult);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
@@ -788,8 +786,7 @@ KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.ashrInPlace(1);
   xorResult.One.ashrInPlace(1);
-  return computeForSatAddSub(/*Add*/ false, /*Signed*/ true, andResult,
-                             xorResult);
+  return computeForAddSub(/*Add*/ false, /*Signed*/ true, andResult, xorResult);
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
@@ -798,8 +795,8 @@ KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.lshrInPlace(1);
   xorResult.One.lshrInPlace(1);
-  return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, andResult,
-                             xorResult);
+  return computeForAddSub(/*Add*/ false, /*Signed*/ false, andResult,
+                          xorResult);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
