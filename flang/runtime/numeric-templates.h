@@ -237,8 +237,12 @@ inline RT_API_ATTRS T RealMod(
   if (ISNANTy<T>::compute(a) || ISNANTy<T>::compute(p) ||
       ISINFTy<T>::compute(a)) {
     return QNANTy<T>::compute();
-  } else if (ISINFTy<T>::compute(p)) {
-    return a;
+  } else if (IS_MODULO && ISINFTy<T>::compute(p)) {
+    // Other compilers behave consistently for MOD(x, +/-INF)
+    // and always return x. This is probably related to
+    // implementation of std::fmod(). Stick to this behavior
+    // for MOD, but return NaN for MODULO(x, +/-INF).
+    return QNANTy<T>::compute();
   }
   T aAbs{ABSTy<T>::compute(a)};
   T pAbs{ABSTy<T>::compute(p)};
@@ -248,8 +252,19 @@ inline RT_API_ATTRS T RealMod(
       if (auto pInt{static_cast<std::int64_t>(p)}; p == pInt) {
         // Fast exact case for integer operands
         auto mod{aInt - (aInt / pInt) * pInt};
-        if (IS_MODULO && (aInt > 0) != (pInt > 0)) {
-          mod += pInt;
+        if constexpr (IS_MODULO) {
+          if (mod == 0) {
+            // Return properly signed zero.
+            return pInt > 0 ? T{0} : -T{0};
+          }
+          if ((aInt > 0) != (pInt > 0)) {
+            mod += pInt;
+          }
+        } else {
+          if (mod == 0) {
+            // Return properly signed zero.
+            return aInt > 0 ? T{0} : -T{0};
+          }
         }
         return static_cast<T>(mod);
       }
@@ -297,7 +312,11 @@ inline RT_API_ATTRS T RealMod(
     }
     if constexpr (IS_MODULO) {
       if ((a < 0) != (p < 0)) {
-        tmp += p;
+        if (tmp == 0.) {
+          tmp = -tmp;
+        } else {
+          tmp += p;
+        }
       }
     }
     return tmp;

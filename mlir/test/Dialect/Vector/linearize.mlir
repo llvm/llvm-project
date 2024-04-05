@@ -146,6 +146,16 @@ func.func @test_scalable_no_linearize(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x
 
 // -----
 
+// ALL-LABEL: func.func @test_0d_vector
+func.func @test_0d_vector() -> vector<f32> {
+  // ALL: %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<f32>
+  %0 = arith.constant dense<0.0> : vector<f32>
+  // ALL: return %[[CST]]
+  return %0 : vector<f32>
+}
+
+// -----
+
 func.func @test_scalable_no_linearize(%arg0: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
   // expected-error@+1 {{failed to legalize operation 'arith.constant' that was explicitly marked illegal}}
   %0 = arith.constant dense<[[1., 1.], [3., 3.]]> : vector<2x[2]xf32>

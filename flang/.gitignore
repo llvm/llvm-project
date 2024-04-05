@@ -5,7 +5,6 @@ build
 root
 tags
 TAGS
-*.o
 .nfs*
 *.sw?
 *~
