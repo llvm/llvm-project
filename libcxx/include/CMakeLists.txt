@@ -738,6 +738,7 @@ set(files
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
+  __type_traits/desugars_to.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -822,7 +823,6 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
-  __type_traits/operation_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
