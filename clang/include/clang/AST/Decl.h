@@ -1100,6 +1100,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned EscapingByref : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCXXCondDecl : 1;
   };
 
   union {
@@ -1587,6 +1590,15 @@ public:
 
   void setEscapingByref() {
     NonParmVarDeclBits.EscapingByref = true;
+  }
+
+  bool isCXXCondDecl() const {
+    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.IsCXXCondDecl;
+  }
+
+  void setCXXCondDecl() {
+    assert(!isa<ParmVarDecl>(this));
+    NonParmVarDeclBits.IsCXXCondDecl = true;
   }
 
   /// Determines if this variable's alignment is dependent.
