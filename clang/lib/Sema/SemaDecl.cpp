@@ -1537,6 +1537,10 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
       cast<FunctionDecl>(D)->isFunctionTemplateSpecialization())
     return;
 
+  if (isa<UsingEnumDecl>(D) && D->getDeclName().isEmpty()) {
+    S->AddDecl(D);
+    return;
+  }
   // If this replaces anything in the current scope,
   IdentifierResolver::iterator I = IdResolver.begin(D->getDeclName()),
                                IEnd = IdResolver.end();
