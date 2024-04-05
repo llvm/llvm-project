@@ -173,8 +173,8 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
-    ; EXPAND: STR_PXI $p0, $sp, 7
-    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+    ; EXPAND: STR_PXI $pn0, $sp, 7
+    ; EXPAND: $pn0 = LDR_PXI $sp, 7, implicit-def $pn0
 
     %0:pnr = COPY $pn0
 
