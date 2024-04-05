@@ -1867,6 +1867,7 @@ module std_private_type_traits_decay                                     [system
   export std_private_type_traits_add_pointer
 }
 module std_private_type_traits_dependent_type                            [system] { header "__type_traits/dependent_type.h" }
+module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
 module std_private_type_traits_disjunction                               [system] { header "__type_traits/disjunction.h" }
 module std_private_type_traits_enable_if                                 [system] { header "__type_traits/enable_if.h" }
 module std_private_type_traits_extent                                    [system] { header "__type_traits/extent.h" }
@@ -2017,7 +2018,6 @@ module std_private_type_traits_maybe_const                               [system
 module std_private_type_traits_nat                                       [system] { header "__type_traits/nat.h" }
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
-module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }

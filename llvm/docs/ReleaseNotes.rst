@@ -174,6 +174,10 @@ Changes to the LLVM tools
 * llvm-ar now allows specifying COFF archive format with ``--format`` argument
   and uses it by default for COFF targets.
 
+* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
+  ``-v`` (``--verbose`` in llvm-ar) has been removed.
+  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
+
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
@@ -181,10 +185,6 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
   for ELF input to skip the specified symbols when executing other options
   that can change a symbol's name, binding or visibility.
-
-* llvm-objcopy now supports ``--compress-sections`` to compress or decompress
-  arbitrary sections not within a segment.
-  (`#85036 <https://github.com/llvm/llvm-project/pull/85036>`_.)
 
 * llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
   on Windows using Intel VTune's SEP. For details on usage, see the `end-user
