@@ -5835,7 +5835,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
     if (!isPowerOf2_32(VL.size()))
       return TreeEntry::NeedToGather;
-    if ((Reuse || !CurrentOrder.empty()))
+    if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
     return TreeEntry::NeedToGather;
@@ -6141,6 +6141,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (NumUniqueScalarValues == VL.size()) {
       ReuseShuffleIndicies.clear();
     } else {
+      // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
       if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
@@ -14928,22 +14929,21 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         continue;
       }
 
-      std::optional<unsigned> NonPowerOf2VF;
+      unsigned NonPowerOf2VF = 0;
       if (VectorizeNonPowerOf2) {
         // First try vectorizing with a non-power-of-2 VF. At the moment, only
         // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
         // lanes are used.
         unsigned CandVF = Operands.size();
-        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF) {
+        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF)
           NonPowerOf2VF = CandVF;
-        }
       }
 
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz + bool(NonPowerOf2VF));
+      SmallVector<unsigned> CandidateVFs(Sz + (NonPowerOf2VF > 0 ? 1 : 0));
       unsigned Size = MinVF;
       for_each(reverse(CandidateVFs), [&](unsigned &VF) {
-        VF = Size > MaxVF ? *NonPowerOf2VF : Size;
+        VF = Size > MaxVF ? NonPowerOf2VF : Size;
         Size *= 2;
       });
       unsigned StartIdx = 0;
