@@ -23,6 +23,8 @@
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include "llvm/TextAPI/Utils.h"
 
+using Architecture = llvm::MachO::Architecture;
+using ArchitectureSet = llvm::MachO::ArchitectureSet;
 using SymbolFlags = llvm::MachO::SymbolFlags;
 using RecordLinkage = llvm::MachO::RecordLinkage;
 using Record = llvm::MachO::Record;
