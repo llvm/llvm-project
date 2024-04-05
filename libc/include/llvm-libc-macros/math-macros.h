@@ -57,6 +57,7 @@
 // the identifier, even in places with parentheses where a function-like macro
 // will be expanded (such as a function declaration in a C++ namespace).
 
+// TODO: Move generic functional math macros to a separate header file.
 #ifdef __cplusplus
 
 template <typename T> inline constexpr bool isfinite(T x) {

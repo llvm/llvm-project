@@ -1142,7 +1142,13 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 //===----------------------------------------------------------------------===//
 void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   Indent() << "#pragma acc " << S->getDirectiveKind();
-  // TODO OpenACC: Print Clauses.
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS);
+    Printer.VisitClauseList(S->clauses());
+  }
+
   PrintStmt(S->getStructuredBlock());
 }
 

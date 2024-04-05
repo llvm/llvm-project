@@ -245,6 +245,10 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+  return ST->hasVInstructions();
+}
+
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
@@ -810,9 +814,27 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
   case Intrinsic::smax: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if ((ST->hasVInstructions() && LT.second.isVector()) ||
-        (LT.second.isScalarInteger() && ST->hasStdExtZbb()))
+    if (LT.second.isScalarInteger() && ST->hasStdExtZbb())
       return LT.first;
+
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      unsigned Op;
+      switch (ICA.getID()) {
+      case Intrinsic::umin:
+        Op = RISCV::VMINU_VV;
+        break;
+      case Intrinsic::umax:
+        Op = RISCV::VMAXU_VV;
+        break;
+      case Intrinsic::smin:
+        Op = RISCV::VMIN_VV;
+        break;
+      case Intrinsic::smax:
+        Op = RISCV::VMAX_VV;
+        break;
+      }
+      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::sadd_sat:
@@ -843,9 +865,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
-    unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return Cost + (LT.first - 1);
+    // Legalisation of illegal types involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
+    if (ST->hasVInstructions())
+      return getRISCVInstructionCost(RISCV::VID_V, LT.second, CostKind) +
+             (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
+    return 1 + (LT.first - 1);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
@@ -909,6 +936,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsTypeLegal)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -943,13 +971,31 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // Instead we use the following instructions to truncate to mask vector:
       // vand.vi v8, v8, 1
       // vmsne.vi v0, v8, 0
-      return 2;
+      return getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                     SrcLT.second, CostKind);
     }
     [[fallthrough]];
   case ISD::FP_EXTEND:
-  case ISD::FP_ROUND:
+  case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
-    return std::abs(PowDiff);
+    unsigned SrcEltSize = Src->getScalarSizeInBits();
+    unsigned DstEltSize = Dst->getScalarSizeInBits();
+
+    unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
+                  : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V
+                                            : RISCV::VFNCVT_F_F_W;
+    InstructionCost Cost = 0;
+    for (; SrcEltSize != DstEltSize;) {
+      MVT ElementMVT = (ISD == ISD::TRUNCATE)
+                           ? MVT::getIntegerVT(DstEltSize)
+                           : MVT::getFloatingPointVT(DstEltSize);
+      MVT DstMVT = DstLT.second.changeVectorElementType(ElementMVT);
+      DstEltSize =
+          (DstEltSize > SrcEltSize) ? DstEltSize >> 1 : DstEltSize << 1;
+      Cost += getRISCVInstructionCost(Op, DstMVT, CostKind);
+    }
+    return Cost;
+  }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:

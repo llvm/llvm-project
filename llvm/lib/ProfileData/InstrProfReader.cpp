@@ -1303,7 +1303,7 @@ Error IndexedInstrProfReader::readHeader() {
     MemProfRecordTable.reset(MemProfRecordHashTable::Create(
         /*Buckets=*/Start + RecordTableOffset,
         /*Payload=*/Ptr,
-        /*Base=*/Start, memprof::RecordLookupTrait(Schema)));
+        /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version1, Schema)));
 
     // Initialize the frame table reader with the payload and bucket offsets.
     MemProfFrameTable.reset(MemProfFrameHashTable::Create(
