@@ -293,6 +293,11 @@ add_math_entrypoint_object(roundf)
 add_math_entrypoint_object(roundl)
 add_math_entrypoint_object(roundf128)
 
+add_math_entrypoint_object(roundeven)
+add_math_entrypoint_object(roundevenf)
+add_math_entrypoint_object(roundevenl)
+add_math_entrypoint_object(roundevenf128)
+
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
