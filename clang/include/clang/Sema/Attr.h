@@ -123,9 +123,10 @@ inline bool isInstanceMethod(const Decl *D) {
   return false;
 }
 
-inline bool hasImplicitObjectParameter(const Decl *D) {
+inline bool checkIfMethodHasImplicitObjectParameter(const Decl *D) {
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
-    return MethodDecl->isImplicitObjectMemberFunction();
+    return MethodDecl->isInstance() &&
+           !MethodDecl->hasCXXExplicitFunctionObjectParameter();
   return false;
 }
 

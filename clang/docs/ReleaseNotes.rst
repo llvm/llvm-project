@@ -487,6 +487,9 @@ Improvements to Clang's diagnostics
   carries messages like 'In file included from ...' or 'In module ...'.
   Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
