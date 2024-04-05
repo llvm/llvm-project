@@ -1973,7 +1973,7 @@ public:
       assert(isa<Instruction>(VL[0]) && "Expected instruction");
       unsigned NumOperands = cast<Instruction>(VL[0])->getNumOperands();
       constexpr unsigned IntrinsicNumOperands = 2;
-      if (auto *CI = dyn_cast<IntrinsicInst>(VL[0]))
+      if (isa<IntrinsicInst>(VL[0]))
         NumOperands = IntrinsicNumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
@@ -14140,6 +14140,17 @@ bool BoUpSLP::collectValuesToDemote(
         return isa<InsertElementInst>(U) && !getTreeEntry(U);
       }))
     return FinalAnalysis();
+
+  if (!all_of(I->users(),
+              [=](User *U) {
+                return getTreeEntry(U) ||
+                       (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                       (U->getType()->isSized() &&
+                        !U->getType()->isScalableTy() &&
+                        DL->getTypeSizeInBits(U->getType()) <= BitWidth);
+              }) &&
+      !IsPotentiallyTruncated(I, BitWidth))
+    return false;
 
   unsigned Start = 0;
   unsigned End = I->getNumOperands();
