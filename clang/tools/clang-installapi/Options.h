@@ -67,6 +67,9 @@ struct DriverOptions {
   /// \brief Output path.
   std::string OutputPath;
 
+  /// \brief DSYM path.
+  std::string DSYMPath;
+
   /// \brief File encoding to print.
   FileType OutFT = FileType::TBD_V5;
 
@@ -141,7 +144,8 @@ private:
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
   OPT_##ID,
 #include "InstallAPIOpts.inc"
   LastOption

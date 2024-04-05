@@ -45,9 +45,21 @@ static constexpr const ArrayRef<StringLiteral>
 /// Create table mapping all options defined in InstallAPIOpts.td.
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX, NAME,  HELPTEXT,   METAVAR,     OPT_##ID,    Option::KIND##Class,   \
-   PARAM,  FLAGS, VISIBILITY, OPT_##GROUP, OPT_##ALIAS, ALIASARGS,             \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   Option::KIND##Class,                                                        \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "InstallAPIOpts.inc"
 #undef OPTION
@@ -240,6 +252,9 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
 
   if (const Arg *A = ParsedArgs.getLastArg(OPT_verify_against))
     DriverOpts.DylibToVerify = A->getValue();
+
+  if (const Arg *A = ParsedArgs.getLastArg(OPT_dsym))
+    DriverOpts.DSYMPath = A->getValue();
 
   // Handle exclude & extra header directories or files.
   auto handleAdditionalInputArgs = [&](PathSeq &Headers,
@@ -522,7 +537,8 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle);
+      std::move(*Slices), Diags, DriverOpts.VerifyMode, DriverOpts.Demangle,
+      DriverOpts.DSYMPath);
   return Ctx;
 }
 

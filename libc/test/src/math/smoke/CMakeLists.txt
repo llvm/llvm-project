@@ -178,6 +178,7 @@ add_fp_unittest(
     libc.src.math.canonicalize
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -193,6 +194,7 @@ add_fp_unittest(
     libc.src.math.canonicalizef
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -208,6 +210,7 @@ add_fp_unittest(
     libc.src.math.canonicalizef128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -223,6 +226,7 @@ add_fp_unittest(
     libc.src.math.canonicalizel
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -390,6 +394,62 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.roundf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundeven_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundeven_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundeven
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundevenf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenl_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundevenl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenf128_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundevenf128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -767,6 +827,17 @@ add_fp_unittest(
    libc.include.math
    libc.src.math.exp2
    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2m1f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.exp2m1f
 )
 
 add_fp_unittest(
@@ -2748,6 +2819,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.atanf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan2f_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
 )
 
