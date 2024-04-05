@@ -135,6 +135,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
     cl::init(false));
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
@@ -492,6 +493,10 @@ int main(int argc, char **argv) {
     // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
+  // Since llvm-link collects multiple IR modules together, for simplicity's
+  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single
+  // debug info format.
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLinkDiagnosticHandler>(),
