@@ -7057,7 +7057,7 @@ bool BoUpSLP::areAllUsersVectorized(
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
                    TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                   ArrayRef<Type *> VecTys) {
+                   ArrayRef<Type *> ArgTys) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
@@ -7065,7 +7065,7 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
     FMF = FPCI->getFastMathFlags();
   SmallVector<const Value *> Arguments(CI->args());
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, Arguments, VecTys, FMF,
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, Arguments, ArgTys, FMF,
                                     dyn_cast<IntrinsicInst>(CI));
   auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
@@ -7078,7 +7078,7 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI->getCallInstrCost(nullptr, VecTy, VecTys,
+    LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys,
                                     TTI::TCK_RecipThroughput);
   }
   return {IntrinsicCost, LibCost};
@@ -8505,6 +8505,30 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+static SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                                  const Intrinsic::ID ID,
+                                                  const unsigned VF,
+                                                  unsigned MinBW) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(FixedVectorType::get(
+            IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(FixedVectorType::get(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -9072,24 +9096,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       auto *CI = cast<CallInst>(VL0);
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-      SmallVector<Type *> VecTys;
-      for (auto [Idx, Arg] : enumerate(CI->args())) {
-        if (ID != Intrinsic::not_intrinsic) {
-          if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx)) {
-            VecTys.push_back(Arg->getType());
-            continue;
-          }
-          if (It != MinBWs.end()) {
-            VecTys.push_back(FixedVectorType::get(
-                IntegerType::get(CI->getContext(), It->second.first),
-                VecTy->getNumElements()));
-            continue;
-          }
-        }
-        VecTys.push_back(
-            FixedVectorType::get(Arg->getType(), VecTy->getNumElements()));
-      }
-      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, VecTys);
+      SmallVector<Type *> ArgTys =
+          buildIntrinsicArgTypes(CI, ID, VecTy->getNumElements(),
+                                 It != MinBWs.end() ? It->second.first : 0);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
       return std::min(VecCallCosts.first, VecCallCosts.second) + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -12561,24 +12571,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
-      SmallVector<Type *> VecTys;
-      for (auto [Idx, Arg] : enumerate(CI->args())) {
-        if (ID != Intrinsic::not_intrinsic) {
-          if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx)) {
-            VecTys.push_back(Arg->getType());
-            continue;
-          }
-          if (It != MinBWs.end()) {
-            VecTys.push_back(FixedVectorType::get(
-                IntegerType::get(CI->getContext(), It->second.first),
-                VecTy->getNumElements()));
-            continue;
-          }
-        }
-        VecTys.push_back(
-            FixedVectorType::get(Arg->getType(), VecTy->getNumElements()));
-      }
-      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, VecTys);
+      SmallVector<Type *> ArgTys =
+          buildIntrinsicArgTypes(CI, ID, VecTy->getNumElements(),
+                                 It != MinBWs.end() ? It->second.first : 0);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
       bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
                           VecCallCosts.first <= VecCallCosts.second;
 
@@ -14383,17 +14379,12 @@ bool BoUpSLP::collectValuesToDemote(
     unsigned VF = ITE->Scalars.size();
     // Choose the best bitwidth based on cost estimations.
     auto Checker = [&](unsigned BitWidth, unsigned) {
-      SmallVector<Type *> VecTys;
-      auto *ITy = IntegerType::get(IC->getContext(), PowerOf2Ceil(BitWidth));
-      for (auto [Idx, Arg] : enumerate(IC->args())) {
-        if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx)) {
-          VecTys.push_back(Arg->getType());
-          continue;
-        }
-        VecTys.push_back(FixedVectorType::get(ITy, VF));
-      }
-      auto VecCallCosts = getVectorCallCosts(IC, FixedVectorType::get(ITy, VF),
-                                             TTI, TLI, VecTys);
+      unsigned MinBW = PowerOf2Ceil(BitWidth);
+      SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(IC, ID, VF, MinBW);
+      auto VecCallCosts = getVectorCallCosts(
+          IC,
+          FixedVectorType::get(IntegerType::get(IC->getContext(), MinBW), VF),
+          TTI, TLI, ArgTys);
       InstructionCost Cost = std::min(VecCallCosts.first, VecCallCosts.second);
       if (Cost < BestCost) {
         BestCost = Cost;
