@@ -1370,8 +1370,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // instruction. Widen memory instructions involved in address computation
       // will lead to gather/scatter instructions, which don't need to be
       // handled.
-      if (isa<VPWidenMemoryRecipe>(CurRec) ||
-          isa<VPInterleaveRecipe>(CurRec) ||
+      if (isa<VPWidenMemoryRecipe>(CurRec) || isa<VPInterleaveRecipe>(CurRec) ||
           isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
         continue;
 

@@ -2323,7 +2323,6 @@ public:
   /// Return the address accessed by this recipe.
   virtual VPValue *getAddr() const = 0;
 
-
   // Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
 
