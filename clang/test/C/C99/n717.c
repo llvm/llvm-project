@@ -65,3 +65,11 @@ int c5 = '\u0060';
 int c6 = '\U00000024';
 int c7 = '\U00000040';
 int c8 = '\U00000060';
+
+// Valid lone surrogates.
+M(\uD799)
+const char *c9 = "\U0000E000";
+
+// Invalid lone surrogates, which are excluded explicitly by 6.4.3p2.
+M(\uD800) // expected-error {{invalid universal character}}
+const char *c10  = "\U0000DFFF"; // expected-error {{invalid universal character}}
