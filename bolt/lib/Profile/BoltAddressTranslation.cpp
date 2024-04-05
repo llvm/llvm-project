@@ -615,7 +615,8 @@ BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
 
 std::pair<const BinaryFunction *, unsigned>
 BoltAddressTranslation::translateSymbol(const BinaryContext &BC,
-                                        const MCSymbol &Symbol) const {
+                                        const MCSymbol &Symbol,
+                                        uint32_t Offset) const {
   // The symbol could be a secondary entry in a cold fragment.
   uint64_t SymbolValue = cantFail(errorOrToExpected(BC.getSymbolValue(Symbol)));
 
@@ -632,7 +633,7 @@ BoltAddressTranslation::translateSymbol(const BinaryContext &BC,
   const BinaryFunction *ParentBF = BC.getBinaryFunctionAtAddress(HotAddress);
 
   const uint32_t InputOffset =
-      translate(CalleeAddress, OutputOffset, /*IsBranchSrc*/ false);
+      translate(CalleeAddress, OutputOffset, /*IsBranchSrc*/ false) + Offset;
 
   unsigned SecondaryEntryId{0};
   if (InputOffset)

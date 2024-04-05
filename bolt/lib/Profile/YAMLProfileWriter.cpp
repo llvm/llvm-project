@@ -27,11 +27,10 @@ extern llvm::cl::opt<bool> ProfileUseDFS;
 namespace llvm {
 namespace bolt {
 
-/// Set CallSiteInfo destination fields from \p Symbol and return a target
-/// BinaryFunction for that symbol.
-static const BinaryFunction *
-setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
-                  const MCSymbol *Symbol, const BoltAddressTranslation *BAT) {
+const BinaryFunction *YAMLProfileWriter::setCSIDestination(
+    const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+    uint32_t Offset) {
   CSI.DestId = 0; // designated for unknown functions
   CSI.EntryDiscriminator = 0;
 
@@ -40,7 +39,7 @@ setCSIDestination(const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
     if (const BinaryFunction *Callee =
             BC.getFunctionForSymbol(Symbol, &EntryID)) {
       if (BAT && BAT->isBATFunction(Callee->getAddress()))
-        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol);
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
       CSI.DestId = Callee->getFunctionNumber();
       CSI.EntryDiscriminator = EntryID;
       return Callee;
