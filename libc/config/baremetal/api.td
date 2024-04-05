@@ -1,5 +1,5 @@
 include "config/public_api.td"
-include "spec/posix.td"
+
 include "spec/stdc.td"
 include "spec/stdc_ext.td"
 include "spec/bsd_ext.td"
@@ -57,10 +57,7 @@ def MathAPI : PublicAPI<"math.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Types = [
-    "size_t",
-    "off_t",
-  ];
+  let Types = ["size_t"];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
