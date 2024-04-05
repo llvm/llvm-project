@@ -174,6 +174,7 @@ static void runAllDeltaPassesInChild(TestRunner &Tester,
   return;
 #endif
 
+#ifndef _WIN32
 #define DELTA_PASS(NAME, FUNC)                                                 \
   if (!SkipPass.count(NAME)) {                                                 \
     pid_t CPid = fork();                                                       \
@@ -203,6 +204,7 @@ static void runAllDeltaPassesInChild(TestRunner &Tester,
     DELTA_PASSES;
   }
 #undef DELTA_PASS
+#endif
 }
 
 static void runDeltaPassNameInChild(TestRunner &Tester, StringRef PassName) {
@@ -211,6 +213,7 @@ static void runDeltaPassNameInChild(TestRunner &Tester, StringRef PassName) {
   return;
 #endif
 
+#ifndef _WIN32
 #define DELTA_PASS(NAME, FUNC)                                                 \
   if (PassName == NAME) {                                                      \
     pid_t CPid = fork();                                                       \
@@ -241,6 +244,7 @@ static void runDeltaPassNameInChild(TestRunner &Tester, StringRef PassName) {
     DELTA_PASSES;
   }
 #undef DELTA_PASS
+#endif
 
   // We should have errored on unrecognized passes before trying to run
   // anything.
