@@ -23,13 +23,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "remove-traps"
 
-static cl::opt<int> HotPercentileCutoff(
-    "remove-traps-percentile-cutoff-hot", cl::init(0),
-    cl::desc("Alternative hot percentile cuttoff. By default "
-             "`-profile-summary-cutoff-hot` is used."));
+static cl::opt<int> HotPercentileCutoff("remove-traps-percentile-cutoff-hot",
+                                        cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    RandomRate("remove-traps-random-rate", cl::init(0.0),
+    RandomRate("remove-traps-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
                         "unconditional pseudo-random checks removal."));
 
@@ -38,9 +36,11 @@ STATISTIC(NumChecksRemoved, "Number of removed checks");
 
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI) {
-  SmallVector<std::pair<IntrinsicInst *, Value *>, 16> ReplaceWithValue;
+  SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
+  // TODO:
+  // https://github.com/llvm/llvm-project/pull/84858#discussion_r1520603139
   auto ShouldRemove = [&](bool IsHot) {
     if (!RandomRate.getNumOccurrences())
       return IsHot;
@@ -64,18 +64,13 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
         bool IsHot = false;
         if (PSI) {
           uint64_t Count = BFI.getBlockProfileCount(&BB).value_or(0);
-          IsHot =
-              HotPercentileCutoff.getNumOccurrences()
-                  ? (HotPercentileCutoff > 0 &&
-                     PSI->isHotCountNthPercentile(HotPercentileCutoff, Count))
-                  : PSI->isHotCount(Count);
+          IsHot = PSI->isHotCountNthPercentile(HotPercentileCutoff, Count);
         }
 
         bool ToRemove = ShouldRemove(IsHot);
         ReplaceWithValue.push_back({
             II,
-            ToRemove ? Constant::getNullValue(II->getType())
-                     : (Constant::getAllOnesValue(II->getType())),
+            ToRemove,
         });
         if (ToRemove)
           ++NumChecksRemoved;
@@ -88,7 +83,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   }
 
   for (auto [I, V] : ReplaceWithValue) {
-    I->replaceAllUsesWith(V);
+    I->replaceAllUsesWith(ConstantInt::getBool(I->getType(), !V));
     I->eraseFromParent();
   }
 
@@ -106,4 +101,9 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
 
   return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();
+}
+
+bool RemoveTrapsPass::IsRequested() {
+  return RandomRate.getNumOccurrences() ||
+         HotPercentileCutoff.getNumOccurrences();
 }
