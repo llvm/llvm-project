@@ -4126,10 +4126,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       }
     } else if (Literal.isFloat)
       Ty = Context.FloatTy;
-    else if (getLangOpts().HLSL && Literal.isLong)
-      Ty = Context.DoubleTy;
     else if (Literal.isLong)
-      Ty = Context.LongDoubleTy;
+      Ty = !getLangOpts().HLSL ? Context.LongDoubleTy : Context.DoubleTy;
     else if (Literal.isFloat16)
       Ty = Context.Float16Ty;
     else if (Literal.isFloat128)
