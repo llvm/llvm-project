@@ -955,8 +955,7 @@ define i1 @icmp_or_xor_with_sub_3_6(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @or_disjoint_with_constants(i8 %x) {
 ; CHECK-LABEL: @or_disjoint_with_constants(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 18
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1:%.*]], 18
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %or = or disjoint i8 %x, 1
@@ -967,8 +966,8 @@ define i1 @or_disjoint_with_constants(i8 %x) {
 
 define i1 @or_disjoint_with_constants2(i8 %x) {
 ; CHECK-LABEL: @or_disjoint_with_constants2(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OR]], 71
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[TMP1:%.*]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 66
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
