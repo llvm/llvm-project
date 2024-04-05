@@ -287,8 +287,7 @@ static std::string getOverloadKindStr(const Record *R) {
 // Constant value that is used to encode shader model version
 // denoting SM5.0
 
-static std::string
-getOverloadKindStrs(const SmallVector<Record *> Recs) {
+static std::string getOverloadKindStrs(const SmallVector<Record *> Recs) {
   std::string OverloadString = "";
   std::string Prefix = "";
   OverloadString.append("{");
@@ -441,14 +440,14 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     if (OLParamIdx < 0) {
       OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
     }
-    OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
-       << ", OpCodeClass::" << Op.OpClass << ", "
+    OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
+       << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadKindStrs(Op.OpOverloads) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " }\n";
-       Prefix = ",";
+    Prefix = ",";
   }
   OS << "  };\n";
 
