@@ -43,6 +43,7 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
+- P2872R3 - Remove ``wstring_convert`` From C++26
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
@@ -56,6 +57,9 @@ Improvements and New Features
   improvements.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
+  available.
 
 Deprecations and Removals
 -------------------------
