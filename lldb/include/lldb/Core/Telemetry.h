@@ -200,6 +200,37 @@ public:
   virtual void AddDestination(TelemetryDestination *destination) = 0;
 };
 
+/*
+
+Logger configs: LLDB users can also supply their own configs via:
+$XDG_CONFIG_HOME/.lldb_telemetry_config
+
+
+We can propose simple syntax: <field_name><colon><value>
+Eg.,
+enable_logging:true
+destination:stdout
+destination:stderr
+destination:/path/to/some/file
+
+The allowed field_name values are:
+ * enable_logging
+       If the fields are specified more than once, the last line will take precedence
+       If enable_logging is set to false, no logging will occur.
+ * destination.
+      This is allowed to be specified multiple times - it will add to the default
+      (ie, specified by vendor) list of destinations.
+      The value can be either of
+         + one of the two magic values "stdout" or "stderr".
+         + a path to a local file
+
+!!NOTE!!: We decided to use a separate file instead of the existing settings
+         file because that file is parsed too late in the process and by the
+         there might have been lots of telemetry-entries that need to be
+         sent already.
+         This approach avoid losing log entries if LLDB crashes during init.
+
+*/
 LoggerConfig *GetLoggerConfig();
 
 } // namespace lldb_private
