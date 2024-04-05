@@ -4019,7 +4019,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // dominated defs as dead.
           if (Def) {
             // For anything in this case, what and how we value number
-            // guarantees that any side-effets that would have occurred (ie
+            // guarantees that any side-effects that would have occurred (ie
             // throwing, etc) can be proven to either still occur (because it's
             // dominated by something that has the same side-effects), or never
             // occur.  Otherwise, we would not have been able to prove it value
