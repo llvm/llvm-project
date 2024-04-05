@@ -673,7 +673,7 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
-option(LLVM_ENABLE_EXPORTED_SYMBOLS
+option(LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES
   "Preserve exported symbols in executables" ON)
 
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
