@@ -626,6 +626,9 @@ Improvements to Clang's diagnostics
   used rather than when they are needed for constant evaluation or when code is generated for them.
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
 
+- Clang now diagnoses missing format attributes for non-template functions and
+  class/struct/union members. Fixes #GH60718
+
 Improvements to Clang's time-trace
 ----------------------------------
 

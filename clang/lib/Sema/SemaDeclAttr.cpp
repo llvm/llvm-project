@@ -3547,7 +3547,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   unsigned NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
 
   IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
@@ -3660,7 +3660,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   int32_t NumArgs = getFunctionOrMethodNumParams(D);
 
   FunctionDecl *FD = D->getAsFunction();
@@ -5359,6 +5359,114 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                         diag::err_incomplete_type);
 
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
+}
+
+// This function is called only if function call is not inside template body.
+// TODO: Add call for function calls inside template body.
+// Check if parent function misses format attribute. If misses, emit warning.
+void Sema::DiagnoseMissingFormatAttributes(const FunctionDecl *FDecl,
+                                           ArrayRef<const Expr *> Args,
+                                           SourceLocation Loc) {
+  assert(FDecl);
+
+  const FunctionDecl *ParentFuncDecl = getCurFunctionDecl();
+  if (!ParentFuncDecl)
+    return;
+
+  // If function is a member of struct/union/class and has implicit object
+  // parameter, format attribute argument indexing starts from 2. Otherwise, it
+  // starts from 1.
+  unsigned int FormatArgumentIndexOffset =
+      checkIfMethodHasImplicitObjectParameter(FDecl) ? 2 : 1;
+  unsigned int ParentFunctionFormatArgumentIndexOffset =
+      checkIfMethodHasImplicitObjectParameter(ParentFuncDecl) ? 2 : 1;
+
+  // Check if function has format attribute with forwarded format string.
+  IdentifierInfo *AttrType;
+  const ParmVarDecl *FormatArg;
+  if (!llvm::any_of(FDecl->specific_attrs<FormatAttr>(),
+                    [&](const FormatAttr *Attr) {
+                      int OffsetFormatIndex =
+                          Attr->getFormatIdx() - FormatArgumentIndexOffset;
+                      if (OffsetFormatIndex < 0 ||
+                          (unsigned)OffsetFormatIndex >= Args.size())
+                        return false;
+
+                      const auto *FormatArgExpr = dyn_cast<DeclRefExpr>(
+                          Args[OffsetFormatIndex]->IgnoreParenCasts());
+                      if (!FormatArgExpr)
+                        return false;
+
+                      FormatArg = dyn_cast_or_null<ParmVarDecl>(
+                          FormatArgExpr->getReferencedDeclOfCallee());
+                      if (!FormatArg)
+                        return false;
+
+                      AttrType = Attr->getType();
+                      return true;
+                    }))
+    return;
+
+  // Check if format string argument is parent function parameter.
+  unsigned int StringIndex = 0;
+  if (!llvm::any_of(ParentFuncDecl->parameters(),
+                    [&](const ParmVarDecl *Param) {
+                      StringIndex = Param->getFunctionScopeIndex() +
+                                    ParentFunctionFormatArgumentIndexOffset;
+
+                      return Param == FormatArg;
+                    }))
+    return;
+
+  unsigned NumOfParentFunctionParams = ParentFuncDecl->getNumParams();
+
+  // Compare parent and calling function format attribute arguments (archetype
+  // and format string).
+  if (llvm::any_of(
+          ParentFuncDecl->specific_attrs<FormatAttr>(),
+          [&](const FormatAttr *Attr) {
+            if (Attr->getType() != AttrType)
+              return false;
+            int OffsetFormatIndex =
+                Attr->getFormatIdx() - ParentFunctionFormatArgumentIndexOffset;
+
+            if (OffsetFormatIndex < 0 ||
+                (unsigned)OffsetFormatIndex >= NumOfParentFunctionParams)
+              return false;
+
+            if (ParentFuncDecl->parameters()[OffsetFormatIndex] != FormatArg)
+              return false;
+
+            return true;
+          }))
+    return;
+
+  // If parent function is variadic, check if last argument of child function is
+  // va_list.
+  unsigned FirstToCheck = [&]() -> unsigned {
+    if (!ParentFuncDecl->isVariadic())
+      return 0;
+    const auto *FirstToCheckArg =
+        dyn_cast<DeclRefExpr>(Args[Args.size() - 1]->IgnoreParenCasts());
+    if (!FirstToCheckArg)
+      return 0;
+
+    if (FirstToCheckArg->getType().getCanonicalType() !=
+        Context.getBuiltinVaListType().getCanonicalType())
+      return 0;
+    return NumOfParentFunctionParams + ParentFunctionFormatArgumentIndexOffset;
+  }();
+
+  // Emit warning
+  SourceLocation ParentFuncLoc = ParentFuncDecl->getLocation();
+  Diag(ParentFuncLoc, diag::warn_missing_format_attribute)
+      << AttrType << ParentFuncDecl
+      << FixItHint::CreateInsertion(ParentFuncLoc,
+                                    (llvm::Twine("__attribute__((format(") +
+                                     AttrType->getName() + ", " +
+                                     llvm::Twine(StringIndex) + ", " +
+                                     llvm::Twine(FirstToCheck) + ")))")
+                                        .str());
 }
 
 //===----------------------------------------------------------------------===//

@@ -3854,6 +3854,10 @@ public:
 
   enum class RetainOwnershipKind { NS, CF, OS };
 
+  void DiagnoseMissingFormatAttributes(const FunctionDecl *FDecl,
+                                       ArrayRef<const Expr *> Args,
+                                       SourceLocation Loc);
+
   UuidAttr *mergeUuidAttr(Decl *D, const AttributeCommonInfo &CI,
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 

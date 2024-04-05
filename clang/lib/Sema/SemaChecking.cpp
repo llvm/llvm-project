@@ -4119,8 +4119,10 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
   }
 
-  if (FD)
+  if (FD) {
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
+    DiagnoseMissingFormatAttributes(FD, Args, Range.getBegin());
+  }
 }
 
 void Sema::CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc) {
