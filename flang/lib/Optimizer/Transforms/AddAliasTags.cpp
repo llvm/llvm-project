@@ -171,10 +171,28 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                                         << " at " << *op << "\n");
       tag = state.getFuncTree(func).directDataTree.getTag(name);
     } else {
-      // SourceKind::Direct is likely to be extended to cases which are not a
-      // SymbolRefAttr in the future
-      LLVM_DEBUG(llvm::dbgs().indent(2) << "Can't get name for direct "
-                                        << source << " at " << *op << "\n");
+      bool sourceIsDummyArgument = false;
+      if (auto blockArg =
+              source.u.get<mlir::Value>().dyn_cast<mlir::BlockArgument>())
+        sourceIsDummyArgument = blockArg.getOwner()->isEntryBlock();
+      if (sourceIsDummyArgument) {
+        std::string name = getFuncArgName(source.u.get<mlir::Value>());
+        if (!name.empty()) {
+          LLVM_DEBUG(llvm::dbgs().indent(2)
+                     << "Found reference to direct from dummy argument " << name
+                     << " at " << *op << "\n");
+          tag = state.getFuncTree(func).directDataTree.getTag(name);
+        } else {
+          LLVM_DEBUG(llvm::dbgs().indent(2)
+                     << "WARN: for direct, couldn't find a name for dummy "
+                     << "argument " << *op << "\n");
+        }
+      } else {
+        // SourceKind::Direct is likely to be extended to more cases in the
+        // future
+        LLVM_DEBUG(llvm::dbgs().indent(2) << "Can't get name for direct "
+                                          << source << " at " << *op << "\n");
+      }
     }
 
     // TBAA for local allocations

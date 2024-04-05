@@ -48,14 +48,14 @@
 // CHECK: #[[ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
 // CHECK: #[[ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY_ACCESS]], 0>}>
 // CHECK: #[[ANY_GLBL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANY_DATA]], 0>}>
-// CHECK: #[[ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
 // CHECK: #[[ANY_DIRECT:.+]] = #llvm.tbaa_type_desc<id = "direct data", members = {<#[[ANY_DATA]], 0>}>
+// CHECK: #[[ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANY_DATA]], 0>}>
 // CHECK: #[[GLBL_ZSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstart", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_ZSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEzstop", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_YSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystart", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_YSTOP:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodEystop", members = {<#[[ANY_GLBL]], 0>}>
 // CHECK: #[[GLBL_XSTART:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMmodExstart", members = {<#[[ANY_GLBL]], 0>}>
-// CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeElow", members = {<#[[ANY_ARG]], 0>}>
+// CHECK: #[[ARG_LOW:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodFcalleeElow", members = {<#[[ANY_DIRECT]], 0>}>
 // CHECK: #[[DIRECT_A:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEa", members = {<#[[ANY_DIRECT]], 0>}>
 // CHECK: #[[DIRECT_B:.+]] = #llvm.tbaa_type_desc<id = "direct data/_QMmodEb", members = {<#[[ANY_DIRECT]], 0>}>
 // CHECK: #[[ARG_Z:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmodFcalleeEz", members = {<#[[ANY_ARG]], 0>}>

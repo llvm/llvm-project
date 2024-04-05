@@ -4,7 +4,7 @@
 // as well as its diagnostic output.
 // RUN: fir-opt %s \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
-// RUN:   --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN:   --mlir-disable-threading 2>&1 | FileCheck -match-full-lines %s
 
 // subroutine test(p0, p1, arr, t_arr, alloc, t_alloc)
 //   real, pointer :: p0, p1
@@ -51,8 +51,12 @@
 // CHECK-DAG: p0.tgt_addr#0 <-> alloc.tgt_addr#0: NoAlias
 // CHECK-DAG: p0.tgt_addr#0 <-> t_alloc.tgt_addr#0: MayAlias
 
+// The address *in* an allocatable cannot alias the address *of* that
+// allocatable.
+// CHECK-DAG: alloc#0 <-> alloc.tgt_addr#0: NoAlias
+
 func.func @_QPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p0"}, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "p1"}, %arg2: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}, %arg3: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "t_arr", fir.target}, %arg4: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "alloc"}, %arg5: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "t_alloc", fir.target}) attributes {test.ptr="func"} {
-  %0:2 = hlfir.declare %arg4 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %0:2 = hlfir.declare %arg4 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEalloc", test.ptr="alloc"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
   %1:2 = hlfir.declare %arg2 {uniq_name = "_QFtestEarr"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %2:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp0"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)
   %3:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtestEp1"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> (!fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>)

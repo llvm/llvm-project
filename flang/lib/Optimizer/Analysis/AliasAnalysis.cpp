@@ -412,7 +412,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
         attributes.set(Attribute::Target);
       if (Source::isPointerReference(ty))
         attributes.set(Attribute::Pointer);
-      if (followBoxAddr && attributes.test(Attribute::Pointer))
+      if (followBoxAddr && fir::isa_ref_type(ty))
         type = SourceKind::Direct;
       else
         type = SourceKind::Argument;
