@@ -280,10 +280,37 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
-    llvm_unreachable("NYI");
+    if (E->getNumSubExprs() == 2) {
+      // The undocumented form of __builtin_shufflevector.
+      mlir::Value InputVec = Visit(E->getExpr(0));
+      mlir::Value IndexVec = Visit(E->getExpr(1));
+      return CGF.builder.create<mlir::cir::VecShuffleDynamicOp>(
+          CGF.getLoc(E->getSourceRange()), InputVec, IndexVec);
+    } else {
+      // The documented form of __builtin_shufflevector, where the indices are
+      // a variable number of integer constants. The constants will be stored
+      // in an ArrayAttr.
+      mlir::Value Vec1 = Visit(E->getExpr(0));
+      mlir::Value Vec2 = Visit(E->getExpr(1));
+      SmallVector<mlir::Attribute, 8> Indices;
+      for (unsigned i = 2; i < E->getNumSubExprs(); ++i) {
+        Indices.push_back(mlir::cir::IntAttr::get(
+            CGF.builder.getSInt64Ty(),
+            E->getExpr(i)
+                ->EvaluateKnownConstInt(CGF.getContext())
+                .getSExtValue()));
+      }
+      return CGF.builder.create<mlir::cir::VecShuffleOp>(
+          CGF.getLoc(E->getSourceRange()), CGF.getCIRType(E->getType()), Vec1,
+          Vec2, CGF.builder.getArrayAttr(Indices));
+    }
   }
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *E) {
-    llvm_unreachable("NYI");
+    // __builtin_convertvector is an element-wise cast, and is implemented as a
+    // regular cast. The back end handles casts of vectors correctly.
+    return buildScalarConversion(Visit(E->getSrcExpr()),
+                                 E->getSrcExpr()->getType(), E->getType(),
+                                 E->getSourceRange().getBegin());
   }
   mlir::Value VisitMemberExpr(MemberExpr *E);
   mlir::Value VisitExtVectorelementExpr(Expr *E) { llvm_unreachable("NYI"); }
@@ -1725,9 +1752,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
 }
 
 // Conversion from bool, integral, or floating-point to integral or
-// floating-point.  Conversions involving other types are handled elsewhere.
+// floating-point. Conversions involving other types are handled elsewhere.
 // Conversion to bool is handled elsewhere because that's a comparison against
-// zero, not a simple cast.
+// zero, not a simple cast. This handles both individual scalars and vectors.
 mlir::Value ScalarExprEmitter::buildScalarCast(
     mlir::Value Src, QualType SrcType, QualType DstType, mlir::Type SrcTy,
     mlir::Type DstTy, ScalarConversionOpts Opts) {
@@ -1736,9 +1763,20 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   if (SrcTy.isa<mlir::IntegerType>() || DstTy.isa<mlir::IntegerType>())
     llvm_unreachable("Obsolete code. Don't use mlir::IntegerType with CIR.");
 
+  mlir::Type FullDstTy = DstTy;
+  if (SrcTy.isa<mlir::cir::VectorType>() &&
+      DstTy.isa<mlir::cir::VectorType>()) {
+    // Use the element types of the vectors to figure out the CastKind.
+    SrcTy = SrcTy.dyn_cast<mlir::cir::VectorType>().getEltType();
+    DstTy = DstTy.dyn_cast<mlir::cir::VectorType>().getEltType();
+  }
+  assert(!SrcTy.isa<mlir::cir::VectorType>() &&
+         !DstTy.isa<mlir::cir::VectorType>() &&
+         "buildScalarCast given a vector type and a non-vector type");
+
   std::optional<mlir::cir::CastKind> CastKind;
 
-  if (SrcType->isBooleanType()) {
+  if (SrcTy.isa<mlir::cir::BoolType>()) {
     if (Opts.TreatBooleanAsSigned)
       llvm_unreachable("NYI: signed bool");
     if (CGF.getBuilder().isInt(DstTy)) {
@@ -1768,7 +1806,7 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
       CastKind = mlir::cir::CastKind::float_to_int;
     } else if (DstTy.isa<mlir::cir::CIRFPTypeInterface>()) {
       // TODO: split this to createFPExt/createFPTrunc
-      return Builder.createFloatingCast(Src, DstTy);
+      return Builder.createFloatingCast(Src, FullDstTy);
     } else {
       llvm_unreachable("Internal error: Cast to unexpected type");
     }
@@ -1777,7 +1815,8 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   }
 
   assert(CastKind.has_value() && "Internal error: CastKind not set.");
-  return Builder.create<mlir::cir::CastOp>(Src.getLoc(), DstTy, *CastKind, Src);
+  return Builder.create<mlir::cir::CastOp>(Src.getLoc(), FullDstTy, *CastKind,
+                                           Src);
 }
 
 LValue

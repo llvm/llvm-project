@@ -3,6 +3,7 @@
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
 typedef long long vll2 __attribute__((vector_size(16)));
+typedef unsigned short vus2 __attribute__((vector_size(4)));
 
 void vector_int_test(int x) {
 
@@ -84,6 +85,12 @@ void vector_int_test(int x) {
   // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
   vi4 t = a >= b;
   // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!s32i x 4>, !cir.vector<!s32i x 4>
+
+  // __builtin_shufflevector
+  vi4 u = __builtin_shufflevector(a, b, 7, 5, 3, 1);
+  // CHECK: %{{[0-9]+}} = cir.vec.shuffle(%{{[0-9]+}}, %{{[0-9]+}} : !cir.vector<!s32i x 4>) [#cir.int<7> : !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<!s32i x 4>
+  vi4 v = __builtin_shufflevector(a, b);
+  // CHECK: %{{[0-9]+}} = cir.vec.shuffle.dynamic %{{[0-9]+}} : !cir.vector<!s32i x 4>, %{{[0-9]+}} : !cir.vector<!s32i x 4>
 }
 
 void vector_double_test(int x, double y) {
@@ -146,4 +153,8 @@ void vector_double_test(int x, double y) {
   // CHECK: %{{[0-9]+}} = cir.vec.cmp(le, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>, !cir.vector<!s64i x 2>
   vll2 t = a >= b;
   // CHECK: %{{[0-9]+}} = cir.vec.cmp(ge, %{{[0-9]+}}, %{{[0-9]+}}) : !cir.vector<!cir.double x 2>, !cir.vector<!s64i x 2>
+
+  // __builtin_convertvector
+  vus2 w = __builtin_convertvector(a, vus2);
+  // CHECK: %{{[0-9]+}} = cir.cast(float_to_int, %{{[0-9]+}} : !cir.vector<!cir.double x 2>), !cir.vector<!u16i x 2>
 }

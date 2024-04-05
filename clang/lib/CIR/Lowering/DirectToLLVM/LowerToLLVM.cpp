@@ -143,6 +143,15 @@ convertCmpKindToFCmpPredicate(mlir::cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+/// If the given type is a vector type, return the vector's element type.
+/// Otherwise return the given type unchanged.
+mlir::Type elementTypeIfVector(mlir::Type type) {
+  if (auto VecType = type.dyn_cast<mlir::cir::VectorType>()) {
+    return VecType.getEltType();
+  }
+  return type;
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -575,6 +584,10 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CastOp castOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    // For arithmetic conversions, LLVM IR uses the same instruction to convert
+    // both individual scalars and entire vectors. This lowering pass handles
+    // both situations.
+
     auto src = adaptor.getSrc();
 
     switch (castOp.getKind()) {
@@ -598,42 +611,45 @@ public:
       break;
     }
     case mlir::cir::CastKind::integral: {
-      auto dstType = castOp.getResult().getType().cast<mlir::cir::IntType>();
-      auto srcType = castOp.getSrc().getType().dyn_cast<mlir::cir::IntType>();
+      auto srcType = castOp.getSrc().getType();
+      auto dstType = castOp.getResult().getType();
       auto llvmSrcVal = adaptor.getOperands().front();
-      auto llvmDstTy =
-          getTypeConverter()->convertType(dstType).cast<mlir::IntegerType>();
+      auto llvmDstType = getTypeConverter()->convertType(dstType);
+      mlir::cir::IntType srcIntType =
+          elementTypeIfVector(srcType).cast<mlir::cir::IntType>();
+      mlir::cir::IntType dstIntType =
+          elementTypeIfVector(dstType).cast<mlir::cir::IntType>();
 
-      // Target integer is smaller: truncate source value.
-      if (dstType.getWidth() < srcType.getWidth()) {
-        rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(castOp, llvmDstTy,
+      if (dstIntType.getWidth() < srcIntType.getWidth()) {
+        // Bigger to smaller. Truncate.
+        rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(castOp, llvmDstType,
                                                          llvmSrcVal);
-      }
-      // Target integer is larger: sign extend or zero extend.
-      else if (dstType.getWidth() > srcType.getWidth()) {
-        if (srcType.isUnsigned())
-          rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
+      } else if (dstIntType.getWidth() > srcIntType.getWidth()) {
+        // Smaller to bigger. Zero extend or sign extend based on signedness.
+        if (srcIntType.isUnsigned())
+          rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstType,
                                                           llvmSrcVal);
         else
-          rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(castOp, llvmDstTy,
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(castOp, llvmDstType,
                                                           llvmSrcVal);
-      } else { // Target integer is of the same size: do nothing.
+      } else {
+        // Same size. Signedness changes doesn't matter to LLVM. Do nothing.
         rewriter.replaceOp(castOp, llvmSrcVal);
       }
       break;
     }
     case mlir::cir::CastKind::floating: {
-      auto dstTy = castOp.getResult().getType();
-      auto srcTy = castOp.getSrc().getType();
+      auto llvmSrcVal = adaptor.getOperands().front();
+      auto llvmDstTy =
+          getTypeConverter()->convertType(castOp.getResult().getType());
+
+      auto srcTy = elementTypeIfVector(castOp.getSrc().getType());
+      auto dstTy = elementTypeIfVector(castOp.getResult().getType());
 
       if (!dstTy.isa<mlir::cir::CIRFPTypeInterface>() ||
           !srcTy.isa<mlir::cir::CIRFPTypeInterface>())
         return castOp.emitError()
                << "NYI cast from " << srcTy << " to " << dstTy;
-
-      auto llvmSrcVal = adaptor.getOperands().front();
-      auto llvmDstTy =
-          getTypeConverter()->convertType(dstTy).cast<mlir::FloatType>();
 
       auto getFloatWidth = [](mlir::Type ty) -> unsigned {
         return ty.cast<mlir::cir::CIRFPTypeInterface>().getWidth();
@@ -707,7 +723,9 @@ public:
       auto dstTy = castOp.getType();
       auto llvmSrcVal = adaptor.getOperands().front();
       auto llvmDstTy = getTypeConverter()->convertType(dstTy);
-      if (castOp.getSrc().getType().cast<mlir::cir::IntType>().isSigned())
+      if (elementTypeIfVector(castOp.getSrc().getType())
+              .cast<mlir::cir::IntType>()
+              .isSigned())
         rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(castOp, llvmDstTy,
                                                           llvmSrcVal);
       else
@@ -719,7 +737,9 @@ public:
       auto dstTy = castOp.getType();
       auto llvmSrcVal = adaptor.getOperands().front();
       auto llvmDstTy = getTypeConverter()->convertType(dstTy);
-      if (castOp.getResult().getType().cast<mlir::cir::IntType>().isSigned())
+      if (elementTypeIfVector(castOp.getResult().getType())
+              .cast<mlir::cir::IntType>()
+              .isSigned())
         rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(castOp, llvmDstTy,
                                                           llvmSrcVal);
       else
@@ -1302,8 +1322,7 @@ public:
            "Vector compare with non-vector type");
     // LLVM IR vector comparison returns a vector of i1.  This one-bit vector
     // must be sign-extended to the correct result type.
-    auto elementType =
-        op.getLhs().getType().dyn_cast<mlir::cir::VectorType>().getEltType();
+    auto elementType = elementTypeIfVector(op.getLhs().getType());
     mlir::Value bitResult;
     if (auto intType = elementType.dyn_cast<mlir::cir::IntType>()) {
       bitResult = rewriter.create<mlir::LLVM::ICmpOp>(
@@ -1333,8 +1352,8 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Vector splat can be implemented with an `insertelement` and a
     // `shufflevector`, which is better than an `insertelement` for each
-    // element in vector.  Start with an undef vector.  Insert the value into
-    // the first element.  Then use a `shufflevector` with a mask of all 0 to
+    // element in the vector. Start with an undef vector. Insert the value into
+    // the first element. Then use a `shufflevector` with a mask of all 0 to
     // fill out the entire vector with that value.
     auto vecTy = op.getType().dyn_cast<mlir::cir::VectorType>();
     assert(vecTy && "result type of cir.vec.splat op is not VectorType");
@@ -1375,6 +1394,84 @@ public:
             typeConverter->convertType(op.getCond().getType())));
     rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
         op, bitVec, adaptor.getVec1(), adaptor.getVec2());
+    return mlir::success();
+  }
+};
+
+class CIRVectorShuffleIntsLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecShuffleOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecShuffleOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecShuffleOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // LLVM::ShuffleVectorOp takes an ArrayRef of int for the list of indices.
+    // Convert the ClangIR ArrayAttr of IntAttr constants into a
+    // SmallVector<int>.
+    SmallVector<int, 8> indices;
+    std::transform(
+        op.getIndices().begin(), op.getIndices().end(),
+        std::back_inserter(indices), [](mlir::Attribute intAttr) {
+          return intAttr.cast<mlir::cir::IntAttr>().getValue().getSExtValue();
+        });
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(
+        op, adaptor.getVec1(), adaptor.getVec2(), indices);
+    return mlir::success();
+  }
+};
+
+class CIRVectorShuffleVecLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecShuffleDynamicOp> {
+public:
+  using OpConversionPattern<
+      mlir::cir::VecShuffleDynamicOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecShuffleDynamicOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // LLVM IR does not have an operation that corresponds to this form of
+    // the built-in.
+    //     __builtin_shufflevector(V, I)
+    // is implemented as this pseudocode, where the for loop is unrolled
+    // and N is the number of elements:
+    //     masked = I & (N-1)
+    //     for (i in 0 <= i < N)
+    //       result[i] = V[masked[i]]
+    auto loc = op.getLoc();
+    mlir::Value input = adaptor.getVec();
+    mlir::Type llvmIndexVecType =
+        getTypeConverter()->convertType(op.getIndices().getType());
+    mlir::Type llvmIndexType = getTypeConverter()->convertType(
+        elementTypeIfVector(op.getIndices().getType()));
+    uint64_t numElements =
+        op.getVec().getType().cast<mlir::cir::VectorType>().getSize();
+    mlir::Value maskValue = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, llvmIndexType,
+        mlir::IntegerAttr::get(llvmIndexType, numElements - 1));
+    mlir::Value maskVector =
+        rewriter.create<mlir::LLVM::UndefOp>(loc, llvmIndexVecType);
+    for (uint64_t i = 0; i < numElements; ++i) {
+      mlir::Value iValue = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, rewriter.getI64Type(), i);
+      maskVector = rewriter.create<mlir::LLVM::InsertElementOp>(
+          loc, maskVector, maskValue, iValue);
+    }
+    mlir::Value maskedIndices = rewriter.create<mlir::LLVM::AndOp>(
+        loc, llvmIndexVecType, adaptor.getIndices(), maskVector);
+    mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(
+        loc, getTypeConverter()->convertType(op.getVec().getType()));
+    for (uint64_t i = 0; i < numElements; ++i) {
+      mlir::Value iValue = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, rewriter.getI64Type(), i);
+      mlir::Value indexValue = rewriter.create<mlir::LLVM::ExtractElementOp>(
+          loc, maskedIndices, iValue);
+      mlir::Value valueAtIndex =
+          rewriter.create<mlir::LLVM::ExtractElementOp>(loc, input, indexValue);
+      result = rewriter.create<mlir::LLVM::InsertElementOp>(
+          loc, result, valueAtIndex, iValue);
+    }
+    rewriter.replaceOp(op, result);
     return mlir::success();
   }
 };
@@ -1782,12 +1879,8 @@ public:
     assert(op.getType() == op.getInput().getType() &&
            "Unary operation's operand type and result type are different");
     mlir::Type type = op.getType();
-    mlir::Type elementType = type;
-    bool IsVector = false;
-    if (auto VecType = type.dyn_cast<mlir::cir::VectorType>()) {
-      IsVector = true;
-      elementType = VecType.getEltType();
-    }
+    mlir::Type elementType = elementTypeIfVector(type);
+    bool IsVector = type.isa<mlir::cir::VectorType>();
     auto llvmType = getTypeConverter()->convertType(type);
     auto loc = op.getLoc();
 
@@ -1943,8 +2036,7 @@ public:
     auto rhs = adaptor.getRhs();
     auto lhs = adaptor.getLhs();
 
-    if (type.isa<mlir::cir::VectorType>())
-      type = type.dyn_cast<mlir::cir::VectorType>().getEltType();
+    type = elementTypeIfVector(type);
 
     switch (op.getKind()) {
     case mlir::cir::BinOpKind::Add:
@@ -2764,10 +2856,12 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
-      CIRVectorTernaryLowering, CIRStackSaveLowering, CIRStackRestoreLowering,
-      CIRUnreachableLowering, CIRTrapLowering, CIRInlineAsmOpLowering,
-      CIRSetBitfieldLowering, CIRGetBitfieldLowering, CIRPrefetchLowering,
-      CIRIsConstantOpLowering>(converter, patterns.getContext());
+      CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,
+      CIRVectorShuffleVecLowering, CIRStackSaveLowering,
+      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
+      CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
+      CIRPrefetchLowering, CIRIsConstantOpLowering>(converter,
+                                                    patterns.getContext());
 }
 
 namespace {

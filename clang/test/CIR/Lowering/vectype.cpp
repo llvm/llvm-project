@@ -5,6 +5,7 @@
 typedef int vi4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
 typedef long long vll2 __attribute__((vector_size(16)));
+typedef unsigned short vus2 __attribute__((vector_size(4)));
 
 void vector_int_test(int x) {
 
@@ -182,6 +183,42 @@ void vector_int_test(int x) {
   // CHECK: %[[#T127:]] = llvm.icmp "sge" %[[#T125]], %[[#T126]] : vector<4xi32>
   // CHECK: %[[#T128:]] = llvm.sext %[[#T127]] : vector<4xi1> to vector<4xi32>
   // CHECK: llvm.store %[[#T128]], %[[#Tt:]] : vector<4xi32>, !llvm.ptr
+
+  // __builtin_shufflevector
+  vi4 u = __builtin_shufflevector(a, b, 7, 5, 3, 1);
+  // CHECK: %[[#Tu:]] = llvm.shufflevector %[[#bsva:]], %[[#bsvb:]] [7, 5, 3, 1] : vector<4xi32>
+  vi4 v = __builtin_shufflevector(a, b);
+  // CHECK: %[[#sv_a:]] = llvm.load %[[#T3]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#sv_b:]] = llvm.load %[[#T5]] : !llvm.ptr -> vector<4xi32>
+  // CHECK: %[[#sv0:]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: %[[#sv1:]] = llvm.mlir.undef : vector<4xi32>
+  // CHECK: %[[#sv2:]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[#sv3:]] = llvm.insertelement %[[#sv0]], %[[#sv1]][%[[#sv2]] : i64] : vector<4xi32>
+  // CHECK: %[[#sv4:]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[#sv5:]] = llvm.insertelement %[[#sv0]], %[[#sv3]][%[[#sv4]] : i64] : vector<4xi32>
+  // CHECK: %[[#sv6:]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[#sv7:]] = llvm.insertelement %[[#sv0]], %[[#sv5]][%[[#sv6]] : i64] : vector<4xi32>
+  // CHECK: %[[#sv8:]] = llvm.mlir.constant(3 : i64) : i64
+  // CHECK: %[[#sv9:]] = llvm.insertelement %[[#sv0]], %[[#sv7]][%[[#sv8]] : i64] : vector<4xi32>
+  // CHECK: %[[#svA:]] = llvm.and %[[#sv_b]], %[[#sv9]]  : vector<4xi32>
+  // CHECK: %[[#svB:]] = llvm.mlir.undef : vector<4xi32>
+  // CHECK: %[[#svC:]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[#svD:]] = llvm.extractelement %[[#svA]][%[[#svC]] : i64] : vector<4xi32>
+  // CHECK: %[[#svE:]] = llvm.extractelement %[[#sv_a]][%[[#svD]] : i32] : vector<4xi32>
+  // CHECK: %[[#svF:]] = llvm.insertelement %[[#svE]], %[[#svB]][%[[#svC]] : i64] : vector<4xi32>
+  // CHECK: %[[#svG:]] = llvm.mlir.constant(1 : i64) : i64
+  // CHECK: %[[#svH:]] = llvm.extractelement %[[#svA]][%[[#svG]] : i64] : vector<4xi32>
+  // CHECK: %[[#svI:]] = llvm.extractelement %[[#sv_a]][%[[#svH]] : i32] : vector<4xi32>
+  // CHECK: %[[#svJ:]] = llvm.insertelement %[[#svI]], %[[#svF]][%[[#svG]] : i64] : vector<4xi32>
+  // CHECK: %[[#svK:]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[#svL:]] = llvm.extractelement %[[#svA]][%[[#svK]] : i64] : vector<4xi32>
+  // CHECK: %[[#svM:]] = llvm.extractelement %[[#sv_a]][%[[#svL]] : i32] : vector<4xi32>
+  // CHECK: %[[#svN:]] = llvm.insertelement %[[#svM]], %[[#svJ]][%[[#svK]] : i64] : vector<4xi32>
+  // CHECK: %[[#svO:]] = llvm.mlir.constant(3 : i64) : i64
+  // CHECK: %[[#svP:]] = llvm.extractelement %[[#svA]][%[[#svO]] : i64] : vector<4xi32>
+  // CHECK: %[[#svQ:]] = llvm.extractelement %[[#sv_a]][%[[#svP:]] : i32] : vector<4xi32>
+  // CHECK: %[[#svR:]] = llvm.insertelement %[[#svQ]], %[[#svN]][%[[#svO]] : i64] : vector<4xi32>
+  // CHECK: llvm.store %[[#svR]], %[[#sv_v:]] : vector<4xi32>, !llvm.ptr
 }
 
 void vector_double_test(int x, double y) {
@@ -294,4 +331,8 @@ void vector_double_test(int x, double y) {
   // CHECK: %[[#T82:]] = llvm.fcmp "oge" %[[#T80]], %[[#T81]] : vector<2xf64>
   // CHECK: %[[#T83:]] = llvm.sext %[[#T82]] : vector<2xi1> to vector<2xi64>
   // CHECK: llvm.store %[[#T83]], %[[#Tt:]] : vector<2xi64>, !llvm.ptr
+
+  // __builtin_convertvector
+  vus2 w = __builtin_convertvector(a, vus2);
+  // CHECK: %[[#cv0:]] = llvm.fptoui %[[#cv1:]] : vector<2xf64> to vector<2xi16>
 }
