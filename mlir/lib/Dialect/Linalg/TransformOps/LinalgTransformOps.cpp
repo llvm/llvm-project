@@ -3122,6 +3122,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // VectorizeOp
 //===----------------------------------------------------------------------===//
+
+static const StringLiteral kVectorSizesKeyword = "vector_sizes";
+
 ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
                                           OperationState &result) {
   OpAsmParser::UnresolvedOperand target;
@@ -3134,12 +3137,14 @@ ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
     return ParseResult::failure();
 
-  if (succeeded(parser.parseOptionalKeyword("vector_sizes"))) {
-    if (parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals))
+  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
+    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
+                                     scalableVals)))
       return ParseResult::failure();
   }
 
-  if (succeeded(parser.parseOptionalKeyword("vectorize_nd_extract")))
+  if (succeeded(parser.parseOptionalKeyword(
+          getVectorizeNdExtractAttrName(result.name))))
     result.addAttribute(getVectorizeNdExtractAttrName(result.name),
                         parser.getBuilder().getUnitAttr());
 
@@ -3152,10 +3157,8 @@ ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
            << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
   }
   if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
-      parser.resolveOperands(
-          dynamicSizes,
-          SmallVector<Type>(operandTypes.begin() + 1, operandTypes.end()),
-          operandLoc, result.operands)) {
+      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
+                             operandLoc, result.operands)) {
     return failure();
   }
 
@@ -3170,7 +3173,7 @@ ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
 void transform::VectorizeOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget() << ' ';
   if (!getMixedVectorSizes().empty()) {
-    p << "vector_sizes ";
+    p << kVectorSizesKeyword << ' ';
     printDynamicIndexList(p, getOperation(), getVectorSizes(),
                           getStaticVectorSizesAttr(),
                           /*valueTypes=*/{}, getScalableSizesAttr(),
@@ -3178,7 +3181,7 @@ void transform::VectorizeOp::print(OpAsmPrinter &p) {
   }
 
   if (getVectorizeNdExtract())
-    p << "vectorize_nd_extract ";
+    p << getVectorizeNdExtractAttrName() << ' ';
 
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
@@ -3186,9 +3189,12 @@ void transform::VectorizeOp::print(OpAsmPrinter &p) {
           getScalableSizesAttrName(getOperation()->getName()),
           getStaticVectorSizesAttrName(getOperation()->getName())});
   p << " : ";
-  p << getTarget().getType() << ", ";
-  llvm::interleaveComma(getVectorSizes(), p,
-                        [&](Value operand) { p << operand.getType(); });
+  p << getTarget().getType();
+  if (!getVectorSizes().empty()) {
+    p << ", ";
+    llvm::interleaveComma(getVectorSizes(), p,
+                          [&](Value operand) { p << operand.getType(); });
+  }
 }
 
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(

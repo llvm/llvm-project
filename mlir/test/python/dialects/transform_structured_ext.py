@@ -212,6 +212,15 @@ def testVectorizeMixed(target):
     # CHECK: transform.structured.vectorize
     # CHECK-SAME:     vector_sizes [%[[V0]], 4]
 
+@run
+@create_sequence
+def testVectorizeEmpty(target):
+    structured.VectorizeOp(target, [])
+    # CHECK-LABEL: TEST: testVectorizeEmpty
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.vectorize
+    # CHECK-NOT:     vector_sizes
+
 
 @run
 @create_sequence
