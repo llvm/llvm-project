@@ -1658,40 +1658,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(128);
 
   if (Subtarget->isWindowsArm64EC()) {
-    // FIXME: are there other intrinsics we need to add here?
-    setLibcallName(RTLIB::MEMCPY, "#memcpy");
-    setLibcallName(RTLIB::MEMSET, "#memset");
-    setLibcallName(RTLIB::MEMMOVE, "#memmove");
-    setLibcallName(RTLIB::REM_F32, "#fmodf");
-    setLibcallName(RTLIB::REM_F64, "#fmod");
-    setLibcallName(RTLIB::FMA_F32, "#fmaf");
-    setLibcallName(RTLIB::FMA_F64, "#fma");
-    setLibcallName(RTLIB::SQRT_F32, "#sqrtf");
-    setLibcallName(RTLIB::SQRT_F64, "#sqrt");
-    setLibcallName(RTLIB::CBRT_F32, "#cbrtf");
-    setLibcallName(RTLIB::CBRT_F64, "#cbrt");
-    setLibcallName(RTLIB::LOG_F32, "#logf");
-    setLibcallName(RTLIB::LOG_F64, "#log");
-    setLibcallName(RTLIB::LOG2_F32, "#log2f");
-    setLibcallName(RTLIB::LOG2_F64, "#log2");
-    setLibcallName(RTLIB::LOG10_F32, "#log10f");
-    setLibcallName(RTLIB::LOG10_F64, "#log10");
-    setLibcallName(RTLIB::EXP_F32, "#expf");
-    setLibcallName(RTLIB::EXP_F64, "#exp");
-    setLibcallName(RTLIB::EXP2_F32, "#exp2f");
-    setLibcallName(RTLIB::EXP2_F64, "#exp2");
-    setLibcallName(RTLIB::EXP10_F32, "#exp10f");
-    setLibcallName(RTLIB::EXP10_F64, "#exp10");
-    setLibcallName(RTLIB::SIN_F32, "#sinf");
-    setLibcallName(RTLIB::SIN_F64, "#sin");
-    setLibcallName(RTLIB::COS_F32, "#cosf");
-    setLibcallName(RTLIB::COS_F64, "#cos");
-    setLibcallName(RTLIB::POW_F32, "#powf");
-    setLibcallName(RTLIB::POW_F64, "#pow");
-    setLibcallName(RTLIB::LDEXP_F32, "#ldexpf");
-    setLibcallName(RTLIB::LDEXP_F64, "#ldexp");
-    setLibcallName(RTLIB::FREXP_F32, "#frexpf");
-    setLibcallName(RTLIB::FREXP_F64, "#frexp");
+    // FIXME: are there intrinsics we need to exclude from this?
+    for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
+      auto code = static_cast<RTLIB::Libcall>(i);
+      auto libcallName = getLibcallName(code);
+      if ((libcallName != nullptr) && (libcallName[0] != '#')) {
+        setLibcallName(code, Saver.save(Twine("#") + libcallName).data());
+      }
+    }
   }
 }
 
