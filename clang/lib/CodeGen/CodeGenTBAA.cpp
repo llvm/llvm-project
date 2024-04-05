@@ -320,6 +320,9 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
       // base type.
       if ((*i)->isBitField()) {
         const CGBitFieldInfo &Info = CGRL.getBitFieldInfo(*i);
+        // For big endian targets the first bitfield in the consecutive run is
+        // at the most-significant end; see CGRecordLowering::setBitFieldInfo
+        // for more information.
         bool IsBE = Context.getTargetInfo().isBigEndian();
         bool IsFirst = IsBE ? Info.StorageSize - (Info.Offset + Info.Size) == 0
                             : Info.Offset == 0;
