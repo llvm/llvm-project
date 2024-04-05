@@ -4383,6 +4383,11 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Inst.isInvalid())
       return QualType();
 
+    InstantiatingTemplate InstTemplate(
+        *this, /*PointOfInstantiation=*/AliasTemplate->getBeginLoc(),
+        /*Template=*/AliasTemplate,
+        /*TemplateArgs=*/TemplateArgLists.getInnermost());
+
     std::optional<ContextRAII> SavedContext;
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
