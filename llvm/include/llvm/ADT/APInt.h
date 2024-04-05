@@ -1740,6 +1740,9 @@ public:
     return *this;
   }
 
+  /// \returns the multiplicative inverse for a given modulo.
+  APInt multiplicativeInverse(const APInt &modulo) const;
+
   /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
   APInt multiplicativeInverse() const;
 
