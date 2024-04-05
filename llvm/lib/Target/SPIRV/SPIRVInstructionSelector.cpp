@@ -229,6 +229,7 @@ private:
                             const SPIRVType *ResType = nullptr) const;
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
+  Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -1391,9 +1392,18 @@ bool SPIRVInstructionSelector::selectFCmp(Register ResVReg,
 
 Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
                                                  MachineInstr &I) const {
+  // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
+  bool ZeroAsNull = STI.isOpenCLEnv();
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConsIntVector(0, I, ResType, TII);
-  return GR.getOrCreateConstInt(0, I, ResType, TII);
+    return GR.getOrCreateConstVector(0UL, I, ResType, TII, ZeroAsNull);
+  return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
+}
+
+Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
+                                                  MachineInstr &I) const {
+  if (ResType->getOpcode() == SPIRV::OpTypeVector)
+    return GR.getOrCreateConstVector(0.0, I, ResType, TII);
+  return GR.getOrCreateConstFP(APFloat(0.0), I, ResType, TII);
 }
 
 Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
@@ -1403,7 +1413,7 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
   APInt One =
       AllOnes ? APInt::getAllOnes(BitWidth) : APInt::getOneBitSet(BitWidth, 0);
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConsIntVector(One.getZExtValue(), I, ResType, TII);
+    return GR.getOrCreateConstVector(One.getZExtValue(), I, ResType, TII);
   return GR.getOrCreateConstInt(One.getZExtValue(), I, ResType, TII);
 }
 

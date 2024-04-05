@@ -368,11 +368,14 @@ private:
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
-  Register getOrCreateIntCompositeOrNull(uint64_t Val, MachineInstr &I,
-                                         SPIRVType *SpvType,
-                                         const SPIRVInstrInfo &TII,
-                                         Constant *CA, unsigned BitWidth,
-                                         unsigned ElemCnt);
+
+  template <typename T>
+  Register getOrCreateCompositeOrNull(T *Val, MachineInstr &I,
+                                      SPIRVType *SpvType,
+                                      const SPIRVInstrInfo &TII, T *CA,
+                                      unsigned BitWidth, unsigned ElemCnt,
+                                      bool ZeroAsNull = true);
+
   Register getOrCreateIntCompositeOrNull(uint64_t Val,
                                          MachineIRBuilder &MIRBuilder,
                                          SPIRVType *SpvType, bool EmitIR,
@@ -383,12 +386,19 @@ public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
                             SPIRVType *SpvType = nullptr, bool EmitIR = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
-                               SPIRVType *SpvType, const SPIRVInstrInfo &TII);
+                               SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                               bool ZeroAsNull = true);
+  Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,
+                              const SPIRVInstrInfo &TII);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
-  Register getOrCreateConsIntVector(uint64_t Val, MachineInstr &I,
-                                    SPIRVType *SpvType,
-                                    const SPIRVInstrInfo &TII);
+
+  Register getOrCreateConstVector(uint64_t Val, MachineInstr &I,
+                                  SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                                  bool ZeroAsNull = true);
+  Register getOrCreateConstVector(double Val, MachineInstr &I,
+                                  SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                                  bool ZeroAsNull = true);
   Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
                                    SPIRVType *SpvType,
                                    const SPIRVInstrInfo &TII);
@@ -418,6 +428,11 @@ public:
                                          MachineIRBuilder &MIRBuilder);
   SPIRVType *getOrCreateSPIRVIntegerType(unsigned BitWidth, MachineInstr &I,
                                          const SPIRVInstrInfo &TII);
+  SPIRVType *getOrCreateSPIRVType(unsigned BitWidth, MachineInstr &I,
+                                  const SPIRVInstrInfo &TII,
+                                  unsigned SPIRVOPcode);
+  SPIRVType *getOrCreateSPIRVFloatType(unsigned BitWidth, MachineInstr &I,
+                                       const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder);
   SPIRVType *getOrCreateSPIRVBoolType(MachineInstr &I,
                                       const SPIRVInstrInfo &TII);
