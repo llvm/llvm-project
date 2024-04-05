@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
-// <algorithm>
+// <numeric>
 
 // template<class ExecutionPolicy,
 //          class ForwardIterator1, class ForwardIterator2, class T>

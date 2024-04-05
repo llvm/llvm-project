@@ -95,10 +95,12 @@ template <class _ExecutionPolicy,
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_copy_n, _RawPolicy),
       [&__policy](
           _ForwardIterator __g_first, _Size __g_n, _ForwardOutIterator __g_result) -> optional<_ForwardIterator> {
-        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value)
+        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
           return std::__copy(__policy, std::move(__g_first), std::move(__g_first + __g_n), std::move(__g_result));
-        else
+        } else {
+          (void)__policy;
           return std::copy_n(__g_first, __g_n, __g_result);
+        }
       },
       std::move(__first),
       std::move(__n),
