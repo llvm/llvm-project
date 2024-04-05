@@ -504,6 +504,7 @@ Bug Fixes to C++ Support
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
+- Handled an edge case in ``getFullyPackExpandedSize`` so that we now avoid a false-positive diagnostic. (#GH84220)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
