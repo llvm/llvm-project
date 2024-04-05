@@ -458,14 +458,15 @@ static void findPathBetween(const VarLocResult &from, VarLocResult to,
     int u = icfg.getNodeId(from.fid, from.bid);
     int v = icfg.getNodeId(to.fid, to.bid);
 
-    std::vector<int> pointsToPass, pointsToAvoid;
+    std::vector<int> pointsToPass;
     for (const auto &loc : _pointsToPass) {
         requireTrue(loc.isValid());
         pointsToPass.push_back(icfg.getNodeId(loc.fid, loc.bid));
     }
+    std::set<int> pointsToAvoid;
     for (const auto &loc : _pointsToAvoid) {
         requireTrue(loc.isValid());
-        pointsToAvoid.push_back(icfg.getNodeId(loc.fid, loc.bid));
+        pointsToAvoid.insert(icfg.getNodeId(loc.fid, loc.bid));
     }
 
     auto pFinder = DijPathFinder(icfg);

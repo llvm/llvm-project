@@ -11,7 +11,7 @@ struct ICFGPathFinder {
 
     virtual void search(int source, int target,
                         const std::vector<int> &pointsToPass,
-                        const std::vector<int> &pointsToAvoid,
+                        const std::set<int> &pointsToAvoid,
                         int maxCallDepth) = 0;
 };
 
@@ -31,8 +31,7 @@ struct DfsPathFinder : public ICFGPathFinder {
      * TODO: 目前 pointsToAvoid 还没处理
      */
     void search(int source, int target, const std::vector<int> &pointsToPass,
-                const std::vector<int> &pointsToAvoid,
-                int maxCallDepth) override {
+                const std::set<int> &pointsToAvoid, int maxCallDepth) override {
         this->source = source;
         this->target = target;
         this->maxCallDepth = maxCallDepth;
@@ -212,8 +211,7 @@ struct DijPathFinder : public ICFGPathFinder {
     }
 
     void search(int source, int target, const std::vector<int> &pointsToPass,
-                const std::vector<int> &pointsToAvoid,
-                int maxCallDepth) override {
+                const std::set<int> &pointsToAvoid, int maxCallDepth) override {
         if (source == target) {
             results.insert({source});
             return;
