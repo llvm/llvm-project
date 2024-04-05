@@ -352,16 +352,13 @@ public:
   }
 
   MPFRNumber roundeven() const {
-#if MPFR_VERSION_MAJOR > 4 ||                                                  \
-    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 0)
     MPFRNumber result(*this);
+#if MPFR_VERSION_MAJOR >= 4
     mpfr_roundeven(result.value, value);
-    return result;
 #else
-    MPFRNumber result(*this);
     mpfr_rint(result.value, value, MPFR_RNDN);
-    return result;
 #endif
+    return result;
   }
 
   bool round_to_long(long &result) const {
