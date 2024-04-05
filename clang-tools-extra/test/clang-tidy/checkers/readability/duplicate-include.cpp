@@ -72,31 +72,16 @@ int r;
 // CHECK-FIXES-NEXT: {{^int r;$}}
 
 namespace Issue_87303 {
-// Include name from macro
+#define RESET_INCLUDE_CACHE
+// Expect no warnings
+
 #define MACRO_FILENAME "duplicate-include.h"
-int a;
 #include MACRO_FILENAME
-int b;
 #include "duplicate-include.h"
-int c;
-// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: duplicate include
-// CHECK-FIXES:      {{^int a;$}}
-// CHECK-FIXES-NEXT: {{^#include MACRO_FILENAME$}}
-// CHECK-FIXES-NEXT: {{^int b;$}}
-// CHECK-FIXES-NEXT: {{^int c;$}}
 
-// Keep macro
 #define MACRO_FILENAME_2 <duplicate-include2.h>
-int d;
 #include <duplicate-include2.h>
-int e;
 #include MACRO_FILENAME_2
-int f;
-// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: duplicate include
-// CHECK-FIXES:      {{^int d;$}}
-// CHECK-FIXES-NEXT: {{^#include <duplicate-include2.h>$}}
-// CHECK-FIXES-NEXT: {{^int e;$}}
-// CHECK-FIXES-NEXT: {{^#include MACRO_FILENAME_2$}}
-// CHECK-FIXES-NEXT: {{^int f;$}}
 
+#undef RESET_INCLUDE_CACHE
 } // Issue_87303

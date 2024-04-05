@@ -252,8 +252,8 @@ Changes in existing checks
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
 
 - Improved :doc:`readability-duplicate-include
-  <clang-tidy/checks/readability/duplicate-include>` check by resolving crash
-  at include directives that form the filename using macro.
+  <clang-tidy/checks/readability/duplicate-include>` check by excluding include
+  directives that form the filename using macro.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
