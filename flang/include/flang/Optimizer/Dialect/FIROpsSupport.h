@@ -155,13 +155,7 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
 /// Unwrap integer constant from an mlir::Value.
-inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
-}
+std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
