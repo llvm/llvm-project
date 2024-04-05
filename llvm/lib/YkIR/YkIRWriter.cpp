@@ -768,10 +768,26 @@ private:
 
   void serialiseConstantInt(ConstantInt *CI) {
     OutStreamer.emitSizeT(typeIndex(CI->getType()));
-    OutStreamer.emitSizeT(CI->getBitWidth() / 8);
-    for (size_t I = 0; I < CI->getBitWidth(); I += 8) {
-      uint64_t Byte = CI->getValue().extractBitsAsZExtValue(8, I);
+    unsigned BitWidth = CI->getBitWidth();
+
+    // Figure out how many bytes it'd take to store that many bits.
+    unsigned ByteWidth = BitWidth / 8;
+    if (BitWidth % 8 != 0) {
+      ByteWidth++;
+    }
+    OutStreamer.emitSizeT(ByteWidth);
+
+    unsigned BitsRemain = BitWidth;
+    while (BitsRemain > 0) {
+      // We have to be careful not to ask extractBitsAsZExtValue() for more
+      // bits than there are left, or an internal assertion will fail.
+      unsigned NumBitsThisIter = std::min({BitsRemain, unsigned(8)});
+      uint64_t Byte = CI->getValue().extractBitsAsZExtValue(
+          NumBitsThisIter, BitWidth - BitsRemain);
+      // This could be optimised by writing larger chunks thank a byte, but
+      // beware endianess!
       OutStreamer.emitInt8(Byte);
+      BitsRemain -= NumBitsThisIter;
     }
   }
 
