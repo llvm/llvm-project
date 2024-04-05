@@ -14146,6 +14146,7 @@ bool BoUpSLP::collectValuesToDemote(
                 return getTreeEntry(U) ||
                        (UserIgnoreList && UserIgnoreList->contains(U)) ||
                        (U->getType()->isSized() &&
+                        !U->getType()->isScalableTy() &&
                         DL->getTypeSizeInBits(U->getType()) <= BitWidth);
               }) &&
       !IsPotentiallyTruncated(I, BitWidth))
