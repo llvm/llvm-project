@@ -334,6 +334,9 @@ Improvements to Clang's diagnostics
 - Clang now emits ``unused argument`` warning when the -fmodule-output flag is used
   with an input that is not of type c++-module.
 
+- Clang emits a ``-Wreturn-stack-address`` warning if a function returns a pointer or
+  reference to a struct literal. Fixes #GH8678
+
 - Clang emits a ``-Wunused-but-set-variable`` warning on C++ variables whose declaration
   (with initializer) entirely consist the condition expression of a if/while/for construct
   but are not actually used in the body of the if/while/for construct. Fixes #GH41447
