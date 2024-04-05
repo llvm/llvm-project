@@ -483,6 +483,16 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 16;
+        } else if (AMDGPU::VReg_576RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 18;
+        } else if (AMDGPU::SReg_576RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 18;
+        } else if (AMDGPU::AReg_576RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 18;
         } else if (AMDGPU::SReg_1024RegClass.contains(Reg)) {
           IsSGPR = true;
           Width = 32;

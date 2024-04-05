@@ -46,12 +46,15 @@ enum PartialMappingIdx {
   PM_SGPR384 = 35,
   PM_VGPR384 = 36,
   PM_AGPR384 = 37,
-  PM_AGPR32 = 38,
-  PM_AGPR64 = 39,
-  PM_AGPR128 = 40,
-  PM_AGPR256 = 41,
-  PM_AGPR512 = 42,
-  PM_AGPR1024 = 43
+  PM_SGPR576 = 38,
+  PM_VGPR576 = 39,
+  PM_AGPR576 = 40,
+  PM_AGPR32 = 41,
+  PM_AGPR64 = 42,
+  PM_AGPR128 = 43,
+  PM_AGPR256 = 44,
+  PM_AGPR512 = 45,
+  PM_AGPR1024 = 46
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
@@ -90,6 +93,9 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 384, SGPRRegBank},
   {0, 384, VGPRRegBank},
   {0, 384, AGPRRegBank},
+  {0, 576, SGPRRegBank},
+  {0, 576, VGPRRegBank},
+  {0, 576, AGPRRegBank},
 
   {0, 32, AGPRRegBank}, // AGPR begin
   {0, 64, AGPRRegBank},
@@ -143,6 +149,9 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   {&PartMappings[29], 1},
   {&PartMappings[30], 1},
   {&PartMappings[31], 1},
+  {&PartMappings[32], 1},
+  {&PartMappings[33], 1},
+  {&PartMappings[34], 1},
 
   // AGPRs
   {nullptr, 0},
@@ -150,12 +159,12 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   {nullptr, 0},
   {nullptr, 0},
   {nullptr, 0},
-  {&PartMappings[32], 1}, // 32
-  {&PartMappings[33], 1}, // 64
-  {&PartMappings[34], 1}, // 128
-  {&PartMappings[35], 1}, // 256
-  {&PartMappings[36], 1}, // 512
-  {&PartMappings[37], 1}  // 1024
+  {&PartMappings[35], 1}, // 32
+  {&PartMappings[36], 1}, // 64
+  {&PartMappings[37], 1}, // 128
+  {&PartMappings[38], 1}, // 256
+  {&PartMappings[39], 1}, // 512
+  {&PartMappings[40], 1}  // 1024
 };
 
 const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
@@ -184,7 +193,7 @@ const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
 enum ValueMappingIdx {
   SGPRStartIdx = 1,
   VGPRStartIdx = 12,
-  AGPRStartIdx = 38
+  AGPRStartIdx = 41
 };
 
 const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
@@ -263,6 +272,20 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
         break;
       case AMDGPU::AGPRRegBankID:
         Idx = PM_AGPR384;
+        break;
+      default: llvm_unreachable("Invalid register bank");
+    }
+    break;
+  case 576:
+    switch (BankID) {
+      case AMDGPU::VGPRRegBankID:
+        Idx = PM_VGPR576;
+        break;
+      case AMDGPU::SGPRRegBankID:
+        Idx = PM_SGPR576;
+        break;
+      case AMDGPU::AGPRRegBankID:
+        Idx = PM_AGPR576;
         break;
       default: llvm_unreachable("Invalid register bank");
     }

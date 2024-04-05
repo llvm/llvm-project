@@ -142,6 +142,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16i32, &AMDGPU::SGPR_512RegClass);
   addRegisterClass(MVT::v16f32, TRI->getVGPRClassForBitWidth(512));
 
+  addRegisterClass(MVT::v18i32, &AMDGPU::SGPR_576RegClass);
+  addRegisterClass(MVT::v18f32, TRI->getVGPRClassForBitWidth(576));
+
   addRegisterClass(MVT::v8i64, &AMDGPU::SGPR_512RegClass);
   addRegisterClass(MVT::v8f64, TRI->getVGPRClassForBitWidth(512));
 
@@ -177,6 +180,25 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v32bf16, &AMDGPU::SGPR_512RegClass);
   }
 
+  if (Subtarget->hasMLMathInsts()) {
+    assert(Subtarget->has16BitInsts());
+    addRegisterClass(MVT::v6i16, &AMDGPU::SGPR_96RegClass);
+    addRegisterClass(MVT::v6f16, &AMDGPU::SGPR_96RegClass);
+    addRegisterClass(MVT::v6bf16, &AMDGPU::SGPR_96RegClass);
+
+    addRegisterClass(MVT::v10i16, &AMDGPU::SGPR_160RegClass);
+    addRegisterClass(MVT::v10f16, &AMDGPU::SGPR_160RegClass);
+    addRegisterClass(MVT::v10bf16, &AMDGPU::SGPR_160RegClass);
+
+    addRegisterClass(MVT::v18i16, &AMDGPU::SGPR_288RegClass);
+    addRegisterClass(MVT::v18f16, &AMDGPU::SGPR_288RegClass);
+    addRegisterClass(MVT::v18bf16, &AMDGPU::SGPR_288RegClass);
+
+    addRegisterClass(MVT::v36i16, &AMDGPU::SGPR_576RegClass);
+    addRegisterClass(MVT::v36f16, &AMDGPU::SGPR_576RegClass);
+    addRegisterClass(MVT::v36bf16, &AMDGPU::SGPR_576RegClass);
+  }
+
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
   addRegisterClass(MVT::v32f32, TRI->getVGPRClassForBitWidth(1024));
 
@@ -191,17 +213,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // We need to custom lower vector stores from local memory
   setOperationAction(ISD::LOAD,
-                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
-                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
+                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
+                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v9i32,
                       MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
-                      MVT::i1,     MVT::v32i32},
+                      MVT::v18i32, MVT::i1, MVT::v32i32},
                      Custom);
 
   setOperationAction(ISD::STORE,
-                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
-                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
+                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
+                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v9i32,
                       MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
-                      MVT::i1,     MVT::v32i32},
+                      MVT::v18i32, MVT::i1, MVT::v32i32},
                      Custom);
 
   if (isTypeLegal(MVT::bf16)) {
@@ -277,14 +299,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
 
   setOperationAction(ISD::TRUNCATE,
-                     {MVT::v2i32,  MVT::v3i32,  MVT::v4i32,  MVT::v5i32,
-                      MVT::v6i32,  MVT::v7i32,  MVT::v8i32,  MVT::v9i32,
-                      MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32},
+                     {MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32,
+                      MVT::v6i32, MVT::v7i32, MVT::v8i32, MVT::v9i32,
+                      MVT::v10i32, MVT::v11i32, MVT::v12i32, MVT::v16i32,
+                      MVT::v18i32},
                      Expand);
   setOperationAction(ISD::FP_ROUND,
-                     {MVT::v2f32,  MVT::v3f32,  MVT::v4f32,  MVT::v5f32,
-                      MVT::v6f32,  MVT::v7f32,  MVT::v8f32,  MVT::v9f32,
-                      MVT::v10f32, MVT::v11f32, MVT::v12f32, MVT::v16f32},
+                     {MVT::v2f32, MVT::v3f32, MVT::v4f32, MVT::v5f32,
+                      MVT::v6f32, MVT::v7f32, MVT::v8f32, MVT::v9f32,
+                      MVT::v10f32, MVT::v11f32, MVT::v12f32, MVT::v16f32,
+                      MVT::v18f32},
                      Expand);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG,
@@ -439,10 +463,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // Deal with vec5/6/7 vector operations when widened to vec8.
   setOperationAction(ISD::INSERT_SUBVECTOR,
-                     {MVT::v5i32,  MVT::v5f32,  MVT::v6i32,  MVT::v6f32,
-                      MVT::v7i32,  MVT::v7f32,  MVT::v8i32,  MVT::v8f32,
-                      MVT::v9i32,  MVT::v9f32,  MVT::v10i32, MVT::v10f32,
-                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32},
+                     {MVT::v5i32, MVT::v5f32, MVT::v6i32, MVT::v6f32,
+                      MVT::v7i32, MVT::v7f32, MVT::v8i32, MVT::v8f32,
+                      MVT::v9i32, MVT::v9f32, MVT::v10i32, MVT::v10f32,
+                      MVT::v11i32, MVT::v11f32, MVT::v12i32, MVT::v12f32,
+                      MVT::v18i32, MVT::v18f32},
                      Custom);
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling,
@@ -684,6 +709,63 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v4bf16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4bf16, MVT::v2i32);
 
+    if (Subtarget->hasMLMathInsts()) {
+      setOperationAction(ISD::LOAD, MVT::v6i16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v6i16, MVT::v3i32);
+      setOperationAction(ISD::LOAD, MVT::v6f16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v6f16, MVT::v3i32);
+      setOperationAction(ISD::LOAD, MVT::v6bf16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v6bf16, MVT::v3i32);
+
+      setOperationAction(ISD::STORE, MVT::v6i16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v6i16, MVT::v3i32);
+      setOperationAction(ISD::STORE, MVT::v6f16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v6f16, MVT::v3i32);
+      setOperationAction(ISD::STORE, MVT::v6bf16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v6bf16, MVT::v3i32);
+
+      setOperationAction(ISD::LOAD, MVT::v10i16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v10i16, MVT::v5i32);
+      setOperationAction(ISD::LOAD, MVT::v10f16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v10f16, MVT::v5i32);
+      setOperationAction(ISD::LOAD, MVT::v10bf16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v10bf16, MVT::v5i32);
+
+      setOperationAction(ISD::STORE, MVT::v10i16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v10i16, MVT::v5i32);
+      setOperationAction(ISD::STORE, MVT::v10f16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v10f16, MVT::v5i32);
+      setOperationAction(ISD::STORE, MVT::v10bf16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v10bf16, MVT::v5i32);
+
+      setOperationAction(ISD::LOAD, MVT::v18i16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v18i16, MVT::v9i32);
+      setOperationAction(ISD::LOAD, MVT::v18f16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v18f16, MVT::v9i32);
+      setOperationAction(ISD::LOAD, MVT::v18bf16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v18bf16, MVT::v9i32);
+
+      setOperationAction(ISD::STORE, MVT::v18i16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v18i16, MVT::v9i32);
+      setOperationAction(ISD::STORE, MVT::v18f16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v18f16, MVT::v9i32);
+      setOperationAction(ISD::STORE, MVT::v18bf16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v18bf16, MVT::v9i32);
+
+      setOperationAction(ISD::LOAD, MVT::v36i16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v36i16, MVT::v18i32);
+      setOperationAction(ISD::LOAD, MVT::v36f16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v36f16, MVT::v18i32);
+      setOperationAction(ISD::LOAD, MVT::v36bf16, Promote);
+      AddPromotedToType(ISD::LOAD, MVT::v36bf16, MVT::v18i32);
+
+      setOperationAction(ISD::STORE, MVT::v36i16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v36i16, MVT::v18i32);
+      setOperationAction(ISD::STORE, MVT::v36f16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v36f16, MVT::v18i32);
+      setOperationAction(ISD::STORE, MVT::v36bf16, Promote);
+      AddPromotedToType(ISD::STORE, MVT::v36bf16, MVT::v18i32);
+    }
     setOperationAction(ISD::LOAD, MVT::v8i16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v8i16, MVT::v4i32);
     setOperationAction(ISD::LOAD, MVT::v8f16, Promote);
@@ -743,6 +825,27 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
                        Subtarget->hasVOP3PInsts() ? Legal : Custom);
+
+    if (Subtarget->hasMLMathInsts()) {
+      for (MVT VT : {MVT::v6i16, MVT::v6f16, MVT::v6bf16, MVT::v10i16,
+                     MVT::v10f16, MVT::v10bf16, MVT::v18i16, MVT::v18f16,
+                     MVT::v18bf16, MVT::v36i16, MVT::v36f16, MVT::v36bf16}) {
+        setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+        setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+        setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
+        setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+        setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Expand);
+
+        setOperationAction(ISD::SELECT, VT, Promote);
+        AddPromotedToType(ISD::SELECT, VT, MVT::v3i32);
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+                           VT, Custom);
+      }
+    }
 
     setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
@@ -5977,9 +6080,12 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
+         VT == MVT::v6i16 || VT == MVT::v6f16 || VT == MVT::v8i16 ||
+         VT == MVT::v8f16 || VT == MVT::v10i16 || VT == MVT::v10f16 ||
+         VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v18i16 ||
+         VT == MVT::v18f16 || VT == MVT::v36i16 || VT == MVT::v36f16 ||
+         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32 ||
+         VT == MVT::v32i16 || VT == MVT::v32f16);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -7436,6 +7542,7 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VecVT = Vec.getValueType();
   unsigned VecSize = VecVT.getSizeInBits();
   EVT EltVT = VecVT.getVectorElementType();
+  unsigned NElem = VecVT.getVectorNumElements();
 
   DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
 
@@ -7445,6 +7552,18 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // XXX - Why doesn't this get called when vector_shuffle is expanded?
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
+
+  if (VecVT == MVT::v6i16 || VecVT == MVT::v6f16 || VecVT == MVT::v6bf16 ||
+      VecVT == MVT::v10i16 || VecVT == MVT::v10f16 || VecVT == MVT::v10bf16 ||
+      VecVT == MVT::v18i16 || VecVT == MVT::v18f16 || VecVT == MVT::v18bf16 ||
+      VecVT == MVT::v36i16 || VecVT == MVT::v36f16 || VecVT == MVT::v36bf16) {
+
+    NElem = llvm::bit_ceil(NElem);
+    VecVT = MVT::getVectorVT(VecVT.getVectorElementType().getSimpleVT(), NElem);
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VecVT, DAG.getUNDEF(VecVT),
+                      Vec, DAG.getVectorIdxConstant(0, SL));
+    VecSize = VecVT.getSizeInBits();
+  }
 
   if (VecSize == 128 || VecSize == 256 || VecSize == 512) {
     SDValue Lo, Hi;
@@ -7488,7 +7607,6 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
 
     EVT IdxVT = Idx.getValueType();
-    unsigned NElem = VecVT.getVectorNumElements();
     assert(isPowerOf2_32(NElem));
     SDValue IdxMask = DAG.getConstant(NElem / 2 - 1, SL, IdxVT);
     SDValue NewIdx = DAG.getNode(ISD::AND, SL, IdxVT, Idx, IdxMask);
@@ -7538,7 +7656,9 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   EVT ResultVT = Op.getValueType();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
 
-  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+  EVT PackVT =
+      MVT::getVectorVT(ResultVT.getVectorElementType().getSimpleVT(), 2);
+
   EVT EltVT = PackVT.getVectorElementType();
   int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
 
@@ -7626,48 +7746,37 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     SDValue Blend = DAG.getBuildVector(MVT::getVectorVT(HalfIntVT, 2), SL,
                                        { CastLo, CastHi });
-    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
+
+    SDValue RetVal = DAG.getNode(ISD::BITCAST, SL, VT, Blend);
+    return RetVal;
   }
 
-  if (VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16) {
-    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
-                                     VT.getVectorNumElements() / 4);
-    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
+  if (VT == MVT::v6i16 || VT == MVT::v6f16 || VT == MVT::v6bf16 ||
+      VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v16bf16 ||
+      VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v32bf16) {
 
-    SmallVector<SDValue, 4> Parts[4];
-    for (unsigned I = 0, E = VT.getVectorNumElements() / 4; I != E; ++I) {
-      for (unsigned P = 0; P < 4; ++P)
-        Parts[P].push_back(Op.getOperand(I + P * E));
-    }
-    SDValue Casts[4];
-    for (unsigned P = 0; P < 4; ++P) {
-      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
-      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
-    }
+    const unsigned NumParts =
+        VT.getSizeInBits() == 96 ? 3 : VT.getSizeInBits() / 64;
+    const unsigned NumElementsPerPart = VT.getVectorNumElements() / NumParts;
 
-    SDValue Blend =
-        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 4), SL, Casts);
-    return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
-  }
+    EVT PartVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
+                                  NumElementsPerPart);
+    MVT PartIntVT = MVT::getIntegerVT(PartVT.getSizeInBits());
 
-  if (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v32bf16) {
-    EVT QuarterVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
-                                     VT.getVectorNumElements() / 8);
-    MVT QuarterIntVT = MVT::getIntegerVT(QuarterVT.getSizeInBits());
-
-    SmallVector<SDValue, 8> Parts[8];
-    for (unsigned I = 0, E = VT.getVectorNumElements() / 8; I != E; ++I) {
-      for (unsigned P = 0; P < 8; ++P)
+    SmallVector<SDValue> Parts[8];
+    assert(NumParts <= 8);
+    for (unsigned I = 0, E = NumElementsPerPart; I != E; ++I) {
+      for (unsigned P = 0; P < NumParts; ++P)
         Parts[P].push_back(Op.getOperand(I + P * E));
     }
     SDValue Casts[8];
-    for (unsigned P = 0; P < 8; ++P) {
-      SDValue Vec = DAG.getBuildVector(QuarterVT, SL, Parts[P]);
-      Casts[P] = DAG.getNode(ISD::BITCAST, SL, QuarterIntVT, Vec);
+    for (unsigned P = 0; P < NumParts; ++P) {
+      SDValue Vec = DAG.getBuildVector(PartVT, SL, Parts[P]);
+      Casts[P] = DAG.getNode(ISD::BITCAST, SL, PartIntVT, Vec);
     }
 
-    SDValue Blend =
-        DAG.getBuildVector(MVT::getVectorVT(QuarterIntVT, 8), SL, Casts);
+    SDValue Blend = DAG.getBuildVector(MVT::getVectorVT(PartIntVT, NumParts),
+                                       SL, ArrayRef(Casts, NumParts));
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
@@ -15401,7 +15510,33 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
     return performFPRoundCombine(N, DCI);
   case ISD::LOAD: {
-    if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
+
+    SelectionDAG &DAG = DCI.DAG;
+    LoadSDNode *Ld = cast<LoadSDNode>(N);
+
+    EVT MemVT = Ld->getMemoryVT();
+    if (Ld->getExtensionType() == ISD::EXTLOAD &&
+        (MemVT == MVT::v6f16 || MemVT == MVT::v6bf16)) {
+      SDLoc SL(N);
+      SDValue Ptr = Ld->getBasePtr();
+      SDValue NewLoad = DAG.getLoad(
+          ISD::UNINDEXED, ISD::NON_EXTLOAD, MVT::v3f32, SL, Ld->getChain(), Ptr,
+          Ld->getOffset(), Ld->getPointerInfo(), MVT::v3f32, Ld->getAlign(),
+          Ld->getMemOperand()->getFlags(), Ld->getAAInfo(), nullptr);
+
+      DCI.AddToWorklist(NewLoad.getNode());
+
+      SDValue BitCast = DAG.getNode(ISD::BITCAST, SL, MemVT, NewLoad);
+      DCI.AddToWorklist(BitCast.getNode());
+
+      SDValue FpExt =
+          DAG.getNode(ISD::FP_EXTEND, SL, Ld->getValueType(0), BitCast);
+      DCI.AddToWorklist(FpExt.getNode());
+
+      return DAG.getMergeValues({FpExt, NewLoad.getValue(1)}, SL);
+    }
+
+    if (SDValue Widened = widenLoad(Ld, DCI))
       return Widened;
     [[fallthrough]];
   }

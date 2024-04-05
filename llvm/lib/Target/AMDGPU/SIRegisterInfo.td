@@ -62,6 +62,11 @@ class getSubRegs<int size> {
                              sub4, sub5, sub6, sub7,
                              sub8, sub9, sub10, sub11,
                              sub12, sub13, sub14, sub15];
+  list<SubRegIndex> ret18 = [sub0, sub1, sub2, sub3,
+                             sub4, sub5, sub6, sub7,
+                             sub8, sub9, sub10, sub11,
+                             sub12, sub13, sub14, sub15,
+                             sub16, sub17];
   list<SubRegIndex> ret32 = [sub0, sub1, sub2, sub3,
                              sub4, sub5, sub6, sub7,
                              sub8, sub9, sub10, sub11,
@@ -83,7 +88,11 @@ class getSubRegs<int size> {
                                                               !if(!eq(size, 11), ret11,
                                                                   !if(!eq(size, 12), ret12,
                                                                       !if(!eq(size, 16), ret16,
-                                                                          ret32))))))))))));
+                                                                          !if(!eq(size, 18), ret18,
+                                                                              ret32)))))))))))));
+
+
+
 }
 
 // Generates list of sequential register tuple names.
@@ -459,6 +468,9 @@ def SGPR_384Regs : SIRegisterTuples<getSubRegs<12>.ret, SGPR_32, 105, 4, 12, "s"
 // SGPR 512-bit registers
 def SGPR_512Regs : SIRegisterTuples<getSubRegs<16>.ret, SGPR_32, 105, 4, 16, "s">;
 
+// SGPR 576-bit registers. No operations use these, but for symmetry with 576-bit VGPRs.
+def SGPR_576Regs : SIRegisterTuples<getSubRegs<18>.ret, SGPR_32, 105, 4, 18, "s">;
+
 // SGPR 1024-bit registers
 def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s">;
 
@@ -700,6 +712,9 @@ def VGPR_384 : SIRegisterTuples<getSubRegs<12>.ret, VGPR_32, 1023, 1, 12, "v">;
 // VGPR 512-bit registers
 def VGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, VGPR_32, 1023, 1, 16, "v">;
 
+// VGPR 576-bit registers
+def VGPR_576 : SIRegisterTuples<getSubRegs<18>.ret, VGPR_32, 1023, 1, 18, "v">;
+
 // VGPR 1024-bit registers
 def VGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, VGPR_32, 1023, 1, 32, "v">;
 
@@ -757,6 +772,9 @@ def AGPR_384 : SIRegisterTuples<getSubRegs<12>.ret, AGPR_32, 255, 1, 12, "a">;
 
 // AGPR 512-bit registers
 def AGPR_512 : SIRegisterTuples<getSubRegs<16>.ret, AGPR_32, 255, 1, 16, "a">;
+
+// AGPR 576-bit registers
+def AGPR_576 : SIRegisterTuples<getSubRegs<18>.ret, AGPR_32, 255, 1, 18, "a">;
 
 // AGPR 1024-bit registers
 def AGPR_1024 : SIRegisterTuples<getSubRegs<32>.ret, AGPR_32, 255, 1, 32, "a">;
@@ -934,16 +952,17 @@ multiclass SRegClass<int numRegs,
   }
 }
 
-defm "" : SRegClass<3, [v3i32, v3f32], SGPR_96Regs, TTMP_96Regs>;
+defm "" : SRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], SGPR_96Regs, TTMP_96Regs>;
 defm "" : SRegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16], SGPR_128Regs, TTMP_128Regs>;
-defm "" : SRegClass<5, [v5i32, v5f32], SGPR_160Regs, TTMP_160Regs>;
+defm "" : SRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
 defm "" : SRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], SGPR_256Regs, TTMP_256Regs>;
-defm "" : SRegClass<9, [v9i32, v9f32], SGPR_288Regs, TTMP_288Regs>;
+defm "" : SRegClass<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], SGPR_288Regs, TTMP_288Regs>;
 defm "" : SRegClass<10, [v10i32, v10f32], SGPR_320Regs, TTMP_320Regs>;
 defm "" : SRegClass<11, [v11i32, v11f32], SGPR_352Regs, TTMP_352Regs>;
 defm "" : SRegClass<12, [v12i32, v12f32], SGPR_384Regs, TTMP_384Regs>;
+defm "" : SRegClass<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], SGPR_576Regs>;
 
 let GlobalPriority = true in {
 defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], SGPR_512Regs, TTMP_512Regs>;
@@ -991,17 +1010,18 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 
 defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
                                 (add VGPR_64)>;
-defm VReg_96 : VRegClass<3, [v3i32, v3f32], (add VGPR_96)>;
+defm VReg_96 : VRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], (add VGPR_96)>;
 defm VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16], (add VGPR_128)>;
-defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
+defm VReg_160 : VRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add VGPR_160)>;
 
 defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
 defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
 defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
-defm VReg_288 : VRegClass<9, [v9i32, v9f32], (add VGPR_288)>;
+defm VReg_288 : VRegClass<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add VGPR_288)>;
 defm VReg_320 : VRegClass<10, [v10i32, v10f32], (add VGPR_320)>;
 defm VReg_352 : VRegClass<11, [v11i32, v11f32], (add VGPR_352)>;
 defm VReg_384 : VRegClass<12, [v12i32, v12f32], (add VGPR_384)>;
+defm VReg_576 : VRegClass<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], (add VGPR_576)>;
 
 let GlobalPriority = true in {
 defm VReg_512 : VRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16], (add VGPR_512)>;
@@ -1026,16 +1046,17 @@ multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 
 defm AReg_64 : ARegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4i16],
                         (add AGPR_64)>;
-defm AReg_96 : ARegClass<3, [v3i32, v3f32], (add AGPR_96)>;
+defm AReg_96 : ARegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], (add AGPR_96)>;
 defm AReg_128 : ARegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16], (add AGPR_128)>;
-defm AReg_160 : ARegClass<5, [v5i32, v5f32], (add AGPR_160)>;
+defm AReg_160 : ARegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add AGPR_160)>;
 defm AReg_192 : ARegClass<6, [v6i32, v6f32, v3i64, v3f64], (add AGPR_192)>;
 defm AReg_224 : ARegClass<7, [v7i32, v7f32], (add AGPR_224)>;
 defm AReg_256 : ARegClass<8, [v8i32, v8f32, v4i64, v4f64], (add AGPR_256)>;
-defm AReg_288 : ARegClass<9, [v9i32, v9f32], (add AGPR_288)>;
+defm AReg_288 : ARegClass<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add AGPR_288)>;
 defm AReg_320 : ARegClass<10, [v10i32, v10f32], (add AGPR_320)>;
 defm AReg_352 : ARegClass<11, [v11i32, v11f32], (add AGPR_352)>;
 defm AReg_384 : ARegClass<12, [v12i32, v12f32], (add AGPR_384)>;
+defm AReg_576 : ARegClass<18, [v18i32, v18f32, v36i16, v36f16, v36bf16], (add AGPR_576)>;
 
 let GlobalPriority = true in {
 defm AReg_512 : ARegClass<16, [v16i32, v16f32, v8i64, v8f64], (add AGPR_512)>;
@@ -1127,6 +1148,7 @@ defm AV_288 : AVRegClass<9, VReg_288.RegTypes, (add VGPR_288), (add AGPR_288)>;
 defm AV_320 : AVRegClass<10, VReg_320.RegTypes, (add VGPR_320), (add AGPR_320)>;
 defm AV_352 : AVRegClass<11, VReg_352.RegTypes, (add VGPR_352), (add AGPR_352)>;
 defm AV_384 : AVRegClass<12, VReg_384.RegTypes, (add VGPR_384), (add AGPR_384)>;
+defm AV_576 : AVRegClass<18, VReg_576.RegTypes, (add VGPR_576), (add AGPR_576)>;
 
 let GlobalPriority = true in {
 defm AV_512 : AVRegClass<16, VReg_512.RegTypes, (add VGPR_512), (add AGPR_512)>;
@@ -1287,6 +1309,7 @@ def VRegSrc_128  : SrcReg9<VReg_128, "OPW128">;
 def VRegSrc_192  : SrcReg9<VReg_192, "OPW192">;
 def VRegSrc_256  : SrcReg9<VReg_256, "OPW256">;
 def VRegSrc_512  : SrcReg9<VReg_512, "OPW512">;
+def VRegSrc_576  : SrcReg9<VReg_576, "OPW576">;
 def VRegSrc_1024 : SrcReg9<VReg_1024, "OPW1024">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 

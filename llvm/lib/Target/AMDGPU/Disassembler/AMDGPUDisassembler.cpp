@@ -1314,6 +1314,7 @@ MCOperand AMDGPUDisassembler::createSRegOperand(unsigned SRegClassID,
   case AMDGPU::TTMP_384RegClassID:
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::TTMP_512RegClassID:
+  case AMDGPU::SGPR_576RegClassID:
     shift = 2;
     break;
   // ToDo: unclear if s[88:104] is available on VI. Can we use VCC as SGPR in
@@ -1552,6 +1553,8 @@ unsigned AMDGPUDisassembler::getVgprClassId(const OpWidthTy Width) const {
   case OPW352: return VReg_352RegClassID;
   case OPW384: return VReg_384RegClassID;
   case OPW512: return VReg_512RegClassID;
+  case OPW576:
+    return VReg_576RegClassID;
   case OPW1024: return VReg_1024RegClassID;
   }
 }
@@ -1577,6 +1580,8 @@ unsigned AMDGPUDisassembler::getAgprClassId(const OpWidthTy Width) const {
   case OPW352: return AReg_352RegClassID;
   case OPW384: return AReg_384RegClassID;
   case OPW512: return AReg_512RegClassID;
+  case OPW576:
+    return AReg_576RegClassID;
   case OPW1024: return AReg_1024RegClassID;
   }
 }
@@ -1603,6 +1608,8 @@ unsigned AMDGPUDisassembler::getSgprClassId(const OpWidthTy Width) const {
   case OPW352: return SGPR_352RegClassID;
   case OPW384: return SGPR_384RegClassID;
   case OPW512: return SGPR_512RegClassID;
+  case OPW576:
+    return SGPR_576RegClassID;
   }
 }
 

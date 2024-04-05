@@ -35,15 +35,15 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-std::array<std::vector<int16_t>, 16> SIRegisterInfo::RegSplitParts;
+std::array<std::vector<int16_t>, 18> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
 // Map numbers of DWORDs to indexes in SubRegFromChannelTable.
 // Valid indexes are shifted 1, such that a 0 mapping means unsupported.
 // e.g. for 8 DWORDs (256-bit), SubRegFromChannelTableWidthMap[8] = 8,
 //      meaning index 7 in SubRegFromChannelTable.
-static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9};
+static const std::array<unsigned, 19> SubRegFromChannelTableWidthMap = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0};
 
 namespace llvm {
 
@@ -344,6 +344,7 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
       unsigned Size = getSubRegIdxSize(Idx);
       if (Size & 31)
         continue;
+      assert(Size / 32 - 1 < RegSplitParts.size());
       std::vector<int16_t> &Vec = RegSplitParts[Size / 32 - 1];
       unsigned Pos = getSubRegIdxOffset(Idx);
       if (Pos % Size)
@@ -489,6 +490,9 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     if (RC == &AMDGPU::VReg_512_Align2RegClass ||
         RC == &AMDGPU::AReg_512_Align2RegClass)
       return &AMDGPU::AV_512_Align2RegClass;
+    if (RC == &AMDGPU::VReg_576_Align2RegClass ||
+        RC == &AMDGPU::AReg_576_Align2RegClass)
+      return &AMDGPU::AV_576_Align2RegClass;
     if (RC == &AMDGPU::VReg_1024RegClass || RC == &AMDGPU::AReg_1024RegClass)
       return &AMDGPU::AV_1024RegClass;
     if (RC == &AMDGPU::VReg_1024_Align2RegClass ||
@@ -981,6 +985,15 @@ static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
   case AMDGPU::SI_SPILL_AV1024_SAVE:
   case AMDGPU::SI_SPILL_AV1024_RESTORE:
     return 32;
+  case AMDGPU::SI_SPILL_S576_SAVE:
+  case AMDGPU::SI_SPILL_S576_RESTORE:
+  case AMDGPU::SI_SPILL_V576_SAVE:
+  case AMDGPU::SI_SPILL_V576_RESTORE:
+  case AMDGPU::SI_SPILL_A576_SAVE:
+  case AMDGPU::SI_SPILL_A576_RESTORE:
+  case AMDGPU::SI_SPILL_AV576_SAVE:
+  case AMDGPU::SI_SPILL_AV576_RESTORE:
+    return 18;
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_V512_SAVE:
@@ -2079,6 +2092,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
     SlotIndexes *Indexes, LiveIntervals *LIS, bool SpillToPhysVGPRLane) const {
   switch (MI->getOpcode()) {
   case AMDGPU::SI_SPILL_S1024_SAVE:
+  case AMDGPU::SI_SPILL_S576_SAVE:
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S384_SAVE:
   case AMDGPU::SI_SPILL_S352_SAVE:
@@ -2094,6 +2108,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S32_SAVE:
     return spillSGPR(MI, FI, RS, Indexes, LIS, true, SpillToPhysVGPRLane);
   case AMDGPU::SI_SPILL_S1024_RESTORE:
+  case AMDGPU::SI_SPILL_S576_RESTORE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_S384_RESTORE:
   case AMDGPU::SI_SPILL_S352_RESTORE:
@@ -2138,6 +2153,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   switch (MI->getOpcode()) {
     // SGPR register spill
     case AMDGPU::SI_SPILL_S1024_SAVE:
+    case AMDGPU::SI_SPILL_S576_SAVE:
     case AMDGPU::SI_SPILL_S512_SAVE:
     case AMDGPU::SI_SPILL_S384_SAVE:
     case AMDGPU::SI_SPILL_S352_SAVE:
@@ -2156,6 +2172,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
     // SGPR register restore
     case AMDGPU::SI_SPILL_S1024_RESTORE:
+    case AMDGPU::SI_SPILL_S576_RESTORE:
     case AMDGPU::SI_SPILL_S512_RESTORE:
     case AMDGPU::SI_SPILL_S384_RESTORE:
     case AMDGPU::SI_SPILL_S352_RESTORE:
@@ -2181,6 +2198,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       LLVM_FALLTHROUGH;
     }
     case AMDGPU::SI_SPILL_V1024_SAVE:
+    case AMDGPU::SI_SPILL_V576_SAVE:
     case AMDGPU::SI_SPILL_V512_SAVE:
     case AMDGPU::SI_SPILL_V384_SAVE:
     case AMDGPU::SI_SPILL_V352_SAVE:
@@ -2195,6 +2213,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V64_SAVE:
     case AMDGPU::SI_SPILL_V32_SAVE:
     case AMDGPU::SI_SPILL_A1024_SAVE:
+    case AMDGPU::SI_SPILL_A576_SAVE:
     case AMDGPU::SI_SPILL_A512_SAVE:
     case AMDGPU::SI_SPILL_A384_SAVE:
     case AMDGPU::SI_SPILL_A352_SAVE:
@@ -2209,6 +2228,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A64_SAVE:
     case AMDGPU::SI_SPILL_A32_SAVE:
     case AMDGPU::SI_SPILL_AV1024_SAVE:
+    case AMDGPU::SI_SPILL_AV576_SAVE:
     case AMDGPU::SI_SPILL_AV512_SAVE:
     case AMDGPU::SI_SPILL_AV384_SAVE:
     case AMDGPU::SI_SPILL_AV352_SAVE:
@@ -2271,6 +2291,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V352_RESTORE:
     case AMDGPU::SI_SPILL_V384_RESTORE:
     case AMDGPU::SI_SPILL_V512_RESTORE:
+    case AMDGPU::SI_SPILL_V576_RESTORE:
     case AMDGPU::SI_SPILL_V1024_RESTORE:
     case AMDGPU::SI_SPILL_A32_RESTORE:
     case AMDGPU::SI_SPILL_A64_RESTORE:
@@ -2285,6 +2306,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_A352_RESTORE:
     case AMDGPU::SI_SPILL_A384_RESTORE:
     case AMDGPU::SI_SPILL_A512_RESTORE:
+    case AMDGPU::SI_SPILL_A576_RESTORE:
     case AMDGPU::SI_SPILL_A1024_RESTORE:
     case AMDGPU::SI_SPILL_AV32_RESTORE:
     case AMDGPU::SI_SPILL_AV64_RESTORE:
@@ -2299,6 +2321,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV352_RESTORE:
     case AMDGPU::SI_SPILL_AV384_RESTORE:
     case AMDGPU::SI_SPILL_AV512_RESTORE:
+    case AMDGPU::SI_SPILL_AV576_RESTORE:
     case AMDGPU::SI_SPILL_AV1024_RESTORE:
     case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
     case AMDGPU::SI_SPILL_WWM_AV32_RESTORE: {
@@ -2700,6 +2723,8 @@ getAnyVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::VReg_512RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::VReg_576RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::VReg_1024RegClass;
 
@@ -2732,6 +2757,8 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_384_Align2RegClass;
   if (BitWidth == 512)
     return &AMDGPU::VReg_512_Align2RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::VReg_576_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::VReg_1024_Align2RegClass;
 
@@ -2778,6 +2805,8 @@ SIRegisterInfo::getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const {
     return &AMDGPU::VReg_384_Lo256_Align2RegClass;
   if (BitWidth <= 512)
     return &AMDGPU::VReg_512_Lo256_Align2RegClass;
+  if (BitWidth <= 576)
+    return &AMDGPU::VReg_576_Lo256_Align2RegClass;
   if (BitWidth <= 1024)
     return &AMDGPU::VReg_1024_Lo256_Align2RegClass;
 
@@ -2810,6 +2839,8 @@ getAnyAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AReg_512RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AReg_576RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024RegClass;
 
@@ -2842,6 +2873,8 @@ getAlignedAGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AReg_384_Align2RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AReg_512_Align2RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AReg_576_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AReg_1024_Align2RegClass;
 
@@ -2884,6 +2917,8 @@ getAnyVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AV_512RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AV_576RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AV_1024RegClass;
 
@@ -2916,6 +2951,8 @@ getAlignedVectorSuperClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::AV_384_Align2RegClass;
   if (BitWidth == 512)
     return &AMDGPU::AV_512_Align2RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::AV_576_Align2RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::AV_1024_Align2RegClass;
 
@@ -2961,6 +2998,8 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::SGPR_384RegClass;
   if (BitWidth == 512)
     return &AMDGPU::SGPR_512RegClass;
+  if (BitWidth == 576)
+    return &AMDGPU::SGPR_576RegClass;
   if (BitWidth == 1024)
     return &AMDGPU::SGPR_1024RegClass;
 
