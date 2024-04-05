@@ -2372,9 +2372,40 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             YamlCSI.Count = BI.Branches;
             YamlCSI.Mispreds = BI.Mispreds;
             YamlCSI.Offset = BranchOffset - Offset;
-            if (BinaryData *BD = BC.getBinaryDataByName(CallToLoc.Name))
-              YAMLProfileWriter::setCSIDestination(BC, YamlCSI, BD->getSymbol(),
-                                                   BAT, CallToLoc.Offset);
+            BinaryData *CallTargetBD = BC.getBinaryDataByName(CallToLoc.Name);
+            if (!CallTargetBD) {
+              YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
+            }
+            uint64_t CallTargetAddress = CallTargetBD->getAddress();
+            BinaryFunction *CallTargetBF =
+                BC.getBinaryFunctionAtAddress(CallTargetAddress);
+            if (!CallTargetBF) {
+              YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
+            }
+            // Calls between hot and cold fragments must be handled in
+            // fixupBATProfile.
+            assert(CallTargetBF != BF && "invalid CallTargetBF");
+            YamlCSI.DestId = CallTargetBF->getFunctionNumber();
+            if (CallToLoc.Offset) {
+              if (BAT->isBATFunction(CallTargetAddress)) {
+                LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Unsupported secondary "
+                                     "entry point in BAT function "
+                                  << CallToLoc.Name << '\n');
+              } else if (const BinaryBasicBlock *CallTargetBB =
+                             CallTargetBF->getBasicBlockAtOffset(
+                                 CallToLoc.Offset)) {
+                // Only record true call information, ignoring returns (normally
+                // won't have a target basic block) and jumps to the landing
+                // pads (not an entry point).
+                if (CallTargetBB->isEntryPoint()) {
+                  YamlCSI.EntryDiscriminator =
+                      CallTargetBF->getEntryIDForSymbol(
+                          CallTargetBB->getLabel());
+                }
+              }
+            }
             YamlBB.CallSites.emplace_back(YamlCSI);
           }
         }
