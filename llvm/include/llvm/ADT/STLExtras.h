@@ -2151,7 +2151,7 @@ template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
               !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
-  interleave(c.begin(), c.end(), each_fn, between_fn);
+  interleave(adl_begin(c), adl_end(c), each_fn, between_fn);
 }
 
 /// Overload of interleave for the common case of string separator.
@@ -2159,7 +2159,7 @@ template <typename Container, typename UnaryFunctor, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
 inline void interleave(const Container &c, StreamT &os, UnaryFunctor each_fn,
                        const StringRef &separator) {
-  interleave(c.begin(), c.end(), each_fn, [&] { os << separator; });
+  interleave(adl_begin(c), adl_end(c), each_fn, [&] { os << separator; });
 }
 template <typename Container, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
