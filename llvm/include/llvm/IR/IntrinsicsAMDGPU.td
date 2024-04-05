@@ -3025,6 +3025,23 @@ def int_amdgcn_permute_pair_bcast_b32 :
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
   >;
 
+class AMDGPUPermuteAuxDataTwoDest :
+  DefaultAttrsIntrinsic<
+    [
+      llvm_i32_ty,  // %dst0
+      llvm_i32_ty   // %dst1
+    ],
+    [
+      llvm_i32_ty, // %src0
+      llvm_i32_ty, // %src1
+      llvm_i32_ty  // %aux_data
+    ],
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<2>>]
+  >;
+
+def int_amdgcn_permute_pair_2src_interleave_b64 : AMDGPUPermuteAuxDataTwoDest;
+def int_amdgcn_permute_pack_tensor_2src_b64 : AMDGPUPermuteAuxDataTwoDest;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

@@ -41,19 +41,20 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
 }
 
-class VOP3Me <bits<8> op> : Enc96 {
+class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
 
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
   bits<11> src2;
+  bits<6> aux_data;
 
   bit clamp;
 
   let Inst{7-0} = vdst{7-0};
   let Inst{9-8} = ?;      // vdst cont
   let Inst{11-10} = ?;    // vdst_idx
-  let Inst{12} = clamp;
+  let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
 
   let Inst{23-16} = op;
@@ -65,12 +66,13 @@ class VOP3Me <bits<8> op> : Enc96 {
   let Inst{53-45} = src1{8-0};
   let Inst{55-54} = ?;    // src1 cont
   let Inst{57-56} = ?;    // src1_idx
+  let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
   let Inst{72-64} = src2{8-0};
   let Inst{74-73} = ?;    // src2 cont
   let Inst{76-75} = ?;    // src2_idx
 
   let Inst{78-77} = ?;    // sparse_sel
-  let Inst{88-79} = ?;    // aux_data
+  let Inst{88-79} = ?;    // aux_data1
 }
 
 class VOP4Me <bits<8> op> : Enc128 {
@@ -122,6 +124,16 @@ def VOPM_I32_I32_I32_AUX : VOP2M_Profile<[i32, i32, i32, untyped], 1>;
 def VOPM_I32_I32_AUX : VOP2M_Profile<[i32, i32, untyped, untyped], 1>;
 def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]>;
 
+class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1> {
+
+  let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
+  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data);
+
+  let Asm64 = "$vdst, $src2, $src0, $src1$aux_data";
+}
+
+def VOPM_PERMUTE_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, untyped]>;
+
 class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> :
   VOP_Pseudo<opName, "", P, P.Outs64, P.Ins64, "", pattern> {
   let mayRaiseFPException = 0;
@@ -138,6 +150,13 @@ def V_PERMUTE_PAIR_BCAST_B32     : VOPM_Pseudo<VOPM_I32_I32_AUX,
                                                [(set i32:$vdst, (int_amdgcn_permute_pair_bcast_b32 i32:$src0, timm:$aux_data))]>;
 def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo<VOPM_I32_I32_I32_AUX,
                                                        [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
+
+let SchedRW = [Write32Bit, Write32Bit] in {
+  def V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32,
+                                                         [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pair_2src_interleave_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
+  def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32,
+                                                         [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
+}
 
 //===----------------------------------------------------------------------===//
 // VOPM Reals
@@ -196,11 +215,28 @@ multiclass VOP2M_Real_Base<GFXGen Gen, bits<8> op,
 
 multiclass VOP2M_Real_gfx13 <bits<8> op> : VOP2M_Real_Base <GFX13Gen, op>;
 
-// TODO: Replace invented opcodes
+multiclass VOP3M_Real_Base<GFXGen Gen, bits<8> op,
+                           string backing_ps_name = NAME,
+                           string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
+
+  def Gen.Suffix :
+    VOPM_Real_Gen<ps, Gen, asmName>,
+    VOP3Me<op, !cast<VOPMProfile>(ps.Pfl)> {
+      let AsmString = asmName # ps.Pfl.Asm64;
+  }
+}
+
+multiclass VOP3M_Real_gfx13 <bits<8> op> : VOP3M_Real_Base <GFX13Gen, op>;
+
+// TODO-GFX13: Replace invented opcodes
 
 defm V_MOV_2SRC_B64              : VOP2M_Real_gfx13 <0x42>;
 defm V_BPERMUTE_B32              : VOP2M_Real_gfx13 <0x43>;
 defm V_PERMUTE_PAIR_BCAST_B32    : VOP2M_Real_gfx13 <0x44>;
 defm V_PERMUTE_PAIR_GENSGPR_B32  : VOP2M_Real_gfx13 <0x45>;
 defm V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOP2M_Real_gfx13 <0x46>;
+
+defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x3E>;
+defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x3F>;
 

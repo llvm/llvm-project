@@ -49,3 +49,35 @@ void test_amdgcn_permute_pair_bcast_b32(global uint* out, uint src0)
 {
   *out = __builtin_amdgcn_permute_pair_bcast_b32(src0, 2);
 }
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_permute_pair_2src_interleave_b64(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.permute.pair.2src.interleave.b64(i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 2)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_permute_pair_2src_interleave_b64(global uint* out0, global uint* out1, uint src0, uint src1)
+{
+  uint tmp;
+  *out0 = __builtin_amdgcn_permute_pair_2src_interleave_b64(&tmp, src0, src1, 2);
+  *out1 = tmp;
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_permute_pack_tensor_2src_b64(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call { i32, i32 } @llvm.amdgcn.permute.pack.tensor.2src.b64(i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 2)
+// CHECK-GFX1300-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i32 } [[TMP0]], 0
+// CHECK-GFX1300-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i32 } [[TMP0]], 1
+// CHECK-GFX1300-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[OUT0:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[OUT1:%.*]], align 4, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_permute_pack_tensor_2src_b64(global uint* out0, global uint* out1, uint src0, uint src1)
+{
+  uint tmp;
+  *out0 = __builtin_amdgcn_permute_pack_tensor_2src_b64(&tmp, src0, src1, 2);
+  *out1 = tmp;
+}
