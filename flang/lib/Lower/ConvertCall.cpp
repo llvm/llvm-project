@@ -1494,11 +1494,15 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
           value =
               hlfir::Entity{genRecordCPtrValueArg(builder, loc, value, eleTy)};
         }
-      } else if (fir::isa_derived(value.getFortranElementType())) {
-        // BIND(C), VALUE derived type. The derived type value must really
+      } else if (fir::isa_derived(value.getFortranElementType()) ||
+                 value.isCharacter()) {
+        // BIND(C), VALUE derived type or character. The value must really
         // be loaded here.
-        auto [derived, cleanup] = hlfir::convertToValue(loc, builder, value);
-        mlir::Value loadedValue = fir::getBase(derived);
+        auto [exv, cleanup] = hlfir::convertToValue(loc, builder, value);
+        mlir::Value loadedValue = fir::getBase(exv);
+        if (mlir::isa<fir::BoxCharType>(loadedValue.getType()))
+          loadedValue = builder.create<fir::BoxAddrOp>(
+              loc, fir::ReferenceType::get(argTy), loadedValue);
         if (fir::isa_ref_type(loadedValue.getType()))
           loadedValue = builder.create<fir::LoadOp>(loc, loadedValue);
         caller.placeInput(arg, loadedValue);
