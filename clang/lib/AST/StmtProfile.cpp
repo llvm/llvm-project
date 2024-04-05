@@ -2441,11 +2441,30 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
   }
 }
 
+namespace {
+class OpenACCClauseProfiler
+    : public OpenACCClauseVisitor<OpenACCClauseProfiler> {
+
+public:
+  OpenACCClauseProfiler() = default;
+
+  void VisitOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses) {
+    for (const OpenACCClause *Clause : Clauses) {
+      // TODO OpenACC: When we have clauses with expressions, we should
+      // profile them too.
+      Visit(Clause);
+    }
+  }
+};
+} // namespace
+
 void StmtProfiler::VisitOpenACCComputeConstruct(
     const OpenACCComputeConstruct *S) {
   // VisitStmt handles children, so the AssociatedStmt is handled.
   VisitStmt(S);
-  // TODO OpenACC: Visit Clauses.
+
+  OpenACCClauseProfiler P;
+  P.VisitOpenACCClauseList(S->clauses());
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
