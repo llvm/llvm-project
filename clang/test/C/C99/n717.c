@@ -52,10 +52,9 @@ M(\U00000060) // expected-error {{character '`' cannot be specified by a univers
 // cannot use the macro expansion to test their behavior.
 
 // This is outside of the range of values specified by ISO 10646.
-int c1 = '\U00110000'; // expected-error {{invalid universal character}}
-// FIXME: this does not fall outside of the range and should work fine. This
-// character constant in C has type 'int' which can hold that value.
-int c2 = '\U0010FFFF'; // expected-error {{character too large for enclosing character literal type}}
+const char *c1 = "\U00110000"; // expected-error {{invalid universal character}}
+// This does not fall outside of the range
+const char *c2 = "\U0010FFFF";
 
 // These should always be accepted because they're a valid in a character
 // constant.
