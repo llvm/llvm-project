@@ -30,11 +30,12 @@ using namespace llvm;
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
-cl::opt<bool>
-    UseNewDbgInfoFormat("experimental-debuginfo-iterators",
-                        cl::desc("Enable communicating debuginfo positions "
-                                 "through iterators, eliminating intrinsics"),
-                        cl::init(true));
+cl::opt<bool> UseNewDbgInfoFormat(
+    "experimental-debuginfo-iterators",
+    cl::desc("Enable communicating debuginfo positions through iterators, "
+             "eliminating intrinsics. Has no effect if "
+             "--preserve-input-debuginfo-format=true."),
+    cl::init(true));
 cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
     "preserve-input-debuginfo-format", cl::Hidden,
     cl::desc("When set to true, IR files will be processed and printed in "
