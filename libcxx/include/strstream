@@ -13,7 +13,7 @@
 /*
     strstream synopsis
 
-class strstreambuf
+class strstreambuf                                    // Removed in C++26
     : public basic_streambuf<char>
 {
 public:
@@ -63,7 +63,7 @@ private:
     void (*pfree)(void*);               // exposition only
 };
 
-class istrstream
+class istrstream                                      // Removed in C++26
     : public basic_istream<char>
 {
 public:
@@ -81,7 +81,7 @@ private:
     strstreambuf sb; // exposition only
 };
 
-class ostrstream
+class ostrstream                                      // Removed in C++26
     : public basic_ostream<char>
 {
 public:
@@ -99,7 +99,7 @@ private:
     strstreambuf sb; // exposition only
 };
 
-class strstream
+class strstream                                       // Removed in C++26
     : public basic_iostream<char>
 {
 public:
@@ -137,6 +137,8 @@ private:
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+#if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM) || defined(_LIBCPP_BUILDING_LIBRARY)
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -343,5 +345,7 @@ private:
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM) || defined(_LIBCPP_BUILDING_LIBRARY)
 
 #endif // _LIBCPP_STRSTREAM
