@@ -710,8 +710,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
       OS, Usage, Title, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
-      },
-      VisibilityMask);
+      });
 }
 
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
@@ -727,14 +726,13 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
         if (CandidateInfo.Flags & FlagsToExclude)
           return true;
         return false;
-      },
-      Visibility(0));
+      });
 }
 
 void OptTable::internalPrintHelp(
     raw_ostream &OS, const char *Usage, const char *Title, bool ShowHidden,
-    bool ShowAllAliases, std::function<bool(const Info &)> ExcludeOption,
-    Visibility VisibilityMask) const {
+    bool ShowAllAliases,
+    std::function<bool(const Info &)> ExcludeOption) const {
   OS << "OVERVIEW: " << Title << "\n\n";
   OS << "USAGE: " << Usage << "\n\n";
 
@@ -756,11 +754,11 @@ void OptTable::internalPrintHelp(
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
-    const char *HelpText = getOptionHelpText(Id, VisibilityMask);
+    const char *HelpText = getOptionHelpText(Id);
     if (!HelpText && ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
+        HelpText = getOptionHelpText(Alias.getID());
     }
 
     if (HelpText && (strlen(HelpText) != 0)) {
