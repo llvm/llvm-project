@@ -335,6 +335,7 @@ namespace llvm {
 
     // Top-Level Entities
     bool parseTopLevelEntities();
+    bool finalizeDebugInfoFormat(Module *M);
     void dropUnknownMetadataReferences();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
