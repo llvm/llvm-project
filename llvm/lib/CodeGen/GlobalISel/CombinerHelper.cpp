@@ -597,8 +597,8 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
       const auto &MMO = LoadMI->getMMO();
-      // For atomics, only form anyextending loads.
-      if (MMO.isAtomic() && UseMI.getOpcode() != TargetOpcode::G_ANYEXT)
+      // Don't do anything for atomics.
+      if (MMO.isAtomic())
         continue;
       // Check for legality.
       if (!isPreLegalize()) {
@@ -5201,10 +5201,7 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
 
     // Calculate the multiplicative inverse modulo BW.
     // 2^W requires W + 1 bits, so we have to extend and then truncate.
-    unsigned W = Divisor.getBitWidth();
-    APInt Factor = Divisor.zext(W + 1)
-                       .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
-                       .trunc(W);
+    APInt Factor = Divisor.multiplicativeInverse();
     Shifts.push_back(MIB.buildConstant(ScalarShiftAmtTy, Shift).getReg(0));
     Factors.push_back(MIB.buildConstant(ScalarTy, Factor).getReg(0));
     return true;
@@ -6276,14 +6273,15 @@ bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
 bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-  auto *LHSDef = MRI.getVRegDef(LHS);
-  if (getIConstantVRegVal(LHS, MRI).has_value())
-    return true;
-
-  // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute
-  // as long as we don't already have a constant on the RHS.
-  if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
-    return false;
+  if (!getIConstantVRegVal(LHS, MRI)) {
+    // Skip commuting if LHS is not a constant. But, LHS may be a
+    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
+    // have a constant on the RHS.
+    if (MRI.getVRegDef(LHS)->getOpcode() !=
+        TargetOpcode::G_CONSTANT_FOLD_BARRIER)
+      return false;
+  }
+  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
   return MRI.getVRegDef(RHS)->getOpcode() !=
              TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
          !getIConstantVRegVal(RHS, MRI);

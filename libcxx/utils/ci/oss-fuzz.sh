@@ -23,7 +23,7 @@ for test in libcxx/test/libcxx/fuzzing/*.pass.cpp; do
     exe="$(basename ${test})"
     exe="${exe%.pass.cpp}"
     ${CXX} ${CXXFLAGS} \
-        -std=c++14 \
+        -std=c++20 \
         -DLIBCPP_OSS_FUZZ \
         -D_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS \
         -nostdinc++ -cxx-isystem ${INSTALL}/include/c++/v1 \
