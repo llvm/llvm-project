@@ -68,7 +68,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   // *** vprint_unicode ***
   {
     stream.str("");
-    ;
+
     std::vprint_unicode(stream, fmt.get(), std::make_format_args(args...));
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -78,7 +78,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   // *** vprint_nonunicode ***
   {
     stream.str("");
-    ;
+
     std::vprint_nonunicode(stream, fmt.get(), std::make_format_args(args...));
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -89,7 +89,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   {
     expected += '\n'; // Tested last since it changes the expected value.
     stream.str("");
-    ;
+
     std::println(stream, fmt, std::forward<Args>(args)...);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
@@ -100,7 +100,7 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
   {
     expected = "\n";
     stream.str("");
-    ;
+
     std::println(stream);
     std::string out = stream.str();
     TEST_REQUIRE(out == expected,
