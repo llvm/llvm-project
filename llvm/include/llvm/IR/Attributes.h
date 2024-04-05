@@ -38,6 +38,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class ConstantRange;
+class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
@@ -94,8 +95,6 @@ public:
 
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
-  static const unsigned NumConstRangeListAttrKinds =
-      LastConstRangeListAttr - FirstConstRangeListAttr + 1;
 
   static bool isEnumAttrKind(AttrKind Kind) {
     return Kind >= FirstEnumAttr && Kind <= LastEnumAttr;
@@ -109,8 +108,9 @@ public:
   static bool isConstantRangeAttrKind(AttrKind Kind) {
     return Kind >= FirstConstantRangeAttr && Kind <= LastConstantRangeAttr;
   }
-  static bool isConstRangeListAttrKind(AttrKind Kind) {
-    return Kind >= FirstConstRangeListAttr && Kind <= LastConstRangeListAttr;
+  static bool isConstantRangeListAttrKind(AttrKind Kind) {
+    return Kind >= FirstConstantRangeListAttr &&
+           Kind <= LastConstantRangeListAttr;
   }
 
   static bool canUseAsFnAttr(AttrKind Kind);
@@ -137,7 +137,7 @@ public:
   static Attribute get(LLVMContext &Context, AttrKind Kind,
                        const ConstantRange &CR);
   static Attribute get(LLVMContext &Context, AttrKind Kind,
-                       SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges);
+                       const ConstantRangeList &CRL);
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
@@ -193,11 +193,11 @@ public:
   /// Return true if the attribute is a type attribute.
   bool isTypeAttribute() const;
 
-  /// Return true if the attribute is a const range list attribute.
-  bool isConstRangeListAttribute() const;
-
   /// Return true if the attribute is a ConstantRange attribute.
   bool isConstantRangeAttribute() const;
+
+  /// Return true if the attribute is a ConstantRangeList attribute.
+  bool isConstantRangeListAttribute() const;
 
   /// Return true if the attribute is any kind of attribute.
   bool isValid() const { return pImpl; }
@@ -236,9 +236,9 @@ public:
   /// attribute to be a ConstantRange attribute.
   ConstantRange getValueAsConstantRange() const;
 
-  /// Return the attribute's value as a const range list. This requires the
-  /// attribute to be a const range list attribute.
-  SmallVector<std::pair<int64_t, int64_t>, 16> getValueAsRanges() const;
+  /// Return the attribute's value as a ConstantRangeList. This requires the
+  /// attribute to be a ConstantRangeList attribute.
+  ConstantRangeList getValueAsConstantRangeList() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -280,6 +280,9 @@ public:
 
   /// Returns the value of the range attribute.
   ConstantRange getRange() const;
+
+  /// Returns the value of the initialized attribute.
+  ConstantRangeList getInitialized() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -1183,11 +1186,6 @@ public:
   /// Add a type attribute with the given type.
   AttrBuilder &addTypeAttr(Attribute::AttrKind Kind, Type *Ty);
 
-  /// Add a const range list attribute with the given ranges.
-  AttrBuilder &
-  addConstRangeListAttr(Attribute::AttrKind Kind,
-                        SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges);
-
   /// This turns a byval type into the form used internally in Attribute.
   AttrBuilder &addByValAttr(Type *Ty);
 
@@ -1230,6 +1228,13 @@ public:
 
   /// Add range attribute.
   AttrBuilder &addRangeAttr(const ConstantRange &CR);
+
+  /// Add a ConstantRangeList attribute with the given range.
+  AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
+                                        const ConstantRangeList &CRL);
+
+  /// Add initialized attribute.
+  AttrBuilder &addInitializedAttr(const ConstantRangeList &CRL);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

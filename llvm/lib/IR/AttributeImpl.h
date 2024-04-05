@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -48,7 +49,7 @@ protected:
     StringAttrEntry,
     TypeAttrEntry,
     ConstantRangeAttrEntry,
-    ConstRangeListAttrEntry,
+    ConstantRangeListAttrEntry,
   };
 
   AttributeImpl(AttrEntryKind KindID) : KindID(KindID) {}
@@ -65,8 +66,8 @@ public:
   bool isConstantRangeAttribute() const {
     return KindID == ConstantRangeAttrEntry;
   }
-  bool isConstRangeListAttribute() const {
-    return KindID == ConstRangeListAttrEntry;
+  bool isConstantRangeListAttribute() const {
+    return KindID == ConstantRangeListAttrEntry;
   }
 
   bool hasAttribute(Attribute::AttrKind A) const;
@@ -83,7 +84,7 @@ public:
 
   ConstantRange getValueAsConstantRange() const;
 
-  SmallVector<std::pair<int64_t, int64_t>, 16> getValueAsRanges() const;
+  ConstantRangeList getValueAsConstantRangeList() const;
 
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
@@ -100,7 +101,7 @@ public:
     else if (isConstantRangeAttribute())
       Profile(ID, getKindAsEnum(), getValueAsConstantRange());
     else
-      Profile(ID, getKindAsEnum(), getValueAsRanges());
+      Profile(ID, getKindAsEnum(), getValueAsConstantRangeList());
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind) {
@@ -133,11 +134,14 @@ public:
     ID.AddInteger(CR.getUpper());
   }
 
-  static void
-  Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-          const SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges) {
+  static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
+                      const ConstantRangeList &CRL) {
     ID.AddInteger(Kind);
-    ID.AddRanges(Ranges);
+    ID.AddInteger(CRL.size());
+    for (auto &CR : CRL) {
+      ID.AddInteger(CR.getLower());
+      ID.AddInteger(CR.getUpper());
+    }
   }
 };
 
@@ -237,18 +241,15 @@ public:
   ConstantRange getConstantRangeValue() const { return CR; }
 };
 
-class ConstRangeListAttributeImpl : public EnumAttributeImpl {
-  SmallVector<std::pair<int64_t, int64_t>, 16> Ranges;
+class ConstantRangeListAttributeImpl : public EnumAttributeImpl {
+  ConstantRangeList CRL;
 
 public:
-  ConstRangeListAttributeImpl(
-      Attribute::AttrKind Kind,
-      SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges)
-      : EnumAttributeImpl(ConstRangeListAttrEntry, Kind), Ranges(Ranges) {}
+  ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
+                                 const ConstantRangeList &CRL)
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), CRL(CRL) {}
 
-  SmallVector<std::pair<int64_t, int64_t>, 16> getRangesValue() const {
-    return Ranges;
-  }
+  ConstantRangeList getConstantRangeListValue() const { return CRL; }
 };
 
 class AttributeBitSet {

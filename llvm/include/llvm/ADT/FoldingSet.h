@@ -362,21 +362,6 @@ public:
     }
   }
 
-  void AddRanges(const SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges) {
-    size_t Size = Ranges.size();
-
-    unsigned NumsToInsert = 1 + 2 * Size;
-    Bits.reserve(Bits.size() + NumsToInsert);
-    Bits.push_back(Size);
-    if (Size == 0)
-      return;
-
-    for (auto [Start, End] : Ranges) {
-      Bits.push_back(Start);
-      Bits.push_back(End);
-    }
-  }
-
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
   void AddString(StringRef String);
   void AddNodeID(const FoldingSetNodeID &ID);

@@ -72,6 +72,7 @@
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ConvergenceVerifier.h"
 #include "llvm/IR/DataLayout.h"
@@ -1993,14 +1994,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           Attrs.hasAttribute(Attribute::ReadOnly)),
         "Attributes writable and readonly are incompatible!", V);
 
-  Check(!(Attrs.hasAttribute(Attribute::Initialized) &&
-          Attrs.hasAttribute(Attribute::ReadNone)),
-        "Attributes initialized and readnone are incompatible!", V);
-
-  Check(!(Attrs.hasAttribute(Attribute::Initialized) &&
-          Attrs.hasAttribute(Attribute::ReadOnly)),
-        "Attributes initialized and readonly are incompatible!", V);
-
   AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
@@ -2040,6 +2033,30 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
   }
 
+  if (Attrs.hasAttribute(Attribute::Initialized)) {
+    auto Inits = Attrs.getAttribute(Attribute::Initialized)
+                     .getValueAsConstantRangeList();
+    Check(!Inits.isEmptySet(),
+          "Attribute 'initialized' does not support empty list", V);
+    Check(!Inits.isFullSet(),
+          "Attribute 'initialized' does not support full list", V);
+
+    Check(Inits.getRange(0).getLower().slt(Inits.getRange(0).getUpper()),
+          "Attribute 'initialized' requires interval lower less than upper", V);
+    for (size_t i = 1; i < Inits.size(); i++) {
+      auto Previous = Inits.getRange(i - 1);
+      auto Current = Inits.getRange(i);
+      Check(Current.getLower().slt(Current.getUpper()),
+            "Attribute 'initialized' requires interval lower less than upper",
+            V);
+      Check(Current.getLower().sge(Previous.getLower()),
+            "Attribute 'initialized' requires intervals in ascending order!",
+            V);
+      Check(Current.getLower().sge(Previous.getUpper()),
+            "Attribute 'initialized' requires intervals merged!", V);
+    }
+  }
+
   if (Attrs.hasAttribute(Attribute::NoFPClass)) {
     uint64_t Val = Attrs.getAttribute(Attribute::NoFPClass).getValueAsInt();
     Check(Val != 0, "Attribute 'nofpclass' must have at least one test bit set",
@@ -2051,19 +2068,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
-  }
-  if (Attrs.hasAttribute(Attribute::Initialized)) {
-    auto Inits = Attrs.getAttribute(Attribute::Initialized).getValueAsRanges();
-    Check(!Inits.empty(), "Attribute 'initialized' does not support empty list",
-          V);
-
-    for (size_t i = 1; i < Inits.size(); i++) {
-      Check(Inits[i].first > Inits[i - 1].first,
-            "Attribute 'initialized' requires intervals in ascending order!",
-            V);
-      Check(Inits[i].first > Inits[i - 1].second,
-            "Attribute 'initialized' requires intervals merged!", V);
-    }
   }
 }
 

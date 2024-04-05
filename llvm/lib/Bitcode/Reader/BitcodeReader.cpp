@@ -30,6 +30,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -2315,22 +2316,21 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           i--;
 
           B.addConstantRangeAttr(Kind, MaybeCR.get());
-        } else if (Record[i] == 8 || Record[i] == 9) {
+        } else if (Record[i] == 8) {
           Attribute::AttrKind Kind;
           if (Error Err = parseAttrKind(Record[++i], &Kind))
             return Err;
-          if (!Attribute::isConstRangeListAttrKind(Kind))
-            return error("Not a const range list attribute");
+          if (!Attribute::isConstantRangeListAttrKind(Kind))
+            return error("Not a constant range list attribute");
 
-          SmallVector<std::pair<int64_t, int64_t>, 16> Ranges;
+          ConstantRangeList CRL(64, false);
           int RangeSize = Record[++i];
           for (int Idx = 0; Idx < RangeSize; ++Idx) {
-            int Start = Record[++i];
-            int End = Record[++i];
-            Ranges.push_back(std::make_pair(Start, End));
+            int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
+            int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
+            CRL.append(Start, End);
           }
-
-          B.addConstRangeListAttr(Kind, Ranges);
+          B.addConstantRangeListAttr(Kind, CRL);
         } else {
           return error("Invalid attribute group entry");
         }

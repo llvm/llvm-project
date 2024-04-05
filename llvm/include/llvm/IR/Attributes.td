@@ -38,9 +38,6 @@ class IntAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 /// Type attribute.
 class TypeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
-/// Const range list attribute.
-class ConstRangeListAttr<string S, list<AttrProperty> P>: Attr<S, P>;
-
 /// StringBool attribute.
 class StrBoolAttr<string S> : Attr<S, []>;
 
@@ -49,6 +46,9 @@ class ComplexStrAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
 /// ConstantRange attribute.
 class ConstantRangeAttr<string S, list<AttrProperty> P> : Attr<S, P>;
+
+/// ConstantRangeList attribute.
+class ConstantRangeListAttr<string S, list<AttrProperty> P> : Attr<S, P>;
 
 /// Target-independent enum attributes.
 
@@ -114,6 +114,9 @@ def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 
 /// Pass structure in an alloca.
 def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
+
+/// Pointer argument memory is initialized.
+def Initialized : ConstantRangeListAttr<"initialized", [ParamAttr]>;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;
@@ -320,9 +323,6 @@ def Writable : EnumAttr<"writable", [ParamAttr]>;
 
 /// Function only writes to memory.
 def WriteOnly : EnumAttr<"writeonly", [ParamAttr]>;
-
-/// Pointer argument memory [%p+LoN, %p+HiN) is initialized.
-def Initialized : ConstRangeListAttr<"initialized", [ParamAttr]>;
 
 /// Zero extended before/after call.
 def ZExt : EnumAttr<"zeroext", [ParamAttr, RetAttr]>;

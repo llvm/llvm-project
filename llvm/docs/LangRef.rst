@@ -1632,11 +1632,6 @@ Currently, only the following parameter attributes are defined:
     parameter. Other arbitrary accesses to the same memory via other pointers
     are allowed.
 
-    Note that this attribute does not apply to the unwind edge: the
-    initializing function does not read the pointer before writing to it
-    regardless of unwinding or not, but the memory may not actually be
-    written to when unwinding happens.
-
     The ``writable`` or ``dereferenceable`` attribute does not imply the
     ``initialized`` attribute. The ``initialized`` does not imply ``writeonly``
     since ``initialized`` allows reading from the pointer after writing.
@@ -1644,7 +1639,7 @@ Currently, only the following parameter attributes are defined:
     This attribute is a list of constant ranges in ascending order with no
     overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit ints, and
     negative values are allowed in case the argument points partway into
-    an allocation.
+    an allocation. An empty list is not allowed.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead

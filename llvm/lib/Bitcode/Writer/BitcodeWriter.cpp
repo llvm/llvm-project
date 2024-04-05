@@ -33,6 +33,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -933,22 +934,18 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         if (Ty)
           Record.push_back(VE.getTypeID(Attr.getValueAsType()));
       } else if (Attr.isConstantRangeAttribute()) {
-        assert(Attr.isConstantRangeAttribute());
         Record.push_back(7);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
         emitConstantRange(Record, Attr.getValueAsConstantRange());
       } else {
-        assert(Attr.isConstRangeListAttribute());
-        const auto &Ranges = Attr.getValueAsRanges();
-
-        Record.push_back(Ranges.empty() ? 8 : 9);
+        assert(Attr.isConstantRangeListAttribute());
+        Record.push_back(8);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        Record.push_back(Ranges.size());
-        if (!Ranges.empty()) {
-          for (const auto &Range : Ranges) {
-            Record.push_back(Range.first);
-            Record.push_back(Range.second);
-          }
+        ConstantRangeList CRL = Attr.getValueAsConstantRangeList();
+        Record.push_back(CRL.size());
+        for (auto &CR : CRL) {
+          emitSignedInt64(Record, CR.getLower().getSExtValue());
+          emitSignedInt64(Record, CR.getUpper().getSExtValue());
         }
       }
     }

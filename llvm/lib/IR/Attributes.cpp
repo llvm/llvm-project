@@ -25,6 +25,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
@@ -192,13 +193,17 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
 }
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
-                         SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges) {
-  assert(Attribute::isConstRangeListAttrKind(Kind) &&
-         "Not a const range list attribute");
+                         const ConstantRangeList &CRL) {
+  assert(Attribute::isConstantRangeListAttrKind(Kind) &&
+         "Not a ConstantRangeList attribute");
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  ID.AddRanges(Ranges);
+  ID.AddInteger(CRL.size());
+  for (auto &CR : CRL) {
+    ID.AddInteger(CR.getLower());
+    ID.AddInteger(CR.getUpper());
+  }
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -206,7 +211,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    PA = new (pImpl->Alloc) ConstRangeListAttributeImpl(Kind, Ranges);
+    PA = new (pImpl->ConstantRangeListAttributeAlloc.Allocate())
+        ConstantRangeListAttributeImpl(Kind, CRL);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
   }
 
@@ -340,14 +346,14 @@ bool Attribute::isConstantRangeAttribute() const {
   return pImpl && pImpl->isConstantRangeAttribute();
 }
 
-bool Attribute::isConstRangeListAttribute() const {
-  return pImpl && pImpl->isConstRangeListAttribute();
+bool Attribute::isConstantRangeListAttribute() const {
+  return pImpl && pImpl->isConstantRangeListAttribute();
 }
 
 Attribute::AttrKind Attribute::getKindAsEnum() const {
   if (!pImpl) return None;
   assert((isEnumAttribute() || isIntAttribute() || isTypeAttribute() ||
-          isConstantRangeAttribute() || isConstRangeListAttribute()) &&
+          isConstantRangeAttribute() || isConstantRangeListAttribute()) &&
          "Invalid attribute type to get the kind as an enum!");
   return pImpl->getKindAsEnum();
 }
@@ -393,13 +399,10 @@ ConstantRange Attribute::getValueAsConstantRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
-SmallVector<std::pair<int64_t, int64_t>, 16>
-Attribute::getValueAsRanges() const {
-  if (!pImpl)
-    return {};
-  assert(isConstRangeListAttribute() &&
-         "Invalid attribute type to get the value as a const range list!");
-  return pImpl->getValueAsRanges();
+ConstantRangeList Attribute::getValueAsConstantRangeList() const {
+  assert(isConstantRangeListAttribute() &&
+         "Invalid attribute type to get the value as a ConstantRangeList!");
+  return pImpl->getValueAsConstantRangeList();
 }
 
 bool Attribute::hasAttribute(AttrKind Kind) const {
@@ -484,6 +487,12 @@ ConstantRange Attribute::getRange() const {
   assert(hasAttribute(Attribute::Range) &&
          "Trying to get range args from non-range attribute");
   return pImpl->getValueAsConstantRange();
+}
+
+ConstantRangeList Attribute::getInitialized() const {
+  assert(hasAttribute(Attribute::Initialized) &&
+         "Trying to get initialized attr from non-ConstantRangeList attribute");
+  return pImpl->getValueAsConstantRangeList();
 }
 
 static const char *getModRefStr(ModRefInfo MR) {
@@ -653,19 +662,19 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   }
 
   if (hasAttribute(Attribute::Initialized)) {
-    auto Ranges = getValueAsRanges();
-    if (Ranges.empty())
-      return "";
-
-    std::string Result = "initialized(";
+    std::string Result;
     raw_string_ostream OS(Result);
-    for (size_t i = 0; i < Ranges.size(); i++) {
-      auto [Start, End] = Ranges[i];
-      OS << "(" << Start << "," << End << ")";
-      if (i != Ranges.size() - 1)
+    ConstantRangeList CRL = getValueAsConstantRangeList();
+    OS << "initialized(";
+    size_t i = 0;
+    for (auto &CR : CRL) {
+      OS << "(" << CR.getLower() << "," << CR.getUpper() << ")";
+      if (i != CRL.size() - 1)
         OS << ",";
+      i++;
     }
     OS << ")";
+    OS.flush();
     return Result;
   }
 
@@ -759,7 +768,7 @@ bool AttributeImpl::hasAttribute(StringRef Kind) const {
 
 Attribute::AttrKind AttributeImpl::getKindAsEnum() const {
   assert(isEnumAttribute() || isIntAttribute() || isTypeAttribute() ||
-         isConstantRangeAttribute() || isConstRangeListAttribute());
+         isConstantRangeAttribute() || isConstantRangeListAttribute());
   return static_cast<const EnumAttributeImpl *>(this)->getEnumKind();
 }
 
@@ -794,11 +803,10 @@ ConstantRange AttributeImpl::getValueAsConstantRange() const {
       ->getConstantRangeValue();
 }
 
-SmallVector<std::pair<int64_t, int64_t>, 16>
-AttributeImpl::getValueAsRanges() const {
-  assert(isConstRangeListAttribute());
-  return static_cast<const ConstRangeListAttributeImpl *>(this)
-      ->getRangesValue();
+ConstantRangeList AttributeImpl::getValueAsConstantRangeList() const {
+  assert(isConstantRangeListAttribute());
+  return static_cast<const ConstantRangeListAttributeImpl *>(this)
+      ->getConstantRangeListValue();
 }
 
 bool AttributeImpl::operator<(const AttributeImpl &AI) const {
@@ -815,6 +823,8 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
     assert(!AI.isEnumAttribute() && "Non-unique attribute");
     assert(!AI.isTypeAttribute() && "Comparison of types would be unstable");
     assert(!AI.isConstantRangeAttribute() && "Unclear how to compare ranges");
+    assert(!AI.isConstantRangeListAttribute() &&
+           "Unclear how to compare range list");
     // TODO: Is this actually needed?
     assert(AI.isIntAttribute() && "Only possibility left");
     return getValueAsInt() < AI.getValueAsInt();
@@ -2008,14 +2018,18 @@ AttrBuilder &AttrBuilder::addConstantRangeAttr(Attribute::AttrKind Kind,
   return addAttribute(Attribute::get(Ctx, Kind, CR));
 }
 
-AttrBuilder &AttrBuilder::addConstRangeListAttr(
-    Attribute::AttrKind Kind,
-    SmallVector<std::pair<int64_t, int64_t>, 16> &Ranges) {
-  return addAttribute(Attribute::get(Ctx, Kind, Ranges));
-}
-
 AttrBuilder &AttrBuilder::addRangeAttr(const ConstantRange &CR) {
   return addConstantRangeAttr(Attribute::Range, CR);
+}
+
+AttrBuilder &
+AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
+                                      const ConstantRangeList &CRL) {
+  return addAttribute(Attribute::get(Ctx, Kind, CRL));
+}
+
+AttrBuilder &AttrBuilder::addInitializedAttr(const ConstantRangeList &CRL) {
+  return addConstantRangeListAttr(Attribute::Initialized, CRL);
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
