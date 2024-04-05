@@ -14,22 +14,20 @@ define i32 @func_local_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-LABEL: func_local_tls:
 ; NOPIC:       # %bb.0: # %entry
 ; NOPIC-NEXT:    pushq %rbp
-; NOPIC-NEXT:    pushq %r14
 ; NOPIC-NEXT:    pushq %rbx
+; NOPIC-NEXT:    pushq %rax
 ; NOPIC-NEXT:    movl %fs:foo_local@TPOFF, %ebp
 ; NOPIC-NEXT:    testl %edi, %edi
 ; NOPIC-NEXT:    movl %ebp, %eax
 ; NOPIC-NEXT:    jne .LBB0_2
 ; NOPIC-NEXT:  # %bb.1: # %if.then
 ; NOPIC-NEXT:    movq %rsi, %rbx
-; NOPIC-NEXT:    movq %fs:0, %rax
-; NOPIC-NEXT:    leaq foo_local@TPOFF(%rax), %r14
 ; NOPIC-NEXT:    callq effect@PLT
-; NOPIC-NEXT:    movl 168(%r14,%rbx,4), %eax
+; NOPIC-NEXT:    movl %fs:foo_local@TPOFF+168(,%rbx,4), %eax
 ; NOPIC-NEXT:  .LBB0_2: # %if.end
 ; NOPIC-NEXT:    addl %ebp, %eax
+; NOPIC-NEXT:    addq $8, %rsp
 ; NOPIC-NEXT:    popq %rbx
-; NOPIC-NEXT:    popq %r14
 ; NOPIC-NEXT:    popq %rbp
 ; NOPIC-NEXT:    retq
 ;
@@ -110,9 +108,8 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-NEXT:    jne .LBB1_2
 ; NOPIC-NEXT:  # %bb.1: # %if.then
 ; NOPIC-NEXT:    movq %rsi, %rbx
-; NOPIC-NEXT:    addq %fs:0, %r14
 ; NOPIC-NEXT:    callq effect@PLT
-; NOPIC-NEXT:    movl 168(%r14,%rbx,4), %eax
+; NOPIC-NEXT:    movl %fs:168(%r14,%rbx,4), %eax
 ; NOPIC-NEXT:  .LBB1_2: # %if.end
 ; NOPIC-NEXT:    addl %ebp, %eax
 ; NOPIC-NEXT:    popq %rbx
