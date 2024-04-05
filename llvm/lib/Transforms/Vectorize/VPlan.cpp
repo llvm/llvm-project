@@ -358,23 +358,14 @@ void VPTransformState::addNewMetadata(Instruction *To,
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
-void VPTransformState::addMetadata(Instruction *To, Instruction *From) {
+void VPTransformState::addMetadata(Value *To, Instruction *From) {
   // No source instruction to transfer metadata from?
   if (!From)
     return;
 
-  propagateMetadata(To, From);
-  addNewMetadata(To, From);
-}
-
-void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  for (Value *V : To) {
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      addMetadata(I, From);
+  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
+    propagateMetadata(ToI, From);
+    addNewMetadata(ToI, From);
   }
 }
 
