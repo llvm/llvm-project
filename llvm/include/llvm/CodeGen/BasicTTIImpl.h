@@ -209,7 +209,8 @@ private:
                                               Align Alignment,
                                               bool VariableMask,
                                               bool IsGatherScatter,
-                                              TTI::TargetCostKind CostKind) {
+                                              TTI::TargetCostKind CostKind,
+                                              unsigned AddressSpace = 0) {
     // We cannot scalarize scalable vectors, so return Invalid.
     if (isa<ScalableVectorType>(DataTy))
       return InstructionCost::getInvalid();
@@ -230,8 +231,9 @@ private:
                   CostKind, -1, nullptr, nullptr)
             : 0;
     InstructionCost LoadCost =
-        VF * (AddrExtractCost + getMemoryOpCost(Opcode, VT->getElementType(),
-                                                Alignment, 0, CostKind));
+        VF *
+        (AddrExtractCost + getMemoryOpCost(Opcode, VT->getElementType(),
+                                           Alignment, AddressSpace, CostKind));
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -1369,6 +1371,7 @@ public:
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind) {
+    // TODO: Pass on AddressSpace when we have test coverage.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
                                        CostKind);
   }
