@@ -14,16 +14,6 @@ using namespace llvm;
 namespace {
 
 class ConstantRangeListTest : public ::testing::Test {
-public:
-  ConstantRangeList
-  GetCRL(SmallVectorImpl<std::pair<int64_t, int64_t>> &Ranges) {
-    ConstantRangeList Result(64, false);
-    for (const auto &[Start, End] : Ranges) {
-      Result.append(Start, End);
-    }
-    return Result;
-  }
-
 protected:
   static ConstantRangeList Full;
   static ConstantRangeList Empty;
@@ -39,13 +29,21 @@ TEST_F(ConstantRangeListTest, Basics) {
   EXPECT_FALSE(Empty.isFullSet());
   EXPECT_TRUE(Empty.isEmptySet());
 
-  ConstantRangeList Some1 = GetCRL({(0, 4), (8, 12)});
-  EXPECT_FALSE(Some1.isFullSet());
-  EXPECT_FALSE(Some1.isEmptySet());
+  ConstantRangeList CRL1(64, false);
+  CRL1.append(0, 4);
+  CRL1.append(8, 12);
+  EXPECT_FALSE(CRL1.isFullSet());
+  EXPECT_FALSE(CRL1.isEmptySet());
 
-  ConstantRangeList Some2 = GetCRL({(0, 4), (8, 12)});
-  ConstantRangeList Some3 = GetCRL({(-4, 0), (8, 12)});
-  EXPECT_TRUE(Some1 == Some2 && Some1 != Some3);
+  ConstantRangeList CRL2(64, false);
+  CRL2.append(0, 4);
+  CRL2.append(8, 12);
+  EXPECT_TRUE(CRL1 == CRL2);
+
+  ConstantRangeList CRL3(64, false);
+  CRL3.append(-4, 0);
+  CRL3.append(8, 12);
+  EXPECT_TRUE(CRL1 != CRL3);
 }
 
 } // anonymous namespace

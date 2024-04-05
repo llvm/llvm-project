@@ -116,7 +116,7 @@ def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", [FnAttr]>;
 def InAlloca : TypeAttr<"inalloca", [ParamAttr]>;
 
 /// Pointer argument memory is initialized.
-def Initialized : ConstantRangeListAttr<"initialized", [ParamAttr]>;
+def Initializes : ConstantRangeListAttr<"initializes", [ParamAttr]>;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", [FnAttr]>;

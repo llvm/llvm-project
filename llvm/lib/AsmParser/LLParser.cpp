@@ -1599,8 +1599,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::Range:
     return parseRangeAttr(B);
-  case Attribute::Initialized:
-    return parseInitializedAttr(B);
+  case Attribute::Initializes:
+    return parseInitializesAttr(B);
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -3054,9 +3054,9 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   return false;
 }
 
-/// parseInitializedAttr
-///   ::= initialized((Lo1,Hi1),(Lo2,Hi2),...)
-bool LLParser::parseInitializedAttr(AttrBuilder &B) {
+/// parseInitializesAttr
+///   ::= initializes((Lo1,Hi1),(Lo2,Hi2),...)
+bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   Lex.Lex();
 
   auto ParseAPSInt = [&](APInt &Val) {
@@ -3093,7 +3093,7 @@ bool LLParser::parseInitializedAttr(AttrBuilder &B) {
   if (parseToken(lltok::rparen, "expected ')'"))
     return true;
 
-  B.addInitializedAttr(CRL);
+  B.addInitializesAttr(CRL);
   return false;
 }
 

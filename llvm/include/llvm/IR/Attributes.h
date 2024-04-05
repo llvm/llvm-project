@@ -281,8 +281,8 @@ public:
   /// Returns the value of the range attribute.
   ConstantRange getRange() const;
 
-  /// Returns the value of the initialized attribute.
-  ConstantRangeList getInitialized() const;
+  /// Returns the value of the initializes attribute.
+  ConstantRangeList getInitializes() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -1233,8 +1233,8 @@ public:
   AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
                                         const ConstantRangeList &CRL);
 
-  /// Add initialized attribute.
-  AttrBuilder &addInitializedAttr(const ConstantRangeList &CRL);
+  /// Add initializes attribute.
+  AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

@@ -2033,27 +2033,27 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
   }
 
-  if (Attrs.hasAttribute(Attribute::Initialized)) {
-    auto Inits = Attrs.getAttribute(Attribute::Initialized)
+  if (Attrs.hasAttribute(Attribute::Initializes)) {
+    auto Inits = Attrs.getAttribute(Attribute::Initializes)
                      .getValueAsConstantRangeList();
     Check(!Inits.isEmptySet(),
-          "Attribute 'initialized' does not support empty list", V);
+          "Attribute 'initializes' does not support empty list", V);
     Check(!Inits.isFullSet(),
-          "Attribute 'initialized' does not support full list", V);
+          "Attribute 'initializes' does not support full list", V);
 
     Check(Inits.getRange(0).getLower().slt(Inits.getRange(0).getUpper()),
-          "Attribute 'initialized' requires interval lower less than upper", V);
+          "Attribute 'initializes' requires interval lower less than upper", V);
     for (size_t i = 1; i < Inits.size(); i++) {
       auto Previous = Inits.getRange(i - 1);
       auto Current = Inits.getRange(i);
       Check(Current.getLower().slt(Current.getUpper()),
-            "Attribute 'initialized' requires interval lower less than upper",
+            "Attribute 'initializes' requires interval lower less than upper",
             V);
       Check(Current.getLower().sge(Previous.getLower()),
-            "Attribute 'initialized' requires intervals in ascending order!",
+            "Attribute 'initializes' requires intervals in ascending order!",
             V);
       Check(Current.getLower().sge(Previous.getUpper()),
-            "Attribute 'initialized' requires intervals merged!", V);
+            "Attribute 'initializes' requires intervals merged!", V);
     }
   }
 

@@ -489,9 +489,9 @@ ConstantRange Attribute::getRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
-ConstantRangeList Attribute::getInitialized() const {
-  assert(hasAttribute(Attribute::Initialized) &&
-         "Trying to get initialized attr from non-ConstantRangeList attribute");
+ConstantRangeList Attribute::getInitializes() const {
+  assert(hasAttribute(Attribute::Initializes) &&
+         "Trying to get initializes attr from non-ConstantRangeList attribute");
   return pImpl->getValueAsConstantRangeList();
 }
 
@@ -661,11 +661,11 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
-  if (hasAttribute(Attribute::Initialized)) {
+  if (hasAttribute(Attribute::Initializes)) {
     std::string Result;
     raw_string_ostream OS(Result);
     ConstantRangeList CRL = getValueAsConstantRangeList();
-    OS << "initialized(";
+    OS << "initializes(";
     size_t i = 0;
     for (auto &CR : CRL) {
       OS << "(" << CR.getLower() << "," << CR.getUpper() << ")";
@@ -2028,8 +2028,8 @@ AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
   return addAttribute(Attribute::get(Ctx, Kind, CRL));
 }
 
-AttrBuilder &AttrBuilder::addInitializedAttr(const ConstantRangeList &CRL) {
-  return addConstantRangeListAttr(Attribute::Initialized, CRL);
+AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
+  return addConstantRangeListAttr(Attribute::Initializes, CRL);
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
@@ -2121,7 +2121,7 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
           .addAttribute(Attribute::DereferenceableOrNull)
           .addAttribute(Attribute::Writable)
           .addAttribute(Attribute::DeadOnUnwind)
-          .addAttribute(Attribute::Initialized);
+          .addAttribute(Attribute::Initializes);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

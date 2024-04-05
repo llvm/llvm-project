@@ -1621,7 +1621,7 @@ Currently, only the following parameter attributes are defined:
     ``readonly`` or a ``memory`` attribute that does not contain
     ``argmem: write``.
 
-``initialized((Lo1,Hi1),...)``
+``initializes((Lo1,Hi1),...)``
     This attribute indicates that the function initializes the ranges of the
     pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
     means the first memory access is a non-volatile, non-atomic write. The
@@ -1633,8 +1633,8 @@ Currently, only the following parameter attributes are defined:
     are allowed.
 
     The ``writable`` or ``dereferenceable`` attribute does not imply the
-    ``initialized`` attribute. The ``initialized`` does not imply ``writeonly``
-    since ``initialized`` allows reading from the pointer after writing.
+    ``initializes`` attribute. The ``initializes`` does not imply ``writeonly``
+    since ``initializes`` allows reading from the pointer after writing.
 
     This attribute is a list of constant ranges in ascending order with no
     overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit ints, and

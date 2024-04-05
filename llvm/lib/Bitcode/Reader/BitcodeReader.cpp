@@ -2130,8 +2130,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnUnwind;
   case bitc::ATTR_KIND_RANGE:
     return Attribute::Range;
-  case bitc::ATTR_KIND_INITIALIZED:
-    return Attribute::Initialized;
+  case bitc::ATTR_KIND_INITIALIZES:
+    return Attribute::Initializes;
   }
 }
 
