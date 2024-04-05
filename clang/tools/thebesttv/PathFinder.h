@@ -159,7 +159,7 @@ struct DijPathFinder : public ICFGPathFinder {
         bool operator<(const Node &b) const { return d > b.d; }
     };
 
-    void dij(int s) {
+    void dij(int s, const std::set<int> &pointsToAvoid) {
         std::fill(d.begin(), d.end(), INF);
         d[s] = 0;
 
@@ -179,6 +179,9 @@ struct DijPathFinder : public ICFGPathFinder {
 
             for (const auto &e : icfg.G[u]) {
                 int v = e.target;
+                // skip point to avoid
+                if (pointsToAvoid.count(v))
+                    continue;
                 if (d[v] > d[u] + 1) {
                     d[v] = d[u] + 1;
                     q.push({v, d[v], u});
@@ -212,6 +215,21 @@ struct DijPathFinder : public ICFGPathFinder {
 
     void search(int source, int target, const std::vector<int> &pointsToPass,
                 const std::set<int> &pointsToAvoid, int maxCallDepth) override {
+        if (pointsToAvoid.count(source)) {
+            logger.warn("Source is in pointsToAvoid!");
+            return;
+        }
+        if (pointsToAvoid.count(target)) {
+            logger.warn("Target is in pointsToAvoid!");
+            return;
+        }
+        for (int x : pointsToPass) {
+            if (pointsToAvoid.count(x)) {
+                logger.warn("Point to pass is in pointsToAvoid!");
+                return;
+            }
+        }
+
         if (source == target) {
             results.insert({source});
             return;
@@ -234,7 +252,7 @@ struct DijPathFinder : public ICFGPathFinder {
         std::vector<int> path;
         for (int i = 0; i < ptp.size() - 1; i++) {
             int u = ptp[i], v = ptp[i + 1];
-            dij(u);
+            dij(u, pointsToAvoid);
             if (d[v] == INF) {
                 logger.warn("No path from {} to {}", u, v);
                 return;
