@@ -1741,8 +1741,10 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(unsigned char, signed char));
   static_assert(__is_layout_compatible(int[], int[]));
   static_assert(__is_layout_compatible(int[2], int[2]));
-  static_assert(!__is_layout_compatible(int[n], int[2])); // FIXME: VLAs should be rejected
-  static_assert(!__is_layout_compatible(int[n], int[n])); // FIXME: VLAs should be rejected
+  static_assert(!__is_layout_compatible(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported for '__is_layout_compatible'}}
+  static_assert(!__is_layout_compatible(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported for '__is_layout_compatible'}}
   static_assert(__is_layout_compatible(int&, int&));
   static_assert(!__is_layout_compatible(int&, char&));
   static_assert(__is_layout_compatible(void(int), void(int)));
