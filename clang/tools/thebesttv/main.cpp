@@ -214,14 +214,12 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
     }
 
-    auto exactResult =
-        locateVariable(functionsInFile, loc.file, loc.line, loc.column, isStmt);
-    // 若不是语句，必须精确匹配
-    if (!isStmt || exactResult.isValid())
+    auto exactResult = locateVariable(functionsInFile, loc.file, loc.line,
+                                      loc.column, isStmt, true);
+    if (exactResult.isValid())
         return exactResult;
-    // 对语句精确匹配失败
-    logger.warn("Unable to find exact match for stmt! Trying inexact "
-                "matching...");
+    // 精确匹配失败
+    logger.warn("Unable to find exact match! Trying inexact matching...");
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
     return locateVariable(functionsInFile, loc.file, loc.line, loc.column,
                           isStmt, false);
