@@ -103,6 +103,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fesetexcept
+  SRCS
+    fesetexcept.cpp
+  HDRS
+    fesetexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fenv_impl
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   fesetexceptflag
   SRCS
     fesetexceptflag.cpp
