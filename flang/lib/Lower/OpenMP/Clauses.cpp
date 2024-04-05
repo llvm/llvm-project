@@ -325,7 +325,7 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // Absent: missing-in-parser
 // AcqRel: empty
 // Acquire: empty
-// AdjustArgs: incomplate
+// AdjustArgs: incomplete
 
 Affinity make(const parser::OmpClause::Affinity &inp,
               semantics::SemanticsContext &semaCtx) {

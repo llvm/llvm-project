@@ -6269,7 +6269,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //       initializer is a string literal, see 8.5.2.
   //     - Otherwise, if the destination type is an array, the program is
   //       ill-formed.
-  if (const ArrayType *DestAT = Context.getAsArrayType(DestType)) {
+  //     - Except in HLSL, where non-decaying array parameters behave like
+  //       non-array types for initialization.
+  if (DestType->isArrayType() && !DestType->isArrayParameterType()) {
+    const ArrayType *DestAT = Context.getAsArrayType(DestType);
     if (Initializer && isa<VariableArrayType>(DestAT)) {
       SetFailed(FK_VariableLengthArrayHasInitializer);
       return;
@@ -7078,6 +7081,11 @@ PerformConstructorInitialization(Sema &S,
       Kind.AllowExplicit() && !Kind.isCopyInit() && Args.size() == 1 &&
       hasCopyOrMoveCtorParam(S.Context,
                              getConstructorInfo(Step.Function.FoundDecl));
+
+  // A smart pointer constructed from a nullable pointer is nullable.
+  if (NumArgs == 1 && !Kind.isExplicitCast())
+    S.diagnoseNullableToNonnullConversion(
+        Entity.getType(), Args.front()->getType(), Kind.getLocation());
 
   // Determine the arguments required to actually perform the constructor
   // call.
@@ -10922,32 +10930,16 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                   Context.getLValueReferenceType(ElementTypes[I].withConst());
           }
 
-        llvm::FoldingSetNodeID ID;
-        ID.AddPointer(Template);
-        for (auto &T : ElementTypes)
-          T.getCanonicalType().Profile(ID);
-        unsigned Hash = ID.ComputeHash();
-        if (AggregateDeductionCandidates.count(Hash) == 0) {
-          if (FunctionTemplateDecl *TD =
-                  DeclareImplicitDeductionGuideFromInitList(
-                      Template, ElementTypes,
-                      TSInfo->getTypeLoc().getEndLoc())) {
-            auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
-            GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);
-            AggregateDeductionCandidates[Hash] = GD;
-            addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
-                                  OnlyListConstructors,
-                                  /*AllowAggregateDeductionCandidate=*/true);
-          }
-        } else {
-          CXXDeductionGuideDecl *GD = AggregateDeductionCandidates[Hash];
-          FunctionTemplateDecl *TD = GD->getDescribedFunctionTemplate();
-          assert(TD && "aggregate deduction candidate is function template");
+        if (FunctionTemplateDecl *TD =
+                DeclareAggregateDeductionGuideFromInitList(
+                    LookupTemplateDecl, ElementTypes,
+                    TSInfo->getTypeLoc().getEndLoc())) {
+          auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
           addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
                                 OnlyListConstructors,
                                 /*AllowAggregateDeductionCandidate=*/true);
+          HasAnyDeductionGuide = true;
         }
-        HasAnyDeductionGuide = true;
       }
     };
 

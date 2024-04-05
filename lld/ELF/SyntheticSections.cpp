@@ -314,22 +314,42 @@ GnuPropertySection::GnuPropertySection()
                        config->wordsize, ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  write32(buf, 4);                          // Name size
+  write32(buf + 4, getSize() - 16);         // Content size
+  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
+  memcpy(buf + 12, "GNU", 4);               // Name string
+
   uint32_t featureAndType = config->emachine == EM_AARCH64
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
-  write32(buf, 4);                                   // Name size
-  write32(buf + 4, config->is64 ? 16 : 12);          // Content size
-  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
-  memcpy(buf + 12, "GNU", 4);                        // Name string
-  write32(buf + 16, featureAndType);                 // Feature type
-  write32(buf + 20, 4);                              // Feature size
-  write32(buf + 24, config->andFeatures);            // Feature flags
-  if (config->is64)
-    write32(buf + 28, 0); // Padding
+  unsigned offset = 16;
+  if (config->andFeatures != 0) {
+    write32(buf + offset + 0, featureAndType);      // Feature type
+    write32(buf + offset + 4, 4);                   // Feature size
+    write32(buf + offset + 8, config->andFeatures); // Feature flags
+    if (config->is64)
+      write32(buf + offset + 12, 0); // Padding
+    offset += 16;
+  }
+
+  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
+    write32(buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
+    write32(buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
+    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
+           ctx.aarch64PauthAbiCoreInfo.size());
+  }
 }
 
-size_t GnuPropertySection::getSize() const { return config->is64 ? 32 : 28; }
+size_t GnuPropertySection::getSize() const {
+  uint32_t contentSize = 0;
+  if (config->andFeatures != 0)
+    contentSize += config->is64 ? 16 : 12;
+  if (!ctx.aarch64PauthAbiCoreInfo.empty())
+    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
+  assert(contentSize != 0);
+  return contentSize + 16;
+}
 
 BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
@@ -415,7 +435,7 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   for (EhSectionPiece &cie : sec->cies)
     offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       fatal(toString(sec) + ": invalid CIE reference");
@@ -448,7 +468,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
     if (hasLSDA(cie))
       ciesWithLSDA.insert(cie.inputOff);
   for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
       continue;
 
@@ -1633,7 +1653,8 @@ void RelocationBaseSection::partitionRels() {
     return;
   const RelType relativeRel = target->relativeRel;
   numRelativeRelocs =
-      llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; }) -
+      std::stable_partition(relocs.begin(), relocs.end(),
+                            [=](auto &r) { return r.type == relativeRel; }) -
       relocs.begin();
 }
 
@@ -1666,7 +1687,7 @@ void RelocationBaseSection::computeRels() {
   parallelForEach(relocs,
                   [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
 
-  auto irelative = std::partition(
+  auto irelative = std::stable_partition(
       relocs.begin() + numRelativeRelocs, relocs.end(),
       [t = target->iRelativeRel](auto &r) { return r.type != t; });
 

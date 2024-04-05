@@ -207,7 +207,7 @@ steps:
 - group: ':freebsd: FreeBSD'
   steps:
   - label: FreeBSD 13 amd64
-    command: libcxx/utils/ci/run-buildbot generic-cxx23
+    command: libcxx/utils/ci/run-buildbot generic-cxx26
     env:
       CC: clang17
       CXX: clang++17

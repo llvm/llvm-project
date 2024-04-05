@@ -1768,16 +1768,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector())
+    if (!DstTy.isScalableVector()) {
       report("Destination type must be a scalable vector", MI);
+      break;
+    }
 
-    if (!SrcTy.isScalar())
+    if (!SrcTy.isScalar()) {
       report("Source type must be a scalar", MI);
+      break;
+    }
 
-    if (DstTy.getScalarType() != SrcTy)
-      report("Element type of the destination must be the same type as the "
-             "source type",
+    if (TypeSize::isKnownGT(DstTy.getElementType().getSizeInBits(),
+                            SrcTy.getSizeInBits())) {
+      report("Element type of the destination must be the same size or smaller "
+             "than the source type",
              MI);
+      break;
+    }
 
     break;
   }

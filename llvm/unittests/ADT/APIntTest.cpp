@@ -2841,6 +2841,58 @@ TEST(APIntTest, multiply) {
   EXPECT_EQ(64U, i96.countr_zero());
 }
 
+TEST(APIntOpsTest, Mulh) {
+
+  // Unsigned
+
+  // 32 bits
+  APInt i32a(32, 0x0001'E235);
+  APInt i32b(32, 0xF623'55AD);
+  EXPECT_EQ(0x0001'CFA1, APIntOps::mulhu(i32a, i32b));
+
+  // 64 bits
+  APInt i64a(64, 0x1234'5678'90AB'CDEF);
+  APInt i64b(64, 0xFEDC'BA09'8765'4321);
+  EXPECT_EQ(0x121F'A000'A372'3A57, APIntOps::mulhu(i64a, i64b));
+
+  // 128 bits
+  APInt i128a(128, "1234567890ABCDEF1234567890ABCDEF", 16);
+  APInt i128b(128, "FEDCBA0987654321FEDCBA0987654321", 16);
+  APInt i128Res = APIntOps::mulhu(i128a, i128b);
+  EXPECT_EQ(APInt(128, "121FA000A3723A57E68984312C3A8D7E", 16), i128Res);
+
+  // Signed
+
+  // 32 bits
+  APInt i32c(32, 0x1234'5678); // +ve
+  APInt i32d(32, 0x10AB'CDEF); // +ve
+  APInt i32e(32, 0xFEDC'BA09); // -ve
+
+  EXPECT_EQ(0x012F'7D02, APIntOps::mulhs(i32c, i32d));
+  EXPECT_EQ(0xFFEB'4988, APIntOps::mulhs(i32c, i32e));
+  EXPECT_EQ(0x0001'4B68, APIntOps::mulhs(i32e, i32e));
+
+  // 64 bits
+  APInt i64c(64, 0x1234'5678'90AB'CDEF); // +ve
+  APInt i64d(64, 0x1234'5678'90FE'DCBA); // +ve
+  APInt i64e(64, 0xFEDC'BA09'8765'4321); // -ve
+
+  EXPECT_EQ(0x014B'66DC'328E'10C1, APIntOps::mulhs(i64c, i64d));
+  EXPECT_EQ(0xFFEB'4988'12C6'6C68, APIntOps::mulhs(i64c, i64e));
+  EXPECT_EQ(0x0001'4B68'2174'FA18, APIntOps::mulhs(i64e, i64e));
+
+  // 128 bits
+  APInt i128c(128, "1234567890ABCDEF1234567890ABCDEF", 16); // +ve
+  APInt i128d(128, "1234567890FEDCBA1234567890FEDCBA", 16); // +ve
+  APInt i128e(128, "FEDCBA0987654321FEDCBA0987654321", 16); // -ve
+
+  i128Res = APIntOps::mulhs(i128c, i128d);
+  EXPECT_EQ(APInt(128, "14B66DC328E10C1FE303DF9EA0B2529", 16), i128Res);
+
+  i128Res = APIntOps::mulhs(i128c, i128e);
+  EXPECT_EQ(APInt(128, "FFEB498812C66C68D4552DB89B8EBF8F", 16), i128Res);
+}
+
 TEST(APIntTest, RoundingUDiv) {
   for (uint64_t Ai = 1; Ai <= 255; Ai++) {
     APInt A(8, Ai);
@@ -3197,21 +3249,11 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
 }
 
 TEST(APIntTest, MultiplicativeInverseExaustive) {
-  for (unsigned BitWidth = 1; BitWidth <= 16; ++BitWidth) {
-    for (unsigned Value = 0; Value < (1u << BitWidth); ++Value) {
+  for (unsigned BitWidth = 1; BitWidth <= 8; ++BitWidth) {
+    for (unsigned Value = 1; Value < (1u << BitWidth); Value += 2) {
+      // Multiplicative inverse exists for all odd numbers.
       APInt V = APInt(BitWidth, Value);
-      APInt MulInv =
-          V.zext(BitWidth + 1)
-              .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
-              .trunc(BitWidth);
-      APInt One = V * MulInv;
-      if (!V.isZero() && V.countr_zero() == 0) {
-        // Multiplicative inverse exists for all odd numbers.
-        EXPECT_TRUE(One.isOne());
-      } else {
-        // Multiplicative inverse does not exist for even numbers (and 0).
-        EXPECT_TRUE(MulInv.isZero());
-      }
+      EXPECT_EQ(V * V.multiplicativeInverse(), 1);
     }
   }
 }

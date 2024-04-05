@@ -17,11 +17,23 @@ include "llvm/Option/OptParser.td"
 /////////
 // Options
 
-// TextAPI options.
+//
+/// TextAPI options.
+//
 def filetype : Joined<["--"], "filetype=">,
   HelpText<"Specify the output file type (tbd-v4 or tbd-v5)">;
+def not_for_dyld_shared_cache : Joined<["-"], "not_for_dyld_shared_cache">,
+  HelpText<"Mark library as shared cache ineligible">;
 
-// Verification options.
+//
+/// Debugging or logging options.
+//
+def t: Flag<["-"], "t">,
+  HelpText<"Logs each dylib loaded for InstallAPI. Useful for debugging problems with search paths where the wrong library is loaded.">;
+
+//
+/// Verification options.
+//
 def verify_against : Separate<["-"], "verify-against">,
   HelpText<"Verify the specified dynamic library/framework against the headers">;
 def verify_against_EQ : Joined<["--"], "verify-against=">, Alias<verify_against>;
@@ -29,8 +41,12 @@ def verify_mode_EQ : Joined<["--"], "verify-mode=">,
   HelpText<"Specify the severity and extend of the validation. Valid modes are ErrorsOnly, ErrorsAndWarnings, and Pedantic.">;
 def demangle : Flag<["--", "-"], "demangle">,
   HelpText<"Demangle symbols when printing warnings and errors">;
+def dsym: Joined<["--"], "dsym=">,
+  MetaVarName<"<path>">, HelpText<"Specify dSYM path for enriched diagnostics.">;
 
-// Additional input options.
+//
+/// Additional input options.
+//
 def extra_project_header : Separate<["-"], "extra-project-header">,
   MetaVarName<"<path>">,
   HelpText<"Add additional project header location for parsing">;
@@ -73,3 +89,23 @@ def project_umbrella_header : Separate<["-"], "project-umbrella-header">,
   MetaVarName<"<path>">, HelpText<"Specify the project umbrella header location">;
 def project_umbrella_header_EQ : Joined<["--"], "project-umbrella-header=">,
   Alias<project_umbrella_header>;
+
+//
+/// Overidden clang options for different behavior.
+//
+
+// Clang's Xarch does not support options that require arguments. 
+// But is supported for InstallAPI generation.
+def Xarch__ : Joined<["-"], "Xarch_">;
+def allowable_client : Separate<["-"], "allowable_client">,
+  HelpText<"Restricts what can link against the dynamic library being created">;
+def rpath: Separate<["-"], "rpath">,
+  HelpText<"Add path to the runpath search path list for the dynamic library being created.">;
+def reexport_l : Joined<["-"], "reexport-l">,
+  HelpText<"Re-export the specified library">;
+def reexport_library : Separate<["-"], "reexport_library">, MetaVarName<"<path>">,
+  HelpText<"Re-export the specified library">;
+def reexport_framework : Separate<["-"], "reexport_framework">,
+  HelpText<"Re-export the specified framework">;
+
+
