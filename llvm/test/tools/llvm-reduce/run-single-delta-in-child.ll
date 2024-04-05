@@ -1,7 +1,8 @@
+; UNSUPPORTED: target={{.-windows.}}
 ; Test that llvm-reduce can remove uninteresting Basic Blocks, and remove them from instructions (i.e. SwitchInst, BranchInst and IndirectBrInst)
 ; Note: if an uninteresting BB is the default case for a switch, the instruction is removed altogether (since the default case cannot be replaced)
 ;
-; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --run-delta-in-child --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -implicit-check-not=uninteresting %s < %t
 
 ; CHECK-INTERESTINGNESS: store i32 0

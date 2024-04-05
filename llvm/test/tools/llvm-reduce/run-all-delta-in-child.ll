@@ -1,4 +1,5 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; UNSUPPORTED: target={{.-windows.}}
+; RUN: llvm-reduce --run-delta-in-child --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK-FINAL --input-file=%t %s
 
 ; Test handling of 'alias'.
