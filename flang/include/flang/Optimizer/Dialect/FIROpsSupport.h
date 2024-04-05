@@ -109,6 +109,13 @@ static constexpr llvm::StringRef getInternalProcedureAttrName() {
   return "fir.internal_proc";
 }
 
+/// Attribute to link an internal procedure to its host procedure symbol when
+/// the internal procedure mangled name does not allow retrieving the host
+/// func.func because the host is BIND(C).
+static constexpr llvm::StringRef getHostSymbolAttrName() {
+  return "fir.host_symbol";
+}
+
 /// Attribute containing the original name of a function from before the
 /// ExternalNameConverision pass runs
 static constexpr llvm::StringRef getInternalFuncNameAttrName() {

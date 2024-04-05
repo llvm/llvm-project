@@ -589,6 +589,21 @@ void Fortran::lower::CalleeInterface::setFuncAttrs(
 static void addSymbolAttribute(mlir::func::FuncOp func,
                                const Fortran::semantics::Symbol &sym,
                                mlir::MLIRContext &mlirContext) {
+  // The link between an internal procedure and its host procedure is lost
+  // in FIR if the host is BIND(C) since the internal mangling will not
+  // allow retrieving the host bind(C) name, and therefore func.func symbol.
+  // Preserve it as an attribute so that this can be later retrieved.
+  if (sym.owner().kind() == Fortran::semantics::Scope::Kind::Subprogram)
+    if (const Fortran::semantics::Symbol *hostProcedure = sym.owner().symbol())
+      if (Fortran::semantics::IsBindCProcedure(*hostProcedure)) {
+        std::string hostName = Fortran::lower::mangle::mangleName(
+            *hostProcedure, /*keepExternalInScope=*/true);
+        func->setAttr(
+            fir::getHostSymbolAttrName(),
+            mlir::SymbolRefAttr::get(
+                &mlirContext, mlir::StringAttr::get(&mlirContext, hostName)));
+      }
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
