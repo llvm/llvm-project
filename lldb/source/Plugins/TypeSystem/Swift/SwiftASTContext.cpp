@@ -997,6 +997,20 @@ SwiftASTContext::SwiftASTContext(std::string description,
       GetClangModulesCacheProperty());
 }
 
+static std::string DerivePlatformPluginPath(StringRef sdk_path) {
+  llvm::StringRef path = sdk_path;
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) != "SDKs")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) != "Developer")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (!path.ends_with(".platform"))
+    return {};
+  return std::string(path) + "/usr/local/lib/swift/host/plugins";
+}
+
 void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   swift::IRGenOptions &ir_gen_opts =
       m_compiler_invocation_ap->getIRGenOptions();
@@ -1020,6 +1034,20 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
   // Bypass deserialization safety to allow deserializing internal details from
   // swiftmodule files.
   lang_opts.EnableDeserializationSafety = false;
+
+  // Platform plugin path (macOS hosts only).
+  swift::PluginSearchOption::ExternalPluginPath platform_plugins;
+  platform_plugins.SearchPath =
+      DerivePlatformPluginPath(m_compiler_invocation_ap->getSDKPath());
+  if (!platform_plugins.SearchPath.empty()) {
+    platform_plugins.ServerPath = GetPluginServer(platform_plugins.SearchPath);
+    if (!platform_plugins.ServerPath.empty()) {
+      if (FileSystem::Instance().Exists(platform_plugins.SearchPath) &&
+          FileSystem::Instance().Exists(platform_plugins.ServerPath))
+        m_compiler_invocation_ap->getSearchPathOptions()
+            .PluginSearchOpts.push_back(platform_plugins);
+    }
+  }
 }
 
 SwiftASTContext::~SwiftASTContext() {
