@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_config.h"
 
 #include <inttypes.h>
