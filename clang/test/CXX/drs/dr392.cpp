@@ -12,7 +12,7 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace dr392 {
+namespace dr392 { // dr392: 2.8
 
 struct A {
   operator bool() NOTHROW;
