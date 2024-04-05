@@ -311,10 +311,11 @@ private:
           HasParentSection(HasParentSection) {}
 
     bool operator<(const GOFFSectionKey &Other) const {
-      if (SectionType != Other.SectionType) {
-        return SectionType < Other.SectionType;
+      if (SectionType == GOFF::GOFFSectionType::Other
+          && SectionType == GOFF::GOFFSectionType::Other) {
+        return SectionName < Other.SectionName;
       }
-      return SectionName < Other.SectionName;
+      return SectionType < Other.SectionType;
     }
   };
 
