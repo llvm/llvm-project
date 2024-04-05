@@ -601,7 +601,12 @@ int main(int argc, const char **argv) {
                     from = varLoc;
                 } else if (type == "sink") {
                     to = varLoc;
+                    // sink is the last stmt
+                    break;
                 } else {
+                    // source is the first stmt
+                    if (!from.isValid())
+                        continue;
                     path.emplace_back(varLoc);
                 }
             }
