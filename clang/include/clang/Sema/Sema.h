@@ -9713,7 +9713,8 @@ public:
   /// not already done so.
   void DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                       SourceLocation Loc);
-  FunctionTemplateDecl *DeclareImplicitDeductionGuideFromInitList(
+
+  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
       TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
       SourceLocation Loc);
 
