@@ -3420,45 +3420,37 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::AVGFLOORU: {
-    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
-    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = Known.zext(BitWidth + 1);
+    Known2 = Known2.zext(BitWidth + 1);
     Known = KnownBits::avgFloorU(Known, Known2);
     Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGCEILU: {
-    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
-    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = Known.zext(BitWidth + 1);
+    Known2 = Known2.zext(BitWidth + 1);
     Known = KnownBits::avgCeilU(Known, Known2);
     Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGFLOORS: {
-    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
-    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = Known.sext(BitWidth + 1);
+    Known2 = Known2.sext(BitWidth + 1);
     Known = KnownBits::avgFloorS(Known, Known2);
     Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGCEILS: {
-    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
-    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
-    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    Known = Known.sext(BitWidth + 1);
+    Known2 = Known2.sext(BitWidth + 1);
     Known = KnownBits::avgCeilS(Known, Known2);
     Known = Known.extractBits(BitWidth, 1);
     break;
