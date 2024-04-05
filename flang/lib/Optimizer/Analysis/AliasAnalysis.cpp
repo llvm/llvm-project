@@ -88,18 +88,23 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
-  LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
-             llvm::dbgs() << "  lhs: " << lhs << "\n";
-             llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
-             llvm::dbgs() << "  lhsSrc kind: " << EnumToString(lhsSrc.kind) << "\n";
-             llvm::dbgs() << "  lhsSrc pointer: " << lhsSrc.attributes.test(Attribute::Pointer) << "\n";
-             llvm::dbgs() << "  lhsSrc target: " << lhsSrc.attributes.test(Attribute::Target) << "\n";
-             llvm::dbgs() << "  rhs: " << rhs << "\n";
-             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
-             llvm::dbgs() << "  rhsSrc kind: " << EnumToString(rhsSrc.kind) << "\n";
-             llvm::dbgs() << "  rhsSrc pointer: " << rhsSrc.attributes.test(Attribute::Pointer) << "\n";
-             llvm::dbgs() << "  rhsSrc target: " << rhsSrc.attributes.test(Attribute::Target) << "\n";
-             llvm::dbgs() << "\n";);
+  LLVM_DEBUG(
+      llvm::dbgs() << "AliasAnalysis::alias\n";
+      llvm::dbgs() << "  lhs: " << lhs << "\n";
+      llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
+      llvm::dbgs() << "  lhsSrc kind: " << EnumToString(lhsSrc.kind) << "\n";
+      llvm::dbgs() << "  lhsSrc pointer: "
+                   << lhsSrc.attributes.test(Attribute::Pointer) << "\n";
+      llvm::dbgs() << "  lhsSrc target: "
+                   << lhsSrc.attributes.test(Attribute::Target) << "\n";
+      llvm::dbgs() << "  rhs: " << rhs << "\n";
+      llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
+      llvm::dbgs() << "  rhsSrc kind: " << EnumToString(rhsSrc.kind) << "\n";
+      llvm::dbgs() << "  rhsSrc pointer: "
+                   << rhsSrc.attributes.test(Attribute::Pointer) << "\n";
+      llvm::dbgs() << "  rhsSrc target: "
+                   << rhsSrc.attributes.test(Attribute::Target) << "\n";
+      llvm::dbgs() << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
