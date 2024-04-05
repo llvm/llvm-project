@@ -820,7 +820,7 @@ bool DylibVerifier::verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
     return false;
   }
 
-  if (!ProvidedBA.ParentUmbrella.empty() && !DylibBA.ParentUmbrella.empty()) {
+  if (!ProvidedBA.ParentUmbrella.empty() && DylibBA.ParentUmbrella.empty()) {
     Ctx.Diag->Report(diag::err_parent_umbrella_missing)
         << "binary file" << ProvidedBA.ParentUmbrella;
     return false;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DiagnosticBuilderWrappers.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/Platform.h"
@@ -39,16 +40,13 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   raw_string_ostream Stream(PlatformAsString);
 
   Stream << "[ ";
-  bool NeedsComma = false;
-  for (auto &[Platform, Version] : Platforms) {
-    if (NeedsComma)
-      Stream << ", ";
-    else
-      NeedsComma = true;
-    Stream << getPlatformName(Platform);
-    if (!Version.empty())
-      Stream << Version.getAsString();
-  }
+  llvm::interleaveComma(
+      Platforms, Stream,
+      [&Stream](const std::pair<PlatformType, VersionTuple> &PV) {
+        Stream << getPlatformName(PV.first);
+        if (!PV.second.empty())
+          Stream << PV.second.getAsString();
+      });
   Stream << " ]";
   DB.AddString(Stream.str());
   return DB;
