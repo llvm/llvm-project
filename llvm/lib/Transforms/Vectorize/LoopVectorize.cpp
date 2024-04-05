@@ -8245,6 +8245,8 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
              "Distinct incoming values with one having a full mask");
       break;
     }
+    if (In == 0)
+      continue;
     OperandsWithMask.push_back(EdgeMask);
   }
   return new VPBlendRecipe(Phi, OperandsWithMask);

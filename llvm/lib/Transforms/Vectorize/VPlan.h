@@ -1932,12 +1932,12 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// might be incoming with a full mask for which there is no VPValue.
+  /// respective masks, ordered [I0, I1, M1, ...]. Note that the first incoming
+  /// value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
     assert(Operands.size() > 0 &&
-           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
+           ((Operands.size() == 1) || ((Operands.size() + 1) % 2 == 0)) &&
            "Expected either a single incoming value or a positive even number "
            "of operands");
   }
@@ -1951,13 +1951,18 @@ public:
 
   /// Return the number of incoming values, taking into account that a single
   /// incoming value has no mask.
-  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
+  unsigned getNumIncomingValues() const { return (getNumOperands() + 2) / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+  }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
+  VPValue *getMask(unsigned Idx) const {
+    assert(Idx > 0);
+    return getOperand(Idx * 2);
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
