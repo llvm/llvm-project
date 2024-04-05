@@ -1740,8 +1740,8 @@ public:
     return *this;
   }
 
-  /// \returns the multiplicative inverse for a given modulo.
-  APInt multiplicativeInverse(const APInt &modulo) const;
+  /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
+  APInt multiplicativeInverse() const;
 
   /// @}
   /// \name Building-block Operations for APInt and APFloat
@@ -2215,6 +2215,14 @@ APInt avgCeilS(const APInt &C1, const APInt &C2);
 
 /// Compute the ceil of the unsigned average of C1 and C2
 APInt avgCeilU(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhs(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+/// Returns the high N bits of the multiplication result.
+APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Compute GCD of two unsigned APInt values.
 ///

@@ -1660,6 +1660,9 @@ public:
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
 
+  /// Add _Nullable attributes for std:: types.
+  void inferNullableClassAttribute(CXXRecordDecl *CRD);
+
   enum PragmaOptionsAlignKind {
     POAK_Native,  // #pragma options align=native
     POAK_Natural, // #pragma options align=natural
@@ -10167,6 +10170,9 @@ public:
 
       /// We are building deduction guides for a class.
       BuildingDeductionGuides,
+
+      /// We are instantiating a type alias template declaration.
+      TypeAliasTemplateInstantiation,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -10254,6 +10260,12 @@ public:
     /// of a function template.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionDecl *Entity, ExceptionSpecification,
+                          SourceRange InstantiationRange = SourceRange());
+
+    /// Note that we are instantiating a type alias template declaration.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          TypeAliasTemplateDecl *Template,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating a default argument in a
