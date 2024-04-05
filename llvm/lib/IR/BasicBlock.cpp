@@ -40,7 +40,8 @@ cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
     cl::desc("When set to true, IR files will be processed and printed in "
              "their current debug info format, regardless of default behaviour "
              "or other flags passed. Has no effect if input IR does not "
-             "contain debug records or intrinsics."));
+             "contain debug records or intrinsics. Ignored in llvm-link, "
+             "llvm-lto, and llvm-lto2."));
 
 bool WriteNewDbgInfoFormatToBitcode /*set default value in cl::init() below*/;
 cl::opt<bool, true> WriteNewDbgInfoFormatToBitcode2(
@@ -71,10 +72,8 @@ DbgMarker *BasicBlock::createMarker(InstListType::iterator It) {
   return DM;
 }
 
-void BasicBlock::convertToNewDbgValues(bool UpdateFlagOnly) {
+void BasicBlock::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
-  if (UpdateFlagOnly)
-    return;
 
   // Iterate over all instructions in the instruction list, collecting debug
   // info intrinsics and converting them to DbgRecords. Once we find a "real"
@@ -112,11 +111,9 @@ void BasicBlock::convertToNewDbgValues(bool UpdateFlagOnly) {
   }
 }
 
-void BasicBlock::convertFromNewDbgValues(bool UpdateFlagOnly) {
-  IsNewDbgInfoFormat = false;
-  if (UpdateFlagOnly)
-    return;
+void BasicBlock::convertFromNewDbgValues() {
   invalidateOrders();
+  IsNewDbgInfoFormat = false;
 
   // Iterate over the block, finding instructions annotated with DbgMarkers.
   // Convert any attached DbgRecords to debug intrinsics and insert ahead of the
@@ -151,11 +148,14 @@ void BasicBlock::dumpDbgValues() const {
 }
 #endif
 
-void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag, bool UpdateFlagOnly) {
+void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
   if (NewFlag && !IsNewDbgInfoFormat)
-    convertToNewDbgValues(UpdateFlagOnly);
+    convertToNewDbgValues();
   else if (!NewFlag && IsNewDbgInfoFormat)
-    convertFromNewDbgValues(UpdateFlagOnly);
+    convertFromNewDbgValues();
+}
+void BasicBlock::setNewDbgInfoFormatFlag(bool NewFlag) {
+  IsNewDbgInfoFormat = NewFlag;
 }
 
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {

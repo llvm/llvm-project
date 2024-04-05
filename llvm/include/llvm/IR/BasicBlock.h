@@ -81,17 +81,18 @@ public:
   /// intrinsics into DbgMarkers / DbgRecords. Deletes all dbg.values in
   /// the process and sets IsNewDbgInfoFormat = true. Only takes effect if
   /// the UseNewDbgInfoFormat LLVM command line option is given.
-  void convertToNewDbgValues(bool UpdateFlagOnly = false);
+  void convertToNewDbgValues();
 
   /// Convert variable location debugging information stored in DbgMarkers and
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
-  void convertFromNewDbgValues(bool UpdateFlagOnly = false);
+  void convertFromNewDbgValues();
 
   /// Ensure the block is in "old" dbg.value format (\p NewFlag == false) or
   /// in the new format (\p NewFlag == true), converting to the desired format
   /// if necessary.
-  void setIsNewDbgInfoFormat(bool NewFlag, bool UpdateFlagOnly = false);
+  void setIsNewDbgInfoFormat(bool NewFlag);
+  void setNewDbgInfoFormatFlag(bool NewFlag);
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics

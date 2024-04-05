@@ -6519,7 +6519,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
         return error(Lex.getLoc(), "debug record should not appear in a module "
                                    "containing debug info intrinsics");
       if (!SeenNewDbgInfoFormat)
-        M->setIsNewDbgInfoFormat(true, true);
+        M->setNewDbgInfoFormatFlag(true);
       SeenNewDbgInfoFormat = true;
       Lex.Lex();
 
@@ -7924,7 +7924,7 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
                             "using non-intrinsic debug info");
     }
     if (!SeenOldDbgInfoFormat)
-      M->setIsNewDbgInfoFormat(false, true);
+      M->setNewDbgInfoFormatFlag(false);
     SeenOldDbgInfoFormat = true;
   }
   CI->setAttributes(PAL);

@@ -6835,9 +6835,9 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     // function because there must be no existing intrinsics to convert.
     // Otherwise, just set the format on this function now.
     if (NewDbgInfoFormatDesired != F->getParent()->IsNewDbgInfoFormat)
-      F->getParent()->setIsNewDbgInfoFormat(NewDbgInfoFormatDesired, true);
+      F->getParent()->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
     else
-      F->setIsNewDbgInfoFormat(NewDbgInfoFormatDesired, true);
+      F->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
   } else {
     // If we aren't preserving formats, we use the Module flag to get our
     // desired format instead of reading flags, in case we are lazy-loading and
@@ -6846,8 +6846,10 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     // desire the intrinsic format; everything else is a no-op or handled by the
     // autoupgrader.
     bool ModuleIsNewDbgInfoFormat = F->getParent()->IsNewDbgInfoFormat;
-    F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat,
-                             ModuleIsNewDbgInfoFormat || !SeenDebugRecord);
+    if (ModuleIsNewDbgInfoFormat || !SeenDebugRecord)
+      F->setNewDbgInfoFormatFlag(ModuleIsNewDbgInfoFormat);
+    else
+      F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat);
   }
 
   if (StripDebugInfo)
