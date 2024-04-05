@@ -1,4 +1,5 @@
-//===-- Unittests for feclearexcept, feraiseexcept and fetestexpect -------===//
+//===-- Unittests for feclearexcept, feraiseexcept, fetestexpect ----------===//
+//===-- and fesetexcept ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +9,7 @@
 
 #include "src/fenv/feclearexcept.h"
 #include "src/fenv/feraiseexcept.h"
+#include "src/fenv/fesetexcept.h"
 #include "src/fenv/fetestexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -38,6 +40,11 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
     ASSERT_EQ(r, 0);
     s = LIBC_NAMESPACE::fetestexcept(e);
     ASSERT_EQ(s, 0);
+
+    r = LIBC_NAMESPACE::fesetexcept(e);
+    ASSERT_EQ(r, 0);
+    s = LIBC_NAMESPACE::fetestexcept(e);
+    ASSERT_EQ(s, e);
   }
 
   for (int e1 : excepts) {
@@ -52,6 +59,11 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
       ASSERT_EQ(r, 0);
       s = LIBC_NAMESPACE::fetestexcept(e);
       ASSERT_EQ(s, 0);
+
+      r = LIBC_NAMESPACE::fesetexcept(e);
+      ASSERT_EQ(r, 0);
+      s = LIBC_NAMESPACE::fetestexcept(e);
+      ASSERT_EQ(s, e);
     }
   }
 
@@ -68,6 +80,11 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
         ASSERT_EQ(r, 0);
         s = LIBC_NAMESPACE::fetestexcept(e);
         ASSERT_EQ(s, 0);
+
+        r = LIBC_NAMESPACE::fesetexcept(e);
+        ASSERT_EQ(r, 0);
+        s = LIBC_NAMESPACE::fetestexcept(e);
+        ASSERT_EQ(s, e);
       }
     }
   }
@@ -86,6 +103,11 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
           ASSERT_EQ(r, 0);
           s = LIBC_NAMESPACE::fetestexcept(e);
           ASSERT_EQ(s, 0);
+
+          r = LIBC_NAMESPACE::fesetexcept(e);
+          ASSERT_EQ(r, 0);
+          s = LIBC_NAMESPACE::fetestexcept(e);
+          ASSERT_EQ(s, e);
         }
       }
     }
@@ -106,6 +128,11 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
             ASSERT_EQ(r, 0);
             s = LIBC_NAMESPACE::fetestexcept(e);
             ASSERT_EQ(s, 0);
+
+            r = LIBC_NAMESPACE::fesetexcept(e);
+            ASSERT_EQ(r, 0);
+            s = LIBC_NAMESPACE::fetestexcept(e);
+            ASSERT_EQ(s, e);
           }
         }
       }
@@ -115,5 +142,10 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   int r = LIBC_NAMESPACE::feraiseexcept(ALL_EXCEPTS);
   ASSERT_EQ(r, 0);
   int s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
+  ASSERT_EQ(s, ALL_EXCEPTS);
+
+  r = LIBC_NAMESPACE::fesetexcept(ALL_EXCEPTS);
+  ASSERT_EQ(r, 0);
+  s = LIBC_NAMESPACE::fetestexcept(ALL_EXCEPTS);
   ASSERT_EQ(s, ALL_EXCEPTS);
 }
