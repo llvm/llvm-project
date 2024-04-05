@@ -270,9 +270,14 @@ if.end:
 
 ; constant is big and do not fit in 12 bit (imm), fit in i32
 ; RV32IFDC-LABEL: <f_big_ledge_pos>:
-; RV32IFDC-NOT: RESBROPT
+; RV32IFDC: c.li [[REG:.*]], 0x1
+; RV32IFDC: c.slli [[REG]], 0xb
+; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; nothing to check.
+; RV32IFD-LABEL: <f_big_ledge_pos>:
+; RV32IFD: addi [[REG1:.*]], zero, 0x1
+; RV32IFD: slli [[REG2:.*]], [[REG1]], 0xb
+; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG2]], [[PLACE:.*]]
 define i32 @f_big_ledge_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 2048
   br i1 %cmp, label %if.then, label %if.else
@@ -290,11 +295,16 @@ if.end:
 
 ; constant is big and do not fit in 12 bit (imm), fit in i32
 ; RV32IFDC-LABEL: <f_big_ledge_neg>:
-; RV32IFDC-NOT: c.beqz
+; RV32IFDC: c.lui [[REG1:.*]], 0xfffff
+; RV32IFDC: addi [[REG2:.*]], [[REG1]], 0x7ff
+; RV32IFDC: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 ; --- no compress extension
-; nothing to check.
+; RV32IFD-LABEL: <f_big_ledge_neg>:
+; RV32IFD: lui [[REG1:.*]], 0xfffff
+; RV32IFD: addi [[REG2:.*]], [[REG1]], 0x7ff
+; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG2]], [[PLACE:.*]]
 define i32 @f_big_ledge_neg(i32 %in0) minsize {
-  %cmp = icmp CMPCOND i32 %in0, -2048
+  %cmp = icmp CMPCOND i32 %in0, -2049
   br i1 %cmp, label %if.then, label %if.else
 if.then:
   %call = shl i32 %in0, 1
