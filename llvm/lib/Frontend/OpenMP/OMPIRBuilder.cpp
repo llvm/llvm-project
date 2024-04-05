@@ -4791,6 +4791,9 @@ void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
       updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
     updateNVPTXMetadata(Kernel, "minctasm", LB, false);
   }
+  if (T.isAMDGPU())
+    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
