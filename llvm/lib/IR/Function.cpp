@@ -103,6 +103,12 @@ void Function::setIsNewDbgInfoFormat(bool NewFlag) {
   else if (!NewFlag && IsNewDbgInfoFormat)
     convertFromNewDbgValues();
 }
+void Function::setNewDbgInfoFormatFlag(bool NewFlag) {
+  for (auto &BB : *this) {
+    BB.setNewDbgInfoFormatFlag(NewFlag);
+  }
+  IsNewDbgInfoFormat = NewFlag;
+}
 
 //===----------------------------------------------------------------------===//
 // Argument Implementation

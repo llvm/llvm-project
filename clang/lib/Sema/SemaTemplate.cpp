@@ -2711,7 +2711,6 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
-      TTP->getIndex();
       MarkAppeared(TTP->getDecl());
       return true;
     }
@@ -4383,6 +4382,11 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     InstantiatingTemplate Inst(*this, TemplateLoc, Template);
     if (Inst.isInvalid())
       return QualType();
+
+    InstantiatingTemplate InstTemplate(
+        *this, /*PointOfInstantiation=*/AliasTemplate->getBeginLoc(),
+        /*Template=*/AliasTemplate,
+        /*TemplateArgs=*/TemplateArgLists.getInnermost());
 
     std::optional<ContextRAII> SavedContext;
     if (!AliasTemplate->getDeclContext()->isFileContext())
