@@ -2395,19 +2395,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
             !YamlBB.CallSites.empty())
           YamlBF.Blocks.emplace_back(YamlBB);
       }
-
-      for (const auto &[BranchOffset, _] : Branches.InterIndex) {
-        bool Matched =
-            llvm::any_of(llvm::make_second_range(BFBranches),
-                         [&](const std::vector<uint32_t> &BranchOffsets) {
-                           return llvm::is_contained(BranchOffsets,
-                                                     BranchOffset);
-                         });
-        if (!Matched && opts::Verbosity >= 1)
-          errs() << "BOLT-WARNING: Couldn't match call site "
-                 << formatv("{0}@{1:x} to YAML profile\n", FuncName,
-                            BranchOffset);
-      }
       BP.Functions.emplace_back(YamlBF);
     }
   }
