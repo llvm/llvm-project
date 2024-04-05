@@ -9,7 +9,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
 // CHECK-NEXT:    br i1 [[TMP1]], label [[TRAP:%.*]], label [[CONT:%.*]], !nosanitize [[META2]]
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR3:[0-9]+]], !nosanitize [[META2]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR5:[0-9]+]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 // CHECK:       cont:
 // CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
@@ -29,9 +29,28 @@ int test(int x) {
   return x + 123;
 }
 
+// CHECK-LABEL: define dso_local noundef i32 @test_runtime(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.allow.runtime.check(metadata [[META3:![0-9]+]])
+// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// CHECK-NEXT:    ret i32 [[CONV]]
+//
+// REMOVE-LABEL: define dso_local noundef i32 @test_runtime(
+// REMOVE-SAME: ) local_unnamed_addr #[[ATTR0]] {
+// REMOVE-NEXT:  entry:
+// REMOVE-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.allow.runtime.check(metadata [[META3:![0-9]+]])
+// REMOVE-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// REMOVE-NEXT:    ret i32 [[CONV]]
+//
+int test_runtime() {
+  return __builtin_allow_runtime_check("mycheck");
+}
 
 //.
 // CHECK: [[META2]] = !{}
+// CHECK: [[META3]] = !{!"mycheck"}
 //.
 // REMOVE: [[META2]] = !{}
+// REMOVE: [[META3]] = !{!"mycheck"}
 //.
