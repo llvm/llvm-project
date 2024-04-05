@@ -268,7 +268,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers.
+  initializers. Added support for renaming macro arguments.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
