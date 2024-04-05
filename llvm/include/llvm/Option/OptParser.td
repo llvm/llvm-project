@@ -93,11 +93,6 @@ class OptionGroup<string name> {
 
 // Define the option class.
 
-class HelpTextVariant<list<OptionVisibility> visibilities, string text> {
-  list<OptionVisibility> Visibilities = visibilities;
-  string Text = text;
-}
-
 class Option<list<string> prefixes, string name, OptionKind kind> {
   string EnumName = ?; // Uses the def name if undefined.
   list<string> Prefixes = prefixes;
@@ -106,7 +101,6 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   // Used by MultiArg option kind.
   int NumArgs = 0;
   string HelpText = ?;
-  list<HelpTextVariant> HelpTextsForVariants = [];
   string MetaVarName = ?;
   string Values = ?;
   code ValuesCode = ?;
@@ -161,12 +155,6 @@ class Visibility<list<OptionVisibility> visibility> {
 }
 class Group<OptionGroup group> { OptionGroup Group = group; }
 class HelpText<string text> { string HelpText = text; }
-class HelpTextForVariants<list<OptionVisibility> Visibilities, string text> {
-  list<HelpTextVariant> HelpTextsForVariants = [
-    HelpTextVariant<Visibilities, text>
-  ];
-}
-
 class MetaVarName<string name> { string MetaVarName = name; }
 class Values<string value> { string Values = value; }
 class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
