@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "SequenceToOffsetTable.h"
+#include "Basic/SequenceToOffsetTable.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,13 +74,13 @@ static ParameterKind getParameterKind(const Record *R) {
   auto VTRec = R->getValueAsDef("VT");
   switch (getValueType(VTRec)) {
   case MVT::isVoid:
-    return ParameterKind::VOID;
+    return ParameterKind::Void;
   case MVT::f16:
-    return ParameterKind::HALF;
+    return ParameterKind::Half;
   case MVT::f32:
-    return ParameterKind::FLOAT;
+    return ParameterKind::Float;
   case MVT::f64:
-    return ParameterKind::DOUBLE;
+    return ParameterKind::Double;
   case MVT::i1:
     return ParameterKind::I1;
   case MVT::i8:
@@ -91,11 +91,11 @@ static ParameterKind getParameterKind(const Record *R) {
     return ParameterKind::I32;
   case MVT::fAny:
   case MVT::iAny:
-    return ParameterKind::OVERLOAD;
+    return ParameterKind::Overload;
   case MVT::Other:
     // Handle DXIL-specific overload types
     if (R->getValueAsInt("isHalfOrFloat") || R->getValueAsInt("isI16OrI32")) {
-      return ParameterKind::OVERLOAD;
+      return ParameterKind::Overload;
     }
     LLVM_FALLTHROUGH;
   default:
@@ -119,7 +119,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Populate OpTypes with return type and parameter types
 
   // Parameter indices of overloaded parameters.
-  // This vector contains overload parameters in the order order used to
+  // This vector contains overload parameters in the order used to
   // resolve an LLVMMatchType in accordance with  convention outlined in
   // the comment before the definition of class LLVMMatchType in
   // llvm/IR/Intrinsics.td
@@ -201,16 +201,16 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 /// \return std::string string representation of input Kind
 static std::string getParameterKindStr(ParameterKind Kind) {
   switch (Kind) {
-  case ParameterKind::INVALID:
-    return "INVALID";
-  case ParameterKind::VOID:
-    return "VOID";
-  case ParameterKind::HALF:
-    return "HALF";
-  case ParameterKind::FLOAT:
-    return "FLOAT";
-  case ParameterKind::DOUBLE:
-    return "DOUBLE";
+  case ParameterKind::Invalid:
+    return "Invalid";
+  case ParameterKind::Void:
+    return "Void";
+  case ParameterKind::Half:
+    return "Half";
+  case ParameterKind::Float:
+    return "Float";
+  case ParameterKind::Double:
+    return "Double";
   case ParameterKind::I1:
     return "I1";
   case ParameterKind::I8:
@@ -221,14 +221,14 @@ static std::string getParameterKindStr(ParameterKind Kind) {
     return "I32";
   case ParameterKind::I64:
     return "I64";
-  case ParameterKind::OVERLOAD:
-    return "OVERLOAD";
-  case ParameterKind::CBUFFER_RET:
-    return "CBUFFER_RET";
-  case ParameterKind::RESOURCE_RET:
-    return "RESOURCE_RET";
-  case ParameterKind::DXIL_HANDLE:
-    return "DXIL_HANDLE";
+  case ParameterKind::Overload:
+    return "Overload";
+  case ParameterKind::CBufferRet:
+    return "CBufferRet";
+  case ParameterKind::ResourceRet:
+    return "ResourceRet";
+  case ParameterKind::DXILHandle:
+    return "DXILHandle";
   }
   llvm_unreachable("Unknown llvm::dxil::ParameterKind enum");
 }
@@ -398,10 +398,20 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   for (auto &Op : Ops) {
+    // Consider Op.OverloadParamIndex as the overload parameter index, by
+    // default
+    auto OLParamIdx = Op.OverloadParamIndex;
+    // If no overload parameter index is set, treat first parameter type as
+    // overload type - unless the Op has no parameters, in which case treat the
+    // return type - as overload parameter to emit the appropriate overload kind
+    // enum.
+    if (OLParamIdx < 0) {
+      OLParamIdx = (Op.OpTypes.size() > 1) ? 1 : 0;
+    }
     OS << "  { dxil::OpCode::" << Op.OpName << ", " << OpStrings.get(Op.OpName)
        << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
-       << getOverloadKindStr(Op.OpTypes[0]) << ", "
+       << getOverloadKindStr(Op.OpTypes[OLParamIdx]) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " },\n";
@@ -452,7 +462,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
       [](raw_ostream &ParamOS, ParameterKind Kind) {
         ParamOS << "ParameterKind::" << getParameterKindStr(Kind);
       },
-      "ParameterKind::INVALID");
+      "ParameterKind::Invalid");
   OS << "  };\n\n";
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
   OS << "  return DXILOpParameterKindTable + Index;\n";

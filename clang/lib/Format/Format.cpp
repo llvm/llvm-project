@@ -279,6 +279,14 @@ struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::DAGArgStyle> {
+  static void enumeration(IO &IO, FormatStyle::DAGArgStyle &Value) {
+    IO.enumCase(Value, "DontBreak", FormatStyle::DAS_DontBreak);
+    IO.enumCase(Value, "BreakElements", FormatStyle::DAS_BreakElements);
+    IO.enumCase(Value, "BreakAll", FormatStyle::DAS_BreakAll);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::DefinitionReturnTypeBreakingStyle> {
   static void
@@ -887,6 +895,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
     IO.mapOptional("AlignConsecutiveShortCaseStatements",
                    Style.AlignConsecutiveShortCaseStatements);
+    IO.mapOptional("AlignConsecutiveTableGenBreakingDAGArgColons",
+                   Style.AlignConsecutiveTableGenBreakingDAGArgColons);
     IO.mapOptional("AlignConsecutiveTableGenCondOperatorColons",
                    Style.AlignConsecutiveTableGenCondOperatorColons);
     IO.mapOptional("AlignConsecutiveTableGenDefinitionColons",
@@ -945,6 +955,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeTernaryOperators);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
+    IO.mapOptional("BreakFunctionDefinitionParameters",
+                   Style.BreakFunctionDefinitionParameters);
     IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("BreakTemplateDeclarations",
@@ -1092,6 +1104,10 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("StatementAttributeLikeMacros",
                    Style.StatementAttributeLikeMacros);
     IO.mapOptional("StatementMacros", Style.StatementMacros);
+    IO.mapOptional("TableGenBreakingDAGArgOperators",
+                   Style.TableGenBreakingDAGArgOperators);
+    IO.mapOptional("TableGenBreakInsideDAGArg",
+                   Style.TableGenBreakInsideDAGArg);
     IO.mapOptional("TabWidth", Style.TabWidth);
     IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
@@ -1396,6 +1412,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
   LLVMStyle.AlignConsecutiveShortCaseStatements = {};
+  LLVMStyle.AlignConsecutiveTableGenBreakingDAGArgColons = {};
   LLVMStyle.AlignConsecutiveTableGenCondOperatorColons = {};
   LLVMStyle.AlignConsecutiveTableGenDefinitionColons = {};
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
@@ -1450,6 +1467,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
+  LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
@@ -1552,6 +1570,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.StatementAttributeLikeMacros.push_back("Q_EMIT");
   LLVMStyle.StatementMacros.push_back("Q_UNUSED");
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
+  LLVMStyle.TableGenBreakingDAGArgOperators = {};
+  LLVMStyle.TableGenBreakInsideDAGArg = FormatStyle::DAS_DontBreak;
   LLVMStyle.TabWidth = 8;
   LLVMStyle.UseTab = FormatStyle::UT_Never;
   LLVMStyle.VerilogBreakBetweenInstancePorts = true;
@@ -3561,7 +3581,7 @@ cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
   // We need to use lambda function here since there are two versions of
   // `cleanup`.
   auto Cleanup = [](const FormatStyle &Style, StringRef Code,
-                    std::vector<tooling::Range> Ranges,
+                    ArrayRef<tooling::Range> Ranges,
                     StringRef FileName) -> tooling::Replacements {
     return cleanup(Style, Code, Ranges, FileName);
   };
@@ -3813,15 +3833,13 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
-  IsCpp = Style.isCpp();
+  LangOptions LangOpts;
 
   FormatStyle::LanguageStandard LexingStd = Style.Standard;
   if (LexingStd == FormatStyle::LS_Auto)
     LexingStd = FormatStyle::LS_Latest;
   if (LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
-
-  LangOptions LangOpts;
   LangOpts.CPlusPlus = 1;
   LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
@@ -3832,8 +3850,10 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
+
   LangOpts.LineComment = 1;
-  LangOpts.CXXOperatorNames = IsCpp;
+  bool AlternativeOperators = Style.isCpp();
+  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.

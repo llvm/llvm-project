@@ -57,12 +57,8 @@ protected:
   llvm::Value *getThisValue(CodeGenFunction &CGF) {
     return CGF.CXXABIThisValue;
   }
-  Address getThisAddress(CodeGenFunction &CGF) {
-    return Address(
-        CGF.CXXABIThisValue,
-        CGF.ConvertTypeForMem(CGF.CXXABIThisDecl->getType()->getPointeeType()),
-        CGF.CXXABIThisAlignment);
-  }
+
+  Address getThisAddress(CodeGenFunction &CGF);
 
   /// Issue a diagnostic about unsupported features in the ABI.
   void ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S);
@@ -474,12 +470,6 @@ public:
   getVTableAddressPointInStructor(CodeGenFunction &CGF, const CXXRecordDecl *RD,
                                   BaseSubobject Base,
                                   const CXXRecordDecl *NearestVBase) = 0;
-
-  /// Get the address point of the vtable for the given base subobject while
-  /// building a constexpr.
-  virtual llvm::Constant *
-  getVTableAddressPointForConstExpr(BaseSubobject Base,
-                                    const CXXRecordDecl *VTableClass) = 0;
 
   /// Get the address of the vtable for the given record decl which should be
   /// used for the vptr at the given offset in RD.

@@ -15,6 +15,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 #include <queue>
 
@@ -63,7 +64,8 @@ using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 ///
 /// Note: Any modification of existing IR invalides the data stored in this
 /// class. Adding new operations is allowed.
-class ValueBoundsConstraintSet {
+class ValueBoundsConstraintSet
+    : public llvm::RTTIExtends<ValueBoundsConstraintSet, llvm::RTTIRoot> {
 protected:
   /// Helper class that builds a bound for a shaped value dimension or
   /// index-typed value.
@@ -107,14 +109,17 @@ protected:
   };
 
 public:
+  static char ID;
+
   /// The stop condition when traversing the backward slice of a shaped value/
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.
   ///
   /// The first parameter of the function is the shaped value/index-typed
   /// value. The second parameter is the dimension in case of a shaped value.
-  using StopConditionFn =
-      function_ref<bool(Value, std::optional<int64_t> /*dim*/)>;
+  /// The third parameter is this constraint set.
+  using StopConditionFn = std::function<bool(
+      Value, std::optional<int64_t> /*dim*/, ValueBoundsConstraintSet &cstr)>;
 
   /// Compute a bound for the given index-typed value or shape dimension size.
   /// The computed bound is stored in `resultMap`. The operands of the bound are
@@ -255,6 +260,10 @@ public:
   /// Return an expression that represents a constant.
   AffineExpr getExpr(int64_t constant);
 
+  /// Debugging only: Dump the constraint set and the column-to-value/dim
+  /// mapping to llvm::errs.
+  void dump() const;
+
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for
   /// internal data structures/API only.
@@ -263,12 +272,20 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(MLIRContext *ctx);
+  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition);
+
+  /// Populates the constraint set for a value/map without actually computing
+  /// the bound. Returns the position for the value/map (via the return value
+  /// and `posOut` output parameter).
+  int64_t populateConstraintsSet(Value value,
+                                 std::optional<int64_t> dim = std::nullopt);
+  int64_t populateConstraintsSet(AffineMap map, ValueDimList mapOperands,
+                                 int64_t *posOut = nullptr);
 
   /// Iteratively process all elements on the worklist until an index-typed
   /// value or shaped value meets `stopCondition`. Such values are not processed
   /// any further.
-  void processWorklist(StopConditionFn stopCondition);
+  void processWorklist();
 
   /// Bound the given column in the underlying constraint set by the given
   /// expression.
@@ -315,6 +332,9 @@ protected:
 
   /// Builder for constructing affine expressions.
   Builder builder;
+
+  /// The current stop condition function.
+  StopConditionFn stopCondition = nullptr;
 };
 
 } // namespace mlir

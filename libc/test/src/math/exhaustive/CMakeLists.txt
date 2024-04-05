@@ -143,6 +143,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp2m1f_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp2m1f
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   exp10f_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -273,6 +288,7 @@ add_fp_unittest(
     fmod_generic_impl_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.FPUtil.generic.fmod
 )
 

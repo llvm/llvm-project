@@ -324,6 +324,51 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundeven_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundeven_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundeven
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenf_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundevenf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenl_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.roundevenl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   lround_test
   NEED_MPFR
   SUITE
@@ -635,6 +680,21 @@ add_fp_unittest(
    libc.include.math
    libc.src.math.exp2
    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  exp2m1f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp2m1f_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_macros
+    libc.src.errno.errno
+    libc.src.math.exp2m1f
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1518,6 +1578,8 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.generic.explogxf
+    libc.src.math.fabs
+    libc.src.math.fabsf
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1644,20 +1706,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  inv_trigf_utils_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  HDRS
-    in_float_range_test_helper.h
-  SRCS
-    inv_trigf_utils_test.cpp
-  DEPENDS
-    libc.src.math.generic.inv_trigf_utils
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   scalbn_test
   NEED_MPFR
   SUITE
@@ -1728,6 +1776,19 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.powf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan2f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2f_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
 )
 

@@ -85,10 +85,12 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
+  DINodeAttr extraData =
+      translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits());
+      node->getOffsetInBits(), extraData);
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -177,12 +179,13 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   mlir::DistinctAttr id;
   if (node->isDistinct())
     id = getOrCreateDistinctID(node);
-  std::optional<DISubprogramFlags> subprogramFlags =
-      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is invalid.
   DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
     return nullptr;
+  std::optional<DISubprogramFlags> subprogramFlags =
+      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
+  assert(subprogramFlags && "expected valid subprogram flags");
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
@@ -190,8 +193,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
-                               node->getScopeLine(), subprogramFlags.value(),
-                               type);
+                               node->getScopeLine(), *subprogramFlags, type);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {

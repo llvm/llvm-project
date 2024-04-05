@@ -24,7 +24,7 @@
 
 using namespace llvm;
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize) {}
+    : PointerSize(PointerSize), Bound(0) {}
 
 SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     Register VReg,
@@ -123,6 +123,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems,
                                                 SPIRVType *ElemType,
                                                 MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
+  (void)EleOpc;
   assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
           EleOpc == SPIRV::OpTypeBool) &&
          "Invalid vector element type");
@@ -479,6 +480,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     GVar = M->getGlobalVariable(Name);
     if (GVar == nullptr) {
       const Type *Ty = getTypeForSPIRVType(BaseType); // TODO: check type.
+      // Module takes ownership of the global var.
       GVar = new GlobalVariable(*M, const_cast<Type *>(Ty), false,
                                 GlobalValue::ExternalLinkage, nullptr,
                                 Twine(Name));
@@ -721,11 +723,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     AddrSpace = PType->getAddressSpace();
   else
     report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
-  SPIRVType *SpvElementType;
-  // At the moment, all opaque pointers correspond to i8 element type.
-  // TODO: change the implementation once opaque pointers are supported
-  // in the SPIR-V specification.
-  SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
+  SPIRVType *SpvElementType = nullptr;
+  if (auto PType = dyn_cast<TypedPointerType>(Ty))
+    SpvElementType = getOrCreateSPIRVType(PType->getElementType(), MIRBuilder,
+                                          AccQual, EmitIR);
+  else
+    SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
@@ -894,6 +899,15 @@ const SPIRVType *SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(
 bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   const SPIRVType *IntType = retrieveScalarOrVectorIntType(Type);
   return IntType && IntType->getOperand(2).getImm() != 0;
+}
+
+unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
+  SPIRVType *PtrType = getSPIRVTypeForVReg(PtrReg);
+  SPIRVType *ElemType =
+      PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+          ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+          : nullptr;
+  return ElemType ? ElemType->getOpcode() : 0;
 }
 
 bool SPIRVGlobalRegistry::isBitcastCompatible(const SPIRVType *Type1,

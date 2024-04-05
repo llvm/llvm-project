@@ -405,7 +405,8 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
-    OptionalParameter<"uint64_t">:$offsetInBits
+    OptionalParameter<"uint64_t">:$offsetInBits,
+    OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -545,7 +546,7 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
-    "DISubprogramFlags":$subprogramFlags,
+    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type
   );
   let builders = [

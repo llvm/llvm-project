@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
 #include "Shared/Profile.h"
@@ -26,6 +27,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+
+EXTERN void ompx_dump_mapping_tables() {
+  ident_t Loc = {0, 0, 0, 0, ";libomptarget;libomptarget;0;0;;"};
+  auto ExclusiveDevicesAccessor = PM->getExclusiveDevicesAccessor();
+  for (auto &Device : PM->devices(ExclusiveDevicesAccessor))
+    dumpTargetPointerMappings(&Loc, Device, true);
+}
 
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;

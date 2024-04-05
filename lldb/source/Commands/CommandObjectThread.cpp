@@ -1705,7 +1705,7 @@ protected:
         line = sym_ctx.line_entry.line + m_options.m_line_offset;
 
       // Try the current file, but override if asked.
-      FileSpec file = sym_ctx.line_entry.file_sp->GetSpecOnly();
+      FileSpec file = sym_ctx.line_entry.GetFile();
       if (m_options.m_filenames.GetSize() == 1)
         file = m_options.m_filenames.GetFileSpecAtIndex(0);
 

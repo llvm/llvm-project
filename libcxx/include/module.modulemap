@@ -697,7 +697,10 @@ module std_private_algorithm_minmax                                      [system
   export *
 }
 module std_private_algorithm_minmax_element                              [system] { header "__algorithm/minmax_element.h" }
-module std_private_algorithm_mismatch                                    [system] { header "__algorithm/mismatch.h" }
+module std_private_algorithm_mismatch                                    [system] {
+  header "__algorithm/mismatch.h"
+  export std_private_algorithm_simd_utils
+}
 module std_private_algorithm_move                                        [system] { header "__algorithm/move.h" }
 module std_private_algorithm_move_backward                               [system] { header "__algorithm/move_backward.h" }
 module std_private_algorithm_next_permutation                            [system] { header "__algorithm/next_permutation.h" }
@@ -1048,6 +1051,7 @@ module std_private_algorithm_sort                                        [system
   header "__algorithm/sort.h"
   export std_private_debug_utils_strict_weak_ordering_check
 }
+module std_private_algorithm_simd_utils                                  [system] { header "__algorithm/simd_utils.h" }
 module std_private_algorithm_sort_heap                                   [system] { header "__algorithm/sort_heap.h" }
 module std_private_algorithm_stable_partition                            [system] { header "__algorithm/stable_partition.h" }
 module std_private_algorithm_stable_sort                                 [system] { header "__algorithm/stable_sort.h" }
@@ -1141,6 +1145,7 @@ module std_private_chrono_high_resolution_clock  [system] {
   export std_private_chrono_steady_clock
   export std_private_chrono_system_clock
 }
+module std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
 module std_private_chrono_literals               [system] { header "__chrono/literals.h" }
 module std_private_chrono_month                  [system] { header "__chrono/month.h" }
 module std_private_chrono_month_weekday          [system] { header "__chrono/month_weekday.h" }
@@ -1250,6 +1255,8 @@ module std_private_debug_utils_strict_weak_ordering_check [system] {
   header "__debug_utils/strict_weak_ordering_check.h"
   export std_private_type_traits_is_constant_evaluated
 }
+
+module std_private_deque_fwd [system] { header "__fwd/deque.h" }
 
 module std_private_exception_exception        [system] { header "__exception/exception.h" }
 module std_private_exception_exception_ptr    [system] {
@@ -1531,6 +1538,7 @@ module std_private_memory_concepts                        [system] {
 }
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
+module std_private_memory_fwd                             [system] { header "__fwd/memory.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {
@@ -1595,6 +1603,8 @@ module std_private_numeric_saturation_arithmetic    [system] { header "__numeric
 module std_private_numeric_transform_exclusive_scan [system] { header "__numeric/transform_exclusive_scan.h" }
 module std_private_numeric_transform_inclusive_scan [system] { header "__numeric/transform_inclusive_scan.h" }
 module std_private_numeric_transform_reduce         [system] { header "__numeric/transform_reduce.h" }
+
+module std_private_queue_fwd [system] { header "__fwd/queue.h" }
 
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }
@@ -1729,9 +1739,14 @@ module std_private_ranges_transform_view             [system] {
 }
 module std_private_ranges_view_interface             [system] { header "__ranges/view_interface.h" }
 module std_private_ranges_views                      [system] { header "__ranges/views.h" }
-module std_private_ranges_zip_view                   [system] { header "__ranges/zip_view.h" }
+module std_private_ranges_zip_view                   [system] {
+  header "__ranges/zip_view.h"
+  export std_private_utility_pair
+}
 
 module std_private_span_span_fwd [system] { header "__fwd/span.h" }
+
+module std_private_stack_fwd [system] { header "__fwd/stack.h" }
 
 module std_private_stop_token_atomic_unique_lock   [system] { header "__stop_token/atomic_unique_lock.h" }
 module std_private_stop_token_intrusive_list_view  [system] { header "__stop_token/intrusive_list_view.h" }
@@ -1799,20 +1814,22 @@ module std_private_thread_thread               [system] {
 }
 module std_private_thread_timed_backoff_policy [system] { header "__thread/timed_backoff_policy.h" }
 
-module std_private_tuple_find_index       [system] { header "__tuple/find_index.h" }
-module std_private_tuple_make_tuple_types [system] { header "__tuple/make_tuple_types.h" }
-module std_private_tuple_pair_like        [system] {
-  header "__tuple/pair_like.h"
-  export std_private_tuple_tuple_like
+module std_private_tuple_find_index             [system] { header "__tuple/find_index.h" }
+module std_private_tuple_make_tuple_types       [system] { header "__tuple/make_tuple_types.h" }
+module std_private_tuple_tuple_like_no_subrange [system] {
+  header "__tuple/tuple_like_no_subrange.h"
 }
-module std_private_tuple_sfinae_helpers   [system] { header "__tuple/sfinae_helpers.h" }
-module std_private_tuple_tuple_element    [system] { header "__tuple/tuple_element.h" }
-module std_private_tuple_tuple_fwd        [system] { header "__fwd/tuple.h" }
-module std_private_tuple_tuple_indices    [system] { header "__tuple/tuple_indices.h" }
-module std_private_tuple_tuple_like       [system] { header "__tuple/tuple_like.h" }
-module std_private_tuple_tuple_like_ext   [system] { header "__tuple/tuple_like_ext.h" }
-module std_private_tuple_tuple_size       [system] { header "__tuple/tuple_size.h" }
-module std_private_tuple_tuple_types      [system] { header "__tuple/tuple_types.h" }
+module std_private_tuple_sfinae_helpers         [system] { header "__tuple/sfinae_helpers.h" }
+module std_private_tuple_tuple_element          [system] { header "__tuple/tuple_element.h" }
+module std_private_tuple_tuple_fwd              [system] { header "__fwd/tuple.h" }
+module std_private_tuple_tuple_indices          [system] { header "__tuple/tuple_indices.h" }
+module std_private_tuple_tuple_like             [system] {
+  header "__tuple/tuple_like.h"
+  export *
+}
+module std_private_tuple_tuple_like_ext         [system] { header "__tuple/tuple_like_ext.h" }
+module std_private_tuple_tuple_size             [system] { header "__tuple/tuple_size.h" }
+module std_private_tuple_tuple_types            [system] { header "__tuple/tuple_types.h" }
 
 module std_private_type_traits_add_const                                 [system] { header "__type_traits/add_const.h" }
 module std_private_type_traits_add_cv                                    [system] { header "__type_traits/add_cv.h" }
@@ -1850,6 +1867,7 @@ module std_private_type_traits_decay                                     [system
   export std_private_type_traits_add_pointer
 }
 module std_private_type_traits_dependent_type                            [system] { header "__type_traits/dependent_type.h" }
+module std_private_type_traits_desugars_to                               [system] { header "__type_traits/desugars_to.h" }
 module std_private_type_traits_disjunction                               [system] { header "__type_traits/disjunction.h" }
 module std_private_type_traits_enable_if                                 [system] { header "__type_traits/enable_if.h" }
 module std_private_type_traits_extent                                    [system] { header "__type_traits/extent.h" }
@@ -1902,7 +1920,6 @@ module std_private_type_traits_is_core_convertible                       [system
   header "__type_traits/is_core_convertible.h"
   export std_private_type_traits_integral_constant
 }
-module std_private_type_traits_is_default_constructible                  [system] { header "__type_traits/is_default_constructible.h" }
 module std_private_type_traits_is_destructible                           [system] { header "__type_traits/is_destructible.h" }
 module std_private_type_traits_is_empty                                  [system] { header "__type_traits/is_empty.h" }
 module std_private_type_traits_is_enum                                   [system] {
@@ -1927,25 +1944,15 @@ module std_private_type_traits_is_literal_type                           [system
 module std_private_type_traits_is_member_function_pointer                [system] { header "__type_traits/is_member_function_pointer.h" }
 module std_private_type_traits_is_member_object_pointer                  [system] { header "__type_traits/is_member_object_pointer.h" }
 module std_private_type_traits_is_member_pointer                         [system] { header "__type_traits/is_member_pointer.h" }
-module std_private_type_traits_is_move_assignable                        [system] { header "__type_traits/is_move_assignable.h" }
-module std_private_type_traits_is_move_constructible                     [system] { header "__type_traits/is_move_constructible.h" }
 module std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
-module std_private_type_traits_is_nothrow_constructible                  [system] { header "__type_traits/is_nothrow_constructible.h" }
-module std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
-module std_private_type_traits_is_nothrow_copy_assignable                [system] { header "__type_traits/is_nothrow_copy_assignable.h" }
-module std_private_type_traits_is_nothrow_copy_constructible             [system] { header "__type_traits/is_nothrow_copy_constructible.h" }
-module std_private_type_traits_is_nothrow_default_constructible          [system] {
-  header "__type_traits/is_nothrow_default_constructible.h"
+module std_private_type_traits_is_nothrow_constructible                  [system] {
+  header "__type_traits/is_nothrow_constructible.h"
   export std_private_type_traits_integral_constant
 }
+module std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
 module std_private_type_traits_is_nothrow_destructible                   [system] {
   header "__type_traits/is_nothrow_destructible.h"
   export std_private_type_traits_is_destructible
-}
-module std_private_type_traits_is_nothrow_move_assignable                [system] { header "__type_traits/is_nothrow_move_assignable.h" }
-module std_private_type_traits_is_nothrow_move_constructible             [system] {
-  header "__type_traits/is_nothrow_move_constructible.h"
-  export std_private_type_traits_is_nothrow_constructible
 }
 module std_private_type_traits_is_null_pointer                           [system] {
   header "__type_traits/is_null_pointer.h"
@@ -1985,14 +1992,9 @@ module std_private_type_traits_is_swappable                              [system
 module std_private_type_traits_is_trivial                                [system] { header "__type_traits/is_trivial.h" }
 module std_private_type_traits_is_trivially_assignable                   [system] { header "__type_traits/is_trivially_assignable.h" }
 module std_private_type_traits_is_trivially_constructible                [system] { header "__type_traits/is_trivially_constructible.h" }
-module std_private_type_traits_is_trivially_copy_assignable              [system] { header "__type_traits/is_trivially_copy_assignable.h" }
-module std_private_type_traits_is_trivially_copy_constructible           [system] { header "__type_traits/is_trivially_copy_constructible.h" }
 module std_private_type_traits_is_trivially_copyable                     [system] { header "__type_traits/is_trivially_copyable.h" }
-module std_private_type_traits_is_trivially_default_constructible        [system] { header "__type_traits/is_trivially_default_constructible.h" }
 module std_private_type_traits_is_trivially_destructible                 [system] { header "__type_traits/is_trivially_destructible.h" }
 module std_private_type_traits_is_trivially_lexicographically_comparable [system] { header "__type_traits/is_trivially_lexicographically_comparable.h" }
-module std_private_type_traits_is_trivially_move_assignable              [system] { header "__type_traits/is_trivially_move_assignable.h" }
-module std_private_type_traits_is_trivially_move_constructible           [system] { header "__type_traits/is_trivially_move_constructible.h" }
 module std_private_type_traits_is_trivially_relocatable                  [system] { header "__type_traits/is_trivially_relocatable.h" }
 module std_private_type_traits_is_unbounded_array                        [system] { header "__type_traits/is_unbounded_array.h" }
 module std_private_type_traits_is_union                                  [system] { header "__type_traits/is_union.h" }
@@ -2016,7 +2018,6 @@ module std_private_type_traits_maybe_const                               [system
 module std_private_type_traits_nat                                       [system] { header "__type_traits/nat.h" }
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
-module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }
@@ -2097,3 +2098,5 @@ module std_private_utility_to_underlying          [system] { header "__utility/t
 module std_private_utility_unreachable            [system] { header "__utility/unreachable.h" }
 
 module std_private_variant_monostate [system] { header "__variant/monostate.h" }
+
+module std_private_vector_fwd [system] { header "__fwd/vector.h" }
