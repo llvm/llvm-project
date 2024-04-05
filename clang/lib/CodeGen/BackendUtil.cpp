@@ -73,7 +73,7 @@
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
-#include "llvm/Transforms/Instrumentation/LowerBuiltinHotPass.h"
+#include "llvm/Transforms/Instrumentation/LowerBuiltinAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -98,10 +98,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> PrintPipelinePasses;
-
-static cl::opt<bool>
-    ClLowerBuiltinHot("clang-lower-builtin-hot", cl::Optional,
-                      cl::desc("Insert lower-builtin-hot pass."));
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
@@ -750,13 +746,13 @@ static void addSanitizers(const Triple &TargetTriple,
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
 
-  if (ClLowerBuiltinHot) {
+  if (LowerBuiltinAllowCheckPass::IsRequested()) {
     // We can optimize after inliner, and PGO profile matching. The hook below
     // is called at the end `buildFunctionSimplificationPipeline`, which called
     // from `buildInlinerPipeline`, which called after profile matching.
     PB.registerScalarOptimizerLateEPCallback(
         [](FunctionPassManager &FPM, OptimizationLevel Level) {
-          FPM.addPass(LowerBuiltinHotPass());
+          FPM.addPass(LowerBuiltinAllowCheckPass());
         });
   }
 }
