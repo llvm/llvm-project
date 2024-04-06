@@ -918,6 +918,7 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
@@ -928,9 +929,9 @@ struct SignOpConversion : public OpConversionPattern<complex::SignOp> {
     Value imagIsZero =
         b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, imag, zero);
     Value isZero = b.create<arith::AndIOp>(realIsZero, imagIsZero);
-    auto abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex());
-    Value realSign = b.create<arith::DivFOp>(real, abs);
-    Value imagSign = b.create<arith::DivFOp>(imag, abs);
+    auto abs = b.create<complex::AbsOp>(elementType, adaptor.getComplex(), fmf);
+    Value realSign = b.create<arith::DivFOp>(real, abs, fmf);
+    Value imagSign = b.create<arith::DivFOp>(imag, abs, fmf);
     Value sign = b.create<complex::CreateOp>(type, realSign, imagSign);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isZero,
                                                  adaptor.getComplex(), sign);
