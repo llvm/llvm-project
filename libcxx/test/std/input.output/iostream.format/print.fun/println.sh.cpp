@@ -36,7 +36,7 @@
 
 // FILE_DEPENDENCIES: echo.sh
 // RUN: %{build}
-// RUN: %{exec} bash echo.sh -ne "1234 一二三四\ntrue 0x0\n\n" > %t.expected
+// RUN: %{exec} bash echo.sh -ne "1234 一二三四\ntrue 0x0\n" > %t.expected
 // RUN: %{exec} "%t.exe" > %t.actual
 // RUN: diff -u %t.actual %t.expected
 
@@ -46,7 +46,6 @@ int main(int, char**) {
   // The data is passed as-is so it does not depend on the encoding of the input.
   std::println("{} {}", 1234, "一二三四");
   std::println("{} {}", true, nullptr);
-  std::println();
 
   return 0;
 }

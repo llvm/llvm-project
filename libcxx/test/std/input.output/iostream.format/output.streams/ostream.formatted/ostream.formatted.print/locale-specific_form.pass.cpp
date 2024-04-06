@@ -2207,23 +2207,20 @@ static void test_println_blank_line(std::locale loc) {
 }
 
 static void test_println_blank_line() {
-  std::locale loc = std::locale(std::locale(), new numpunct<char>());
-
   std::locale::global(std::locale(LOCALE_en_US_UTF_8));
   assert(std::locale().name() == LOCALE_en_US_UTF_8);
-
   std::stringstream stream;
   test_println_blank_line(stream);
 
+  std::locale loc = std::locale(std::locale(), new numpunct<char>());
   std::locale::global(loc);
-
-  test_println_blank_line(std::locale(LOCALE_en_US_UTF_8));
   test_println_blank_line(std::locale(LOCALE_en_US_UTF_8));
 
 #ifndef TEST_HAS_NO_UNICODE
-  std::locale loc_unicode = std::locale(std::locale(), new numpunct_unicode());
 
+  std::locale loc_unicode = std::locale(std::locale(), new numpunct_unicode());
   test_println_blank_line(loc_unicode);
+
 #endif // TEST_HAS_NO_UNICODE
 }
 
