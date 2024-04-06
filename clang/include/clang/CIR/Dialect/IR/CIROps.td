@@ -1157,6 +1157,40 @@ def BitPopcountOp : CIR_BitOp<"bit.popcount", UIntOfWidths<[16, 32, 64]>> {
 }
 
 //===----------------------------------------------------------------------===//
+// ByteswapOp
+//===----------------------------------------------------------------------===//
+
+def ByteswapOp : CIR_Op<"bswap", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reverse the bytes that constitute the operand integer";
+  let description = [{
+    The `cir.bswap` operation takes an integer as operand, and returns it with
+    the order of bytes that constitute the operand reversed.
+
+    The operand integer must be an unsigned integer. Its widths must be either
+    16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    !u32i = !cir.int<u, 32>
+
+    // %0 = 0x12345678
+    %0 = cir.const(#cir.int<305419896> : !u32i) : !u32i
+
+    // %1 should be 0x78563412
+    %1 = cir.bswap(%0 : !u32i) : !u32i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins UIntOfWidths<[16, 32, 64]>:$input);
+
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` `:` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
 

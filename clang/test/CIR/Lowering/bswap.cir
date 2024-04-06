@@ -1,0 +1,19 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+
+!u32i = !cir.int<u, 32>
+
+cir.func @test(%arg0: !u32i) -> !u32i {
+  %0 = cir.bswap(%arg0 : !u32i) : !u32i
+  cir.return %0 : !u32i
+}
+
+//      MLIR: llvm.func @test(%arg0: i32) -> i32
+// MLIR-NEXT:   %0 = llvm.call_intrinsic "llvm.bswap.i32"(%arg0) : (i32) -> i32
+// MLIR-NEXT:   llvm.return %0 : i32
+// MLIR-NEXT: }
+
+//      LLVM: define i32 @test(i32 %0)
+// LLVM-NEXT:   %2 = call i32 @llvm.bswap.i32(i32 %0)
+// LLVM-NEXT:   ret i32 %2
+// LLVM-NEXT: }
