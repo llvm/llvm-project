@@ -41,6 +41,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   auto ShouldRemove = [&](bool IsHot) {
     if (!RandomRate.getNumOccurrences())
       return IsHot;
+    assert(HotPercentileCutoff.getNumOccurrences());
     if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
     std::bernoulli_distribution D(RandomRate);
@@ -94,4 +95,9 @@ PreservedAnalyses RemoveTrapsPass::run(Function &F,
 
   return removeUbsanTraps(F, BFI, PSI) ? PreservedAnalyses::none()
                                        : PreservedAnalyses::all();
+}
+
+bool RemoveTrapsPass::IsRequested() {
+  return RandomRate.getNumOccurrences() ||
+         HotPercentileCutoff.getNumOccurrences();
 }
