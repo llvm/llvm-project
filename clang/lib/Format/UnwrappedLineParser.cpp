@@ -13,9 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnwrappedLineParser.h"
+#include "FormatToken.h"
+#include "FormatTokenLexer.h"
 #include "FormatTokenSource.h"
+#include "Macros.h"
 #include "TokenAnnotator.h"
+#include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <algorithm>
+#include <utility>
 
 #define DEBUG_TYPE "format-parser"
 
@@ -148,16 +159,14 @@ UnwrappedLineParser::UnwrappedLineParser(
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
     : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
-      CurrentLines(&Lines), Style(Style), Keywords(Keywords),
-      CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
-      Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
+      CurrentLines(&Lines), Style(Style), IsCpp(Style.isCpp()),
+      Keywords(Keywords), CommentPragmasRegex(Style.CommentPragmas),
+      Tokens(nullptr), Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
       IncludeGuard(Style.IndentPPDirectives == FormatStyle::PPDIS_None
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == Style.isCpp());
-}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -486,20 +495,22 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   };
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
+
   do {
-    // Get next non-comment, non-preprocessor token.
     FormatToken *NextTok;
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    if (!Style.isTableGen()) {
-      // InTableGen, '#' is like binary operator. Not a preprocessor directive.
-      while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-        NextTok = Tokens->getNextToken();
+
+    if (!Line->InMacroBody && !Style.isTableGen()) {
+      // Skip PPDirective lines and comments.
+      while (NextTok->is(tok::hash)) {
         do {
           NextTok = Tokens->getNextToken();
-        } while (NextTok->is(tok::comment) ||
-                 (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
+
+        while (NextTok->is(tok::comment))
+          NextTok = Tokens->getNextToken();
       }
     }
 
@@ -631,6 +642,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     default:
       break;
     }
+
     PrevTok = Tok;
     Tok = NextTok;
   } while (Tok->isNot(tok::eof) && !LBraceStack.empty());
@@ -1855,7 +1867,7 @@ void UnwrappedLineParser::parseStructuralElement(
     case tok::caret:
       nextToken();
       // Block return type.
-      if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName()) {
+      if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(IsCpp)) {
         nextToken();
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
@@ -2211,7 +2223,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName()) {
+    if (FormatTok->isTypeName(IsCpp)) {
       nextToken();
       continue;
     }
@@ -2328,7 +2340,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
                      !Previous->isOneOf(tok::kw_return, tok::kw_co_await,
                                         tok::kw_co_yield, tok::kw_co_return)) ||
                     Previous->closesScope())) ||
-      LeftSquare->isCppStructuredBinding()) {
+      LeftSquare->isCppStructuredBinding(IsCpp)) {
     return false;
   }
   if (FormatTok->is(tok::l_square) || tok::isLiteral(FormatTok->Tok.getKind()))
@@ -3404,7 +3416,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
     break;
   }
   default:
-    if (PreviousNonComment->isTypeOrIdentifier()) {
+    if (PreviousNonComment->isTypeOrIdentifier(IsCpp)) {
       // This is a requires clause.
       parseRequiresClause(RequiresToken);
       return true;
@@ -3467,7 +3479,7 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
       --OpenAngles;
       break;
     default:
-      if (NextToken->isTypeName()) {
+      if (NextToken->isTypeName(IsCpp)) {
         FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
@@ -3956,7 +3968,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (FormatTok->is(tok::l_square)) {
         FormatToken *Previous = FormatTok->Previous;
         if (!Previous || (Previous->isNot(tok::r_paren) &&
-                          !Previous->isTypeOrIdentifier())) {
+                          !Previous->isTypeOrIdentifier(IsCpp))) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())

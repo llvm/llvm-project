@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atanhf.h"
@@ -19,7 +19,7 @@
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
+
   LIBC_NAMESPACE::libc_errno = 0;
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);

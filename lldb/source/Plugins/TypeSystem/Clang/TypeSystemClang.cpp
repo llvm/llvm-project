@@ -477,6 +477,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     // Based on the base language, pick one.
     switch (IK.getLanguage()) {
     case clang::Language::Unknown:
+    case clang::Language::CIR:
     case clang::Language::LLVM_IR:
     case clang::Language::RenderScript:
       llvm_unreachable("Invalid input kind!");
@@ -4074,6 +4075,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -4094,6 +4096,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::ConstantArray:
     return lldb::eTypeClassArray;
   case clang::Type::DependentSizedArray:
+    return lldb::eTypeClassArray;
+  case clang::Type::ArrayParameter:
     return lldb::eTypeClassArray;
   case clang::Type::DependentSizedExtVector:
     return lldb::eTypeClassVector;
@@ -4755,6 +4759,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -4773,6 +4778,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:
@@ -5088,6 +5094,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   switch (qual_type->getTypeClass()) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
+  case clang::Type::CountAttributed:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -5105,6 +5112,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:

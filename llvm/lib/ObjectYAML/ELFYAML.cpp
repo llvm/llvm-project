@@ -716,6 +716,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     break;
   case ELF::EM_HEXAGON:
     ECase(SHT_HEX_ORDERED);
+    ECase(SHT_HEXAGON_ATTRIBUTES);
     break;
   case ELF::EM_X86_64:
     ECase(SHT_X86_64_UNWIND);

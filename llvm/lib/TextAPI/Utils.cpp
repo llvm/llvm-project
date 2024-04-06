@@ -152,3 +152,49 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
   }
   return false;
 }
+
+static StringLiteral RegexMetachars = "()^$|+.[]\\{}";
+
+llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
+  SmallString<128> RegexString("^");
+  unsigned NumWildcards = 0;
+  for (unsigned i = 0; i < Glob.size(); ++i) {
+    char C = Glob[i];
+    switch (C) {
+    case '?':
+      RegexString += '.';
+      break;
+    case '*': {
+      const char *PrevChar = i > 0 ? Glob.data() + i - 1 : nullptr;
+      NumWildcards = 1;
+      ++i;
+      while (i < Glob.size() && Glob[i] == '*') {
+        ++NumWildcards;
+        ++i;
+      }
+      const char *NextChar = i < Glob.size() ? Glob.data() + i : nullptr;
+
+      if ((NumWildcards > 1) && (PrevChar == nullptr || *PrevChar == '/') &&
+          (NextChar == nullptr || *NextChar == '/')) {
+        RegexString += "(([^/]*(/|$))*)";
+      } else
+        RegexString += "([^/]*)";
+      break;
+    }
+    default:
+      if (RegexMetachars.find(C) != StringRef::npos)
+        RegexString.push_back('\\');
+      RegexString.push_back(C);
+    }
+  }
+  RegexString.push_back('$');
+  if (NumWildcards == 0)
+    return make_error<StringError>("not a glob", inconvertibleErrorCode());
+
+  llvm::Regex Rule = Regex(RegexString);
+  std::string Error;
+  if (!Rule.isValid(Error))
+    return make_error<StringError>(Error, inconvertibleErrorCode());
+
+  return std::move(Rule);
+}

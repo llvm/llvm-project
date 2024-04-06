@@ -206,9 +206,20 @@ add_custom_target(generate-cxx-modules
 # Configure the modules manifest.
 # Use the relative path between the installation and the module in the json
 # file. This allows moving the entire installation to a different location.
+if("${CMAKE_INSTALL_PREFIX}" STREQUAL "")
+  set(BASE_DIRECTORY "/")
+else()
+  set(BASE_DIRECTORY ${CMAKE_INSTALL_PREFIX})
+endif()
+cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_LIBRARY_DIR
+  BASE_DIRECTORY ${BASE_DIRECTORY}
+  OUTPUT_VARIABLE ABS_LIBRARY_DIR)
+cmake_path(ABSOLUTE_PATH LIBCXX_INSTALL_MODULES_DIR
+  BASE_DIRECTORY ${BASE_DIRECTORY}
+  OUTPUT_VARIABLE ABS_MODULES_DIR)
 file(RELATIVE_PATH LIBCXX_MODULE_RELATIVE_PATH
-  ${CMAKE_INSTALL_PREFIX}/${LIBCXX_INSTALL_LIBRARY_DIR}
-  ${CMAKE_INSTALL_PREFIX}/${LIBCXX_INSTALL_MODULES_DIR})
+  ${ABS_LIBRARY_DIR}
+  ${ABS_MODULES_DIR})
 configure_file(
   "modules.json.in"
   "${LIBCXX_LIBRARY_DIR}/libc++.modules.json"

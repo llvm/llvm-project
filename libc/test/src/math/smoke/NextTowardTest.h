@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
@@ -34,7 +34,6 @@ class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using ToFPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T inf = FPBits::inf(Sign::POS).get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();

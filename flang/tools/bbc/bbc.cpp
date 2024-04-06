@@ -191,11 +191,6 @@ static llvm::cl::opt<bool> enableOpenACC("fopenacc",
                                          llvm::cl::desc("enable openacc"),
                                          llvm::cl::init(false));
 
-static llvm::cl::opt<bool> enablePolymorphic(
-    "polymorphic-type",
-    llvm::cl::desc("enable polymorphic type lowering (experimental)"),
-    llvm::cl::init(false));
-
 static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
     "fno-ppc-native-vector-element-order",
     llvm::cl::desc("no PowerPC native vector element order."),
@@ -351,7 +346,6 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   std::string targetTriple = targetMachine.getTargetTriple().normalize();
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
-  loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};

@@ -19,51 +19,13 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/Utils/ELF.cpp
 )
+add_dependencies(PluginCommon intrinsics_gen)
 
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
 foreach(Target ${TargetsSupported})
 	target_compile_definitions(PluginCommon PRIVATE "LIBOMPTARGET_JIT_${Target}")
 endforeach()
-
-# This is required when using LLVM libraries.
-llvm_update_compile_flags(PluginCommon)
-
-if (LLVM_LINK_LLVM_DYLIB)
-  set(llvm_libs LLVM)
-else()
-  llvm_map_components_to_libnames(llvm_libs
-    ${LLVM_TARGETS_TO_BUILD}
-    AggressiveInstCombine
-    Analysis
-    BinaryFormat
-    BitReader
-    BitWriter
-    CodeGen
-    Core
-    Extensions
-    InstCombine
-    Instrumentation
-    IPO
-    IRReader
-    Linker
-    MC
-    Object
-    Passes
-    Remarks
-    ScalarOpts
-    Support
-    Target
-    TargetParser
-    TransformUtils
-    Vectorize
-  )
-endif()
-
-target_link_libraries(PluginCommon
-  PUBLIC
-    ${llvm_libs}
-)
 
 # Include the RPC server from the `libc` project if availible.
 if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
@@ -82,8 +44,10 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   endif()
 endif()
 
-if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
-	target_link_libraries(PluginCommon PUBLIC OMPT)
+# If we have OMPT enabled include it in the list of sources.
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  target_sources(PluginCommon PRIVATE OMPT/OmptCallback.cpp)
+  target_include_directories(PluginCommon PRIVATE OMPT)
 endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
@@ -95,16 +59,12 @@ target_compile_definitions(PluginCommon PRIVATE
 target_compile_options(PluginCommon PUBLIC ${offload_compile_flags})
 target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 
-target_include_directories(PluginCommon
-  PRIVATE
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  PUBLIC
+target_include_directories(PluginCommon PUBLIC 
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+  ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
 set_target_properties(PluginCommon PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   CXX_VISIBILITY_PRESET protected)
-
-add_subdirectory(OMPT)
-
