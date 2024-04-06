@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
-// RUN:     -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
+// RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for(
 //  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
@@ -101,6 +101,121 @@ func.func @scf_for_swapping_yield(%t1: tensor<?xf32>, %t2: tensor<?xf32>, %a: in
   }
   // expected-error @below{{could not reify bound}}
   %reify1 = "test.reify_bound"(%r1) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+  "test.some_use"(%reify1) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_if_constant(
+func.func @scf_if_constant(%c : i1) {
+  // CHECK: arith.constant 4 : index
+  // CHECK: arith.constant 9 : index
+  %c4 = arith.constant 4 : index
+  %c9 = arith.constant 9 : index
+  %r = scf.if %c -> index {
+    scf.yield %c4 : index
+  } else {
+    scf.yield %c9 : index
+  }
+
+  // CHECK: %[[c4:.*]] = arith.constant 4 : index
+  // CHECK: %[[c10:.*]] = arith.constant 10 : index
+  %reify1 = "test.reify_bound"(%r) {type = "LB"} : (index) -> (index)
+  %reify2 = "test.reify_bound"(%r) {type = "UB"} : (index) -> (index)
+  // CHECK: "test.some_use"(%[[c4]], %[[c10]])
+  "test.some_use"(%reify1, %reify2) : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK: #[[$map:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK: #[[$map1:.*]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
+// CHECK-LABEL: func @scf_if_dynamic(
+//  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %{{.*}}: i1)
+func.func @scf_if_dynamic(%a: index, %b: index, %c : i1) {
+  %c4 = arith.constant 4 : index
+  %r = scf.if %c -> index {
+    %add1 = arith.addi %a, %b : index
+    scf.yield %add1 : index
+  } else {
+    %add2 = arith.addi %b, %c4 : index
+    %add3 = arith.addi %add2, %a : index
+    scf.yield %add3 : index
+  }
+
+  // CHECK: %[[lb:.*]] = affine.apply #[[$map]]()[%[[a]], %[[b]]]
+  // CHECK: %[[ub:.*]] = affine.apply #[[$map1]]()[%[[a]], %[[b]]]
+  %reify1 = "test.reify_bound"(%r) {type = "LB"} : (index) -> (index)
+  %reify2 = "test.reify_bound"(%r) {type = "UB"} : (index) -> (index)
+  // CHECK: "test.some_use"(%[[lb]], %[[ub]])
+  "test.some_use"(%reify1, %reify2) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_if_no_affine_bound(%a: index, %b: index, %c : i1) {
+  %r = scf.if %c -> index {
+    scf.yield %a : index
+  } else {
+    scf.yield %b : index
+  }
+  // The reified bound would be min(%a, %b). min/max expressions are not
+  // supported in reified bounds.
+  // expected-error @below{{could not reify bound}}
+  %reify1 = "test.reify_bound"(%r) {type = "LB"} : (index) -> (index)
+  "test.some_use"(%reify1) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_if_tensor_dim(
+func.func @scf_if_tensor_dim(%c : i1) {
+  // CHECK: arith.constant 4 : index
+  // CHECK: arith.constant 9 : index
+  %c4 = arith.constant 4 : index
+  %c9 = arith.constant 9 : index
+  %t1 = tensor.empty(%c4) : tensor<?xf32>
+  %t2 = tensor.empty(%c9) : tensor<?xf32>
+  %r = scf.if %c -> tensor<?xf32> {
+    scf.yield %t1 : tensor<?xf32>
+  } else {
+    scf.yield %t2 : tensor<?xf32>
+  }
+
+  // CHECK: %[[c4:.*]] = arith.constant 4 : index
+  // CHECK: %[[c10:.*]] = arith.constant 10 : index
+  %reify1 = "test.reify_bound"(%r) {type = "LB", dim = 0}
+      : (tensor<?xf32>) -> (index)
+  %reify2 = "test.reify_bound"(%r) {type = "UB", dim = 0}
+      : (tensor<?xf32>) -> (index)
+  // CHECK: "test.some_use"(%[[c4]], %[[c10]])
+  "test.some_use"(%reify1, %reify2) : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK: #[[$map:.*]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @scf_if_eq(
+//  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %{{.*}}: i1)
+func.func @scf_if_eq(%a: index, %b: index, %c : i1) {
+  %c0 = arith.constant 0 : index
+  %r = scf.if %c -> index {
+    %add1 = arith.addi %a, %b : index
+    scf.yield %add1 : index
+  } else {
+    %add2 = arith.addi %b, %c0 : index
+    %add3 = arith.addi %add2, %a : index
+    scf.yield %add3 : index
+  }
+
+  // CHECK: %[[eq:.*]] = affine.apply #[[$map]]()[%[[a]], %[[b]]]
+  %reify1 = "test.reify_bound"(%r) {type = "EQ"} : (index) -> (index)
+  // CHECK: "test.some_use"(%[[eq]])
   "test.some_use"(%reify1) : (index) -> ()
   return
 }
