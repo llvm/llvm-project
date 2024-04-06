@@ -60,8 +60,8 @@ public:
       Consider(Spec.Target);
       for (const RuleSpec::Element &Elt : Spec.Sequence) {
         Consider(Elt.Symbol);
-        for (const auto& KV : Elt.Attributes)
-           UniqueAttributeValues.insert(KV.second);
+        for (const auto &KV : Elt.Attributes)
+          UniqueAttributeValues.insert(KV.second);
       }
     }
     for (llvm::StringRef Name : UniqueNonterminals) {
@@ -183,7 +183,7 @@ private:
     struct Element {
       llvm::StringRef Symbol; // Name of the symbol
       // Attributes that are associated to the sequence symbol or rule.
-      std::vector<std::pair<llvm::StringRef/*Key*/, llvm::StringRef/*Value*/>>
+      std::vector<std::pair<llvm::StringRef /*Key*/, llvm::StringRef /*Value*/>>
           Attributes;
     };
     std::vector<Element> Sequence;
@@ -248,7 +248,7 @@ private:
     return true;
   }
   // Apply the parsed extensions (stored in RuleSpec) to the grammar Rule.
-  void applyAttributes(const RuleSpec& Spec, const GrammarTable& T, Rule& R) {
+  void applyAttributes(const RuleSpec &Spec, const GrammarTable &T, Rule &R) {
     auto LookupExtensionID = [&T](llvm::StringRef Name) {
       const auto It = llvm::partition_point(
           T.AttributeValues, [&](llvm::StringRef X) { return X < Name; });

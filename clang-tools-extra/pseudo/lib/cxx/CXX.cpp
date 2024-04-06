@@ -207,72 +207,74 @@ bool hasExclusiveType(const ForestNode *N) {
     // All supported symbols are nonterminals.
     assert(N->kind() == ForestNode::Sequence);
     switch (N->rule()) {
-      // seq := element seq: check element then continue into seq
-      case rule::decl_specifier_seq::decl_specifier__decl_specifier_seq:
-      case rule::defining_type_specifier_seq::defining_type_specifier__defining_type_specifier_seq:
-      case rule::type_specifier_seq::type_specifier__type_specifier_seq:
-        if (hasExclusiveType(N->children()[0]))
-          return true;
-        N = N->children()[1];
-        continue;
-      // seq := element: continue into element
-      case rule::decl_specifier_seq::decl_specifier:
-      case rule::type_specifier_seq::type_specifier:
-      case rule::defining_type_specifier_seq::defining_type_specifier:
-        N = N->children()[0];
-        continue;
-
-      // defining-type-specifier
-      case rule::defining_type_specifier::type_specifier:
-        N = N->children()[0];
-        continue;
-      case rule::defining_type_specifier::class_specifier:
-      case rule::defining_type_specifier::enum_specifier:
+    // seq := element seq: check element then continue into seq
+    case rule::decl_specifier_seq::decl_specifier__decl_specifier_seq:
+    case rule::defining_type_specifier_seq::
+        defining_type_specifier__defining_type_specifier_seq:
+    case rule::type_specifier_seq::type_specifier__type_specifier_seq:
+      if (hasExclusiveType(N->children()[0]))
         return true;
+      N = N->children()[1];
+      continue;
+    // seq := element: continue into element
+    case rule::decl_specifier_seq::decl_specifier:
+    case rule::type_specifier_seq::type_specifier:
+    case rule::defining_type_specifier_seq::defining_type_specifier:
+      N = N->children()[0];
+      continue;
 
-      // decl-specifier
-      case rule::decl_specifier::defining_type_specifier:
-        N = N->children()[0];
-        continue;
-      case rule::decl_specifier::CONSTEVAL:
-      case rule::decl_specifier::CONSTEXPR:
-      case rule::decl_specifier::CONSTINIT:
-      case rule::decl_specifier::INLINE:
-      case rule::decl_specifier::FRIEND:
-      case rule::decl_specifier::storage_class_specifier:
-      case rule::decl_specifier::TYPEDEF:
-      case rule::decl_specifier::function_specifier:
-        return false;
+    // defining-type-specifier
+    case rule::defining_type_specifier::type_specifier:
+      N = N->children()[0];
+      continue;
+    case rule::defining_type_specifier::class_specifier:
+    case rule::defining_type_specifier::enum_specifier:
+      return true;
 
-      // type-specifier
-      case rule::type_specifier::elaborated_type_specifier:
-      case rule::type_specifier::typename_specifier:
-        return true;
-      case rule::type_specifier::simple_type_specifier:
-        N = N->children()[0];
-        continue;
-      case rule::type_specifier::cv_qualifier:
-        return false;
+    // decl-specifier
+    case rule::decl_specifier::defining_type_specifier:
+      N = N->children()[0];
+      continue;
+    case rule::decl_specifier::CONSTEVAL:
+    case rule::decl_specifier::CONSTEXPR:
+    case rule::decl_specifier::CONSTINIT:
+    case rule::decl_specifier::INLINE:
+    case rule::decl_specifier::FRIEND:
+    case rule::decl_specifier::storage_class_specifier:
+    case rule::decl_specifier::TYPEDEF:
+    case rule::decl_specifier::function_specifier:
+      return false;
 
-      // simple-type-specifier
-      case rule::simple_type_specifier::type_name:
-      case rule::simple_type_specifier::template_name:
-      case rule::simple_type_specifier::builtin_type:
-      case rule::simple_type_specifier::nested_name_specifier__TEMPLATE__simple_template_id:
-      case rule::simple_type_specifier::nested_name_specifier__template_name:
-      case rule::simple_type_specifier::nested_name_specifier__type_name:
-      case rule::simple_type_specifier::decltype_specifier:
-      case rule::simple_type_specifier::placeholder_type_specifier:
-        return true;
-      case rule::simple_type_specifier::LONG:
-      case rule::simple_type_specifier::SHORT:
-      case rule::simple_type_specifier::SIGNED:
-      case rule::simple_type_specifier::UNSIGNED:
-        return false;
+    // type-specifier
+    case rule::type_specifier::elaborated_type_specifier:
+    case rule::type_specifier::typename_specifier:
+      return true;
+    case rule::type_specifier::simple_type_specifier:
+      N = N->children()[0];
+      continue;
+    case rule::type_specifier::cv_qualifier:
+      return false;
 
-      default:
-        LLVM_DEBUG(llvm::errs() << "Unhandled rule " << N->rule() << "\n");
-        llvm_unreachable("hasExclusiveType be exhaustive!");
+    // simple-type-specifier
+    case rule::simple_type_specifier::type_name:
+    case rule::simple_type_specifier::template_name:
+    case rule::simple_type_specifier::builtin_type:
+    case rule::simple_type_specifier::
+        nested_name_specifier__TEMPLATE__simple_template_id:
+    case rule::simple_type_specifier::nested_name_specifier__template_name:
+    case rule::simple_type_specifier::nested_name_specifier__type_name:
+    case rule::simple_type_specifier::decltype_specifier:
+    case rule::simple_type_specifier::placeholder_type_specifier:
+      return true;
+    case rule::simple_type_specifier::LONG:
+    case rule::simple_type_specifier::SHORT:
+    case rule::simple_type_specifier::SIGNED:
+    case rule::simple_type_specifier::UNSIGNED:
+      return false;
+
+    default:
+      LLVM_DEBUG(llvm::errs() << "Unhandled rule " << N->rule() << "\n");
+      llvm_unreachable("hasExclusiveType be exhaustive!");
     }
   }
 }
@@ -283,13 +285,13 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
     [](const GuardParams &P) { return cond; }                                  \
   }
 #define TOKEN_GUARD(kind, cond)                                                \
-  [](const GuardParams& P) {                                                   \
+  [](const GuardParams &P) {                                                   \
     const Token &Tok = onlyToken(tok::kind, P.RHS, P.Tokens);                  \
     return cond;                                                               \
   }
 #define SYMBOL_GUARD(kind, cond)                                               \
-  [](const GuardParams& P) {                                                   \
-    const ForestNode &N = onlySymbol(Symbol::kind, P.RHS, P.Tokens); \
+  [](const GuardParams &P) {                                                   \
+    const ForestNode &N = onlySymbol(Symbol::kind, P.RHS, P.Tokens);           \
     return cond;                                                               \
   }
   return {

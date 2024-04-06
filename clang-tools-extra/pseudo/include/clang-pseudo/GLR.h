@@ -120,8 +120,8 @@ struct ParseParams {
   const TokenStream &Code;
 
   // Arena for data structure used by the GLR algorithm.
-  ForestArena &Forest;  // Storage for the output forest.
-  GSS &GSStack;         // Storage for parsing stacks.
+  ForestArena &Forest; // Storage for the output forest.
+  GSS &GSStack;        // Storage for parsing stacks.
 };
 
 // Parses the given token stream as the start symbol with the GLR algorithm,

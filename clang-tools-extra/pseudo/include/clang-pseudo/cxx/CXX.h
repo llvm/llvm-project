@@ -65,7 +65,7 @@ enum Rule : RuleID {
 #define RULE(LHS, RHS, ID) RHS = ID,
 #include "CXXSymbols.inc"
 };
-}
+} // namespace dummy
 } // namespace rules
 } // namespace detail
 
