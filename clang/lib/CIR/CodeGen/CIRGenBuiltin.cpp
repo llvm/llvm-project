@@ -593,6 +593,17 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcountll:
     return buildBuiltinBitOp<mlir::cir::BitPopcountOp>(*this, E, std::nullopt);
 
+  case Builtin::BI__builtin_bswap16:
+  case Builtin::BI__builtin_bswap32:
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BI_byteswap_ushort:
+  case Builtin::BI_byteswap_ulong:
+  case Builtin::BI_byteswap_uint64: {
+    auto arg = buildScalarExpr(E->getArg(0));
+    return RValue::get(builder.create<mlir::cir::ByteswapOp>(
+        getLoc(E->getSourceRange()), arg));
+  }
+
   case Builtin::BI__builtin_constant_p: {
     mlir::Type ResultType = ConvertType(E->getType());
 
