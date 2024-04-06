@@ -22,6 +22,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Support/Casting.h"
 #include <cassert>
 
 using namespace llvm;
@@ -33,6 +34,15 @@ SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     MachineInstr &I,
                                                     const SPIRVInstrInfo &TII) {
   SPIRVType *SpirvType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
+  assignSPIRVTypeToVReg(SpirvType, VReg, *CurMF);
+  return SpirvType;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
+                                           MachineInstr &I,
+                                           const SPIRVInstrInfo &TII) {
+  SPIRVType *SpirvType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
   assignSPIRVTypeToVReg(SpirvType, VReg, *CurMF);
   return SpirvType;
 }
@@ -166,28 +176,65 @@ SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
   return std::make_tuple(Res, CI, NewInstr);
 }
 
+std::tuple<Register, ConstantFP *, bool>
+SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
+                                              MachineIRBuilder *MIRBuilder,
+                                              MachineInstr *I,
+                                              const SPIRVInstrInfo *TII) {
+  const Type *LLVMFloatTy;
+  LLVMContext &Ctx = CurMF->getFunction().getContext();
+  if (SpvType)
+    LLVMFloatTy = getTypeForSPIRVType(SpvType);
+  else {
+    LLVMFloatTy = Type::getFloatTy(Ctx);
+    if (MIRBuilder)
+      SpvType = getOrCreateSPIRVType(LLVMFloatTy, *MIRBuilder);
+  }
+  bool NewInstr = false;
+  // Find a constant in DT or build a new one.
+  auto *const CI = ConstantFP::get(Ctx, Val);
+  Register Res = DT.find(CI, CurMF);
+  if (!Res.isValid()) {
+    unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
+    LLT LLTy = LLT::scalar(32);
+    Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+    CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
+    if (MIRBuilder)
+      assignTypeToVReg(LLVMFloatTy, Res, *MIRBuilder);
+    else
+      assignFloatTypeToVReg(BitWidth, Res, *I, *TII);
+    DT.add(CI, CurMF, Res);
+    NewInstr = true;
+  }
+  return std::make_tuple(Res, CI, NewInstr);
+}
+
 Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
                                                  SPIRVType *SpvType,
-                                                 const SPIRVInstrInfo &TII) {
+                                                 const SPIRVInstrInfo &TII,
+                                                 bool ZeroAsNull) {
   assert(SpvType);
-  auto *MF = I.getMF();
-  assert(MF);
-  LLVMContext &Ctx = MF->getFunction().getContext();
-  // Find a constant in DT or build a new one.
-  auto *const ConstFP = ConstantFP::get(Ctx, Val);
-  Register Res = DT.find(ConstFP, MF);
-  if (!Res.isValid()) {
-    Res = MF->getRegInfo().createGenericVirtualRegister(LLT::scalar(32));
-    MF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
-    assignSPIRVTypeToVReg(SpvType, Res, *MF);
-    DT.add(ConstFP, MF, Res);
-
-    MachineInstrBuilder MIB;
-    MachineBasicBlock &BB = *I.getParent();
+  ConstantFP *CI;
+  Register Res;
+  bool New;
+  std::tie(Res, CI, New) =
+      getOrCreateConstFloatReg(Val, SpvType, nullptr, &I, &TII);
+  // If we have found Res register which is defined by the passed G_CONSTANT
+  // machine instruction, a new constant instruction should be created.
+  if (!New && (!I.getOperand(0).isReg() || Res != I.getOperand(0).getReg()))
+    return Res;
+  MachineInstrBuilder MIB;
+  MachineBasicBlock &BB = *I.getParent();
+  // In OpenCL OpConstantNull - Scalar floating point: +0.0 (all bits 0)
+  if (Val.isPosZero() && ZeroAsNull) {
+    MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+              .addDef(Res)
+              .addUse(getSPIRVTypeID(SpvType));
+  } else {
     MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantF))
               .addDef(Res)
               .addUse(getSPIRVTypeID(SpvType));
-    addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
+    addNumImm(CI->getValueAPF().bitcastToAPInt(), MIB);
   }
 
   return Res;
@@ -299,10 +346,10 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
 
   return Res;
 }
-template <>
-Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
-    ConstantFP *Val, MachineInstr &I, SPIRVType *SpvType,
-    const SPIRVInstrInfo &TII, ConstantFP *CA, unsigned BitWidth,
+
+Register SPIRVGlobalRegistry::getOrCreateFloatCompositeOrNull(
+    Constant *Val, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII, Constant *CA, unsigned BitWidth,
     unsigned ElemCnt, bool ZeroAsNull) {
   // Find a constant vector in DT or build a new one.
   Register Res = DT.find(CA, CurMF);
@@ -314,7 +361,8 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     // TODO: can moved below once sorting of types/consts/defs is implemented.
     Register SpvScalConst;
     if (!IsNull)
-      SpvScalConst = getOrCreateConstFP(Val->getValue(), I, SpvBaseType, TII);
+      SpvScalConst = getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(),
+                                        I, SpvBaseType, TII, ZeroAsNull);
     // TODO: maybe use bitwidth of base type.
     LLT LLTy = LLT::scalar(32);
     Register SpvVecConst =
@@ -344,8 +392,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
   return Res;
 }
 
-template <>
-Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
+Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
     Constant *Val, MachineInstr &I, SPIRVType *SpvType,
     const SPIRVInstrInfo &TII, Constant *CA, unsigned BitWidth,
     unsigned ElemCnt, bool ZeroAsNull) {
@@ -405,9 +452,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
-  return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
-                                    SpvType->getOperand(2).getImm(),
-                                    ZeroAsNull);
+  return getOrCreateIntCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
+                                       SpvType->getOperand(2).getImm(),
+                                       ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstVector(double Val,
@@ -424,9 +471,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(double Val,
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
-  return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
-                                    SpvType->getOperand(2).getImm(),
-                                    ZeroAsNull);
+  return getOrCreateFloatCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec,
+                                         BW, SpvType->getOperand(2).getImm(),
+                                         ZeroAsNull);
 }
 
 Register
@@ -442,8 +489,8 @@ SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
       ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), {ConstInt});
   SPIRVType *SpvBaseTy = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
   unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
-  return getOrCreateCompositeOrNull(ConstInt, I, SpvType, TII, ConstArr, BW,
-                                    LLVMArrTy->getNumElements());
+  return getOrCreateIntCompositeOrNull(ConstInt, I, SpvType, TII, ConstArr, BW,
+                                       LLVMArrTy->getNumElements());
 }
 
 Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(

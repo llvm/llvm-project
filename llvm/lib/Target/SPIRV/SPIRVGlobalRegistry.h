@@ -20,6 +20,7 @@
 #include "SPIRVDuplicatesTracker.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/IR/Constant.h"
 
 namespace llvm {
 using SPIRVType = const MachineInstr;
@@ -234,6 +235,8 @@ public:
                               bool EmitIR = true);
   SPIRVType *assignIntTypeToVReg(unsigned BitWidth, Register VReg,
                                  MachineInstr &I, const SPIRVInstrInfo &TII);
+  SPIRVType *assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
+                                   MachineInstr &I, const SPIRVInstrInfo &TII);
   SPIRVType *assignVectTypeToVReg(SPIRVType *BaseType, unsigned NumElements,
                                   Register VReg, MachineInstr &I,
                                   const SPIRVInstrInfo &TII);
@@ -367,14 +370,24 @@ private:
   std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
+  std::tuple<Register, ConstantFP *, bool> getOrCreateConstFloatReg(
+      APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
+      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
 
-  template <typename T>
-  Register getOrCreateCompositeOrNull(T *Val, MachineInstr &I,
-                                      SPIRVType *SpvType,
-                                      const SPIRVInstrInfo &TII, T *CA,
-                                      unsigned BitWidth, unsigned ElemCnt,
-                                      bool ZeroAsNull = true);
+  Register getOrCreateIntCompositeOrNull(Constant *Val, MachineInstr &I,
+                                         SPIRVType *SpvType,
+                                         const SPIRVInstrInfo &TII,
+                                         Constant *CA, unsigned BitWidth,
+                                         unsigned ElemCnt,
+                                         bool ZeroAsNull = true);
+
+  Register getOrCreateFloatCompositeOrNull(Constant *Val, MachineInstr &I,
+                                           SPIRVType *SpvType,
+                                           const SPIRVInstrInfo &TII,
+                                           Constant *CA, unsigned BitWidth,
+                                           unsigned ElemCnt,
+                                           bool ZeroAsNull = true);
 
   Register getOrCreateIntCompositeOrNull(uint64_t Val,
                                          MachineIRBuilder &MIRBuilder,
@@ -389,7 +402,7 @@ public:
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,
-                              const SPIRVInstrInfo &TII);
+                              const SPIRVInstrInfo &TII, bool ZeroAsNull);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
 
