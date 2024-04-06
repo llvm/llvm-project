@@ -6025,7 +6025,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       CM = "large";
     if (Triple.isAArch64(64)) {
       Ok = CM == "tiny" || CM == "small" || CM == "large";
-      if (CM == "large" && RelocationModel != llvm::Reloc::Static)
+      if (CM == "large" && !Triple.isOSBinFormatMachO() &&
+          RelocationModel != llvm::Reloc::Static)
         D.Diag(diag::err_drv_argument_only_allowed_with)
             << A->getAsString(Args) << "-fno-pic";
     } else if (Triple.isLoongArch()) {
