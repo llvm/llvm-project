@@ -911,11 +911,11 @@ std::pair<GOFFSymbol, GOFFSymbol> GOFFObjectWriter::getSDEDSymbolsForSection(con
   GOFFSymbol SD = GSection.getRooted() ? RootSD : createSDSymbol(GSection.getName());
 
   GOFFSymbol ED = createEDSymbol(GSection.getExternalDefinitionName(), SD.EsdId, Layout.getSectionAddressSize(&GSection),
-                                 GOFF::ESD_EXE_Unspecified, //TODO: No.
+                                 GSection.isCode() ? GOFF::ESD_EXE_CODE : GOFF::ESD_EXE_DATA,
                                  GSection.getBindingScope(),
-                                 GOFF::ESD_NS_ProgramManagementBinder, //TODO: Definitely fucking not.
+                                 GSection.getNameSpace(),
                                  GSection.getBindingAlgorithm(),
-                                 true, //TODO: No. (This is read only btw)
+                                 GSection.isReadOnly(),
                                  GSection.getTextStyle(),
                                  GSection.getLoadBehavior()
                                  );
@@ -948,7 +948,7 @@ void GOFFObjectWriter::writeSectionSymbols(const MCSectionGOFF &GSection,
     }
     GOFFSymbol PR = createPRSymbol(GSection.getTextOwnerName(), SDEDSymbols.second.EsdId,
                                    GOFF::ESD_NS_Parts,
-                                   GOFF::ESD_EXE_DATA,
+                                   Executability,
                                    GOFFSymbol::setGOFFAlignment(GSection.getAlign()),
                                    GOFF::ESD_BSC_Section,
                                    Layout.getSectionAddressSize(&GSection),

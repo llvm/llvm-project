@@ -154,6 +154,14 @@ public:
     }
     return getName().str();
   }
+
+  bool isReadOnly() const {
+    return isCode() || isPPA2Offset() || isB_IDRL();
+  }
+
+  GOFF::ESDNameSpaceId getNameSpace() const {
+    return isB_IDRL() ? GOFF::ESD_NS_NormalName : GOFF::ESD_NS_Parts;
+  }
 };
 } // end namespace llvm
 
