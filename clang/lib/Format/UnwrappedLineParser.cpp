@@ -365,11 +365,11 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       nextToken();
       continue;
     }
-    tok::TokenKind kind = FormatTok->Tok.getKind();
+    tok::TokenKind Kind = FormatTok->Tok.getKind();
     if (FormatTok->getType() == TT_MacroBlockBegin)
-      kind = tok::l_brace;
+      Kind = tok::l_brace;
     else if (FormatTok->getType() == TT_MacroBlockEnd)
-      kind = tok::r_brace;
+      Kind = tok::r_brace;
 
     auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
                          &HasLabel, &StatementCount] {
@@ -380,7 +380,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       assert(StatementCount > 0 && "StatementCount overflow!");
     };
 
-    switch (kind) {
+    switch (Kind) {
     case tok::comment:
       nextToken();
       addUnwrappedLine();
@@ -3280,8 +3280,8 @@ void UnwrappedLineParser::parseSwitch() {
 }
 
 // Operators that can follow a C variable.
-static bool isCOperatorFollowingVar(tok::TokenKind kind) {
-  switch (kind) {
+static bool isCOperatorFollowingVar(tok::TokenKind Kind) {
+  switch (Kind) {
   case tok::ampamp:
   case tok::ampequal:
   case tok::arrow:
