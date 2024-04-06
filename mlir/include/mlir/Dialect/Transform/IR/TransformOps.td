@@ -444,7 +444,7 @@ def AsScopeOp : TransformDialectOp<"as_scope", [
     The purpose of this op is to provide an ad-hoc scope for transformations,
     in order to narrow their impact to specific ops.
 
-    This op creates a temporary scf.scope containing clones of its first operand
+    This op creates a temporary scf.scope containing clones of payload operations associated with its first operand
     and applies the transformations within its body to that scope. If
     successful, the scope's results replace all uses of any original operation
     outside the scope, the scope is inlined and the original operations are
