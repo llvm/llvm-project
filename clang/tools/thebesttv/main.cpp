@@ -536,6 +536,83 @@ void generateICFG(const std::vector<std::string> &allFiles) {
     Tool.run(newFrontendActionFactory<GenICFGAction>().get());
 }
 
+void generatePathFromOneEntry(const ordered_json &result,
+                              FunctionLocator &locator, ordered_json &output) {
+    std::string type = result["type"].template get<std::string>();
+
+    const ordered_json &locations = result["locations"];
+    VarLocResult from, to;
+    int fromLine, toLine;
+    std::vector<VarLocResult> path;
+    for (const ordered_json &loc : locations) {
+        std::string type = loc["type"].template get<std::string>();
+        if (type != "source" && type != "sink" && type != "stmt") {
+            logger.warn("Skipping path type: {}", type);
+            continue;
+        }
+
+        // 目前把 source 和 sink 都当作 stmt 来处理，
+        // 精确匹配不上的话，就模糊匹配
+        bool isStmt = true; // type == "stmt";
+        Location jsonLoc(loc);
+        VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
+        if (!varLoc.isValid()) {
+            logger.error(
+                "Error: cannot locate {} at {}", type,
+                loc.dump(4, ' ', false, json::error_handler_t::replace));
+            throw std::runtime_error("Can't locate input entry");
+        }
+
+        if (type == "source") {
+            from = varLoc;
+            fromLine = jsonLoc.line;
+        } else if (type == "sink") {
+            to = varLoc;
+            toLine = jsonLoc.line;
+            // sink is the last stmt
+            break;
+        } else {
+            // source is the first stmt
+            if (!from.isValid())
+                continue;
+            path.emplace_back(varLoc);
+        }
+    }
+
+    handleInputEntry(from, fromLine, to, toLine, path, type, output["results"]);
+}
+
+void generateFromInput(const ordered_json &input, fs::path outputDir) {
+    logger.info("--- Path-finding ---");
+
+    FunctionLocator locator;
+    fs::path jsonResult = outputDir / "output.json";
+    logger.info("Result will be saved to: {}", jsonResult);
+
+    int total = input["results"].size();
+    logger.info("There are {} results to search", total);
+
+    ordered_json output(input);
+    output["results"].clear();
+
+    int cnt = 0;
+    for (const ordered_json &result : input["results"]) {
+        cnt++;
+        std::string type = result["type"].template get<std::string>();
+        logger.info("[{}/{}] type: {}", cnt, total, type);
+        try {
+            generatePathFromOneEntry(result, locator, output);
+        } catch (const std::exception &e) {
+            logger.error("Exception encountered: {}", e.what());
+        }
+    }
+
+    std::ofstream o(jsonResult);
+    o << output.dump(4, ' ', false, json::error_handler_t::replace)
+      << std::endl;
+    o.close();
+}
+
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
@@ -575,73 +652,8 @@ int main(int argc, const char **argv) {
     }
 
     fs::path outputDir = jsonPath.parent_path();
-    {
-        logger.info("--- Path-finding ---");
 
-        FunctionLocator locator;
-        fs::path jsonResult = outputDir / "output.json";
-        logger.info("Result will be saved to: {}", jsonResult);
-
-        int total = input["results"].size();
-        logger.info("There are {} results to search", total);
-
-        ordered_json output(input);
-        output["results"].clear();
-
-        int cnt = 0;
-        for (ordered_json &result : input["results"]) {
-            cnt++;
-            std::string type = result["type"].template get<std::string>();
-            logger.info("[{}/{}] type: {}", cnt, total, type);
-
-            ordered_json &locations = result["locations"];
-            VarLocResult from, to;
-            int fromLine, toLine;
-            std::vector<VarLocResult> path;
-            for (const ordered_json &loc : locations) {
-                std::string type = loc["type"].template get<std::string>();
-                if (type != "source" && type != "sink" && type != "stmt") {
-                    logger.warn("Skipping path type: {}", type);
-                    continue;
-                }
-
-                // 目前把 source 和 sink 都当作 stmt 来处理，
-                // 精确匹配不上的话，就模糊匹配
-                bool isStmt = true; // type == "stmt";
-                Location jsonLoc(loc);
-                VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
-                if (!varLoc.isValid()) {
-                    logger.error("Error: cannot locate {} at {}", type,
-                                 loc.dump(4, ' ', false,
-                                          json::error_handler_t::replace));
-                    exit(1);
-                }
-
-                if (type == "source") {
-                    from = varLoc;
-                    fromLine = jsonLoc.line;
-                } else if (type == "sink") {
-                    to = varLoc;
-                    toLine = jsonLoc.line;
-                    // sink is the last stmt
-                    break;
-                } else {
-                    // source is the first stmt
-                    if (!from.isValid())
-                        continue;
-                    path.emplace_back(varLoc);
-                }
-            }
-
-            handleInputEntry(from, fromLine, to, toLine, path, type,
-                             output["results"]);
-        }
-
-        std::ofstream o(jsonResult);
-        o << output.dump(4, ' ', false, json::error_handler_t::replace)
-          << std::endl;
-        o.close();
-    }
+    generateFromInput(input, outputDir);
 
     return 0;
 
