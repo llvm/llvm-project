@@ -8,7 +8,7 @@ ninja
 
 rm -rf AppDir
 mkdir AppDir
-DESTDIR=AppDir ninja install
+DESTDIR=AppDir ninja install || true
 linuxdeploy \
     --appdir AppDir --output appimage \
     -d ../graph-generation/tool.desktop \
