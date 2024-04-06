@@ -185,16 +185,6 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 4,
-                    "beginColumn": 5,
-                    "endLine": 4,
-                    "endColumn": 16,
-                    "content": "int x = 42;",
-                    "stmtKind": "DeclStmt"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
                     "beginLine": 5,
                     "beginColumn": 5,
                     "endLine": 5,
@@ -398,16 +388,6 @@
                 5
             ],
             "locations": [
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 4,
-                    "beginColumn": 5,
-                    "endLine": 4,
-                    "endColumn": 16,
-                    "content": "int x = 42;",
-                    "stmtKind": "DeclStmt"
-                },
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
