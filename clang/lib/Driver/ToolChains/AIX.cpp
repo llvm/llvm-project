@@ -17,6 +17,8 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 
+#include <set>
+
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
 using namespace clang::driver::tools;
