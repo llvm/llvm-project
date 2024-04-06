@@ -371,11 +371,17 @@ def FeatureFP8ConversionScaleInsts : SubtargetFeature<"fp8-cvt-scale-insts",
   "Has fp8 conversion scale instructions"
 >;
 
+def FeatureBF8ConversionScaleInsts : SubtargetFeature<"bf8-cvt-scale-insts",
+  "HasBF8ConversionScaleInsts",
+  "true",
+  "Has bf8 conversion scale instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
   "Additional instructions for GFX950+",
-  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts]
+  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts, FeatureBF8ConversionScaleInsts]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1430,7 +1436,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
    FeatureBitOp3Insts,
-   FeatureFP8ConversionScaleInsts])>;
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -2227,6 +2234,9 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->HasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
+
+def HasBF8ConversionScaleInsts : Predicate<"Subtarget->HasBF8ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureBF8ConversionScaleInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
