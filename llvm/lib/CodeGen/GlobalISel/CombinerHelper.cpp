@@ -2925,8 +2925,10 @@ bool CombinerHelper::matchCombineInsertVecElts(
     }
     return true;
   }
-  // If we didn't end in a G_IMPLICIT_DEF, bail out.
-  return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+  // If we didn't end in a G_IMPLICIT_DEF and the source is not fully
+  // overwritten, bail out.
+  return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+         all_of(MatchInfo, [](Register Reg) { return !!Reg; });
 }
 
 void CombinerHelper::applyCombineInsertVecElts(
