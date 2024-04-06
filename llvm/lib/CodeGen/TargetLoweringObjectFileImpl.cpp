@@ -2738,17 +2738,17 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFLSDASection(Name, SectionKind::getData(),
+  return getContext().getGOFFSection(Name, SectionKind::getData(),
                                          GOFF::ESD_TS_ByteOriented,
                                          GOFF::ESD_BA_Merge,
                                          GOFF::ESD_LB_Deferred,
                                          GOFF::ESD_BSC_Section,
-                                         true);
+                                         true, &FnSym);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  auto *Symbol = TM.getSymbol(GO);
+  auto *Symbol = cast<MCSymbolGOFF *>(TM.getSymbol(GO));
   if (Kind.isData() || Kind.isBSS()) {
     auto BindingScope = Symbol.isExternal()
                           ? (Symbol.isExported() ? GOFF::ESD_BSC_ImportExport
@@ -2759,7 +2759,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                                        GOFF::ESD_BA_Merge,
                                        GOFF::ESD_LB_Deferred,
                                        BindingScope,
-                                       false);
+                                       false, Symbol);
   }
   return getContext().getObjectFileInfo()->getTextSection();
 }

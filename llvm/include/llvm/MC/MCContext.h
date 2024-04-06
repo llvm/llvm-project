@@ -62,6 +62,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCSymbolELF;
+class MCSymbolGOFF;
 class MCSymbolWasm;
 class MCSymbolXCOFF;
 class MCTargetOptions;
@@ -653,14 +654,13 @@ public:
                                                    unsigned Flags,
                                                    unsigned EntrySize);
 
-  MCSectionGOFF *getGOFFLSDASection(StringRef Section, SectionKind Kind);
-
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
                                 GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
                                 GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
                                 GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
                                 GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
-                                bool isRooted = false);
+                                bool isRooted = false,
+                                MCSymbolGOFF *TextOwner = nullptr);
 
   MCSectionGOFF *
   getGOFFSection(StringRef Section, SectionKind Kind,
@@ -671,7 +671,7 @@ public:
                  GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
                  GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
                  GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
-                 bool isRooted = false);
+                 bool isRooted = false, MCSymbolGOFF * TextOwner = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,

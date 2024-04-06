@@ -24,6 +24,7 @@
 
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -48,15 +49,20 @@ class MCSectionGOFF final : public MCSection {
   /// a LD or PR Symbol.
   bool TextOwnedByED = false;
 
+  /// TextOwner - Valid if owned the text record containing the body of this section
+  /// is not owned by an ED Symbol. The MCSymbol that represents the part or label that
+  /// actually owns the TXT Record.
+  MCSymbolGOFF *TextOwner = nullptr;
+
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub) {}
   
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub,
                 GOFF::ESDTextStyle TextStyle, GOFF::ESDBindingAlgorithm BindAlgorithm,
-                GOFF::ESDLoadingBehavior LoadBehavior, GOFF::ESDBindingScope BindingScope, bool IsRooted)
+                GOFF::ESDLoadingBehavior LoadBehavior, GOFF::ESDBindingScope BindingScope, bool IsRooted, MCSymbolGOFF *TextOwner)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub),
-        TextStyle(TextStyle), BindAlgorithm(BindAlgorithm), LoadBehavior(LoadBehavior), BindingScope(BindingScope), IsRooted(IsRooted) {}
+        TextStyle(TextStyle), BindAlgorithm(BindAlgorithm), LoadBehavior(LoadBehavior), BindingScope(BindingScope), IsRooted(IsRooted), TextOwner(TextOwner) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub,
                 GOFF::GOFFSectionType Type)
@@ -64,10 +70,17 @@ class MCSectionGOFF final : public MCSection {
         Type(Type) {
     if (Type == GOFF::GOFFSectionType::Code) {
       IsRooted = true;
+      TextOwnedByED = true;
     } else if (Type == GOFF::GOFFSectionType::Static) {
+      IsRooted = true;
+      TextOwnedByED = false;
     } else if (Type == GOFF::GOFFSectionType::PPA2Offset) {
+      IsRooted = true;
+      TextOwnedByED = false;
       TextStyle = GOFF::ESD_TS_ByteOriented;
     } else if (Type == GOFF::GOFFSectionType::B_IDRL) {
+      IsRooted = true;
+      TextOwnedByED = true;
       TextStyle = GOFF::ESD_TS_Structured;
       LoadBehavior = GOFF::ESD_LB_NoLoad;
     }
@@ -118,6 +131,28 @@ public:
         return "C_WSA64";
     }
     return "";
+  }
+
+  std::optional<MCSymbolGOFF *> getTextOwner() const {
+    if (TextOwnedByED)
+      return std::nullopt;
+    else if (TextOwner)
+      return TextOwner;
+    return std::nullopt;
+  }
+
+  std::string getTextOwnerName() const {
+    if (TextOwnedByED)
+      return getExternalDefinitionName();
+    else if (Type == GOFF::Static)
+      return "";
+    else if (Type == GOFF::PPA2Offset)
+      return ".&ppa2";
+    else if (Type == GOFF::Other) {
+      if (TextOwner)
+        return TextOwner->getName().str();
+    }
+    return getName().str();
   }
 };
 } // end namespace llvm

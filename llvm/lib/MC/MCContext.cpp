@@ -651,23 +651,15 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
-MCSectionGOFF *MCContext::getGOFFLSDASection(StringRef Section,
-                                             SectionKind Kind) {
-  return getGOFFSection(Section, Kind, nullptr, nullptr,
-                        GOFF::GOFFSectionType::Other, GOFF::ESD_TS_Unstructured, GOFF::ESD_BA_Merge,
-                        GOFF::ESD_LB_Deferred, GOFF::ESD_BSC_Section, true);
-}
-
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          GOFF::ESDTextStyle TextStyle,
                                          GOFF::ESDBindingAlgorithm BindAlgorithm,
                                          GOFF::ESDLoadingBehavior LoadBehavior,
                                          GOFF::ESDBindingScope BindingScope,
-                                         bool isRooted) {
+                                         bool isRooted, MCSymbolGOFF *TextOwner) {
   return getGOFFSection(Section, Kind, nullptr, nullptr, GOFF::GOFFSectionType::Other,
-  TextStyle, BindAlgorithm, LoadBehavior, BindingScope, isRooted);
+  TextStyle, BindAlgorithm, LoadBehavior, BindingScope, isRooted, TextOwner);
 }
-
 
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          MCSection *Parent,
@@ -677,7 +669,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          GOFF::ESDBindingAlgorithm BindAlgorithm,
                                          GOFF::ESDLoadingBehavior LoadBehavior,
                                          GOFF::ESDBindingScope BindingScope,
-                                         bool isRooted) {
+                                         bool isRooted, MCSymbolGOFF *TextOwner) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool = GOFFUniquingMap.insert(std::make_pair(
       GOFFSectionKey{Section.str(), SectionType, (Parent != nullptr)},
@@ -693,7 +685,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
         MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, SectionType);
   else
     GOFFSection = new (GOFFAllocator.Allocate())
-        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, TextStyle, BindAlgorithm, LoadBehavior, BindingScope, isRooted);
+        MCSectionGOFF(CachedName, Kind, Parent, SubsectionId, TextStyle, BindAlgorithm, LoadBehavior, BindingScope, isRooted, TextOwner);
   Iter->second = GOFFSection;
 
   return GOFFSection;
