@@ -17,7 +17,6 @@
 #ifndef _LIBCPP___MDSPAN_MDSPAN_H
 #define _LIBCPP___MDSPAN_MDSPAN_H
 
-#include "__fwd/span.h"
 #include <__assert>
 #include <__config>
 #include <__fwd/mdspan.h>
