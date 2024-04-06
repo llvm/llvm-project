@@ -45,13 +45,21 @@ ForestNode::descendants() const {
   return {RecursiveIterator(this), RecursiveIterator()};
 }
 
-std::string ForestNode::dump(const Grammar &G) const {
+std::string ForestNode::dump(
+    const Grammar &G,
+    std::optional<std::reference_wrapper<const TokenStream>> Code) const {
   switch (kind()) {
   case Ambiguous:
     return llvm::formatv("{0} := <ambiguous>", G.symbolName(symbol()));
   case Terminal:
-    return llvm::formatv("{0} := tok[{1}]", G.symbolName(symbol()),
-                         startTokenIndex());
+    if (Code) {
+      return llvm::formatv("{0} := tok[{1}] ({2})", G.symbolName(symbol()),
+                           startTokenIndex(),
+                           Code->get().tokens()[startTokenIndex()]);
+    } else {
+      return llvm::formatv("{0} := tok[{1}]", G.symbolName(symbol()),
+                           startTokenIndex());
+    }
   case Sequence:
     return G.dumpRule(rule());
   case Opaque:
@@ -60,8 +68,10 @@ std::string ForestNode::dump(const Grammar &G) const {
   llvm_unreachable("Unhandled node kind!");
 }
 
-std::string ForestNode::dumpRecursive(const Grammar &G,
-                                      bool Abbreviated) const {
+std::string ForestNode::dumpRecursive(
+    const Grammar &G,
+    std::optional<std::reference_wrapper<const TokenStream>> Code,
+    bool Abbreviated) const {
   using llvm::formatv;
   Token::Index MaxToken = 0;
   // Count visits of nodes so we can mark those seen multiple times.
@@ -95,7 +105,7 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
   std::string Result;
   constexpr Token::Index KEnd = std::numeric_limits<Token::Index>::max();
   std::function<void(const ForestNode *, Token::Index, std::optional<SymbolID>,
-                     LineDecoration &LineDec)>
+                     LineDecoration LineDec)>
       Dump = [&](const ForestNode *P, Token::Index End,
                  std::optional<SymbolID> ElidedParent, LineDecoration LineDec) {
         bool SharedNode = VisitCounts.find(P)->getSecond() > 1;
@@ -145,13 +155,13 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
 
           // The first time, print as #1. Later, =#1.
           if (First) {
-            Result += formatv("{0} #{1}", P->dump(G), ID);
+            Result += formatv("{0} #{1}", P->dump(G, Code), ID);
           } else {
             Result += formatv("{0} =#{1}", G.symbolName(P->symbol()), ID);
             Children = {}; // Don't walk the children again.
           }
         } else {
-          Result.append(P->dump(G));
+          Result.append(P->dump(G, Code));
         }
         Result.push_back('\n');
 

@@ -46,7 +46,7 @@ public:
         glrParse(clang::pseudo::ParseParams{ParseableStream, Arena, GSS},
                  *Lang.G.findNonterminal("translation-unit"), Lang);
     if (Print)
-      llvm::outs() << Root.dumpRecursive(Lang.G);
+      llvm::outs() << Root.dumpRecursive(Lang.G, std::nullopt);
   }
 };
 
