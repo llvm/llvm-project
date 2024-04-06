@@ -5,7 +5,26 @@
 #  Chapter 4 : Multistage GEMM with Tensor Core
 # ===----------------------------------------------------------------------===//
 #
-# This program demonstrates a GEMM operation with 64x64x64 matrix multiplication
+# This program exemplifies a GEMM operation for `f32+=f16*f16`, utilizing the
+# Multistage method with a tile size of 128x128x64. The code completely
+# parallelizes the two outermost loops into thread blocks. It launches one Warp
+# Groups (128 threads in total) and allocates multiple slots/stage in the
+# shared memory. The program consists of three main parts: prologue, mainloop,
+# and epilogue. In the prologue, thread0 requests for TMA to load data into
+# shared memory slots. The mainloop executes MMA while simultaneously loading
+# TMA for the utilized slots. This overlap of TMA and MMA operations enhances
+# performance by maximizing computational throughput.
+#
+# Loops illustration:
+#
+#  for s in range(NUM_STAGES):
+#    TMA_128x64_64x128...
+#  for ti in range(M//128):  # -> blockIdx.x
+#   for tj in range(N//128): # -> blockIdx.y
+#    for tk in range(K//64):
+#      MMA_128x128x64...
+#      TMA_128x64_64x128...
+#  Epilogue...
 #
 # This chapter introduces demonstrates:
 #  1. Partition shape based on block IDs
@@ -174,7 +193,7 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         a_smem = get_dynamic_shared_memory([TILE_M, TILE_K], T.f16(), offset_a)
         b_smem = get_dynamic_shared_memory([TILE_K, TILE_N], T.f16(), offset_b)
 
-        # Initialize matrices
+        # Iterate input matrices, update accumulator
         A.update_smem(a_smem)
         B.update_smem(b_smem)
         D.update_accumulator(for_op.inner_iter_args[0])
