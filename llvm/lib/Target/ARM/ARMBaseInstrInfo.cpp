@@ -5101,31 +5101,33 @@ static unsigned getCorrespondingDRegAndLane(const TargetRegisterInfo *TRI,
 /// If the other SPR is defined, an implicit-use of it should be added. Else,
 /// (including the case where the DPR itself is defined), it should not.
 ///
-static bool getImplicitSPRUseForDPRUse(const TargetRegisterInfo *TRI,
+static void getImplicitSPRUseForDPRUse(const TargetRegisterInfo *TRI,
                                        MachineInstr &MI, unsigned DReg,
                                        unsigned Lane, unsigned &ImplicitSReg) {
   // If the DPR is defined or used already, the other SPR lane will be chained
   // correctly, so there is nothing to be done.
   if (MI.definesRegister(DReg, TRI) || MI.readsRegister(DReg, TRI)) {
     ImplicitSReg = 0;
-    return true;
+    return;
   }
 
   // Otherwise we need to go searching to see if the SPR is set explicitly.
   ImplicitSReg = TRI->getSubReg(DReg,
                                 (Lane & 1) ? ARM::ssub_0 : ARM::ssub_1);
-  MachineBasicBlock::LivenessQueryResult LQR =
-      MI.getParent()->computeRegisterLiveness(TRI, ImplicitSReg, MI);
+  MachineBasicBlock *MBB = MI.getParent();
+  LiveRegUnits UsedRegs(*TRI);
+  UsedRegs.addLiveOuts(*MBB);
 
-  if (LQR == MachineBasicBlock::LQR_Live)
-    return true;
-  else if (LQR == MachineBasicBlock::LQR_Unknown)
-    return false;
+  auto InstUpToBefore = MBB->end();
+  while (InstUpToBefore != MI)
+    // The pre-decrement is on purpose here.
+    // We want to have the liveness right before Before.
+    UsedRegs.stepBackward(*--InstUpToBefore);
 
-  // If the register is known not to be live, there is no need to add an
-  // implicit-use.
-  ImplicitSReg = 0;
-  return true;
+  if (UsedRegs.available(ImplicitSReg))
+    // If the register is known not to be live, there is no need to add an
+    // implicit-use.
+    ImplicitSReg = 0;
 }
 
 void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
@@ -5201,8 +5203,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
     DReg = getCorrespondingDRegAndLane(TRI, DstReg, Lane);
 
     unsigned ImplicitSReg;
-    if (!getImplicitSPRUseForDPRUse(TRI, MI, DReg, Lane, ImplicitSReg))
-      break;
+    getImplicitSPRUseForDPRUse(TRI, MI, DReg, Lane, ImplicitSReg);
 
     for (unsigned i = MI.getDesc().getNumOperands(); i; --i)
       MI.removeOperand(i - 1);
@@ -5236,8 +5237,7 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
       DSrc = getCorrespondingDRegAndLane(TRI, SrcReg, SrcLane);
 
       unsigned ImplicitSReg;
-      if (!getImplicitSPRUseForDPRUse(TRI, MI, DSrc, SrcLane, ImplicitSReg))
-        break;
+      getImplicitSPRUseForDPRUse(TRI, MI, DSrc, SrcLane, ImplicitSReg);
 
       for (unsigned i = MI.getDesc().getNumOperands(); i; --i)
         MI.removeOperand(i - 1);
