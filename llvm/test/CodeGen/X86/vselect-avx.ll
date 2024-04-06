@@ -227,10 +227,10 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
 ;
 ; AVX2-LABEL: blendv_split:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
-; AVX2-NEXT:    vpslld %xmm2, %ymm1, %ymm2
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero
-; AVX2-NEXT:    vpslld %xmm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpbroadcastd %xmm2, %ymm2
+; AVX2-NEXT:    vpbroadcastd %xmm3, %ymm3
+; AVX2-NEXT:    vpsllvd %ymm2, %ymm1, %ymm2
+; AVX2-NEXT:    vpsllvd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -241,10 +241,10 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
 ; AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
 ; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm2[0],zero,xmm2[1],zero
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm3[0],zero,xmm3[1],zero
-; AVX512-NEXT:    vpslld %xmm2, %ymm1, %ymm2
-; AVX512-NEXT:    vpslld %xmm0, %ymm1, %ymm2 {%k1}
+; AVX512-NEXT:    vpbroadcastd %xmm2, %ymm0
+; AVX512-NEXT:    vpbroadcastd %xmm3, %ymm2
+; AVX512-NEXT:    vpsllvd %ymm2, %ymm1, %ymm2
+; AVX512-NEXT:    vpsllvd %ymm0, %ymm1, %ymm2 {%k1}
 ; AVX512-NEXT:    vmovdqu %ymm2, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
