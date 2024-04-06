@@ -122,7 +122,8 @@ template <size_t Bits> struct DyadicFloat {
 
     int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
 
-    MantissaType m_hi(mantissa >> shift);
+    MantissaType m_hi =
+        shift >= MantissaType::BITS ? MantissaType(0) : mantissa >> shift;
 
     T d_hi = FPBits<T>::create_value(
                  sign, exp_hi,
@@ -130,7 +131,8 @@ template <size_t Bits> struct DyadicFloat {
                      IMPLICIT_MASK)
                  .get_val();
 
-    MantissaType round_mask = MantissaType(1) << (shift - 1);
+    MantissaType round_mask =
+        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
