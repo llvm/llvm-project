@@ -18,6 +18,20 @@ namespace std {
 // constants
 inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
 
+template<class T>
+  concept integral-constant-like =        // exposition only, since C++26
+    is_integral_v<decltype(T::value)> &&
+    !is_same_v<bool, remove_const_t<decltype(T::value)>> &&
+    convertible_to<T, decltype(T::value)> &&
+    equality_comparable_with<T, decltype(T::value)> &&
+    bool_constant<T() == T::value>::value &&
+    bool_constant<static_cast<decltype(T::value)>(T()) == T::value>::value;
+
+template<class T>
+  constexpr size_t maybe-static-ext = dynamic_extent;        // exposition only, since C++26
+template<integral-constant-like T>
+  constexpr size_t maybe-static-ext<T> = {T::value};
+
 // [views.span], class template span
 template <class ElementType, size_t Extent = dynamic_extent>
     class span;
@@ -110,7 +124,9 @@ private:
 };
 
 template<class It, class EndOrSize>
-    span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
+    span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>; // until C++26
+template<class It, class EndOrSize>
+    span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>, maybe-static-ext<EndOrSize>>; // since C++26
 
 template<class T, size_t N>
     span(T (&)[N]) -> span<T, N>;
@@ -563,8 +579,13 @@ _LIBCPP_HIDE_FROM_ABI auto as_writable_bytes(span<_Tp, _Extent> __s) noexcept {
   return __s.__as_writable_bytes();
 }
 
+#if _LIBCPP_STD_VER < 26
 template <contiguous_iterator _It, class _EndOrSize>
 span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
+#else
+template <contiguous_iterator _It, class _EndOrSize>
+span(_It, _EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>, __maybe_static_ext<_EndOrSize>>;
+#endif
 
 template <class _Tp, size_t _Sz>
 span(_Tp (&)[_Sz]) -> span<_Tp, _Sz>;

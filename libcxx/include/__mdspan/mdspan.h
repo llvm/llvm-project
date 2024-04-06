@@ -17,6 +17,7 @@
 #ifndef _LIBCPP___MDSPAN_MDSPAN_H
 #define _LIBCPP___MDSPAN_MDSPAN_H
 
+#include "__fwd/span.h"
 #include <__assert>
 #include <__config>
 #include <__fwd/mdspan.h>
@@ -266,10 +267,17 @@ private:
   friend class mdspan;
 };
 
+#  if _LIBCPP_STD_VER < 26
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
 explicit mdspan(_ElementType*, _OtherIndexTypes...)
     -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+#  else
+template <class _ElementType, class... _OtherIndexTypes>
+  requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
+explicit mdspan(_ElementType*, _OtherIndexTypes...)
+    -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
+#  endif
 
 template <class _Pointer>
   requires(is_pointer_v<remove_reference_t<_Pointer>>)

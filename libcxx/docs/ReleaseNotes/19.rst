@@ -46,6 +46,7 @@ Implemented Papers
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
+- P3029R1 - Better ``mdspan``'s CTAD
 
 Improvements and New Features
 -----------------------------
