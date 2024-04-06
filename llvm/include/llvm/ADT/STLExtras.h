@@ -405,32 +405,23 @@ public:
   }
 };
 
-/// Helper to determine if type T has a member called rbegin().
-template <typename Ty> class has_rbegin_impl {
-  using yes = char[1];
-  using no = char[2];
+namespace detail {
+template <typename Range>
+using check_has_free_function_rbegin =
+    decltype(adl_rbegin(std::declval<Range &>()));
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-/// Metafunction to determine if T& or T has a member called rbegin().
-template <typename Ty>
-struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
+template <typename Range>
+static constexpr bool HasFreeFunctionRBegin =
+    is_detected<check_has_free_function_rbegin, Range>::value;
+} // namespace detail
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
-  if constexpr (has_rbegin<ContainerTy>::value)
-    return make_range(C.rbegin(), C.rend());
+  if constexpr (detail::HasFreeFunctionRBegin<ContainerTy>)
+    return make_range(adl_rbegin(C), adl_rend(C));
   else
-    return make_range(std::make_reverse_iterator(std::end(C)),
-                      std::make_reverse_iterator(std::begin(C)));
+    return make_range(std::make_reverse_iterator(adl_end(C)),
+                      std::make_reverse_iterator(adl_begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.
