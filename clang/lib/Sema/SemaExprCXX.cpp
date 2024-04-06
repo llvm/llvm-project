@@ -6026,6 +6026,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return false;
   }
   case BTT_IsLayoutCompatible: {
+    if (LhsT->isVariableArrayType() || RhsT->isVariableArrayType())
+      Self.Diag(KeyLoc, diag::err_vla_unsupported)
+          << 1 << tok::kw___is_layout_compatible;
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
     default: llvm_unreachable("not a BTT");
