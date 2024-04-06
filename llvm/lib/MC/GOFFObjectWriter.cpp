@@ -341,12 +341,15 @@ private:
 
   void writeADAandCodeSectionSymbols(MCAssembler &Asm,
                                      const MCAsmLayout &Layout);
+
+  std::pair<GOFFSymbol, GOFFSymbol> getSDEDSymbolsForSection(const MCSectionGOFF& GSection, const MCAsmLayout Layout);
+
   // Write out all ESD Symbols that own a section. GOFF doesn't have
   // "sections" in the way other object file formats like ELF do; instead
   // a GOFF section is defined as a triple of ESD Symbols (SD, ED, PR/LD).
   // The PR/LD symbol should own a TXT record that contains the actual
   // data of the section.
-  void writeSectionSymbols(MCAssembler &Asm, const MCAsmLayout &Layout);
+  void writeSectionSymbols(const MCSectionGOFF &GSection, MCAssembler &Asm, const MCAsmLayout &Layout);
 
   void writeText(const MCSectionGOFF *MCSec, uint32_t EsdId,
                  GOFF::TXTRecordStyle RecordStyle, MCAssembler &Asm,
@@ -596,8 +599,6 @@ void GOFFObjectWriter::writeSymbolDefinedInModule(const MCSymbolGOFF &Symbol,
                             ? (Symbol.isExported() ? GOFF::ESD_BSC_ImportExport
                                                    : GOFF::ESD_BSC_Library)
                             : GOFF::ESD_BSC_Section;
-    if (!Symbol.isExternal())
-      SD.BindingScope = GOFF::ESD_BSC_Section;
 
     GOFFSymbol ED = createWSASymbol(SD.EsdId);
     uint32_t PRSectionLen = Layout.getSectionAddressSize(&Section)
@@ -906,57 +907,54 @@ void GOFFObjectWriter::writeADAandCodeSectionSymbols(
   writeSymbol(LD, Layout);
 }
 
-void GOFFObjectWriter::writeSectionSymbols(MCAssembler &Asm,
+std::pair<GOFFSymbol, GOFFSymbol> GOFFObjectWriter::getSDEDSymbolsForSection(const MCSectionGOFF& GSection, const MCAsmLayout Layout) {
+  GOFFSymbol SD = GSection.getRooted() ? RootSD : createSDSymbol(GSection.getName());
+
+  GOFFSymbol ED = createEDSymbol(GSection.getExternalDefinitionName(), SD.EsdId, Layout.getSectionAddressSize(&GSection),
+                                 GOFF::ESD_EXE_Unspecified, //TODO: No.
+                                 GSection.getBindingScope(),
+                                 GOFF::ESD_NS_ProgramManagementBinder, //TODO: Definitely fucking not.
+                                 GSection.getBindingAlgorithm(),
+                                 true, //TODO: No. (This is read only btw)
+                                 GSection.getTextStyle(),
+                                 GSection.getLoadBehavior()
+                                 );
+  return std::make_pair(SD, ED);
+}
+
+
+void GOFFObjectWriter::writeSectionSymbols(const MCSectionGOFF &GSection,
+                                           MCAssembler &Asm,
                                            const MCAsmLayout &Layout) {
-  for (MCSection &S : Asm) {
-    auto &Section = cast<MCSectionGOFF>(S);
-    SectionKind Kind = Section.getKind();
+  bool UsesNewSDSymbol = !(GSection.getRooted());
+  auto SDEDSymbols = getSDEDSymbolsForSection(GSection, Layout);
+  if (UsesNewSDSymbol) {
+    writeSymbol(SDEDSymbols.first, Layout);
+  }
+  writeSymbol(SDEDSymbols.second, Layout);
 
-    if (Section.isCode()) {
-      // The only text section is the code section and the relevant ESD Records
-      // are already created. All we need to do is populate the SectionMap.
-      uint32_t RootSDEsdId = RootSD.EsdId;
-
-      GOFFSection GoffSec = GOFFSection(EntryEDEsdId, CodeLDEsdId, RootSDEsdId);
-      SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.isPPA2Offset()) {
-      StringRef EDSectionName = "C_@@QPPA2";
-      StringRef PRSectionName = ".&ppa2";
-      GOFFSymbol SD = RootSD;
-      GOFFSymbol ED = createEDSymbol(
-          EDSectionName, SD.EsdId, 0, GOFF::ESD_EXE_DATA,
-          GOFF::ESD_BSC_Unspecified, GOFF::ESD_NS_Parts, GOFF::ESD_BA_Merge,
-          /*ReadOnly*/ true, GOFF::ESD_TS_ByteOriented, GOFF::ESD_LB_Initial);
-      GOFFSymbol PR = createPRSymbol(
-          PRSectionName, ED.EsdId, GOFF::ESD_NS_Parts,
-          GOFF::ESD_EXE_Unspecified, GOFF::ESD_ALIGN_Doubleword,
-          GOFF::ESD_BSC_Section, Layout.getSectionAddressSize(&Section),
-          GOFF::ESD_LB_Initial, GOFF::ESD_LT_OS);
-      writeSymbol(ED, Layout);
-      writeSymbol(PR, Layout);
-
-      GOFFSection GoffSec = GOFFSection(PR.EsdId, PR.EsdId, SD.EsdId);
-      SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.isB_IDRL()) {
-      GOFFSymbol SD = RootSD;
-      GOFFSymbol ED = createEDSymbol(
-          "B_IDRL", SD.EsdId, Layout.getSectionAddressSize(&Section),
-          GOFF::ESD_EXE_Unspecified, GOFF::ESD_BSC_Module,
-          GOFF::ESD_NS_NormalName, GOFF::ESD_BA_Concatenate,
-          /*ReadOnly*/ true, GOFF::ESD_TS_Structured, GOFF::ESD_LB_NoLoad);
-      writeSymbol(ED, Layout);
-
-      GOFFSection GoffSec = GOFFSection(ED.EsdId, 0, 0);
-      SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Section.isStatic()) {
-      GOFFSection GoffSec = GOFFSection(ADAPREsdId, ADAPREsdId, RootSD.EsdId);
-      SectionMap.insert(std::make_pair(&Section, GoffSec));
-    } else if (Kind.isBSS() || Kind.isData() || Kind.isThreadData()) {
-      // We handle this with the symbol definition, so there is no need to do
-      // anything here.
-    } else {
-      llvm_unreachable("Unhandled section kind");
-    }
+  if (GSection.isCode()) {
+    GOFFSymbol LD = createLDSymbol(RootSD.Name, SDEDSymbols.second.EsdId);
+    LD.BindingScope = GOFF::ESD_BSC_Section;
+    GOFFSection GoffSec = GOFFSection(LD.EsdId, SDEDSymbols.second.EsdId, SDEDSymbols.first.EsdId);
+    writeSymbol(LD, Layout);
+  } else if (!GSection.isTextOwnedByED()) {
+    MCSymbolGOFF *GSym = nullptr;
+    // TODO: Should be GSection.getTextOwnerName()
+    GOFFSymbol PR = createPRSymbol(GSection.getName(), SDEDSymbols.second.EsdId,
+                                   GOFF::ESD_NS_Parts,
+                                   GOFF::ESD_EXE_DATA,
+                                   GOFFSymbol::setGOFFAlignment(GSection.getAlign()),
+                                   GOFF::ESD_BSC_Section,
+                                   Layout.getSectionAddressSize(&GSection),
+                                   GSection.getLoadBehavior(),
+                                   GSym->isOSLinkage() ? GOFF::ESD_LT_OS : GOFF::ESD_LT_XPLink);
+    writeSymbol(PR, Layout);
+    GOFFSection GoffSec = GOFFSection(PR.EsdId, SDEDSymbols.second.EsdId, SDEDSymbols.first.EsdId);
+    SectionMap.insert(std::make_pair(&GSection, GoffSec));
+  } else {
+    GOFFSection GoffSec = GOFFSection(SDEDSymbols.second.EsdId, 0, SDEDSymbols.first.EsdId);
+    SectionMap.insert(std::make_pair(&GSection, GoffSec));
   }
 }
 
@@ -1058,8 +1056,15 @@ uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
   writeHeader();
   writeSymbol(RootSD, Layout);
 
+  /*
   writeADAandCodeSectionSymbols(Asm, Layout);
   writeSectionSymbols(Asm, Layout);
+  */
+  for (MCSection &S : Asm) {
+    auto &GSection = cast<MCSectionGOFF>(S);
+    if (!(GSection.isCode() || GSection.isStatic()))
+      writeSectionSymbols(GSection, Asm, Layout);
+  }
 
   // Process all MCSymbols and generate the ESD Record(s) for them.
   // Symbols that are aliases of other symbols need to be processed

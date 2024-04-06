@@ -655,13 +655,22 @@ public:
 
   MCSectionGOFF *getGOFFLSDASection(StringRef Section, SectionKind Kind);
 
+  MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
+                                GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                                GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
+                                GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                                GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
+                                bool isRooted = false);
+
   MCSectionGOFF *
   getGOFFSection(StringRef Section, SectionKind Kind,
                  MCSection *Parent = nullptr,
                  const MCExpr *SubsectionId = nullptr,
                  GOFF::GOFFSectionType SectionType = GOFF::Other,
                  GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented,
+                 GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
                  GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
+                 GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
                  bool isRooted = false);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,

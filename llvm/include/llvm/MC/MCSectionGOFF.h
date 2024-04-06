@@ -35,27 +35,37 @@ class MCSectionGOFF final : public MCSection {
   const MCExpr *SubsectionId;
   GOFF::GOFFSectionType Type = GOFF::Other;
   GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented;
+  GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate;
   GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial;
+  GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
 
-  /// IsRooted - true iff the SD symbol used to define the GOFF Class this
+  /// IsRooted - True iff the SD symbol used to define the GOFF Class this
   /// MCSectionGOFF represents is the "root" SD symbol.
   bool IsRooted = false;
+
+  /// TextOwnedByED - True if the ED Symbol in the GOFF Class this MCSectionGOFF
+  /// represents is the owner of TXT record. False if the TXT record is owned by
+  /// a LD or PR Symbol.
+  bool TextOwnedByED = false;
 
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub) {}
-
+  
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub,
-                GOFF::ESDTextStyle TextStyle,
-                GOFF::ESDLoadingBehavior LoadBehavior, bool IsRooted)
+                GOFF::ESDTextStyle TextStyle, GOFF::ESDBindingAlgorithm BindAlgorithm,
+                GOFF::ESDLoadingBehavior LoadBehavior, GOFF::ESDBindingScope BindingScope, bool IsRooted)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub),
-        TextStyle(TextStyle), LoadBehavior(LoadBehavior), IsRooted(IsRooted) {}
+        TextStyle(TextStyle), BindAlgorithm(BindAlgorithm), LoadBehavior(LoadBehavior), BindingScope(BindingScope), IsRooted(IsRooted) {}
 
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub,
                 GOFF::GOFFSectionType Type)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub),
         Type(Type) {
-    if (Type == GOFF::GOFFSectionType::PPA2Offset) {
+    if (Type == GOFF::GOFFSectionType::Code) {
+      IsRooted = true;
+    } else if (Type == GOFF::GOFFSectionType::Static) {
+    } else if (Type == GOFF::GOFFSectionType::PPA2Offset) {
       TextStyle = GOFF::ESD_TS_ByteOriented;
     } else if (Type == GOFF::GOFFSectionType::B_IDRL) {
       TextStyle = GOFF::ESD_TS_Structured;
@@ -80,13 +90,35 @@ public:
   bool isB_IDRL() const { return Type == GOFF::B_IDRL; }
 
   GOFF::ESDTextStyle getTextStyle() const { return TextStyle; }
+  GOFF::ESDBindingAlgorithm getBindingAlgorithm() const { return BindAlgorithm; }
   GOFF::ESDLoadingBehavior getLoadBehavior() const { return LoadBehavior; }
+  GOFF::ESDBindingScope getBindingScope() const { return BindingScope; }
   bool getRooted() const { return IsRooted; }
+  bool isTextOwnedByED() const { return TextOwnedByED; }
 
   MCSection *getParent() const { return Parent; }
   const MCExpr *getSubsectionId() const { return SubsectionId; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
+
+  // Return the name of the External Definition (ED) used to represent this
+  // MCSectionGOFF in the object file.
+  std::string getExternalDefinitionName() const {
+    switch (Type)
+    {
+      case GOFF::GOFFSectionType::Code:
+        return "C_CODE64";
+      case GOFF::GOFFSectionType::Static:
+        return "C_WSA64";
+      case GOFF::GOFFSectionType::PPA2Offset:
+        return "C_QPPA2";
+      case GOFF::GOFFSectionType::B_IDRL:
+        return "B_IDRL";
+      case GOFF::GOFFSectionType::Other:
+        return "C_WSA64";
+    }
+    return "";
+  }
 };
 } // end namespace llvm
 

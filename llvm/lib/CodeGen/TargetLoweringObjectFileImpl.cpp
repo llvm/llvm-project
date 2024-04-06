@@ -2738,20 +2738,29 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFLSDASection(Name, SectionKind::getData());
+  return getContext().getGOFFLSDASection(Name, SectionKind::getData(),
+                                         GOFF::ESD_TS_ByteOriented,
+                                         GOFF::ESD_BA_Merge,
+                                         GOFF::ESD_LB_Deferred,
+                                         GOFF::ESD_BSC_Section,
+                                         true);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
-  if (Kind.isData())
-    return getContext().getGOFFSection(Symbol->getName(),
-                                       SectionKind::getData());
-
-  if (Kind.isBSS())
-    return getContext().getGOFFSection(Symbol->getName(),
-                                       SectionKind::getBSS());
-
+  if (Kind.isData() || Kind.isBSS()) {
+    auto BindingScope = Symbol.isExternal()
+                          ? (Symbol.isExported() ? GOFF::ESD_BSC_ImportExport
+                                                 : GOFF::ESD_BSC_Library)
+                          : GOFF::ESD_BSC_Section;
+    return getContext().getGOFFSection(Symbol->getName(), Kind,
+                                       GOFF::ESD_TS_ByteOriented,
+                                       GOFF::ESD_BA_Merge,
+                                       GOFF::ESD_LB_Deferred,
+                                       BindingScope,
+                                       false);
+  }
   return getContext().getObjectFileInfo()->getTextSection();
 }
 
