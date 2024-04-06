@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_EPOLL_DATA_H__
-#define __LLVM_LIBC_TYPES_EPOLL_DATA_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_EPOLL_DATA_H
+#define LLVM_LIBC_TYPES_STRUCT_EPOLL_DATA_H
 
 union epoll_data {
   void *ptr;
@@ -18,4 +18,4 @@ union epoll_data {
 
 typedef union epoll_data epoll_data_t;
 
-#endif // __LLVM_LIBC_TYPES_EPOLL_DATA_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_EPOLL_DATA_H

@@ -18,8 +18,8 @@
 #include <limits>
 #include <string>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
 #undef HUGE
 
 namespace llvm {
@@ -221,20 +221,33 @@ public:
     // Normalize a fraction with just its LSB set and then multiply.
     // (Set the LSB, not the MSB, in case the scale factor needs to
     //  be subnormal.)
-    auto adjust{exponentBias + binaryPrecision - 1};
+    constexpr auto adjust{exponentBias + binaryPrecision - 1};
+    constexpr auto maxCoeffExpo{maxExponent + binaryPrecision - 1};
     auto expo{adjust + by.ToInt64()};
-    Real twoPow;
     RealFlags flags;
     int rMask{1};
     if (IsZero()) {
       expo = exponentBias; // ignore by, don't overflow
-    } else if (by > INT{maxExponent}) {
-      expo = maxExponent + binaryPrecision - 1;
-    } else if (by < INT{-adjust}) { // underflow
-      expo = 0;
-      rMask = 0;
-      flags.set(RealFlag::Underflow);
+    } else if (expo > maxCoeffExpo) {
+      if (Exponent() < exponentBias) {
+        // Must implement with two multiplications
+        return SCALE(INT{exponentBias})
+            .value.SCALE(by.SubtractSigned(INT{exponentBias}).value, rounding);
+      } else { // overflow
+        expo = maxCoeffExpo;
+      }
+    } else if (expo < 0) {
+      if (Exponent() > exponentBias) {
+        // Must implement with two multiplications
+        return SCALE(INT{-exponentBias})
+            .value.SCALE(by.AddSigned(INT{exponentBias}).value, rounding);
+      } else { // underflow to zero
+        expo = 0;
+        rMask = 0;
+        flags.set(RealFlag::Underflow);
+      }
     }
+    Real twoPow;
     flags |=
         twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKR(rMask));
     ValueWithRealFlags<Real> result{Multiply(twoPow, rounding)};

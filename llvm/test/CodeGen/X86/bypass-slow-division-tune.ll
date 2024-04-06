@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64     < %s | FileCheck -check-prefixes=CHECK,REST,X64 %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=silvermont < %s | FileCheck -check-prefixes=CHECK,REST,SLM %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=skylake    < %s | FileCheck -check-prefixes=CHECK,REST,SKL %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=goldmont   < %s | FileCheck -check-prefixes=CHECK,REST,GMT %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=gracemont  < %s | FileCheck -check-prefixes=CHECK,REST,GMT %s
 ; RUN: llc -profile-summary-huge-working-set-size-threshold=1 -mtriple=x86_64-unknown-linux-gnu -mcpu=skylake    < %s | FileCheck -check-prefixes=HUGEWS %s
 
 ; Verify that div32 is bypassed only for Atoms.
@@ -116,6 +118,13 @@ define i64 @div64(i64 %a, i64 %b) {
 ; SKL-NEXT:    divl %esi
 ; SKL-NEXT:    # kill: def $eax killed $eax def $rax
 ; SKL-NEXT:    retq
+;
+; GMT-LABEL: div64:
+; GMT:       # %bb.0: # %entry
+; GMT-NEXT:    movq %rdi, %rax
+; GMT-NEXT:    cqto
+; GMT-NEXT:    idivq %rsi
+; GMT-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div64:
 ; HUGEWS:       # %bb.0: # %entry
@@ -239,6 +248,13 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; SKL-NEXT:    divl %esi
 ; SKL-NEXT:    # kill: def $eax killed $eax def $rax
 ; SKL-NEXT:    retq
+;
+; GMT-LABEL: div64_hugews:
+; GMT:       # %bb.0:
+; GMT-NEXT:    movq %rdi, %rax
+; GMT-NEXT:    cqto
+; GMT-NEXT:    idivq %rsi
+; GMT-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div64_hugews:
 ; HUGEWS:       # %bb.0:

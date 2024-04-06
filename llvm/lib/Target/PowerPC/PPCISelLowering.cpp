@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCISelLowering.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
 #include "PPCCCState.h"
@@ -135,6 +136,10 @@ cl::opt<bool> DisableAutoPairedVecSt(
 static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
+
+static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
+    "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
+    cl::desc("max depth when checking alias info in GatherAllAliases()"));
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
@@ -1511,6 +1516,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // than the corresponding branch. This information is used in CGP to decide
   // when to convert selects into branches.
   PredictableSelectIsExpensive = Subtarget.isPredictableSelectIsExpensive();
+
+  GatherAllAliasesMaxDepth = PPCGatherAllAliasesMaxDepth;
 }
 
 // *********************************** NOTE ************************************
@@ -1774,9 +1781,11 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
+  case PPCISD::GET_TLS_MOD_AIX: return "PPCISD::GET_TLS_MOD_AIX";
   case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";
+  case PPCISD::TLSLD_AIX:       return "PPCISD::TLSLD_AIX";
   case PPCISD::ADDIS_TLSLD_HA:  return "PPCISD::ADDIS_TLSLD_HA";
   case PPCISD::ADDI_TLSLD_L:    return "PPCISD::ADDI_TLSLD_L";
   case PPCISD::GET_TLSLD_ADDR:  return "PPCISD::GET_TLSLD_ADDR";
@@ -3364,15 +3373,21 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
   const GlobalValue *GV = GA->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   bool Is64Bit = Subtarget.isPPC64();
-  bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
   TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
   if (IsTLSLocalExecModel || Model == TLSModel::InitialExec) {
+    bool HasAIXSmallLocalExecTLS = Subtarget.hasAIXSmallLocalExecTLS();
+    bool HasAIXSmallTLSGlobalAttr = false;
     SDValue VariableOffsetTGA =
         DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TPREL_FLAG);
     SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
     SDValue TLSReg;
+
+    if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasAttribute("aix-small-tls"))
+        HasAIXSmallTLSGlobalAttr = true;
+
     if (Is64Bit) {
       // For local-exec and initial-exec on AIX (64-bit), the sequence generated
       // involves a load of the variable offset (from the TOC), followed by an
@@ -3382,14 +3397,16 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       //    add reg2, reg1, r13     // r13 contains the thread pointer
       TLSReg = DAG.getRegister(PPC::X13, MVT::i64);
 
-      // With the -maix-small-local-exec-tls option, produce a faster access
-      // sequence for local-exec TLS variables where the offset from the TLS
-      // base is encoded as an immediate operand.
+      // With the -maix-small-local-exec-tls option, or with the "aix-small-tls"
+      // global variable attribute, produce a faster access sequence for
+      // local-exec TLS variables where the offset from the TLS base is encoded
+      // as an immediate operand.
       //
       // We only utilize the faster local-exec access sequence when the TLS
       // variable has a size within the policy limit. We treat types that are
       // not sized or are empty as being over the policy size limit.
-      if (HasAIXSmallLocalExecTLS && IsTLSLocalExecModel) {
+      if ((HasAIXSmallLocalExecTLS || HasAIXSmallTLSGlobalAttr) &&
+          IsTLSLocalExecModel) {
         Type *GVType = GV->getValueType();
         if (GVType->isSized() && !GVType->isEmptyTy() &&
             GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
@@ -3407,21 +3424,45 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
       TLSReg = DAG.getNode(PPCISD::GET_TPOINTER, dl, PtrVT);
 
       // We do not implement the 32-bit version of the faster access sequence
-      // for local-exec that is controlled by -maix-small-local-exec-tls.
-      if (HasAIXSmallLocalExecTLS)
+      // for local-exec that is controlled by the -maix-small-local-exec-tls
+      // option, or the "aix-small-tls" global variable attribute.
+      if (HasAIXSmallLocalExecTLS || HasAIXSmallTLSGlobalAttr)
         report_fatal_error("The small-local-exec TLS access sequence is "
                            "currently only supported on AIX (64-bit mode).");
     }
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TLSReg, VariableOffset);
   }
 
-  // Only Local-Exec, Initial-Exec and General-Dynamic TLS models are currently
-  // supported models. If Local- or Initial-exec are not possible or specified,
-  // all GlobalTLSAddress nodes are lowered using the general-dynamic model.
-  // We need to generate two TOC entries, one for the variable offset, one for
-  // the region handle. The global address for the TOC entry of the region
-  // handle is created with the MO_TLSGDM_FLAG flag and the global address
-  // for the TOC entry of the variable offset is created with MO_TLSGD_FLAG.
+  if (Model == TLSModel::LocalDynamic) {
+    // For local-dynamic on AIX, we need to generate one TOC entry for each
+    // variable offset, and a single module-handle TOC entry for the entire
+    // file.
+
+    SDValue VariableOffsetTGA =
+        DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
+    SDValue VariableOffset = getTOCEntry(DAG, dl, VariableOffsetTGA);
+
+    Module *M = DAG.getMachineFunction().getFunction().getParent();
+    GlobalVariable *TLSGV =
+        dyn_cast_or_null<GlobalVariable>(M->getOrInsertGlobal(
+            StringRef("_$TLSML"), PointerType::getUnqual(*DAG.getContext())));
+    TLSGV->setThreadLocalMode(GlobalVariable::LocalDynamicTLSModel);
+    assert(TLSGV && "Not able to create GV for _$TLSML.");
+    SDValue ModuleHandleTGA =
+        DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLDM_FLAG);
+    SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);
+    SDValue ModuleHandle =
+        DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, ModuleHandleTOC);
+
+    return DAG.getNode(ISD::ADD, dl, PtrVT, ModuleHandle, VariableOffset);
+  }
+
+  // If Local- or Initial-exec or Local-dynamic is not possible or specified,
+  // all GlobalTLSAddress nodes are lowered using the general-dynamic model. We
+  // need to generate two TOC entries, one for the variable offset, one for the
+  // region handle. The global address for the TOC entry of the region handle is
+  // created with the MO_TLSGDM_FLAG flag and the global address for the TOC
+  // entry of the variable offset is created with MO_TLSGD_FLAG.
   SDValue VariableOffsetTGA =
       DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
   SDValue RegionHandleTGA =
@@ -4792,7 +4833,7 @@ static bool callsShareTOCBase(const Function *Caller,
   // If the callee is preemptable, then the static linker will use a plt-stub
   // which saves the toc to the stack, and needs a nop after the call
   // instruction to convert to a toc-restore.
-  if (!TM.shouldAssumeDSOLocal(*Caller->getParent(), CalleeGV))
+  if (!TM.shouldAssumeDSOLocal(CalleeGV))
     return false;
 
   // Functions with PC Relative enabled may clobber the TOC in the same DSO.
@@ -5394,10 +5435,9 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   // Returns true if the callee is local, and false otherwise.
   auto isLocalCallee = [&]() {
     const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
     const GlobalValue *GV = G ? G->getGlobal() : nullptr;
 
-    return DAG.getTarget().shouldAssumeDSOLocal(*Mod, GV) &&
+    return DAG.getTarget().shouldAssumeDSOLocal(GV) &&
            !isa_and_nonnull<GlobalIFunc>(GV);
   };
 
@@ -8494,7 +8534,8 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
   // If there is no LXSIBZX/LXSIHZX, like Power8,
   // prefer direct move if the memory size is 1 or 2 bytes.
   MachineMemOperand *MMO = cast<LoadSDNode>(Origin)->getMemOperand();
-  if (!Subtarget.hasP9Vector() && MMO->getSize() <= 2)
+  if (!Subtarget.hasP9Vector() &&
+      (!MMO->getSize().hasValue() || MMO->getSize().getValue() <= 2))
     return true;
 
   for (SDNode::use_iterator UI = Origin->use_begin(),
@@ -10737,6 +10778,66 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getRegister(PPC::X13, MVT::i64);
     return DAG.getRegister(PPC::R2, MVT::i32);
 
+  case Intrinsic::ppc_rldimi: {
+    assert(Subtarget.isPPC64() && "rldimi is only available in 64-bit!");
+    SDValue Src = Op.getOperand(1);
+    APInt Mask = Op.getConstantOperandAPInt(4);
+    if (Mask.isZero())
+      return Op.getOperand(2);
+    if (Mask.isAllOnes())
+      return DAG.getNode(ISD::ROTL, dl, MVT::i64, Src, Op.getOperand(3));
+    uint64_t SH = Op.getConstantOperandVal(3);
+    unsigned MB = 0, ME = 0;
+    if (!isRunOfOnes64(Mask.getZExtValue(), MB, ME))
+      report_fatal_error("invalid rldimi mask!");
+    // rldimi requires ME=63-SH, otherwise rotation is needed before rldimi.
+    if (ME < 63 - SH) {
+      Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
+                        DAG.getConstant(ME + SH + 1, dl, MVT::i32));
+    } else if (ME > 63 - SH) {
+      Src = DAG.getNode(ISD::ROTL, dl, MVT::i64, Src,
+                        DAG.getConstant(ME + SH - 63, dl, MVT::i32));
+    }
+    return SDValue(
+        DAG.getMachineNode(PPC::RLDIMI, dl, MVT::i64,
+                           {Op.getOperand(2), Src,
+                            DAG.getTargetConstant(63 - ME, dl, MVT::i32),
+                            DAG.getTargetConstant(MB, dl, MVT::i32)}),
+        0);
+  }
+
+  case Intrinsic::ppc_rlwimi: {
+    APInt Mask = Op.getConstantOperandAPInt(4);
+    if (Mask.isZero())
+      return Op.getOperand(2);
+    if (Mask.isAllOnes())
+      return DAG.getNode(ISD::ROTL, dl, MVT::i32, Op.getOperand(1),
+                         Op.getOperand(3));
+    unsigned MB = 0, ME = 0;
+    if (!isRunOfOnes(Mask.getZExtValue(), MB, ME))
+      report_fatal_error("invalid rlwimi mask!");
+    return SDValue(DAG.getMachineNode(
+                       PPC::RLWIMI, dl, MVT::i32,
+                       {Op.getOperand(2), Op.getOperand(1), Op.getOperand(3),
+                        DAG.getTargetConstant(MB, dl, MVT::i32),
+                        DAG.getTargetConstant(ME, dl, MVT::i32)}),
+                   0);
+  }
+
+  case Intrinsic::ppc_rlwnm: {
+    if (Op.getConstantOperandVal(3) == 0)
+      return DAG.getConstant(0, dl, MVT::i32);
+    unsigned MB = 0, ME = 0;
+    if (!isRunOfOnes(Op.getConstantOperandVal(3), MB, ME))
+      report_fatal_error("invalid rlwnm mask!");
+    return SDValue(
+        DAG.getMachineNode(PPC::RLWNM, dl, MVT::i32,
+                           {Op.getOperand(1), Op.getOperand(2),
+                            DAG.getTargetConstant(MB, dl, MVT::i32),
+                            DAG.getTargetConstant(ME, dl, MVT::i32)}),
+        0);
+  }
+
   case Intrinsic::ppc_mma_disassemble_acc: {
     if (Subtarget.isISAFuture()) {
       EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
@@ -12661,6 +12762,44 @@ PPCTargetLowering::emitProbedAlloca(MachineInstr &MI,
   return TailMBB;
 }
 
+static bool IsSelectCC(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_CC_I4:
+  case PPC::SELECT_CC_I8:
+  case PPC::SELECT_CC_F4:
+  case PPC::SELECT_CC_F8:
+  case PPC::SELECT_CC_F16:
+  case PPC::SELECT_CC_VRRC:
+  case PPC::SELECT_CC_VSFRC:
+  case PPC::SELECT_CC_VSSRC:
+  case PPC::SELECT_CC_VSRC:
+  case PPC::SELECT_CC_SPE4:
+  case PPC::SELECT_CC_SPE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool IsSelect(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_I4:
+  case PPC::SELECT_I8:
+  case PPC::SELECT_F4:
+  case PPC::SELECT_F8:
+  case PPC::SELECT_F16:
+  case PPC::SELECT_SPE:
+  case PPC::SELECT_SPE4:
+  case PPC::SELECT_VRRC:
+  case PPC::SELECT_VSFRC:
+  case PPC::SELECT_VSSRC:
+  case PPC::SELECT_VSRC:
+    return true;
+  default:
+    return false;
+  }
+}
+
 MachineBasicBlock *
 PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -12698,9 +12837,10 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &MRI = F->getRegInfo();
 
-  if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
-      MI.getOpcode() == PPC::SELECT_CC_I8 || MI.getOpcode() == PPC::SELECT_I4 ||
-      MI.getOpcode() == PPC::SELECT_I8) {
+  if (Subtarget.hasISEL() &&
+      (MI.getOpcode() == PPC::SELECT_CC_I4 ||
+       MI.getOpcode() == PPC::SELECT_CC_I8 ||
+       MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8)) {
     SmallVector<MachineOperand, 2> Cond;
     if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
         MI.getOpcode() == PPC::SELECT_CC_I8)
@@ -12712,24 +12852,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     TII->insertSelect(*BB, MI, dl, MI.getOperand(0).getReg(), Cond,
                       MI.getOperand(2).getReg(), MI.getOperand(3).getReg());
-  } else if (MI.getOpcode() == PPC::SELECT_CC_F4 ||
-             MI.getOpcode() == PPC::SELECT_CC_F8 ||
-             MI.getOpcode() == PPC::SELECT_CC_F16 ||
-             MI.getOpcode() == PPC::SELECT_CC_VRRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE ||
-             MI.getOpcode() == PPC::SELECT_F4 ||
-             MI.getOpcode() == PPC::SELECT_F8 ||
-             MI.getOpcode() == PPC::SELECT_F16 ||
-             MI.getOpcode() == PPC::SELECT_SPE ||
-             MI.getOpcode() == PPC::SELECT_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_VRRC ||
-             MI.getOpcode() == PPC::SELECT_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_VSRC) {
+  } else if (IsSelectCC(MI) || IsSelect(MI)) {
     // The incoming instruction knows the destination vreg to set, the
     // condition code register to branch on, the true/false values to
     // select between, and a branch opcode to use.
@@ -12738,7 +12861,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     //  ...
     //   TrueVal = ...
     //   cmpTY ccX, r1, r2
-    //   bCC copy1MBB
+    //   bCC sinkMBB
     //   fallthrough --> copy0MBB
     MachineBasicBlock *thisMBB = BB;
     MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
@@ -12746,6 +12869,12 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    // See https://reviews.llvm.org/D156113.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    copy0MBB->setCallFrameSize(CallFrameSize);
+    sinkMBB->setCallFrameSize(CallFrameSize);
 
     // Transfer the remainder of BB and its successor edges to sinkMBB.
     sinkMBB->splice(sinkMBB->begin(), BB,
@@ -12756,15 +12885,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB->addSuccessor(copy0MBB);
     BB->addSuccessor(sinkMBB);
 
-    if (MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8 ||
-        MI.getOpcode() == PPC::SELECT_F4 || MI.getOpcode() == PPC::SELECT_F8 ||
-        MI.getOpcode() == PPC::SELECT_F16 ||
-        MI.getOpcode() == PPC::SELECT_SPE4 ||
-        MI.getOpcode() == PPC::SELECT_SPE ||
-        MI.getOpcode() == PPC::SELECT_VRRC ||
-        MI.getOpcode() == PPC::SELECT_VSFRC ||
-        MI.getOpcode() == PPC::SELECT_VSSRC ||
-        MI.getOpcode() == PPC::SELECT_VSRC) {
+    if (IsSelect(MI)) {
       BuildMI(BB, dl, TII->get(PPC::BC))
           .addReg(MI.getOperand(1).getReg())
           .addMBB(sinkMBB);
@@ -14942,6 +15063,7 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
     SDValue Ld = DAG.getMemIntrinsicNode(PPCISD::LXSIZX, dl,
                                          DAG.getVTList(MVT::f64, MVT::Other),
                                          Ops, MVT::i8, LDN->getMemOperand());
+    DAG.makeEquivalentMemoryOrdering(LDN, Ld);
 
     // For signed conversion, we need to sign-extend the value in the VSR
     if (Signed) {
@@ -15033,7 +15155,7 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
     // If the MMO suggests this isn't a load of a full vector, leave
     // things alone.  For a built-in, we have to make the change for
     // correctness, so if there is a size problem that will be a bug.
-    if (MMO->getSize() < 16)
+    if (!MMO->getSize().hasValue() || MMO->getSize().getValue() < 16)
       return SDValue();
     break;
   }
@@ -15101,7 +15223,7 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
     // If the MMO suggests this isn't a store of a full vector, leave
     // things alone.  For a built-in, we have to make the change for
     // correctness, so if there is a size problem that will be a bug.
-    if (MMO->getSize() < 16)
+    if (!MMO->getSize().hasValue() || MMO->getSize().getValue() < 16)
       return SDValue();
     break;
   }
@@ -17963,7 +18085,7 @@ bool PPCTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
       return false;
 
   // If the function is local then we have a good chance at tail-calling it
-  return getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(), Callee);
+  return getTargetMachine().shouldAssumeDSOLocal(Callee);
 }
 
 bool PPCTargetLowering::

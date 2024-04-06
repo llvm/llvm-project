@@ -56,6 +56,12 @@ llvm.func @known_block_sizes()
   llvm.return
 }
 
+llvm.func @kernel_func_no_uniform_work_groups() attributes {rocdl.kernel, rocdl.uniform_work_group_size = false} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_no_uniform_work_groups()
+  // CHECK: #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS:[0-9]+]]
+  llvm.return
+}
+
 llvm.func @rocdl.lane_id() -> i32 {
   // CHECK: [[mbcntlo:%.+]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   // CHECK-NEXT: call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
@@ -82,11 +88,57 @@ llvm.func @rocdl.bpermute(%src : i32) -> i32 {
   llvm.return %0 : i32
 }
 
+llvm.func @rocdl.ballot32(%pred : i1) -> i32 {
+  // CHECK-LABEL: rocdl.ballot32
+  // CHECK: call i32 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i32
+  llvm.return %0 : i32
+}
+
+llvm.func @rocdl.ballot64(%pred : i1) -> i64 {
+  // CHECK-LABEL: rocdl.ballot64
+  // CHECK: call i64 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i64
+  llvm.return %0 : i64
+}
+
+llvm.func @rocdl.waitcnt() {
+  // CHECK-LABEL: rocdl.waitcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
+  rocdl.waitcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier() {
+  // CHECK-LABEL: rocdl.s.barrier
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
+  rocdl.s.barrier
+  llvm.return
+}
+
+
 llvm.func @rocdl.barrier() {
+  // CHECK-LABEL: rocdl.barrier
   // CHECK:      fence syncscope("workgroup") release
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
   // CHECK-NEXT: fence syncscope("workgroup") acquire
   rocdl.barrier
+  llvm.return
+}
+
+llvm.func @rocdl.setprio() {
+  // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
+  rocdl.s.setprio 0
+  // CHECK-NEXT: call void @llvm.amdgcn.s.setprio(i16 1)
+  rocdl.s.setprio 1
+  llvm.return
+}
+
+llvm.func @rocdl.schedbarrier() {
+  // CHECK: call void @llvm.amdgcn.sched.barrier(i32 0)
+  rocdl.sched.barrier 0
+  // CHECK-NEXT: call void @llvm.amdgcn.sched.barrier(i32 1)
+  rocdl.sched.barrier 1
   llvm.return
 }
 
@@ -489,8 +541,9 @@ llvm.func @rocdl_8bit_floats(%source: i32, %stoch: i32) -> i32 {
   llvm.return %source5 : i32
 }
 
-// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" }
+// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
+// CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="false" }
 // CHECK-DAG: ![[$RANGE]] = !{i32 0, i32 64}
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}

@@ -86,6 +86,11 @@ RISCVToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
   return ToolChain::UNW_None;
 }
 
+ToolChain::UnwindTableLevel RISCVToolChain::getDefaultUnwindTableLevel(
+    const llvm::opt::ArgList &Args) const {
+  return UnwindTableLevel::None;
+}
+
 void RISCVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,

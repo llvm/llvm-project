@@ -1,5 +1,5 @@
 ; UNSUPPORTED: system-windows
-; REQUIRES: shell
+; REQUIRES: shell, non-root-user
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: touch %t.resolution.txt
 ; RUN: chmod u-w %t.resolution.txt

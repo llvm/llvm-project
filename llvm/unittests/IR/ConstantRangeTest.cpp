@@ -2479,6 +2479,24 @@ TEST_F(ConstantRangeTest, castOps) {
   ConstantRange IntToPtr = A.castOp(Instruction::IntToPtr, 64);
   EXPECT_EQ(64u, IntToPtr.getBitWidth());
   EXPECT_TRUE(IntToPtr.isFullSet());
+
+  ConstantRange UIToFP = A.castOp(Instruction::UIToFP, 16);
+  EXPECT_EQ(16u, UIToFP.getBitWidth());
+  EXPECT_TRUE(UIToFP.isFullSet());
+
+  ConstantRange UIToFP2 = A.castOp(Instruction::UIToFP, 64);
+  ConstantRange B(APInt(64, 0), APInt(64, 65536));
+  EXPECT_EQ(64u, UIToFP2.getBitWidth());
+  EXPECT_EQ(B, UIToFP2);
+
+  ConstantRange SIToFP = A.castOp(Instruction::SIToFP, 16);
+  EXPECT_EQ(16u, SIToFP.getBitWidth());
+  EXPECT_TRUE(SIToFP.isFullSet());
+
+  ConstantRange SIToFP2 = A.castOp(Instruction::SIToFP, 64);
+  ConstantRange C(APInt(64, -32768), APInt(64, 32768));
+  EXPECT_EQ(64u, SIToFP2.getBitWidth());
+  EXPECT_EQ(C, SIToFP2);
 }
 
 TEST_F(ConstantRangeTest, binaryAnd) {
@@ -2564,6 +2582,12 @@ TEST_F(ConstantRangeTest, binaryXor) {
   EXPECT_EQ(R16_35.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 64)));
   EXPECT_EQ(R16_35.binaryXor(R0_99), ConstantRange(APInt(8, 0), APInt(8, 128)));
   EXPECT_EQ(R0_99.binaryXor(R16_35), ConstantRange(APInt(8, 0), APInt(8, 128)));
+
+  // Treat xor A, B as sub nsw nuw A, B
+  ConstantRange R0_51(APInt(8, 0), APInt(8, 51));
+  ConstantRange R63(APInt(8, 63));
+  EXPECT_EQ(R0_51.binaryXor(R63), ConstantRange(APInt(8, 13), APInt(8, 64)));
+  EXPECT_EQ(R63.binaryXor(R0_51), ConstantRange(APInt(8, 13), APInt(8, 64)));
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {

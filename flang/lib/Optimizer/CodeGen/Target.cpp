@@ -47,7 +47,7 @@ static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
 }
 
 static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
-                     std::string context) {
+                     const std::string &context) {
   if (sem == &llvm::APFloat::IEEEhalf()) {
     TODO(loc, "COMPLEX(KIND=2): for " + context + " type");
   } else if (sem == &llvm::APFloat::BFloat()) {
@@ -737,7 +737,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
-        sem == &llvm::APFloat::IEEEdouble()) {
+        sem == &llvm::APFloat::IEEEdouble() ||
+        sem == &llvm::APFloat::IEEEquad()) {
       // [2 x t]   array of 2 eleTy
       marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
     } else {
@@ -751,7 +752,8 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     CodeGenSpecifics::Marshalling marshal;
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle() ||
-        sem == &llvm::APFloat::IEEEdouble()) {
+        sem == &llvm::APFloat::IEEEdouble() ||
+        sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { t, t }   struct of 2 eleTy
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),

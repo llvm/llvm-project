@@ -10,7 +10,7 @@
 #define VECTOR_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -290,6 +290,20 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     )
     attr-dict
   }];
+}
+
+def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_interleave",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector interleave operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usally a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,

@@ -160,8 +160,9 @@ struct MultiReduceToContract
         iteratorTypes.push_back(vector::IteratorType::reduction);
       }
     }
-    auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
-                                 /*symCount=*/0, exprs, reduceOp.getContext());
+    auto dstMap =
+        AffineMap::get(/*dimCount=*/reductionMask.size(),
+                       /*symbolCount=*/0, exprs, reduceOp.getContext());
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
@@ -712,6 +713,76 @@ struct BubbleDownBitCastForStridedSliceExtract
 // Shuffles vector.bitcast op before vector.insert_strided_slice op.
 //
 // This transforms IR like:
+//   %0 = vector.insert %val, %dst[4] : vector<32xi4> into vector<8x32xi4>
+//   %1 = vector.bitcast %0 : vector<8x32xi4> to vector<8x16xi8>
+// Into:
+//   %0 = vector.bitcast %val : vector<32xi4> to vector<16xi8>
+//   %1 = vector.bitcast %dst : vector<8x32xi4> to vector<8x16xi8>
+//   %2 = vector.insert %0, %1 [4] : vector<16xi8> into vector<8x16xi8>
+//
+struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType castSrcType = bitcastOp.getSourceVectorType();
+    VectorType castDstType = bitcastOp.getResultVectorType();
+
+    // 0-D and scalable vectors are not supported yet.
+    if (castSrcType.getRank() == 0 || castSrcType.isScalable() ||
+        castDstType.isScalable())
+      return failure();
+
+    int64_t castSrcLastDim = castSrcType.getShape().back();
+    int64_t castDstLastDim = castDstType.getShape().back();
+    bool isNumElemsShrink = castSrcLastDim >= castDstLastDim;
+    int64_t ratio;
+    if (isNumElemsShrink) {
+      assert(castSrcLastDim % castDstLastDim == 0);
+      ratio = castSrcLastDim / castDstLastDim;
+    } else {
+      assert(castDstLastDim % castSrcLastDim == 0);
+      ratio = castDstLastDim / castSrcLastDim;
+    }
+
+    auto insertOp = bitcastOp.getSource().getDefiningOp<vector::InsertOp>();
+    if (!insertOp)
+      return failure();
+
+    // Only vector sources are supported for now.
+    auto insertSrcType = dyn_cast<VectorType>(insertOp.getSourceType());
+    if (!insertSrcType)
+      return failure();
+
+    // Bitcast the source.
+    SmallVector<int64_t> srcDims(insertSrcType.getShape());
+    srcDims.back() =
+        isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
+    VectorType newCastSrcType =
+        VectorType::get(srcDims, castDstType.getElementType());
+    auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+
+    SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
+    dstDims.back() =
+        isNumElemsShrink ? dstDims.back() / ratio : dstDims.back() * ratio;
+    VectorType newCastDstType =
+        VectorType::get(dstDims, castDstType.getElementType());
+
+    // Bitcast the destination.
+    auto newCastDstOp = rewriter.create<vector::BitCastOp>(
+        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+
+    // Generate new insert.
+    rewriter.replaceOpWithNewOp<vector::InsertOp>(
+        bitcastOp, newCastSrcOp, newCastDstOp, insertOp.getMixedPosition());
+    return success();
+  }
+};
+
+// Shuffles vector.bitcast op before vector.insert_strided_slice op.
+//
+// This transforms IR like:
 //   %0 = vector.insert_strided_slice %src, %dst {
 //          offsets = [0], strides = [1]} : vector<4xf16> into vector<8xf16>
 //   %1 = vector.bitcast %0: vector<8xf16> to vector<4xf32>
@@ -1184,42 +1255,6 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   return result;
 }
 
-/// Returns a MemRef type that drops inner `dimsToDrop` dimensions from
-/// `srcType`. E.g., if `srcType` is memref<512x16x1x1xf32> and `dimsToDrop` is
-/// two, it returns memref<512x16x16> type.
-static MemRefType getMemRefTypeWithDroppingInnerDims(OpBuilder &builder,
-                                                     MemRefType srcType,
-                                                     size_t dimsToDrop) {
-  MemRefLayoutAttrInterface layout = srcType.getLayout();
-  if (isa<AffineMapAttr>(layout) && layout.isIdentity()) {
-    return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
-                           srcType.getElementType(), nullptr,
-                           srcType.getMemorySpace());
-  }
-  MemRefLayoutAttrInterface updatedLayout;
-  if (auto strided = dyn_cast<StridedLayoutAttr>(layout)) {
-    auto strides = llvm::to_vector(strided.getStrides().drop_back(dimsToDrop));
-    updatedLayout = StridedLayoutAttr::get(strided.getContext(),
-                                           strided.getOffset(), strides);
-    return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
-                           srcType.getElementType(), updatedLayout,
-                           srcType.getMemorySpace());
-  }
-
-  // Non-strided layout case.
-  AffineMap map = srcType.getLayout().getAffineMap();
-  int numSymbols = map.getNumSymbols();
-  for (size_t i = 0; i < dimsToDrop; ++i) {
-    int dim = srcType.getRank() - i - 1;
-    map = map.replace(builder.getAffineDimExpr(dim),
-                      builder.getAffineConstantExpr(0), map.getNumDims() - 1,
-                      numSymbols);
-  }
-  return MemRefType::get(srcType.getShape().drop_back(dimsToDrop),
-                         srcType.getElementType(), updatedLayout,
-                         srcType.getMemorySpace());
-}
-
 /// Drop inner most contiguous unit dimensions from transfer_read operand.
 class DropInnerMostUnitDimsTransferRead
     : public OpRewritePattern<vector::TransferReadOp> {
@@ -1236,7 +1271,7 @@ class DropInnerMostUnitDimsTransferRead
       return failure();
 
     auto srcType = dyn_cast<MemRefType>(readOp.getSource().getType());
-    if (!srcType || !srcType.hasStaticShape())
+    if (!srcType)
       return failure();
 
     if (!readOp.getPermutationMap().isMinorIdentity())
@@ -1260,19 +1295,23 @@ class DropInnerMostUnitDimsTransferRead
                         targetType.getElementType());
 
     auto loc = readOp.getLoc();
-    MemRefType resultMemrefType =
-        getMemRefTypeWithDroppingInnerDims(rewriter, srcType, dimsToDrop);
-    SmallVector<int64_t> offsets(srcType.getRank(), 0);
-    SmallVector<int64_t> strides(srcType.getRank(), 1);
-
+    SmallVector<OpFoldResult> sizes =
+        memref::getMixedSizes(rewriter, loc, readOp.getSource());
+    SmallVector<OpFoldResult> offsets(srcType.getRank(),
+                                      rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(srcType.getRank(),
+                                      rewriter.getIndexAttr(1));
+    auto resultMemrefType =
+        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+            strides));
     ArrayAttr inBoundsAttr =
         readOp.getInBounds()
             ? rewriter.getArrayAttr(
                   readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop))
             : ArrayAttr();
     Value rankedReducedView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType, readOp.getSource(), offsets, srcType.getShape(),
-        strides);
+        loc, resultMemrefType, readOp.getSource(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
     Value result = rewriter.create<vector::TransferReadOp>(
@@ -1348,8 +1387,10 @@ class DropInnerMostUnitDimsTransferWrite
                                       rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(srcType.getRank(),
                                       rewriter.getIndexAttr(1));
-    MemRefType resultMemrefType =
-        getMemRefTypeWithDroppingInnerDims(rewriter, srcType, dimsToDrop);
+    auto resultMemrefType =
+        cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+            srcType.getShape().drop_back(dimsToDrop), srcType, offsets, sizes,
+            strides));
     ArrayAttr inBoundsAttr =
         writeOp.getInBounds()
             ? rewriter.getArrayAttr(
@@ -1399,7 +1440,9 @@ struct CanonicalizeContractMatmulToMMT final
 
     // Set up the parallel/reduction structure in right form.
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, op.getContext());
+    };
     AffineExpr m;
     AffineExpr n;
     AffineExpr k;
@@ -1600,10 +1643,12 @@ struct DropUnitDimFromElementwiseOps final
     if (!resultVectorType)
       return failure();
 
-    // Check the pre-conditions. For `Elementwise` Ops all operands are
-    // guaranteed to have identical shapes and it suffices to only check the
-    // first one.
-    auto sourceVectorType = cast<VectorType>(op->getOperands()[0].getType());
+    // Check the operand pre-conditions. For `Elementwise` ops all operands are
+    // guaranteed to have identical shapes (with some exceptions such as
+    // `arith.select`) and it suffices to only check one of them.
+    auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
+    if (!sourceVectorType)
+      return failure();
     if (sourceVectorType.getRank() < 2)
       return failure();
 
@@ -1777,8 +1822,8 @@ void mlir::vector::populateBubbleVectorBitCastOpPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<BubbleDownVectorBitCastForExtract,
                BubbleDownBitCastForStridedSliceExtract,
-               BubbleUpBitCastForStridedSliceInsert>(patterns.getContext(),
-                                                     benefit);
+               BubbleUpBitCastForInsert, BubbleUpBitCastForStridedSliceInsert>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBreakDownVectorBitCastOpPatterns(

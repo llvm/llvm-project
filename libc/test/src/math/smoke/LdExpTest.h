@@ -15,7 +15,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
 #include <stdint.h>
 
 template <typename T>
@@ -23,7 +22,6 @@ class LdExpTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using NormalFloat = LIBC_NAMESPACE::fputil::NormalFloat<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T inf = FPBits::inf(Sign::POS).get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();
@@ -163,6 +161,7 @@ public:
   TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }
+  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }   \
+  static_assert(true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H

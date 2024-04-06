@@ -63,26 +63,26 @@ define dso_local void @g() local_unnamed_addr #0 !dbg !12 {
 entry:
   %a = alloca %struct.e, align 8, !DIAssignID !29
   call void @llvm.dbg.assign(metadata i1 undef, metadata !16, metadata !DIExpression(), metadata !29, metadata ptr %a, metadata !DIExpression()), !dbg !30
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %a) #5, !dbg !31
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %a) #5, !dbg !31
   %b = getelementptr inbounds %struct.e, ptr %a, i64 0, i32 0, i32 1, !dbg !32
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !33, metadata ptr %b, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !34, metadata ptr undef, metadata !DIExpression()), !dbg !30
   %a2 = getelementptr inbounds %struct.e, ptr %a, i64 0, i32 0, i32 0, !dbg !35
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !33, metadata ptr %a2, metadata !DIExpression()), !dbg !30
-  call void @llvm.memset.p0i8.i64(ptr align 8 %a2, i8 0, i64 8, i1 false), !dbg !35, !DIAssignID !33
+  call void @llvm.memset.p0.i64(ptr align 8 %a2, i8 0, i64 8, i1 false), !dbg !35, !DIAssignID !33
   tail call void (...) @ext() #5, !dbg !36
   store ptr @d, ptr %b, align 8, !dbg !37, !DIAssignID !44
   call void @llvm.dbg.assign(metadata ptr @d, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !44, metadata ptr %b, metadata !DIExpression()), !dbg !30
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %a) #5, !dbg !46
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %a) #5, !dbg !46
   ret void, !dbg !46
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !47 dso_local void @ext(...) local_unnamed_addr #2
 declare dso_local void @f(...) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #4
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #4
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !1000}

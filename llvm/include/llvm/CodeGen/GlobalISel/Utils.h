@@ -308,10 +308,16 @@ std::optional<APFloat> ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
                                               Register Src,
                                               const MachineRegisterInfo &MRI);
 
-/// Tries to constant fold a G_CTLZ operation on \p Src. If \p Src is a vector
-/// then it tries to do an element-wise constant fold.
+/// Tries to constant fold a counting-zero operation (G_CTLZ or G_CTTZ) on \p
+/// Src. If \p Src is a vector then it tries to do an element-wise constant
+/// fold.
 std::optional<SmallVector<unsigned>>
-ConstantFoldCTLZ(Register Src, const MachineRegisterInfo &MRI);
+ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
+                       std::function<unsigned(APInt)> CB);
+
+std::optional<SmallVector<APInt>>
+ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
@@ -343,10 +349,13 @@ Register getFunctionLiveInPhysReg(MachineFunction &MF,
                                   const TargetRegisterClass &RC,
                                   const DebugLoc &DL, LLT RegTy = LLT());
 
-/// Return the least common multiple type of \p OrigTy and \p TargetTy, by changing the
-/// number of vector elements or scalar bitwidth. The intent is a
+/// Return the least common multiple type of \p OrigTy and \p TargetTy, by
+/// changing the number of vector elements or scalar bitwidth. The intent is a
 /// G_MERGE_VALUES, G_BUILD_VECTOR, or G_CONCAT_VECTORS can be constructed from
-/// \p OrigTy elements, and unmerged into \p TargetTy
+/// \p OrigTy elements, and unmerged into \p TargetTy. It is an error to call
+/// this function where one argument is a fixed vector and the other is a
+/// scalable vector, since it is illegal to build a G_{MERGE|UNMERGE}_VALUES
+/// between fixed and scalable vectors.
 LLVM_READNONE
 LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
@@ -365,7 +374,10 @@ LLT getCoverTy(LLT OrigTy, LLT TargetTy);
 /// If these are vectors with different element types, this will try to produce
 /// a vector with a compatible total size, but the element type of \p OrigTy. If
 /// this can't be satisfied, this will produce a scalar smaller than the
-/// original vector elements.
+/// original vector elements. It is an error to call this function where
+/// one argument is a fixed vector and the other is a scalable vector, since it
+/// is illegal to build a G_{MERGE|UNMERGE}_VALUES between fixed and scalable
+/// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_READNONE

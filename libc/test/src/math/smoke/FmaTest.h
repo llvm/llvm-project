@@ -19,7 +19,6 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const T inf = FPBits::inf(Sign::POS).get_val();
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();

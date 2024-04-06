@@ -849,7 +849,8 @@ bool TGLexer::prepSkipRegion(bool MustNeverBeFalse) {
 
   do {
     // Skip all symbols to the line end.
-    prepSkipToLineEnd();
+    while (*CurPtr != '\n')
+      ++CurPtr;
 
     // Find the first non-whitespace symbol in the next line(s).
     if (!prepSkipLineBegin())
@@ -1030,11 +1031,6 @@ bool TGLexer::prepSkipDirectiveEnd() {
   }
 
   return true;
-}
-
-void TGLexer::prepSkipToLineEnd() {
-  while (*CurPtr != '\n' && *CurPtr != '\r' && CurPtr != CurBuf.end())
-    ++CurPtr;
 }
 
 bool TGLexer::prepIsProcessingEnabled() {

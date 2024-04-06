@@ -565,3 +565,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
   }
   return convolution;
 }
+
+bool presburger::isRangeZero(ArrayRef<Fraction> arr) {
+  return llvm::all_of(arr, [&](Fraction f) { return f == 0; });
+}

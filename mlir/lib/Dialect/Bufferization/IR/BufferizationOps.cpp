@@ -234,8 +234,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
-  } else if (options.defaultMemorySpace.has_value()) {
-    memorySpace = *options.defaultMemorySpace;
+  } else if (auto ms = options.defaultMemorySpaceFn(getType())) {
+    memorySpace = *ms;
   } else {
     return getOperation()->emitError("could not infer memory space");
   }
@@ -252,16 +252,6 @@ LogicalResult AllocTensorOp::verify() {
            << getType().getNumDynamicDims() << " dynamic sizes";
   if (getCopy() && getCopy().getType() != getType())
     return emitError("expected that `copy` and return type match");
-
-  // For sparse tensor allocation, we require that none of its
-  // uses escapes the function boundary directly.
-  if (sparse_tensor::getSparseTensorEncoding(getType())) {
-    for (auto &use : getOperation()->getUses())
-      if (isa<func::ReturnOp, func::CallOp, func::CallIndirectOp>(
-              use.getOwner()))
-        return emitError("sparse tensor allocation should not escape function");
-  }
-
   return success();
 }
 
@@ -342,6 +332,9 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
     std::optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
     auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
     if (!allocTensorOp || !maybeConstantIndex)
+      return failure();
+    if (*maybeConstantIndex < 0 ||
+        *maybeConstantIndex >= allocTensorOp.getType().getRank())
       return failure();
     if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
       return failure();

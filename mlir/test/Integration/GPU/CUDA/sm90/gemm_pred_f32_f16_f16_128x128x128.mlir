@@ -206,7 +206,8 @@ func.func @main() {
     {
       %ticks = arith.constant 10000000 : index
       // TMA wait
-      nvgpu.mbarrier.try_wait.parity %barrier[%i], %c0, %ticks : !barrierType
+      %phase_c0 = arith.constant 0 : i1
+      nvgpu.mbarrier.try_wait.parity %barrier[%i], %phase_c0, %ticks : !barrierType
       %lhsSlice = memref.subview %lhsShmem [%i, 0, 0][1, 128, 64][1, 1, 1] : memref<2x128x64xf16, 3> to memref<128x64xf16, strided<[64, 1], offset: ?>, 3>
       %rhsSlice = memref.subview %rhsShmem [%i, 0, 0][1, 64, 128][1, 1, 1] : memref<2x64x128xf16, strided<[8192, 128, 1], offset: 16384>, 3> to memref<64x128xf16, strided<[128, 1], offset: ?>, 3>
       // Descriptor WGMMA

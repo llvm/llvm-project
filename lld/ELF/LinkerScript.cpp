@@ -198,15 +198,7 @@ static bool shouldDefineSym(SymbolAssignment *cmd) {
   if (cmd->name == ".")
     return false;
 
-  if (!cmd->provide)
-    return true;
-
-  // If a symbol was in PROVIDE(), we need to define it only
-  // when it is a referenced undefined symbol.
-  Symbol *b = symtab.find(cmd->name);
-  if (b && !b->isDefined() && !b->isCommon())
-    return true;
-  return false;
+  return !cmd->provide || LinkerScript::shouldAddProvideSym(cmd->name);
 }
 
 // Called by processSymbolAssignments() to assign definitions to
@@ -740,13 +732,12 @@ static OutputDesc *addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
   // should combine these relocation sections into single output.
   // We skip synthetic sections because it can be .rela.dyn/.rela.plt or any
   // other REL[A] sections created by linker itself.
-  if (!isa<SyntheticSection>(isec) &&
-      (isec->type == SHT_REL || isec->type == SHT_RELA)) {
+  if (!isa<SyntheticSection>(isec) && isStaticRelSecType(isec->type)) {
     auto *sec = cast<InputSection>(isec);
     OutputSection *out = sec->getRelocatedSection()->getOutputSection();
 
-    if (out->relocationSection) {
-      out->relocationSection->recordSection(sec);
+    if (auto *relSec = out->relocationSection) {
+      relSec->recordSection(sec);
       return nullptr;
     }
 
@@ -1517,4 +1508,42 @@ void LinkerScript::checkFinalScriptConditions() const {
     if (const MemoryRegion *lmaRegion = sec->lmaRegion)
       checkMemoryRegion(lmaRegion, sec, sec->getLMA());
   }
+}
+
+void LinkerScript::addScriptReferencedSymbolsToSymTable() {
+  // Some symbols (such as __ehdr_start) are defined lazily only when there
+  // are undefined symbols for them, so we add these to trigger that logic.
+  auto reference = [](StringRef name) {
+    Symbol *sym = symtab.addUnusedUndefined(name);
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+  };
+  for (StringRef name : referencedSymbols)
+    reference(name);
+
+  // Keeps track of references from which PROVIDE symbols have been added to the
+  // symbol table.
+  DenseSet<StringRef> added;
+  SmallVector<const SmallVector<StringRef, 0> *, 0> symRefsVec;
+  for (const auto &[name, symRefs] : provideMap)
+    if (LinkerScript::shouldAddProvideSym(name) && added.insert(name).second)
+      symRefsVec.push_back(&symRefs);
+  while (symRefsVec.size()) {
+    for (StringRef name : *symRefsVec.pop_back_val()) {
+      reference(name);
+      // Prevent the symbol from being discarded by --gc-sections.
+      script->referencedSymbols.push_back(name);
+      auto it = script->provideMap.find(name);
+      if (it != script->provideMap.end() &&
+          LinkerScript::shouldAddProvideSym(name) &&
+          added.insert(name).second) {
+        symRefsVec.push_back(&it->second);
+      }
+    }
+  }
+}
+
+bool LinkerScript::shouldAddProvideSym(StringRef symName) {
+  Symbol *sym = symtab.find(symName);
+  return sym && !sym->isDefined() && !sym->isCommon();
 }

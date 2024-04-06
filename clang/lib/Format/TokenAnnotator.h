@@ -16,7 +16,6 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANNOTATOR_H
 
 #include "UnwrappedLineParser.h"
-#include "clang/Format/Format.h"
 
 namespace clang {
 namespace format {
@@ -212,7 +211,7 @@ private:
 class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
-      : Style(Style), Keywords(Keywords) {}
+      : Style(Style), IsCpp(Style.isCpp()), Keywords(Keywords) {}
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
@@ -259,6 +258,8 @@ private:
       const FormatToken &PointerOrReference) const;
 
   const FormatStyle &Style;
+
+  bool IsCpp;
 
   const AdditionalKeywords &Keywords;
 

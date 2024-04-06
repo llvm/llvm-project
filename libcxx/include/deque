@@ -188,10 +188,11 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert> // all public C++ headers provide the assertion handler
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__format/enable_insertable.h>
+#include <__fwd/deque.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -243,9 +244,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class _Tp, class _Allocator = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS deque;
 
 template <class _ValueType, class _DiffType>
 struct __deque_block_size {
@@ -581,7 +579,7 @@ public:
 #endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
-  template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
+  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a) {
     __annotate_new(0);

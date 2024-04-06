@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_PLATFORM_ERROR_TABLE_H
-#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_PLATFORM_ERROR_TABLE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_PLATFORM_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_PLATFORM_ERRORS_H
 
 #if defined(__linux__) || defined(__Fuchsia__)
 #include "tables/linux_platform_errors.h"
@@ -15,4 +15,4 @@
 #include "tables/minimal_platform_errors.h"
 #endif
 
-#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_PLATFORM_ERROR_TABLE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_PLATFORM_ERRORS_H

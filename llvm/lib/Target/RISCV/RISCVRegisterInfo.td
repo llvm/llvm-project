@@ -64,9 +64,14 @@ def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 // GPR sizes change with HwMode.
-// FIXME: Support HwMode in SubRegIndex?
-def sub_gpr_even : SubRegIndex<-1>;
-def sub_gpr_odd  : SubRegIndex<-1, -1>;
+def sub_gpr_even : SubRegIndex<32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32>, SubRegRange<64>]>;
+}
+def sub_gpr_odd  : SubRegIndex<32, 32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+}
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -508,29 +513,29 @@ defvar VM8VTs = [vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
                  vfloat16m8_t, vbfloat16m8_t,
                  vfloat32m8_t, vfloat64m8_t];
 
+// We reverse the order of last 8 registers so that we don't needlessly prevent
+// allocation of higher lmul register groups while still putting v0 last in the
+// allocation order.
+
 def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
-                   (sequence "V%u", 0, 7)), 1>;
+                   (sequence "V%u", 7, 0)), 1>;
 
-def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs),
-                  (add (sequence "V%u", 8, 31),
-                       (sequence "V%u", 1, 7)), 1>;
+def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
-                             (sequence "V%uM2", 0, 7, 2)), 2>;
+                             (sequence "V%uM2", 6, 0, 2)), 2>;
 
-def VRM2NoV0 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
-                                 (sequence "V%uM2", 2, 7, 2)), 2>;
+def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
 
-def VRM4 : VReg<VM4VTs,
-             (add V8M4, V12M4, V16M4, V20M4, V24M4, V28M4, V0M4, V4M4), 4>;
+def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
+                             V24M4, V28M4, V4M4, V0M4), 4>;
 
-def VRM4NoV0 : VReg<VM4VTs,
-             (add V8M4, V12M4, V16M4, V20M4, V24M4, V28M4, V4M4), 4>;
+def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4>;
 
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
-def VRM8NoV0 : VReg<VM8VTs, (add V8M8, V16M8, V24M8), 8>;
+def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
   let Size = 64;
@@ -573,7 +578,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
 def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
@@ -585,9 +590,7 @@ def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
 )>;
 
 // The register class is added for inline assembly for vector mask types.
-def VM : VReg<VMaskVTs,
-           (add (sequence "V%u", 8, 31),
-                (sequence "V%u", 0, 7)), 1>;
+def VM : VReg<VMaskVTs, (add VR), 1>;
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {

@@ -141,6 +141,7 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("sm3");
   (void)__builtin_cpu_supports("sha512");
   (void)__builtin_cpu_supports("sm4");
+  (void)__builtin_cpu_supports("apxf");
   (void)__builtin_cpu_supports("usermsr");
   (void)__builtin_cpu_supports("avx10.1-256");
   (void)__builtin_cpu_supports("avx10.1-512");

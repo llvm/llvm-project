@@ -70,7 +70,7 @@ class BreakpointLocationsTestCase(TestBase):
         bkpt_cond = "1 == 0"
         bkpt.SetCondition(bkpt_cond)
         self.assertEqual(bkpt.GetCondition(), bkpt_cond, "Successfully set condition")
-        self.assertEquals(
+        self.assertEqual(
             bkpt.location[0].GetCondition(),
             bkpt.GetCondition(),
             "Conditions are the same",
@@ -291,6 +291,12 @@ class BreakpointLocationsTestCase(TestBase):
             "breakpoint enable 1.*",
             "All 3 breakpoint locatons enabled correctly",
             startstr="3 breakpoints enabled.",
+        )
+
+        # The 'breakpoint enable 1.' command should not crash.
+        self.expect(
+            "breakpoint enable 1.",
+            startstr="0 breakpoints enabled.",
         )
 
         # The 'breakpoint disable 1.1' command should disable 1 location.

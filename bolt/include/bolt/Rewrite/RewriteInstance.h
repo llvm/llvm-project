@@ -17,7 +17,6 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -47,11 +46,14 @@ public:
   // construction. Constructors can’t return errors, so clients must test \p Err
   // after the object is constructed. Use `create` method instead.
   RewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
-                  const char *const *Argv, StringRef ToolPath, Error &Err);
+                  const char *const *Argv, StringRef ToolPath,
+                  raw_ostream &Stdout, raw_ostream &Stderr, Error &Err);
 
   static Expected<std::unique_ptr<RewriteInstance>>
   create(llvm::object::ELFObjectFileBase *File, const int Argc,
-         const char *const *Argv, StringRef ToolPath);
+         const char *const *Argv, StringRef ToolPath,
+         raw_ostream &Stdout = llvm::outs(),
+         raw_ostream &Stderr = llvm::errs());
   ~RewriteInstance();
 
   /// Assign profile from \p Filename to this instance.

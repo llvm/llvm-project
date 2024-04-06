@@ -373,4 +373,18 @@ template <typename Cat> Log *GetLog(Cat mask) {
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
 
+// Write message to the verbose log, if error is set. In the log
+// message refer to the error with {0}. Error is cleared regardless of
+// whether logging is enabled.
+#define LLDB_LOG_ERRORV(log, error, ...)                                       \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    ::llvm::Error error_private = (error);                                     \
+    if (log_private && log_private->GetVerbose() && error_private) {           \
+      log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
+                               __VA_ARGS__);                                   \
+    } else                                                                     \
+      ::llvm::consumeError(::std::move(error_private));                        \
+  } while (0)
+
 #endif // LLDB_UTILITY_LOG_H

@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=aarch64-eabi -stop-after=finalize-isel -o - | FileCheck --check-prefix=MIR %s
+; RUN: llc %s -mtriple=aarch64 -stop-after=finalize-isel -o - | FileCheck --check-prefix=MIR %s
 
 ; Ensure the scoped AA metadata is still retained after store merging.
 

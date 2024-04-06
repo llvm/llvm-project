@@ -145,7 +145,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
         !Arg.getType()->isAggregateType())
       if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
                                            LastExplicitArgOffset))

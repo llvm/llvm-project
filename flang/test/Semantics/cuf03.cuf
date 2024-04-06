@@ -51,9 +51,23 @@ module m
  contains
   attributes(device) subroutine devsubr(n,da)
     integer, intent(in) :: n
-    real, device :: da(*) ! ok
+    !ERROR: Object 'da' with ATTRIBUTES(DEVICE) may not be assumed size
+    real, device :: da(*)
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
+    real, constant :: rc ! ok
   end subroutine
+
+  subroutine host()
+    !ERROR: Object 'rc' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram
+    real, constant :: rc
+  end subroutine
+
+  attributes(global) subroutine devsubr2()
+    real, shared :: rs
+
+    rs = 1 ! ok
+  end subroutine
+
 end module

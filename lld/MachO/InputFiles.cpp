@@ -1921,14 +1921,14 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     case EncodeKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
-      addSymbol(*symbol, objc::klass + symbol->getName());
-      addSymbol(*symbol, objc::metaclass + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::klass + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::metaclass + symbol->getName());
       break;
     case EncodeKind::ObjectiveCClassEHType:
-      addSymbol(*symbol, objc::ehtype + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::ehtype + symbol->getName());
       break;
     case EncodeKind::ObjectiveCInstanceVariable:
-      addSymbol(*symbol, objc::ivar + symbol->getName());
+      addSymbol(*symbol, objc::symbol_names::ivar + symbol->getName());
       break;
     }
   }

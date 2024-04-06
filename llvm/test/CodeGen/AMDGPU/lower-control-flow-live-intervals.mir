@@ -93,7 +93,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[V_CMP_GT_I32_e64_]], implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[COPY2]], implicit-def $scc
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_OR_B32_]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY [[S_OR_B32_]]
   ; CHECK-NEXT:   $exec_lo = S_ANDN2_B32_term $exec_lo, [[S_OR_B32_]], implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -246,8 +246,8 @@ body:             |
   ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 1, [[S_FF1_I32_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32 = S_ANDN2_B32 [[COPY8]], [[S_LSHL_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   S_CMP_LG_U32 [[S_ANDN2_B32_]], 0, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_ADD_I32_]]
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_ANDN2_B32_]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_ADD_I32_]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_ANDN2_B32_]]
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.6, implicit killed $scc
   ; CHECK-NEXT:   S_BRANCH %bb.7
   ; CHECK-NEXT: {{  $}}

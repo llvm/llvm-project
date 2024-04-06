@@ -33,8 +33,10 @@ export namespace std {
   using std::println;
 
   using std::vprint_nonunicode;
+#    ifndef _LIBCPP_HAS_NO_UNICODE
   using std::vprint_unicode;
-#  endif // _LIBCPP_STD_VER >= 23
+#    endif // _LIBCPP_HAS_NO_UNICODE
+#  endif   // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 } // namespace std

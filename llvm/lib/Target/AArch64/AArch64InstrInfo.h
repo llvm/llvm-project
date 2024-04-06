@@ -155,7 +155,7 @@ public:
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
 
   /// If \p OffsetIsScalable is set to 'true', the offset is scaled by `vscale`.
@@ -380,8 +380,6 @@ public:
   static void decomposeStackOffsetForDwarfOffsets(const StackOffset &Offset,
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
-
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
   // Return true if address of the form BaseReg + Scale * ScaledReg + Offset can
   // be used for a load/store of NumBytes. BaseReg is always present and

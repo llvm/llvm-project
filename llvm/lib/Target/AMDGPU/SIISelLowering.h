@@ -305,6 +305,10 @@ public:
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
+  void CollectTargetIntrinsicOperands(const CallInst &I,
+                                      SmallVectorImpl<SDValue> &Ops,
+                                      SelectionDAG &DAG) const override;
+
   bool getAddrModeArguments(IntrinsicInst * /*I*/,
                             SmallVectorImpl<Value*> &/*Ops*/,
                             Type *&/*AccessTy*/) const override;
@@ -421,6 +425,8 @@ public:
 
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -436,7 +442,6 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
-  bool hasAtomicFaddRtnForTy(SDValue &Op) const;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   bool enableAggressiveFMAFusion(LLT Ty) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -461,7 +466,7 @@ public:
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
-  void AddIMGInit(MachineInstr &MI) const;
+  void AddMemOpInit(MachineInstr &MI) const;
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
 
@@ -518,10 +523,10 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;
-  bool isCanonicalized(Register Reg, MachineFunction &MF,
+  bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
-  bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
+  bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
 
   bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                  const TargetRegisterInfo *TRI,

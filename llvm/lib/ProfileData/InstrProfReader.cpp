@@ -24,6 +24,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -366,6 +367,14 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
+        } else if (ValueKind == IPVK_VTableTarget) {
+          if (InstrProfSymtab::isExternalSymbol(VD.first))
+            Value = 0;
+          else {
+            if (Error E = Symtab->addVTableName(VD.first))
+              return E;
+            Value = IndexedInstrProf::ComputeHash(VD.first);
+          }
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -533,13 +542,29 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
-  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart)))
+  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
+                              StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
     Symtab.mapAddress(FPtr, swap(I->NameRef));
+  }
+
+  if (VTableBegin != nullptr && VTableEnd != nullptr) {
+    for (const RawInstrProf::VTableProfileData<IntPtrT> *I = VTableBegin;
+         I != VTableEnd; ++I) {
+      const IntPtrT VPtr = swap(I->VTablePointer);
+      if (!VPtr)
+        continue;
+      // Map both begin and end address to the name hash, since the instrumented
+      // address could be somewhere in the middle.
+      // VPtr is of type uint32_t or uint64_t so 'VPtr + I->VTableSize' marks
+      // the end of vtable address.
+      Symtab.mapVTableAddress(VPtr, VPtr + swap(I->VTableSize),
+                              swap(I->VTableNameHash));
+    }
   }
   return success();
 }
@@ -582,10 +607,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto NumBitmapBytes = swap(Header.NumBitmapBytes);
   auto PaddingBytesAfterBitmapBytes = swap(Header.PaddingBytesAfterBitmapBytes);
   auto NamesSize = swap(Header.NamesSize);
+  auto VTableNameSize = swap(Header.VNamesSize);
+  auto NumVTables = swap(Header.NumVTables);
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
-  auto PaddingSize = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterNames = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterVTableNames = getNumPaddingBytes(VTableNameSize);
+
+  auto VTableSectionSize =
+      NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
+  auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdSize;
@@ -594,7 +626,12 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
   ptrdiff_t NamesOffset =
       BitmapOffset + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
-  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
+  ptrdiff_t VTableProfDataOffset =
+      NamesOffset + NamesSize + PaddingBytesAfterNames;
+  ptrdiff_t VTableNameOffset = VTableProfDataOffset + VTableSectionSize +
+                               PaddingBytesAfterVTableProfData;
+  ptrdiff_t ValueDataOffset =
+      VTableNameOffset + VTableNameSize + PaddingBytesAfterVTableNames;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
@@ -614,8 +651,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
     DataEnd = Data + NumData;
+    VTableBegin =
+        reinterpret_cast<const RawInstrProf::VTableProfileData<IntPtrT> *>(
+            Start + VTableProfDataOffset);
+    VTableEnd = VTableBegin + NumVTables;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
+    VNamesStart = Start + VTableNameOffset;
+    VNamesEnd = VNamesStart + VTableNameSize;
   }
 
   CountersStart = Start + CountersOffset;
@@ -1207,10 +1250,39 @@ Error IndexedInstrProfReader::readHeader() {
             Header->MemProfOffset);
 
     const unsigned char *Ptr = Start + MemProfOffset;
-    // The value returned from RecordTableGenerator.Emit.
-    const uint64_t RecordTableOffset =
+
+    // Read the first 64-bit word, which may be RecordTableOffset in
+    // memprof::MemProfVersion0 or the MemProf version number in
+    // memprof::MemProfVersion1.
+    const uint64_t FirstWord =
         support::endian::readNext<uint64_t, llvm::endianness::little,
                                   unaligned>(Ptr);
+
+    memprof::IndexedVersion Version = memprof::Version0;
+    if (FirstWord == memprof::Version1) {
+      // Everything is good.  We can proceed to deserialize the rest.
+      Version = memprof::Version1;
+    } else if (FirstWord >= 24) {
+      // This is a heuristic/hack to detect memprof::MemProfVersion0,
+      // which does not have a version field in the header.
+      // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
+      // which should be at least 24 because of the MemProf header size.
+      Version = memprof::Version0;
+    } else {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          formatv("MemProf version {} not supported; "
+                  "requires version between {} and {}, inclusive",
+                  FirstWord, memprof::MinimumSupportedVersion,
+                  memprof::MaximumSupportedVersion));
+    }
+
+    // The value returned from RecordTableGenerator.Emit.
+    const uint64_t RecordTableOffset =
+        Version == memprof::Version0
+            ? FirstWord
+            : support::endian::readNext<uint64_t, llvm::endianness::little,
+                                        unaligned>(Ptr);
     // The offset in the stream right before invoking
     // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
@@ -1231,13 +1303,21 @@ Error IndexedInstrProfReader::readHeader() {
     MemProfRecordTable.reset(MemProfRecordHashTable::Create(
         /*Buckets=*/Start + RecordTableOffset,
         /*Payload=*/Ptr,
-        /*Base=*/Start, memprof::RecordLookupTrait(Schema)));
+        /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version1, Schema)));
 
     // Initialize the frame table reader with the payload and bucket offsets.
     MemProfFrameTable.reset(MemProfFrameHashTable::Create(
         /*Buckets=*/Start + FrameTableOffset,
         /*Payload=*/Start + FramePayloadOffset,
         /*Base=*/Start, memprof::FrameLookupTrait()));
+
+#ifdef EXPENSIVE_CHECKS
+    // Go through all the records and verify that CSId has been correctly
+    // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
+    // would defeat the purpose of OnDiskIterableChainedHashTable.
+    for (const auto &Record : MemProfRecordTable->data())
+      verifyIndexedMemProfRecord(Record);
+#endif
   }
 
   // BinaryIdOffset field in the header is only valid when the format version
@@ -1258,6 +1338,23 @@ Error IndexedInstrProfReader::readHeader() {
     if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
+  }
+
+  if (GET_VERSION(Header->formatVersion()) >= 12) {
+    uint64_t VTableNamesOffset =
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->VTableNamesOffset);
+    const unsigned char *Ptr = Start + VTableNamesOffset;
+
+    CompressedVTableNamesLen =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
+
+    // Writer first writes the length of compressed string, and then the actual
+    // content.
+    VTableNamePtr = (const char *)Ptr;
+    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
@@ -1319,7 +1416,15 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   if (Symtab)
     return *Symtab;
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
+  auto NewSymtab = std::make_unique<InstrProfSymtab>();
+
+  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
+          StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    consumeError(error(ErrCode, Msg));
+  }
+
+  // finalizeSymtab is called inside populateSymtab.
   if (Error E = Index->populateSymtab(*NewSymtab)) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));

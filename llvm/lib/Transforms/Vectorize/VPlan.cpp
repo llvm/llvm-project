@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,6 +47,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
@@ -212,6 +214,14 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
   return It;
 }
 
+VPTransformState::VPTransformState(ElementCount VF, unsigned UF, LoopInfo *LI,
+                                   DominatorTree *DT, IRBuilderBase &Builder,
+                                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                                   LLVMContext &Ctx)
+    : VF(VF), UF(UF), LI(LI), DT(DT), Builder(Builder), ILV(ILV), Plan(Plan),
+      LVer(nullptr),
+      TypeAnalysis(Plan->getCanonicalIV()->getScalarType(), Ctx) {}
+
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   if (Def->isLiveIn())
     return Def->getLiveInIRValue();
@@ -234,7 +244,16 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   return Extract;
 }
 
-Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+Value *VPTransformState::get(VPValue *Def, unsigned Part, bool NeedsScalar) {
+  if (NeedsScalar) {
+    assert((VF.isScalar() || Def->isLiveIn() ||
+            (hasScalarValue(Def, VPIteration(Part, 0)) &&
+             Data.PerPartScalars[Def][Part].size() == 1)) &&
+           "Trying to access a single scalar per part but has multiple scalars "
+           "per part.");
+    return get(Def, VPIteration(Part, 0));
+  }
+
   // If Values have been set for this Def return the one relevant for \p Part.
   if (hasVectorValue(Def, Part))
     return Data.PerPartOutput[Def][Part];
@@ -339,23 +358,14 @@ void VPTransformState::addNewMetadata(Instruction *To,
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
-void VPTransformState::addMetadata(Instruction *To, Instruction *From) {
+void VPTransformState::addMetadata(Value *To, Instruction *From) {
   // No source instruction to transfer metadata from?
   if (!From)
     return;
 
-  propagateMetadata(To, From);
-  addNewMetadata(To, From);
-}
-
-void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  for (Value *V : To) {
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      addMetadata(I, From);
+  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
+    propagateMetadata(ToI, From);
+    addNewMetadata(ToI, From);
   }
 }
 
@@ -552,14 +562,13 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  auto *VPI = dyn_cast<VPInstruction>(R);
-  bool IsCondBranch =
-      isa<VPBranchOnMaskRecipe>(R) ||
-      (VPI && (VPI->getOpcode() == VPInstruction::BranchOnCond ||
-               VPI->getOpcode() == VPInstruction::BranchOnCount));
+  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
+                      match(R, m_BranchOnCond(m_VPValue())) ||
+                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
   (void)IsCondBranch;
 
-  if (VPBB->getNumSuccessors() >= 2 || VPBB->isExiting()) {
+  if (VPBB->getNumSuccessors() >= 2 ||
+      (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
     assert(IsCondBranch && "block with multiple successors not terminated by "
                            "conditional branch recipe");
 
@@ -585,7 +594,7 @@ const VPRecipeBase *VPBasicBlock::getTerminator() const {
 }
 
 bool VPBasicBlock::isExiting() const {
-  return getParent()->getExitingBasicBlock() == this;
+  return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -780,27 +789,21 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *TCMO = Builder.CreateSub(TripCountV,
                                    ConstantInt::get(TripCountV->getType(), 1),
                                    "trip.count.minus.1");
-    auto VF = State.VF;
-    Value *VTCMO =
-        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
-    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-      State.set(BackedgeTakenCount, VTCMO, Part);
+    BackedgeTakenCount->setUnderlyingValue(TCMO);
   }
 
-  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(&VectorTripCount, VectorTripCountV, Part);
+  VectorTripCount.setUnderlyingValue(VectorTripCountV);
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  State.set(&VFxUF,
-            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
-            0);
+  VFxUF.setUnderlyingValue(
+      createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   if (CanonicalIVStartValue) {
-    VPValue *VPV = getVPValueOrAddLiveIn(CanonicalIVStartValue);
+    VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
@@ -820,10 +823,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // Set the reverse mapping from VPValues to Values for code generation.
-  for (auto &Entry : Value2VPValue)
-    State->VPValue2Value[Entry.second] = Entry.first;
-
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -852,11 +851,8 @@ void VPlan::execute(VPTransformState *State) {
         Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        // TODO: Split off the case that all users of a pointer phi are scalar
-        // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
-          continue;
-
+        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+               "recipe generating only scalars should have been replaced");
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }
@@ -875,16 +871,22 @@ void VPlan::execute(VPTransformState *State) {
     // only a single part is generated, which provides the last part from the
     // previous iteration. For non-ordered reductions all UF parts are
     // generated.
-    bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-                            isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
-                            (isa<VPReductionPHIRecipe>(PhiR) &&
-                             cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool SinglePartNeeded =
+        isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+        isa<VPFirstOrderRecurrencePHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool NeedsScalar =
+        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *Phi = State->get(PhiR, Part);
-      Value *Val = State->get(PhiR->getBackedgeValue(),
-                              SinglePartNeeded ? State->UF - 1 : Part);
+      Value *Phi = State->get(PhiR, Part, NeedsScalar);
+      Value *Val =
+          State->get(PhiR->getBackedgeValue(),
+                     SinglePartNeeded ? State->UF - 1 : Part, NeedsScalar);
       cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
@@ -1079,7 +1081,7 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     Old2NewVPValues[OldLiveIn] =
-        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1090,7 +1092,7 @@ VPlan *VPlan::duplicate() {
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
     Old2NewVPValues[TripCount] =
-        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1333,7 +1335,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
-      if (isa<VPHeaderPHIRecipe>(&VPI))
+      if (isa<VPWidenPHIRecipe>(&VPI))
         continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
@@ -1413,9 +1415,9 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     return Expanded;
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
     Expanded = new VPExpandSCEVRecipe(Expr, SE);
     Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());

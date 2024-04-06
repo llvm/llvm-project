@@ -50,7 +50,7 @@ private:
 class ProcessFreeBSDKernelKVM : public ProcessFreeBSDKernel {
 public:
   ProcessFreeBSDKernelKVM(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                          kvm_t *fvc);
+                          kvm_t *fvc, const FileSpec &core_file);
 
   ~ProcessFreeBSDKernelKVM();
 

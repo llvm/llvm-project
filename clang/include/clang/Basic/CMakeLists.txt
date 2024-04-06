@@ -12,6 +12,7 @@ clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
 clang_diag_gen(Driver)
 clang_diag_gen(Frontend)
+clang_diag_gen(InstallAPI)
 clang_diag_gen(Lex)
 clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
@@ -64,6 +65,10 @@ clang_tablegen(Builtins.inc -gen-clang-builtins
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
+
+clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
+  SOURCE BuiltinsRISCV.td
+  TARGET ClangBuiltinsRISCV)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

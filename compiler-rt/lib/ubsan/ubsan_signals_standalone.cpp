@@ -66,6 +66,11 @@ void InitializeDeadlySignals() {
     return;
   is_initialized = true;
   InitializeSignalInterceptors();
+#if SANITIZER_INTERCEPT_SIGNAL_AND_SIGACTION
+  // REAL(sigaction_symname) is nullptr in a static link. Bail out.
+  if (!REAL(sigaction_symname))
+    return;
+#endif
   InstallDeadlySignalHandlers(&UBsanOnDeadlySignal);
 }
 

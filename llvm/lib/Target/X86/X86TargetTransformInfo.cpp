@@ -1480,6 +1480,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // Recognize a basic concat_vector shuffle.
+  if (Kind == TTI::SK_PermuteTwoSrc &&
+      Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
+      ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    return getShuffleCost(TTI::SK_InsertSubvector,
+                          VectorType::getDoubleElementsVectorType(BaseTp), Mask,
+                          CostKind, Mask.size() / 2, BaseTp);
+
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
@@ -1540,6 +1548,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return ExtractCost + 2; // worst case pshufhw + pshufd
       }
     }
+    // If the extract subvector is not optimal, treat it as single op shuffle.
+    Kind = TTI::SK_PermuteSingleSrc;
   }
 
   // Subvector insertions are cheap if the subvectors are aligned.
@@ -2654,9 +2664,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   static const TypeConversionCostTblEntry AVXConversionTbl[] = {
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   6 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,   4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   7 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   4 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1,  4 },
@@ -3088,6 +3098,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   InstructionCost ExtraCost = 0;
   if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) {
     // Some vector comparison predicates cost extra instructions.
+    // TODO: Adjust ExtraCost based on CostKind?
     // TODO: Should we invert this and assume worst case cmp costs
     // and reduce for particular predicates?
     if (MTy.isVector() &&
@@ -3100,21 +3111,25 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                 Pred == CmpInst::BAD_FCMP_PREDICATE))
         Pred = cast<CmpInst>(I)->getPredicate();
 
+      bool CmpWithConstant = false;
+      if (auto *CmpInstr = dyn_cast_or_null<CmpInst>(I))
+        CmpWithConstant = isa<Constant>(CmpInstr->getOperand(1));
+
       switch (Pred) {
       case CmpInst::Predicate::ICMP_NE:
         // xor(cmpeq(x,y),-1)
-        ExtraCost = 1;
+        ExtraCost = CmpWithConstant ? 0 : 1;
         break;
       case CmpInst::Predicate::ICMP_SGE:
       case CmpInst::Predicate::ICMP_SLE:
         // xor(cmpgt(x,y),-1)
-        ExtraCost = 1;
+        ExtraCost = CmpWithConstant ? 0 : 1;
         break;
       case CmpInst::Predicate::ICMP_ULT:
       case CmpInst::Predicate::ICMP_UGT:
         // cmpgt(xor(x,signbit),xor(y,signbit))
         // xor(cmpeq(pmaxu(x,y),x),-1)
-        ExtraCost = 2;
+        ExtraCost = CmpWithConstant ? 1 : 2;
         break;
       case CmpInst::Predicate::ICMP_ULE:
       case CmpInst::Predicate::ICMP_UGE:
@@ -3125,7 +3140,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
           ExtraCost = 1;
         } else {
           // xor(cmpgt(xor(x,signbit),xor(y,signbit)),-1)
-          ExtraCost = 3;
+          ExtraCost = CmpWithConstant ? 2 : 3;
         }
         break;
       case CmpInst::Predicate::FCMP_ONE:
@@ -3998,7 +4013,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
-    { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },
+    { ISD::CTPOP,      MVT::i8,      {  7,  6,  6,  6 } },
     { ISD::ROTL,       MVT::i32,     {  2,  3,  1,  3 } },
     { ISD::ROTL,       MVT::i16,     {  2,  3,  1,  3 } },
     { ISD::ROTL,       MVT::i8,      {  2,  3,  1,  3 } },
@@ -5644,7 +5659,7 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
@@ -5683,8 +5698,10 @@ int X86TTIImpl::getScatterOverhead() const {
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
 // FIXME: Add TargetCostKind support.
-InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
-                                            const Value *Ptr, Align Alignment,
+InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind,
+                                            Type *SrcVTy, const Value *Ptr,
+                                            Align Alignment,
                                             unsigned AddressSpace) {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
@@ -5735,8 +5752,8 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
     // Handle splitting of vector of pointers
     auto *SplitSrcTy =
         FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
-    return SplitFactor * getGSVectorCost(Opcode, SplitSrcTy, Ptr, Alignment,
-                                         AddressSpace);
+    return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
+                                         Alignment, AddressSpace);
   }
 
   // The gather / scatter cost is given by Intel architects. It is a rough
@@ -5756,15 +5773,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
 /// VariableMask - The mask is non-constant at compile time.
 /// Alignment - Alignment for one element.
 /// AddressSpace - pointer[s] address space.
-///
-/// FIXME: Add TargetCostKind support.
-InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
-                                            bool VariableMask, Align Alignment,
+/// TODO: Remove this and use getCommonMaskedMemoryOpCost directly.
+InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode,
+                                            TTI::TargetCostKind CostKind,
+                                            Type *SrcVTy, bool VariableMask,
+                                            Align Alignment,
                                             unsigned AddressSpace) {
   Type *ScalarTy = SrcVTy->getScalarType();
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
   APInt DemandedElts = APInt::getAllOnes(VF);
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   InstructionCost MaskUnpackCost = 0;
   if (VariableMask) {
@@ -5833,10 +5850,11 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
                                     Align(Alignment)))))
-    return getGSScalarCost(Opcode, SrcVTy, VariableMask, Alignment,
+    return getGSScalarCost(Opcode, CostKind, SrcVTy, VariableMask, Alignment,
                            AddressSpace);
 
-  return getGSVectorCost(Opcode, SrcVTy, Ptr, Alignment, AddressSpace);
+  return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
+                         AddressSpace);
 }
 
 bool X86TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
@@ -5931,7 +5949,7 @@ bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
          ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
-bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
   if (!isa<VectorType>(DataTy))
     return false;
 
@@ -5955,8 +5973,8 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasVBMI2());
 }
 
-bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
-  return isLegalMaskedExpandLoad(DataTy);
+bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
+  return isLegalMaskedExpandLoad(DataTy, Alignment);
 }
 
 bool X86TTIImpl::supportsGather() const {
@@ -6080,6 +6098,10 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      // Having more target features is fine for inline ASM.
+      if (CB->isInlineAsm())
+        continue;
+
       SmallVector<Type *, 8> Types;
       for (Value *Arg : CB->args())
         Types.push_back(Arg->getType());

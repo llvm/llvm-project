@@ -199,6 +199,7 @@ static void stubifyImpl(std::unique_ptr<InterfaceFile> IF, Context &Ctx) {
   // TODO: Add inlining and magic merge support.
   if (Ctx.OutStream == nullptr) {
     std::error_code EC;
+    assert(!IF->getPath().empty() && "Unknown output location");
     SmallString<PATH_MAX> OutputLoc = IF->getPath();
     replace_extension(OutputLoc, ".tbd");
     Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);

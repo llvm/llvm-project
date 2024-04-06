@@ -63,8 +63,15 @@ public:
 
   bool match(Operation *op) const { return implementation->match(op); }
 
+  void setFunctionName(StringRef name) { functionName = name.str(); };
+
+  bool hasFunctionName() const { return !functionName.empty(); };
+
+  StringRef getFunctionName() const { return functionName; };
+
 private:
   llvm::IntrusiveRefCntPtr<MatcherInterface> implementation;
+  std::string functionName;
 };
 
 } // namespace mlir::query::matcher

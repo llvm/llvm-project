@@ -65,6 +65,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return std::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateReducedModuleInterface:
+    return std::make_unique<GenerateReducedModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
@@ -179,9 +181,13 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of compilation ( enabled with
-  // --emit-symbol-graph option )
-  if (!FEOpts.SymbolGraphOutputDir.empty()) {
+  // symbol graph as a biproduct of compilation (enabled with
+  // --emit-symbol-graph option)
+  if (FEOpts.EmitSymbolGraph) {
+    if (FEOpts.SymbolGraphOutputDir.empty()) {
+      CI.getDiagnostics().Report(diag::warn_missing_symbol_graph_dir);
+      CI.getFrontendOpts().SymbolGraphOutputDir = ".";
+    }
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
   }

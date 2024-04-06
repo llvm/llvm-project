@@ -1119,8 +1119,8 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultRank(Operation *op) {
   // delegate function that returns true if type is a shaped type with known
   // rank
   auto hasRank = [](const Type type) {
-    if (auto shaped_type = dyn_cast<ShapedType>(type))
-      return shaped_type.hasRank();
+    if (auto shapedType = dyn_cast<ShapedType>(type))
+      return shapedType.hasRank();
 
     return false;
   };
@@ -1288,9 +1288,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 }
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
-  auto isMappableType = [](Type type) {
-    return llvm::isa<VectorType, TensorType>(type);
-  };
+  auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
   auto resultMappableTypes = llvm::to_vector<1>(
       llvm::make_filter_range(op->getResultTypes(), isMappableType));
   auto operandMappableTypes = llvm::to_vector<2>(

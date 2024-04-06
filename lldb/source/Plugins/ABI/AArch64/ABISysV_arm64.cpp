@@ -775,6 +775,8 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
 }
 
 lldb::addr_t ABISysV_arm64::FixAddress(addr_t pc, addr_t mask) {
+  if (mask == LLDB_INVALID_ADDRESS_MASK)
+    return pc;
   lldb::addr_t pac_sign_extension = 0x0080000000000000ULL;
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
 }
@@ -782,12 +784,12 @@ lldb::addr_t ABISysV_arm64::FixAddress(addr_t pc, addr_t mask) {
 // Reads code or data address mask for the current Linux process.
 static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
                                                 llvm::StringRef reg_name) {
-  // 0 means there isn't a mask or it has not been read yet.
-  // We do not return the top byte mask unless thread_sp is valid.
-  // This prevents calls to this function before the thread is setup locking
-  // in the value to just the top byte mask, in cases where pointer
-  // authentication might also be active.
-  uint64_t address_mask = 0;
+  // LLDB_INVALID_ADDRESS_MASK means there isn't a mask or it has not been read
+  // yet. We do not return the top byte mask unless thread_sp is valid. This
+  // prevents calls to this function before the thread is setup locking in the
+  // value to just the top byte mask, in cases where pointer authentication
+  // might also be active.
+  uint64_t address_mask = LLDB_INVALID_ADDRESS_MASK;
   lldb::ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
   if (thread_sp) {
     // Linux configures user-space virtual addresses with top byte ignored.
@@ -814,11 +816,20 @@ static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
 lldb::addr_t ABISysV_arm64::FixCodeAddress(lldb::addr_t pc) {
   if (lldb::ProcessSP process_sp = GetProcessSP()) {
     if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSLinux() &&
-        !process_sp->GetCodeAddressMask())
+        process_sp->GetCodeAddressMask() == LLDB_INVALID_ADDRESS_MASK)
       process_sp->SetCodeAddressMask(
           ReadLinuxProcessAddressMask(process_sp, "code_mask"));
 
-    return FixAddress(pc, process_sp->GetCodeAddressMask());
+    // b55 is the highest bit outside TBI (if it's enabled), use
+    // it to determine if the high bits are set to 0 or 1.
+    const addr_t pac_sign_extension = 0x0080000000000000ULL;
+    addr_t mask = process_sp->GetCodeAddressMask();
+    // Test if the high memory mask has been overriden separately
+    if (pc & pac_sign_extension &&
+        process_sp->GetHighmemCodeAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+      mask = process_sp->GetHighmemCodeAddressMask();
+
+    return FixAddress(pc, mask);
   }
   return pc;
 }
@@ -826,11 +837,20 @@ lldb::addr_t ABISysV_arm64::FixCodeAddress(lldb::addr_t pc) {
 lldb::addr_t ABISysV_arm64::FixDataAddress(lldb::addr_t pc) {
   if (lldb::ProcessSP process_sp = GetProcessSP()) {
     if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSLinux() &&
-        !process_sp->GetDataAddressMask())
+        process_sp->GetDataAddressMask() == LLDB_INVALID_ADDRESS_MASK)
       process_sp->SetDataAddressMask(
           ReadLinuxProcessAddressMask(process_sp, "data_mask"));
 
-    return FixAddress(pc, process_sp->GetDataAddressMask());
+    // b55 is the highest bit outside TBI (if it's enabled), use
+    // it to determine if the high bits are set to 0 or 1.
+    const addr_t pac_sign_extension = 0x0080000000000000ULL;
+    addr_t mask = process_sp->GetDataAddressMask();
+    // Test if the high memory mask has been overriden separately
+    if (pc & pac_sign_extension &&
+        process_sp->GetHighmemDataAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+      mask = process_sp->GetHighmemDataAddressMask();
+
+    return FixAddress(pc, mask);
   }
   return pc;
 }

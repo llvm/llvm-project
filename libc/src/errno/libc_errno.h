@@ -40,7 +40,7 @@ struct Errno {
   operator int();
 };
 
-extern LIBC_NAMESPACE::Errno libc_errno;
+extern Errno libc_errno;
 
 } // namespace LIBC_NAMESPACE
 

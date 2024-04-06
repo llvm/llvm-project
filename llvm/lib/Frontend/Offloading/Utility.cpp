@@ -70,7 +70,7 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
       getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
 
   StringRef Prefix =
-      Triple.isNVPTX() ? "$omp_offloading$entry." : ".omp_offloading.entry.";
+      Triple.isNVPTX() ? "$omp_offloading$entry$" : ".omp_offloading.entry.";
   auto *Entry = new GlobalVariable(
       M, getEntryTy(M),
       /*isConstant=*/true, GlobalValue::WeakAnyLinkage, EntryInitializer,

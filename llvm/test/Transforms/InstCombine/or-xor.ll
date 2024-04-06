@@ -1094,3 +1094,75 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
   %t4 = or i32 %t2, %t3
   ret i32 %t4
 }
+
+define i32 @or_xor_not(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_not(
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %not = xor i32 %y, -1
+  %xor = xor i32 %x, %not
+  %or1 = or i32 %xor, %y
+  ret i32 %or1
+}
+
+define i32 @or_xor_not_uses1(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_not_uses1(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %not = xor i32 %y, -1
+  call void @use(i32 %not)
+  %xor = xor i32 %x, %not
+  %or1 = or i32 %xor, %y
+  ret i32 %or1
+}
+
+define i32 @or_xor_not_uses2(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_not_uses2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[Y]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %not = xor i32 %y, -1
+  %xor = xor i32 %x, %not
+  call void @use(i32 %xor)
+  %or1 = or i32 %xor, %y
+  ret i32 %or1
+}
+
+define i32 @or_xor_and_commuted1(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_and_commuted1(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[X_NOT]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %not = xor i32 %yy, -1
+  %xor = xor i32 %not, %x
+  %or1 = or i32 %yy, %xor
+  ret i32 %or1
+}
+
+define i32 @or_xor_and_commuted2(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_xor_and_commuted2(
+; CHECK-NEXT:    [[YY:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[XX:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[XX_NOT:%.*]] = xor i32 [[XX]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[YY]], [[XX_NOT]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %yy = mul i32 %y, %y ; thwart complexity-based ordering
+  %xx = mul i32 %x, %x ; thwart complexity-based ordering
+  %not = xor i32 %yy, -1
+  %xor = xor i32 %xx, %not
+  %or1 = or i32 %xor, %yy
+  ret i32 %or1
+}

@@ -136,6 +136,7 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
         Function::Create(NewType, F.getLinkage(), F.getName() + ".fixed_sig");
     NewF->setAttributes(F.getAttributes());
     NewF->removeFnAttr("no-prototype");
+    NewF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
     Replacements.emplace_back(&F, NewF);
   }
 

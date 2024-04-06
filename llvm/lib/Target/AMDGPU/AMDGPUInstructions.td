@@ -76,31 +76,9 @@ class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
      let isCodeGenOnly = 1;
 }
 
-def TruePredicate : Predicate<"">;
-
-// FIXME: Tablegen should specially supports this
-def FalsePredicate : Predicate<"false">;
-
-// Add a predicate to the list if does not already exist to deduplicate it.
-class PredConcat<list<Predicate> lst, Predicate pred> {
-  list<Predicate> ret = !listconcat(lst, !listremove([pred], lst));
-}
-
 // Get the union of two Register lists
 class RegListUnion<list<Register> lstA, list<Register> lstB> {
   list<Register> ret = !listconcat(lstA, !listremove(lstB, lstA));
-}
-
-class PredicateControl {
-  Predicate SubtargetPredicate = TruePredicate;
-  Predicate AssemblerPredicate = TruePredicate;
-  Predicate WaveSizePredicate = TruePredicate;
-  list<Predicate> OtherPredicates = [];
-  list<Predicate> Predicates = PredConcat<
-                                 PredConcat<PredConcat<OtherPredicates,
-                                                       SubtargetPredicate>.ret,
-                                            AssemblerPredicate>.ret,
-                                 WaveSizePredicate>.ret;
 }
 
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
@@ -216,7 +194,25 @@ class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   }];
 }
 
-class is_canonicalized<SDPatternOperator op> : PatFrag<
+class is_canonicalized_1<SDPatternOperator op> : PatFrag<
+  (ops node:$src0),
+  (op $src0),
+  [{
+    const SITargetLowering &Lowering =
+              *static_cast<const SITargetLowering *>(getTargetLowering());
+
+    return Lowering.isCanonicalized(*CurDAG, N->getOperand(0));
+   }]> {
+
+  let GISelPredicateCode = [{
+    const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
+      MF.getSubtarget().getTargetLowering());
+
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF);
+  }];
+}
+
+class is_canonicalized_2<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
   [{
@@ -232,8 +228,8 @@ class is_canonicalized<SDPatternOperator op> : PatFrag<
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
       MF.getSubtarget().getTargetLowering());
 
-    return TLI->isCanonicalized(MI.getOperand(1).getReg(), const_cast<MachineFunction&>(MF)) &&
-      TLI->isCanonicalized(MI.getOperand(2).getReg(), const_cast<MachineFunction&>(MF));
+    return TLI->isCanonicalized(MI.getOperand(1).getReg(), MF) &&
+      TLI->isCanonicalized(MI.getOperand(2).getReg(), MF);
   }];
 }
 

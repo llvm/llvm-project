@@ -404,7 +404,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+  if (NullishCoalescing->isNot(TT_NullCoalescingOperator) ||
       Equal->isNot(tok::equal)) {
     return false;
   }
@@ -816,7 +816,7 @@ void FormatTokenLexer::handleTableGenMultilineString() {
   auto CloseOffset = Lex->getBuffer().find("}]", OpenOffset);
   if (CloseOffset == StringRef::npos)
     return;
-  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset + 2);
+  auto Text = Lex->getBuffer().substr(OpenOffset, CloseOffset - OpenOffset + 2);
   MultiLineString->TokenText = Text;
   resetLexer(SourceMgr.getFileOffset(
       Lex->getSourceLocation(Lex->getBufferLocation() - 2 + Text.size())));

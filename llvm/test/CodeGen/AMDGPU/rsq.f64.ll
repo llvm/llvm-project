@@ -3431,9 +3431,8 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_neg_rsq_f64__afn:
@@ -3503,9 +3502,8 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn double -1.0, %sqrt
@@ -4015,9 +4013,8 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; SI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; SI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; SI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
-; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -1.0
+; SI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[2:3]
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SDAG-LABEL: v_neg_rsq_f64__afn_nnan_ninf:
@@ -4087,9 +4084,8 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; VI-GISEL-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; VI-GISEL-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; VI-GISEL-NEXT:    v_mul_f64 v[4:5], v[2:3], -1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[4:5], -1.0
-; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -1.0
+; VI-GISEL-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[2:3]
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sqrt = call contract afn nnan ninf double @llvm.sqrt.f64(double %x)
   %rsq = fdiv contract afn nnan ninf double -1.0, %sqrt

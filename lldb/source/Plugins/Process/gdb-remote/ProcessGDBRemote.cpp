@@ -263,10 +263,9 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_continue_C_tids(), m_continue_s_tids(), m_continue_S_tids(),
       m_max_memory_size(0), m_remote_stub_max_memory_size(0),
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
-      m_waiting_for_attach(false),
-      m_command_sp(), m_breakpoint_pc_offset(0),
+      m_waiting_for_attach(false), m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress(false) {
+      m_erased_flash_ranges(), m_vfork_in_progress_count(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -901,7 +900,7 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
   }
 
   AddressableBits addressable_bits = m_gdb_comm.GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
@@ -1600,6 +1599,26 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // has no stop reason.
     thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      // If a thread is stopped at a breakpoint site, set that as the stop
+      // reason even if it hasn't executed the breakpoint instruction yet.
+      // We will silently step over the breakpoint when we resume execution
+      // and miss the fact that this thread hit the breakpoint.
+      const size_t num_thread_ids = m_thread_ids.size();
+      for (size_t i = 0; i < num_thread_ids; i++) {
+        if (m_thread_ids[i] == thread->GetID() && m_thread_pcs.size() > i) {
+          addr_t pc = m_thread_pcs[i];
+          lldb::BreakpointSiteSP bp_site_sp =
+              thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+          if (bp_site_sp) {
+            if (bp_site_sp->ValidForThisThread(*thread)) {
+              thread->SetStopInfo(
+                  StopInfo::CreateStopReasonWithBreakpointSiteID(
+                      *thread, bp_site_sp->GetID()));
+              return true;
+            }
+          }
+        }
+      }
       thread->SetStopInfo(StopInfoSP());
     }
     return true;
@@ -1722,7 +1741,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     } else {
       bool handled = false;
       bool did_exec = false;
-      if (!reason.empty()) {
+      // debugserver can send reason = "none" which is equivalent
+      // to no reason.
+      if (!reason.empty() && reason != "none") {
         if (reason == "trace") {
           addr_t pc = thread_sp->GetRegisterContext()->GetPC();
           lldb::BreakpointSiteSP bp_site_sp =
@@ -1864,11 +1885,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         lldb::BreakpointSiteSP bp_site_sp =
             thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
 
-        // If the current pc is a breakpoint site then the StopInfo should be
-        // set to Breakpoint even though the remote stub did not set it as such.
-        // This can happen when the thread is involuntarily interrupted (e.g.
-        // due to stops on other threads) just as it is about to execute the
-        // breakpoint instruction.
+        // If a thread is stopped at a breakpoint site, set that as the stop
+        // reason even if it hasn't executed the breakpoint instruction yet.
+        // We will silently step over the breakpoint when we resume execution
+        // and miss the fact that this thread hit the breakpoint.
         if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
               *thread_sp, bp_site_sp->GetID()));
@@ -2317,7 +2337,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       }
     }
 
-    addressable_bits.SetProcessMasks(*this);
+    SetAddressableBitMasks(addressable_bits);
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -5272,8 +5292,10 @@ public:
           (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
               .GetProcessPtr();
       if (process) {
-        StreamSP output_stream_sp(
-            m_interpreter.GetDebugger().GetAsyncOutputStream());
+        StreamSP output_stream_sp = result.GetImmediateOutputStream();
+        if (!output_stream_sp)
+          output_stream_sp =
+              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =
@@ -5333,8 +5355,7 @@ public:
             interpreter, "process plugin packet xfer-size",
             "Maximum size that lldb will try to read/write one one chunk.",
             nullptr) {
-    CommandArgumentData max_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
-    m_arguments.push_back({max_arg});
+    AddSimpleArgumentList(eArgTypeUnsignedInteger);
   }
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
@@ -5376,8 +5397,7 @@ public:
                             "be added to the packet prior to sending and "
                             "stripped from the result.",
                             nullptr) {
-    CommandArgumentData packet_arg{eArgTypeNone, eArgRepeatStar};
-    m_arguments.push_back({packet_arg});
+    AddSimpleArgumentList(eArgTypeNone, eArgRepeatStar);
   }
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
@@ -5615,8 +5635,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log = GetLog(GDBRLog::Process);
 
-  assert(!m_vfork_in_progress);
-  m_vfork_in_progress = true;
+  LLDB_LOG(
+      log,
+      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      child_pid, child_tid);
+  ++m_vfork_in_progress_count;
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5670,8 +5693,8 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 }
 
 void ProcessGDBRemote::DidVForkDone() {
-  assert(m_vfork_in_progress);
-  m_vfork_in_progress = false;
+  assert(m_vfork_in_progress_count > 0);
+  --m_vfork_in_progress_count;
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5681,7 +5704,9 @@ void ProcessGDBRemote::DidVForkDone() {
 void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
-  if (GetFollowForkMode() == eFollowChild)
-    m_vfork_in_progress = false;
+  if (GetFollowForkMode() == eFollowChild) {
+    if (m_vfork_in_progress_count > 0)
+      --m_vfork_in_progress_count;
+  }
   Process::DidExec();
 }

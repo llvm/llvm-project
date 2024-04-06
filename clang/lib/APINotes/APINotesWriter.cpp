@@ -128,6 +128,7 @@ class APINotesWriter::Implementation {
   SelectorID getSelector(ObjCSelectorRef SelectorRef) {
     // Translate the selector reference into a stored selector.
     StoredObjCSelector Selector;
+    Selector.NumArgs = SelectorRef.NumArgs;
     Selector.Identifiers.reserve(SelectorRef.Identifiers.size());
     for (auto piece : SelectorRef.Identifiers)
       Selector.Identifiers.push_back(getIdentifier(piece));
@@ -440,7 +441,7 @@ void emitVersionedInfo(
   std::sort(VI.begin(), VI.end(),
             [](const std::pair<VersionTuple, T> &LHS,
                const std::pair<VersionTuple, T> &RHS) -> bool {
-              assert(LHS.first != RHS.first &&
+              assert((&LHS == &RHS || LHS.first != RHS.first) &&
                      "two entries for the same version");
               return LHS.first < RHS.first;
             });

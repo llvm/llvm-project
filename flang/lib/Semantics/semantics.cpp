@@ -515,7 +515,7 @@ bool SemanticsContext::IsTempName(const std::string &name) {
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {
   return ModFileReader{*this}.Read(SourceName{name, std::strlen(name)},
-      true /*intrinsic*/, nullptr, true /*silence errors*/);
+      true /*intrinsic*/, nullptr, /*silent=*/true);
 }
 
 void SemanticsContext::UseFortranBuiltinsModule() {

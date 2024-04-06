@@ -1290,6 +1290,27 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
+      llvm::convertStrToExceptionBehavior(mdstr->getString());
+  assert(optLLVM && "Expecting FP exception behavior");
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
+}
+
+RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::RoundingMode> optLLVM =
+      llvm::convertStrToRoundingMode(mdstr->getString());
+  assert(optLLVM && "Expecting rounding mode");
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(*optLLVM));
+}
+
 FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
@@ -1966,6 +1987,13 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   // TODO: find a way to support this case.
   if (isMetadataKillLocation(dbgIntr))
     return emitUnsupportedWarning();
+  // Drop debug intrinsics if the associated variable information cannot be
+  // translated due to cyclic debug metadata.
+  // TODO: Support cyclic debug metadata.
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  if (!localVariableAttr)
+    return emitUnsupportedWarning();
   FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
   if (failed(argOperand))
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
@@ -1991,8 +2019,6 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   } else {
     builder.setInsertionPointAfterValue(*argOperand);
   }
-  DILocalVariableAttr localVariableAttr =
-      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());
   Operation *op =

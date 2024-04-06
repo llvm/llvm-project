@@ -122,6 +122,46 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
+  // Use the f128 variants of math functions on x86_64
+  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
+    setLibcallName(RTLIB::REM_F128, "fmodf128");
+    setLibcallName(RTLIB::FMA_F128, "fmaf128");
+    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
+    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
+    setLibcallName(RTLIB::LOG_F128, "logf128");
+    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
+    setLibcallName(RTLIB::LOG2_F128, "log2f128");
+    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
+    setLibcallName(RTLIB::LOG10_F128, "log10f128");
+    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
+    setLibcallName(RTLIB::EXP_F128, "expf128");
+    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
+    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
+    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
+    setLibcallName(RTLIB::SIN_F128, "sinf128");
+    setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+    setLibcallName(RTLIB::POW_F128, "powf128");
+    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
+    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
+    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
+    setLibcallName(RTLIB::RINT_F128, "rintf128");
+    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
+    setLibcallName(RTLIB::ROUND_F128, "roundf128");
+    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
+    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
+    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
+    setLibcallName(RTLIB::FMIN_F128, "fminf128");
+    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
+    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
+    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
+    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
+    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
+    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+  }
+
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
   if (TT.isPPC()) {
     setLibcallName(RTLIB::ADD_F128, "__addkf3");
@@ -267,6 +307,9 @@ RTLIB::Libcall RTLIB::getFPEXT(EVT OpVT, EVT RetVT) {
   } else if (OpVT == MVT::f80) {
     if (RetVT == MVT::f128)
       return FPEXT_F80_F128;
+  } else if (OpVT == MVT::bf16) {
+    if (RetVT == MVT::f32)
+      return FPEXT_BF16_F32;
   }
 
   return UNKNOWN_LIBCALL;
@@ -780,6 +823,12 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
+  // Let extending atomic loads be unsupported by default.
+  for (MVT ValVT : MVT::all_valuetypes())
+    for (MVT MemVT : MVT::all_valuetypes())
+      setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, ValVT, MemVT,
+                             Expand);
+
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
   for (ISD::NodeType NT : enum_seq(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
@@ -923,6 +972,9 @@ void TargetLoweringBase::initActions() {
 
   // Most targets also ignore the @llvm.readcyclecounter intrinsic.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Expand);
+
+  // Most targets also ignore the @llvm.readsteadycounter intrinsic.
+  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Expand);
 
   // ConstantFP nodes default to expand.  Targets can either change this to
   // Legal, in which case all fp constants are legal, or use isFPImmLegal()
@@ -1738,15 +1790,8 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       ExtendKind = ISD::ZERO_EXTEND;
 
-    // FIXME: C calling convention requires the return type to be promoted to
-    // at least 32-bit. But this is not necessary for non-C calling
-    // conventions. The frontend should mark functions whose return values
-    // require promoting with signext or zeroext attributes.
-    if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger()) {
-      MVT MinVT = TLI.getRegisterType(MVT::i32);
-      if (VT.bitsLT(MinVT))
-        VT = MinVT;
-    }
+    if (ExtendKind != ISD::ANY_EXTEND && VT.isInteger())
+      VT = TLI.getTypeForExtReturn(ReturnType->getContext(), VT, ExtendKind);
 
     unsigned NumParts =
         TLI.getNumRegistersForCallingConv(ReturnType->getContext(), CC, VT);
@@ -1972,6 +2017,10 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
   // The default implementation of this implements a conservative RISCy, r+r and
   // r+i addr mode.
 
+  // Scalable offsets not supported
+  if (AM.ScalableOffset)
+    return false;
+
   // Allows a sign-extended 16-bit immediate field.
   if (AM.BaseOffs <= -(1LL << 16) || AM.BaseOffs >= (1LL << 16)-1)
     return false;
@@ -2030,7 +2079,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
         !TM.getTargetTriple().isWindowsGNUEnvironment() &&
-        !TM.getTargetTriple().isOSFreeBSD() &&
+        !(TM.getTargetTriple().isPPC64() &&
+          TM.getTargetTriple().isOSFreeBSD()) &&
         (!TM.getTargetTriple().isOSDarwin() ||
          TM.getRelocationModel() == Reloc::Static))
       GV->setDSOLocal(true);
@@ -2297,7 +2347,7 @@ bool TargetLoweringBase::isLoadBitCastBeneficial(
 }
 
 void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 }
 
 MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(

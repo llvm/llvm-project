@@ -121,7 +121,9 @@ public:
   }
 
   bool layout(MapList l) {
-    auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, ctx);
+    };
     return maps == infer(l);
   }
 
