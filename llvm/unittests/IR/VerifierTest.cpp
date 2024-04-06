@@ -367,5 +367,33 @@ TEST(VerifierTest, CrossFunctionRef) {
   Store->eraseFromParent();
 }
 
+TEST(VerifierTest, AtomicRMW) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getFloatTy(C);
+  Constant *CF = ConstantFP::getZero(FPTy);
+
+  // Invalid scalable type : atomicrmw (<vscale x 2 x float>)
+  Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
+  new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("atomicrmw fadd operand must have floating-point or "
+                       "fixed vector of floating-point type!"))
+      << ErrorOS.str();
+}
+
 } // end anonymous namespace
 } // end namespace llvm
