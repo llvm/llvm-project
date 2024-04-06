@@ -11,7 +11,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 namespace LIBC_NAMESPACE::fputil {
 

@@ -16,7 +16,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \

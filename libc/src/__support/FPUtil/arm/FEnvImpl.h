@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {

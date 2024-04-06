@@ -15,7 +15,7 @@
 #include <math.h>
 #include <errno.h>
 #include <limits.h>
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include "mathlib.h"
 
 #ifndef math_errhandling

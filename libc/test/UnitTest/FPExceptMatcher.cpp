@@ -8,7 +8,7 @@
 
 #include "FPExceptMatcher.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <memory>
 #include <setjmp.h>
 #include <signal.h>

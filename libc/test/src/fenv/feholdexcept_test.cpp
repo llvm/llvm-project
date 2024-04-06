@@ -13,7 +13,7 @@
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
 #if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
