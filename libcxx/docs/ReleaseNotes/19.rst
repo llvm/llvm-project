@@ -44,6 +44,7 @@ Implemented Papers
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
+- P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 
