@@ -113,7 +113,6 @@ libc_support_library(
     hdrs = ["hdr/math_macros.h"],
 )
 
-
 ############################### Support libraries ##############################
 
 libc_support_library(
