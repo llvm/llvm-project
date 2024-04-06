@@ -3422,37 +3422,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::AVGFLOORU: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth + 1);
-    Known2 = Known2.zext(BitWidth + 1);
     Known = KnownBits::avgFloorU(Known, Known2);
-    Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGCEILU: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth + 1);
-    Known2 = Known2.zext(BitWidth + 1);
     Known = KnownBits::avgCeilU(Known, Known2);
-    Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGFLOORS: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.sext(BitWidth + 1);
-    Known2 = Known2.sext(BitWidth + 1);
     Known = KnownBits::avgFloorS(Known, Known2);
-    Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::AVGCEILS: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.sext(BitWidth + 1);
-    Known2 = Known2.sext(BitWidth + 1);
     Known = KnownBits::avgCeilS(Known, Known2);
-    Known = Known.extractBits(BitWidth, 1);
     break;
   }
   case ISD::SELECT:
