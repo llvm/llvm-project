@@ -23,10 +23,7 @@ struct UnimplementedFeature {
   static bool tbaa() { return false; }
   static bool cleanups() { return false; }
 
-  // cir::VectorType is in progress, so cirVectorType() will go away soon.
-  // Start adding feature flags for more advanced vector types and operations
-  // that will take longer to implement.
-  static bool cirVectorType() { return false; }
+  // GNU vectors are done, but other kinds of vectors haven't been implemented.
   static bool scalableVectors() { return false; }
   static bool vectorConstants() { return false; }
 
