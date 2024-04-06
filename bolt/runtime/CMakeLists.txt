@@ -16,12 +16,10 @@ add_library(bolt_rt_instr STATIC
   instr.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-set_target_properties(bolt_rt_instr PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
 add_library(bolt_rt_hugify STATIC
   hugify.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-set_target_properties(bolt_rt_hugify PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
 
 set(BOLT_RT_FLAGS
   -ffreestanding
