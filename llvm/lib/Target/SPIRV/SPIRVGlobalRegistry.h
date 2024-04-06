@@ -443,7 +443,7 @@ public:
                                          const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVType(unsigned BitWidth, MachineInstr &I,
                                   const SPIRVInstrInfo &TII,
-                                  unsigned SPIRVOPcode);
+                                  unsigned SPIRVOPcode, Type *LLVMTy);
   SPIRVType *getOrCreateSPIRVFloatType(unsigned BitWidth, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder);

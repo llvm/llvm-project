@@ -355,14 +355,15 @@ Register SPIRVGlobalRegistry::getOrCreateFloatCompositeOrNull(
   Register Res = DT.find(CA, CurMF);
   bool IsNull = Val->isNullValue() && ZeroAsNull;
   if (!Res.isValid()) {
-    SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
     // SpvScalConst should be created before SpvVecConst to avoid undefined ID
     // error on validation.
     // TODO: can moved below once sorting of types/consts/defs is implemented.
     Register SpvScalConst;
-    if (!IsNull)
+    if (!IsNull) {
+      SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
       SpvScalConst = getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(),
                                         I, SpvBaseType, TII, ZeroAsNull);
+    }
     // TODO: maybe use bitwidth of base type.
     LLT LLTy = LLT::scalar(32);
     Register SpvVecConst =
@@ -401,14 +402,15 @@ Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
   // If no values are attached, the composite is null constant.
   bool IsNull = Val->isNullValue() && ZeroAsNull;
   if (!Res.isValid()) {
-    SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
     // SpvScalConst should be created before SpvVecConst to avoid undefined ID
     // error on validation.
     // TODO: can moved below once sorting of types/consts/defs is implemented.
     Register SpvScalConst;
-    if (!IsNull)
+    if (!IsNull) {
+      SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
       SpvScalConst = getOrCreateConstInt(Val->getUniqueInteger().getSExtValue(),
                                          I, SpvBaseType, TII);
+    }
     // TODO: maybe use bitwidth of base type.
     LLT LLTy = LLT::scalar(32);
     Register SpvVecConst =
@@ -1243,8 +1245,7 @@ SPIRVType *SPIRVGlobalRegistry::finishCreatingSPIRVType(const Type *LLVMTy,
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
                                                      MachineInstr &I,
                                                      const SPIRVInstrInfo &TII,
-                                                     unsigned SPIRVOPcode) {
-  Type *LLVMTy = IntegerType::get(CurMF->getFunction().getContext(), BitWidth);
+                                                     unsigned SPIRVOPcode, Type *LLVMTy) {
   Register Reg = DT.find(LLVMTy, CurMF);
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -1259,11 +1260,14 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVIntegerType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
-  return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeInt);
+  Type *LLVMTy = IntegerType::get(CurMF->getFunction().getContext(), BitWidth);
+  return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeInt, LLVMTy);
 }
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVFloatType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
-  return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeFloat);
+  LLVMContext &Ctx = CurMF->getFunction().getContext();
+  Type *LLVMTy = Type::getFloatTy(Ctx);
+  return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeFloat, LLVMTy);
 }
 
 SPIRVType *
