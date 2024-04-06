@@ -192,13 +192,9 @@ TYPED_TEST(LlvmLibcUIntClassTest, Masks, Types) {
 
 TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
   if constexpr (!T::SIGNED) {
-    for (size_t i = 0; i <= T::BITS; ++i) {
-      const auto zero_or = [i](T value) {
-        // Prevent UB when i == T::BITS.
-        return i == T::BITS ? 0 : value;
-      };
-      const auto l_one = zero_or(T::all_ones() << i); // 0b111...000
-      const auto r_one = zero_or(T::all_ones() >> i); // 0b000...111
+    for (size_t i = 0; i < T::BITS; ++i) {
+      const auto l_one = T::all_ones() << i; // 0b111...000
+      const auto r_one = T::all_ones() >> i; // 0b000...111
       const int zeros = i;
       const int ones = T::BITS - zeros;
       ASSERT_EQ(cpp::countr_one(r_one), ones);
