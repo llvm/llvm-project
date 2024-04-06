@@ -16,8 +16,8 @@
 #error "Invalid include"
 #endif
 
-#include <arm_acle.h>
 #include "hdr/fenv_macros.h"
+#include <arm_acle.h>
 #include <stdint.h>
 
 #include "src/__support/FPUtil/FPBits.h"

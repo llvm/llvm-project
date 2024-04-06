@@ -6,17 +6,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#include "hdr/fenv_macros.h"
+#include "mathlib.h"
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
-#include <ctype.h>
-#include <math.h>
-#include <errno.h>
-#include <limits.h>
-#include "hdr/fenv_macros.h"
-#include "mathlib.h"
 
 #ifndef math_errhandling
 # define math_errhandling 0

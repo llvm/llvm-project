@@ -6,15 +6,15 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include <ctype.h>
 #include "hdr/fenv_macros.h"
+#include "mathlib.h"
+#include <ctype.h>
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "mathlib.h"
 
 /* Don't depend on mpfr by default.  */
 #ifndef USE_MPFR
