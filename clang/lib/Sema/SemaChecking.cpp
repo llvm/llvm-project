@@ -5697,6 +5697,7 @@ void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
 // returning an ExprError
 bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all:
   case Builtin::BI__builtin_hlsl_elementwise_any: {
     if (checkArgCount(*this, TheCall, 1))
       return true;
