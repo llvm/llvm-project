@@ -1401,7 +1401,7 @@ namespace dr387 { // dr387: 2.8
   }
 }
 
-// FIXME: dr388 needs codegen test
+// FIXME: dr388 needs libc++abi test
 
 namespace dr389 { // dr389: no
   struct S {
@@ -1567,7 +1567,7 @@ namespace dr391 { // dr391: 2.8 c++11
   const C<int> &c = fc();
 }
 
-// dr392 FIXME write codegen test
+// dr392 is in dr392.cpp
 // dr394: na
 
 namespace dr395 { // dr395: 3.0
