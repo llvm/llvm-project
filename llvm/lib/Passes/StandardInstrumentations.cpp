@@ -807,8 +807,6 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
       (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID)))
     DumpIRFilename = fetchDumpFilename(PassID, IR);
 
-  ++CurrentPassNumber;
-
   // Saving Module for AfterPassInvalidated operations.
   // Note: here we rely on a fact that we do not change modules while
   // traversing the pipeline, so the latest captured module is good
@@ -819,9 +817,14 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   if (!shouldPrintIR(IR))
     return;
 
+  ++CurrentPassNumber;
+
   if (shouldPrintPassNumbers())
     dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
            << " on " << getIRName(IR) << "\n";
+
+  if (shouldPrintAfterPass(PassID))
+    pushPassRunDescriptor(PassID, IR, DumpIRFilename);
 
   if (!shouldPrintBeforePass(PassID))
     return;
