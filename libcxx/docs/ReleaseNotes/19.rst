@@ -92,6 +92,11 @@ Deprecations and Removals
   libatomic is not available. If you are one such user, please reach out to the libc++ developers so we can collaborate
   on a path for supporting atomics properly on freestanding platforms.
 
+- LWG3430 disallow implicit conversion of the source arguments to ``std::filesystem::path`` when
+  constructing ``std::basic_*fstream``. This effectively removes the possibility to directly construct
+  a ``std::basic_*fstream`` from a ``std::basic_string_view``, a input-iterator or a C-string, instead
+  you can construct a temporary ``std::basic_string``. This change has been applied to C++17 and later.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------
