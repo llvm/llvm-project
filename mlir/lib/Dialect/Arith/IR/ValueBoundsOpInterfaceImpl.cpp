@@ -24,8 +24,15 @@ struct AddIOpInterface
     auto addIOp = cast<AddIOp>(op);
     assert(value == addIOp.getResult() && "invalid value");
 
-    cstr.bound(value) ==
-        cstr.getExpr(addIOp.getLhs()) + cstr.getExpr(addIOp.getRhs());
+    // Note: `getExpr` has a side effect: it may add a new column to the
+    // constraint system. The evaluation order of addition operands is
+    // unspecified in C++. To make sure that all compilers produce the exact
+    // same results (that can be FileCheck'd), it is important that `getExpr`
+    // is called first and assigned to temporary variables, and the addition
+    // is performed afterwards.
+    AffineExpr lhs = cstr.getExpr(addIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(addIOp.getRhs());
+    cstr.bound(value) == lhs + rhs;
   }
 };
 
@@ -49,8 +56,9 @@ struct SubIOpInterface
     auto subIOp = cast<SubIOp>(op);
     assert(value == subIOp.getResult() && "invalid value");
 
-    cstr.bound(value) ==
-        cstr.getExpr(subIOp.getLhs()) - cstr.getExpr(subIOp.getRhs());
+    AffineExpr lhs = cstr.getExpr(subIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(subIOp.getRhs());
+    cstr.bound(value) == lhs - rhs;
   }
 };
 
@@ -61,8 +69,9 @@ struct MulIOpInterface
     auto mulIOp = cast<MulIOp>(op);
     assert(value == mulIOp.getResult() && "invalid value");
 
-    cstr.bound(value) ==
-        cstr.getExpr(mulIOp.getLhs()) * cstr.getExpr(mulIOp.getRhs());
+    AffineExpr lhs = cstr.getExpr(mulIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(mulIOp.getRhs());
+    cstr.bound(value) == lhs *rhs;
   }
 };
 
