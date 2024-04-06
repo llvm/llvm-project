@@ -3,5 +3,5 @@ add_libc_fuzzer(
   SRCS
     uint_fuzz.cpp
   DEPENDS
-    libc.src.__support.uint
+    libc.src.__support.big_int
 )

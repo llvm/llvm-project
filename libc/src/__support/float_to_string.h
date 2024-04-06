@@ -15,7 +15,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
