@@ -108,12 +108,6 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     bugreporter::trackExpressionValue(N, ex, *R);
   }
   C.emitReport(std::move(R));
-  // llvm::errs() << "Undef checker reports to loc: \n";
-  // location.dump();
-  // llvm::errs() << "\nand Val:\n";
-  // val.dump();
-  // //C.getState()->dump();
-  // llvm::errs() << "\n";
 }
 
 void ento::registerUndefinedAssignmentChecker(CheckerManager &mgr) {

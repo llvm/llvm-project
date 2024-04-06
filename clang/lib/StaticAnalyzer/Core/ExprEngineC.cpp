@@ -11,9 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -35,6 +41,19 @@ static SVal conjureOffsetSymbolOnLocation(
     return svalBuilder.conjureSymbolVal(Expression, LCtx, Ty, Count);
   }
   return Symbol;
+}
+
+// Update the SVal bound to the Cast expression with the SVal
+// bound to the casted expression
+static ProgramStateRef updateStateAfterSimpleCast(StmtNodeBuilder& Bldr,
+                                       ExplodedNode *Pred,
+                                       const CastExpr *CastE,
+                                       const Expr *CastedE) {
+  ProgramStateRef state = Pred->getState();
+  const LocationContext *LCtx = Pred->getLocationContext();
+  SVal V = state->getSVal(CastedE, LCtx);
+  return state->BindExpr(CastE, LCtx, V);
+  //Bldr.generateNode(CastE, Pred, state);
 }
 
 void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
@@ -332,10 +351,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_FunctionToPointerDecay:
       case CK_BuiltinFnToFnPtr: {
         // Copy the SVal of Ex to CastE.
-        ProgramStateRef state = Pred->getState();
-        const LocationContext *LCtx = Pred->getLocationContext();
-        SVal V = state->getSVal(Ex, LCtx);
-        state = state->BindExpr(CastE, LCtx, V);
+        // Point of interest
+        state = updateStateAfterSimpleCast(Bldr, Pred, CastE, Ex);
         Bldr.generateNode(CastE, Pred, state);
         continue;
       }
@@ -601,6 +618,37 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
       // Note in the state that the initialization has occurred.
       ExplodedNode *UpdatedN = N;
       SVal InitVal = state->getSVal(InitEx, LC);
+
+      // The call expression to which we have bound something is hidden behind
+      // an implicit cast expression.
+
+      // This is a workaround for those checkers that are evaluating calls
+      // with return value, and are "behind" a cast expression. A good example
+      // for this is std::variant checker.
+      // Let's see the following code as an example:
+      //
+      // int a = std::get<int>(v);
+      //
+      // The AST for the std::get call shall look something like this:
+      //
+      // ImplicitCastExpr <FunctionToPointerDecay>
+      // `-CallExpr
+      //
+      // First the handling of `ImplicitCastExpr <FunctionToPointerDecay>`
+      // happens in the ExprEngine::VisitCast function. After that
+      // std::variant checker evaluates the std::get call and binds
+      // an SVal to the call expression. The problem here is that
+      // the handling of the casting is the responsible to bind the
+      // sub expressions (in our case std::get call expressions) value
+      // to the cast expression.
+      if (auto *AsImplCast = dyn_cast_or_null<CastExpr>(InitEx);
+          AsImplCast && InitVal.isUndef()) {
+        // InitVal = state->getSVal(AsImplCast->getSubExpr(), LC);
+        state = updateStateAfterSimpleCast(B, Pred, AsImplCast,
+                                           AsImplCast->getSubExpr());
+        B.generateNode(InitEx, Pred, state);
+        InitVal = state->getSVal(InitEx, LC);
+      }
 
       assert(DS->isSingleDecl());
       if (getObjectUnderConstruction(state, DS, LC)) {

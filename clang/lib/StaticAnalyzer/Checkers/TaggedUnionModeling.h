@@ -13,7 +13,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include <vector>
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::ento::tagged_union_modeling {
 
@@ -26,7 +26,6 @@ bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
 bool isStdType(const Type *Type, const std::string &TypeName);
 bool isStdVariant(const Type *Type);
-void printSVals(std::vector<SVal> v);
 
 // When invalidating regions, we also have to follow that by invalidating the
 // corresponding custom data in the program state.
@@ -81,28 +80,8 @@ bool handleConstructorAndAssignment(const CallEvent &Call, CheckerContext &C,
 
       State = State->set<TypeMap>(ThisRegion, *OtherSVal);
     }
-  } else {
-    // Value constructor.
-    // Here we create a MemRegion and an SVal for the value held by
-    // std::variant, since std::variant owns the held value.
-    //
-    // If we don't do this here later on UndefinedAssignmentChecker will warn
-    // for garbage value assignment.
-    const auto *Mreg = ArgSVal.getAsRegion();
-    SVal PointedToSVal = C.getState()->getSVal(Mreg);
-
-    auto SymForStdVariantHeldValue = C.getSValBuilder().conjureSymbolVal(
-        "std::variant held value", Call.getArgExpr(0), C.getLocationContext(),
-        C.blockCount());
-    auto *SymRegForStdVariantHeldValue =
-        C.getSValBuilder().getRegionManager().getSymbolicRegion(
-            SymForStdVariantHeldValue.getAsSymbol());
-    auto LocForVariantHeldValue =
-        C.getSValBuilder().makeLoc(SymRegForStdVariantHeldValue);
-    State = State->bindLoc(LocForVariantHeldValue, PointedToSVal,
-                           C.getLocationContext());
-    State = State->set<TypeMap>(ThisRegion, LocForVariantHeldValue);
-  }
+  } else
+    State = State->set<TypeMap>(ThisRegion, ArgSVal);
 
   C.addTransition(State);
   return true;

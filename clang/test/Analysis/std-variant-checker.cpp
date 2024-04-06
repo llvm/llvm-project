@@ -384,3 +384,10 @@ void stdEmplace() {
   (void)a;
   (void)c;
 }
+
+void followHeldValue() {
+  std::variant<int, char> v = 0;
+  int a = std::get<int> (v);
+  int b = 5/a;
+  (void)b;
+}
