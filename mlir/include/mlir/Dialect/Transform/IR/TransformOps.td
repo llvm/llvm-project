@@ -451,7 +451,7 @@ def AsScopeOp : TransformDialectOp<"as_scope", [
     erased. On failure, the scf.scope is erased, leaving payload IR unmodified.
 
     The operation takes as arguments a handle whose payload ops are to be
-    scoped in the order they are listed, and and optional pair of attribute,
+    scoped in the order they are listed, and an optional pair of attribute,
     handle defining an insertion point for the scf.scope. If specified, the
     insertion point handle must hold a single payload op. If omitted, the
     payload ops must form an interval. It is the user's responsibility to make
