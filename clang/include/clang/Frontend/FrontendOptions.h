@@ -642,9 +642,11 @@ public:
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
         IncludeTimestamps(true), UseTemporary(true), CacheCompileJob(false),
         ForIncludeTreeScan(false), DisableCachedCompileJobReplay(false),
-        MayEmitDiagnosticsAfterProcessingSourceFiles(false),
-        WriteOutputAsCASID(false), AllowPCMWithCompilerErrors(false),
-        ModulesShareFileManager(true), TimeTraceGranularity(500) {}
+        MayEmitDiagnosticsAfterProcessingSourceFiles(false), WriteOutputAsCASID(false),
+        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
+        EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
+        EmitSymbolGraphSymbolLabelsForTesting(false),
+        EmitPrettySymbolGraphs(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
