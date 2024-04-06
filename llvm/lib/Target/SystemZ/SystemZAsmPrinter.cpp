@@ -1650,13 +1650,17 @@ bool SystemZAsmPrinter::doFinalization(Module &M) {
     // Set symbol flags for all global objects.
     // Global Variables are objects (data)...
     for (const auto &G : M.globals()) {
-      MCSymbol *Sym = getSymbol(&G);
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+      if (!G.hasInternalLinkage()) {
+        MCSymbol *Sym = getSymbol(&G);
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+      }
     }
     // and Funtions are functions (executable).
     for (const Function &F : M) {
-      MCSymbol *Sym = getSymbol(&F);
-      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      if (!F.hasInternalLinkage()) {
+        MCSymbol *Sym = getSymbol(&F);
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      }
     }
   }
   return AsmPrinter::doFinalization(M);
