@@ -3,7 +3,7 @@ import functools, sys, ctypes, os, errno
 import numpy as np
 from functools import partialmethod
 from mlir import ir
-from mlir.dialects import arith, func, gpu, memref, nvgpu
+from mlir.dialects import arith, func, gpu, memref, nvgpu, scf, nvvm
 from mlir.extras import types as T
 from mlir import runtime as rt
 from tools import nvgpucompiler
@@ -84,7 +84,9 @@ class Mbarriers:
                 self.mbar_group_op, txcount_op, self.id_op, predicate=predicate
             )
         else:
-            nvgpu.mbarrier_arrive(self.mbar_group_op, self.id_op, predicate=predicate)
+            nvgpu.mbarrier_arrive(
+                ir.Type.parse("!nvgpu.mbarrier.token"), self.mbar_group_op, self.id_op
+            )
 
     def try_wait(self, phase: bool = False, ticks: int = 10000000):
         ticks_op = const(ticks)
@@ -164,6 +166,33 @@ class TMA:
             mbarId=mbarrier.id_op,
             predicate=predicate,
         )
+
+
+WARP_GROUP_SIZE = 128  # Number of threads in a warpgroup
+
+
+class Warpgroup:
+    def __init__(self, primaryThread, registerSize):
+        tidx = gpu.thread_id(gpu.Dimension.x)
+        self.primary_thread = primaryThread
+        self.register_size = registerSize
+        self.is_wg_primary = (tidx % WARP_GROUP_SIZE) == 0
+        self.wg_id = tidx / WARP_GROUP_SIZE
+        self.is_me = self.wg_id == (primaryThread // WARP_GROUP_SIZE)
+
+    def __enter__(self):
+        if_op = scf.IfOp(self.is_me)
+        self.ipoint_op = ir.InsertionPoint(if_op.then_block)
+        self.ipoint_op.__enter__()
+        if self.register_size < 64:
+            nvvm.setmaxregister(self.register_size, nvvm.SetMaxRegisterAction.decrease)
+        else:
+            nvvm.setmaxregister(self.register_size, nvvm.SetMaxRegisterAction.increase)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        scf.yield_([])
+        self.ipoint_op.__exit__(exc_type, exc_value, traceback)
+        return True
 
 
 class WGMMAType(Enum):
@@ -408,7 +437,7 @@ class NVDSL:
                 module.operation.verify()
 
                 # Save IR in a file
-                saveIR(module)
+                # saveIR(module)
 
                 # Compile and JIT MLIR module
                 options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"
