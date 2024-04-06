@@ -101,11 +101,11 @@ endif()
 
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
-    uint_test
+    big_int_test
     SUITE
       libc-support-tests
     SRCS
-      uint_test.cpp
+      big_int_test.cpp
     DEPENDS
       libc.src.__support.big_int
       libc.src.__support.CPP.optional

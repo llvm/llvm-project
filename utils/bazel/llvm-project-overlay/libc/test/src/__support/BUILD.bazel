@@ -83,8 +83,8 @@ libc_test(
 )
 
 libc_test(
-    name = "uint_test",
-    srcs = ["uint_test.cpp"],
+    name = "big_int_test",
+    srcs = ["big_int_test.cpp"],
     deps = [
         "//libc:__support_big_int",
         "//libc:__support_cpp_optional",
