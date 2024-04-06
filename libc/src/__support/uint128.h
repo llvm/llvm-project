@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_UINT128_H
 #define LLVM_LIBC_SRC___SUPPORT_UINT128_H
 
-#include "UInt.h"
+#include "big_int.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 #ifdef LIBC_TYPES_HAS_INT128
