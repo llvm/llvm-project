@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_FENV_FEGETEXCEPTFLAG_H
 #define LLVM_LIBC_SRC_FENV_FEGETEXCEPTFLAG_H
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 namespace LIBC_NAMESPACE {
 

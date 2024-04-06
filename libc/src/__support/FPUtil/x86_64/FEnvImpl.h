@@ -16,7 +16,7 @@
 #error "Invalid include"
 #endif
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <stdint.h>
 
 #include "src/__support/macros/sanitizer.h"

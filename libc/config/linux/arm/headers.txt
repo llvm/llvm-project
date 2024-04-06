@@ -1,6 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.ctype
-    libc.include.fenv
+    libc.hdr.fenv_macros
     libc.include.errno
     libc.include.float
     libc.include.stdint

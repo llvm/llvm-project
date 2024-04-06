@@ -7,7 +7,7 @@
  */
 
 #include <ctype.h>
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <float.h>
 #include <math.h>
 #include <stdint.h>

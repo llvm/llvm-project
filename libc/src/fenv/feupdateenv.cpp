@@ -10,7 +10,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 namespace LIBC_NAMESPACE {
 
