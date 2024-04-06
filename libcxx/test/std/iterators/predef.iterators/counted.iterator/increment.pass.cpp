@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr counted_iterator& operator++();
-// decltype(auto) operator++(int);
+// constexpr decltype(auto) operator++(int);
 // constexpr counted_iterator operator++(int)
 //   requires forward_iterator<I>;
 
