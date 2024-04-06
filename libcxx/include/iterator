@@ -477,7 +477,7 @@ constexpr  move_iterator<Iterator> make_move_iterator(const Iterator& i);
 
 template<class Iterator1, class Iterator2>
     requires (!sized_sentinel_for<Iterator1, Iterator2>)
-  inline constexpr bool disable_sized_sentinel_for<move_iterator<Iterator1>,    // since C++20
+  inline constexpr bool disable_sized_sentinel_for<move_iterator<Iterator1>,    // since C++23
                                                     move_iterator<Iterator2>> = true;
 
 template<semiregular S>
