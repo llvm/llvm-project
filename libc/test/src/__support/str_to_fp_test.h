@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/str_to_float.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h"
 
 #include "test/UnitTest/Test.h"
