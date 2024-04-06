@@ -73,7 +73,7 @@ public:
   // getNextToken() -> a2
   virtual FormatToken *insertTokens(ArrayRef<FormatToken *> Tokens) = 0;
 
-  FormatToken *getNextNonComment() {
+  [[nodiscard]] FormatToken *getNextNonComment() {
     FormatToken *Tok;
     do {
       Tok = getNextToken();
