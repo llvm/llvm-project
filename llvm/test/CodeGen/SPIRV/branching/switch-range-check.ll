@@ -8,19 +8,19 @@
 
 define spir_func void @foo(i64 noundef %addr, i64 noundef %as) {
 entry:
-  %0 = inttoptr i64 %as to ptr addrspace(4)
-  %1 = load i8, ptr addrspace(4) %0
-  %cmp = icmp sgt i8 %1, 0
+  %src = inttoptr i64 %as to ptr addrspace(4)
+  %val = load i8, ptr addrspace(4) %src
+  %cmp = icmp sgt i8 %val, 0
   br i1 %cmp, label %if.then, label %if.end
 
-if.then:                                          ; preds = %entry
-  %add.ptr = getelementptr inbounds i8, ptr addrspace(4) %0, i64 1
-  %2 = load i8, ptr addrspace(4) %add.ptr
+if.then:
+  %add.ptr = getelementptr inbounds i8, ptr addrspace(4) %src, i64 1
+  %cond = load i8, ptr addrspace(4) %add.ptr
   br label %if.end
 
-if.end:                                           ; preds = %if.then, %entry
-  %shadow_value.0.in = phi i8 [ %2, %if.then ], [ %1, %entry ]
-  switch i8 %shadow_value.0.in, label %sw.default [
+if.end:
+  %swval = phi i8 [ %cond, %if.then ], [ %val, %entry ]
+  switch i8 %swval, label %sw.default [
     i8 -127, label %sw.epilog
     i8 -126, label %sw.bb3
     i8 -125, label %sw.bb4
@@ -35,83 +35,38 @@ if.end:                                           ; preds = %if.then, %entry
     i8 -123, label %sw.bb11
   ]
 
-sw.bb3:                                           ; preds = %if.end
+sw.bb3:
   br label %sw.epilog
 
-sw.bb4:                                           ; preds = %if.end
+sw.bb4:
   br label %sw.epilog
 
-sw.bb5:                                           ; preds = %if.end
+sw.bb5:
   br label %sw.epilog
 
-sw.bb6:                                           ; preds = %if.end
+sw.bb6:
   br label %sw.epilog
 
-sw.bb7:                                           ; preds = %if.end
+sw.bb7:
   br label %sw.epilog
 
-sw.bb8:                                           ; preds = %if.end, %if.end, %if.end
+sw.bb8:
   br label %sw.epilog
 
-sw.bb9:                                           ; preds = %if.end
+sw.bb9:
   br label %sw.epilog
 
-sw.bb10:                                          ; preds = %if.end
+sw.bb10:
   br label %sw.epilog
 
-sw.bb11:                                          ; preds = %if.end
+sw.bb11:
   br label %sw.epilog
 
-sw.default:                                       ; preds = %if.end
+sw.default:
   br label %sw.epilog
 
-sw.epilog:                                        ; preds = %sw.default, %sw.bb11, %sw.bb10, %sw.bb9, %sw.bb8, %sw.bb7, %sw.bb6, %sw.bb5, %sw.bb4, %sw.bb3, %if.end
+sw.epilog:
   br label %exit
-
-if.then.i:                                        ; preds = %sw.epilog
-  br label %exit
-
-for.cond.i:                                       ; preds = %for.inc.i, %if.then.i
-  br label %exit
-
-for.inc.i:                                        ; preds = %for.cond.i
-  br label %exit
-
-if.end.i:                                         ; preds = %for.cond.i, %if.then.i
-  br label %exit
-
-if.end18.thread.i:                                ; preds = %if.end.i
-  br label %5
-
-for.cond8.i:                                      ; preds = %for.inc14.i, %if.end.i
-  br label %exit
-
-for.inc14.i:                                      ; preds = %for.cond8.i
-  br label %exit
-
-if.end18.i:                                       ; preds = %for.cond8.i
-  br label %5
-
-5:                                                ; preds = %if.end18.i, %if.end18.thread.i
-  br label %for.cond25.i
-
-for.cond25.i:                                     ; preds = %for.body29.i, %5
-  br label %exit
-
-for.cond.cleanup27.i:                             ; preds = %for.cond25.i
-  br label %for.cond41.i
-
-for.body29.i:                                     ; preds = %for.cond25.i
-  br label %for.cond25.i
-
-for.cond41.i:                                     ; preds = %for.body45.i, %for.cond.cleanup27.i
-  br label %exit
-
-for.cond.cleanup43.i:                             ; preds = %for.cond41.i
-  br label %exit
-
-for.body45.i:                                     ; preds = %for.cond41.i
-  br label %for.cond41.i
 
 exit:
   ret void
