@@ -19,7 +19,7 @@ namespace std {
 inline constexpr size_t dynamic_extent = numeric_limits<size_t>::max();
 
 template<class T>
-  concept integral-constant-like =        // exposition only, since C++26
+  concept integral-constant-like =                           // exposition only, since C++26
     is_integral_v<decltype(T::value)> &&
     !is_same_v<bool, remove_const_t<decltype(T::value)>> &&
     convertible_to<T, decltype(T::value)> &&
