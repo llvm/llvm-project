@@ -64,6 +64,7 @@ private:
 
   bool shouldPrintBeforePass(StringRef PassID);
   bool shouldPrintAfterPass(StringRef PassID);
+  bool shouldPrintAfterPassNumberCheck();
   bool shouldPrintPassNumbers();
   bool shouldPrintBeforePassNumber();
   bool shouldPrintAfterPassNumber();
