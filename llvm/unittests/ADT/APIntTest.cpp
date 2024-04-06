@@ -3257,9 +3257,10 @@ TEST(APIntTest, MultiplicativeInverseExaustive) {
               .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
               .trunc(BitWidth);
       APInt One = V * MulInv;
-      if (!V.isZero() && V.countr_zero() == 0) {
+      if (V[0]) {
         // Multiplicative inverse exists for all odd numbers.
         EXPECT_TRUE(One.isOne());
+        EXPECT_TRUE((V * V.multiplicativeInverse()).isOne());
       } else {
         // Multiplicative inverse does not exist for even numbers (and 0).
         EXPECT_TRUE(MulInv.isZero());
