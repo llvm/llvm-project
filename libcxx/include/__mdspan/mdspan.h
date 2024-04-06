@@ -275,8 +275,8 @@ explicit mdspan(_ElementType*, _OtherIndexTypes...)
 #  else
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*, _OtherIndexTypes...)
-    -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
+explicit mdspan(_ElementType*,
+                _OtherIndexTypes...) -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
 #  endif
 
 template <class _Pointer>
