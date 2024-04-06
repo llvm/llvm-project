@@ -2785,9 +2785,10 @@ void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
 // OpenACC Constructs/Directives.
 //===----------------------------------------------------------------------===//
 void ASTStmtReader::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  (void)Record.readInt();
   S->Kind = Record.readEnum<OpenACCDirectiveKind>();
   S->Range = Record.readSourceRange();
-  // TODO OpenACC: Deserialize Clauses.
+  Record.readOpenACCClauseList(S->Clauses);
 }
 
 void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
@@ -4219,10 +4220,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
-    case STMT_OPENACC_COMPUTE_CONSTRUCT:
-      S = OpenACCComputeConstruct::CreateEmpty(Context, Empty);
+    case STMT_OPENACC_COMPUTE_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);
       break;
-
+    }
     case EXPR_REQUIRES:
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
       unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];
