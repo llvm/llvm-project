@@ -366,9 +366,9 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       continue;
     }
     tok::TokenKind Kind = FormatTok->Tok.getKind();
-    if (FormatTok->getType() == TT_MacroBlockBegin)
+    if (FormatTok->is(TT_MacroBlockBegin))
       Kind = tok::l_brace;
-    else if (FormatTok->getType() == TT_MacroBlockEnd)
+    else if (FormatTok->is(TT_MacroBlockEnd))
       Kind = tok::r_brace;
 
     auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
@@ -4709,14 +4709,13 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
   do {
     FormatTok = Tokens->getNextToken();
     assert(FormatTok);
-    while (FormatTok->getType() == TT_ConflictStart ||
-           FormatTok->getType() == TT_ConflictEnd ||
-           FormatTok->getType() == TT_ConflictAlternative) {
-      if (FormatTok->getType() == TT_ConflictStart)
+    while (FormatTok->isOneOf(TT_ConflictStart, TT_ConflictEnd,
+                              TT_ConflictAlternative)) {
+      if (FormatTok->is(TT_ConflictStart))
         conditionalCompilationStart(/*Unreachable=*/false);
-      else if (FormatTok->getType() == TT_ConflictAlternative)
+      else if (FormatTok->is(TT_ConflictAlternative))
         conditionalCompilationAlternative();
-      else if (FormatTok->getType() == TT_ConflictEnd)
+      else if (FormatTok->is(TT_ConflictEnd))
         conditionalCompilationEnd();
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
