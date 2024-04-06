@@ -989,13 +989,6 @@ void ARMConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB) {
 MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   MachineBasicBlock *OrigBB = MI->getParent();
 
-  // Collect liveness information at MI.
-  LivePhysRegs LRs(*MF->getSubtarget().getRegisterInfo());
-  LRs.addLiveOuts(*OrigBB);
-  auto LivenessEnd = ++MachineBasicBlock::iterator(MI).getReverse();
-  for (MachineInstr &LiveMI : make_range(OrigBB->rbegin(), LivenessEnd))
-    LRs.stepBackward(LiveMI);
-
   // Create a new MBB for the code after the OrigBB.
   MachineBasicBlock *NewBB =
     MF->CreateMachineBasicBlock(OrigBB->getBasicBlock());
@@ -1023,12 +1016,6 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
 
   // OrigBB branches to NewBB.
   OrigBB->addSuccessor(NewBB);
-
-  // Update live-in information in the new block.
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (MCPhysReg L : LRs)
-    if (!MRI.isReserved(L))
-      NewBB->addLiveIn(L);
 
   // Update internal data structures to account for the newly inserted MBB.
   // This is almost the same as updateForInsertedWaterBlock, except that
@@ -2496,10 +2483,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
     MF->CreateMachineBasicBlock(JTBB->getBasicBlock());
   MachineFunction::iterator MBBI = ++JTBB->getIterator();
   MF->insert(MBBI, NewBB);
-
-  // Copy live-in information to new block.
-  for (const MachineBasicBlock::RegisterMaskPair &RegMaskPair : BB->liveins())
-    NewBB->addLiveIn(RegMaskPair);
 
   // Add an unconditional branch from NewBB to BB.
   // There doesn't seem to be meaningful DebugInfo available; this doesn't
