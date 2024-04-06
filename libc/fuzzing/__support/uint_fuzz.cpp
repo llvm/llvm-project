@@ -1,5 +1,5 @@
 #include "src/__support/CPP/bit.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 using namespace LIBC_NAMESPACE;
