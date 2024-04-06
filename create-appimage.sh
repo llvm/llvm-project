@@ -9,7 +9,7 @@ ninja
 rm -rf AppDir
 mkdir AppDir
 DESTDIR=AppDir ninja install || true
-linuxdeploy \
+NO_STRIP=true linuxdeploy \
     --appdir AppDir --output appimage \
     -d ../graph-generation/tool.desktop \
     -i ../graph-generation/tool.png
