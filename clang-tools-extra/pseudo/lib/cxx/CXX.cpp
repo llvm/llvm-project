@@ -280,10 +280,7 @@ bool hasExclusiveType(const ForestNode *N) {
 }
 
 llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
-#define GUARD(cond)                                                            \
-  {                                                                            \
-    [](const GuardParams &P) { return cond; }                                  \
-  }
+#define GUARD(cond) {[](const GuardParams &P) { return cond; }}
 #define TOKEN_GUARD(kind, cond)                                                \
   [](const GuardParams &P) {                                                   \
     const Token &Tok = onlyToken(tok::kind, P.RHS, P.Tokens);                  \
