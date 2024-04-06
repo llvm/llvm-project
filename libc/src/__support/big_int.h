@@ -256,8 +256,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
                                                 size_t offset) {
   static_assert(direction == LEFT || direction == RIGHT);
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
-  constexpr size_t TOTAL_BITS = N * WORD_BITS;
 #ifdef LIBC_TYPES_HAS_INT128
+  constexpr size_t TOTAL_BITS = N * WORD_BITS;
   if constexpr (TOTAL_BITS == 128) {
     using type = cpp::conditional_t<is_signed, __int128_t, __uint128_t>;
     auto tmp = cpp::bit_cast<type>(array);
