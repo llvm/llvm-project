@@ -18,6 +18,10 @@ namespace std {
 void *operator new(size_t, std::align_val_t); // #dr5xx-global-operator-new-aligned
 #endif
 
+namespace std {
+  struct type_info;
+}
+
 namespace dr500 { // dr500: dup 372
   class D;
   class A {
@@ -264,6 +268,18 @@ namespace dr527 { // dr527: na
 
   int ax = a.x, bx = b.x, cx = c.x, dx = d.x, ex = E::e->x, fx = F::f->x;
 }
+
+namespace dr528 { // dr528: 2.7
+
+struct S; // #dr528-S
+
+void f() {
+  typeid(S);
+  // expected-error@-1 {{'typeid' of incomplete type 'S'}}
+  //   expected-note@#dr528-S {{forward declaration of 'dr528::S'}}
+}
+
+} // namespace dr528
 
 namespace dr530 { // dr530: yes
   template<int*> struct S { enum { N = 1 }; };
@@ -618,6 +634,8 @@ namespace dr548 { // dr548: dup 482
   template void dr548::f<int>();
 }
 
+// dr550: dup 393
+
 namespace dr551 { // dr551: yes c++11
   // FIXME: This obviously should apply in C++98 mode too.
   template<typename T> void f() {}
@@ -641,6 +659,7 @@ namespace dr552 { // dr552: yes
   X<Y, 0> x;
 }
 
+// dr553: 2.7
 struct dr553_class {
   friend void *operator new(size_t, dr553_class);
 };
@@ -661,6 +680,10 @@ namespace dr553 {
 }
 
 // dr554: na
+
+// dr555: na
+// NB: name lookup cases that issue briefly touches are covered in our test for CWG466
+
 // dr556: na
 
 namespace dr557 { // dr557: 3.1
@@ -688,6 +711,20 @@ namespace dr558 { // dr558: 2.9
 }
 
 template<typename> struct dr559 { typedef int T; dr559::T u; }; // dr559: yes
+
+namespace dr560 { // dr560: 16
+
+template <class T>
+struct Outer {
+  struct Inner {
+    Inner* self();
+  };
+};
+template <class T>
+Outer<T>::Inner* Outer<T>::Inner::self() { return this; }
+// cxx98-17-error@-1 {{missing 'typename' prior to dependent type name Outer<T>::Inner; implicit 'typename' is a C++20 extension}}
+
+} // namespace dr560
 
 namespace dr561 { // dr561: yes
   template<typename T> void f(int);
