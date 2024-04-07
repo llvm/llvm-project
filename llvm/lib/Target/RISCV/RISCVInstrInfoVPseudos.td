@@ -761,6 +761,11 @@ class GetVTypePredicates<VTypeInfo vti> {
                                      true : [HasVInstructions]);
 }
 
+class GetVTypeScalarPredicates<VTypeInfo vti> {
+  list<Predicate> Predicates = !cond(!eq(vti.Scalar, bf16) : [HasStdExtZfbfmin],
+                                     true : []);
+}
+
 class VPseudoUSLoadNoMask<VReg RetClass,
                           int EEW> :
       Pseudo<(outs RetClass:$rd),
