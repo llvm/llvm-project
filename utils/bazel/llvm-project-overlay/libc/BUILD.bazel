@@ -756,6 +756,7 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/rounding_mode.h"],
     deps = [
         ":__support_macros_attributes",
+	":hdr_fenv_macros",
     ],
 )
 
