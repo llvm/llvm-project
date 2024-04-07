@@ -11,7 +11,7 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "libc/include/llvm-libc-macros/fenv-macros.h"
+#include "include/llvm-libc-macros/fenv-macros.h"
 
 #else // Overlay mode
 

@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "mathlib.h"
 #include <ctype.h>
 #include <fenv.h>
 #include <float.h>
