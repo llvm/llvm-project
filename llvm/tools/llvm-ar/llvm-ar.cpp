@@ -65,7 +65,7 @@ static void printRanLibHelp(StringRef ToolName) {
          << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
-         << "  -v --version          - Display the version of this program\n"
+         << "  -V --version          - Display the version of this program\n"
          << "  -D                    - Use zero for timestamps and uids/gids "
             "(default)\n"
          << "  -U                    - Use actual timestamps and uids/gids\n"
@@ -82,6 +82,7 @@ static void printArHelp(StringRef ToolName) {
     =darwin             -   darwin
     =bsd                -   bsd
     =bigarchive         -   big archive (AIX OS)
+    =coff               -   coff
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
   --output              - the directory to extract archive members to
@@ -193,7 +194,7 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, BSD, DARWIN, BIGARCHIVE, Unknown };
+enum Format { Default, GNU, COFF, BSD, DARWIN, BIGARCHIVE, Unknown };
 }
 
 static Format FormatType = Default;
@@ -1025,14 +1026,21 @@ static void performWriteOperation(ArchiveOperation Operation,
       Kind = object::Archive::K_GNU;
     else if (OldArchive) {
       Kind = OldArchive->kind();
-      if (Kind == object::Archive::K_BSD) {
-        auto InferredKind = object::Archive::K_BSD;
+      std::optional<object::Archive::Kind> AltKind;
+      if (Kind == object::Archive::K_BSD)
+        AltKind = object::Archive::K_DARWIN;
+      else if (Kind == object::Archive::K_GNU && !OldArchive->hasSymbolTable())
+        // If there is no symbol table, we can't tell GNU from COFF format
+        // from the old archive type.
+        AltKind = object::Archive::K_COFF;
+      if (AltKind) {
+        auto InferredKind = Kind;
         if (NewMembersP && !NewMembersP->empty())
           InferredKind = NewMembersP->front().detectKindFromObject();
         else if (!NewMembers.empty())
           InferredKind = NewMembers.front().detectKindFromObject();
-        if (InferredKind == object::Archive::K_DARWIN)
-          Kind = object::Archive::K_DARWIN;
+        if (InferredKind == AltKind)
+          Kind = *AltKind;
       }
     } else if (NewMembersP)
       Kind = !NewMembersP->empty() ? NewMembersP->front().detectKindFromObject()
@@ -1043,6 +1051,9 @@ static void performWriteOperation(ArchiveOperation Operation,
     break;
   case GNU:
     Kind = object::Archive::K_GNU;
+    break;
+  case COFF:
+    Kind = object::Archive::K_COFF;
     break;
   case BSD:
     if (Thin)
@@ -1376,6 +1387,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("darwin", DARWIN)
                        .Case("bsd", BSD)
                        .Case("bigarchive", BIGARCHIVE)
+                       .Case("coff", COFF)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);
@@ -1427,7 +1439,7 @@ static int ranlib_main(int argc, char **argv) {
         } else if (arg.front() == 'h') {
           printHelpMessage();
           return 0;
-        } else if (arg.front() == 'v') {
+        } else if (arg.front() == 'V') {
           cl::PrintVersionMessage();
           return 0;
         } else if (arg.front() == 'X') {

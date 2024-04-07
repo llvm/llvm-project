@@ -14,8 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -45,6 +47,7 @@ INITIALIZE_PASS(FinalizeISel, DEBUG_TYPE,
 
 bool FinalizeISel::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
 
   // Iterate through each instruction in the function, looking for pseudos.
@@ -53,6 +56,11 @@ bool FinalizeISel::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
          MBBI != MBBE; ) {
       MachineInstr &MI = *MBBI++;
+
+      // Set AdjustsStack to true if the instruction selector emits a stack
+      // frame setup instruction or a stack aligning inlineasm.
+      if (TII->isFrameInstr(MI) || MI.isStackAligningInlineAsm())
+        MF.getFrameInfo().setAdjustsStack(true);
 
       // If MI is a pseudo, expand it.
       if (MI.usesCustomInsertionHook()) {

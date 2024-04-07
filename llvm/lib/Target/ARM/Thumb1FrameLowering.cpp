@@ -710,11 +710,6 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   unsigned TemporaryReg = 0;
   BitVector PopFriendly =
       TRI.getAllocatableSet(MF, TRI.getRegClass(ARM::tGPRRegClassID));
-  // R7 may be used as a frame pointer, hence marked as not generally
-  // allocatable, however there's no reason to not use it as a temporary for
-  // restoring LR.
-  if (STI.getFramePointerReg() == ARM::R7)
-    PopFriendly.set(ARM::R7);
 
   assert(PopFriendly.any() && "No allocatable pop-friendly register?!");
   // Rebuild the GPRs from the high registers because they are removed

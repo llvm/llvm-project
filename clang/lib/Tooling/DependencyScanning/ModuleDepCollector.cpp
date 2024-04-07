@@ -175,6 +175,9 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
     CI.getCodeGenOpts().CoverageCompilationDir.clear();
     CI.getCodeGenOpts().CoverageDataFile.clear();
     CI.getCodeGenOpts().CoverageNotesFile.clear();
+    CI.getCodeGenOpts().ProfileInstrumentUsePath.clear();
+    CI.getCodeGenOpts().SampleProfileFile.clear();
+    CI.getCodeGenOpts().ProfileRemappingFile.clear();
   }
 
   // Map output paths that affect behaviour to "-" so their existence is in the

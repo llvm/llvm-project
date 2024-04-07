@@ -230,7 +230,8 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 /// on the IR.
 fir::ExtendedValue
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         fir::FortranVariableOpInterface fortranVariable);
+                         fir::FortranVariableOpInterface fortranVariable,
+                         bool forceHlfirBase = false);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
 fir::FortranVariableOpInterface
@@ -432,6 +433,11 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
+
+// TODO: this does not support polymorphic molds
+hlfir::Entity createStackTempFromMold(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity mold);
 
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,

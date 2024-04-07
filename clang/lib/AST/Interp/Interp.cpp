@@ -254,10 +254,10 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     if (VD->isConstexpr())
       return true;
 
-    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return false;
-
     QualType T = VD->getType();
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return T->isSignedIntegerOrEnumerationType() || T->isUnsignedIntegerOrEnumerationType();
+
     if (T.isConstQualified())
       return true;
 
@@ -485,7 +485,9 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         // Don't emit anything if the function isn't defined and we're checking
         // for a constant expression. It might be defined at the point we're
         // actually calling it.
-        if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+        bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
+        if (!DiagDecl->isDefined() && !IsExtern &&
+            S.checkingPotentialConstantExpression())
           return false;
 
         // If the declaration is defined _and_ declared 'constexpr', the below

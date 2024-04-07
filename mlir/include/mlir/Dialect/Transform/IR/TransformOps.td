@@ -18,10 +18,10 @@ include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -190,11 +190,21 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
     attributes specify the conversion target.
 
-    This transform consumes the `target` handle and modifies the payload. It
-    does not produce any handles.
+    This transform modifies the payload. By default, it consumes the `target`
+    handle. It does not produce any handles.
+
+    If the `preserve_handles` attribute is set, this transform does not consume
+    the `target` handle and instead updates handles based on notifications from
+    a tracking listener that is attached to the dialect conversion, similar to
+    `transform.apply_patterns`. Only replacements via `RewriterBase::replaceOp`
+    or `replaceOpWithNewOp` are considered "payload op replacements". In
+    contrast to `transform.apply_patterns`, we allow replacement ops even if the
+    op name has changed. This is because conversion patterns are expected to
+    lower ops to different ops (from a different dialect). More details can be
+    found at the documentation site of `TrackingListener`.
 
     This transform produces a silenceable failure if the dialect conversion was
-    unsuccessful.
+    unsuccessful or the tracking listener failed to find a replacement op.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -202,7 +212,8 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
-                       UnitAttr:$partial_conversion);
+                       UnitAttr:$partial_conversion,
+                       UnitAttr:$preserve_handles);
   let results = (outs);
   let regions = (region
       MaxSizedRegion<1>:$patterns,
@@ -1087,15 +1098,28 @@ def PrintOp : TransformDialectOp<"print",
      MatchOpInterface]> {
   let summary = "Dump each payload op";
   let description = [{
-    This op dumps each payload op that is associated with the `target` operand
-    to stderr. It also prints the `name` string attribute. If no target is
+    Prints each payload op that is associated with the `target` operand to
+    `stdout`. It also prints the `name` string attribute. If no target is
     specified, the top-level op is dumped.
 
     This op is useful for printf-style debugging.
+
+    Supported printing flag attributes:
+    * `assume_verified` -- skips verification when the unit attribute is
+      specified. This improves performace but may lead to crashes and
+      unexpected behavior when the printed payload op is invalid.
+    * `use_local_scope` -- prints in local scope when the unit attribute is
+      specified. This improves performance but may not be identical to
+      printing within the full module.
+    * `skip_regions` -- does not print regions of operations when the unit
+      attribute is specified.
   }];
 
   let arguments = (ins Optional<TransformHandleTypeInterface>:$target,
-                       OptionalAttr<StrAttr>:$name);
+                       OptionalAttr<StrAttr>:$name,
+                       OptionalAttr<UnitAttr>:$assume_verified,
+                       OptionalAttr<UnitAttr>:$use_local_scope,
+                       OptionalAttr<UnitAttr>:$skip_regions);
   let results = (outs);
 
   let builders = [

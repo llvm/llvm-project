@@ -53,11 +53,7 @@ static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
     Offset = align(primSize(T));
 
   APSInt R;
-  INT_TYPE_SWITCH(T, {
-    T Val = Stk.peek<T>(Offset);
-    R = APSInt(APInt(Val.bitWidth(), static_cast<uint64_t>(Val), T::isSigned()),
-               !T::isSigned());
-  });
+  INT_TYPE_SWITCH(T, R = Stk.peek<T>(Offset).toAPSInt());
 
   return R;
 }
@@ -121,6 +117,36 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
     llvm_unreachable("Unsupported return type for builtin function");
   }
 #undef RET_CASE
+}
+
+static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
+                                                  const InterpFrame *Frame,
+                                                  const CallExpr *Call) {
+  // The current frame is the one for __builtin_is_constant_evaluated.
+  // The one above that, potentially the one for std::is_constant_evaluated().
+  if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
+      Frame->Caller && S.getEvalStatus().Diag) {
+    auto isStdCall = [](const FunctionDecl *F) -> bool {
+      return F && F->isInStdNamespace() && F->getIdentifier() &&
+             F->getIdentifier()->isStr("is_constant_evaluated");
+    };
+    const InterpFrame *Caller = Frame->Caller;
+
+    if (Caller->Caller && isStdCall(Caller->getCallee())) {
+      const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "std::is_constant_evaluated";
+    } else {
+      const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
+      S.report(E->getExprLoc(),
+               diag::warn_is_constant_evaluated_always_true_constexpr)
+          << "__builtin_is_constant_evaluated";
+    }
+  }
+
+  S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+  return true;
 }
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
@@ -537,11 +563,12 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const Function *Func, const CallExpr *Call,
                                    bool Right) {
-  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+  PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
+  PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
 
-  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
-  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+  APSInt Amount = peekToAPSInt(S.Stk, AmountT);
+  APSInt Value = peekToAPSInt(
+      S.Stk, ValueT, align(primSize(AmountT)) + align(primSize(ValueT)));
 
   APSInt Result;
   if (Right)
@@ -609,10 +636,9 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_launder(InterpState &S, CodePtr OpPC,
-                                    const InterpFrame *Frame,
-                                    const Function *Func,
-                                    const CallExpr *Call) {
+/// Just takes the first Argument to the call and puts it on the stack.
+static bool noopPointer(InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
+                        const Function *Func, const CallExpr *Call) {
   const Pointer &Arg = S.Stk.peek<Pointer>();
   S.Stk.push<Pointer>(Arg);
   return true;
@@ -921,14 +947,15 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
-  InterpFrame *Frame = S.Current;
+  const InterpFrame *Frame = S.Current;
   APValue Dummy;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
 
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
-    S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
+    if (!interp__builtin_is_constant_evaluated(S, OpPC, Frame, Call))
+      return false;
     break;
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume:
@@ -1052,6 +1079,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
@@ -1146,7 +1174,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_launder:
-    if (!interp__builtin_launder(S, OpPC, Frame, F, Call))
+  case Builtin::BI__builtin___CFStringMakeConstantString:
+  case Builtin::BI__builtin___NSStringMakeConstantString:
+    if (!noopPointer(S, OpPC, Frame, F, Call))
       return false;
     break;
 
@@ -1327,6 +1357,51 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                   FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
   FieldPtr.initialize();
   return true;
+}
+
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+  assert(Src.isLive() && Dest.isLive());
+
+  [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
+  const Descriptor *DestDesc = Dest.getFieldDesc();
+
+  assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
+
+  if (DestDesc->isPrimitiveArray()) {
+    assert(SrcDesc->isPrimitiveArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    PrimType ET = DestDesc->getPrimType();
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      Pointer DestElem = Dest.atIndex(I);
+      TYPE_SWITCH(ET, {
+        DestElem.deref<T>() = Src.atIndex(I).deref<T>();
+        DestElem.initialize();
+      });
+    }
+    return true;
+  }
+
+  if (DestDesc->isRecord()) {
+    assert(SrcDesc->isRecord());
+    assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
+    const Record *R = DestDesc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      Pointer DestField = Dest.atField(F.Offset);
+      if (std::optional<PrimType> FT = S.Ctx.classify(F.Decl->getType())) {
+        TYPE_SWITCH(*FT, {
+          DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
+          DestField.initialize();
+        });
+      } else {
+        return Invalid(S, OpPC);
+      }
+    }
+    return true;
+  }
+
+  // FIXME: Composite types.
+
+  return Invalid(S, OpPC);
 }
 
 } // namespace interp

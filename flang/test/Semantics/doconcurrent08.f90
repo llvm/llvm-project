@@ -209,6 +209,8 @@ module m2
   type :: impureFinal
    contains
     final :: impureSub
+    final :: impureSubRank1
+    final :: impureSubRank2
   end type
 
   type :: pureFinal
@@ -222,16 +224,27 @@ module m2
     type(impureFinal), intent(in) :: x
   end subroutine
 
+  impure subroutine impureSubRank1(x)
+    type(impureFinal), intent(in) :: x(:)
+  end subroutine
+
+  impure subroutine impureSubRank2(x)
+    type(impureFinal), intent(in) :: x(:,:)
+  end subroutine
+
   pure subroutine pureSub(x)
     type(pureFinal), intent(in) :: x
   end subroutine
 
   subroutine s4()
     type(impureFinal), allocatable :: ifVar, ifvar1
+    type(impureFinal), allocatable :: ifArr1(:), ifArr2(:,:)
+    type(impureFinal) :: if0
     type(pureFinal), allocatable :: pfVar
     allocate(ifVar)
     allocate(ifVar1)
     allocate(pfVar)
+    allocate(ifArr1(5), ifArr2(5,5))
 
     ! OK for an ordinary DO loop
     do i = 1,10
@@ -239,11 +252,9 @@ module m2
     end do
 
     ! OK to invoke a PURE FINAL procedure in a DO CONCURRENT
-    ! This case does not work currently because the compiler's test for
-    ! HasImpureFinal() in .../lib/Semantics/tools.cc doesn't work correctly
-!    do concurrent (i = 1:10)
-!      if (i .eq. 1) deallocate(pfVar)
-!    end do
+    do concurrent (i = 1:10)
+      if (i .eq. 1) deallocate(pfVar)
+    end do
 
     ! Error to invoke an IMPURE FINAL procedure in a DO CONCURRENT
     do concurrent (i = 1:10)
@@ -269,6 +280,34 @@ module m2
         ! of ifvar which causes the invocation of an IMPURE FINAL procedure
         !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresub' caused by assignment not allowed in DO CONCURRENT
         ifvar = ifvar1
+      end if
+    end do
+
+    do concurrent (i = 1:5)
+      if (i .eq. 1) then
+        !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresub' caused by assignment not allowed in DO CONCURRENT
+        ifArr1(i) = if0
+      end if
+    end do
+
+    do concurrent (i = 1:5)
+      if (i .eq. 1) then
+        !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresubrank1' caused by assignment not allowed in DO CONCURRENT
+        ifArr1 = if0
+      end if
+    end do
+
+    do concurrent (i = 1:5)
+      if (i .eq. 1) then
+        !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresubrank1' caused by assignment not allowed in DO CONCURRENT
+        ifArr2(i,:) = if0
+      end if
+    end do
+
+    do concurrent (i = 1:5)
+      if (i .eq. 1) then
+        !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresubrank2' caused by assignment not allowed in DO CONCURRENT
+        ifArr2(:,:) = if0
       end if
     end do
   end subroutine s4

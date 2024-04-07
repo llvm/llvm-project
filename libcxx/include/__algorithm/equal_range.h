@@ -23,7 +23,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__type_traits/is_callable.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 

@@ -6,7 +6,7 @@ define double @x(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[A:%.*]], 24
 ; CHECK-NEXT:    [[N:%.*]] = and i32 [[M]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[N]], 1
-; CHECK-NEXT:    [[P:%.*]] = sitofp i32 [[TMP1]] to double
+; CHECK-NEXT:    [[P:%.*]] = uitofp i32 [[TMP1]] to double
 ; CHECK-NEXT:    ret double [[P]]
 ;
   %m = lshr i32 %a, 24
@@ -20,7 +20,7 @@ define double @test(i32 %a) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i32 [[A:%.*]], 1073741823
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[A_AND]], 1
-; CHECK-NEXT:    [[RES:%.*]] = sitofp i32 [[TMP1]] to double
+; CHECK-NEXT:    [[RES:%.*]] = uitofp i32 [[TMP1]] to double
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   ; Drop two highest bits to guarantee that %a + 1 doesn't overflow
@@ -49,7 +49,7 @@ define double @test_2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i32 [[A:%.*]], 1073741823
 ; CHECK-NEXT:    [[B_AND:%.*]] = and i32 [[B:%.*]], 1073741823
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[A_AND]], [[B_AND]]
-; CHECK-NEXT:    [[RES:%.*]] = sitofp i32 [[TMP1]] to double
+; CHECK-NEXT:    [[RES:%.*]] = uitofp i32 [[TMP1]] to double
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   ; Drop two highest bits to guarantee that %a + %b doesn't overflow
@@ -89,7 +89,7 @@ define float @test_3(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[M:%.*]] = lshr i32 [[A:%.*]], 24
 ; CHECK-NEXT:    [[N:%.*]] = and i32 [[M]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[N]], 1
-; CHECK-NEXT:    [[P:%.*]] = sitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    [[P:%.*]] = uitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[P]]
 ;
   %m = lshr i32 %a, 24
@@ -104,7 +104,7 @@ define <4 x double> @test_4(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    [[A_AND:%.*]] = and <4 x i32> [[A:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
 ; CHECK-NEXT:    [[B_AND:%.*]] = and <4 x i32> [[B:%.*]], <i32 1073741823, i32 1073741823, i32 1073741823, i32 1073741823>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i32> [[A_AND]], [[B_AND]]
-; CHECK-NEXT:    [[RES:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x double>
+; CHECK-NEXT:    [[RES:%.*]] = uitofp <4 x i32> [[TMP1]] to <4 x double>
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   ; Drop two highest bits to guarantee that %a + %b doesn't overflow

@@ -363,7 +363,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   documentation targets being as part of a normal build.  If the ``install``
   target is run then this also enables all built documentation targets to be
   installed. Defaults to OFF.  To enable a particular documentation target, see
-  see LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
+  LLVM_ENABLE_SPHINX and LLVM_ENABLE_DOXYGEN.
 
 **LLVM_BUILD_EXAMPLES**:BOOL
   Build LLVM examples. Defaults to OFF. Targets for building each example are
@@ -654,6 +654,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   Generate dSYM files and strip executables and libraries (Darwin Only).
   Defaults to OFF.
 
+**LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
+  When building executables, preserve symbol exports. Defaults to ON. 
+  You can use this option to disable exported symbols from all 
+  executables (Darwin Only).
+
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler and standard library versions won't be checked. LLVM
   may not compile at all, or might fail at runtime due to known bugs in these
@@ -762,11 +767,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
 
-**LLVM_PARALLEL_LIT**:BOOL
-  Defaults to ``OFF``. If set to ``OFF``, lit testsuites will be configured
-  with CMake's ``USES_TERMINAL`` flag to give direct access to the terminal. If
-  set to ``ON``, that flag will be removed allowing Ninja to schedule multiple
-  lit testsuites in parallel.
+**LLVM_PARALLEL_TABLEGEN_JOBS**:STRING
+  Define the maximum number of concurrent tablegen jobs.
 
 **LLVM_RAM_PER_COMPILE_JOB**:STRING
   Calculates the amount of Ninja compile jobs according to available resources.
@@ -780,6 +782,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   exclusively therefore you should add an offset of one or two compile jobs 
   to be sure its not terminated in your memory restricted environment. On ELF
   platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
+
+**LLVM_RAM_PER_TABLEGEN_JOB**:STRING
+  Calculates the amount of Ninja tablegen jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_TABLEGEN_JOBS. Tablegen jobs
+  will be between one and amount of logical cores.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This

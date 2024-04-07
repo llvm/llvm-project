@@ -417,3 +417,33 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 }
+
+// -----
+
+// "test.foo" is tracked and replaced with "test.new_op" during a dialect
+// conversion. Make sure that the handle is updated accordingly.
+
+// CHECK-LABEL: func @dialect_conversion_tracking
+//  CHECK-NEXT:   %[[m:.*]] = "test.new_op"() {annotated} : () -> memref<5xf32>
+//  CHECK-NEXT:   %[[cast:.*]] = builtin.unrealized_conversion_cast %0 : memref<5xf32> to tensor<5xf32>
+//  CHECK-NEXT:   return %[[cast]]
+func.func @dialect_conversion_tracking() -> tensor<5xf32> {
+  %0 = "test.foo"() {replace_with_new_op = "test.bar"} : () -> (tensor<5xf32>)
+  return %0 : tensor<5xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.match ops{["test.foo"]} in %0 : (!transform.any_op) -> !transform.any_op
+    transform.apply_conversion_patterns to %0 {
+      transform.apply_conversion_patterns.transform.test_conversion_patterns
+    } with type_converter {
+      transform.apply_conversion_patterns.transform.test_type_converter
+    } {legal_ops = ["func.func", "func.return", "test.new_op"], preserve_handles}
+        : !transform.any_op
+    // Add an attribute to %1, which is now mapped to a new op.
+    transform.annotate %1 "annotated" : !transform.any_op
+    transform.yield
+  }
+}

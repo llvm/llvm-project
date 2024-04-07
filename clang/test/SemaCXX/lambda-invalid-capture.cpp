@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++03 -Wno-c++11-extensions %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // Don't crash.
 

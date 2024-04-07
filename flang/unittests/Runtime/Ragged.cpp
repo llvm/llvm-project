@@ -14,7 +14,7 @@ using namespace Fortran::runtime;
 TEST(Ragged, RaggedArrayAllocateDeallocateTest) {
   struct RaggedArrayHeader header;
   unsigned rank = 2;
-  int64_t *extents = new int64_t[2];
+  int64_t *extents = reinterpret_cast<int64_t *>(malloc(2 * sizeof(int64_t)));
   extents[0] = 10;
   extents[1] = 100;
   RaggedArrayHeader *ret = (RaggedArrayHeader *)_FortranARaggedArrayAllocate(

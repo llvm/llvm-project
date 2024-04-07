@@ -418,24 +418,6 @@ inline _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... 
   std::__lock_first(0, __l0, __l1, __l2, __l3...);
 }
 
-template <class _L0>
-inline _LIBCPP_HIDE_FROM_ABI void __unlock(_L0& __l0) {
-  __l0.unlock();
-}
-
-template <class _L0, class _L1>
-inline _LIBCPP_HIDE_FROM_ABI void __unlock(_L0& __l0, _L1& __l1) {
-  __l0.unlock();
-  __l1.unlock();
-}
-
-template <class _L0, class _L1, class _L2, class... _L3>
-inline _LIBCPP_HIDE_FROM_ABI void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
-  __l0.unlock();
-  __l1.unlock();
-  std::__unlock(__l2, __l3...);
-}
-
 #  endif // _LIBCPP_CXX03_LANG
 
 #  if _LIBCPP_STD_VER >= 17
@@ -498,7 +480,7 @@ public:
 private:
   template <size_t... _Indx>
   _LIBCPP_HIDE_FROM_ABI static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
-    std::__unlock(std::get<_Indx>(__mt)...);
+    (std::get<_Indx>(__mt).unlock(), ...);
   }
 
   _MutexTuple __t_;

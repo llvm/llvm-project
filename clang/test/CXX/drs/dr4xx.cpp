@@ -948,7 +948,7 @@ namespace dr460 { // dr460: yes
 // dr464: na
 // dr465: na
 
-namespace dr466 { // dr466: no
+namespace dr466 { // dr466: 2.8
   typedef int I;
   typedef const int CI;
   typedef volatile int VI;
@@ -960,7 +960,7 @@ namespace dr466 { // dr466: no
     a->CI::~CI();
     a->VI::~VI();
 
-    a->CI::~VI(); // FIXME: This is invalid; CI and VI are not the same scalar type.
+    a->CI::~VI(); // allowed by changes to [expr.id.prim.qual]/2 introduced in P1131R2
 
     b->~I();
     b->~CI();

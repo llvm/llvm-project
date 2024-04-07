@@ -1021,7 +1021,6 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_max_f32_e32 v0, 0xbe230000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1043,7 +1042,6 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f16_f32_e64 v0, -v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_max_f32_e32 v0, 0x3e230000, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;

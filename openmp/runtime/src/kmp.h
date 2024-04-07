@@ -819,13 +819,14 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
+#ifndef KMP_OS_AIX
 class kmp_affinity_raii_t {
   kmp_affin_mask_t *mask;
   bool restored;
 
 public:
   kmp_affinity_raii_t(const kmp_affin_mask_t *new_mask = nullptr)
-      : restored(false) {
+      : mask(nullptr), restored(false) {
     if (KMP_AFFINITY_CAPABLE()) {
       KMP_CPU_ALLOC(mask);
       KMP_ASSERT(mask != NULL);
@@ -835,7 +836,7 @@ public:
     }
   }
   void restore() {
-    if (!restored && KMP_AFFINITY_CAPABLE()) {
+    if (mask && KMP_AFFINITY_CAPABLE() && !restored) {
       __kmp_set_system_affinity(mask, /*abort_on_error=*/true);
       KMP_CPU_FREE(mask);
     }
@@ -843,6 +844,7 @@ public:
   }
   ~kmp_affinity_raii_t() { restore(); }
 };
+#endif // !KMP_OS_AIX
 
 // Declare local char buffers with this size for printing debug and info
 // messages, using __kmp_affinity_print_mask().
@@ -1392,8 +1394,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   kmp_cpuinfo_flags_t flags;
   int apic_id;
-  int physical_id;
-  int logical_id;
   kmp_uint64 frequency; // Nominal CPU frequency in Hz.
   char name[3 * sizeof(kmp_cpuid_t)]; // CPUID(0x80000002,0x80000003,0x80000004)
 } kmp_cpuinfo_t;
@@ -2507,7 +2507,7 @@ typedef struct kmp_depend_info {
   union {
     kmp_uint8 flag; // flag as an unsigned char
     struct { // flag as a set of 8 bits
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
       /* Same fields as in the #else branch, but in reverse order */
       unsigned all : 1;
       unsigned unused : 3;
@@ -2672,7 +2672,7 @@ typedef struct kmp_task_stack {
 #endif // BUILD_TIED_TASK_STACK
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
   unsigned reserved31 : 6;
@@ -3912,7 +3912,8 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {

@@ -211,6 +211,32 @@ namespace dr2565 { // dr2565: 16 open 2023-06-07
 #endif
 }
 
+namespace dr2583 { // dr2583: 19
+#if __cplusplus >= 201103L
+struct A {
+  int i;
+  char c;
+};
+
+struct B {
+  int i;
+  alignas(8) char c;
+};
+
+union U {
+  A a;
+  B b;
+};
+
+union V {
+  A a;
+  alignas(64) B b;
+};
+
+static_assert(!__is_layout_compatible(A, B), "");
+static_assert(__is_layout_compatible(U, V), "");
+#endif
+} // namespace dr2583
 
 namespace dr2598 { // dr2598: 18
 #if __cplusplus >= 201103L

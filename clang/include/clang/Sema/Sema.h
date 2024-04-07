@@ -33,7 +33,6 @@
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
@@ -42,7 +41,6 @@
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/Module.h"
-#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -57,6 +55,7 @@
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
@@ -183,6 +182,7 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaOpenACC;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -423,7 +423,7 @@ enum class TemplateDeductionResult {
 
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
-class Sema final {
+class Sema final : public SemaBase {
   // Table of Contents
   // -----------------
   // 1. Semantic Analysis (Sema.cpp)
@@ -466,9 +466,8 @@ class Sema final {
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
   // 39. HLSL Constructs (SemaHLSL.cpp)
-  // 40. OpenACC Constructs (SemaOpenACC.cpp)
-  // 41. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 42. SYCL Constructs (SemaSYCL.cpp)
+  // 40. OpenMP Directives and Clauses (SemaOpenMP.cpp)
+  // 41. SYCL Constructs (SemaSYCL.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -514,195 +513,6 @@ public:
   ///
   void addExternalSource(ExternalSemaSource *E);
 
-  /// Helper class that creates diagnostics with optional
-  /// template instantiation stacks.
-  ///
-  /// This class provides a wrapper around the basic DiagnosticBuilder
-  /// class that emits diagnostics. ImmediateDiagBuilder is
-  /// responsible for emitting the diagnostic (as DiagnosticBuilder
-  /// does) and, if the diagnostic comes from inside a template
-  /// instantiation, printing the template instantiation stack as
-  /// well.
-  class ImmediateDiagBuilder : public DiagnosticBuilder {
-    Sema &SemaRef;
-    unsigned DiagID;
-
-  public:
-    ImmediateDiagBuilder(DiagnosticBuilder &DB, Sema &SemaRef, unsigned DiagID)
-        : DiagnosticBuilder(DB), SemaRef(SemaRef), DiagID(DiagID) {}
-    ImmediateDiagBuilder(DiagnosticBuilder &&DB, Sema &SemaRef, unsigned DiagID)
-        : DiagnosticBuilder(DB), SemaRef(SemaRef), DiagID(DiagID) {}
-
-    // This is a cunning lie. DiagnosticBuilder actually performs move
-    // construction in its copy constructor (but due to varied uses, it's not
-    // possible to conveniently express this as actual move construction). So
-    // the default copy ctor here is fine, because the base class disables the
-    // source anyway, so the user-defined ~ImmediateDiagBuilder is a safe no-op
-    // in that case anwyay.
-    ImmediateDiagBuilder(const ImmediateDiagBuilder &) = default;
-
-    ~ImmediateDiagBuilder() {
-      // If we aren't active, there is nothing to do.
-      if (!isActive())
-        return;
-
-      // Otherwise, we need to emit the diagnostic. First clear the diagnostic
-      // builder itself so it won't emit the diagnostic in its own destructor.
-      //
-      // This seems wasteful, in that as written the DiagnosticBuilder dtor will
-      // do its own needless checks to see if the diagnostic needs to be
-      // emitted. However, because we take care to ensure that the builder
-      // objects never escape, a sufficiently smart compiler will be able to
-      // eliminate that code.
-      Clear();
-
-      // Dispatch to Sema to emit the diagnostic.
-      SemaRef.EmitCurrentDiagnostic(DiagID);
-    }
-
-    /// Teach operator<< to produce an object of the correct type.
-    template <typename T>
-    friend const ImmediateDiagBuilder &
-    operator<<(const ImmediateDiagBuilder &Diag, const T &Value) {
-      const DiagnosticBuilder &BaseDiag = Diag;
-      BaseDiag << Value;
-      return Diag;
-    }
-
-    // It is necessary to limit this to rvalue reference to avoid calling this
-    // function with a bitfield lvalue argument since non-const reference to
-    // bitfield is not allowed.
-    template <typename T,
-              typename = std::enable_if_t<!std::is_lvalue_reference<T>::value>>
-    const ImmediateDiagBuilder &operator<<(T &&V) const {
-      const DiagnosticBuilder &BaseDiag = *this;
-      BaseDiag << std::move(V);
-      return *this;
-    }
-  };
-
-  /// A generic diagnostic builder for errors which may or may not be deferred.
-  ///
-  /// In CUDA, there exist constructs (e.g. variable-length arrays, try/catch)
-  /// which are not allowed to appear inside __device__ functions and are
-  /// allowed to appear in __host__ __device__ functions only if the host+device
-  /// function is never codegen'ed.
-  ///
-  /// To handle this, we use the notion of "deferred diagnostics", where we
-  /// attach a diagnostic to a FunctionDecl that's emitted iff it's codegen'ed.
-  ///
-  /// This class lets you emit either a regular diagnostic, a deferred
-  /// diagnostic, or no diagnostic at all, according to an argument you pass to
-  /// its constructor, thus simplifying the process of creating these "maybe
-  /// deferred" diagnostics.
-  class SemaDiagnosticBuilder {
-  public:
-    enum Kind {
-      /// Emit no diagnostics.
-      K_Nop,
-      /// Emit the diagnostic immediately (i.e., behave like Sema::Diag()).
-      K_Immediate,
-      /// Emit the diagnostic immediately, and, if it's a warning or error, also
-      /// emit a call stack showing how this function can be reached by an a
-      /// priori known-emitted function.
-      K_ImmediateWithCallStack,
-      /// Create a deferred diagnostic, which is emitted only if the function
-      /// it's attached to is codegen'ed.  Also emit a call stack as with
-      /// K_ImmediateWithCallStack.
-      K_Deferred
-    };
-
-    SemaDiagnosticBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
-                          const FunctionDecl *Fn, Sema &S);
-    SemaDiagnosticBuilder(SemaDiagnosticBuilder &&D);
-    SemaDiagnosticBuilder(const SemaDiagnosticBuilder &) = default;
-
-    // The copy and move assignment operator is defined as deleted pending
-    // further motivation.
-    SemaDiagnosticBuilder &operator=(const SemaDiagnosticBuilder &) = delete;
-    SemaDiagnosticBuilder &operator=(SemaDiagnosticBuilder &&) = delete;
-
-    ~SemaDiagnosticBuilder();
-
-    bool isImmediate() const { return ImmediateDiag.has_value(); }
-
-    /// Convertible to bool: True if we immediately emitted an error, false if
-    /// we didn't emit an error or we created a deferred error.
-    ///
-    /// Example usage:
-    ///
-    ///   if (SemaDiagnosticBuilder(...) << foo << bar)
-    ///     return ExprError();
-    ///
-    /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
-    /// want to use these instead of creating a SemaDiagnosticBuilder yourself.
-    operator bool() const { return isImmediate(); }
-
-    template <typename T>
-    friend const SemaDiagnosticBuilder &
-    operator<<(const SemaDiagnosticBuilder &Diag, const T &Value) {
-      if (Diag.ImmediateDiag)
-        *Diag.ImmediateDiag << Value;
-      else if (Diag.PartialDiagId)
-        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
-            << Value;
-      return Diag;
-    }
-
-    // It is necessary to limit this to rvalue reference to avoid calling this
-    // function with a bitfield lvalue argument since non-const reference to
-    // bitfield is not allowed.
-    template <typename T,
-              typename = std::enable_if_t<!std::is_lvalue_reference<T>::value>>
-    const SemaDiagnosticBuilder &operator<<(T &&V) const {
-      if (ImmediateDiag)
-        *ImmediateDiag << std::move(V);
-      else if (PartialDiagId)
-        S.DeviceDeferredDiags[Fn][*PartialDiagId].second << std::move(V);
-      return *this;
-    }
-
-    friend const SemaDiagnosticBuilder &
-    operator<<(const SemaDiagnosticBuilder &Diag, const PartialDiagnostic &PD) {
-      if (Diag.ImmediateDiag)
-        PD.Emit(*Diag.ImmediateDiag);
-      else if (Diag.PartialDiagId)
-        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second = PD;
-      return Diag;
-    }
-
-    void AddFixItHint(const FixItHint &Hint) const {
-      if (ImmediateDiag)
-        ImmediateDiag->AddFixItHint(Hint);
-      else if (PartialDiagId)
-        S.DeviceDeferredDiags[Fn][*PartialDiagId].second.AddFixItHint(Hint);
-    }
-
-    friend ExprResult ExprError(const SemaDiagnosticBuilder &) {
-      return ExprError();
-    }
-    friend StmtResult StmtError(const SemaDiagnosticBuilder &) {
-      return StmtError();
-    }
-    operator ExprResult() const { return ExprError(); }
-    operator StmtResult() const { return StmtError(); }
-    operator TypeResult() const { return TypeError(); }
-    operator DeclResult() const { return DeclResult(true); }
-    operator MemInitResult() const { return MemInitResult(true); }
-
-  private:
-    Sema &S;
-    SourceLocation Loc;
-    unsigned DiagID;
-    const FunctionDecl *Fn;
-    bool ShowCallStack;
-
-    // Invariant: At most one of these Optionals has a value.
-    // FIXME: Switch these to a Variant once that exists.
-    std::optional<ImmediateDiagBuilder> ImmediateDiag;
-    std::optional<unsigned> PartialDiagId;
-  };
-
   void PrintStats() const;
 
   /// Warn that the stack is nearly exhausted.
@@ -743,14 +553,6 @@ public:
   void EmitCurrentDiagnostic(unsigned DiagID);
 
   void addImplicitTypedef(StringRef Name, QualType T);
-
-  /// Emit a diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID,
-                             bool DeferHint = false);
-
-  /// Emit a partial diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD,
-                             bool DeferHint = false);
 
   /// Whether uncompilable error has occurred. This includes error happens
   /// in deferred diagnostics.
@@ -1162,6 +964,11 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaOpenACC &OpenACC() {
+    assert(OpenACCPtr);
+    return *OpenACCPtr;
+  }
+
 protected:
   friend class Parser;
   friend class InitializationSequence;
@@ -1191,6 +998,8 @@ private:
   Scope *CurScope;
 
   mutable IdentifierInfo *Ident_super;
+
+  std::unique_ptr<SemaOpenACC> OpenACCPtr;
 
   ///@}
 
@@ -1654,6 +1463,9 @@ public:
 
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
+
+  /// Add _Nullable attributes for std:: types.
+  void inferNullableClassAttribute(CXXRecordDecl *CRD);
 
   enum PragmaOptionsAlignKind {
     POAK_Native,  // #pragma options align=native
@@ -2152,14 +1964,15 @@ public:
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
 
+  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
+                         const FunctionProtoType *Proto);
+
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
 
-  bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                         const FunctionProtoType *Proto);
   bool CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation loc,
                            ArrayRef<const Expr *> Args);
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
@@ -2233,7 +2046,8 @@ private:
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D);
+  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
+                           const llvm::StringMap<bool> &FeatureMap);
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
@@ -3059,6 +2873,8 @@ public:
                                     TemplateIdAnnotation *TemplateId,
                                     bool IsMemberSpecialization);
 
+  bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
+
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
   NamedDecl *getShadowedDeclaration(const TypedefNameDecl *D,
                                     const LookupResult &R);
@@ -3263,7 +3079,8 @@ public:
   Decl *ActOnFileScopeAsmDecl(Expr *expr, SourceLocation AsmLoc,
                               SourceLocation RParenLoc);
 
-  Decl *ActOnTopLevelStmtDecl(Stmt *Statement);
+  TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
+  void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
   void ActOnPopScope(SourceLocation Loc, Scope *S);
 
@@ -3910,14 +3727,22 @@ public:
   void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *Min, Expr *Max);
 
+  /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
+  AMDGPUMaxNumWorkGroupsAttr *
+  CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
+                                   Expr *YExpr, Expr *ZExpr);
+
+  /// addAMDGPUMaxNumWorkGroupsAttr - Adds an amdgpu_max_num_work_groups
+  /// attribute to a particular declaration.
+  void addAMDGPUMaxNumWorkGroupsAttr(Decl *D, const AttributeCommonInfo &CI,
+                                     Expr *XExpr, Expr *YExpr, Expr *ZExpr);
+
   DLLImportAttr *mergeDLLImportAttr(Decl *D, const AttributeCommonInfo &CI);
   DLLExportAttr *mergeDLLExportAttr(Decl *D, const AttributeCommonInfo &CI);
   MSInheritanceAttr *mergeMSInheritanceAttr(Decl *D,
                                             const AttributeCommonInfo &CI,
                                             bool BestCase,
                                             MSInheritanceModel Model);
-
-  bool CheckCountedByAttr(Scope *Scope, const FieldDecl *FD);
 
   EnforceTCBAttr *mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL);
   EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
@@ -5231,6 +5056,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
+      EK_BoundsAttrArgument,
       EK_Other
     } ExprContext;
 
@@ -5347,6 +5173,12 @@ public:
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back();
   };
+
+  bool isBoundsAttrContext() const {
+    return ExprEvalContexts.back().ExprContext ==
+           ExpressionEvaluationContextRecord::ExpressionKind::
+               EK_BoundsAttrArgument;
+  }
 
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
@@ -8053,13 +7885,13 @@ public:
 
   /// The parser has processed a module import translated from a
   /// #include or similar preprocessing directive.
-  void ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
   void BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod);
 
   /// The parsed has entered a submodule.
-  void ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleBegin(SourceLocation DirectiveLoc, Module *Mod);
   /// The parser has left a submodule.
-  void ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
+  void ActOnAnnotModuleEnd(SourceLocation DirectiveLoc, Module *Mod);
 
   /// Create an implicit import of the given module at the given
   /// source location, for error recovery, if possible.
@@ -9002,6 +8834,12 @@ public:
   void ProcessStmtAttributes(Stmt *Stmt, const ParsedAttributes &InAttrs,
                              SmallVectorImpl<const Attr *> &OutAttrs);
 
+  ExprResult ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
+                                SourceRange Range);
+  ExprResult BuildCXXAssumeExpr(Expr *Assumption,
+                                const IdentifierInfo *AttrName,
+                                SourceRange Range);
+
   ///@}
 
   //
@@ -9197,7 +9035,7 @@ public:
 
   bool AttachTypeConstraint(NestedNameSpecifierLoc NS,
                             DeclarationNameInfo NameInfo,
-                            ConceptDecl *NamedConcept,
+                            ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
@@ -9679,7 +9517,8 @@ public:
   /// not already done so.
   void DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                       SourceLocation Loc);
-  FunctionTemplateDecl *DeclareImplicitDeductionGuideFromInitList(
+
+  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
       TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
       SourceLocation Loc);
 
@@ -9825,6 +9664,12 @@ public:
   DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           sema::TemplateDeductionInfo &Info);
+
+  TemplateDeductionResult DeduceTemplateArguments(
+      TemplateParameterList *TemplateParams, ArrayRef<TemplateArgument> Ps,
+      ArrayRef<TemplateArgument> As, sema::TemplateDeductionInfo &Info,
+      SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+      bool NumberOfArgumentsMustMatch);
 
   TemplateDeductionResult SubstituteExplicitTemplateArguments(
       FunctionTemplateDecl *FunctionTemplate,
@@ -10130,6 +9975,9 @@ public:
 
       /// We are building deduction guides for a class.
       BuildingDeductionGuides,
+
+      /// We are instantiating a type alias template declaration.
+      TypeAliasTemplateInstantiation,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -10217,6 +10065,12 @@ public:
     /// of a function template.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           FunctionDecl *Entity, ExceptionSpecification,
+                          SourceRange InstantiationRange = SourceRange());
+
+    /// Note that we are instantiating a type alias template declaration.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          TypeAliasTemplateDecl *Template,
+                          ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we are instantiating a default argument in a
@@ -10377,6 +10231,9 @@ public:
     InstantiatingTemplate &operator=(const InstantiatingTemplate &) = delete;
   };
 
+  bool SubstTemplateArgument(const TemplateArgumentLoc &Input,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             TemplateArgumentLoc &Output);
   bool
   SubstTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                          const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -10861,9 +10718,11 @@ public:
                                   ParmVarDecl *Param);
   void InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
                                 FunctionDecl *Function);
-  FunctionDecl *InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
-                                               const TemplateArgumentList *Args,
-                                               SourceLocation Loc);
+  FunctionDecl *InstantiateFunctionDeclaration(
+      FunctionTemplateDecl *FTD, const TemplateArgumentList *Args,
+      SourceLocation Loc,
+      CodeSynthesisContext::SynthesisKind CSC =
+          CodeSynthesisContext::ExplicitTemplateArgumentSubstitution);
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function,
                                      bool Recursive = false,
@@ -11606,12 +11465,14 @@ private:
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
-  /// used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
   /// the case of lambdas) set up the LocalInstantiationScope of the current
   /// function.
-  bool SetupConstraintScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope);
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
 
   /// Used during constraint checking, sets up the constraint template argument
   /// lists, and calls SetupConstraintScope to set up the
@@ -11713,6 +11574,8 @@ public:
                               SourceLocation AttrLoc);
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
+
+  QualType BuildCountAttributedArrayType(QualType WrappedTy, Expr *CountExpr);
 
   QualType BuildAddressSpaceAttr(QualType &T, LangAS ASIdx, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
@@ -13056,9 +12919,7 @@ public:
   /// Diagnostics that are emitted only if we discover that the given function
   /// must be codegen'ed.  Because handling these correctly adds overhead to
   /// compilation, this is currently only enabled for CUDA compilations.
-  llvm::DenseMap<CanonicalDeclPtr<const FunctionDecl>,
-                 std::vector<PartialDiagnosticAt>>
-      DeviceDeferredDiags;
+  SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
 
   /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
   /// key in a hashtable, both the FD and location are hashed.
@@ -13301,56 +13162,6 @@ public:
 
   bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
   bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name OpenACC Constructs
-  /// Implementations are in SemaOpenACC.cpp
-  ///@{
-
-public:
-  /// Called after parsing an OpenACC Clause so that it can be checked.
-  bool ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
-                          SourceLocation StartLoc);
-
-  /// Called after the construct has been parsed, but clauses haven't been
-  /// parsed.  This allows us to diagnose not-implemented, as well as set up any
-  /// state required for parsing the clauses.
-  void ActOnOpenACCConstruct(OpenACCDirectiveKind K, SourceLocation StartLoc);
-
-  /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
-  /// happen before any associated declarations or statements have been parsed.
-  /// This function is only called when we are parsing a 'statement' context.
-  bool ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                      SourceLocation StartLoc);
-
-  /// Called after the directive, including its clauses, have been parsed and
-  /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
-  /// happen before any associated declarations or statements have been parsed.
-  /// This function is only called when we are parsing a 'Decl' context.
-  bool ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
-                                      SourceLocation StartLoc);
-  /// Called when we encounter an associated statement for our construct, this
-  /// should check legality of the statement as it appertains to this Construct.
-  StmtResult ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
-                                        StmtResult AssocStmt);
-
-  /// Called after the directive has been completely parsed, including the
-  /// declaration group or associated statement.
-  StmtResult ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
-                                          SourceLocation StartLoc,
-                                          SourceLocation EndLoc,
-                                          StmtResult AssocStmt);
-  /// Called after the directive has been completely parsed, including the
-  /// declaration group or associated statement.
-  DeclGroupRef ActOnEndOpenACCDeclDirective();
 
   ///@}
 
@@ -14694,10 +14505,10 @@ private:
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The current `omp begin/end assumes` scopes.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeScoped;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeScoped;
 
   /// All `omp assumes` we encountered so far.
-  SmallVector<AssumptionAttr *, 4> OMPAssumeGlobal;
+  SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
 
   /// OMPD_loop is mapped to OMPD_for, OMPD_distribute or OMPD_simd depending
   /// on the parameter of the bind clause. In the methods for the

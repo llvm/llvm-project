@@ -64,9 +64,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[CTLZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_UNDEF [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[CTLZ_ZERO_UNDEF]], [[C]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[CTLZ_ZERO_UNDEF]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_CTLZ_ZERO_UNDEF %0
     %2:_(s32) = G_ZEXT %1

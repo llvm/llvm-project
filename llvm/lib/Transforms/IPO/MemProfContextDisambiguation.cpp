@@ -122,6 +122,10 @@ static cl::opt<unsigned>
                                  "frames through tail calls."));
 
 namespace llvm {
+cl::opt<bool> EnableMemProfContextDisambiguation(
+    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
 cl::opt<bool> SupportsHotColdNew(
@@ -306,8 +310,12 @@ public:
     // True if this node was effectively removed from the graph, in which case
     // its context id set, caller edges, and callee edges should all be empty.
     bool isRemoved() const {
-      assert(ContextIds.empty() ==
-             (CalleeEdges.empty() && CallerEdges.empty()));
+      // Note that we can have non-empty context ids with empty caller and
+      // callee edges if the graph ends up with a single node.
+      if (ContextIds.empty())
+        assert(CalleeEdges.empty() && CallerEdges.empty() &&
+               "Context ids empty but at least one of callee and caller edges "
+               "were not!");
       return ContextIds.empty();
     }
 
@@ -349,9 +357,12 @@ public:
     }
   };
 
-  /// Helper to remove callee edges that have allocation type None (due to not
+  /// Helpers to remove callee edges that have allocation type None (due to not
   /// carrying any context ids) after transformations.
   void removeNoneTypeCalleeEdges(ContextNode *Node);
+  void
+  recursivelyRemoveNoneTypeCalleeEdges(ContextNode *Node,
+                                       DenseSet<const ContextNode *> &Visited);
 
 protected:
   /// Get a list of nodes corresponding to the stack ids in the given callsite
@@ -2428,10 +2439,42 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
+    recursivelyRemoveNoneTypeCalleeEdges(
+        ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
+  auto Inserted = Visited.insert(Node);
+  if (!Inserted.second)
+    return;
+
+  removeNoneTypeCalleeEdges(Node);
+
+  for (auto *Clone : Node->Clones)
+    recursivelyRemoveNoneTypeCalleeEdges(Clone, Visited);
+
+  // The recursive call may remove some of this Node's caller edges.
+  // Iterate over a copy and skip any that were removed.
+  auto CallerEdges = Node->CallerEdges;
+  for (auto &Edge : CallerEdges) {
+    // Skip any that have been removed by an earlier recursive call.
+    if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
+      assert(!std::count(Node->CallerEdges.begin(), Node->CallerEdges.end(),
+                         Edge));
+      continue;
+    }
+    recursivelyRemoveNoneTypeCalleeEdges(Edge->Caller, Visited);
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
   DenseSet<const ContextNode *> Visited;
   for (auto &Entry : AllocationCallToContextNodeMap)
     identifyClones(Entry.second, Visited);
+  Visited.clear();
+  for (auto &Entry : AllocationCallToContextNodeMap)
+    recursivelyRemoveNoneTypeCalleeEdges(Entry.second, Visited);
+  if (VerifyCCG)
+    check();
 }
 
 // helper function to check an AllocType is cold or notcold or both.
@@ -2446,7 +2489,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   if (VerifyNodes)
-    checkNode<DerivedCCG, FuncTy, CallTy>(Node);
+    checkNode<DerivedCCG, FuncTy, CallTy>(Node, /*CheckEdges=*/false);
   assert(!Node->CloneOf);
 
   // If Node as a null call, then either it wasn't found in the module (regular
@@ -2507,8 +2550,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
                    [&](const std::shared_ptr<ContextEdge> &A,
                        const std::shared_ptr<ContextEdge> &B) {
-                     assert(checkColdOrNotCold(A->AllocTypes) &&
-                            checkColdOrNotCold(B->AllocTypes));
+                     // Nodes with non-empty context ids should be sorted before
+                     // those with empty context ids.
+                     if (A->ContextIds.empty())
+                       // Either B ContextIds are non-empty (in which case we
+                       // should return false because B < A), or B ContextIds
+                       // are empty, in which case they are equal, and we should
+                       // maintain the original relative ordering.
+                       return false;
+                     if (B->ContextIds.empty())
+                       return true;
 
                      if (A->AllocTypes == B->AllocTypes)
                        // Use the first context id for each edge as a
@@ -2587,39 +2638,16 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
            Node->AllocTypes != (uint8_t)AllocationType::None);
     // Sanity check that no alloc types on clone or its edges are None.
     assert(Clone->AllocTypes != (uint8_t)AllocationType::None);
-    assert(llvm::none_of(
-        Clone->CallerEdges, [&](const std::shared_ptr<ContextEdge> &E) {
-          return E->AllocTypes == (uint8_t)AllocationType::None;
-        }));
   }
 
-  // Cloning may have resulted in some cloned callee edges with type None,
-  // because they aren't carrying any contexts. Remove those edges.
-  for (auto *Clone : Node->Clones) {
-    removeNoneTypeCalleeEdges(Clone);
-    if (VerifyNodes)
-      checkNode<DerivedCCG, FuncTy, CallTy>(Clone);
-  }
   // We should still have some context ids on the original Node.
   assert(!Node->ContextIds.empty());
 
-  // Remove any callee edges that ended up with alloc type None after creating
-  // clones and updating callee edges.
-  removeNoneTypeCalleeEdges(Node);
-
   // Sanity check that no alloc types on node or edges are None.
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
-  assert(llvm::none_of(Node->CalleeEdges,
-                       [&](const std::shared_ptr<ContextEdge> &E) {
-                         return E->AllocTypes == (uint8_t)AllocationType::None;
-                       }));
-  assert(llvm::none_of(Node->CallerEdges,
-                       [&](const std::shared_ptr<ContextEdge> &E) {
-                         return E->AllocTypes == (uint8_t)AllocationType::None;
-                       }));
 
   if (VerifyNodes)
-    checkNode<DerivedCCG, FuncTy, CallTy>(Node);
+    checkNode<DerivedCCG, FuncTy, CallTy>(Node, /*CheckEdges=*/false);
 }
 
 void ModuleCallsiteContextGraph::updateAllocationCall(
@@ -3375,10 +3403,22 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
     auto *GVSummary =
         ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
-    if (!GVSummary)
-      // Must have been imported, use the first summary (might be multiple if
-      // this was a linkonce_odr).
-      GVSummary = TheFnVI.getSummaryList().front().get();
+    if (!GVSummary) {
+      // Must have been imported, use the summary which matches the definition。
+      // (might be multiple if this was a linkonce_odr).
+      auto SrcModuleMD = F.getMetadata("thinlto_src_module");
+      assert(SrcModuleMD &&
+             "enable-import-metadata is needed to emit thinlto_src_module");
+      StringRef SrcModule =
+          dyn_cast<MDString>(SrcModuleMD->getOperand(0))->getString();
+      for (auto &GVS : TheFnVI.getSummaryList()) {
+        if (GVS->modulePath() == SrcModule) {
+          GVSummary = GVS.get();
+          break;
+        }
+      }
+      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+    }
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
