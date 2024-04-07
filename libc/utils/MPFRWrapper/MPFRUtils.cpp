@@ -14,7 +14,6 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 
-#include "hdr/fenv_macros.h"
 #include "hdr/math_macros.h"
 #include <memory>
 #include <stdint.h>

@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/fenv_macros.h"
+#include <fenv.h>
 
 TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
   // We will disable all exceptions to prevent invocation of the exception
