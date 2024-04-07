@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     fegetround.h
   DEPENDS
-    libc.hdr.fenv_macros
+    libc.include.fenv
     libc.src.__support.FPUtil.fenv_impl
   COMPILE_OPTIONS
     -O2

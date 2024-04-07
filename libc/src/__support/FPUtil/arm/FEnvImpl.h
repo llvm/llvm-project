@@ -11,6 +11,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "hdr/fenv_macros.h"
 #include <fenv.h>
 #include <stdint.h>
 

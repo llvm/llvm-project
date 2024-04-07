@@ -71,12 +71,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "llvm_libc_macros_fenv_macros",
-    hdrs = ["include/llvm-libc-macros/fenv-macros.h"],
-    deps = [":llvm_libc_macros_limits_macros"],
-)
-
-libc_support_library(
     name = "llvm_libc_macros_limits_macros",
     hdrs = ["include/llvm-libc-macros/limits-macros.h"],
 )
@@ -117,6 +111,11 @@ libc_support_library(
 libc_support_library(
     name = "hdr_math_macros",
     hdrs = ["hdr/math_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_fenv_macros",
+    hdrs = ["hdr/fenv_macros.h"],
 )
 
 ############################### Support libraries ##############################
