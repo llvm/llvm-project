@@ -804,6 +804,11 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
 // AsScopeOp
 //===----------------------------------------------------------------------===//
 
+/// Helper function for getting the (first, last) pair of ops in the closed
+/// interval of ops specified as argument. All ops must belong to the same block
+/// and are not assumed to be ordered from earliest to latest. The function
+/// finds the earliest and latest ops and verifies that given ops indeed form an
+/// interval, i.e. that all ops between earliest and latest are in the set.
 static std::optional<std::pair<Operation *, Operation *>>
 getInterval(SetVector<Operation *> &ops) {
   assert(!ops.empty() && "Expected non-empty operation list");
@@ -817,12 +822,12 @@ getInterval(SetVector<Operation *> &ops) {
   for (Operation *op : ops) {
     if (op->getBlock() != block)
       return std::nullopt;
-    if (op->isBeforeInBlock(earliest))
+    if (op->isBeforeInBlock(earliest)) {
       earliest = op;
-    else if (latest->isBeforeInBlock(op))
+      continue;
+    }
+    if (latest->isBeforeInBlock(op))
       latest = op;
-    else
-      ;
   }
 
   // Make sure all operations between earliest and latest are in ops.
@@ -852,25 +857,25 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
 
   Operation *wherePayload = nullptr;
   Value whereOp = getWhereOp();
-  auto whereAttr = getWhere();
   RelativeLocation where;
   if (whereOp) {
     auto wherePayloadOps = state.getPayloadOps(whereOp);
-    if (std::distance(wherePayloadOps.begin(), wherePayloadOps.end()) != 1) {
-      auto diag = emitDefiniteFailure()
-                  << "expects a single location for the scope";
+    if (!llvm::hasSingleElement(wherePayloadOps)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "expects a single location for the scope";
       diag.attachNote(whereOp.getLoc()) << "single location";
       return diag;
     }
     wherePayload = *wherePayloadOps.begin();
-    where = *whereAttr;
+    where = *getWhere();
   } else {
     // No insertion point specified, so payload ops must form an interval.
     auto interval = getInterval(opsPayload);
     if (!interval) {
-      auto diag = emitDefiniteFailure()
-                  << "payload ops must form an interval unless insertion point "
-                     "is specified";
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "payload ops must form an interval unless insertion point "
+             "is specified";
       diag.attachNote(ops.getLoc()) << "not an interval";
       return diag;
     }
@@ -938,12 +943,12 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
   auto scope = rewriter.create<scf::ScopeOp>(wherePayload->getLoc(),
                                              resultTypes, liveIns);
   Region *scopeBody = &scope.getBody();
-  // TODO: Move into builder.
-  Block *scopeBlock = rewriter.createBlock(scopeBody, scopeBody->end());
-
-  // TODO: Move into builder.
-  for (Value arg : liveIns)
-    scopeBlock->addArgument(arg.getType(), arg.getLoc());
+  SmallVector<Location> argLocs(liveIns.size(), scope.getLoc());
+  SmallVector<Type> argTypes;
+  for (Value liveIn : liveIns)
+    argTypes.push_back(liveIn.getType());
+  Block *scopeBlock = rewriter.createBlock(scopeBody, scopeBody->end(),
+                                           argTypes, argLocs);
 
   IRMapping mapper;
   for (Value liveIn : liveIns)
@@ -979,7 +984,7 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
         break;
       }
 
-      if (::mlir::failed(result.silence()))
+      if (failed(result.silence()))
         return DiagnosedSilenceableFailure::definiteFailure();
     }
 
@@ -1009,10 +1014,6 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
       return DiagnosedSilenceableFailure::definiteFailure();
     }
     scopeBody = &scope.getBody();
-    if (!scopeBody->hasOneBlock()) {
-      LLVM_DEBUG(DBGS() << "multiple blocks in scope post transformation\n");
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
     scopeBlock = &scopeBody->front();
   }
 
@@ -1043,13 +1044,30 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
   for (Operation &scopeOp : scopeBlock->without_terminator())
     rewriter.clone(scopeOp, inlineMapper);
 
+  // Replace users with the transformed live outs, except users which belong to
+  // the original payload ops. Once done, any remaining user of any payload op
+  // must itself be a payload op.
   for (auto [liveOut, transformedLiveOut] :
        llvm::zip(liveOuts, transformedLiveOuts)) {
     Value inlinedLiveOut = inlineMapper.lookup<Value>(transformedLiveOut);
-    rewriter.replaceAllUsesWith(liveOut, inlinedLiveOut);
+    rewriter.replaceUsesWithIf(liveOut, inlinedLiveOut,
+                               [&isInScope](OpOperand &operand) {
+                                 return !isInScope(operand.getOwner());
+                               });
   }
+  assert(llvm::all_of(opsPayload,
+                      [&opsPayload](Operation *payload) {
+                        return llvm::all_of(payload->getUsers(),
+                                            [&opsPayload](Operation *user) {
+                                              return opsPayload.contains(user);
+                                            });
+                      }) &&
+         "Expected users of payload ops to be the payload ops themselves");
 
   rewriter.eraseOp(scope);
+
+  // Erase the original payload ops. Since these ops might still be using each
+  // other, they must be erased in use-before-def order.
   while (!opsPayload.empty()) {
     for (auto payload : llvm::make_early_inc_range(opsPayload)) {
       if (payload->getUsers().empty()) {
@@ -1067,9 +1085,6 @@ void transform::AsScopeOp::getEffects(
   onlyReadsHandle(getWhereOp(), effects);
   consumesHandle(getWhat(), effects);
   producesHandle(getResults(), effects);
-  Region &region = getRegion();
-  if (!region.empty())
-    producesHandle(region.front().getArguments(), effects);
   modifiesPayload(effects);
 }
 

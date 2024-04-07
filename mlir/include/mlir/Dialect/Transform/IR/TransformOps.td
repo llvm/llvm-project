@@ -462,7 +462,7 @@ def AsScopeOp : TransformDialectOp<"as_scope", [
     transformation, either for functional reasons, e.g.
 
     ```mlir
-    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> (), !transform.any_op {
+    transform.as_scope %what before %where : (!transform.any_op, !transform.any_op) -> () {
     ^bb2(%s: !transform.any_op):
       transform.apply_patterns to %s {
         transform.apply_patterns.canonicalization
@@ -474,7 +474,7 @@ def AsScopeOp : TransformDialectOp<"as_scope", [
     or for saving on compile time/memory by minimizing cloning, e.g.
 
     ```mlir
-    transform.as_scope %what after %where : (!transform.any_op, !transform.any_op) -> (), !transform.any_op {
+    transform.as_scope %what after %where : (!transform.any_op, !transform.any_op) -> () {
     ^bb2(%s: !transform.any_op):
       transform.alternatives %s : !transform.any_op {
       ^bb2(%arg2: !transform.any_op):

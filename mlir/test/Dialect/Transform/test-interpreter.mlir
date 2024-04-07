@@ -2658,6 +2658,40 @@ module attributes { transform.with_named_sequence } {
 
 // -----
 
+// CHECK-LABEL: func.func @scope_single_op_interval() -> i32 {
+//       CHECK:   %[[VAL_0:.*]] = arith.constant 17 : i32
+//       CHECK:   %[[VAL_1:.*]] = arith.constant 75 : i32
+//       CHECK:   %[[VAL_2:.*]] = arith.constant 29 : i32
+//       CHECK:   %[[VAL_3:.*]] = arith.subi %[[VAL_1]], %[[VAL_2]] : i32
+//       CHECK:   %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_0]] : i32
+//       CHECK:   return %[[VAL_4]] : i32
+//       CHECK: }
+module attributes { transform.with_named_sequence } {
+  func.func @scope_single_op_interval() -> i32 {
+    %c17 = arith.constant 17 : i32
+    %c75 = arith.constant 75 : i32
+    %c29 = arith.constant 29 : i32
+    %sub = arith.subi %c75, %c29 : i32
+    %add = arith.addi %sub, %c17 : i32
+    return %add : i32
+  }
+
+  transform.named_sequence @__transform_main(%fun: !transform.any_op) {
+    %addi = transform.structured.match ops{["arith.addi"]} in %fun : (!transform.any_op) -> !transform.any_op
+    %what = transform.merge_handles %addi : !transform.any_op
+    transform.as_scope %what : (!transform.any_op) -> () {
+      ^bb2(%s: !transform.any_op):
+        transform.apply_patterns to %s {
+          transform.apply_patterns.canonicalization
+        } : !transform.any_op
+        transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
 module attributes { transform.with_named_sequence } {
   func.func @scope_not_an_interval(%a: i32, %b: i32, %c: i32) -> (i32, i32) {
     %sub = arith.subi %a, %b : i32
