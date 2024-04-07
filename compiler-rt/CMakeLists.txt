@@ -36,6 +36,7 @@ include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
+include(GetDarwinLinkerVersion)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -444,6 +445,15 @@ else()
   set(SANITIZER_USE_SYMBOLS FALSE)
 endif()
 
+# Get the linker version while configuring compiler-rt and explicitly pass it
+# in cflags during testing. This fixes the compiler/linker version mismatch
+# issue when running a clang built with a newer Xcode in an older Xcode
+set(COMPILER_RT_DARWIN_LINKER_VERSION)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+  get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
+  message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
+endif()
+
 # Build sanitizer runtimes with debug info.
 if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
@@ -589,10 +599,10 @@ if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
   # of the ones bundled with the compiler by overriding the resource directory.
   #
   if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
-    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${CMAKE_CURRENT_BINARY_DIR}")
+    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
   endif()
-  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
-  list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-Wl,-rpath,${output_dir}")
+  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} rtlib_dir)
+  list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-Wl,-rpath,${rtlib_dir}")
 endif()
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)

@@ -896,7 +896,7 @@ define float @test_rootn_f32__y_neg2__strictfp(float %x) #1 {
 ; CHECK-LABEL: define float @test_rootn_f32__y_neg2__strictfp(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = call float @_Z5rsqrtf(float [[X]])
+; CHECK-NEXT:    [[__ROOTN2RSQRT:%.*]] = call float @_Z5rsqrtf(float [[X]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[__ROOTN2RSQRT]]
 ;
 entry:
