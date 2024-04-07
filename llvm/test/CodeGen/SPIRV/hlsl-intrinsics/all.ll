@@ -1,9 +1,12 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-HLSL
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OCL
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; Make sure spirv operation function calls for all are generated.
 
-; CHECK: OpMemoryModel Logical GLSL450
+; CHECK-HLSL: OpMemoryModel Logical GLSL450
+; CHECK-OCL: OpMemoryModel Physical32 OpenCL
+; CHECK: OpName %[[#all_bool_arg:]] "a"
 ; CHECK: %[[#int_64:]] = OpTypeInt 64 0
 ; CHECK: %[[#bool:]] = OpTypeBool
 ; CHECK: %[[#int_32:]] = OpTypeInt 32 0
@@ -19,19 +22,31 @@
 ; CHECK: %[[#vec_float_32_4:]] = OpTypeVector %[[#float_32]] 4
 ; CHECK: %[[#vec_float_64_4:]] = OpTypeVector %[[#float_64]] 4
 
-; CHECK: %[[#const_int_64:]] = OpConstant %[[#int_64]] 0
-; CHECK: %[[#const_int_32:]] = OpConstant %[[#int_32]] 0
-; CHECK: %[[#const_int_16:]] = OpConstant %[[#int_16]] 0
-; CHECK: %[[#const_float_64:]] = OpConstant %[[#float_64]] 0
-; CHECK: %[[#const_float_32:]] =  OpConstant %[[#float_32:]] 0
-; CHECK: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
+; CHECK-HLSL: %[[#const_int_64:]] = OpConstant %[[#int_64]] 0
+; CHECK-HLSL: %[[#const_int_32:]] = OpConstant %[[#int_32]] 0
+; CHECK-HLSL: %[[#const_int_16:]] = OpConstant %[[#int_16]] 0
+; CHECK-HLSL: %[[#const_float_64:]] = OpConstant %[[#float_64]] 0
+; CHECK-HLSL: %[[#const_float_32:]] = OpConstant %[[#float_32:]] 0
+; CHECK-HLSL: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
+; CHECK-HLSL: %[[#vec_zero_const_i16_4:]] = OpConstantComposite %[[#vec_16_4:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]]
+; CHECK-HLSL: %[[#vec_zero_const_i32_4:]] = OpConstantComposite %[[#vec_32_4:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]]
+; CHECK-HLSL: %[[#vec_zero_const_i64_4:]] = OpConstantComposite %[[#vec_64_4:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]]
+; CHECK-HLSL: %[[#vec_zero_const_f16_4:]] = OpConstantComposite %[[#vec_float_16_4:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]]
+; CHECK-HLSL: %[[#vec_zero_const_f32_4:]] = OpConstantComposite %[[#vec_float_32_4:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]]
+; CHECK-HLSL: %[[#vec_zero_const_f64_4:]] = OpConstantComposite %[[#vec_float_64_4:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]]
 
-; CHECK: %[[#vec_zero_const_i16_4:]] = OpConstantComposite %[[#vec_16_4:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]]
-; CHECK: %[[#vec_zero_const_i32_4:]] = OpConstantComposite %[[#vec_32_4:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]]
-; CHECK: %[[#vec_zero_const_i64_4:]] = OpConstantComposite %[[#vec_64_4:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]]
-; CHECK: %[[#vec_zero_const_f16_4:]] = OpConstantComposite %[[#vec_float_16_4:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]]
-; CHECK: %[[#vec_zero_const_f32_4:]] = OpConstantComposite %[[#vec_float_32_4:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]]
-; CHECK: %[[#vec_zero_const_f64_4:]] = OpConstantComposite %[[#vec_float_64_4:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]]
+; CHECK-OCL: %[[#const_int_64:]] = OpConstantNull %[[#int_64]]
+; CHECK-OCL: %[[#const_int_32:]] = OpConstantNull %[[#int_32]]
+; CHECK-OCL: %[[#const_int_16:]] = OpConstantNull %[[#int_16]]
+; CHECK-OCL: %[[#const_float_64:]] = OpConstantNull %[[#float_64]] 
+; CHECK-OCL: %[[#const_float_32:]] = OpConstantNull %[[#float_32:]]
+; CHECK-OCL: %[[#const_float_16:]] = OpConstantNull %[[#float_16:]]
+; CHECK-OCL: %[[#vec_zero_const_i16_4:]] = OpConstantNull %[[#vec_16_4:]]
+; CHECK-OCL: %[[#vec_zero_const_i32_4:]] = OpConstantNull %[[#vec_32_4:]]
+; CHECK-OCL: %[[#vec_zero_const_i64_4:]] = OpConstantNull %[[#vec_64_4:]]
+; CHECK-OCL: %[[#vec_zero_const_f16_4:]] = OpConstantNull %[[#vec_float_16_4:]]
+; CHECK-OCL: %[[#vec_zero_const_f32_4:]] = OpConstantNull %[[#vec_float_32_4:]]
+; CHECK-OCL: %[[#vec_zero_const_f64_4:]] = OpConstantNull %[[#vec_float_64_4:]]
 
 define noundef i1 @all_int64_t(i64 noundef %p0) {
 entry:
@@ -150,6 +165,14 @@ entry:
   ; CHECK: %[[#f64VecNotEq:]] = OpFOrdNotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_f64_4:]]
   ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#f64VecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4f64(<4 x double> %p0)
+  ret i1 %hlsl.all
+}
+
+define noundef i1 @all_bool(i1 noundef %a) {
+entry:
+  ; CHECK: %[[#all_bool_arg:]] = OpFunctionParameter %[[#bool:]]
+  ; CHECK: OpReturnValue %[[#all_bool_arg:]]
+  %hlsl.all = call i1 @llvm.spv.all.i1(i1 %a)
   ret i1 %hlsl.all
 }
 

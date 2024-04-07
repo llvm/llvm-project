@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 
@@ -1170,15 +1171,12 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
   bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
   if (IsBoolTy && !IsVectorTy) {
-    Register LoadReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+    assert(ResVReg == I.getOperand(0).getReg());
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
         .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(InputType))
-        .addUse(InputRegister);
-
-    return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpStore))
-        .addUse(LoadReg)
-        .addUse(InputRegister);
+        .addUse(InputRegister)
+        .constrainAllUses(TII, TRI, RBI);
   }
 
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
