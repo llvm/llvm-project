@@ -2516,6 +2516,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BIprintf:
+  case Builtin::BI__builtin_printf:
+    if (SemaBuiltinPrintf(FDecl, TheCall))
+      return ExprError();
+    break;
 
   // The acquire, release, and no fence variants are ARM and AArch64 only.
   case Builtin::BI_interlockedbittestandset_acq:
@@ -9516,6 +9521,52 @@ bool Sema::SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
     Diag(Arg->getBeginLoc(), diag::warn_va_start_type_is_undefined) << Reason;
     Diag(ParamLoc, diag::note_parameter_type) << Type;
   }
+
+  return false;
+}
+
+bool Sema::SemaBuiltinPrintf(FunctionDecl *FDecl, CallExpr *TheCall) {
+  auto Proto = FDecl->getType()->getAs<FunctionProtoType>();
+  auto Args = llvm::ArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
+
+  unsigned NumParams = Proto->getNumParams();
+  unsigned MinArgs = FDecl->getMinRequiredArguments();
+  if (Args.size() < NumParams) {
+    if (Args.size() < MinArgs) {
+      Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
+          << /*function*/ 0 << MinArgs << static_cast<unsigned>(Args.size())
+          << /*HasExplicitObjectParameter*/ false << TheCall->getSourceRange();
+
+      // Emit the location of the prototype if valid.
+      if (!FDecl->isImplicit())
+        Diag(FDecl->getLocation(), diag::note_callee_decl)
+            << FDecl << FDecl->getParametersSourceRange();
+
+      return true;
+    }
+    // We reserve space for the default arguments when we create
+    // the call expression.
+    assert((TheCall->getNumArgs() == NumParams) &&
+           "We should have reserved space for the default arguments before!");
+  }
+
+  SmallVector<Expr *, 8> AllArgs;
+  VariadicCallType CallType = VariadicCallType::VariadicFunction;
+
+  // Convert arguments to paramters types of printf decl/builtin.
+  bool Invalid = GatherArgumentsForCall(TheCall->getBeginLoc(), FDecl, Proto, 0,
+                                        Args, AllArgs, CallType);
+
+  if (Invalid)
+    return true;
+  unsigned TotalNumArgs = AllArgs.size();
+  for (unsigned i = 0; i < TotalNumArgs; ++i)
+    TheCall->setArg(i, AllArgs[i]);
+
+  TheCall->setType(Proto->getReturnType());
+
+  if (CheckFunctionCall(FDecl, TheCall, Proto))
+    return true;
 
   return false;
 }

@@ -5917,7 +5917,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         getTarget().getTriple().isAMDGCN()) {
       if (getLangOpts().OpenMPIsTargetDevice)
         return EmitOpenMPDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isNVPTX())
+      if (getTarget().getTriple().isNVPTX() && !getLangOpts().OpenCL)
         return EmitNVPTXDevicePrintfCallExpr(E);
       if (getTarget().getTriple().isAMDGCN() && getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E);
