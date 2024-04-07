@@ -11,7 +11,6 @@
 // constexpr iterator_t<V> base() const;
 
 #include <cassert>
-#include <optional>
 #include <ranges>
 
 #include "../types.h"
@@ -30,7 +29,7 @@ constexpr bool test() {
   // const &
   {
     SplitView sv;
-    const SplitIter it{sv, Iter{5}, std::nullopt};
+    const SplitIter it{sv, Iter{5}, {}};
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
@@ -38,7 +37,7 @@ constexpr bool test() {
   // &
   {
     SplitView sv;
-    SplitIter it{sv, Iter{5}, std::nullopt};
+    SplitIter it{sv, Iter{5}, {}};
     std::same_as<Iter> decltype(auto) base = it.base();
     assert(base.i == 5);
   }
@@ -46,7 +45,7 @@ constexpr bool test() {
   // &&
   {
     SplitView sv;
-    SplitIter it{sv, Iter{5}, std::nullopt};
+    SplitIter it{sv, Iter{5}, {}};
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }
@@ -54,7 +53,7 @@ constexpr bool test() {
   // const &&
   {
     SplitView sv;
-    const SplitIter it{sv, Iter{5}, std::nullopt};
+    const SplitIter it{sv, Iter{5}, {}};
     std::same_as<Iter> decltype(auto) base = std::move(it).base();
     assert(base.i == 5);
   }

@@ -9,10 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // constexpr value_type operator*() const;
-//   Effects: Equivalent to return {cur_, next_->begin()};
+//   Effects: Equivalent to return {cur_, next_.begin()};
 
 #include <cassert>
-#include <optional>
 #include <ranges>
 
 #include "../types.h"
@@ -31,7 +30,7 @@ constexpr bool test() {
     SplitView sv;
     Iter current{5};
     std::ranges::subrange next{Iter{6}, Iter{7}};
-    const SplitIter it{sv, current, std::make_optional(next)};
+    const SplitIter it{sv, current, next};
     std::same_as<std::ranges::subrange<Iter>> decltype(auto) value = *it;
     assert(value.begin().i == 5);
     assert(value.end().i == 6);

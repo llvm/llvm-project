@@ -8,10 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr iterator(split_view& parent, iterator_t<V> current, optional<subrange<iterator_t<V>>> next);
+// constexpr iterator(split_view& parent, iterator_t<V> current, subrange<iterator_t<V>> next);
 
 #include <cassert>
-#include <optional>
 #include <ranges>
 
 #include "../types.h"
@@ -36,17 +35,12 @@ constexpr bool test() {
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
   SplitView sv{TracedMoveView{}, TracedMoveView{}};
-  SplitIter iter = {sv,
-                    sv.base().begin(),
-                    std::make_optional(std::ranges::subrange<TracedMoveIter>{sv.base().begin(), sv.base().end()})};
+  SplitIter iter = {sv, sv.base().begin(), std::ranges::subrange<TracedMoveIter>{sv.base().begin(), sv.base().end()}};
   assert(iter.base().moved);
 
   auto subRange = *iter;
   assert(subRange.begin().moved);
   assert(subRange.end().moved);
-
-  SplitIter iter2 = {sv, sv.base().begin(), std::nullopt};
-  assert(iter2.base().moved);
 
   return true;
 }
