@@ -427,11 +427,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       break;
     case tok::kw_default: {
       unsigned StoredPosition = Tokens->getPosition();
-      FormatToken *Next;
-      do {
-        Next = Tokens->getNextToken();
-        assert(Next);
-      } while (Next->is(tok::comment));
+      auto *Next = Tokens->getNextNonComment();
       FormatTok = Tokens->setPosition(StoredPosition);
       if (Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like
@@ -497,10 +493,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   assert(Tok->is(tok::l_brace));
 
   do {
-    FormatToken *NextTok;
-    do {
-      NextTok = Tokens->getNextToken();
-    } while (NextTok->is(tok::comment));
+    auto *NextTok = Tokens->getNextNonComment();
 
     if (!Line->InMacroBody && !Style.isTableGen()) {
       // Skip PPDirective lines and comments.
