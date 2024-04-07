@@ -3003,4 +3003,28 @@ define i1 @icmp_dec_notnonzero(i8 %x) {
   ret i1 %c
 }
 
+define i1 @icmp_addnuw_nonzero(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero(
+; CHECK-NEXT:    [[I:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[I]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i8 %x, %y
+  %c = icmp eq i8 %i, 0
+  ret i1 %c
+}
+
+define i1 @icmp_addnuw_nonzero_fail_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero_fail_multiuse(
+; CHECK-NEXT:    [[I:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    call void @use(i32 [[I]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i32 %x, %y
+  %c = icmp eq i32 %i, 0
+  call void @use(i32 %i)
+  ret i1 %c
+}
+
 declare void @llvm.assume(i1)
