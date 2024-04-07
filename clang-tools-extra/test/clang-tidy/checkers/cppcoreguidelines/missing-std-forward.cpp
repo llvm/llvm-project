@@ -199,5 +199,12 @@ struct S {
 
 } // namespace deleted_functions
 
+namespace unused_arguments {
+
 template<typename F>
-void unused_argument(F&&) {}
+void unused_argument1(F&&) {}
+
+template<typename F>
+void unused_argument2([[maybe_unused]] F&& f) {}
+
+} // namespace unused_arguments

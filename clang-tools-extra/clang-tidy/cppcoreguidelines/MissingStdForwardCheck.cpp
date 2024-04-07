@@ -128,7 +128,8 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       parmVarDecl(
           parmVarDecl().bind("param"), hasIdentifier(),
-          isTemplateTypeParameter(), hasAncestor(functionDecl().bind("func")),
+          unless(hasAttr(attr::Kind::Unused)), isTemplateTypeParameter(),
+          hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
               unless(anyOf(isDeleted(),
