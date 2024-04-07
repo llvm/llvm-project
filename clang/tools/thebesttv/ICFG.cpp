@@ -53,7 +53,7 @@ void ICFG::tryAndAddCallSite(int fid, const CFGBlock &B) {
         return;
 
     // callsite block has only one successor
-    assert(B.succ_size() == 1);
+    requireTrue(B.succ_size() == 1);
     const CFGBlock &Succ = **B.succ_begin();
 
     // get node id of callsite & its successor

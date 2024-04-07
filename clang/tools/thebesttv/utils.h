@@ -13,7 +13,6 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <memory>
