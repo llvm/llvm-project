@@ -519,6 +519,7 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         if (!to.isValid()) {
             logger.warn("Missing sink! Using exit of source instead");
             to = sourceExit;
+            toLine = INT_MAX;
         }
         findPathBetween(from, fromLine, to, toLine, path, {}, type, jResults);
     }
