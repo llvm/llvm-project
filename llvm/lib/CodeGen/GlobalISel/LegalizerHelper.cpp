@@ -4265,6 +4265,10 @@ LegalizerHelper::fewerElementsVectorPhi(GenericMachineInstr &MI,
     }
   }
 
+  // Set the insert point after the existing PHIs
+  MachineBasicBlock &MBB = *MI.getParent();
+  MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
+
   // Merge small outputs into MI's def.
   if (NumLeftovers) {
     mergeMixedSubvectors(MI.getReg(0), OutputRegs);
