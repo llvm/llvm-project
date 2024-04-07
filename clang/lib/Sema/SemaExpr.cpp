@@ -6331,7 +6331,6 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
       // Pass down lifetime extending flag, and collect temporaries in
       // CreateMaterializeTemporaryExpr when we rewrite the call argument.
       keepInLifetimeExtendingContext();
-      keepInMaterializeTemporaryObjectContext();
       EnsureImmediateInvocationInDefaultArgs Immediate(*this);
       ExprResult Res;
       runWithSufficientStackSpace(CallLoc, [&] {
@@ -18695,9 +18694,9 @@ void Sema::PopExpressionEvaluationContext() {
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
   auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
-  if (getLangOpts().CPlusPlus23 && isInLifetimeExtendingContext() &&
-      PrevRecord.InLifetimeExtendingContext && !ExprEvalContexts.empty()) {
-    auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+  if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
+      PrevRecord.InLifetimeExtendingContext &&
+      !Rec.ForRangeLifetimeExtendTemps.empty()) {
     PrevRecord.ForRangeLifetimeExtendTemps.append(
         Rec.ForRangeLifetimeExtendTemps);
   }
