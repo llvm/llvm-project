@@ -850,6 +850,7 @@ void Environment::setValue(const Expr &E, Value &Val) {
   if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
     assert(isOriginalRecordConstructor(CanonE) ||
            &RecordVal->getLoc() == &getResultObjectLocation(CanonE));
+    (void)RecordVal;
   }
 
   assert(CanonE.isPRValue());

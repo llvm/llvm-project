@@ -6354,6 +6354,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
         // by this point.
         assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
                "ConstantExpr has no value associated with it");
+        (void)CE;
       } else {
         E = ConstantExpr::Create(Context, Result.get(), Value);
       }
