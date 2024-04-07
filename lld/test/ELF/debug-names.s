@@ -1,119 +1,140 @@
-// debug_names.s was gGenerated with:
+# debug_names.s was gGenerated with:
 
-// - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-//     -S debug-names.cpp -o debug-names.s
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
+#     -S debug-names.cpp -o a.s
 
-// debug-names.cpp contents:
+# debug-names.cpp contents:
 
-// struct t1 { };
-// void f1(t1) { }
+# struct t1 { };
+# void f1(t1) { }
 
-// REQUIRES: x86
-// RUN: rm -rf %t && split-file %s %t
-// RUN: llvm-mc -filetype=obj -triple=x86_64 %t/debug-names.s \
-// RUN:     -o %t/debug-names.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64 %t/debug-names-2.s \
-// RUN:     -o %t/debug-names-2.o
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
 
-// RUN: ld.lld --debug-names --no-debug-names %t/debug-names.o \
-// RUN:     %t/debug-names-2.o -o %t/debug-names
-// RUN: llvm-readelf -SW %t/debug-names \
-// RUN:     | FileCheck %s --check-prefix=NO_DBG_NAMES
+# RUN: ld.lld --debug-names --no-debug-names a.o b.o -o out0
+# RUN: llvm-readelf -SW out0 | FileCheck %s --check-prefix=NO_MERGE
 	
-// NO_DBG_NAMES: .debug_names  PROGBITS  0000000000000000 [[#%x,]] 000110
+# NO_MERGE: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
+# NO_MERGE: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 000110 00      0   0  4
 	
-// RUN: ld.lld --debug-names %t/debug-names.o %t/debug-names-2.o \
-// RUN:     -o %t/debug-names
+# RUN: ld.lld --debug-names a.o b.o -o out
 
-// RUN: llvm-dwarfdump -debug-names %t/debug-names \
-// RUN:     | FileCheck %s --check-prefix=DWARF
-// RUN: llvm-readelf -SW %t/debug-names \
-// RUN:    | FileCheck -DFILE=%t/debug-names.o \
-// RUN:      -DFILE=%t/debug-names-2.o %s --check-prefix=READELF
+# RUN: llvm-dwarfdump -debug-names out | FileCheck %s --check-prefix=DWARF
+# RUN: llvm-readelf -SW out | FileCheck %s --check-prefix=READELF
 
-// READELF: .debug_names PROGBITS 0000000000000000 [[#%x,]] 0000d0
+# READELF: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
+# READELF: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 0000cc 00      0   0  4
 
-// DWARF:      .debug_names contents:
-// DWARF:      Name Index @ 0x0 {
-// DWARF-NEXT:   Header {
-// DWARF-NEXT:     Length: 0xCC
-// DWARF-NEXT:     Format: DWARF32
-// DWARF-NEXT:     Version: 5
-// DWARF-NEXT:     CU count: 2
-// DWARF-NEXT:     Local TU count: 0
-// DWARF-NEXT:     Foreign TU count: 0
-// DWARF-NEXT:     Bucket count: 5
-// DWARF-NEXT:     Name count: 5
-// DWARF-NEXT:     Abbreviations table size: 0x1F
-// DWARF-NEXT:     Augmentation: 'LLVM0700'
-// DWARF:        Compilation Unit offsets [
-// DWARF-NEXT:     CU[0]: 0x00000000
-// DWARF-NEXT:     CU[1]: 0x0000000c
-// DWARF:          Abbreviations [
-// DWARF-NEXT:     Abbreviation 0x1 {
-// DWARF:            Tag: DW_TAG_structure_type
-// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-// DWARF:          Abbreviation 0x2 {
-// DWARF-NEXT:       Tag: DW_TAG_subprogram
-// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-// DWARF:          Abbreviation 0x3 {
-// DWARF-NEXT:       Tag: DW_TAG_base_type
-// DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-// DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
-// DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
-// DWARF:        Bucket 0 [
-// DWARF:        Bucket 1 [
-// DWARF:            String: 0x00000089 "f1"
-// DWARF-NEXT:       Entry @ 0xa3 {
-// DWARF-NEXT:         Abbrev: 0x2
-// DWARF-NEXT:         Tag: DW_TAG_subprogram
-// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-// DWARF:            String: 0x00000095 "t1"
-// DWARF-NEXT:       Entry @ 0xaa {
-// DWARF-NEXT:         Abbrev: 0x1
-// DWARF-NEXT:         Tag: DW_TAG_structure_type
-// DWARF-NEXT:         DW_IDX_die_offset: 0x0000003a
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-// DWARF-NEXT:       }
-// DWARF-NEXT:       Entry @ 0xb0 {
-// DWARF-NEXT:         Abbrev: 0x1
-// DWARF-NEXT:         Tag: DW_TAG_structure_type
-// DWARF-NEXT:         DW_IDX_die_offset: 0x00000042
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-// DWARF:            String: 0x00000130 "int"
-// DWARF-NEXT:       Entry @ 0xb7 {
-// DWARF-NEXT:         Abbrev: 0x3
-// DWARF-NEXT:         Tag: DW_TAG_base_type
-// DWARF-NEXT:         DW_IDX_die_offset: 0x0000003e
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
-// DWARF:        Bucket 2 [
-// DWARF:        Bucket 3 [
-// DWARF:            String: 0x0000008c "_Z2f12t1"
-// DWARF-NEXT:       Entry @ 0xbe {
-// DWARF-NEXT:         Abbrev: 0x2
-// DWARF-NEXT:         Tag: DW_TAG_subprogram
-// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x00
-// DWARF:        Bucket 4 [
-// DWARF:            String: 0x0000012b "main"
-// DWARF-NEXT:       Entry @ 0xc5 {
-// DWARF-NEXT:         Abbrev: 0x2
-// DWARF-NEXT:         Tag: DW_TAG_subprogram
-// DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
-// DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
-// DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+# DWARF:      .debug_names contents:
+# DWARF:      Name Index @ 0x0 {
+# DWARF-NEXT:   Header {
+# DWARF-NEXT:     Length: 0xC8
+# DWARF-NEXT:     Format: DWARF32
+# DWARF-NEXT:     Version: 5
+# DWARF-NEXT:     CU count: 2
+# DWARF-NEXT:     Local TU count: 0
+# DWARF-NEXT:     Foreign TU count: 0
+# DWARF-NEXT:     Bucket count: 5
+# DWARF-NEXT:     Name count: 5
+# DWARF-NEXT:     Abbreviations table size: 0x1F
+# DWARF-NEXT:     Augmentation: 'LLVM0700'
+# DWARF:        Compilation Unit offsets [
+# DWARF-NEXT:     CU[0]: 0x00000000
+# DWARF-NEXT:     CU[1]: 0x0000000c
+# DWARF:          Abbreviations [
+# DWARF-NEXT:     Abbreviation 0x1 {
+# DWARF:            Tag: DW_TAG_structure_type
+# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+# DWARF:          Abbreviation 0x2 {
+# DWARF-NEXT:       Tag: DW_TAG_subprogram
+# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+# DWARF:          Abbreviation 0x3 {
+# DWARF-NEXT:       Tag: DW_TAG_base_type
+# DWARF-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+# DWARF-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+# DWARF-NEXT:       DW_IDX_compile_unit: DW_FORM_data1
+# DWARF:        Bucket 0 [
+# DWARF-NEXT:     EMPTY
+# DWARF-NEXT:   ]
+# DWARF-NEXT:   Bucket 1 [
+# DWARF-NEXT:     Name 1 {
+# DWARF-NEXT:       Hash: 0x59796A
+# DWARF-NEXT:       String: 0x00000095 "t1"
+# DWARF-NEXT:       Entry @ 0xaa {
+# DWARF-NEXT:         Abbrev: 0x1
+# DWARF-NEXT:         Tag: DW_TAG_structure_type
+# DWARF-NEXT:         DW_IDX_die_offset: 0x0000003a
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+# DWARF-NEXT:       }
+# DWARF-NEXT:       Entry @ 0xb0 {
+# DWARF-NEXT:         Abbrev: 0x1
+# DWARF-NEXT:         Tag: DW_TAG_structure_type
+# DWARF-NEXT:         DW_IDX_die_offset: 0x00000042
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+# DWARF-NEXT:       }
+# DWARF-NEXT:     }
+# DWARF-NEXT:     Name 2 {
+# DWARF-NEXT:       Hash: 0x5355B2BE
+# DWARF-NEXT:       String: 0x0000008c "_Z2f12t1"
+# DWARF-NEXT:       Entry @ 0xbe {
+# DWARF-NEXT:         Abbrev: 0x2
+# DWARF-NEXT:         Tag: DW_TAG_subprogram
+# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+# DWARF-NEXT:       }
+# DWARF-NEXT:     }
+# DWARF-NEXT:     Name 3 {
+# DWARF-NEXT:       Hash: 0x7C9A7F6A
+# DWARF-NEXT:       String: 0x0000012b "main"
+# DWARF-NEXT:       Entry @ 0xc5 {
+# DWARF-NEXT:         Abbrev: 0x2
+# DWARF-NEXT:         Tag: DW_TAG_subprogram
+# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+# DWARF-NEXT:       }
+# DWARF-NEXT:     }
+# DWARF-NEXT:   ]
+# DWARF-NEXT:   Bucket 2 [
+# DWARF-NEXT:     EMPTY
+# DWARF-NEXT:   ]
+# DWARF-NEXT:   Bucket 3 [
+# DWARF-NEXT:     Name 4 {
+# DWARF-NEXT:       Hash: 0xB888030
+# DWARF-NEXT:       String: 0x00000130 "int"
+# DWARF-NEXT:       Entry @ 0xb7 {
+# DWARF-NEXT:         Abbrev: 0x3
+# DWARF-NEXT:         Tag: DW_TAG_base_type
+# DWARF-NEXT:         DW_IDX_die_offset: 0x0000003e
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x01
+# DWARF-NEXT:       }
+# DWARF-NEXT:     }
+# DWARF-NEXT:   ]
+# DWARF-NEXT:   Bucket 4 [
+# DWARF-NEXT:     Name 5 {
+# DWARF-NEXT:       Hash: 0x59779C
+# DWARF-NEXT:       String: 0x00000089 "f1"
+# DWARF-NEXT:       Entry @ 0xa3 {
+# DWARF-NEXT:         Abbrev: 0x2
+# DWARF-NEXT:         Tag: DW_TAG_subprogram
+# DWARF-NEXT:         DW_IDX_die_offset: 0x00000023
+# DWARF-NEXT:         DW_IDX_parent: <parent not indexed>
+# DWARF-NEXT:         DW_IDX_compile_unit: 0x00
+# DWARF-NEXT:       }
+# DWARF-NEXT:     }
+# DWARF-NEXT:   ]
 
-#--- debug-names.s
+#--- a.s
 	.text
 	.globl	_Z2f12t1                        # -- Begin function _Z2f12t1
 	.p2align	4, 0x90
@@ -241,18 +262,18 @@ _Z2f12t1:                               # @_Z2f12t1
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 
-#--- debug-names-2.s
-// Generated with:
-// - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-//     -S debug-names-2.cpp -o debug-names-2.s
+#--- b.s
+# Generated with:
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
+#     -S debug-names-2.cpp -o b.s
 
-// debug-names-2.cpp contents:
+# debug-names-2.cpp contents:
 
-// struct t1 { };
-// int main() {
-//   t1 v1;
-// }
-//
+# struct t1 { };
+# int main() {
+#   t1 v1;
+# }
+#
 	.text
 	.globl	main                            # -- Begin function main
 	.p2align	4, 0x90

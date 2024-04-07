@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
-
 #include "Config.h"
 #include "DWARF.h"
 #include "EhFrame.h"
@@ -31,6 +30,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -2714,429 +2714,267 @@ static uint32_t computeGdbHash(StringRef s) {
   return h;
 }
 
-template <class ELFT>
-DebugNamesSection<ELFT>::DebugNamesSection()
-    : SyntheticSection(0, SHT_PROGBITS, 1, ".debug_names") {}
+// 4-byte alignment ensures that values in the hash lookup table and the name
+// table are aligned.
+DebugNamesBaseSection::DebugNamesBaseSection()
+    : SyntheticSection(0, SHT_PROGBITS, 4, ".debug_names") {}
 
-template <class ELFT>
-template <class RelTy>
-void DebugNamesSection<ELFT>::getNameRelocsImpl(
-    InputSection *sec, ArrayRef<RelTy> rels,
-    DenseMap<uint32_t, uint32_t> &relocs) {
-  for (auto &rel : rels) {
-    Symbol &sym = sec->getFile<ELFT>()->getRelocTargetSym(rel);
-    relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
-  }
+// Get the size of the .debug_names section header in bytes for DWARF32:
+static uint32_t getDebugNamesHeaderSize(uint32_t augmentationStringSize) {
+  return /* unit length */ 4 +
+         /* version */ 2 +
+         /* padding */ 2 +
+         /* CU count */ 4 +
+         /* TU count */ 4 +
+         /* Foreign TU count */ 4 +
+         /* Bucket Count */ 4 +
+         /* Name Count */ 4 +
+         /* Abbrev table size */ 4 +
+         /* Augmentation string size */ 4 +
+         /* Augmentation string */ augmentationStringSize;
 }
 
-template <class ELFT>
-void DebugNamesSection<ELFT>::getNameRelocs(
-    InputSectionBase *base, DenseMap<uint32_t, uint32_t> &relocs) {
-  auto *sec = cast<InputSection>(base);
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
-    getNameRelocsImpl(sec, rels.rels, relocs);
-  else
-    getNameRelocsImpl(sec, rels.relas, relocs);
-}
-
-template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
-  SmallVector<uint32_t, 0> mergedCuOffsets;
-  SmallVector<uint32_t, 0> mergedTuOffsets;
-  DenseMap<uint32_t, uint32_t> strOffsets;
-  SmallVector<DenseMap<uint32_t, uint32_t>, 0> chunksRelocs;
-  chunksRelocs.reserve(numChunks);
-
-  for (size_t i = 0, e = numChunks; i != e; ++i) {
-    DebugNamesOutputChunk &chunk = outputChunks[i];
-    InputSectionBase *base = inputDebugNamesSections[i];
-    DenseMap<uint32_t, uint32_t> &relocs = chunksRelocs.emplace_back();
-    getNameRelocs(base, relocs);
-
-    // Update CuOffsets list with new data
-    for (uint32_t cuOffset : chunk.compilationUnits)
-      mergedCuOffsets.push_back(chunk.sec->outSecOff + cuOffset);
-
-    // TODO: Update TuOffsets list with new data
-  }
-
-  // Update the entries with the relocated string offsets.
-  for (NamedEntry &stringEntry : mergedEntries) {
-    uint32_t oldOffset = stringEntry.stringOffsetOffset;
-    uint32_t idx = stringEntry.chunkIdx;
-    stringEntry.relocatedEntryOffset = chunksRelocs[idx][oldOffset];
-  }
-
-  // Write out bytes for merged section.
-
-  // Write the header.
-  endian::write32<ELFT::Endianness>(buf + 0, mergedHdr.UnitLength);
-  endian::write16<ELFT::Endianness>(buf + 4, mergedHdr.Version);
-  endian::write32<ELFT::Endianness>(buf + 8, mergedHdr.CompUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 12, mergedHdr.LocalTypeUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 16, mergedHdr.ForeignTypeUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 20, mergedHdr.BucketCount);
-  endian::write32<ELFT::Endianness>(buf + 24, mergedHdr.NameCount);
-  endian::write32<ELFT::Endianness>(buf + 28, mergedHdr.AbbrevTableSize);
-  endian::write32<ELFT::Endianness>(buf + 32, mergedHdr.AugmentationStringSize);
-  buf += 36;
-  memcpy(buf, mergedHdr.AugmentationString.c_str(), 8);
-  buf += 8;
-
-  // Write the CU list.
-  for (uint32_t offset : mergedCuOffsets) {
-    endian::write32<ELFT::Endianness>(buf + 0, offset);
-    buf += 4;
-  }
-
-  // Write the local TU list.
-  // TODO: Fix this, once we get everything working without TUs.
-  if (mergedHdr.LocalTypeUnitCount != 0)
-    warn(".debug_names: type units are not handled in merged index");
-
-  // Write the foreign TU list.
-  // TODO: Fix this, once we get everything working without TUs.
-  if (mergedHdr.ForeignTypeUnitCount != 0)
-    warn(".debug_names: type units are not handled in merged index");
-
-  // Write the hash table.
-  // ... Write the buckets
-  uint32_t idx = 1;
-  for (const SmallVector<NamedEntry *, 0> &bucket : bucketList) {
-    if (!bucket.empty())
-      endian::write32<ELFT::Endianness>(buf + 0, idx);
-    idx += bucket.size();
-    buf += 4;
-  }
-
-  // ...Write the hashes
-  for (const auto &bucket : bucketList) {
-    for (const auto &entry : bucket) {
-      uint32_t hashValue = entry->hashValue;
-      endian::write32<ELFT::Endianness>(buf + 0, hashValue);
-      buf += 4;
-    }
-  }
-
-  // Write the string offsets.
-  for (const NamedEntry &entry : mergedEntries) {
-    endian::write32<ELFT::Endianness>(buf + 0, entry.relocatedEntryOffset);
-    buf += 4;
-  }
-
-  // Write the entry offsets.
-  for (const auto &entry : mergedEntries) {
-    endian::write32<ELFT::Endianness>(buf + 0, entry.entryOffset);
-    buf += 4;
-  }
-
-  // Write the abbrev table.
-  for (const Abbrev *abbrev : mergedAbbrevTable) {
-    buf += encodeULEB128(abbrev->code, buf);
-    buf += encodeULEB128(abbrev->tag, buf);
-    for (DWARFDebugNames::AttributeEncoding attr : abbrev->attributes) {
-      buf += encodeULEB128(attr.Index, buf);
-      buf += encodeULEB128(attr.Form, buf);
-    }
-    endian::write16<ELFT::Endianness>(buf + 0, 0); // attribute sentinels.
-    buf += 2;
-  }
-  *buf++ = 0; // abbrev table sentinel
-
-  // Write the entry pool.
-  for (const auto &stringEntry : mergedEntries) {
-    // Write all the entries for the string.
-    for (const std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
-      buf += encodeULEB128(entry->abbrevCode, buf);
-      for (const auto &value : entry->attrValues) {
-        endian::write32<ELFT::Endianness>(buf + 0, value.attrValue);
-        buf += value.attrSize;
-      }
-    }
-    *buf++ = 0; // Entry sentinel
-  }
-}
-
-template <class ELFT> bool DebugNamesSection<ELFT>::isNeeded() const {
-  return numChunks > 0;
-}
-
-template <class ELFT>
-static void readCompileUnitOffsets(
-    typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
-    typename DebugNamesSection<ELFT>::DebugNamesOutputChunk &outputChunk,
-    DWARFDataExtractor &namesExtractor) {
-  uint64_t offset = secData.locs.CUsBase;
-  uint64_t *offsetPtr = &offset;
-  outputChunk.compilationUnits.resize(secData.hdr.CompUnitCount);
-  uint32_t *bufferPtr =
-      namesExtractor.getU32(offsetPtr, outputChunk.compilationUnits.begin(),
-                            secData.hdr.CompUnitCount);
-  if (!bufferPtr)
-    errorOrWarn(toString(outputChunk.sec) +
-                Twine(": error while reading CU offsets"));
-}
-
-template <class ELFT>
-static void readEntryOffsets(
-    typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
-    DWARFDataExtractor &namesExtractor) {
-  secData.entryOffsets.resize(secData.hdr.NameCount);
-  uint64_t offset = secData.locs.EntryOffsetsBase;
-  uint64_t *offsetPtr = &offset;
-  uint32_t *bufferPtr = namesExtractor.getU32(
-      offsetPtr, secData.entryOffsets.begin(), secData.hdr.NameCount);
-  if (!bufferPtr)
-    errorOrWarn(Twine(": error while reading entry offsets"));
-}
-
-template <class ELFT>
-static void readAttributeValues(
-    SmallVector<typename DebugNamesSection<ELFT>::AttrValueData, 3> &values,
-    typename DebugNamesSection<ELFT>::DebugNamesInputChunk &chunk,
-    uint64_t &offset,
-    typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
-    int32_t &parentOffset, DWARFDataExtractor &namesExtractor,
-    const DWARFDebugNames::Abbrev &abbrev) {
-  const LLDDWARFSection &namesSection = *chunk.namesSection;
-  uint64_t *offsetPtr = &offset;
-  typename DebugNamesSection<ELFT>::AttrValueData cuOrTuAttr = {0, 0};
-  for (DWARFDebugNames::AttributeEncoding attr : abbrev.Attributes) {
-    Error err = Error::success();
-    typename DebugNamesSection<ELFT>::AttrValueData newAttr;
-    uint32_t value;
-    if (attr.Index == DW_IDX_parent && attr.Form != DW_FORM_flag_present &&
-        attr.Form != DW_FORM_ref4)
-      errorOrWarn(toString(namesSection.sec) +
-                  Twine(": invalid form for DW_IDX_parent"));
-    switch (attr.Form) {
-    case DW_FORM_flag_present: {
-      // Currently only DW_IDX_parent attributes (in .debug_names) can
-      // have this form. This form does not have a real value (nothing is
-      // emitted for it).
-      if (attr.Index != DW_IDX_parent)
-        errorOrWarn(toString(namesSection.sec) +
-                    Twine(": invalid form for attribute"));
-      break;
-    }
-    case DW_FORM_data1:
-    case DW_FORM_ref1: {
-      newAttr.attrValue = namesExtractor.getU8(offsetPtr, &err);
-      newAttr.attrSize = 1;
-      break;
-    }
-    case DW_FORM_data2:
-    case DW_FORM_ref2: {
-      value = namesExtractor.getU16(offsetPtr, &err);
-      newAttr.attrValue = value;
-      newAttr.attrSize = 2;
-      break;
-    }
-    case DW_FORM_data4:
-    case DW_FORM_ref4: {
-      value = namesExtractor.getU32(offsetPtr, &err);
-      newAttr.attrValue = value;
-      newAttr.attrSize = 4;
-      if (attr.Index == dwarf::DW_IDX_parent)
-        parentOffset = value + secData.locs.EntriesBase;
-      break;
-    }
-    case DW_FORM_data8:
-    case DW_FORM_ref8:
-    case DW_FORM_ref_sig8: {
-      value = namesExtractor.getU64(offsetPtr, &err);
-      newAttr.attrValue = value;
-      newAttr.attrSize = 8;
-      break;
-    }
-    default: {
-      errorOrWarn(toString(namesSection.sec) +
-                  Twine(": unrecognized form encoding ") + Twine(attr.Form) +
-                  Twine(" in .debug_names abbrev table"));
-      break;
-    }
-    }
-    if (err)
-      errorOrWarn(toString(namesSection.sec) +
-                  Twine(": error while reading attributes: ") +
-                  toString(std::move(err)));
-    if (attr.Index == DW_IDX_compile_unit)
-      // Save it to put it at the end of the attributes list.
-      cuOrTuAttr = newAttr;
-    else if (attr.Form != DW_FORM_flag_present)
-      values.push_back(newAttr);
-  }
-
-  // Make sure the CU or TU index attribute is the last one in the list.
-  values.push_back(cuOrTuAttr);
-}
-
-template <class ELFT>
-static void
-readEntry(typename DebugNamesSection<ELFT>::NamedEntry &stringEntry,
-          typename DebugNamesSection<ELFT>::DebugNamesInputChunk &chunk,
-          typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
-          DWARFDataExtractor &namesExtractor,
-          const DWARFDebugNames::NameIndex &ni) {
-  std::unique_ptr<LLDDWARFSection> &namesSection = chunk.namesSection;
-  uint64_t offset = stringEntry.entryOffset;
-  // Each entry ends with a zero 'sentinel' value
-  while (offset < namesSection->Data.size() &&
-         namesSection->Data[offset] != 0) {
-    // Read & store all entries (for the same string)
-    auto entry =
-        std::make_unique<typename DebugNamesSection<ELFT>::IndexEntry>();
-    entry->poolOffset = offset;
-    Error err = Error::success();
-    // This call to namesExtractor can't fail; if there were a problem with the
-    // input, it would have been caught in the call to NamesIndex::extract, in
-    // DebugNamesSection::create.
-    uint64_t ulebValue = namesExtractor.getULEB128(&offset, &err);
-    cantFail(std::move(err));
-    entry->abbrevCode = static_cast<uint32_t>(ulebValue);
-    const auto &abbrevs = ni.getAbbrevs();
-    auto abbrevIt = abbrevs.find_as(entry->abbrevCode);
-    if (abbrevIt != abbrevs.end()) {
-      const DWARFDebugNames::Abbrev &abbrev = *abbrevIt;
-      readAttributeValues<ELFT>(entry->attrValues, chunk, offset, secData,
-                                entry->parentOffset, namesExtractor, abbrev);
-      stringEntry.indexEntries.push_back(std::move(entry));
-    } else
-      errorOrWarn(toString(chunk.namesSection->sec) +
-                  Twine(": invalid abbrev code in entry"));
-  }
-  if (offset >= namesSection->Data.size())
-    errorOrWarn(
-        toString(chunk.namesSection->sec) +
-        Twine(": encountered unexpected end of section while reading entry"));
-}
-
-template <class ELFT>
-static void
-readEntries(typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData,
-            typename DebugNamesSection<ELFT>::DebugNamesInputChunk &chunk,
-            DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
-            const DWARFDebugNames::NameIndex &ni) {
-  // Temporary map from entry offsets to address (pointer) of entry with that
-  // offset; used to find parent entries quickly.
-  DenseMap<uint32_t, typename DebugNamesSection<ELFT>::IndexEntry *> offsetMap;
-  // Reserve sizes for this chunk's hashes & namedEntries.
-  chunk.hashValues.reserve(secData.hdr.NameCount);
-  secData.namedEntries.reserve(secData.hdr.NameCount);
-  // Calculate the Entry Offsets, create initial records.
-  for (uint32_t i = 0, e = secData.hdr.NameCount; i != e; ++i) {
-    // Get string value
-    typename DebugNamesSection<ELFT>::NamedEntry stringEntry;
-    stringEntry.entryOffset =
-        secData.locs.EntriesBase + secData.entryOffsets[i];
-    uint64_t strOffsetOffset =
-        secData.locs.StringOffsetsBase + i * secData.dwarfSize;
-    stringEntry.stringOffsetOffset = strOffsetOffset;
-    uint64_t strOffset =
-        namesExtractor.getRelocatedValue(secData.dwarfSize, &strOffsetOffset);
-    StringRef name = strExtractor.getCStrRef(&strOffset);
-    stringEntry.name = name.data();
-    // Calculate hash
-    stringEntry.hashValue = caseFoldingDjbHash(name);
-    chunk.hashValues.push_back(stringEntry.hashValue);
-    // Read String Entry
-    readEntry<ELFT>(stringEntry, chunk, secData, namesExtractor, ni);
-    // Add index entries & offsets to our temporary map
-    for (const auto &entry : stringEntry.indexEntries)
-      offsetMap[entry->poolOffset] = entry.get();
-    secData.namedEntries.push_back(std::move(stringEntry));
-  }
-  // Find/assign pointers to any 'real' parent entries (needed to find correct
-  // parent entry offsets in merged data).
-  for (auto &stringEntry : secData.namedEntries)
-    for (auto &entry : stringEntry.indexEntries)
-      if (entry->parentOffset != -1)
-        entry->parentEntry = offsetMap[entry->parentOffset];
-}
-
-static uint16_t computeDebugNamesHeaderSize() {
-  // Size of the .debug_names section header, in bytes, for DWARF32:
-  uint16_t size = /* unit length */ 4 +
-                  /* version */ 2 +
-                  /* padding */ 2 +
-                  /* CU count */ 4 +
-                  /* TU count */ 4 +
-                  /* Foreign TU count */ 4 +
-                  /* Bucket Count */ 4 +
-                  /* Name Count */ 4 +
-                  /* Abbrev table size */ 4 +
-                  /* Augmentation string size */ 4 +
-                  /* augmentation string */ 8;
-  return size;
-}
-
-template <class ELFT>
-static void collectDebugNamesSectionData(
-    typename DebugNamesSection<ELFT>::DebugNamesInputChunk &chunk,
-    typename DebugNamesSection<ELFT>::DebugNamesOutputChunk &outputChunk,
-    DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor) {
-  for (const DWARFDebugNames::NameIndex &ni : *chunk.debugNamesData) {
-    typename DebugNamesSection<ELFT>::DebugNamesSectionData &secData =
-        chunk.sectionsData.emplace_back();
-    secData.hdr = ni.getHeader();
-    if (secData.hdr.Format != DwarfFormat::DWARF32) {
-      errorOrWarn(toString(chunk.namesSection->sec) +
-                  Twine(": unsupported DWARF64"));
-      // Don't try to continue; we can't parse DWARF64 at the moment.
+void DebugNamesBaseSection::parseDebugNames(
+    InputChunk &inputChunk, OutputChunk &chunk,
+    DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
+    function_ref<SmallVector<uint32_t, 0>(
+        const DWARFDebugNames::Header &,
+        const DWARFDebugNames::DWARFDebugNamesOffsets &)>
+        readOffsets) {
+  const LLDDWARFSection namesSec = inputChunk.section;
+  DenseMap<uint32_t, IndexEntry *> offsetMap;
+  for (const DWARFDebugNames::NameIndex &ni : *inputChunk.llvmDebugNames) {
+    NameData &nd = inputChunk.nameData.emplace_back();
+    nd.hdr = ni.getHeader();
+    if (nd.hdr.Format != DwarfFormat::DWARF32) {
+      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported DWARF64"));
       return;
     }
-    secData.dwarfSize = dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
-    secData.hdrSize = computeDebugNamesHeaderSize();
-    if (secData.hdr.Version != 5)
-      errorOrWarn(toString(chunk.namesSection->sec) +
-                  Twine(": unsupported version"));
-    secData.locs = findDebugNamesOffsets(secData.hdrSize, secData.hdr);
-    readCompileUnitOffsets<ELFT>(secData, outputChunk, namesExtractor);
-    readEntryOffsets<ELFT>(secData, namesExtractor);
-    readEntries<ELFT>(secData, chunk, namesExtractor, strExtractor, ni);
+    if (nd.hdr.Version != 5) {
+      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported version ") +
+                  Twine(nd.hdr.Version));
+      return;
+    }
+    const uint32_t dwarfSize =
+        dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
+    const uint32_t hdrSize =
+        getDebugNamesHeaderSize(nd.hdr.AugmentationStringSize);
+    auto locs = findDebugNamesOffsets(hdrSize, nd.hdr);
+    if (locs.EntriesBase > namesExtractor.getData().size()) {
+      errorOrWarn(toString(namesSec.sec) +
+                  Twine(": index entry is out of bounds"));
+      return;
+    }
+
+    SmallVector<uint32_t, 0> entryOffsets = readOffsets(nd.hdr, locs);
+
+    // Read the entry pool.
+    offsetMap.clear();
+    nd.nameEntries.resize(nd.hdr.NameCount);
+    for (auto i : seq(nd.hdr.NameCount)) {
+      NameEntry &ne = nd.nameEntries[i];
+      uint64_t strOffset = locs.StringOffsetsBase + i * dwarfSize;
+      ne.stringOffset = strOffset;
+      uint64_t strp = namesExtractor.getRelocatedValue(dwarfSize, &strOffset);
+      StringRef name = strExtractor.getCStrRef(&strp);
+      ne.name = name.data();
+      ne.hashValue = caseFoldingDjbHash(name);
+
+      // Read a series of index entries that end with abbreviation code 0.
+      const char *errMsg = nullptr;
+      uint64_t offset = locs.EntriesBase + entryOffsets[i];
+      while (offset < namesSec.Data.size() && namesSec.Data[offset] != 0) {
+        auto ie = makeThreadLocal<IndexEntry>();
+        ie->poolOffset = offset;
+        Error err = Error::success();
+        ie->abbrevCode =
+            static_cast<uint32_t>(namesExtractor.getULEB128(&offset, &err));
+        if (err) {
+          consumeError(std::move(err));
+          errMsg = ": invalid abbrev code in entry";
+          break;
+        }
+        auto it = ni.getAbbrevs().find_as(ie->abbrevCode);
+        if (it == ni.getAbbrevs().end()) {
+          errMsg = ": invalid abbrev code in entry";
+          break;
+        }
+
+        AttrValue attr, cuAttr = {0, 0};
+        for (DWARFDebugNames::AttributeEncoding a : it->Attributes) {
+          if (a.Index == dwarf::DW_IDX_parent) {
+            if (a.Form == dwarf::DW_FORM_ref4) {
+              attr.attrValue = namesExtractor.getU32(&offset, &err);
+              attr.attrSize = 4;
+              ie->parentOffset = locs.EntriesBase + attr.attrValue;
+            } else if (a.Form != DW_FORM_flag_present) {
+              errMsg = ": invalid form for DW_IDX_parent";
+            }
+          } else {
+            switch (a.Form) {
+            case DW_FORM_data1:
+            case DW_FORM_ref1: {
+              attr.attrValue = namesExtractor.getU8(&offset, &err);
+              attr.attrSize = 1;
+              break;
+            }
+            case DW_FORM_data2:
+            case DW_FORM_ref2: {
+              attr.attrValue = namesExtractor.getU16(&offset, &err);
+              attr.attrSize = 2;
+              break;
+            }
+            case DW_FORM_data4:
+            case DW_FORM_ref4: {
+              attr.attrValue = namesExtractor.getU32(&offset, &err);
+              attr.attrSize = 4;
+              break;
+            }
+            default:
+              errorOrWarn(toString(namesSec.sec) +
+                          Twine(": unrecognized form encoding ") +
+                          Twine(a.Form) + Twine(" in abbrev table"));
+              return;
+            }
+          }
+          if (err) {
+            errorOrWarn(toString(namesSec.sec) +
+                        Twine(": error while reading attributes: ") +
+                        toString(std::move(err)));
+            return;
+          }
+          if (a.Index == DW_IDX_compile_unit)
+            cuAttr = attr;
+          else if (a.Form != DW_FORM_flag_present)
+            ie->attrValues.push_back(attr);
+        }
+
+        // Canonicalize abbrev by placing the CU/TU index at the end.
+        ie->attrValues.push_back(cuAttr);
+        ne.indexEntries.push_back(std::move(ie));
+      }
+      if (offset >= namesSec.Data.size())
+        errMsg = ": index entry is out of bounds";
+      if (errMsg)
+        errorOrWarn(toString(namesSec.sec) + Twine(errMsg));
+
+      for (IndexEntry &ie : ne.entries())
+        offsetMap[ie.poolOffset] = &ie;
+    }
+
+    // Assign parent pointers, which will be used to update DW_IDX_parent index
+    // attributes. Note: offsetMap[0] does not exist, so parentOffset == 0 will
+    // get parentEntry == null as well.
+    for (NameEntry &ne : nd.nameEntries)
+      for (IndexEntry &ie : ne.entries())
+        ie.parentEntry = offsetMap.lookup(ie.parentOffset);
   }
 }
 
-template <class ELFT>
-void DebugNamesSection<ELFT>::collectMergedCounts(
-    MutableArrayRef<DebugNamesInputChunk> &inputChunks) {
-  SmallVector<uint32_t, 0> tmpMergedCuOffsets;
-  mergedHdr.CompUnitCount = 0;
-  mergedHdr.LocalTypeUnitCount = 0;
-  mergedHdr.ForeignTypeUnitCount = 0;
-  mergedHdr.Version = 5;
-  mergedHdr.Format = DwarfFormat::DWARF32;
-  mergedHdr.AugmentationStringSize = 0;
+// Compute the form for output DW_IDX_compile_unit attributes similar to
+// DIEInteger::BestForm. The input forms (often DW_FORM_data1) may not hold all
+// CU indices.
+std::pair<uint8_t, dwarf::Form> static getMergedCuCountForm(
+    uint32_t compUnitCount) {
+  if (compUnitCount > UINT16_MAX)
+    return {4, DW_FORM_data4};
+  if (compUnitCount > UINT8_MAX)
+    return {2, DW_FORM_data2};
+  return {1, DW_FORM_data1};
+}
 
-  for (size_t i = 0, e = numChunks; i != e; ++i) {
-    DebugNamesInputChunk &inputChunk = inputChunks[i];
-    DebugNamesOutputChunk &outputChunk = outputChunks[i];
-    inputChunk.baseCuOffsetIdx = tmpMergedCuOffsets.size();
-    for (uint32_t cuOffset : outputChunk.compilationUnits)
-      tmpMergedCuOffsets.push_back(outputChunk.sec->outSecOff + cuOffset);
-    for (const DebugNamesSectionData &data : inputChunk.sectionsData) {
-      mergedHdr.CompUnitCount += data.hdr.CompUnitCount;
-      mergedHdr.LocalTypeUnitCount += data.hdr.LocalTypeUnitCount;
-      mergedHdr.ForeignTypeUnitCount += data.hdr.ForeignTypeUnitCount;
-      // Set & check the Augmentation String.
-      if (mergedHdr.AugmentationStringSize == 0) {
-        mergedHdr.AugmentationStringSize = data.hdr.AugmentationStringSize;
-        mergedHdr.AugmentationString = data.hdr.AugmentationString;
-      } else if ((mergedHdr.AugmentationStringSize !=
-                  data.hdr.AugmentationStringSize) ||
-                 (mergedHdr.AugmentationString !=
-                  data.hdr.AugmentationString)) {
-        // There are conflicting augmentation strings, so it's best for the
-        // merged index to not use an augmentation string.
-        mergedHdr.AugmentationString = "        ";
-        mergedHdr.AugmentationStringSize = mergedHdr.AugmentationString.size();
+void DebugNamesBaseSection::computeHdrAndAbbrevTable(
+    MutableArrayRef<InputChunk> inputChunks) {
+  TimeTraceScope timeScope("Merge .debug_names", "hdr and abbrev table");
+  size_t numCu = 0;
+  hdr.Format = DwarfFormat::DWARF32;
+  hdr.Version = 5;
+  hdr.CompUnitCount = 0;
+  hdr.LocalTypeUnitCount = 0;
+  hdr.ForeignTypeUnitCount = 0;
+  hdr.AugmentationStringSize = 0;
+
+  // Compute CU and TU counts.
+  for (auto i : seq(numChunks)) {
+    InputChunk &inputChunk = inputChunks[i];
+    inputChunk.baseCuIdx = numCu;
+    numCu += chunks[i].compUnits.size();
+    for (const NameData &nd : inputChunk.nameData) {
+      hdr.CompUnitCount += nd.hdr.CompUnitCount;
+      hdr.LocalTypeUnitCount += nd.hdr.LocalTypeUnitCount;
+      hdr.ForeignTypeUnitCount += nd.hdr.ForeignTypeUnitCount;
+      // If augmentation strings are not identical, use an empty string.
+      if (i == 0) {
+        hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
+        hdr.AugmentationString = nd.hdr.AugmentationString;
+      } else if (hdr.AugmentationString != nd.hdr.AugmentationString) {
+        hdr.AugmentationStringSize = 0;
+        hdr.AugmentationString.clear();
       }
     }
   }
+
+  // Uniquify input abbrev tables and compute mapping from old abbrev code to
+  // new abbrev code.
+  FoldingSet<Abbrev> abbrevSet;
+  // Determine the form for the DW_IDX_compile_unit attributes in the merged
+  // index. The input form may not encode all possible CU indices.
+  const dwarf::Form cuAttrForm = getMergedCuCountForm(hdr.CompUnitCount).second;
+  for (InputChunk &inputChunk : inputChunks) {
+    for (auto [i, ni] : enumerate(*inputChunk.llvmDebugNames)) {
+      for (const DWARFDebugNames::Abbrev &oldAbbrev : ni.getAbbrevs()) {
+        // Canonicalize abbrev by placing the CU/TU index at the end,
+        // similar to `DebugNamesBaseSection::parse`.
+        Abbrev abbrev;
+        DWARFDebugNames::AttributeEncoding cuAttr(DW_IDX_compile_unit,
+                                                  cuAttrForm);
+        abbrev.code = oldAbbrev.Code;
+        abbrev.tag = oldAbbrev.Tag;
+        for (DWARFDebugNames::AttributeEncoding a : oldAbbrev.Attributes) {
+          if (a.Index == DW_IDX_compile_unit)
+            cuAttr.Index = a.Index;
+          else
+            abbrev.attributes.push_back({a.Index, a.Form});
+        }
+        abbrev.attributes.push_back(cuAttr);
+
+        // Profile the abbrev, get or assign a new code, then record the abbrev
+        // code mapping.
+        FoldingSetNodeID id;
+        abbrev.Profile(id);
+        uint32_t newCode;
+        void *insertPos;
+        if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+          newCode = existing->code;
+        } else {
+          Abbrev *abbrev2 =
+              new (abbrevAlloc.Allocate()) Abbrev(std::move(abbrev));
+          abbrevSet.InsertNode(abbrev2, insertPos);
+          abbrevTable.push_back(abbrev2);
+          newCode = abbrevTable.size();
+          abbrev2->code = newCode;
+        }
+        inputChunk.nameData[i].abbrevCodeMap[oldAbbrev.Code] = newCode;
+      }
+    }
+  }
+
+  // Compute the merged abbrev table.
+  raw_svector_ostream os(abbrevTableBuf);
+  for (Abbrev *abbrev : abbrevTable) {
+    encodeULEB128(abbrev->code, os);
+    encodeULEB128(abbrev->tag, os);
+    for (DWARFDebugNames::AttributeEncoding a : abbrev->attributes) {
+      encodeULEB128(a.Index, os);
+      encodeULEB128(a.Form, os);
+    }
+    os.write("\0", 2); // attribute specification end
+  }
+  os.write(0); // abbrev table end
+  hdr.AbbrevTableSize = abbrevTableBuf.size();
 }
 
-template <class ELFT>
-void DebugNamesSection<ELFT>::Abbrev::Profile(FoldingSetNodeID &id) const {
+void DebugNamesBaseSection::Abbrev::Profile(FoldingSetNodeID &id) const {
   id.AddInteger(tag);
   for (const DWARFDebugNames::AttributeEncoding &attr : attributes) {
     id.AddInteger(attr.Index);
@@ -3144,324 +2982,316 @@ void DebugNamesSection<ELFT>::Abbrev::Profile(FoldingSetNodeID &id) const {
   }
 }
 
-template <class ELFT>
-std::pair<uint8_t, dwarf::Form> DebugNamesSection<ELFT>::getMergedCuSizeData() {
-  // Once we've merged all the CU offsets into a single list, the original
-  // DWARF form/size (often 1 byte) may be too small to hold indices to all
-  // the offsets. Here we calculate what the right form/size needs to be for
-  // the merged index.
-  uint8_t size;
-  dwarf::Form form;
-  // TODO: Investigate possibly using DIEInteger::BestForm here
-  if (mergedHdr.CompUnitCount > UINT32_MAX) {
-    form = DW_FORM_data8;
-    size = 8;
-  } else if (mergedHdr.CompUnitCount > UINT16_MAX) {
-    form = DW_FORM_data4;
-    size = 4;
-  } else if (mergedHdr.CompUnitCount > UINT8_MAX) {
-    form = DW_FORM_data2;
-    size = 2;
-  } else {
-    form = DW_FORM_data1;
-    size = 1;
-  }
-
-  return {size, form};
-}
-
-template <class ELFT>
-void DebugNamesSection<ELFT>::getMergedAbbrevTable(
-    MutableArrayRef<DebugNamesInputChunk> &inputChunks) {
-  MapVector<uint64_t, Abbrev> abbrevMap;
-  FoldingSet<Abbrev> AbbreviationsSet;
-
-  // Need to determine what size form is needed for the DW_IDX_compile_unit
-  // attributes in the merged index. Will need to update the abbrevs to use
-  // the right form.
-  dwarf::Form compileUnitAttrForm = getMergedCuSizeData().second;
-
-  for (DebugNamesInputChunk &chunk : inputChunks) {
-    for (const DWARFDebugNames::NameIndex &ni : *chunk.debugNamesData) {
-      const auto &abbrevs = ni.getAbbrevs();
-      for (const DWARFDebugNames::Abbrev &abbrev : abbrevs) {
-        // Create canonicalized abbrev.
-        Abbrev newAbbrev;
-        DWARFDebugNames::AttributeEncoding cuOrTuAttr(DW_IDX_compile_unit,
-                                                      compileUnitAttrForm);
-        newAbbrev.code = abbrev.Code;
-        newAbbrev.tag = abbrev.Tag;
-        for (const DWARFDebugNames::AttributeEncoding attr :
-             abbrev.Attributes) {
-          DWARFDebugNames::AttributeEncoding newAttr(attr.Index, attr.Form);
-          if (attr.Index == DW_IDX_compile_unit)
-            // Save it, to put it at the end.
-            cuOrTuAttr.Index = newAttr.Index;
-          else
-            newAbbrev.attributes.push_back(newAttr);
-        }
-        // Put the CU/TU index at the end of the attributes list.
-        newAbbrev.attributes.push_back(cuOrTuAttr);
-
-        // Next, check our abbreviations set to see if we've already seen the
-        // identical abbreviation.
-        uint32_t oldCode = newAbbrev.code;
-        uint32_t newCode;
-        FoldingSetNodeID id;
-        newAbbrev.Profile(id);
-        void *insertPos;
-        if (Abbrev *Existing =
-                AbbreviationsSet.FindNodeOrInsertPos(id, insertPos)) {
-          // Found it; we've already seen an identical abbreviation.
-          newCode = Existing->code;
-        } else {
-          // Didn't find it.
-          Abbrev *newAbbrev2 =
-              new (abbrevAlloc.Allocate()) Abbrev(std::move(newAbbrev));
-          AbbreviationsSet.InsertNode(newAbbrev2, insertPos);
-          newCode = mergedAbbrevTable.size() + 1;
-          newAbbrev2->code = newCode;
-          mergedAbbrevTable.push_back(newAbbrev2);
-        }
-        chunk.abbrevCodeMap[oldCode] = newCode;
-      }
-    }
-  }
-
-  // Calculate the merged abbrev table size.
-  mergedHdr.AbbrevTableSize = 0;
-  for (Abbrev *a : mergedAbbrevTable) {
-    mergedHdr.AbbrevTableSize += getULEB128Size(a->code);
-    mergedHdr.AbbrevTableSize += getULEB128Size(a->tag);
-    for (const DWARFDebugNames::AttributeEncoding &attr : a->attributes) {
-      mergedHdr.AbbrevTableSize += getULEB128Size(attr.Index);
-      mergedHdr.AbbrevTableSize += getULEB128Size(attr.Form);
-    }
-    mergedHdr.AbbrevTableSize += 2; // attribute index & form sentinels
-  }
-  ++mergedHdr.AbbrevTableSize; // abbrev table sentinel
-}
-
-template <class ELFT>
-void DebugNamesSection<ELFT>::getMergedSymbols(
-    MutableArrayRef<DebugNamesInputChunk> &inputChunks) {
-  // The number of symbols (& abbrevs) we will handle is very large; will use
-  // multi-threading to speed it up.
-  constexpr size_t numShards = 32;
+std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
+    MutableArrayRef<InputChunk> inputChunks) {
+  TimeTraceScope timeScope("Merge .debug_names", "entry pool");
+  // Collect the compilation units for each unique name. Speed it up using
+  // multi-threading as the number of symbols can be in the order of millions.
   const size_t concurrency =
       bit_floor(std::min<size_t>(config->threadCount, numShards));
   const size_t shift = 32 - countr_zero(numShards);
-
-  struct ShardData {
-    // Map to uniquify symbols by name
-    MapVector<CachedHashStringRef, NamedEntry> nameMap;
-  };
-
-  // Need to determine what size is needed for the DW_IDX_compile_unit
-  // attributes in the merged index. Will need to update the indexEntries
-  // to use the right size.
-  uint8_t compileUnitAttrSize = getMergedCuSizeData().first;
-
-  auto shardsPtr = std::make_unique<ShardData[]>(numShards);
-  MutableArrayRef<ShardData> shards(shardsPtr.get(), numShards);
-
+  const uint8_t cuAttrSize = getMergedCuCountForm(hdr.CompUnitCount).first;
+  DenseMap<CachedHashStringRef, size_t> maps[numShards];
   parallelFor(0, concurrency, [&](size_t threadId) {
-    for (size_t i = 0, e = numChunks; i != e; ++i) {
-      DebugNamesInputChunk &chunk = inputChunks[i];
-      for (DebugNamesSectionData &secData : chunk.sectionsData) {
-        // Deduplicate the NamedEntry records (based on the string/name),
-        // using a map from string/name to NamedEntry records.
-        // Note there is a twist: If there is already a record for the current
-        // 'string' in the nameMap, we append all the indexEntries from the
-        // current record to the record that's in the nameMap. I.e. we
-        // deduplicate the *strings* but we keep all the IndexEntry records
-        // (moving them to the appropriate 'kept' NamedEntry record).
-        for (NamedEntry &stringEntry : secData.namedEntries) {
-          size_t shardId = stringEntry.hashValue >> shift;
+    for (auto i : seq(numChunks)) {
+      InputChunk &inputChunk = inputChunks[i];
+      for (NameData &nd : inputChunk.nameData) {
+        for (NameEntry &ne : nd.nameEntries) {
+          auto shardId = ne.hashValue >> shift;
           if ((shardId & (concurrency - 1)) != threadId)
             continue;
 
-          auto &shard = shards[shardId];
-          stringEntry.chunkIdx = i;
-          for (std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
-            // The DW_IDX_compile_unit is always the last attribute (we set it
-            // up that way when we read/created the attributes). We need to
-            // update the index value to use the correct merged offset, and we
-            // need to fix the size of the index attribute.
-            uint8_t endPos = entry->attrValues.size() - 1;
-            entry->attrValues[endPos].attrValue += chunk.baseCuOffsetIdx;
-            entry->attrValues[endPos].attrSize = compileUnitAttrSize;
-            // Update the entry's abbrev code to match the merged
-            // abbreviations.
-            entry->abbrevCode = chunk.abbrevCodeMap[entry->abbrevCode];
+          ne.chunkIdx = i;
+          for (IndexEntry &ie : ne.entries()) {
+            ie.abbrevCode = nd.abbrevCodeMap[ie.abbrevCode];
+            // Update the DW_IDX_compile_unit attribute (the last one after
+            // canonicalization).
+            auto &back = ie.attrValues.back();
+            back.attrValue += inputChunk.baseCuIdx;
+            back.attrSize = cuAttrSize;
           }
 
-          CachedHashStringRef cachedHashName(stringEntry.name);
-          auto [it, inserted] =
-              shard.nameMap.try_emplace(cachedHashName, std::move(stringEntry));
-          if (!inserted) {
-            // Found the string already; don't add to map, but append
-            // entry/entries for it to existing map entry.
-            NamedEntry &found = it->second;
-            // Append the entries...
-            for (auto &entry : stringEntry.indexEntries)
-              found.indexEntries.push_back(std::move(entry));
-          }
+          auto &nameVec = nameVecs[shardId];
+          auto [it, inserted] = maps[shardId].try_emplace(
+              CachedHashStringRef(ne.name, ne.hashValue), nameVec.size());
+          if (inserted)
+            nameVec.push_back(std::move(ne));
+          else
+            nameVec[it->second].indexEntries.append(ne.indexEntries);
         }
       }
     }
   });
 
-  // Combined the shared symbols into mergedEntries
-  for (ShardData &shard : shards)
-    for (auto &mapEntry : shard.nameMap)
-      mergedEntries.push_back(std::move(mapEntry.second));
-  mergedHdr.NameCount = mergedEntries.size();
-}
-
-template <class ELFT>
-void DebugNamesSection<ELFT>::computeUniqueHashes(
-    MutableArrayRef<DebugNamesInputChunk> &chunks) {
-  SmallVector<uint32_t, 0> uniques;
-  for (const auto &chunk : chunks)
-    uniques.append(chunk.hashValues);
-  llvm::sort(uniques);
-  mergedHdr.BucketCount = dwarf::getDebugNamesBucketCount(llvm::unique(uniques) - uniques.begin());
-}
-
-template <class ELFT> void DebugNamesSection<ELFT>::generateBuckets() {
-  bucketList.resize(mergedHdr.BucketCount);
-  for (NamedEntry &entry : mergedEntries) {
-    uint32_t bucketIdx = entry.hashValue % mergedHdr.BucketCount;
-    bucketList[bucketIdx].push_back(&entry);
-  }
-
-  // Sort the contents of the buckets by hash value so that the hash collisions
-  // end up together.
-  for (SmallVector<NamedEntry *, 0> &bucket : bucketList)
-    stable_sort(bucket, [](NamedEntry *lhs, NamedEntry *rhs) {
-      return lhs->hashValue < rhs->hashValue;
-    });
-}
-
-template <class ELFT>
-void DebugNamesSection<ELFT>::calculateEntriesSizeAndOffsets() {
-  uint32_t offset = 0;
-  for (NamedEntry &stringEntry : mergedEntries) {
-    stringEntry.entryOffset = offset;
-    for (std::unique_ptr<IndexEntry> &entry : stringEntry.indexEntries) {
-      uint32_t entrySize = 0;
-      entry->poolOffset = offset;
-      entrySize += getULEB128Size(entry->abbrevCode);
-      for (const auto &attr : entry->attrValues)
-        entrySize += attr.attrSize;
-      offset += entrySize;
+  // Compute entry offsets parallelly. First, compute offsets relative to the
+  // current shard.
+  uint32_t offsets[numShards];
+  parallelFor(0, numShards, [&](size_t shard) {
+    uint32_t offset = 0;
+    for (NameEntry &ne : nameVecs[shard]) {
+      ne.entryOffset = offset;
+      for (IndexEntry &ie : ne.entries()) {
+        ie.poolOffset = offset;
+        offset += getULEB128Size(ie.abbrevCode);
+        for (AttrValue value : ie.attrValues)
+          offset += value.attrSize;
+      }
+      ++offset; // index entry sentinel
     }
-    // Add in sentinel size
-    ++offset;
-  }
-  mergedTotalEntriesSize = offset;
-}
+    offsets[shard] = offset;
+  });
+  // Then add shard offsets.
+  std::partial_sum(offsets, std::end(offsets), offsets);
+  parallelFor(1, numShards, [&](size_t shard) {
+    uint32_t offset = offsets[shard - 1];
+    for (NameEntry &ne : nameVecs[shard]) {
+      ne.entryOffset += offset;
+      for (IndexEntry &ie : ne.entries())
+        ie.poolOffset += offset;
+    }
+  });
 
-template <class ELFT> void DebugNamesSection<ELFT>::updateParentIndexEntries() {
-  for (NamedEntry &stringEntry : mergedEntries) {
-    for (std::unique_ptr<IndexEntry> &childEntry : stringEntry.indexEntries) {
-      if (!childEntry->parentEntry)
-        continue;
-
-      // Abbrevs are indexed starting at 1; vector starts at 0. (abbrevCode
-      // corresponds to position in the merged table vector).
-      const Abbrev *abbrev = mergedAbbrevTable[childEntry->abbrevCode - 1];
-
-      // Found the abbrev. Find the index for the DW_IDX_parent attribute
-      // (in the abbrev) and update that value in the entry with the
-      // correct parent offset (in the merged entry pool).
-      for (size_t idx = 0, size = abbrev->attributes.size(); idx != size;
-           ++idx) {
-        DWARFDebugNames::AttributeEncoding attr = abbrev->attributes[idx];
-        if (attr.Index == DW_IDX_parent && attr.Form == DW_FORM_ref4)
-          childEntry->attrValues[idx].attrValue =
-              childEntry->parentEntry->poolOffset;
+  // Update DW_IDX_parent attributes that use DW_FORM_ref4.
+  parallelFor(0, numShards, [&](size_t shard) {
+    for (NameEntry &ne : nameVecs[shard]) {
+      for (IndexEntry &ie : ne.entries()) {
+        if (!ie.parentEntry)
+          continue;
+        const Abbrev *abbrev = abbrevTable[ie.abbrevCode - 1];
+        for (auto i : seq(abbrev->attributes.size())) {
+          DWARFDebugNames::AttributeEncoding a = abbrev->attributes[i];
+          if (a.Index == DW_IDX_parent && a.Form == DW_FORM_ref4)
+            ie.attrValues[i].attrValue = ie.parentEntry->poolOffset;
+        }
       }
     }
-  }
+  });
+
+  // Return (entry pool size, number of entries).
+  uint32_t num = 0;
+  for (auto &map : maps)
+    num += map.size();
+  return {offsets[numShards - 1], num};
 }
 
-template <class ELFT>
-uint64_t DebugNamesSection<ELFT>::calculateMergedSectionSize() {
-  uint32_t hdrSize = computeDebugNamesHeaderSize();
-  mergedOffsets = findDebugNamesOffsets(hdrSize, mergedHdr);
-  // Add in the size for all the Entries, and make it 4-byte aligned.
-  mergedHdr.UnitLength =
-      alignTo(mergedOffsets.EntriesBase + mergedTotalEntriesSize, 4);
-  // Add in the first 4 bytes, whichs print out the length of the section.
-  return mergedHdr.UnitLength + 4;
-}
-
-template <class ELFT>
-DebugNamesSection<ELFT> *DebugNamesSection<ELFT>::create() {
-  TimeTraceScope timeScope("Create merged .debug_names");
+void DebugNamesBaseSection::init(
+    function_ref<void(InputFile *, InputChunk &, OutputChunk &)> parseFile) {
+  TimeTraceScope timeScope("Merge .debug_names");
+  // Collect and remove input .debug_names sections. Save InputSection pointers
+  // to relocate string offsets in `writeTo`.
   SetVector<InputFile *> files;
-  SmallVector<InputSectionBase *, 0> sections;
   for (InputSectionBase *s : ctx.inputSections) {
     InputSection *isec = dyn_cast<InputSection>(s);
     if (!isec)
       continue;
-    // Mark original sections as dead, but save links to them for calculating
-    // relocations later.
-    if (s->name == ".debug_names") {
+    if (!(s->flags & SHF_ALLOC) && s->name == ".debug_names") {
       s->markDead();
-      sections.push_back(s);
+      inputSections.push_back(isec);
       files.insert(isec->file);
     }
   }
-  auto inputChunksPtr = std::make_unique<DebugNamesInputChunk[]>(files.size());
-  MutableArrayRef<DebugNamesInputChunk> inputChunks(inputChunksPtr.get(),
-                                                    files.size());
-  auto outputChunks = std::make_unique<DebugNamesOutputChunk[]>(files.size());
-  parallelFor(0, files.size(), [&](size_t i) {
-    auto *file = cast<ObjFile<ELFT>>(files[i]);
-    auto dwarfCtx = std::make_unique<DWARFContext>(
-        std::make_unique<LLDDwarfObj<ELFT>>(file));
-    auto &dobj =
-        static_cast<const LLDDwarfObj<ELFT> &>(dwarfCtx->getDWARFObj());
 
-    // Extract DWARFDebugNames data from the .debug_names section. The
-    // .debug_names section needs the .debug_str section, to get the actual
-    // symbol names.
-    const StringRef strSection = dobj.getStrSection();
-    const LLDDWARFSection &namesSection = dobj.getNamesSection();
-    DWARFDataExtractor namesExtractor(dobj, namesSection, config->isLE,
-                                      config->wordsize);
-    DataExtractor strExtractor(strSection, config->isLE, config->wordsize);
-    inputChunks[i].debugNamesData =
-        std::make_unique<DWARFDebugNames>(namesExtractor, strExtractor);
-    inputChunks[i].namesSection =
-        std::make_unique<LLDDWARFSection>(namesSection);
-    if (Error E = inputChunks[i].debugNamesData->extract()) {
+  // Parse input .debug_names sections and extract InputChunk and OutputChunk
+  // data. OutputChunk contains CU information, which will be needed by
+  // `writeTo`.
+  auto inputChunksPtr = std::make_unique<InputChunk[]>(files.size());
+  MutableArrayRef<InputChunk> inputChunks(inputChunksPtr.get(), files.size());
+  numChunks = files.size();
+  chunks = std::make_unique<OutputChunk[]>(files.size());
+  {
+    TimeTraceScope timeScope("Merge .debug_names", "parse");
+    parallelFor(0, files.size(), [&](size_t i) {
+      parseFile(files[i], inputChunks[i], chunks[i]);
+    });
+  }
+
+  // Compute section header (except unit_length), abbrev table, and entry pool.
+  computeHdrAndAbbrevTable(inputChunks);
+  uint32_t entryPoolSize;
+  std::tie(entryPoolSize, hdr.NameCount) = computeEntryPool(inputChunks);
+  hdr.BucketCount = dwarf::getDebugNamesBucketCount(hdr.NameCount);
+
+  // Compute the section size. Subtract 4 to get the unit_length for DWARF32.
+  uint32_t hdrSize = getDebugNamesHeaderSize(hdr.AugmentationStringSize);
+  size = findDebugNamesOffsets(hdrSize, hdr).EntriesBase + entryPoolSize;
+  hdr.UnitLength = size - 4;
+}
+
+template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
+  init([](InputFile *f, InputChunk &inputChunk, OutputChunk &chunk) {
+    auto *file = cast<ObjFile<ELFT>>(f);
+    DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
+    auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
+    chunk.infoSec = dobj.getInfoSection();
+    DWARFDataExtractor namesExtractor(dobj, dobj.getNamesSection(),
+                                      ELFT::Endianness == endianness::little,
+                                      ELFT::Is64Bits ? 8 : 4);
+    // .debug_str is needed to get symbol names from string offsets.
+    DataExtractor strExtractor(dobj.getStrSection(),
+                               ELFT::Endianness == endianness::little,
+                               ELFT::Is64Bits ? 8 : 4);
+    inputChunk.section = dobj.getNamesSection();
+
+    inputChunk.llvmDebugNames.emplace(namesExtractor, strExtractor);
+    if (Error e = inputChunk.llvmDebugNames->extract()) {
       errorOrWarn(toString(dobj.getNamesSection().sec) + Twine(": ") +
-                  toString(std::move(E)));
+                  toString(std::move(e)));
     }
-    outputChunks[i].sec = dobj.getInfoSection();
-    collectDebugNamesSectionData<ELFT>(inputChunks[i], outputChunks[i],
-                                       namesExtractor, strExtractor);
+    parseDebugNames(
+        inputChunk, chunk, namesExtractor, strExtractor,
+        [&chunk, namesData = dobj.getNamesSection().Data.data()](
+            const DWARFDebugNames::Header &hdr,
+            const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
+          // Read CU offsets.
+          const char *p = namesData + locs.CUsBase;
+          chunk.compUnits.resize_for_overwrite(hdr.CompUnitCount);
+          for (auto i : seq(hdr.CompUnitCount))
+            chunk.compUnits[i] =
+                endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
+
+          // Read entry offsets.
+          p = namesData + locs.EntryOffsetsBase;
+          SmallVector<uint32_t, 0> entryOffsets;
+          entryOffsets.resize_for_overwrite(hdr.NameCount);
+          for (auto i : seq(hdr.NameCount))
+            entryOffsets[i] =
+                endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
+          return entryOffsets;
+        });
+  });
+}
+
+template <class ELFT>
+template <class RelTy>
+void DebugNamesSection<ELFT>::getNameRelocs(
+    InputSection *sec, ArrayRef<RelTy> rels,
+    DenseMap<uint32_t, uint32_t> &relocs) {
+  for (const RelTy &rel : rels) {
+    Symbol &sym = sec->file->getRelocTargetSym(rel);
+    relocs[rel.r_offset] = sym.getVA(getAddend<ELFT>(rel));
+  }
+}
+
+template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
+  // Get relocations of .debug_names sections.
+  auto relocs = std::make_unique<DenseMap<uint32_t, uint32_t>[]>(numChunks);
+  parallelFor(0, numChunks, [&](size_t i) {
+    InputSection *sec = inputSections[i];
+    auto rels = sec->template relsOrRelas<ELFT>();
+    if (rels.areRelocsRel())
+      getNameRelocs(sec, rels.rels, relocs.get()[i]);
+    else
+      getNameRelocs(sec, rels.relas, relocs.get()[i]);
   });
 
-  auto *ret = make<DebugNamesSection>();
-  ret->inputDebugNamesSections = sections;
-  ret->outputChunks = std::move(outputChunks);
-  ret->numChunks = files.size();
-  ret->collectMergedCounts(inputChunks);
-  ret->getMergedAbbrevTable(inputChunks);
-  ret->getMergedSymbols(inputChunks);
-  ret->computeUniqueHashes(inputChunks);
-  // inputChunks are not needed any more. Reset now to save memory.
-  inputChunksPtr.reset();
-  ret->generateBuckets();
-  ret->calculateEntriesSizeAndOffsets();
-  ret->updateParentIndexEntries();
-  ret->sectionSize = ret->calculateMergedSectionSize();
-  return ret;
+  // Relocate string offsets in the name table.
+  parallelForEach(nameVecs, [&](auto &nameVec) {
+    for (NameEntry &ne : nameVec)
+      ne.stringOffset = relocs.get()[ne.chunkIdx][ne.stringOffset];
+  });
+}
+
+template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
+  [[maybe_unused]] uint8_t *oldBuf = buf;
+  // Write the header.
+  endian::write32<ELFT::Endianness>(buf + 0, hdr.UnitLength);
+  endian::write16<ELFT::Endianness>(buf + 4, hdr.Version);
+  endian::write32<ELFT::Endianness>(buf + 8, hdr.CompUnitCount);
+  endian::write32<ELFT::Endianness>(buf + 12, hdr.LocalTypeUnitCount);
+  endian::write32<ELFT::Endianness>(buf + 16, hdr.ForeignTypeUnitCount);
+  endian::write32<ELFT::Endianness>(buf + 20, hdr.BucketCount);
+  endian::write32<ELFT::Endianness>(buf + 24, hdr.NameCount);
+  endian::write32<ELFT::Endianness>(buf + 28, hdr.AbbrevTableSize);
+  endian::write32<ELFT::Endianness>(buf + 32, hdr.AugmentationStringSize);
+  buf += 36;
+  memcpy(buf, hdr.AugmentationString.c_str(), hdr.AugmentationString.size());
+  buf += hdr.AugmentationStringSize;
+
+  // Write the CU list.
+  for (auto i : seq(numChunks)) {
+    OutputChunk &chunk = chunks[i];
+    for (uint32_t cuOffset : chunk.compUnits) {
+      endian::write32<ELFT::Endianness>(buf,
+                                        chunk.infoSec->outSecOff + cuOffset);
+      buf += 4;
+    }
+  }
+
+  if (hdr.LocalTypeUnitCount || hdr.ForeignTypeUnitCount)
+    warn(".debug_names: type units are not implemented");
+
+  // Write the hash lookup table.
+  SmallVector<SmallVector<NameEntry *, 0>, 0> buckets(hdr.BucketCount);
+  // Symbols enter into a bucket whose index is the hash modulo bucket_count.
+  for (auto &nameVec : nameVecs)
+    for (NameEntry &ne : nameVec)
+      buckets[ne.hashValue % hdr.BucketCount].push_back(&ne);
+
+  // Write buckets (accumulated bucket counts).
+  uint32_t bucketIdx = 1;
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
+    if (!bucket.empty())
+      endian::write32<ELFT::Endianness>(buf, bucketIdx);
+    buf += 4;
+    bucketIdx += bucket.size();
+  }
+  // Write the hashes.
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
+    for (const NameEntry *e : bucket) {
+      endian::write32<ELFT::Endianness>(buf, e->hashValue);
+      buf += 4;
+    }
+  }
+
+  // Write the name table. The name entries are ordered by bucket_idx and
+  // correspond one-to-one with the hash lookup table.
+  //
+  // First, write the relocated string offsets.
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
+    for (const NameEntry *ne : bucket) {
+      endian::write32<ELFT::Endianness>(buf, ne->stringOffset);
+      buf += 4;
+    }
+  }
+  // Then write the entry offsets.
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
+    for (const NameEntry *ne : bucket) {
+      endian::write32<ELFT::Endianness>(buf, ne->entryOffset);
+      buf += 4;
+    }
+  }
+
+  // Write the abbrev table.
+  memcpy(buf, abbrevTableBuf.data(), abbrevTableBuf.size());
+  buf += abbrevTableBuf.size();
+
+  // Write the entry pool. Unlike the name table, the name entries follow the
+  // nameVecs order computed by `computeEntryPool`.
+  for (auto &nameVec : nameVecs) {
+    for (NameEntry &ne : nameVec) {
+      for (const IndexEntry &ie : ne.entries()) {
+        buf += encodeULEB128(ie.abbrevCode, buf);
+        for (AttrValue value : ie.attrValues) {
+          switch (value.attrSize) {
+          case 1:
+            *buf = value.attrValue;
+            break;
+          case 2:
+            endian::write16<ELFT::Endianness>(buf, value.attrValue);
+            break;
+          case 4:
+            endian::write32<ELFT::Endianness>(buf, value.attrValue);
+            break;
+          default:
+            llvm_unreachable("invalid attrSize");
+          }
+          buf += value.attrSize;
+        }
+      }
+      ++buf; // index entry sentinel
+    }
+  }
+  assert(uint64_t(buf - oldBuf) == size);
 }
 
 GdbIndexSection::GdbIndexSection()
@@ -4616,6 +4446,7 @@ void InStruct::reset() {
   ppc32Got2.reset();
   ibtPlt.reset();
   relaPlt.reset();
+  debugNames.reset();
   gdbIndex.reset();
   shStrTab.reset();
   strTab.reset();
@@ -5025,8 +4856,10 @@ template <class ELFT> void elf::createSyntheticSections() {
   if (config->andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
     add(*make<GnuPropertySection>());
 
-  if (config->debugNames)
-    add(*DebugNamesSection<ELFT>::create());
+  if (config->debugNames) {
+    in.debugNames = std::make_unique<DebugNamesSection<ELFT>>();
+    add(*in.debugNames);
+  }
   if (config->gdbIndex) {
     in.gdbIndex = GdbIndexSection::create<ELFT>();
     add(*in.gdbIndex);
