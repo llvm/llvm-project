@@ -84,7 +84,7 @@ func.func @canonicalize_buffer_cast_of_tensor_load_to_copy(
 //  CHECK-NOT: bufferization.to_memref
 //      CHECK: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, strided<[1], offset: ?>>
-//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, strided<[1], offset: 3>>
+//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) {{.*}} : memref<?xf32, strided<[1], offset: 3>>
 //      CHECK: memref.copy %[[M]], %[[ALLOC]]
 // CHECK-SAME:   memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[1], offset: 3>>
 //      CHECK: return %[[ALLOC]]

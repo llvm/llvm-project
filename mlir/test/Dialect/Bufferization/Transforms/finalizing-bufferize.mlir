@@ -33,7 +33,7 @@ func.func @unable_to_convert_lone_tensor_load(%arg0: memref<f32>) {
 //  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[1], offset: ?>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
-//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) {{.*}} : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: ?>>) -> memref<?xf32> {
@@ -48,7 +48,7 @@ func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: ?
 //  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[100], offset: ?>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
-//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) {{.*}} : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, strided<[100], offset: ?>>) -> memref<?xf32> {
@@ -63,7 +63,7 @@ func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, strided<[100], offse
 //  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[1], offset: 25>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
-//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) {{.*}} : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
 func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: 25>>) -> memref<?xf32> {

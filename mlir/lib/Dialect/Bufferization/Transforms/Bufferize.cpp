@@ -75,7 +75,7 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
       if (!rankedDestType)
         return nullptr;
       FailureOr<Value> replacement =
-          castOrReallocMemRefValue(builder, inputs[0], rankedDestType);
+          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, {});
       if (failed(replacement))
         return nullptr;
       return *replacement;
@@ -512,8 +512,8 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {
     rewriter.setInsertionPoint(op);
-    (void)bufferization::foldToMemrefToTensorPair(rewriter,
-                                                  cast<ToMemrefOp>(op));
+    (void)bufferization::foldToMemrefToTensorPair(
+        rewriter, cast<ToMemrefOp>(op), options);
   }
 
   // Remove all dead to_tensor ops.
