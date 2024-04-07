@@ -3267,16 +3267,14 @@ TEST(APIntTest, ModularMultiplicativeInverseSpecific) {
   int NonInvertibleElements[14] = {0,  2,  4,  6,  8,  10, 12,
                                    13, 14, 16, 18, 20, 22, 24};
 
-  for (size_t i = 0; i < 12; ++i) {
-    APInt V(BitWidth, Values[i]);
-    APInt Inv = V.multiplicativeInverse(Modulus);
-    EXPECT_EQ(Inv, Inverses[i]);
+  for (auto [Val, ExpectedInv] : zip(Values, Inverses)) {
+    APInt V(BitWidth, Val);
+    EXPECT_EQ(V.multiplicativeInverse(Modulus), ExpectedInv);
   }
 
-  for (size_t i = 0; i < 14; ++i) {
-    APInt V(BitWidth, NonInvertibleElements[i]);
-    APInt Inv = V.multiplicativeInverse(Modulus);
-    EXPECT_EQ(Inv, 0);
+  for (auto Val : NonInvertibleElements) {
+    APInt V(BitWidth, Val);
+    EXPECT_EQ(V.multiplicativeInverse(Modulus), 0);
   }
 }
 
@@ -3284,15 +3282,17 @@ TEST(APIntTest, ModularMultiplicativeInverseExaustive) {
   // Test all moduli and all values up to 8 bits using a gcd test to determine
   // if a multiplicative inverse exists.
   int BitWidth = 8;
+
+  APInt M(BitWidth, 1);
+  APInt Z(BitWidth, 0);
+  EXPECT_TRUE(Z.multiplicativeInverse(M).isZero());
+
   for (unsigned Modulus = 2; Modulus < (1u << BitWidth); ++Modulus) {
+    APInt M(BitWidth, Modulus);
     for (unsigned Value = 0; Value < Modulus; ++Value) {
-      APInt M(BitWidth, Modulus);
       APInt V(BitWidth, Value);
-      EXPECT_TRUE(V.ult(M))
-          << "Expected " << V << " ult " << M << ", but it was not";
       APInt MulInv = V.multiplicativeInverse(M);
       if (APIntOps::GreatestCommonDivisor(V, M).isOne()) {
-        EXPECT_FALSE(MulInv.isZero());
         // Multiplication verification must take place in a larger bit width
         APInt Actual = (V.zext(2 * BitWidth) * MulInv.zext(2 * BitWidth))
                            .urem(M.zext(2 * BitWidth));
