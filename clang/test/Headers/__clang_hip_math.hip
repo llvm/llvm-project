@@ -3703,7 +3703,7 @@ extern "C" __device__ BOOL_TYPE test___signbitf(float x) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[X:%.*]] to i64
 // CHECK-NEXT:    [[DOTLOBIT:%.*]] = lshr i64 [[TMP0]], 63
-// CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[DOTLOBIT]] to i32
+// CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i64 [[DOTLOBIT]] to i32
 // CHECK-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___signbit(double x) {
