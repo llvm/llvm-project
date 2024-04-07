@@ -1837,10 +1837,10 @@ public:
                                   bool IsVariadic, FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
-  ExprResult SemaBuiltinShuffleVector(CallExpr *TheCall);
-  ExprResult SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
-                                   SourceLocation BuiltinLoc,
-                                   SourceLocation RParenLoc);
+  ExprResult BuiltinShuffleVector(CallExpr *TheCall);
+  ExprResult ConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
+                               SourceLocation BuiltinLoc,
+                               SourceLocation RParenLoc);
 
   enum FormatStringType {
     FST_Scanf,
@@ -1973,8 +1973,8 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
-  bool SemaBuiltinVectorMath(CallExpr *TheCall, QualType &Res);
-  bool SemaBuiltinVectorToScalarMath(CallExpr *TheCall);
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
@@ -2067,62 +2067,59 @@ private:
   bool CheckNVPTXBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
 
-  bool SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
-  bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
-  bool SemaBuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
-  bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
-                                   unsigned BuiltinID);
-  bool SemaBuiltinComplex(CallExpr *TheCall);
-  bool SemaBuiltinVSX(CallExpr *TheCall);
-  bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
-  bool SemaValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
+  bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
+  bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
+  bool BuiltinUnorderedCompare(CallExpr *TheCall, unsigned BuiltinID);
+  bool BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
+                               unsigned BuiltinID);
+  bool BuiltinComplex(CallExpr *TheCall);
+  bool BuiltinVSX(CallExpr *TheCall);
+  bool BuiltinOSLogFormat(CallExpr *TheCall);
+  bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
-  bool SemaBuiltinPrefetch(CallExpr *TheCall);
-  bool SemaBuiltinAllocaWithAlign(CallExpr *TheCall);
-  bool SemaBuiltinArithmeticFence(CallExpr *TheCall);
-  bool SemaBuiltinAssume(CallExpr *TheCall);
-  bool SemaBuiltinAssumeAligned(CallExpr *TheCall);
-  bool SemaBuiltinLongjmp(CallExpr *TheCall);
-  bool SemaBuiltinSetjmp(CallExpr *TheCall);
-  ExprResult SemaBuiltinAtomicOverloaded(ExprResult TheCallResult);
-  ExprResult SemaBuiltinNontemporalOverloaded(ExprResult TheCallResult);
-  ExprResult SemaAtomicOpsOverloaded(ExprResult TheCallResult,
-                                     AtomicExpr::AtomicOp Op);
-  bool SemaBuiltinConstantArg(CallExpr *TheCall, int ArgNum,
-                              llvm::APSInt &Result);
-  bool SemaBuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low,
-                                   int High, bool RangeIsError = true);
-  bool SemaBuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
-                                      unsigned Multiple);
-  bool SemaBuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
-  bool SemaBuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
-                                         unsigned ArgBits);
-  bool SemaBuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
-                                               unsigned ArgBits);
-  bool SemaBuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
-                                int ArgNum, unsigned ExpectedFieldNum,
-                                bool AllowName);
-  bool SemaBuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
-  bool SemaBuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
-                             const char *TypeDesc);
+  bool BuiltinPrefetch(CallExpr *TheCall);
+  bool BuiltinAllocaWithAlign(CallExpr *TheCall);
+  bool BuiltinArithmeticFence(CallExpr *TheCall);
+  bool BuiltinAssume(CallExpr *TheCall);
+  bool BuiltinAssumeAligned(CallExpr *TheCall);
+  bool BuiltinLongjmp(CallExpr *TheCall);
+  bool BuiltinSetjmp(CallExpr *TheCall);
+  ExprResult BuiltinAtomicOverloaded(ExprResult TheCallResult);
+  ExprResult BuiltinNontemporalOverloaded(ExprResult TheCallResult);
+  ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
+                                 AtomicExpr::AtomicOp Op);
+  bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);
+  bool BuiltinConstantArgRange(CallExpr *TheCall, int ArgNum, int Low, int High,
+                               bool RangeIsError = true);
+  bool BuiltinConstantArgMultiple(CallExpr *TheCall, int ArgNum,
+                                  unsigned Multiple);
+  bool BuiltinConstantArgPower2(CallExpr *TheCall, int ArgNum);
+  bool BuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+                                     unsigned ArgBits);
+  bool BuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall, int ArgNum,
+                                           unsigned ArgBits);
+  bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
+                            unsigned ExpectedFieldNum, bool AllowName);
+  bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
+                         const char *TypeDesc);
 
   bool CheckPPCMMAType(QualType Type, SourceLocation TypeLoc);
 
-  bool SemaBuiltinElementwiseMath(CallExpr *TheCall);
-  bool SemaBuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                         bool CheckForFloatArgs = true);
+  bool BuiltinElementwiseMath(CallExpr *TheCall);
+  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                     bool CheckForFloatArgs = true);
   bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
-  bool SemaBuiltinNonDeterministicValue(CallExpr *TheCall);
+  bool BuiltinNonDeterministicValue(CallExpr *TheCall);
 
   // Matrix builtin handling.
-  ExprResult SemaBuiltinMatrixTranspose(CallExpr *TheCall,
-                                        ExprResult CallResult);
-  ExprResult SemaBuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
-                                              ExprResult CallResult);
-  ExprResult SemaBuiltinMatrixColumnMajorStore(CallExpr *TheCall,
-                                               ExprResult CallResult);
+  ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
+  ExprResult BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
+                                          ExprResult CallResult);
+  ExprResult BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
+                                           ExprResult CallResult);
 
   // WebAssembly builtin handling.
   bool BuiltinWasmRefNullExtern(CallExpr *TheCall);
@@ -6997,8 +6994,8 @@ public:
                                SourceLocation ClosingBraceLoc);
 
 private:
-  ExprResult SemaBuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
-                                                    bool IsDelete);
+  ExprResult BuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
+                                                bool IsDelete);
 
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
