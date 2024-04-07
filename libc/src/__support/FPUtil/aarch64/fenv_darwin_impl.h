@@ -16,10 +16,10 @@
 #error "Invalid include"
 #endif
 
-#include "hdr/fenv_macros.h"
 #include <arm_acle.h>
 #include <stdint.h>
 
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 namespace LIBC_NAMESPACE {
