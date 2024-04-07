@@ -12,8 +12,8 @@
 #include <atomic>
 #include <mutex>
 #include <numeric>
-#include <thread>
 #include <shared_mutex>
+#include <thread>
 
 #include "benchmark/benchmark.h"
 
