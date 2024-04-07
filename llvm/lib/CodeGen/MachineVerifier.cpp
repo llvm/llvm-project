@@ -1506,7 +1506,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(2).getReg());
 
     if ((DstTy.isVector() != SrcTy.isVector()) ||
-        (DstTy.isVector() && DstTy.getNumElements() != SrcTy.getNumElements()))
+        (DstTy.isVector() &&
+         DstTy.getElementCount() != SrcTy.getElementCount()))
       report("Generic vector icmp/fcmp must preserve number of lanes", MI);
 
     break;
@@ -1767,16 +1768,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector())
+    if (!DstTy.isScalableVector()) {
       report("Destination type must be a scalable vector", MI);
+      break;
+    }
 
-    if (!SrcTy.isScalar())
+    if (!SrcTy.isScalar()) {
       report("Source type must be a scalar", MI);
+      break;
+    }
 
-    if (DstTy.getScalarType() != SrcTy)
-      report("Element type of the destination must be the same type as the "
-             "source type",
+    if (TypeSize::isKnownGT(DstTy.getElementType().getSizeInBits(),
+                            SrcTy.getSizeInBits())) {
+      report("Element type of the destination must be the same size or smaller "
+             "than the source type",
              MI);
+      break;
+    }
 
     break;
   }
@@ -1865,6 +1873,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
       report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
 
+    break;
+  }
+  case TargetOpcode::G_UBSANTRAP: {
+    const MachineOperand &KindOp = MI->getOperand(0);
+    if (!MI->getOperand(0).isImm()) {
+      report("Crash kind must be an immediate", &KindOp, 0);
+      break;
+    }
+    int64_t Kind = MI->getOperand(0).getImm();
+    if (!isInt<8>(Kind))
+      report("Crash kind must be 8 bit wide", &KindOp, 0);
     break;
   }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:

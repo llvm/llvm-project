@@ -179,12 +179,13 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   mlir::DistinctAttr id;
   if (node->isDistinct())
     id = getOrCreateDistinctID(node);
-  std::optional<DISubprogramFlags> subprogramFlags =
-      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   // Return nullptr if the scope or type is invalid.
   DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
     return nullptr;
+  std::optional<DISubprogramFlags> subprogramFlags =
+      symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
+  assert(subprogramFlags && "expected valid subprogram flags");
   DISubroutineTypeAttr type = translate(node->getType());
   if (node->getType() && !type)
     return nullptr;
@@ -192,8 +193,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
                                getStringAttrOrNull(node->getRawName()),
                                getStringAttrOrNull(node->getRawLinkageName()),
                                translate(node->getFile()), node->getLine(),
-                               node->getScopeLine(), subprogramFlags.value(),
-                               type);
+                               node->getScopeLine(), *subprogramFlags, type);
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {

@@ -160,6 +160,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion_Extension,
       ICR_Conversion,
       ICR_Conversion,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -201,6 +202,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Incompatible pointer conversion",
       "Fixed point conversion",
       "HLSL vector truncation",
+      "Non-decaying array conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2131,8 +2133,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   //   A glvalue (3.10) of a non-function, non-array type T can
   //   be converted to a prvalue.
   bool argIsLValue = From->isGLValue();
-  if (argIsLValue &&
-      !FromType->isFunctionType() && !FromType->isArrayType() &&
+  if (argIsLValue && !FromType->canDecayToPointerType() &&
       S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
     SCS.First = ICK_Lvalue_To_Rvalue;
 
@@ -2147,6 +2148,19 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
+  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+             ToType->isArrayParameterType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    FromType = S.Context.getArrayParameterType(FromType);
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.First = ICK_HLSL_Array_RValue;
+    SCS.setAllToTypes(ToType);
+    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -6100,6 +6114,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
+  case ICK_HLSL_Array_RValue:
     llvm_unreachable("found a first conversion kind in Second");
 
   case ICK_Function_Conversion:
@@ -6339,6 +6354,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
         // by this point.
         assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
                "ConstantExpr has no value associated with it");
+        (void)CE;
       } else {
         E = ConstantExpr::Create(Context, Result.get(), Value);
       }
@@ -6865,6 +6881,32 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
+static bool isNonViableMultiVersionOverload(FunctionDecl *FD) {
+  if (FD->isTargetMultiVersionDefault())
+    return false;
+
+  if (!FD->getASTContext().getTargetInfo().getTriple().isAArch64())
+    return FD->isTargetMultiVersion();
+
+  if (!FD->isMultiVersion())
+    return false;
+
+  // Among multiple target versions consider either the default,
+  // or the first non-default in the absence of default version.
+  unsigned SeenAt = 0;
+  unsigned I = 0;
+  bool HasDefault = false;
+  FD->getASTContext().forEachMultiversionedFunctionVersion(
+      FD, [&](const FunctionDecl *CurFD) {
+        if (FD == CurFD)
+          SeenAt = I;
+        else if (CurFD->isTargetMultiVersionDefault())
+          HasDefault = true;
+        ++I;
+      });
+  return HasDefault || SeenAt != 0;
+}
+
 /// AddOverloadCandidate - Adds the given function to the set of
 /// candidate functions, using the given function call arguments.  If
 /// @p SuppressUserConversions, then don't allow user-defined
@@ -6970,11 +7012,7 @@ void Sema::AddOverloadCandidate(
     }
   }
 
-  if (Function->isMultiVersion() &&
-      ((Function->hasAttr<TargetAttr>() &&
-        !Function->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Function->hasAttr<TargetVersionAttr>() &&
-        !Function->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Function)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
     return;
@@ -7637,11 +7675,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     return;
   }
 
-  if (Method->isMultiVersion() &&
-      ((Method->hasAttr<TargetAttr>() &&
-        !Method->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Method->hasAttr<TargetVersionAttr>() &&
-        !Method->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Method)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -8127,11 +8161,7 @@ void Sema::AddConversionCandidate(
     return;
   }
 
-  if (Conversion->isMultiVersion() &&
-      ((Conversion->hasAttr<TargetAttr>() &&
-        !Conversion->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Conversion->hasAttr<TargetVersionAttr>() &&
-        !Conversion->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Conversion)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -14796,6 +14826,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             }
           }
         }
+
+        // Check for nonnull = nullable.
+        // This won't be caught in the arg's initialization: the parameter to
+        // the assignment operator is not marked nonnull.
+        if (Op == OO_Equal)
+          diagnoseNullableToNonnullConversion(Args[0]->getType(),
+                                              Args[1]->getType(), OpLoc);
 
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {

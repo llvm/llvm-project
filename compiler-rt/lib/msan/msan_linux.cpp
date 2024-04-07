@@ -175,7 +175,7 @@ bool InitShadowWithReExec(bool init_origins) {
   // Start with dry run: check layout is ok, but don't print warnings because
   // warning messages will cause tests to fail (even if we successfully re-exec
   // after the warning).
-  bool success = InitShadow(__msan_get_track_origins(), true);
+  bool success = InitShadow(init_origins, true);
   if (!success) {
 #  if SANITIZER_LINUX
     // Perhaps ASLR entropy is too high. If ASLR is enabled, re-exec without it.
@@ -197,7 +197,7 @@ bool InitShadowWithReExec(bool init_origins) {
 
   // The earlier dry run didn't actually map or protect anything. Run again in
   // non-dry run mode.
-  return success && InitShadow(__msan_get_track_origins(), false);
+  return success && InitShadow(init_origins, false);
 }
 
 static void MsanAtExit(void) {

@@ -24,6 +24,6 @@ MODULE_ANALYSIS("dxil-resource", DXILResourceAnalysis())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 // TODO: rename to print<foo> after NPM switch
-MODULE_PASS("print-dx-shader-flags", DXILResourcePrinterPass(dbgs()))
+MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
 MODULE_PASS("print-dxil-resource", DXILResourcePrinterPass(dbgs()))
 #undef MODULE_PASS
