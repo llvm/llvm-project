@@ -288,7 +288,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __outer_iterator& __x, default_sentinel_t) {
       _LIBCPP_ASSERT_NON_NULL(__x.__parent_ != nullptr, "Cannot call comparison on a default-constructed iterator.");
-      return !__x.__has_more_;
+      return __x.__current() == ranges::end(__x.__parent_base()) && !__x.__has_more_;
     }
   };
 
