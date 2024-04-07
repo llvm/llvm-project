@@ -123,13 +123,13 @@ public:
   {
     // clang-format off
     return __outer_iterator<__simple_view<_View> &&
-                            __simple_view<_Pattern>>{*this, ranges::end(__base_), __outer_iterator_at_end{}};
+                            __simple_view<_Pattern>>{*this, __outer_iterator_at_end{}, ranges::end(__base_)};
     // clang-format on
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
     if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
-      return __outer_iterator<true>{*this, ranges::end(__base_), __outer_iterator_at_end{}};
+      return __outer_iterator<true>{*this, __outer_iterator_at_end{}, ranges::end(__base_)};
     } else {
       return default_sentinel;
     }
@@ -216,7 +216,7 @@ private:
     // the `lazy_split_view`. Needs to be called with the end iterator of the
     // underlying range.
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(
-        _Parent& __parent, iterator_t<_Base> __current, __outer_iterator_at_end)
+        _Parent& __parent, __outer_iterator_at_end, iterator_t<_Base> __current)
       requires forward_range<_Base>
         : __parent_(std::addressof(__parent)), __current_(std::move(__current)), __has_more_(false) {}
 

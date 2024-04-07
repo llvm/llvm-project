@@ -109,7 +109,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
-      return __iterator{*this, ranges::end(__base_), __iterator_at_end{}};
+      return __iterator{*this, __iterator_at_end{}, ranges::end(__base_)};
     } else {
       return __sentinel{*this};
     }
@@ -153,7 +153,7 @@ public:
   // the `split_view`. Needs to be called with the end iterator of the
   // underlying range.
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
-      split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, __iterator_at_end)
+      split_view<_View, _Pattern>& __parent, __iterator_at_end, iterator_t<_View> __current)
       : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __has_more_(false) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
