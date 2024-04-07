@@ -206,13 +206,10 @@ namespace dr1814 { // dr1814: yes
 #endif
 }
 
-namespace dr1815 { // dr1815: no
+namespace dr1815 { // dr1815: yes
 #if __cplusplus >= 201402L
-  // FIXME: needs codegen test
   struct A { int &&r = 0; }; // #dr1815-A 
   A a = {};
-  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}} FIXME
-  //   since-cxx14-note@#dr1815-A {{initializing field 'r' with default member initializer}}
 
   struct B { int &&r = 0; }; // #dr1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}

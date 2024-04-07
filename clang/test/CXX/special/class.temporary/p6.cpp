@@ -269,6 +269,26 @@ void init_capture_init_list() {
   // CHECK: }
 }
 
+void check_dr1815() { // dr1815: yes
+#if __cplusplus >= 201402L
+
+  struct A {
+    int &&r = 0;
+    ~A() {}
+  };
+
+  struct B {
+    A &&a = A{};
+    ~B() {}
+  };
+
+  // CHECK: void @_Z12check_dr1815v()
+  // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev(
+  // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev(
+  B a = {};
+#endif
+}
+
 namespace P2718R0 {
 namespace basic {
 template <typename E> using T2 = std::list<E>;
