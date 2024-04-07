@@ -26,7 +26,7 @@
 //  template<class ElementType, class... Integrals>
 //    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
 //    explicit mdspan(ElementType*, Integrals...)
-//      -> mdspan<ElementType, dextents<size_t, maybe-static-ext<Integrals>...>>;  // since C++26
+//      -> mdspan<ElementType, extents<size_t, maybe-static-ext<Integrals>...>>;  // since C++26
 //
 //  template<class ElementType, class OtherIndexType, size_t N>
 //    mdspan(ElementType*, span<OtherIndexType, N>)
