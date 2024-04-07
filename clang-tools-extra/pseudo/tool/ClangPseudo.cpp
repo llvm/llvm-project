@@ -53,7 +53,7 @@ static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser stat
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
 static opt<bool>
     PrintTerminalTokens("print-terminal-tokens",
-                           desc("Print terminal tokens in parse forest"));
+                        desc("Print terminal tokens in parse forest"));
 static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
                               init(true));
 static opt<std::string> HTMLForest("html-forest",

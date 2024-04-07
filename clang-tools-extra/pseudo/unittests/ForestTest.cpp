@@ -73,12 +73,12 @@ TEST_F(ForestTest, DumpBasic) {
   const auto *Add =
       &Arena.createSequence(symbol("add-expression"), ruleFor("add-expression"),
                             {Left, &T[1], Right});
-  EXPECT_EQ(Add->dumpRecursive(G, true),
+  EXPECT_EQ(Add->dumpRecursive(G, std::nullopt, true),
             "[  0, end) add-expression := id-expression + id-expression\n"
             "[  0,   1) ├─id-expression~IDENTIFIER := tok[0]\n"
             "[  1,   2) ├─+ := tok[1]\n"
             "[  2, end) └─id-expression~IDENTIFIER := tok[2]\n");
-  EXPECT_EQ(Add->dumpRecursive(G, false),
+  EXPECT_EQ(Add->dumpRecursive(G, std::nullopt, false),
             "[  0, end) add-expression := id-expression + id-expression\n"
             "[  0,   1) ├─id-expression := IDENTIFIER\n"
             "[  0,   1) │ └─IDENTIFIER := tok[0]\n"
@@ -144,7 +144,7 @@ TEST_F(ForestTest, DumpAbbreviatedShared) {
 
   // We must not abbreviate away shared nodes: if we show A~* there's no way to
   // show that the intermediate B node is shared between A1 and A2.
-  EXPECT_EQ(A->dumpRecursive(G, /*Abbreviate=*/true),
+  EXPECT_EQ(A->dumpRecursive(G, std::nullopt, /*Abbreviate=*/true),
             "[  0, end) A := <ambiguous>\n"
             "[  0, end) ├─A~B := * #1\n"
             "[  0, end) │ └─* := tok[0]\n"

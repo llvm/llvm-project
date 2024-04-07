@@ -527,8 +527,7 @@ private:
         SequenceNodes.size() == 1
             ? SequenceNodes.front()
             : &Params.Forest.createAmbiguous(F.Symbol, SequenceNodes);
-    LLVM_DEBUG(llvm::dbgs()
-               << "    --> " << Parsed->dump(Lang.G, std::nullopt) << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "    --> " << Parsed->dump(Lang.G) << "\n");
 
     // Bases for this family, deduplicate them, and group by the goTo State.
     sortAndUnique(FamilyBases);

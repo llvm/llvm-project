@@ -114,12 +114,17 @@ public:
   // Iteration over all nodes in the forest, including this.
   llvm::iterator_range<RecursiveIterator> descendants() const;
 
-  std::string
-  dump(const Grammar &,
-       std::optional<std::reference_wrapper<const TokenStream>>) const;
+  // Dump forest node to text. If Code is std::nullopt, terminals will be
+  // displayed as token indexes.
+  std::string dump(const Grammar &,
+                   std::optional<std::reference_wrapper<const TokenStream>>
+                       Code = std::nullopt) const;
+  // Dump forest node recursively to text. If Code is std::nullopt, terminals
+  // will be displayed as token indexes.
   std::string
   dumpRecursive(const Grammar &,
-                std::optional<std::reference_wrapper<const TokenStream>>,
+                std::optional<std::reference_wrapper<const TokenStream>> Code =
+                    std::nullopt,
                 bool Abbreviated = false) const;
 
 private:
