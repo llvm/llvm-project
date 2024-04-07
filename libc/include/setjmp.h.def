@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SETJMP_H
 #define LLVM_LIBC_SETJMP_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 %%public_api()
 

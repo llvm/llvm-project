@@ -604,6 +604,8 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     // BAT YAML is handled by DataAggregator since normal YAML output requires
     // CFG which is not available in BAT mode.
     if (usesBAT()) {
+      // Postprocess split function profile for BAT
+      fixupBATProfile(BC);
       if (opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML)
         if (std::error_code EC = writeBATYAML(BC, opts::OutputFilename))
           report_error("cannot create output data file", EC);
@@ -2271,6 +2273,29 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   return std::error_code();
 }
 
+void DataAggregator::fixupBATProfile(BinaryContext &BC) {
+  for (auto &[FuncName, Branches] : NamesToBranches) {
+    BinaryData *BD = BC.getBinaryDataByName(FuncName);
+    assert(BD);
+    uint64_t FuncAddress = BD->getAddress();
+    if (!BAT->isBATFunction(FuncAddress))
+      continue;
+    // Filter out cold fragments
+    if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
+      continue;
+    // Convert inter-branches between hot and cold fragments into
+    // intra-branches.
+    for (auto &[OffsetFrom, CallToMap] : Branches.InterIndex) {
+      for (auto &[CallToLoc, CallToIdx] : CallToMap) {
+        if (CallToLoc.Name != FuncName)
+          continue;
+        Branches.IntraIndex[OffsetFrom][CallToLoc.Offset] = CallToIdx;
+        Branches.InterIndex[OffsetFrom].erase(CallToLoc);
+      }
+    }
+  }
+}
+
 std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
                                              StringRef OutputFilename) const {
   std::error_code EC;
@@ -2308,7 +2333,112 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       if (BAT->isBATFunction(Function.getAddress()))
         continue;
       BP.Functions.emplace_back(
-          YAMLProfileWriter::convert(Function, /*UseDFS=*/false));
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
+    }
+
+    for (const auto &KV : NamesToBranches) {
+      const StringRef FuncName = KV.first;
+      const FuncBranchData &Branches = KV.second;
+      yaml::bolt::BinaryFunctionProfile YamlBF;
+      BinaryData *BD = BC.getBinaryDataByName(FuncName);
+      assert(BD);
+      uint64_t FuncAddress = BD->getAddress();
+      if (!BAT->isBATFunction(FuncAddress))
+        continue;
+      // Filter out cold fragments
+      if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
+        continue;
+      BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
+      assert(BF);
+      YamlBF.Name = FuncName.str();
+      YamlBF.Id = BF->getFunctionNumber();
+      YamlBF.Hash = BAT->getBFHash(FuncAddress);
+      YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      const BoltAddressTranslation::BBHashMapTy &BlockMap =
+          BAT->getBBHashMap(FuncAddress);
+
+      auto addSuccProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+                                uint64_t SuccOffset, unsigned SuccDataIdx) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
+        yaml::bolt::SuccessorInfo SI;
+        SI.Index = BlockMap.getBBIndex(SuccOffset);
+        SI.Count = BI.Branches;
+        SI.Mispreds = BI.Mispreds;
+        YamlBB.Successors.emplace_back(SI);
+      };
+
+      std::unordered_map<uint32_t, std::vector<uint32_t>> BFBranches =
+          BAT->getBFBranches(FuncAddress);
+
+      auto addCallsProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
+                                 uint64_t Offset) {
+        // Iterate over BRANCHENTRY records in the current block
+        for (uint32_t BranchOffset : BFBranches[Offset]) {
+          if (!Branches.InterIndex.contains(BranchOffset))
+            continue;
+          for (const auto &[CallToLoc, CallToIdx] :
+               Branches.InterIndex.at(BranchOffset)) {
+            const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
+            yaml::bolt::CallSiteInfo YamlCSI;
+            YamlCSI.DestId = 0; // designated for unknown functions
+            YamlCSI.EntryDiscriminator = 0;
+            YamlCSI.Count = BI.Branches;
+            YamlCSI.Mispreds = BI.Mispreds;
+            YamlCSI.Offset = BranchOffset - Offset;
+            BinaryData *CallTargetBD = BC.getBinaryDataByName(CallToLoc.Name);
+            if (!CallTargetBD) {
+              YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
+            }
+            uint64_t CallTargetAddress = CallTargetBD->getAddress();
+            BinaryFunction *CallTargetBF =
+                BC.getBinaryFunctionAtAddress(CallTargetAddress);
+            if (!CallTargetBF) {
+              YamlBB.CallSites.emplace_back(YamlCSI);
+              continue;
+            }
+            // Calls between hot and cold fragments must be handled in
+            // fixupBATProfile.
+            assert(CallTargetBF != BF && "invalid CallTargetBF");
+            YamlCSI.DestId = CallTargetBF->getFunctionNumber();
+            if (CallToLoc.Offset) {
+              if (BAT->isBATFunction(CallTargetAddress)) {
+                LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Unsupported secondary "
+                                     "entry point in BAT function "
+                                  << CallToLoc.Name << '\n');
+              } else if (const BinaryBasicBlock *CallTargetBB =
+                             CallTargetBF->getBasicBlockAtOffset(
+                                 CallToLoc.Offset)) {
+                // Only record true call information, ignoring returns (normally
+                // won't have a target basic block) and jumps to the landing
+                // pads (not an entry point).
+                if (CallTargetBB->isEntryPoint()) {
+                  YamlCSI.EntryDiscriminator =
+                      CallTargetBF->getEntryIDForSymbol(
+                          CallTargetBB->getLabel());
+                }
+              }
+            }
+            YamlBB.CallSites.emplace_back(YamlCSI);
+          }
+        }
+      };
+
+      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
+        yaml::bolt::BinaryBasicBlockProfile YamlBB;
+        if (!BlockMap.isInputBlock(FromOffset))
+          continue;
+        YamlBB.Index = BlockMap.getBBIndex(FromOffset);
+        YamlBB.Hash = BlockMap.getBBHash(FromOffset);
+        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
+          addSuccProfile(YamlBB, SuccOffset, SuccDataIdx);
+        addCallsProfile(YamlBB, FromOffset);
+        if (YamlBB.ExecCount || !YamlBB.Successors.empty() ||
+            !YamlBB.CallSites.empty())
+          YamlBF.Blocks.emplace_back(YamlBB);
+      }
+      BP.Functions.emplace_back(YamlBF);
     }
   }
 

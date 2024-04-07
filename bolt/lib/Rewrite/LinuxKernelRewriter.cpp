@@ -212,6 +212,11 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Size of bug_entry struct.
   static constexpr size_t BUG_TABLE_ENTRY_SIZE = 12;
 
+  /// List of bug entries per function.
+  using FunctionBugListType =
+      DenseMap<BinaryFunction *, SmallVector<uint32_t, 2>>;
+  FunctionBugListType FunctionBugList;
+
   /// .pci_fixup section.
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
@@ -252,11 +257,19 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Paravirtual instruction patch sites.
   Error readParaInstructions();
+  Error rewriteParaInstructions();
 
+  /// __bug_table section handling.
   Error readBugTable();
+  Error rewriteBugTable();
 
-  /// Read alternative instruction info from .altinstructions.
+  /// Do no process functions containing instruction annotated with
+  /// \p Annotation.
+  void skipFunctionsWithAnnotation(StringRef Annotation) const;
+
+  /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
+  Error rewriteAltInstructions();
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -318,6 +331,12 @@ public:
     if (Error E = rewriteExceptionTable())
       return E;
 
+    if (Error E = rewriteAltInstructions())
+      return E;
+
+    if (Error E = rewriteParaInstructions())
+      return E;
+
     if (Error E = rewriteORCTables())
       return E;
 
@@ -325,6 +344,9 @@ public:
       return E;
 
     if (Error E = rewriteStaticKeysJumpTable())
+      return E;
+
+    if (Error E = rewriteBugTable())
       return E;
 
     return Error::success();
@@ -1126,16 +1148,43 @@ Error LinuxKernelRewriter::readParaInstructions() {
   return Error::success();
 }
 
+void LinuxKernelRewriter::skipFunctionsWithAnnotation(
+    StringRef Annotation) const {
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (!BC.shouldEmit(BF))
+      continue;
+    for (const BinaryBasicBlock &BB : BF) {
+      const bool HasAnnotation = llvm::any_of(BB, [&](const MCInst &Inst) {
+        return BC.MIB->hasAnnotation(Inst, Annotation);
+      });
+      if (HasAnnotation) {
+        BF.setSimple(false);
+        break;
+      }
+    }
+  }
+}
+
+Error LinuxKernelRewriter::rewriteParaInstructions() {
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
+
+  return Error::success();
+}
+
 /// Process __bug_table section.
-/// This section contains information useful for kernel debugging.
+/// This section contains information useful for kernel debugging, mostly
+/// utilized by WARN()/WARN_ON() macros and deprecated BUG()/BUG_ON().
+///
 /// Each entry in the section is a struct bug_entry that contains a pointer to
 /// the ud2 instruction corresponding to the bug, corresponding file name (both
 /// pointers use PC relative offset addressing), line number, and flags.
 /// The definition of the struct bug_entry can be found in
-/// `include/asm-generic/bug.h`
-///
-/// NB: find_bug() uses linear search to match an address to an entry in the bug
-///     table. Hence there is no need to sort entries when rewriting the table.
+/// `include/asm-generic/bug.h`. The first entry in the struct is an instruction
+/// address encoded as a PC-relative offset. In theory, it could be an absolute
+/// address if CONFIG_GENERIC_BUG_RELATIVE_POINTERS is not set, but in practice
+/// the kernel code relies on it being a relative offset on x86-64.
 Error LinuxKernelRewriter::readBugTable() {
   BugTableSection = BC.getUniqueSectionByName("__bug_table");
   if (!BugTableSection)
@@ -1178,10 +1227,58 @@ Error LinuxKernelRewriter::readBugTable() {
                                  " referenced by bug table entry %d",
                                  InstAddress, EntryID);
       BC.MIB->addAnnotation(*Inst, "BugEntry", EntryID);
+
+      FunctionBugList[BF].push_back(EntryID);
     }
   }
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " bug table entries\n";
+
+  return Error::success();
+}
+
+/// find_bug() uses linear search to match an address to an entry in the bug
+/// table. Hence, there is no need to sort entries when rewriting the table.
+/// When we need to erase an entry, we set its instruction address to zero.
+Error LinuxKernelRewriter::rewriteBugTable() {
+  if (!BugTableSection)
+    return Error::success();
+
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (!BC.shouldEmit(BF))
+      continue;
+
+    if (!FunctionBugList.count(&BF))
+      continue;
+
+    // Bugs that will be emitted for this function.
+    DenseSet<uint32_t> EmittedIDs;
+    for (BinaryBasicBlock &BB : BF) {
+      for (MCInst &Inst : BB) {
+        if (!BC.MIB->hasAnnotation(Inst, "BugEntry"))
+          continue;
+        const uint32_t ID = BC.MIB->getAnnotationAs<uint32_t>(Inst, "BugEntry");
+        EmittedIDs.insert(ID);
+
+        // Create a relocation entry for this bug entry.
+        MCSymbol *Label =
+            BC.MIB->getOrCreateInstLabel(Inst, "__BUG_", BC.Ctx.get());
+        const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
+        BugTableSection->addRelocation(EntryOffset, Label, ELF::R_X86_64_PC32,
+                                       /*Addend*/ 0);
+      }
+    }
+
+    // Clear bug entries that were not emitted for this function, e.g. as a
+    // result of DCE, but setting their instruction address to zero.
+    for (const uint32_t ID : FunctionBugList[&BF]) {
+      if (!EmittedIDs.count(ID)) {
+        const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
+        BugTableSection->addRelocation(EntryOffset, nullptr, ELF::R_X86_64_PC32,
+                                       /*Addend*/ 0);
+      }
+    }
+  }
 
   return Error::success();
 }
@@ -1301,6 +1398,14 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
   BC.outs() << "BOLT-INFO: parsed " << EntryID
             << " alternative instruction entries\n";
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::rewriteAltInstructions() {
+  // Disable output of functions with alt instructions before the rewrite
+  // support is complete.
+  skipFunctionsWithAnnotation("AltInst");
 
   return Error::success();
 }
@@ -1679,6 +1784,8 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
              << "\n\tTargetAddress: 0x" << Twine::utohexstr(TargetAddress)
              << "\n\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress) << '\n';
     });
+    (void)TargetAddress;
+    (void)KeyAddress;
 
     BinaryFunction *BF =
         BC.getBinaryFunctionContainingAddress(JumpAddress,

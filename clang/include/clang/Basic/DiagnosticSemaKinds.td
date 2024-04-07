@@ -165,7 +165,7 @@ def ext_vla_folded_to_constant : ExtWarn<
   "variable length array folded to constant array as an extension">,
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
-  "variable length arrays are not supported for %select{the current target|'%1'}0">;
+  "variable length arrays are not supported %select{for the current target|in '%1'}0">;
 def err_vla_in_coroutine_unsupported : Error<
   "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
@@ -1748,8 +1748,8 @@ def err_type_defined_in_condition : Error<
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
 def ext_type_defined_in_offsetof : Extension<
-  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
-  "extension">, InGroup<GNUOffsetofExtensions>;
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a C23 "
+  "extension">, InGroup<C23>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -6464,9 +6464,6 @@ def ext_c99_flexible_array_member : Extension<
 def err_flexible_array_virtual_base : Error<
   "flexible array member %0 not allowed in "
   "%select{struct|interface|union|class|enum}1 which has a virtual base class">;
-def err_flexible_array_empty_aggregate : Error<
-  "flexible array member %0 not allowed in otherwise empty "
-  "%select{struct|interface|union|class|enum}1">;
 def err_flexible_array_has_nontrivial_dtor : Error<
   "flexible array member %0 of type %1 with non-trivial destruction">;
 def ext_flexible_array_in_struct : Extension<
@@ -6481,8 +6478,6 @@ def ext_flexible_array_empty_aggregate_ms : Extension<
   "flexible array member %0 in otherwise empty "
   "%select{struct|interface|union|class|enum}1 is a Microsoft extension">,
   InGroup<MicrosoftFlexibleArray>;
-def err_flexible_array_union : Error<
-  "flexible array member %0 in a union is not allowed">;
 def ext_flexible_array_union_ms : Extension<
   "flexible array member %0 in a union is a Microsoft extension">,
   InGroup<MicrosoftFlexibleArray>;
@@ -9826,6 +9821,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
+def warn_format_conversion_argument_type_mismatch_signedness : Warning<
+  warn_format_conversion_argument_type_mismatch.Summary>,
+  InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;

@@ -1916,6 +1916,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("__attribute__((cold)) C() : Base(obj->func()) {}");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
+
   // Mixed
   Tokens = annotate("auto f() -> int { auto a = b()->c; }");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
@@ -2424,6 +2428,22 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown); // other
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_TableGenDAGArgListComma);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_TableGenDAGArgCloser);
+
+  // If TableGenBreakingDAGArgOperators is enabled, it uses
+  // TT_TableGenDAGArgListColonToAlign to annotate the colon to align.
+  Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled = true;
+  Tokens = AnnotateValue("(ins type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier,
+               TT_TableGenDAGArgOperatorToBreak); // ins
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColonToAlign);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColonToAlign);
+
+  Tokens = AnnotateValue("(other type1:$src1, type2:$src2)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_Unknown); // other
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_TableGenDAGArgListColon);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_TableGenDAGArgListColon);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
@@ -2789,6 +2809,19 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[13], BK_Block);
   EXPECT_BRACE_KIND(Tokens[14], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "  char *a[] = {\n"
+                    "      /* abc */ \"abc\",\n"
+                    "#if FOO\n"
+                    "      /* xyz */ \"xyz\",\n"
+                    "#endif\n"
+                    "      /* last */ \"last\"};\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[21], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, StreamOperator) {

@@ -429,7 +429,10 @@ namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
   uint32_t EntryNameOffset;
 
-  void swapBytes() { sys::swapByteOrder(EntryNameOffset); }
+  void swapBytes() {
+    v2::RuntimeInfo::swapBytes();
+    sys::swapByteOrder(EntryNameOffset);
+  }
 
   void swapBytes(Triple::EnvironmentType Stage) {
     v2::RuntimeInfo::swapBytes(Stage);

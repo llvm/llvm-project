@@ -1049,7 +1049,7 @@ exit:
 
 define ptr @freeze_load_noundef(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_noundef(
-; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !noundef !0
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !noundef [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = load ptr, ptr %ptr, !noundef !0
@@ -1059,7 +1059,7 @@ define ptr @freeze_load_noundef(ptr %ptr) {
 
 define ptr @freeze_load_dereferenceable(ptr %ptr) {
 ; CHECK-LABEL: @freeze_load_dereferenceable(
-; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable !1
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = load ptr, ptr %ptr, !dereferenceable !1
@@ -1138,6 +1138,17 @@ define i32 @propagate_drop_flags_or(i32 %arg) {
   ret i32 %v1.fr
 }
 
+define i32 @propagate_drop_flags_trunc(i64 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_trunc(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i64 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[ARG_FR]] to i32
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = trunc nsw nuw i64 %arg to i32
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}
@@ -1145,8 +1156,8 @@ define i32 @propagate_drop_flags_or(i32 %arg) {
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{}
-; CHECK: [[META1:![0-9]+]] = !{i64 4}
+; CHECK: [[META0]] = !{}
+; CHECK: [[META1]] = !{i64 4}
 ; CHECK: [[RNG2]] = !{i32 0, i32 100}
 ; CHECK: [[RNG3]] = !{i32 0, i32 33}
 ;.

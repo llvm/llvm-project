@@ -274,7 +274,7 @@ struct SparseTensorCodegenPass
         });
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
-    target.addLegalOp<linalg::FillOp>();
+    target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         complex::ComplexDialect, memref::MemRefDialect, scf::SCFDialect>();
