@@ -56,7 +56,7 @@ private:
   _Cache __cached_begin_                        = _Cache();
 
   struct __iterator_at_end {
-    constexpr explicit __iterator_at_end() = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator_at_end() = default;
   };
 
   template <class, class>

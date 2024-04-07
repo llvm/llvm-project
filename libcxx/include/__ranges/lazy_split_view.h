@@ -145,7 +145,7 @@ private:
   };
 
   struct __outer_iterator_at_end {
-    constexpr explicit __outer_iterator_at_end() = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator_at_end() = default;
   };
 
   template <bool _Const>
