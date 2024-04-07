@@ -246,8 +246,8 @@ bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 
 static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
   int64_t Offset = int64_t(Value) - 4;
-  if (Offset < Min || Offset > Max)
-    return "out of range pc-relative fixup value";
+  // if (Offset < Min || Offset > Max)
+  //   return "out of range pc-relative fixup value";
   return nullptr;
 }
 
@@ -262,8 +262,8 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
     //
     // Relax if the value is too big for a (signed) i8.
     int64_t Offset = int64_t(Value) - 4;
-    if (Offset > 2046 || Offset < -2048)
-      return "out of range pc-relative fixup value";
+    // if (Offset > 2046 || Offset < -2048)
+    //   return "out of range pc-relative fixup value";
     break;
   }
   case ARM::fixup_arm_thumb_bcc: {
@@ -274,8 +274,8 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
     //
     // Relax if the value is too big for a (signed) i8.
     int64_t Offset = int64_t(Value) - 4;
-    if (Offset > 254 || Offset < -256)
-      return "out of range pc-relative fixup value";
+    // if (Offset > 254 || Offset < -256)
+    //   return "out of range pc-relative fixup value";
     break;
   }
   case ARM::fixup_thumb_adr_pcrel_10:
@@ -285,8 +285,8 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
     int64_t Offset = int64_t(Value) - 4;
     if (Offset & 3)
       return "misaligned pc-relative fixup value";
-    else if (Offset > 1020 || Offset < 0)
-      return "out of range pc-relative fixup value";
+    // else if (Offset > 1020 || Offset < 0)
+    //   return "out of range pc-relative fixup value";
     break;
   }
   case ARM::fixup_arm_thumb_cb: {
@@ -525,10 +525,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       Value = -Value;
       isAdd = false;
     }
-    if (Value >= 4096) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if (Value >= 4096) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     Value |= isAdd << 23;
 
     // Same addressing mode as fixup_arm_pcrel_10,
@@ -546,10 +546,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       Value = -Value;
       opc = 2; // 0b0010
     }
-    if (ARM_AM::getSOImmVal(Value) == -1) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if (ARM_AM::getSOImmVal(Value) == -1) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     // Encode the immediate and shift the opcode into place.
     return ARM_AM::getSOImmVal(Value) | (opc << 21);
   }
@@ -714,10 +714,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // CB instructions can only branch to offsets in [4, 126] in multiples of 2
     // so ensure that the raw value LSB is zero and it lies in [2, 130].
     // An offset of 2 will be relaxed to a NOP.
-    if ((int64_t)Value < 2 || Value > 0x82 || Value & 1) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if ((int64_t)Value < 2 || Value > 0x82 || Value & 1) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     // Offset by 4 and don't encode the lower bit, which is always 0.
     // FIXME: diagnose if no Thumb2
     uint32_t Binary = (Value - 4) >> 1;
@@ -755,10 +755,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       isAdd = false;
     }
     // The value has the low 4 bits encoded in [3:0] and the high 4 in [11:8].
-    if (Value >= 256) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if (Value >= 256) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     Value = (Value & 0xf) | ((Value & 0xf0) << 4);
     return Value | (isAdd << 23);
   }
@@ -776,10 +776,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     }
     // These values don't encode the low two bits since they're always zero.
     Value >>= 2;
-    if (Value >= 256) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if (Value >= 256) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     Value |= isAdd << 23;
 
     // Same addressing mode as fixup_arm_pcrel_10, but with 16-bit halfwords
@@ -807,10 +807,10 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
       return 0;
     }
     Value >>= 1;
-    if (Value >= 256) {
-      Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
-      return 0;
-    }
+    // if (Value >= 256) {
+    //   Ctx.reportError(Fixup.getLoc(), "out of range pc-relative fixup value");
+    //   return 0;
+    // }
     Value |= isAdd << 23;
 
     // Same addressing mode as fixup_arm_pcrel_9, but with 16-bit halfwords

@@ -26,6 +26,7 @@ namespace llvm {
     Function * createInitFunction(Module & M);
     bool EncodeLR(MachineInstr & MI, MachineOperand & LR,
                            uint32_t Stride);
+    bool insertNop(MachineInstr &MI);
     bool EncodeCallSite(MachineInstr & MI, MachineOperand & MO,
                            uint32_t Stride);
     bool DecodeLR(MachineInstr & MI, MachineOperand & PCLR,
