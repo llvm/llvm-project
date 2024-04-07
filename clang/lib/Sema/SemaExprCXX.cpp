@@ -3938,9 +3938,8 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
 
-ExprResult
-Sema::SemaBuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
-                                             bool IsDelete) {
+ExprResult Sema::BuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
+                                                    bool IsDelete) {
   CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
   if (!getLangOpts().CPlusPlus) {
     Diag(TheCall->getExprLoc(), diag::err_builtin_requires_language)
