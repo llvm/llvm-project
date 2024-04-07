@@ -9,7 +9,6 @@
 #include "MissingStdForwardCheck.h"
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -79,7 +78,7 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
   return Node.getCaptureDefault() == Kind;
 }
 
-AST_MATCHER(ParmVarDecl, hasAnyName) { return !Node.getName().empty(); }
+AST_MATCHER(VarDecl, hasIdentifier) { return Node.getIdentifier() != NULL; }
 
 } // namespace
 
@@ -128,8 +127,8 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       parmVarDecl(
-          parmVarDecl().bind("param"), hasAnyName(), isTemplateTypeParameter(),
-          hasAncestor(functionDecl().bind("func")),
+          parmVarDecl().bind("param"), hasIdentifier(),
+          isTemplateTypeParameter(), hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
               unless(anyOf(isDeleted(),
