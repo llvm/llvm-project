@@ -171,7 +171,7 @@ define i32 @test5(i32 %A) {
 define i32 @test6(i64 %A) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[A:%.*]], 32
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %B = zext i64 %A to i128
@@ -459,7 +459,7 @@ define <2 x i64> @test12_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i128> [[D]], <i128 31, i128 undef>
 ; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    [[G:%.*]] = trunc nuw nsw <2 x i128> [[F]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[G]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -524,7 +524,7 @@ define <2 x i64> @test13_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i128> [[D]], <i128 31, i128 undef>
 ; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    [[G:%.*]] = trunc nsw <2 x i128> [[F]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[G]]
 ;
   %C = sext <2 x i32> %A to <2 x i128>

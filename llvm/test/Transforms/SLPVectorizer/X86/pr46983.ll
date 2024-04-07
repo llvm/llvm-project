@@ -55,7 +55,7 @@ define void @store_i8(ptr nocapture %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[TMP9]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>)
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i32> [[TMP10]] to <4 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc nuw <4 x i32> [[TMP10]] to <4 x i8>
 ; CHECK-NEXT:    store <4 x i8> [[TMP11]], ptr [[TMP0]], align 1, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    ret void
 ;

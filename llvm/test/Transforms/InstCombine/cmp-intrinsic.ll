@@ -618,7 +618,7 @@ define i1 @trunc_cttz_false_ult_other_i32_i6(i32 %x) {
 define i1 @trunc_cttz_false_ult_other_i32_i6_extra_use(i32 %x) {
 ; CHECK-LABEL: @trunc_cttz_false_ult_other_i32_i6_extra_use(
 ; CHECK-NEXT:    [[TZ:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[TZ]] to i6
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[TZ]] to i6
 ; CHECK-NEXT:    call void @use6(i6 [[TRUNC]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i6 [[TRUNC]], 7
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -720,7 +720,7 @@ define i1 @trunc_ctlz_false_ugt_other_i32_i6(i32 %x) {
 define i1 @trunc_ctlz_false_ugt_other_i32_i6_extra_use(i32 %x) {
 ; CHECK-LABEL: @trunc_ctlz_false_ugt_other_i32_i6_extra_use(
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[LZ]] to i6
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[LZ]] to i6
 ; CHECK-NEXT:    call void @use6(i6 [[TRUNC]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i6 [[TRUNC]], 4
 ; CHECK-NEXT:    ret i1 [[CMP]]

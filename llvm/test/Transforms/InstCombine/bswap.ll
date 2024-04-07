@@ -43,7 +43,7 @@ define i16 @test1_trunc(i32 %i) {
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
 ; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
-; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    [[T13:%.*]] = trunc nuw i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
   %t1 = lshr i32 %i, 24
@@ -61,7 +61,7 @@ define i16 @test1_trunc_extra_use(i32 %i) {
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
 ; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    call void @extra_use(i32 [[T5]])
-; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    [[T13:%.*]] = trunc nuw i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
   %t1 = lshr i32 %i, 24

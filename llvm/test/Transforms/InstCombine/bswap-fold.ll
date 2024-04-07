@@ -211,7 +211,7 @@ define i64 @variable_shl_not_masked_enough_i64(i64 %x, i64 %n) {
 define i16 @test7(i32 %A) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 16
-; CHECK-NEXT:    [[D:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[D]]
 ;
   %B = tail call i32 @llvm.bswap.i32(i32 %A) nounwind
@@ -223,7 +223,7 @@ define i16 @test7(i32 %A) {
 define <2 x i16> @test7_vector(<2 x i32> %A) {
 ; CHECK-LABEL: @test7_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %A) nounwind
@@ -235,7 +235,7 @@ define <2 x i16> @test7_vector(<2 x i32> %A) {
 define i16 @test8(i64 %A) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[A:%.*]], 48
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i16
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i64 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[D]]
 ;
   %B = tail call i64 @llvm.bswap.i64(i64 %A) nounwind
@@ -247,7 +247,7 @@ define i16 @test8(i64 %A) {
 define <2 x i16> @test8_vector(<2 x i64> %A) {
 ; CHECK-LABEL: @test8_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 48, i64 48>
-; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i64> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %A) nounwind

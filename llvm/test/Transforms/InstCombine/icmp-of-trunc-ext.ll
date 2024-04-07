@@ -28,8 +28,8 @@ define i1 @icmp_trunc_x_trunc_y_fail_from_illegal1(i256 %x, i256 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i256 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[X16:%.*]] = trunc i256 [[X]] to i16
-; CHECK-NEXT:    [[Y16:%.*]] = trunc i256 [[Y]] to i16
+; CHECK-NEXT:    [[X16:%.*]] = trunc nuw i256 [[X]] to i16
+; CHECK-NEXT:    [[Y16:%.*]] = trunc nuw i256 [[Y]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[X16]], [[Y16]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -49,7 +49,7 @@ define i1 @icmp_trunc_x_trunc_y_illegal_trunc_to_legal_anyways(i123 %x, i32 %y) 
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i123 [[X]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i123 [[X]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -89,7 +89,7 @@ define i1 @icmp_trunc_x_trunc_y_3(i64 %x, i32 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 256
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[X]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -109,7 +109,7 @@ define i1 @icmp_trunc_x_trunc_y_fail_maybe_dirty_upper(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 65537
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[X16:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[X16:%.*]] = trunc nuw i32 [[X]] to i16
 ; CHECK-NEXT:    [[Y16:%.*]] = trunc i32 [[Y]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X16]], [[Y16]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -131,7 +131,7 @@ define i1 @icmp_trunc_x_trunc_y_fail_maybe_dirty_upper_2(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[X16:%.*]] = trunc i32 [[X]] to i16
-; CHECK-NEXT:    [[Y16:%.*]] = trunc i32 [[Y]] to i16
+; CHECK-NEXT:    [[Y16:%.*]] = trunc nuw i32 [[Y]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X16]], [[Y16]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -151,7 +151,7 @@ define i1 @icmp_trunc_x_trunc_y_swap0(i33 %x, i32 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i33 [[X]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -171,7 +171,7 @@ define i1 @icmp_trunc_x_trunc_y_swap1(i33 %x, i32 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i33 [[X]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -238,7 +238,7 @@ define i1 @icmp_trunc_x_zext_y_3_fail_illegal(i6 %x, i45 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i45 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[X16:%.*]] = zext i6 [[X:%.*]] to i16
-; CHECK-NEXT:    [[Y16:%.*]] = trunc i45 [[Y]] to i16
+; CHECK-NEXT:    [[Y16:%.*]] = trunc nuw i45 [[Y]] to i16
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[Y16]], [[X16]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -254,7 +254,7 @@ define i1 @icmp_trunc_x_zext_y_fail_multiuse(i32 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_trunc_x_zext_y_fail_multiuse(
 ; CHECK-NEXT:    [[X_LB_ONLY:%.*]] = icmp ult i32 [[X:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
-; CHECK-NEXT:    [[X16:%.*]] = trunc i32 [[X]] to i16
+; CHECK-NEXT:    [[X16:%.*]] = trunc nuw i32 [[X]] to i16
 ; CHECK-NEXT:    [[Y16:%.*]] = zext i8 [[Y:%.*]] to i16
 ; CHECK-NEXT:    call void @use(i16 [[Y16]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule i16 [[X16]], [[Y16]]

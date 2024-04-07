@@ -320,7 +320,7 @@ define void @pr46688(i1 %cond, i32 %x, i16 %d, ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    [[THR1_PN:%.*]] = lshr i32 [[THR_PN]], [[X]]
 ; CHECK-NEXT:    [[THR2_PN:%.*]] = lshr i32 [[THR1_PN]], [[X]]
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = lshr i32 [[THR2_PN]], [[X]]
-; CHECK-NEXT:    [[STOREMERGE1:%.*]] = trunc i32 [[STOREMERGE]] to i16
+; CHECK-NEXT:    [[STOREMERGE1:%.*]] = trunc nuw i32 [[STOREMERGE]] to i16
 ; CHECK-NEXT:    store i16 [[STOREMERGE1]], ptr [[P1:%.*]], align 2
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    ret void

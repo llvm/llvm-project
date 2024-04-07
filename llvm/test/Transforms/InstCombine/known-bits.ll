@@ -455,7 +455,7 @@ define i64 @test_icmp_trunc5(i64 %n) {
 ; CHECK-LABEL: @test_icmp_trunc5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[N:%.*]], 47
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CONV1]], -13
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
