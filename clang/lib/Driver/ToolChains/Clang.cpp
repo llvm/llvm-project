@@ -7815,13 +7815,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
 
-  if (Triple.isAArch64() &&
-      (Args.hasArg(options::OPT_mno_fmv) ||
-       (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||
-       getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)) {
-    // Disable Function Multiversioning on AArch64 target.
+  if (Triple.isAArch64()) {
     CmdArgs.push_back("-target-feature");
-    CmdArgs.push_back("-fmv");
+    if (Args.hasArg(options::OPT_mno_fmv) ||
+        (Triple.isAndroid() && Triple.isAndroidVersionLT(23)) ||
+        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_CompilerRT)
+      CmdArgs.push_back("-fmv");
+    else
+      CmdArgs.push_back("+fmv");
   }
 
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
