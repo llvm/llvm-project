@@ -2986,10 +2986,10 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   Value *Op0, *Op1;
   Instruction *Ext0, *Ext1;
   const CmpInst::Predicate Pred = Cmp.getPredicate();
-  if (match(Add,
-            m_Add(m_CombineAnd(m_Instruction(Ext0), m_ZExtOrSExt(m_Value(Op0))),
-                  m_CombineAnd(m_Instruction(Ext1),
-                               m_ZExtOrSExt(m_Value(Op1))))) &&
+  if (match(Add, m_AddLike(m_CombineAnd(m_Instruction(Ext0),
+                                        m_ZExtOrSExt(m_Value(Op0))),
+                           m_CombineAnd(m_Instruction(Ext1),
+                                        m_ZExtOrSExt(m_Value(Op1))))) &&
       Op0->getType()->isIntOrIntVectorTy(1) &&
       Op1->getType()->isIntOrIntVectorTy(1)) {
     unsigned BW = C.getBitWidth();
@@ -3021,9 +3021,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   // If the add does not wrap, we can always adjust the compare by subtracting
   // the constants. Equality comparisons are handled elsewhere. SGE/SLE/UGE/ULE
   // are canonicalized to SGT/SLT/UGT/ULT.
-  if ((Add->hasNoSignedWrap() &&
+  if ((match(Add, m_NSWAddLike(m_Value(), m_Value())) &&
        (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT)) ||
-      (Add->hasNoUnsignedWrap() &&
+      (match(Add, m_NUWAddLike(m_Value(), m_Value())) &&
        (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT))) {
     bool Overflow;
     APInt NewC =
@@ -3438,6 +3438,20 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       }
     }
     break;
+  case Instruction::Or: {
+    const APInt *BOC;
+    if (match(BOp1, m_APInt(BOC)) && BO->hasOneUse() && RHS->isAllOnesValue()) {
+      // Comparing if all bits outside of a constant mask are set?
+      // Replace (X | C) == -1 with (X & ~C) == ~C.
+      // This removes the -1 constant.
+      Constant *NotBOC = ConstantExpr::getNot(cast<Constant>(BOp1));
+      Value *And = Builder.CreateAnd(BOp0, NotBOC);
+      return new ICmpInst(Pred, And, NotBOC);
+    }
+    if (!cast<PossiblyDisjointInst>(BO)->isDisjoint())
+      break;
+    [[fallthrough]];
+  }
   case Instruction::Add: {
     // (A + C2) == C --> A == (C - C2)
     // (A + C2) != C --> A != (C - C2)
@@ -3452,7 +3466,7 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
         return new ICmpInst(Pred, BOp0, NegVal);
       if (Value *NegVal = dyn_castNegVal(BOp0))
         return new ICmpInst(Pred, NegVal, BOp1);
-      if (BO->hasOneUse()) {
+      if (BO->hasOneUse() && BO->getOpcode() != Instruction::Or) {
         // (add nuw A, B) != 0 -> (or A, B) != 0
         if (match(BO, m_NUWAdd(m_Value(), m_Value()))) {
           Value *Or = Builder.CreateOr(BOp0, BOp1);
@@ -3477,18 +3491,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       }
     }
     break;
-  case Instruction::Or: {
-    const APInt *BOC;
-    if (match(BOp1, m_APInt(BOC)) && BO->hasOneUse() && RHS->isAllOnesValue()) {
-      // Comparing if all bits outside of a constant mask are set?
-      // Replace (X | C) == -1 with (X & ~C) == ~C.
-      // This removes the -1 constant.
-      Constant *NotBOC = ConstantExpr::getNot(cast<Constant>(BOp1));
-      Value *And = Builder.CreateAnd(BOp0, NotBOC);
-      return new ICmpInst(Pred, And, NotBOC);
-    }
-    break;
-  }
   case Instruction::UDiv:
   case Instruction::SDiv:
     if (BO->isExact()) {
@@ -3761,10 +3763,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     if (Instruction *I = foldICmpAndConstant(Cmp, BO, C))
       return I;
     break;
-  case Instruction::Or:
-    if (Instruction *I = foldICmpOrConstant(Cmp, BO, C))
-      return I;
-    break;
   case Instruction::Mul:
     if (Instruction *I = foldICmpMulConstant(Cmp, BO, C))
       return I;
@@ -3794,6 +3792,12 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
     if (Instruction *I = foldICmpSubConstant(Cmp, BO, C))
       return I;
     break;
+  case Instruction::Or:
+    if (Instruction *I = foldICmpOrConstant(Cmp, BO, C))
+      return I;
+    if (!cast<PossiblyDisjointInst>(BO)->isDisjoint())
+      break;
+    [[fallthrough]];
   case Instruction::Add:
     if (Instruction *I = foldICmpAddConstant(Cmp, BO, C))
       return I;
