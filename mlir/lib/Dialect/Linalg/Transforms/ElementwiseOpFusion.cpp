@@ -1497,9 +1497,10 @@ LinalgOp cloneToCollapsedOp<LinalgOp>(RewriterBase &rewriter, LinalgOp origOp,
   SmallVector<Type> resultTypes;
   collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
                              outputOperands, resultTypes);
-  return cast<LinalgOp>(clone(
+
+  return clone(
       rewriter, origOp, resultTypes,
-      llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands))));
+      llvm::to_vector(llvm::concat<Value>(inputOperands, outputOperands)));
 }
 
 /// Collapse a `GenericOp`
