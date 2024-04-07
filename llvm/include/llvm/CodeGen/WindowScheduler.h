@@ -60,14 +60,14 @@ enum WindowSchedulingFlag {
 /// scheduler.
 class WindowScheduler {
 protected:
-  const TargetSubtargetInfo *Subtarget = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
-  MachineRegisterInfo *MRI = nullptr;
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;
   MachineBasicBlock *MBB = nullptr;
   MachineLoop &Loop;
+  const TargetSubtargetInfo *Subtarget = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
   /// To innovatively identify the dependencies between MIs across two trips, we
   /// construct a DAG for a new MBB, which is created by copying the original

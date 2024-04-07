@@ -101,11 +101,9 @@ cl::opt<unsigned>
                   cl::Hidden, cl::init(1000));
 
 WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML)
-    : Context(C), MF(C->MF), MBB(ML.getHeader()), Loop(ML) {
-  Subtarget = &(MF->getSubtarget());
-  TII = Subtarget->getInstrInfo();
-  TRI = Subtarget->getRegisterInfo();
-  MRI = &MF->getRegInfo();
+    : Context(C), MF(C->MF), MBB(ML.getHeader()), Loop(ML),
+      Subtarget(&MF->getSubtarget()), TII(Subtarget->getInstrInfo()),
+      TRI(Subtarget->getRegisterInfo()), MRI(&MF->getRegInfo()) {
   TripleDAG = std::unique_ptr<ScheduleDAGInstrs>(
       createMachineScheduler(/*OnlyBuildGraph=*/true));
 }
@@ -285,7 +283,7 @@ void WindowScheduler::generateTripleMBB() {
   // Step 1: Performing the first copy of MBB instructions, excluding
   // terminators. At the same time, we back up the anti-register of phis.
   // DefPairs hold the old and new define register pairs.
-  std::map<Register, Register> DefPairs;
+  DenseMap<Register, Register> DefPairs;
   for (auto *MI : OriMIs) {
     if (MI->isDebugInstr() || MI->isTerminator())
       continue;
@@ -306,7 +304,7 @@ void WindowScheduler::generateTripleMBB() {
           (MI->isTerminator() && Cnt < DuplicateNum - 1))
         continue;
       auto *NewMI = MF->CloneMachineInstr(MI);
-      std::map<Register, Register> NewDefs;
+      DenseMap<Register, Register> NewDefs;
       // New defines are updated.
       for (auto MO : NewMI->defs())
         if (MO.isReg() && MO.getReg().isVirtual()) {
@@ -364,10 +362,11 @@ void WindowScheduler::generateTripleMBB() {
   // %1 = phi i32 [%2, %BB.1], [%7, %BB.3]
   // The new phi is:
   // %1 = phi i32 [%2, %BB.1], [%11, %BB.3]
-  for (auto &Phi : MBB->phis())
+  for (auto &Phi : MBB->phis()) {
     for (auto DefRegPair : DefPairs)
       if (Phi.readsRegister(DefRegPair.first, TRI))
         Phi.substituteRegister(DefRegPair.first, DefRegPair.second, 0, *TRI);
+  }
   updateLiveIntervals();
 }
 
@@ -437,8 +436,7 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
     RM.reserveResources(*SU, CurCycle);
     OriToCycle[getOriMI(&MI)] = CurCycle;
     LLVM_DEBUG(dbgs() << "\tCycle " << CurCycle << " [S."
-                      << getOriStage(getOriMI(&MI), Offset) << "]: ");
-    LLVM_DEBUG(MI.dump());
+                      << getOriStage(getOriMI(&MI), Offset) << "]: " << MI);
   }
   LLVM_DEBUG(dbgs() << "MaxCycle is " << CurCycle << ".\n");
   return CurCycle;
@@ -540,8 +538,7 @@ void WindowScheduler::schedulePhi(int Offset, unsigned &II) {
     // If there is no limit to the late cycle, a default value is given.
     if (LateCycle == INT_MAX)
       LateCycle = (int)(II - 1);
-    LLVM_DEBUG(dbgs() << "\tCycle range [0, " << LateCycle << "] ");
-    LLVM_DEBUG(Phi.dump());
+    LLVM_DEBUG(dbgs() << "\tCycle range [0, " << LateCycle << "] " << Phi);
     // The issue cycle of phi is set to the latest cycle in the interval.
     auto *OriPhi = getOriMI(&Phi);
     OriToCycle[OriPhi] = LateCycle;
@@ -615,8 +612,7 @@ void WindowScheduler::expand() {
     Cycles[MI] = std::get<1>(Info);
     Stages[MI] = std::get<2>(Info);
     LLVM_DEBUG(dbgs() << "\tCycle " << Cycles[MI] << " [S." << Stages[MI]
-                      << "]: ");
-    LLVM_DEBUG(MI->dump());
+                      << "]: " << *MI);
   }
   ModuloSchedule MS(*MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));

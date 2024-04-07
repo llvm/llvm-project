@@ -1,11 +1,11 @@
 # REQUIRES: asserts
-# RUN: llc --march=hexagon %s -run-pass=pipeliner -O2 -debug-only=pipeliner \
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -o - 2>&1 | FileCheck %s \
 # RUN: --check-prefix=CHECK-INITIALIZE
-# RUN: llc --march=hexagon %s -run-pass=pipeliner -O2 -debug-only=pipeliner \
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -window-region-limit=1 -window-ii-limit=1 -o - \
 # RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSE-II
-# RUN: llc --march=hexagon %s -run-pass=pipeliner -O2 -debug-only=pipeliner \
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -window-region-limit=1 -window-search-ratio=80 \
 # RUN: -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SCHED-NOT-NEEDED
 
