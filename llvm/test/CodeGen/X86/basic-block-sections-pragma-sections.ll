@@ -38,7 +38,7 @@
 ;;   return 0;
 ;; }
 
-define dso_local i32 @_Z3fooi(i32 %n) local_unnamed_addr #0 {
+define dso_local i32 @_Z3fooi(i32 %n) local_unnamed_addr section "foo_section" {
 entry:
   %cmp = icmp slt i32 %n, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -52,5 +52,3 @@ if.end:                                           ; preds = %entry
 }
 
 declare dso_local void @exit(i32) local_unnamed_addr
-
-attributes #0 = {"implicit-section-name"="foo_section" }
