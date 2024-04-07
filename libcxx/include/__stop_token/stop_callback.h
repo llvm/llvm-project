@@ -21,6 +21,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/private_constructor_tag.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,13 +50,13 @@ public:
     requires constructible_from<_Callback, _Cb>
   _LIBCPP_HIDE_FROM_ABI explicit stop_callback(const stop_token& __st,
                                                _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
-      : stop_callback(__private_tag{}, __st.__state_, std::forward<_Cb>(__cb)) {}
+      : stop_callback(__private_constructor_tag{}, __st.__state_, std::forward<_Cb>(__cb)) {}
 
   template <class _Cb>
     requires constructible_from<_Callback, _Cb>
   _LIBCPP_HIDE_FROM_ABI explicit stop_callback(stop_token&& __st,
                                                _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
-      : stop_callback(__private_tag{}, std::move(__st.__state_), std::forward<_Cb>(__cb)) {}
+      : stop_callback(__private_constructor_tag{}, std::move(__st.__state_), std::forward<_Cb>(__cb)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~stop_callback() {
     if (__state_) {
@@ -74,10 +75,8 @@ private:
 
   friend __stop_callback_base;
 
-  struct __private_tag {};
-
   template <class _StatePtr, class _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(__private_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
+  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(__private_constructor_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
       is_nothrow_constructible_v<_Callback, _Cb>)
       : __stop_callback_base([](__stop_callback_base* __cb_base) noexcept {
           // stop callback is supposed to only be called once
