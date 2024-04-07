@@ -184,8 +184,8 @@ if test_cc_resource_dir is not None:
 if lit_config.debug:
     lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
-if test_cc_resource_dir != local_build_resource_dir:
-    if config.test_standalone_build_libs and config.compiler_id == "Clang":
+if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+    if config.compiler_id == "Clang":
         if lit_config.debug:
             lit_config.note(
                 f"Overriding test compiler resource dir to use "
@@ -203,6 +203,12 @@ if test_cc_resource_dir != local_build_resource_dir:
         config.target_cflags += f" -idirafter {test_cc_resource_dir}/include"
         config.target_cflags += f" -resource-dir={config.compiler_rt_output_dir}"
         config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+    else:
+        lit_config.warning(
+            f"Cannot override compiler-rt library directory with non-Clang "
+            f"compiler: {config.compiler_id}"
+        )
+
 
 # Ask the compiler for the path to libraries it is going to use. If this
 # doesn't match config.compiler_rt_libdir then it means we might be testing the
