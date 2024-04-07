@@ -202,7 +202,8 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     assert(isInt<32>(ScalableValue / 8) &&
            "Expect the number of vector registers within 32-bits.");
     uint32_t NumOfVReg = ScalableValue / 8;
-    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg).setMIFlag(Flag);
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
+        .setMIFlag(Flag);
     TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
     BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
       .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)

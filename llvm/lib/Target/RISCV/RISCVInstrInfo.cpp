@@ -3054,7 +3054,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
 
 void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator II, const DebugLoc &DL,
-                            Register DestReg, int32_t Amount,
+                            Register DestReg, uint32_t Amount,
                             MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   if (llvm::has_single_bit<uint32_t>(Amount)) {

@@ -229,12 +229,12 @@ public:
                           unsigned OpIdx,
                           const TargetRegisterInfo *TRI) const override;
 
-  // Generate code to multiply the value in DestReg by Amount - handles
-  // all the common optimizations for this idiom, and supports fallback for
-  // subtargets which don't support multiply instructions.
+  /// Generate code to multiply the value in DestReg by Amt - handles all
+  /// the common optimizations for this idiom, and supports fallback for
+  /// subtargets which don't support multiply instructions.
   void mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
               MachineBasicBlock::iterator II, const DebugLoc &DL,
-              Register DestReg, int32_t Amt, MachineInstr::MIFlag Flag) const;
+              Register DestReg, uint32_t Amt, MachineInstr::MIFlag Flag) const;
 
   bool useMachineCombiner() const override { return true; }
 
