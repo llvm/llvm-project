@@ -17,21 +17,7 @@
 // MPFR header can be included in manner allowed in that repo.
 #include "CustomMPFRIncluder.h"
 #else
-
-extern "C" {
-#pragma push_macro("__cplusplus")
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wbuiltin-macro-redefined"
-#endif
-#undef __cplusplus
 #include <mpfr.h>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-#pragma pop_macro("__cplusplus")
-}
-
 #endif
 
 #endif // LLVM_LIBC_UTILS_MPFRWRAPPER_MPFR_INC_H
