@@ -29,6 +29,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/TemplateName.h"
@@ -44,6 +45,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -193,17 +195,17 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
   const ModuleMap &MM = HS.getModuleMap();
   SourceManager &SourceMgr = PP.getSourceManager();
 
-  std::set<const FileEntry *> ModuleMaps{};
-  auto CollectIncludingModuleMaps = [&](FileEntryRef F) {
+  std::set<const FileEntry *> ModuleMaps;
+  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
     if (!ModuleMaps.insert(F).second)
       return;
-    FileID FID = SourceMgr.translateFile(F);
     SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
     // The include location of inferred module maps can point into the header
     // file that triggered the inferring. Cut off the walk if that's the case.
     while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
       FID = SourceMgr.getFileID(Loc);
-      if (!ModuleMaps.insert(*SourceMgr.getFileEntryRefForID(FID)).second)
+      F = *SourceMgr.getFileEntryRefForID(FID);
+      if (!ModuleMaps.insert(F).second)
         break;
       Loc = SourceMgr.getIncludeLoc(FID);
     }
@@ -216,13 +218,13 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
         break;
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
-      if (auto ModuleMapFile = MM.getContainingModuleMapFile(Mod))
-        CollectIncludingModuleMaps(*ModuleMapFile);
+      if (FileID FID = MM.getContainingModuleMapFileID(Mod); FID.isValid())
+        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
       // For inferred modules, the module map that allowed inferring is not in
       // the include chain of the virtual containing module map file. It did
       // affect the compilation, though.
-      if (auto ModuleMapFile = MM.getModuleMapFileForUniquing(Mod))
-        CollectIncludingModuleMaps(*ModuleMapFile);
+      if (FileID FID = MM.getModuleMapFileIDForUniquing(Mod); FID.isValid())
+        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
     }
   };
 
@@ -315,6 +317,10 @@ void TypeLocWriter::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
+  // nothing to do
+}
+
+void TypeLocWriter::VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
   // nothing to do
 }
 
@@ -512,6 +518,10 @@ void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
+}
+
+void TypeLocWriter::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  // Nothing to do
 }
 
 void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
@@ -3123,9 +3133,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
       continue;
     ++NumLocations;
 
-    SourceLocation Loc = Diag.SourceMgr->getComposedLoc(FileIDAndFile.first, 0);
-    assert(!Loc.isInvalid() && "start loc for valid FileID is invalid");
-    AddSourceLocation(Loc, Record);
+    AddFileID(FileIDAndFile.first, Record);
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {
@@ -3189,6 +3197,10 @@ void ASTWriter::WriteType(QualType T) {
 uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
                                                  DeclContext *DC) {
   if (DC->decls_empty())
+    return 0;
+
+  // In reduced BMI, we don't care the declarations in functions.
+  if (GeneratingReducedBMI && DC->isFunctionOrMethod())
     return 0;
 
   uint64_t Offset = Stream.GetCurrentBitNo();
@@ -4623,10 +4635,12 @@ ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer,
                      InMemoryModuleCache &ModuleCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-                     bool IncludeTimestamps, bool BuildingImplicitModule)
+                     bool IncludeTimestamps, bool BuildingImplicitModule,
+                     bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
       IncludeTimestamps(IncludeTimestamps),
-      BuildingImplicitModule(BuildingImplicitModule) {
+      BuildingImplicitModule(BuildingImplicitModule),
+      GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {
     if (auto Writer = Ext->createExtensionWriter(*this))
       ModuleFileExtensionWriters.push_back(std::move(Writer));
@@ -4722,7 +4736,6 @@ void ASTWriter::computeNonAffectingInputFiles() {
       continue;
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
-        AffectingModuleMaps.empty() ||
         llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
@@ -4950,38 +4963,12 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     Stream.EmitRecord(METADATA_OLD_FORMAT, Record);
   }
 
-  // Create a lexical update block containing all of the declarations in the
-  // translation unit that do not come from other AST files.
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
-  SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
-  for (const auto *D : TU->noload_decls()) {
-    if (!D->isFromASTFile()) {
-      NewGlobalKindDeclPairs.push_back(D->getKind());
-      NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
-    }
-  }
 
-  auto Abv = std::make_shared<BitCodeAbbrev>();
-  Abv->Add(llvm::BitCodeAbbrevOp(TU_UPDATE_LEXICAL));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  unsigned TuUpdateLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
-  {
-    RecordData::value_type Record[] = {TU_UPDATE_LEXICAL};
-    Stream.EmitRecordWithBlob(TuUpdateLexicalAbbrev, Record,
-                              bytes(NewGlobalKindDeclPairs));
-  }
-
-  // And a visible updates block for the translation unit.
-  Abv = std::make_shared<BitCodeAbbrev>();
-  Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_VISIBLE));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  UpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
-  WriteDeclContextVisibleUpdate(TU);
-
-  // If we have any extern "C" names, write out a visible update for them.
-  if (Context.ExternCContext)
-    WriteDeclContextVisibleUpdate(Context.ExternCContext);
+  // Force all top level declarations to be emitted.
+  for (const auto *D : TU->noload_decls())
+    if (!D->isFromASTFile())
+      GetDeclRef(D);
 
   // If the translation unit has an anonymous namespace, and we don't already
   // have an update block for it, write it as an update block.
@@ -5122,33 +5109,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     DeclsToCheckForDeferredDiags.push_back(GetDeclRef(D));
 
-  RecordData DeclUpdatesOffsetsRecord;
+  WriteDeclAndTypes(Context);
 
-  // Keep writing types, declarations, and declaration update records
-  // until we've emitted all of them.
-  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/5);
-  DeclTypesBlockStartOffset = Stream.GetCurrentBitNo();
-  WriteTypeAbbrevs();
-  WriteDeclAbbrevs();
-  do {
-    WriteDeclUpdatesBlocks(DeclUpdatesOffsetsRecord);
-    while (!DeclTypesToEmit.empty()) {
-      DeclOrType DOT = DeclTypesToEmit.front();
-      DeclTypesToEmit.pop();
-      if (DOT.isType())
-        WriteType(DOT.getType());
-      else
-        WriteDecl(Context, DOT.getDecl());
-    }
-  } while (!DeclUpdates.empty());
-  Stream.ExitBlock();
-
-  DoneWritingDeclsAndTypes = true;
-
-  // These things can only be done once we've written out decls and types.
-  WriteTypeDeclOffsets();
-  if (!DeclUpdatesOffsetsRecord.empty())
-    Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
   WriteFileDeclIDsMap();
   WriteSourceManagerBlock(Context.getSourceManager(), PP);
   WriteComments();
@@ -5233,10 +5195,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
 
-  // Write the visible updates to DeclContexts.
-  for (auto *DC : UpdatedDeclContexts)
-    WriteDeclContextVisibleUpdate(DC);
-
   if (!WritingModule) {
     // Write the submodules that were imported, if any.
     struct ModuleInfo {
@@ -5299,6 +5257,72 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     WriteModuleFileExtension(SemaRef, *ExtWriter);
 
   return backpatchSignature();
+}
+
+void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
+  // Keep writing types, declarations, and declaration update records
+  // until we've emitted all of them.
+  RecordData DeclUpdatesOffsetsRecord;
+  Stream.EnterSubblock(DECLTYPES_BLOCK_ID, /*bits for abbreviations*/5);
+  DeclTypesBlockStartOffset = Stream.GetCurrentBitNo();
+  WriteTypeAbbrevs();
+  WriteDeclAbbrevs();
+  do {
+    WriteDeclUpdatesBlocks(DeclUpdatesOffsetsRecord);
+    while (!DeclTypesToEmit.empty()) {
+      DeclOrType DOT = DeclTypesToEmit.front();
+      DeclTypesToEmit.pop();
+      if (DOT.isType())
+        WriteType(DOT.getType());
+      else
+        WriteDecl(Context, DOT.getDecl());
+    }
+  } while (!DeclUpdates.empty());
+  Stream.ExitBlock();
+
+  DoneWritingDeclsAndTypes = true;
+
+  // These things can only be done once we've written out decls and types.
+  WriteTypeDeclOffsets();
+  if (!DeclUpdatesOffsetsRecord.empty())
+    Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
+
+  const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
+  // Create a lexical update block containing all of the declarations in the
+  // translation unit that do not come from other AST files.
+  SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
+  for (const auto *D : TU->noload_decls()) {
+    if (!D->isFromASTFile()) {
+      NewGlobalKindDeclPairs.push_back(D->getKind());
+      NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
+    }
+  }
+
+  auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+  Abv->Add(llvm::BitCodeAbbrevOp(TU_UPDATE_LEXICAL));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+  unsigned TuUpdateLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  RecordData::value_type Record[] = {TU_UPDATE_LEXICAL};
+  Stream.EmitRecordWithBlob(TuUpdateLexicalAbbrev, Record,
+                            bytes(NewGlobalKindDeclPairs));
+
+  Abv = std::make_shared<llvm::BitCodeAbbrev>();
+  Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_VISIBLE));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
+  UpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  // And a visible updates block for the translation unit.
+  WriteDeclContextVisibleUpdate(TU);
+
+  // If we have any extern "C" names, write out a visible update for them.
+  if (Context.ExternCContext)
+    WriteDeclContextVisibleUpdate(Context.ExternCContext);
+
+  // Write the visible updates to DeclContexts.
+  for (auto *DC : UpdatedDeclContexts)
+    WriteDeclContextVisibleUpdate(DC);
 }
 
 void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
@@ -5457,18 +5481,20 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
 
     // Add a trailing update record, if any. These must go last because we
     // lazily load their attached statement.
-    if (HasUpdatedBody) {
-      const auto *Def = cast<FunctionDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
-      Record.push_back(Def->isInlined());
-      Record.AddSourceLocation(Def->getInnerLocStart());
-      Record.AddFunctionDefinition(Def);
-    } else if (HasAddedVarDefinition) {
-      const auto *VD = cast<VarDecl>(D);
-      Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
-      Record.push_back(VD->isInline());
-      Record.push_back(VD->isInlineSpecified());
-      Record.AddVarDeclInit(VD);
+    if (!GeneratingReducedBMI || !CanElideDeclDef(D)) {
+      if (HasUpdatedBody) {
+        const auto *Def = cast<FunctionDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_FUNCTION_DEFINITION);
+        Record.push_back(Def->isInlined());
+        Record.AddSourceLocation(Def->getInnerLocStart());
+        Record.AddFunctionDefinition(Def);
+      } else if (HasAddedVarDefinition) {
+        const auto *VD = cast<VarDecl>(D);
+        Record.push_back(UPD_CXX_ADDED_VAR_DEFINITION);
+        Record.push_back(VD->isInline());
+        Record.push_back(VD->isInlineSpecified());
+        Record.AddVarDeclInit(VD);
+      }
     }
 
     OffsetsRecord.push_back(GetDeclRef(D));
@@ -6056,7 +6082,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \
@@ -7372,4 +7398,64 @@ void ASTRecordWriter::writeOMPChildren(OMPChildren *Data) {
     AddStmt(Data->getAssociatedStmt());
   for (unsigned I = 0, E = Data->getNumChildren(); I < E; ++I)
     AddStmt(Data->getChildren()[I]);
+}
+
+void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
+  writeEnum(C->getClauseKind());
+  writeSourceLocation(C->getBeginLoc());
+  writeSourceLocation(C->getEndLoc());
+
+  switch (C->getClauseKind()) {
+  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Finalize:
+  case OpenACCClauseKind::IfPresent:
+  case OpenACCClauseKind::Seq:
+  case OpenACCClauseKind::Independent:
+  case OpenACCClauseKind::Auto:
+  case OpenACCClauseKind::Worker:
+  case OpenACCClauseKind::Vector:
+  case OpenACCClauseKind::NoHost:
+  case OpenACCClauseKind::If:
+  case OpenACCClauseKind::Self:
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::UseDevice:
+  case OpenACCClauseKind::Attach:
+  case OpenACCClauseKind::Delete:
+  case OpenACCClauseKind::Detach:
+  case OpenACCClauseKind::Device:
+  case OpenACCClauseKind::DevicePtr:
+  case OpenACCClauseKind::DeviceResident:
+  case OpenACCClauseKind::FirstPrivate:
+  case OpenACCClauseKind::Host:
+  case OpenACCClauseKind::Link:
+  case OpenACCClauseKind::NoCreate:
+  case OpenACCClauseKind::Present:
+  case OpenACCClauseKind::Private:
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::Reduction:
+  case OpenACCClauseKind::Collapse:
+  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::VectorLength:
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::DeviceNum:
+  case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
+  case OpenACCClauseKind::Async:
+  case OpenACCClauseKind::Tile:
+  case OpenACCClauseKind::Gang:
+  case OpenACCClauseKind::Wait:
+  case OpenACCClauseKind::Invalid:
+    llvm_unreachable("Clause serialization not yet implemented");
+  }
+  llvm_unreachable("Invalid Clause Kind");
+}
+
+void ASTRecordWriter::writeOpenACCClauseList(
+    ArrayRef<const OpenACCClause *> Clauses) {
+  for (const OpenACCClause *Clause : Clauses)
+    writeOpenACCClause(Clause);
 }

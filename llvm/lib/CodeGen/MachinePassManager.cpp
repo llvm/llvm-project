@@ -79,7 +79,7 @@ ModuleToMachineFunctionPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   for (Function &F : M) {
     // Do not codegen any 'available_externally' functions at all, they have
     // definitions outside the translation unit.
-    if (F.hasAvailableExternallyLinkage())
+    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
       continue;
 
     MachineFunction &MF = MMI.getOrCreateMachineFunction(F);

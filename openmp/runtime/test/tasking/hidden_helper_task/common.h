@@ -17,7 +17,7 @@ typedef struct kmp_depend_info {
   union {
     unsigned char flag;
     struct {
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
       unsigned all : 1;
       unsigned unused : 3;
       unsigned set : 1;

@@ -21,19 +21,6 @@
 #error This file requires C++17
 #endif
 
-// FIXME: Currently the variant<T&> tests are disabled using this macro.
-#define TEST_VARIANT_HAS_NO_REFERENCES
-
-// TODO(LLVM-19): Remove TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
-#ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
-# define TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
-#endif
-#ifdef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
-constexpr bool VariantAllowsNarrowingConversions = true;
-#else
-constexpr bool VariantAllowsNarrowingConversions = false;
-#endif
-
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct CopyThrows {
   CopyThrows() = default;

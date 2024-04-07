@@ -15,6 +15,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "include/tzdb/leap_second_private.h"
 #include "include/tzdb/time_zone_link_private.h"
 #include "include/tzdb/time_zone_private.h"
 #include "include/tzdb/types_private.h"
@@ -511,14 +512,33 @@ static string __parse_version(istream& __input) {
   return chrono::__parse_string(__input);
 }
 
+[[nodiscard]]
+static __tz::__rule& __create_entry(__tz::__rules_storage_type& __rules, const string& __name) {
+  auto __result = [&]() -> __tz::__rule& {
+    auto& __rule = __rules.emplace_back(__name, vector<__tz::__rule>{});
+    return __rule.second.emplace_back();
+  };
+
+  if (__rules.empty())
+    return __result();
+
+  // Typically rules are in contiguous order in the database.
+  // But there are exceptions, some rules are interleaved.
+  if (__rules.back().first == __name)
+    return __rules.back().second.emplace_back();
+
+  if (auto __it = ranges::find(__rules, __name, [](const auto& __r) { return __r.first; });
+      __it != ranges::end(__rules))
+    return __it->second.emplace_back();
+
+  return __result();
+}
+
 static void __parse_rule(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istream& __input) {
   chrono::__skip_mandatory_whitespace(__input);
   string __name = chrono::__parse_string(__input);
 
-  if (__rules.empty() || __rules.back().first != __name)
-    __rules.emplace_back(__name, vector<__tz::__rule>{});
-
-  __tz::__rule& __rule = __rules.back().second.emplace_back();
+  __tz::__rule& __rule = __create_entry(__rules, __name);
 
   chrono::__skip_mandatory_whitespace(__input);
   __rule.__from = chrono::__parse_year(__input);
@@ -603,6 +623,36 @@ static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istr
   }
 }
 
+static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, istream&& __input) {
+  // The file stores dates since 1 January 1900, 00:00:00, we want
+  // seconds since 1 January 1970.
+  constexpr auto __offset = sys_days{1970y / January / 1} - sys_days{1900y / January / 1};
+
+  while (true) {
+    switch (__input.peek()) {
+    case istream::traits_type::eof():
+      return;
+
+    case ' ':
+    case '\t':
+    case '\n':
+      __input.get();
+      continue;
+
+    case '#':
+      chrono::__skip_line(__input);
+      continue;
+    }
+
+    sys_seconds __date = sys_seconds{seconds{chrono::__parse_integral(__input, false)}} - __offset;
+    chrono::__skip_mandatory_whitespace(__input);
+    seconds __value{chrono::__parse_integral(__input, false)};
+    chrono::__skip_line(__input);
+
+    __leap_seconds.emplace_back(leap_second::__constructor_tag{}, __date, __value);
+  }
+}
+
 void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   filesystem::path __root = chrono::__libcpp_tzdb_directory();
   ifstream __tzdata{__root / "tzdata.zi"};
@@ -612,7 +662,69 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   std::ranges::sort(__tzdb.zones);
   std::ranges::sort(__tzdb.links);
   std::ranges::sort(__rules, {}, [](const auto& p) { return p.first; });
+
+  // There are two files with the leap second information
+  // - leapseconds as specified by zic
+  // - leap-seconds.list the source data
+  // The latter is much easier to parse, it seems Howard shares that
+  // opinion.
+  chrono::__parse_leap_seconds(__tzdb.leap_seconds, ifstream{__root / "leap-seconds.list"});
+  // The Standard requires the leap seconds to be sorted. The file
+  // leap-seconds.list usually provides them in sorted order, but that is not
+  // guaranteed so we ensure it here.
+  std::ranges::sort(__tzdb.leap_seconds);
 }
+
+#ifdef _WIN32
+[[nodiscard]] static const time_zone* __current_zone_windows(const tzdb& tzdb) {
+  // TODO TZDB Implement this on Windows.
+  std::__throw_runtime_error("unknown time zone");
+}
+#else  // ifdef _WIN32
+[[nodiscard]] static const time_zone* __current_zone_posix(const tzdb& tzdb) {
+  // On POSIX systems there are several ways to configure the time zone.
+  // In order of priority they are:
+  // - TZ environment variable
+  //   https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08
+  //   The documentation is unclear whether or not it's allowed to
+  //   change time zone information. For example the TZ string
+  //     MST7MDT
+  //   this is an entry in tzdata.zi. The value
+  //     MST
+  //   is also an entry. Is it allowed to use the following?
+  //     MST-3
+  //   Even when this is valid there is no time_zone record in the
+  //   database. Since the library would need to return a valid pointer,
+  //   this means the library needs to allocate and leak a pointer.
+  //
+  // - The time zone name is the target of the symlink /etc/localtime
+  //   relative to /usr/share/zoneinfo/
+
+  // The algorithm is like this:
+  // - If the environment variable TZ is set and points to a valid
+  //   record use this value.
+  // - Else use the name based on the `/etc/localtime` symlink.
+
+  if (const char* __tz = getenv("TZ"))
+    if (const time_zone* __result = tzdb.__locate_zone(__tz))
+      return __result;
+
+  filesystem::path __path = "/etc/localtime";
+  if (!std::filesystem::exists(__path))
+    std::__throw_runtime_error("tzdb: the symlink '/etc/localtime' does not exist");
+
+  if (!std::filesystem::is_symlink(__path))
+    std::__throw_runtime_error("tzdb: the path '/etc/localtime' is not a symlink");
+
+  filesystem::path __tz = filesystem::read_symlink(__path);
+  string __name         = filesystem::relative(__tz, "/usr/share/zoneinfo/");
+
+  if (const time_zone* __result = tzdb.__locate_zone(__name))
+    return __result;
+
+  std::__throw_runtime_error(("tzdb: the time zone '" + __name + "' is not found in the database").c_str());
+}
+#endif // ifdef _WIN32
 
 //===----------------------------------------------------------------------===//
 //                           Public API
@@ -621,6 +733,14 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
 _LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_list& get_tzdb_list() {
   static tzdb_list __result{new tzdb_list::__impl()};
   return __result;
+}
+
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI const time_zone* tzdb::__current_zone() const {
+#ifdef _WIN32
+  return chrono::__current_zone_windows(*this);
+#else
+  return chrono::__current_zone_posix(*this);
+#endif
 }
 
 _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI const tzdb& reload_tzdb() {

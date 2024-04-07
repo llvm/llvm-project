@@ -40,6 +40,7 @@ class TlsGlobalTestCase(TestBase):
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
+    @expectedFailureIf(lldbplatformutil.xcode15LinkerBug())
     def test(self):
         """Test thread-local storage."""
         self.build()

@@ -69,7 +69,10 @@ void InitOnlyAction::ExecuteAction() {
 
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
-  Preprocessor &PP = getCompilerInstance().getPreprocessor();
+  CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
+  Preprocessor &PP = CI.getPreprocessor();
 
   // Ignore unknown pragmas.
   PP.IgnorePragmas();
@@ -184,12 +187,12 @@ bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   return true;
 }
 
-std::unique_ptr<ASTConsumer>
-GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
-                                        StringRef InFile) {
+std::vector<std::unique_ptr<ASTConsumer>>
+GenerateModuleAction::CreateMultiplexConsumer(CompilerInstance &CI,
+                                              StringRef InFile) {
   std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
   if (!OS)
-    return nullptr;
+    return {};
 
   std::string OutputFile = CI.getFrontendOpts().OutputFile;
   std::string Sysroot;
@@ -210,6 +213,17 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
       +CI.getFrontendOpts().BuildingImplicitModule));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, std::string(InFile), OutputFile, std::move(OS), Buffer));
+  return Consumers;
+}
+
+std::unique_ptr<ASTConsumer>
+GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
+                                        StringRef InFile) {
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
+      CreateMultiplexConsumer(CI, InFile);
+  if (Consumers.empty())
+    return nullptr;
+
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -265,13 +279,26 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
   CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
   CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
 
-  return GenerateModuleAction::CreateASTConsumer(CI, InFile);
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
+      CreateMultiplexConsumer(CI, InFile);
+  if (Consumers.empty())
+    return nullptr;
+
+  return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
 std::unique_ptr<raw_pwrite_stream>
 GenerateModuleInterfaceAction::CreateOutputFile(CompilerInstance &CI,
                                                 StringRef InFile) {
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, "pcm");
+}
+
+std::unique_ptr<ASTConsumer>
+GenerateReducedModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
+                                                        StringRef InFile) {
+  return std::make_unique<ReducedBMIGenerator>(CI.getPreprocessor(),
+                                               CI.getModuleCache(),
+                                               CI.getFrontendOpts().OutputFile);
 }
 
 bool GenerateHeaderUnitAction::BeginSourceFileAction(CompilerInstance &CI) {
@@ -426,6 +453,8 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
+    case Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      return "TypeAliasTemplateInstantiation";
     }
     return "";
   }
@@ -839,7 +868,6 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   const LangOptions &LO = getCurrentASTUnit().getLangOpts();
   if (LO.CPlusPlusModules && !LO.CurrentModule.empty()) {
-
     ASTReader *R = getCurrentASTUnit().getASTReader().get();
     unsigned SubModuleCount = R->getTotalNumSubmodules();
     serialization::ModuleFile &MF = R->getModuleManager().getPrimaryModule();
@@ -1060,6 +1088,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
+  case Language::CIR:
     break;
 
   case Language::Unknown:
@@ -1164,6 +1193,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
+  AdjustCI(CI);
+
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();

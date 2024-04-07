@@ -359,7 +359,13 @@ public:
   }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI ios_base() { // purposefully does no initialization
+  _LIBCPP_HIDE_FROM_ABI ios_base() : __loc_(nullptr) {
+    // Purposefully does no initialization
+    //
+    // Except for the locale, this is a sentinel to avoid destroying
+    // an uninitialized object. See
+    // test/libcxx/input.output/iostreams.base/ios.base/ios.base.cons/dtor.uninitialized.pass.cpp
+    // for the details.
   }
 
   void init(void* __sb);
@@ -571,7 +577,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI basic_ios() { // purposefully does no initialization
+  _LIBCPP_HIDE_FROM_ABI basic_ios() {
+    // purposefully does no initialization
+    // since the destructor does nothing this does not have ios_base issues.
   }
   _LIBCPP_HIDE_FROM_ABI void init(basic_streambuf<char_type, traits_type>* __sb);
 

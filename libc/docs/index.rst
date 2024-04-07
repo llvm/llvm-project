@@ -66,6 +66,7 @@ stages there is no ABI stability in any form.
    strings
    stdio
    stdbit
+   fenv
    libc_search
    c23
 
@@ -78,6 +79,7 @@ stages there is no ABI stability in any form.
    dev/index.rst
    porting
    contributing
+   talks
 
 .. toctree::
    :hidden:

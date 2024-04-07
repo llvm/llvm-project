@@ -77,6 +77,16 @@ def : WriteRes<WriteIDiv, [RocketUnitIDiv]> {
   let ReleaseAtCycles = [33];
 }
 
+// Integer remainder
+def : WriteRes<WriteIRem32, [RocketUnitIDiv]> {
+  let Latency = 34;
+  let ReleaseAtCycles = [34];
+}
+def : WriteRes<WriteIRem, [RocketUnitIDiv]> {
+  let Latency = 33;
+  let ReleaseAtCycles = [33];
+}
+
 // Memory
 def : WriteRes<WriteSTB, [RocketUnitMem]>;
 def : WriteRes<WriteSTH, [RocketUnitMem]>;
@@ -189,6 +199,8 @@ def : ReadAdvance<ReadShiftReg, 0>;
 def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
+def : ReadAdvance<ReadIRem, 0>;
+def : ReadAdvance<ReadIRem32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
 def : ReadAdvance<ReadIMul32, 0>;
 def : ReadAdvance<ReadAtomicWA, 0>;

@@ -102,7 +102,7 @@ public:
       : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
-  const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
+  RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
     return derivedType_;
   }
   RT_API_ATTRS DescriptorAddendum &set_derivedType(
@@ -204,7 +204,7 @@ public:
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   RT_API_ATTRS ISO::CFI_cdesc_t &raw() { return raw_; }
-  const RT_API_ATTRS ISO::CFI_cdesc_t &raw() const { return raw_; }
+  RT_API_ATTRS const ISO::CFI_cdesc_t &raw() const { return raw_; }
   RT_API_ATTRS std::size_t ElementBytes() const { return raw_.elem_len; }
   RT_API_ATTRS int rank() const { return raw_.rank; }
   RT_API_ATTRS TypeCode type() const { return TypeCode{raw_.type}; }
@@ -225,7 +225,7 @@ public:
   RT_API_ATTRS Dimension &GetDimension(int dim) {
     return *reinterpret_cast<Dimension *>(&raw_.dim[dim]);
   }
-  const RT_API_ATTRS Dimension &GetDimension(int dim) const {
+  RT_API_ATTRS const Dimension &GetDimension(int dim) const {
     return *reinterpret_cast<const Dimension *>(&raw_.dim[dim]);
   }
 
@@ -345,7 +345,7 @@ public:
       return nullptr;
     }
   }
-  const RT_API_ATTRS DescriptorAddendum *Addendum() const {
+  RT_API_ATTRS const DescriptorAddendum *Addendum() const {
     if (raw_.f18Addendum != 0) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
@@ -448,7 +448,7 @@ public:
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);
   }
-  const RT_API_ATTRS Descriptor &descriptor() const {
+  RT_API_ATTRS const Descriptor &descriptor() const {
     return *reinterpret_cast<const Descriptor *>(storage_);
   }
 

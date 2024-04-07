@@ -32,10 +32,9 @@ using namespace dwarf_linker::classic;
 
 Expected<std::unique_ptr<DwarfStreamer>> DwarfStreamer::createStreamer(
     const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,
-    raw_pwrite_stream &OutFile, DWARFLinkerBase::TranslatorFuncTy Translator,
-    DWARFLinkerBase::MessageHandlerTy Warning) {
+    raw_pwrite_stream &OutFile, DWARFLinkerBase::MessageHandlerTy Warning) {
   std::unique_ptr<DwarfStreamer> Streamer =
-      std::make_unique<DwarfStreamer>(FileType, OutFile, Translator, Warning);
+      std::make_unique<DwarfStreamer>(FileType, OutFile, Warning);
   if (Error Err = Streamer->init(TheTriple, "__DWARF"))
     return std::move(Err);
 
@@ -977,11 +976,10 @@ void DwarfStreamer::emitLineTableString(const DWARFDebugLine::Prologue &P,
 
   switch (String.getForm()) {
   case dwarf::DW_FORM_string: {
-    StringRef TranslatedString =
-        (Translator) ? Translator(*StringVal) : *StringVal;
-    Asm->OutStreamer->emitBytes(TranslatedString.data());
+    StringRef Str = *StringVal;
+    Asm->OutStreamer->emitBytes(Str.data());
     Asm->emitInt8(0);
-    LineSectionSize += TranslatedString.size() + 1;
+    LineSectionSize += Str.size() + 1;
   } break;
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_line_strp: {

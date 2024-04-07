@@ -761,6 +761,11 @@ class GetVTypePredicates<VTypeInfo vti> {
                                      true : [HasVInstructions]);
 }
 
+class GetVTypeScalarPredicates<VTypeInfo vti> {
+  list<Predicate> Predicates = !cond(!eq(vti.Scalar, bf16) : [HasStdExtZfbfmin],
+                                     true : []);
+}
+
 class VPseudoUSLoadNoMask<VReg RetClass,
                           int EEW> :
       Pseudo<(outs RetClass:$rd),
@@ -2133,19 +2138,6 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
-multiclass VPseudoBinaryNoMask<VReg RetClass,
-                               VReg Op1Class,
-                               DAGOperand Op2Class,
-                               LMULInfo MInfo,
-                               string Constraint = "",
-                               int sew = 0> {
-  let VLMul = MInfo.value, SEW=sew in {
-    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
-                                       Constraint>;
-  }
-}
-
 multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      VReg Op1Class,
                                      DAGOperand Op2Class,
@@ -2212,7 +2204,8 @@ multiclass VPseudoTiedBinary<VReg RetClass,
     def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
                                                           Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" : VPseudoTiedBinaryMask<RetClass, Op2Class,
-                                                         Constraint, TargetConstraintType>;
+                                                         Constraint, TargetConstraintType>,
+                                        RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -2225,7 +2218,8 @@ multiclass VPseudoTiedBinaryRoundingMode<VReg RetClass,
     def "_" # MInfo.MX # "_TIED":
       VPseudoTiedBinaryNoMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
     def "_" # MInfo.MX # "_MASK_TIED" :
-      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>;
+      VPseudoTiedBinaryMaskRoundingMode<RetClass, Op2Class, Constraint, TargetConstraintType>,
+      RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -2921,22 +2915,6 @@ multiclass VPseudoVMAX_VV_VF {
   }
 }
 
-multiclass VPseudoVALU_VV_VF {
-  foreach m = MxListF in {
-    defm "" : VPseudoBinaryFV_VV<m>,
-              SchedBinary<"WriteVFALUV", "ReadVFALUV", "ReadVFALUV", m.MX,
-                          forceMergeOpRead=true>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF<m, f>,
-                SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
-    }
-  }
-}
-
 multiclass VPseudoVALU_VV_VF_RM {
   foreach m = MxListF in {
     defm "" : VPseudoBinaryFV_VV_RM<m>,
@@ -2947,16 +2925,6 @@ multiclass VPseudoVALU_VV_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "" : VPseudoBinaryV_VF_RM<m, f>,
-                SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
-                            forceMergeOpRead=true>;
-    }
-  }
-}
-
-multiclass VPseudoVALU_VF {
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoBinaryV_VF<m, f>,
                 SchedBinary<"WriteVFALUF", "ReadVFALUV", "ReadVFALUF", m.MX,
                             forceMergeOpRead=true>;
     }
@@ -2993,12 +2961,6 @@ multiclass VPseudoVWALU_VV_VX {
     defm "" : VPseudoBinaryW_VX<m>, 
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx,
                           forceMergeOpRead=true>;
-  }
-}
-
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
-  foreach m = MxListW in {
-    defm "" : VPseudoBinaryW_VI<ImmType, m>;
   }
 }
 
@@ -3369,22 +3331,6 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
     defm "" : VPseudoTernaryV_VX_AAXA<m, Constraint>,
               SchedTernary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX",
                            "ReadVIMulAddV", mx>;
-  }
-}
-
-multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxListF in {
-    defm "" : VPseudoTernaryV_VV_AAXA<m, Constraint>,
-              SchedTernary<"WriteVFMulAddV", "ReadVFMulAddV", "ReadVFMulAddV",
-                           "ReadVFMulAddV", m.MX>;
-  }
-
-  foreach f = FPList in {
-    foreach m = f.MxList in {
-      defm "" : VPseudoTernaryV_VF_AAXA<m, f, Constraint>,
-                SchedTernary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
-                             "ReadVFMulAddV", m.MX>;
-    }
   }
 }
 
@@ -6698,6 +6644,7 @@ defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 // 15. Vector Mask Instructions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [HasVInstructions] in {
 //===----------------------------------------------------------------------===//
 // 15.1 Vector Mask-Register Logical Instructions
 //===----------------------------------------------------------------------===//
@@ -6718,7 +6665,6 @@ defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
 //===----------------------------------------------------------------------===//
 // 15.2. Vector mask population count vcpop
 //===----------------------------------------------------------------------===//
-
 let IsSignExtendingOpW = 1 in
 defm PseudoVCPOP: VPseudoVPOP_M;
 
@@ -6753,6 +6699,7 @@ defm PseudoVIOTA_M: VPseudoVIOTA_M;
 // 15.9. Vector Element Index Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVID : VPseudoVID_V;
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // 16. Vector Permutation Instructions
@@ -6767,14 +6714,14 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   let HasSEWOp = 1, BaseInstr = VMV_X_S in
   def PseudoVMV_X_S:
     Pseudo<(outs GPR:$rd), (ins VR:$rs2, ixlenimm:$sew), []>,
-    Sched<[WriteVIMovVX, ReadVIMovVX]>,
+    Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
       Constraints = "$rd = $rs1" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
                             (ins VR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),
                             []>,
-    Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
+    Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
 }
 } // Predicates = [HasVInstructions]
@@ -6793,7 +6740,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
         def "PseudoVFMV_" # f.FX # "_S_" # mx :
           Pseudo<(outs f.fprclass:$rd),
                  (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVFMovVF, ReadVFMovVF]>,
+          Sched<[WriteVMovFS, ReadVMovFS]>,
           RISCVVPseudo;
         let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
             Constraints = "$rd = $rs1" in
@@ -6802,7 +6749,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
                                                       AVL:$vl, ixlenimm:$sew),
                                                  []>,
-          Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>,
+          Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
           RISCVVPseudo;
       }
     }
@@ -6828,6 +6775,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 16.4. Vector Register Gather Instructions
 //===----------------------------------------------------------------------===//
+let Predicates = [HasVInstructions] in {
 defm PseudoVRGATHER     : VPseudoVGTR_VV_VX_VI<uimm5, "@earlyclobber $rd">;
 defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
                                              Constraint="@earlyclobber $rd">;
@@ -6836,6 +6784,7 @@ defm PseudoVRGATHEREI16 : VPseudoVGTR_VV_EEW<eew=16,
 // 16.5. Vector Compress Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVCOMPRESS : VPseudoVCPR_V;
+} // Predicates = [HasVInstructions]
 
 //===----------------------------------------------------------------------===//
 // Patterns.

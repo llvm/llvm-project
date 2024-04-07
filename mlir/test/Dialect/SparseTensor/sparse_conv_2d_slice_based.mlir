@@ -41,7 +41,7 @@
 // CHECK:                 scf.yield
 // CHECK:               }
 // CHECK:               scf.if {{.*}} {
-// CHECK:                 sparse_tensor.insert %{{.*}} into %{{.*}}{{\[}}%[[D0]], %[[D1]]]
+// CHECK:                 tensor.insert %{{.*}} into %{{.*}}{{\[}}%[[D0]], %[[D1]]]
 // CHECK:                 scf.yield
 // CHECK:               } else {
 // CHECK:                 scf.yield

@@ -107,10 +107,50 @@ entry:
 define i32 @test9(i32 %a, i32 %b) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwimi 3, 4, 8, 20, 26
+; CHECK-NEXT:    rlwimi 4, 3, 8, 20, 26
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 8, i32 4064)
+  ret i32 %r
+}
+
+define i32 @test10(i32 %a, i32 %b) {
+; CHECK-LABEL: test10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 0, i32 -1)
+  ret i32 %r
+}
+
+define i32 @test11(i32 %a, i32 %b) {
+; CHECK-LABEL: test11:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    rotlwi 3, 3, 8
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 8, i32 -1)
+  ret i32 %r
+}
+
+define i32 @test12(i32 %a, i32 %b) {
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 0, i32 0)
+  ret i32 %r
+}
+
+define i32 @test13(i32 %a, i32 %b) {
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    rlwimi 3, 4, 0, 27, 19
+; CHECK-NEXT:    blr
+entry:
+  %r = call i32 @llvm.ppc.rlwimi(i32 %a, i32 %b, i32 0, i32 4064)
   ret i32 %r
 }
 

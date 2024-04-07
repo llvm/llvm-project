@@ -10,6 +10,12 @@
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x01,0x41,0x7b]
          addq	%r16, 123(%r17), %r18
 
+## MRMDestMemCC
+
+# CHECK: cfcmovbq %r16, 123(%r17,%r18,4)
+# CHECK: encoding: [0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b]
+         cfcmovbq %r16, 123(%r17,%r18,4)
+
 ## MRMSrcMem
 
 # CHECK: vbroadcasti32x4	(%r16,%r17), %zmm0
@@ -19,6 +25,16 @@
 # CHECK: subq	123(%r16), %r17, %r18
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x2b,0x48,0x7b]
          subq	123(%r16), %r17, %r18
+
+## MRMSrcMemCC
+
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18
+# CHECK: encoding: [0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18
+
+# CHECK: cfcmovbq	123(%r16,%r17,4), %r18, %r19
+# CHECK: encoding: [0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b]
+         cfcmovbq	123(%r16,%r17,4), %r18, %r19
 
 ## MRM0m
 
@@ -122,11 +138,23 @@
 # CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
          {nf}	addq	%r16, %r17
 
+## MRMDestRegCC
+
+# CHECK: cfcmovbq	%r16, %r17
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x42,0xc1]
+         cfcmovbq	%r16, %r17
+
 ## MRMSrcReg
 
 # CHECK: mulxq	%r16, %r17, %r18
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulxq	%r16, %r17, %r18
+
+## MRMSrcRegCC
+
+# CHECK: cfcmovbq	%r16, %r17, %r18
+# CHECK: encoding: [0x62,0xec,0xec,0x14,0x42,0xc8]
+         cfcmovbq	%r16, %r17, %r18
 
 ## MRMSrcReg4VOp3
 

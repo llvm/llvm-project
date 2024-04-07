@@ -14,6 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_num_result.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
 namespace LIBC_NAMESPACE {
@@ -75,8 +76,12 @@ template <class T>
 LIBC_INLINE StrToNumResult<T>
 strtointeger(const char *__restrict src, int base,
              const size_t src_len = cpp::numeric_limits<size_t>::max()) {
-  // TODO: Rewrite to support numbers longer than long long
-  unsigned long long result = 0;
+  using ResultType = typename cpp::conditional_t<(cpp::is_same_v<T, UInt128> ||
+                                                  cpp::is_same_v<T, Int128>),
+                                                 UInt128, unsigned long long>;
+
+  ResultType result = 0;
+
   bool is_number = false;
   size_t src_cur = 0;
   int error_val = 0;
@@ -101,15 +106,16 @@ strtointeger(const char *__restrict src, int base,
   if (base == 16 && is_hex_start(src + src_cur, src_len - src_cur))
     src_cur = src_cur + 2;
 
-  constexpr bool IS_UNSIGNED = (cpp::numeric_limits<T>::min() == 0);
+  constexpr bool IS_UNSIGNED = cpp::is_unsigned_v<T>;
   const bool is_positive = (result_sign == '+');
-  unsigned long long constexpr NEGATIVE_MAX =
-      !IS_UNSIGNED
-          ? static_cast<unsigned long long>(cpp::numeric_limits<T>::max()) + 1
-          : cpp::numeric_limits<T>::max();
-  unsigned long long const abs_max =
+
+  ResultType constexpr NEGATIVE_MAX =
+      !IS_UNSIGNED ? static_cast<ResultType>(cpp::numeric_limits<T>::max()) + 1
+                   : cpp::numeric_limits<T>::max();
+  ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
-  unsigned long long const abs_max_div_by_base = abs_max / base;
+  ResultType const abs_max_div_by_base = abs_max / base;
+
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
     if (cur_digit >= base)
@@ -149,10 +155,12 @@ strtointeger(const char *__restrict src, int base,
       return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return {is_positive
-              ? static_cast<T>(result)
-              : static_cast<T>(-static_cast<cpp::make_unsigned_t<T>>(result)),
-          str_len, error_val};
+  return {
+      is_positive
+          ? static_cast<T>(result)
+          : static_cast<T>(
+                -static_cast<make_integral_or_big_int_unsigned_t<T>>(result)),
+      str_len, error_val};
 }
 
 } // namespace internal

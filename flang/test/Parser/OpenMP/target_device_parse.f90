@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %flang_fc1 -fdebug-unparse-no-sema -fopenmp %s | FileCheck --ignore-case %s
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 ! Checks the parsing of Openmp 5.0 Target Device constructs

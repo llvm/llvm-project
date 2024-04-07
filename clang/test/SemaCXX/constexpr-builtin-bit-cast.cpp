@@ -90,7 +90,8 @@ void test_record() {
   struct tuple4 {
     unsigned x, y, z, doublez;
 
-    constexpr bool operator==(tuple4 const &other) const {
+    bool operator==(tuple4 const &other) const = default;
+    constexpr bool operator==(bases const &other) const {
       return x == other.x && y == other.y &&
              z == other.z && doublez == other.doublez;
     }
@@ -99,6 +100,9 @@ void test_record() {
   constexpr tuple4 t4 = bit_cast<tuple4>(b);
   static_assert(t4 == tuple4{1, 2, 3, 4});
   static_assert(round_trip<tuple4>(b));
+
+  constexpr auto b2 = bit_cast<bases>(t4);
+  static_assert(t4 == b2);
 }
 
 void test_partially_initialized() {
