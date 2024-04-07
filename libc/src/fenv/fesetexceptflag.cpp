@@ -9,8 +9,7 @@
 #include "src/fenv/fesetexceptflag.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
-
-#include "hdr/fenv_macros.h"
+#include <fenv.h>
 
 namespace LIBC_NAMESPACE {
 
