@@ -47,12 +47,13 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
   return {};
 }
 
-uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
+uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs,
+                                     bool IsBackEndFeature) {
   uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
-    if (auto Ext = parseArchExtension(FeatureStr))
+  for (const StringRef FeatureStr : FeatureStrs)
+    if (auto Ext = IsBackEndFeature ? parseTargetFeature(FeatureStr)
+                                    : parseArchExtension(FeatureStr))
       FeaturesMask |= (1ULL << Ext->CPUFeature);
-  }
   return FeaturesMask;
 }
 
@@ -129,6 +130,14 @@ std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef Arch
     if (ArchExt == A.Name)
       return A;
   }
+  return {};
+}
+
+std::optional<AArch64::ExtensionInfo>
+AArch64::parseTargetFeature(StringRef Feature) {
+  for (const auto &E : Extensions)
+    if (Feature == E.Feature)
+      return E;
   return {};
 }
 

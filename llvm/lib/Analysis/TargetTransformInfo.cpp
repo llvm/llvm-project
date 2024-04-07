@@ -1296,6 +1296,12 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
+bool TargetTransformInfo::hasFMV() const { return TTIImpl->hasFMV(); }
+
+uint64_t TargetTransformInfo::getFeatureMask(Function &F) const {
+  return TTIImpl->getFeatureMask(F);
+}
+
 unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }

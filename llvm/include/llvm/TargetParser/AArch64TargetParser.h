@@ -846,6 +846,7 @@ const ArchInfo *getArchForCpu(StringRef CPU);
 // Parser
 const ArchInfo *parseArch(StringRef Arch);
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
+std::optional<ExtensionInfo> parseTargetFeature(StringRef Feature);
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);
 // Used by target parser tests
@@ -856,7 +857,8 @@ bool isX18ReservedByDefault(const Triple &TT);
 // For given feature names, return a bitmask corresponding to the entries of
 // AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks
 // themselves, they are sequential (0, 1, 2, 3, ...).
-uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs,
+                            bool IsBackEndFeature = false);
 
 void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 

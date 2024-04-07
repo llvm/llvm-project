@@ -941,6 +941,10 @@ public:
 
   bool hasArmWideBranch(bool) const { return false; }
 
+  bool hasFMV() const { return false; }
+
+  uint64_t getFeatureMask(Function &F) const { return 0; }
+
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
 protected:

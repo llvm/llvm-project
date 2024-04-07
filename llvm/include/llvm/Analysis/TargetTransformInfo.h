@@ -1762,6 +1762,12 @@ public:
   /// false, but it shouldn't matter what it returns anyway.
   bool hasArmWideBranch(bool Thumb) const;
 
+  /// Returns true if the target supports Function MultiVersioning.
+  bool hasFMV() const;
+
+  /// Returns a bitmask constructed from the target features of a function.
+  uint64_t getFeatureMask(Function &F) const;
+
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
 
@@ -2152,6 +2158,8 @@ public:
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
+  virtual bool hasFMV() const = 0;
+  virtual uint64_t getFeatureMask(Function &F) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
 };
 
@@ -2902,6 +2910,12 @@ public:
 
   bool hasArmWideBranch(bool Thumb) const override {
     return Impl.hasArmWideBranch(Thumb);
+  }
+
+  bool hasFMV() const override { return Impl.hasFMV(); }
+
+  uint64_t getFeatureMask(Function &F) const override {
+    return Impl.getFeatureMask(F);
   }
 
   unsigned getMaxNumArgs() const override {
