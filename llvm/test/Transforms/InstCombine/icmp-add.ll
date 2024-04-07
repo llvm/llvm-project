@@ -9,10 +9,8 @@ declare void @use(i32)
 define i1 @cvt_icmp_0_zext_plus_zext_eq_i16(i16 %arg, i16 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i16(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = zext i16 [[ARG:%.*]] to i32
-; CHECK-NEXT:    [[I2:%.*]] = zext i16 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[I3:%.*]] = sub nsw i32 0, [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32 [[I2]], [[I3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i16 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq i16 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;
 bb:
@@ -27,10 +25,8 @@ bb:
 define i1 @cvt_icmp_0_zext_plus_zext_eq_i8(i8 %arg, i8 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i8(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = zext i8 [[ARG:%.*]] to i32
-; CHECK-NEXT:    [[I2:%.*]] = zext i8 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[I3:%.*]] = sub nsw i32 0, [[I]]
-; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32 [[I2]], [[I3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i8 [[ARG1:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    ret i1 [[I4]]
 ;
 bb:
@@ -3005,8 +3001,8 @@ define i1 @icmp_dec_notnonzero(i8 %x) {
 
 define i1 @icmp_addnuw_nonzero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_addnuw_nonzero(
-; CHECK-NEXT:    [[I:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[I]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %i = add nuw i8 %x, %y
