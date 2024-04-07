@@ -36,7 +36,9 @@ constexpr bool test() {
   using SplitIter = std::ranges::iterator_t<SplitView>;
 
   SplitView sv{TracedMoveView{}, TracedMoveView{}};
-  SplitIter iter = {sv, sv.base().begin(), std::make_optional(std::ranges::subrange<TracedMoveIter>{sv.base().begin(), sv.base().end()})};
+  SplitIter iter = {sv,
+                    sv.base().begin(),
+                    std::make_optional(std::ranges::subrange<TracedMoveIter>{sv.base().begin(), sv.base().end()})};
   assert(iter.base().moved);
 
   auto subRange = *iter;
