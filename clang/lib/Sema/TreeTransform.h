@@ -3890,15 +3890,14 @@ public:
         FPOptionsOverride());
 
     // Type-check the __builtin_shufflevector expression.
-    return SemaRef.SemaBuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
+    return SemaRef.BuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
   }
 
   /// Build a new convert vector expression.
   ExprResult RebuildConvertVectorExpr(SourceLocation BuiltinLoc,
                                       Expr *SrcExpr, TypeSourceInfo *DstTInfo,
                                       SourceLocation RParenLoc) {
-    return SemaRef.SemaConvertVectorExpr(SrcExpr, DstTInfo,
-                                         BuiltinLoc, RParenLoc);
+    return SemaRef.ConvertVectorExpr(SrcExpr, DstTInfo, BuiltinLoc, RParenLoc);
   }
 
   /// Build a new template argument pack expansion.
