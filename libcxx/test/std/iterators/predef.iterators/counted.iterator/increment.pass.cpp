@@ -115,9 +115,8 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-
 #ifndef TEST_HAS_NO_EXCEPTIONS
+  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
   {
     using Counted = std::counted_iterator<ThrowsOnInc<int*>>;
     std::counted_iterator iter(ThrowsOnInc<int*>{buffer}, 8);
