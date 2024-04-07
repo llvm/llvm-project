@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/IdentifierTable.h"
 
 using namespace clang::ast_matchers;
 
@@ -78,7 +79,10 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
   return Node.getCaptureDefault() == Kind;
 }
 
-AST_MATCHER(VarDecl, hasIdentifier) { return Node.getIdentifier() != NULL; }
+AST_MATCHER(VarDecl, hasIdentifier) {
+  const IdentifierInfo *ID = Node.getIdentifier();
+  return ID != NULL && !ID->isPlaceholder();
+}
 
 } // namespace
 
