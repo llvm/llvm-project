@@ -8,11 +8,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr outer-iterator(Parent& parent, iterator_t<Base> current);
+// constexpr outer-iterator(Parent& parent, optional<iterator_t<Base>> current);
 //   requires forward_range<Base>
 
 #include <ranges>
 
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include "../types.h"
@@ -23,7 +24,8 @@ static_assert(!std::is_constructible_v<OuterIterInput, SplitViewInput&, std::ran
 constexpr bool test() {
   ForwardView input("abc");
   SplitViewForward v(std::move(input), " ");
-  [[maybe_unused]] OuterIterForward i(v, input.begin());
+  [[maybe_unused]] OuterIterForward i1(v, std::make_optional(input.begin()));
+  [[maybe_unused]] OuterIterForward i2(v, std::nullopt);
 
   return true;
 }
