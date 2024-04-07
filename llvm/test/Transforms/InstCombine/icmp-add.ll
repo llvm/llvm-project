@@ -1802,22 +1802,17 @@ define i1 @test4(i32 %a) {
   ret i1 %c
 }
 
-define { i32, i1 } @test4multiuse(i32 %a) {
-; CHECK-LABEL: @test4multiuse(
-; CHECK-NEXT:    [[B:%.*]] = add nsw i32 [[A:%.*]], -2147483644
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], 2147483640
-; CHECK-NEXT:    [[TMP:%.*]] = insertvalue { i32, i1 } undef, i32 [[B]], 0
-; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i32, i1 } [[TMP]], i1 [[C]], 1
-; CHECK-NEXT:    ret { i32, i1 } [[RES]]
+define {
+i32, i1 } @test4multiuse(i32 %a) {
 ;
 
-  %b = add nsw i32 %a, -2147483644
-  %c = icmp slt i32 %b, -4
+%b = add nsw i32 %a, -2147483644
+%c = icmp slt i32 %b, -4
 
-  %tmp = insertvalue { i32, i1 } undef, i32 %b, 0
-  %res = insertvalue { i32, i1 } %tmp, i1 %c, 1
+%tmp = insertvalue { i32, i1 } undef, i32 %b, 0
+%res = insertvalue { i32, i1 } %tmp, i1 %c, 1
 
-  ret { i32, i1 } %res
+ret { i32, i1 } %res
 }
 
 define <2 x i1> @test4vec(<2 x i32> %a) {
@@ -2857,7 +2852,7 @@ define i1 @icmp_add_add_C_comm2(i32 %X, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %a = udiv i32 42, %X  ; thwart complexity-based canonicalization
   %add1 = add i32 %a, %b
   %add2 = add i32 %add1, -1
   %cmp = icmp ugt i32 %a, %add2
@@ -2871,7 +2866,7 @@ define i1 @icmp_add_add_C_comm2_pred(i32 %X, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %a = udiv i32 42, %X  ; thwart complexity-based canonicalization
   %add1 = add i32 %a, %b
   %add2 = add i32 %add1, -1
   %cmp = icmp ule i32 %a, %add2
@@ -2886,7 +2881,7 @@ define i1 @icmp_add_add_C_comm2_wrong_pred(i32 %X, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[ADD2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %a = udiv i32 42, %X  ; thwart complexity-based canonicalization
   %add1 = add i32 %a, %b
   %add2 = add i32 %add1, -1
   %cmp = icmp ult i32 %a, %add2
@@ -2900,7 +2895,7 @@ define i1 @icmp_add_add_C_comm3(i32 %X, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %a = udiv i32 42, %X ; thwart complexity-based canonicalization
+  %a = udiv i32 42, %X  ; thwart complexity-based canonicalization
   %add1 = add i32 %b, %a
   %add2 = add i32 %add1, -1
   %cmp = icmp ugt i32 %a, %add2
@@ -3000,6 +2995,30 @@ define i1 @icmp_dec_notnonzero(i8 %x) {
 ;
   %i = add i8 %x, -1
   %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+define i1 @icmp_addnuw_nonzero(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero(
+; CHECK-NEXT:    [[I:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[I]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i8 %x, %y
+  %c = icmp eq i8 %i, 0
+  ret i1 %c
+}
+
+define i1 @icmp_addnuw_nonzero_fail_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_addnuw_nonzero_fail_multiuse(
+; CHECK-NEXT:    [[I:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[I]], 0
+; CHECK-NEXT:    call void @use(i32 [[I]])
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add nuw i32 %x, %y
+  %c = icmp eq i32 %i, 0
+  call void @use(i32 %i)
   ret i1 %c
 }
 
