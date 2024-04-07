@@ -180,6 +180,42 @@ The tests of libc++ are stored in libc++'s testing related subdirectories:
   ``libcxx/test/libcxx``. The structure of this directories follows the
   structure of ``libcxx/test/std``.
 
+Principles of testing
+---------------------
+
+Tests are a practical way to validate the correctness of the code. As such, they contain pragmatic trade offs between
+the cost of writing and maintaining the tests and the value they provide. Please consider the following principles when
+writing tests:
+
+- **Consider the next reader**
+
+    Tests should be obvious to tho future reader. Avoid too much boiler plate or other
+    distractions. Ensure each test has enough context to understand what it is testing. Avoid gratuitous use of advanced
+    test features or abstractions.
+
+- **Consider the effect of time**
+
+    Tests should be resilient to the effects of time. Tests are not static; They are
+    living documents that change over time. The intent of a test can become less clear over time.
+
+- **Consider the edge cases carefully**
+
+    Undefined behavior and edge cases are often the source of bugs. Tests should exercise these cases to ensure that
+    the code under test behaves correctly. It's important to write tests for the easy cases as well as the hard ones.
+
+- **Consider the focus**
+
+    Each test case should test a single concern. Ideally a test should only fail when this concern
+    is violated. Focused tests are not flakey. If a test case covers multiple concerns, consider splitting it into multiple
+    test cases.
+
+
+Note that these are principles, not rules. There are cases where it is appropriate to break these principles.
+During code review, if you feel that a test is not following these principles, please discuss it with the author.
+
+Remember code review is a **consensus building** process, not a **gatekeeping** process. Your fellow engineers are
+all working towards the same goal: to make the code better.
+
 Structure of a test
 -------------------
 
