@@ -20,7 +20,9 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
@@ -176,13 +178,14 @@ SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
   return std::make_tuple(Res, CI, NewInstr);
 }
 
-std::tuple<Register, ConstantFP *, bool>
+std::tuple<Register, ConstantFP *, bool, unsigned>
 SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
                                               MachineIRBuilder *MIRBuilder,
                                               MachineInstr *I,
                                               const SPIRVInstrInfo *TII) {
   const Type *LLVMFloatTy;
   LLVMContext &Ctx = CurMF->getFunction().getContext();
+  unsigned BitWidth = 32;
   if (SpvType)
     LLVMFloatTy = getTypeForSPIRVType(SpvType);
   else {
@@ -195,7 +198,9 @@ SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
   auto *const CI = ConstantFP::get(Ctx, Val);
   Register Res = DT.find(CI, CurMF);
   if (!Res.isValid()) {
-    unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
+    if (SpvType)
+      BitWidth = getScalarOrVectorBitWidth(SpvType);
+
     LLT LLTy = LLT::scalar(32);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
     CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
@@ -206,7 +211,7 @@ SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
     DT.add(CI, CurMF, Res);
     NewInstr = true;
   }
-  return std::make_tuple(Res, CI, NewInstr);
+  return std::make_tuple(Res, CI, NewInstr, BitWidth);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
@@ -217,7 +222,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
   ConstantFP *CI;
   Register Res;
   bool New;
-  std::tie(Res, CI, New) =
+  unsigned BitWidth;
+  std::tie(Res, CI, New, BitWidth) =
       getOrCreateConstFloatReg(Val, SpvType, nullptr, &I, &TII);
   // If we have found Res register which is defined by the passed G_CONSTANT
   // machine instruction, a new constant instruction should be created.
@@ -234,9 +240,13 @@ Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
     MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantF))
               .addDef(Res)
               .addUse(getSPIRVTypeID(SpvType));
-    addNumImm(CI->getValueAPF().bitcastToAPInt(), MIB);
+    addNumImm(
+        APInt(BitWidth, CI->getValueAPF().bitcastToAPInt().getZExtValue()),
+        MIB);
   }
-
+  const auto &ST = CurMF->getSubtarget();
+  constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), *ST.getRegBankInfo());
   return Res;
 }
 
@@ -459,7 +469,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                        ZeroAsNull);
 }
 
-Register SPIRVGlobalRegistry::getOrCreateConstVector(double Val,
+Register SPIRVGlobalRegistry::getOrCreateConstVector(APFloat Val,
                                                      MachineInstr &I,
                                                      SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
@@ -1245,7 +1255,8 @@ SPIRVType *SPIRVGlobalRegistry::finishCreatingSPIRVType(const Type *LLVMTy,
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
                                                      MachineInstr &I,
                                                      const SPIRVInstrInfo &TII,
-                                                     unsigned SPIRVOPcode, Type *LLVMTy) {
+                                                     unsigned SPIRVOPcode,
+                                                     Type *LLVMTy) {
   Register Reg = DT.find(LLVMTy, CurMF);
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -1266,7 +1277,20 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVIntegerType(
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVFloatType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
   LLVMContext &Ctx = CurMF->getFunction().getContext();
-  Type *LLVMTy = Type::getFloatTy(Ctx);
+  Type *LLVMTy;
+  switch (BitWidth) {
+  case 16:
+    LLVMTy = Type::getHalfTy(Ctx);
+    break;
+  case 32:
+    LLVMTy = Type::getFloatTy(Ctx);
+    break;
+  case 64:
+    LLVMTy = Type::getDoubleTy(Ctx);
+    break;
+  default:
+    llvm_unreachable("Bit width is of unexpected size.");
+  }
   return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeFloat, LLVMTy);
 }
 

@@ -23,16 +23,13 @@
 ; CHECK: %[[#const_int_32:]] = OpConstant %[[#int_32]] 0
 ; CHECK: %[[#const_int_16:]] = OpConstant %[[#int_16]] 0
 ; CHECK: %[[#const_float_64:]] = OpConstant %[[#float_64]] 0
-; CHECK: %[[#const_bool:]] = OpConstantNull %[[#bool]]
+; CHECK: %[[#const_float_32:]] =  OpConstant %[[#float_32:]] 0
+; CHECK: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
 
-; CHECK: %[[#vec_zero_const_i1_4:]] = OpConstantComposite %[[#vec_1_4:]] %[[#const_bool:]] %[[#const_bool:]] %[[#const_bool:]] %[[#const_bool:]]
 ; CHECK: %[[#vec_zero_const_i16_4:]] = OpConstantComposite %[[#vec_16_4:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]]
 ; CHECK: %[[#vec_zero_const_i32_4:]] = OpConstantComposite %[[#vec_32_4:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]]
 ; CHECK: %[[#vec_zero_const_i64_4:]] = OpConstantComposite %[[#vec_64_4:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]]
-
-; CHECK: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
 ; CHECK: %[[#vec_zero_const_f16_4:]] = OpConstantComposite %[[#vec_float_16_4:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]]
-; CHECK: %[[#const_float_32:]] =  OpConstant %[[#float_32:]] 0
 ; CHECK: %[[#vec_zero_const_f32_4:]] = OpConstantComposite %[[#vec_float_32_4:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]]
 ; CHECK: %[[#vec_zero_const_f64_4:]] = OpConstantComposite %[[#vec_float_64_4:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]]
 
@@ -41,7 +38,7 @@ entry:
   %p0.addr = alloca i64, align 8
   store i64 %p0, ptr %p0.addr, align 8
   %0 = load i64, ptr %p0.addr, align 8
-  ; CHECK: %[[#]] = OpINotEqual %[[#int_64:]] %[[#]] %[[#const_int_64:]]
+  ; CHECK: %[[#]] = OpINotEqual %[[#bool:]] %[[#]] %[[#const_int_64:]]
   %hlsl.all = call i1 @llvm.spv.all.i64(i64 %0)
   ret i1 %hlsl.all
 }
@@ -52,7 +49,7 @@ entry:
   %p0.addr = alloca i32, align 4
   store i32 %p0, ptr %p0.addr, align 4
   %0 = load i32, ptr %p0.addr, align 4
-  ; CHECK: %[[#]] = OpINotEqual %[[#int_32:]] %[[#]] %[[#const_int_32:]]
+  ; CHECK: %[[#]] = OpINotEqual %[[#bool:]] %[[#]] %[[#const_int_32:]]
   %hlsl.all = call i1 @llvm.spv.all.i32(i32 %0)
   ret i1 %hlsl.all
 }
@@ -63,7 +60,7 @@ entry:
   %p0.addr = alloca i16, align 2
   store i16 %p0, ptr %p0.addr, align 2
   %0 = load i16, ptr %p0.addr, align 2
-  ; CHECK: %[[#]] = OpINotEqual %[[#int_16:]] %[[#]] %[[#const_int_16:]]
+  ; CHECK: %[[#]] = OpINotEqual %[[#bool:]] %[[#]] %[[#const_int_16:]]
   %hlsl.all = call i1 @llvm.spv.all.i16(i16 %0)
   ret i1 %hlsl.all
 }
@@ -73,7 +70,7 @@ entry:
   %p0.addr = alloca double, align 8
   store double %p0, ptr %p0.addr, align 8
   %0 = load double, ptr %p0.addr, align 8
-  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#float_64:]] %[[#]] %[[#const_float_64:]]
+  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#bool:]] %[[#]] %[[#const_float_64:]]
   %hlsl.all = call i1 @llvm.spv.all.f64(double %0)
   ret i1 %hlsl.all
 }
@@ -84,7 +81,7 @@ entry:
   %p0.addr = alloca float, align 4
   store float %p0, ptr %p0.addr, align 4
   %0 = load float, ptr %p0.addr, align 4
-  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#float_32:]] %[[#]] %[[#const_float_32:]]
+  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#bool:]] %[[#]] %[[#const_float_32:]]
   %hlsl.all = call i1 @llvm.spv.all.f32(float %0)
   ret i1 %hlsl.all
 }
@@ -95,7 +92,7 @@ entry:
   %p0.addr = alloca half, align 2
   store half %p0, ptr %p0.addr, align 2
   %0 = load half, ptr %p0.addr, align 2
-  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#float_16:]] %[[#]] %[[#const_float_16:]]
+  ; CHECK: %[[#]] = OpFOrdNotEqual %[[#bool:]] %[[#]] %[[#const_float_16:]]
   %hlsl.all = call i1 @llvm.spv.all.f16(half %0)
   ret i1 %hlsl.all
 }
@@ -103,7 +100,6 @@ entry:
 
 define noundef i1 @all_bool4(<4 x i1> noundef %p0) {
 entry:
-  ; CHECK: %[[#boolVecNotEq:]] = OpINotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_i1_4:]]
   ; CHECK: %[[#]] = OpAll %[[#vec_1_4:]] %[[#boolVecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4i1(<4 x i1> %p0)
   ret i1 %hlsl.all
@@ -111,48 +107,48 @@ entry:
 
 define noundef i1 @all_short4(<4 x i16> noundef %p0) {
 entry:
-  ; CHECK: %[[#shortVecNotEq:]] = OpINotEqual %[[#vec_16_4:]] %[[#]] %[[#vec_zero_const_i16_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_16_4:]] %[[#shortVecNotEq:]]
+  ; CHECK: %[[#shortVecNotEq:]] = OpINotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_i16_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#shortVecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4i16(<4 x i16> %p0)
   ret i1 %hlsl.all
 }
 
 define noundef i1 @all_int4(<4 x i32> noundef %p0) {
 entry:
-  ; CHECK: %[[#i32VecNotEq:]] = OpINotEqual %[[#vec_32_4:]] %[[#]] %[[#vec_zero_const_i32_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_32_4:]] %[[#i32VecNotEq:]]
+  ; CHECK: %[[#i32VecNotEq:]] = OpINotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_i32_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#i32VecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4i32(<4 x i32> %p0)
   ret i1 %hlsl.all
 }
 
 define noundef i1 @all_int64_t4(<4 x i64> noundef %p0) {
 entry:
-  ; CHECK: %[[#i64VecNotEq:]] = OpINotEqual %[[#vec_64_4:]] %[[#]] %[[#vec_zero_const_i64_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_64_4:]] %[[#i64VecNotEq]]
+  ; CHECK: %[[#i64VecNotEq:]] = OpINotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_i64_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#i64VecNotEq]]
   %hlsl.all = call i1 @llvm.spv.all.v4i64(<4 x i64> %p0)
   ret i1 %hlsl.all
 }
 
 define noundef i1 @all_half4(<4 x half> noundef %p0) {
 entry:
-  ; CHECK: %[[#f16VecNotEq:]] = OpFOrdNotEqual %[[#vec_float_16_4:]] %[[#]] %[[#vec_zero_const_f16_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_float_16_4]] %[[#f16VecNotEq:]]
+  ; CHECK: %[[#f16VecNotEq:]] = OpFOrdNotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_f16_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool]] %[[#f16VecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4f16(<4 x half> %p0)
   ret i1 %hlsl.all
 }
 
 define noundef i1 @all_float4(<4 x float> noundef %p0) {
 entry:
-  ; CHECK: %[[#f32VecNotEq:]] = OpFOrdNotEqual %[[#vec_float_32_4:]] %[[#]] %[[#vec_zero_const_f32_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_float_32_4:]] %[[#f32VecNotEq:]]
+  ; CHECK: %[[#f32VecNotEq:]] = OpFOrdNotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_f32_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#f32VecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4f32(<4 x float> %p0)
   ret i1 %hlsl.all
 }
 
 define noundef i1 @all_double4(<4 x double> noundef %p0) {
 entry:
-  ; CHECK: %[[#f64VecNotEq:]] = OpFOrdNotEqual %[[#vec_float_64_4:]] %[[#]] %[[#vec_zero_const_f64_4:]]
-  ; CHECK: %[[#]] = OpAll %[[#vec_float_64_4:]] %[[#f64VecNotEq:]]
+  ; CHECK: %[[#f64VecNotEq:]] = OpFOrdNotEqual %[[#vec_1_4:]] %[[#]] %[[#vec_zero_const_f64_4:]]
+  ; CHECK: %[[#]] = OpAll %[[#bool:]] %[[#f64VecNotEq:]]
   %hlsl.all = call i1 @llvm.spv.all.v4f64(<4 x double> %p0)
   ret i1 %hlsl.all
 }

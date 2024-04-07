@@ -1167,8 +1167,9 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   Register InputRegister = I.getOperand(2).getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
-
-  if (InputType->getOpcode() == SPIRV::OpTypeBool) {
+  bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
+  bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
+  if (IsBoolTy && !IsVectorTy) {
     Register LoadReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
         .addDef(ResVReg)
@@ -1183,25 +1184,36 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
   unsigned SpirvNotEqualId =
       IsFloatTy ? SPIRV::OpFOrdNotEqual : SPIRV::OpINotEqual;
+  SPIRVType *SpvBoolScalarTy = GR.getOrCreateSPIRVBoolType(I, TII);
+  SPIRVType *SpvBoolTy = SpvBoolScalarTy;
+  Register NotEqualReg = ResVReg;
 
-  bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
-  Register ConstCompositeZeroReg =
-      IsFloatTy ? buildZerosValF(InputType, I) : buildZerosVal(InputType, I);
-  Register NotEqualReg =
-      IsVectorTy ? MRI->createVirtualRegister(&SPIRV::IDRegClass) : ResVReg;
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SpirvNotEqualId))
-      .addDef(NotEqualReg)
-      .addUse(GR.getSPIRVTypeID(InputType))
-      .addUse(I.getOperand(2).getReg())
-      .addUse(ConstCompositeZeroReg)
-      .constrainAllUses(TII, TRI, RBI);
+  if (IsVectorTy) {
+    NotEqualReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    const unsigned NumElts = InputType->getOperand(2).getImm();
+    SpvBoolTy = GR.getOrCreateSPIRVVectorType(SpvBoolTy, NumElts, I, TII);
+  }
+
+  if (!IsBoolTy) {
+    Register ConstCompositeZeroReg =
+        IsFloatTy ? buildZerosValF(InputType, I) : buildZerosVal(InputType, I);
+
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SpirvNotEqualId))
+        .addDef(NotEqualReg)
+        .addUse(GR.getSPIRVTypeID(SpvBoolTy))
+        .addUse(InputRegister)
+        .addUse(ConstCompositeZeroReg)
+        .constrainAllUses(TII, TRI, RBI);
+  } else {
+    NotEqualReg = InputRegister;
+  }
 
   if (!IsVectorTy)
     return true;
 
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAll))
       .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(InputType))
+      .addUse(GR.getSPIRVTypeID(SpvBoolScalarTy))
       .addUse(NotEqualReg)
       .constrainAllUses(TII, TRI, RBI);
 
@@ -1452,13 +1464,28 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
+APFloat getZeroFP(const Type *LLVMFloatTy) {
+  if (!LLVMFloatTy)
+    return APFloat::getZero(APFloat::IEEEsingle());
+  switch (LLVMFloatTy->getScalarType()->getTypeID()) {
+  case Type::HalfTyID:
+    return APFloat::getZero(APFloat::IEEEhalf());
+  default:
+  case Type::FloatTyID:
+    return APFloat::getZero(APFloat::IEEEsingle());
+  case Type::DoubleTyID:
+    return APFloat::getZero(APFloat::IEEEdouble());
+  }
+}
+
 Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
                                                   MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
   bool ZeroAsNull = STI.isOpenCLEnv();
+  APFloat VZero = getZeroFP(GR.getTypeForSPIRVType(ResType));
   if (ResType->getOpcode() == SPIRV::OpTypeVector)
-    return GR.getOrCreateConstVector(0.0, I, ResType, TII, ZeroAsNull);
-  return GR.getOrCreateConstFP(APFloat(0.0), I, ResType, TII, ZeroAsNull);
+    return GR.getOrCreateConstVector(VZero, I, ResType, TII, ZeroAsNull);
+  return GR.getOrCreateConstFP(VZero, I, ResType, TII, ZeroAsNull);
 }
 
 Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,

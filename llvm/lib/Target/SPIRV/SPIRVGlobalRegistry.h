@@ -370,7 +370,7 @@ private:
   std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
-  std::tuple<Register, ConstantFP *, bool> getOrCreateConstFloatReg(
+  std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
       APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
@@ -409,7 +409,7 @@ public:
   Register getOrCreateConstVector(uint64_t Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
-  Register getOrCreateConstVector(double Val, MachineInstr &I,
+  Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
   Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
