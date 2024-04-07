@@ -6,7 +6,7 @@ define i16 @range_from_and_nuw(i32 %a) {
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 65535
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i32 [[AND1]] to i16
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i32 [[AND1]] to i16
 ; CHECK-NEXT:    ret i16 [[TRUNC1]]
 ;
 entry:
@@ -20,7 +20,7 @@ define i8 @range_from_or_nsw(i16 %a) {
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = or i16 [[A]], -128
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i16 [[AND1]] to i8
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nsw i16 [[AND1]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC1]]
 ;
 entry:
@@ -34,7 +34,7 @@ define i16 @range_from_and_nuw_nsw(i32 %a) {
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 32767
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i32 [[AND1]] to i16
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw nsw i32 [[AND1]] to i16
 ; CHECK-NEXT:    ret i16 [[TRUNC1]]
 ;
 entry:
@@ -67,8 +67,8 @@ define i4 @range_from_sge_sle(i8 %a) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[A]], 7
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i8 [[A]] to i4
-; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc i8 [[AND1]] to i4
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i8 [[A]] to i4
+; CHECK-NEXT:    [[TRUNC2:%.*]] = trunc nuw nsw i8 [[AND1]] to i4
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i4 [[TRUNC1]], [[TRUNC2]]
 ; CHECK-NEXT:    ret i4 [[XOR1]]
 ; CHECK:       else:
@@ -99,7 +99,7 @@ define i16 @range_from_sext(i16 %a) {
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SEXT1:%.*]] = sext i16 [[A]] to i32
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i32 [[SEXT1]] to i16
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nsw i32 [[SEXT1]] to i16
 ; CHECK-NEXT:    ret i16 [[TRUNC1]]
 ;
 entry:
@@ -113,7 +113,7 @@ define i16 @range_from_zext(i16 %a) {
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i32 [[ZEXT1]] to i16
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i32 [[ZEXT1]] to i16
 ; CHECK-NEXT:    ret i16 [[TRUNC1]]
 ;
 entry:
@@ -127,7 +127,7 @@ define i1 @range_from_select_i1_nuw(i1 %c) {
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[C]], i16 0, i16 1
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i16 [[SELECT1]] to i1
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i16 [[SELECT1]] to i1
 ; CHECK-NEXT:    ret i1 [[TRUNC1]]
 ;
 entry:
@@ -141,7 +141,7 @@ define i1 @range_from_select_i1_nsw(i1 %c) {
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[C]], i16 0, i16 -1
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i16 [[SELECT1]] to i1
+; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nsw i16 [[SELECT1]] to i1
 ; CHECK-NEXT:    ret i1 [[TRUNC1]]
 ;
 entry:
