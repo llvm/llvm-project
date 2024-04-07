@@ -1513,6 +1513,25 @@ define <4 x float> @insertelement_constant_chain() {
   ret <4 x float> %ins.3
 }
 
+define <4 x float> @insertelement_non_constant_chain(i32 %idx) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @insertelement_non_constant_chain
+; CHECK-SAME: (i32 [[IDX:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
+; CHECK-NEXT:    [[INS_4:%.*]] = insertelement <4 x float> [[INS_2]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 4.000000e+00, i32 [[IDX]]
+; CHECK-NEXT:    ret <4 x float> [[INS_3]]
+;
+  %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
+  %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1
+  %ins.2 = insertelement <4 x float> %ins.1, float -9.0, i32 2
+  %ins.3 = insertelement <4 x float> %ins.2, float 3.0, i32 3
+  %ins.4 = insertelement <4 x float> %ins.2, float 4.0, i32 %idx
+  ret <4 x float> %ins.4
+}
+
 define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define <vscale x 4 x float> @insertelement_scalable_constant_chain
