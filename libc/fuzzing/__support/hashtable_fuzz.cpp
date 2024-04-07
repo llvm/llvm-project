@@ -108,9 +108,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   uint64_t rand_a = GET_VAL(next_uint64);
   uint64_t rand_b = GET_VAL(next_uint64);
   internal::HashTable *table_a = internal::HashTable::allocate(size_a, rand_a);
-  register_cleanup(1, [&table_a] { internal::HashTable::deallocate(table_a); });
+  register_cleanup(1, [&table_a] {
+    if (table_a)
+      internal::HashTable::deallocate(table_a);
+  });
   internal::HashTable *table_b = internal::HashTable::allocate(size_b, rand_b);
-  register_cleanup(2, [&table_b] { internal::HashTable::deallocate(table_b); });
+  register_cleanup(2, [&table_b] {
+    if (table_b)
+      internal::HashTable::deallocate(table_b);
+  });
   if (!table_a || !table_b)
     return 0;
   for (;;) {
@@ -118,8 +124,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     switch (action) {
     case Action::Find: {
       const char *key = GET_VAL(next_cstr);
-      if (!key)
-        return 0;
       if (static_cast<bool>(table_a->find(key)) !=
           static_cast<bool>(table_b->find(key)))
         trap_with_message(key);
@@ -127,8 +131,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
     case Action::Insert: {
       char *key = GET_VAL(next_cstr);
-      if (!key)
-        return 0;
       ENTRY *a = internal::HashTable::insert(table_a, ENTRY{key, key});
       ENTRY *b = internal::HashTable::insert(table_b, ENTRY{key, key});
       if (a->data != b->data)
