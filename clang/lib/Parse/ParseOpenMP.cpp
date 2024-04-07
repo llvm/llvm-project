@@ -2952,8 +2952,14 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
 
     StmtResult AssociatedStmt;
     if (HasAssociatedStatement) {
+      ArrayRef<OpenMPDirectiveKind> Leaves = getLeafConstructs(DKind);
       // The body is a block scope like in Lambdas and Blocks.
-      Actions.ActOnOpenMPRegionStart(DKind, getCurScope());
+      if (isCombinedConstruct(DKind)) {
+        for (OpenMPDirectiveKind Leaf : Leaves)
+          Actions.ActOnOpenMPRegionStart(Leaf, getCurScope());
+      } else {
+        Actions.ActOnOpenMPRegionStart(DKind, getCurScope());
+      }
       // FIXME: We create a bogus CompoundStmt scope to hold the contents of
       // the captured region. Code elsewhere assumes that any FunctionScopeInfo
       // should have at least one compound statement scope within it.
@@ -2966,7 +2972,17 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             getLangOpts().OpenMPIRBuilder)
           AssociatedStmt = Actions.ActOnOpenMPLoopnest(AssociatedStmt.get());
       }
-      AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+      if (!Leaves.empty()) {
+        size_t i = Leaves.size() - 1;
+        AssociatedStmt = Actions.ActOnOpenMPRegionEnd(
+            AssociatedStmt, Clauses, [&](StmtResult S) {
+              return Actions.ActOnOpenMPExecutableDirective(
+                  Leaves[i--], DirName, CancelRegion, Clauses, S.get(),
+                  Loc, EndLoc);
+            });
+      } else {
+        AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+      }
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
                DKind == OMPD_target_exit_data) {
       Actions.ActOnOpenMPRegionStart(DKind, getCurScope());
@@ -2975,9 +2991,11 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                                                   /*isStmtExpr=*/false));
       AssociatedStmt = Actions.ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
     }
-    Directive = Actions.ActOnOpenMPExecutableDirective(
-        DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc,
-        EndLoc);
+    if (!isCombinedConstruct(DKind)) {
+      Directive = Actions.ActOnOpenMPExecutableDirective(
+          DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc,
+          EndLoc);
+    }
 
     // Exit scope.
     Actions.EndOpenMPDSABlock(Directive.get());
