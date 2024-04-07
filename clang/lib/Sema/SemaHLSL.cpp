@@ -13,7 +13,7 @@
 
 using namespace clang;
 
-SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {};
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
 
 Decl *SemaHLSL::ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
                                      SourceLocation KwLoc,
