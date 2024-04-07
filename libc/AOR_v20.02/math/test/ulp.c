@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "mathlib.h"
 
 /* Don't depend on mpfr by default.  */
 #ifndef USE_MPFR
