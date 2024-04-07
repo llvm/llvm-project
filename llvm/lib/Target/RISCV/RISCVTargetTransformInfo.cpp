@@ -863,6 +863,25 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::get_active_lane_mask: {
+    if (ST->hasVInstructions()) {
+      Type *ExpRetTy = VectorType::get(
+          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
+      auto LT = getTypeLegalizationCost(ExpRetTy);
+
+      // vid.v   v8
+      // vsaddu.vx   v8, v8, a0
+      // vmsltu.vx   v0, v8, a1
+      return getRISCVInstructionCost(
+                 {RISCV::VID_V, RISCV::VSADDU_VX, RISCV::VMSLTU_VX}, LT.second,
+                 CostKind) +
+             (LT.first - 1) *
+                 getRISCVInstructionCost(
+                     {RISCV::VADD_VX, RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
+                     LT.second, CostKind);
+    }
+    break;
+  }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
     auto LT = getTypeLegalizationCost(RetTy);
