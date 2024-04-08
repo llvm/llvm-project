@@ -1865,6 +1865,13 @@ TEST_F(FormatTest, UnderstandsMacros) {
   verifyFormat("MACRO(co_return##something)");
 
   verifyFormat("#define A x:");
+
+  verifyFormat("#define Foo(Bar) {#Bar}", "#define Foo(Bar) \\\n"
+                                          "  { \\\n"
+                                          "    #Bar \\\n"
+                                          "  }");
+  verifyFormat("#define Foo(Bar) {#Bar}", "#define Foo(Bar) \\\n"
+                                          "  { #Bar }");
 }
 
 TEST_F(FormatTest, ShortBlocksInMacrosDontMergeWithCodeAfterMacro) {
@@ -11035,7 +11042,7 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("some_templated_type<decltype([](int i) { return i; })>");
 
   verifyFormat("#define FOO(typeName, realClass)                           \\\n"
-               "  { #typeName, foo<FooType>(new foo<realClass>(#typeName)) }",
+               "  {#typeName, foo<FooType>(new foo<realClass>(#typeName))}",
                getLLVMStyleWithColumns(60));
 }
 
