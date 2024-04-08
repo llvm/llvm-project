@@ -4005,17 +4005,10 @@ public:
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
+                                            ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    getSema().OpenACC().ActOnConstruct(K, BeginLoc);
-
-    // TODO OpenACC: Include clauses.
-    if (getSema().OpenACC().ActOnStartStmtDirective(K, BeginLoc))
-      return StmtError();
-
-    StrBlock = getSema().OpenACC().ActOnAssociatedStmt(K, StrBlock);
-
     return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                     StrBlock);
+                                                     Clauses, StrBlock);
   }
 
 private:
@@ -4036,6 +4029,10 @@ private:
   QualType TransformDependentNameType(TypeLocBuilder &TLB,
                                       DependentNameTypeLoc TL,
                                       bool DeducibleTSTContext);
+
+  llvm::SmallVector<OpenACCClause *>
+  TransformOpenACCClauseList(OpenACCDirectiveKind DirKind,
+                             ArrayRef<const OpenACCClause *> OldClauses);
 };
 
 template <typename Derived>
@@ -11077,15 +11074,37 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
 template <typename Derived>
+llvm::SmallVector<OpenACCClause *>
+TreeTransform<Derived>::TransformOpenACCClauseList(
+    OpenACCDirectiveKind DirKind, ArrayRef<const OpenACCClause *> OldClauses) {
+  // TODO OpenACC: Ensure we loop through the list and transform the individual
+  // clauses.
+  return {};
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
-  // TODO OpenACC: Transform clauses.
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+  // FIXME: When implementing this for constructs that can take arguments, we
+  // should do Sema for them here.
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
 
   // Transform Structured Block.
   StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock =
+      getSema().OpenACC().ActOnAssociatedStmt(C->getDirectiveKind(), StrBlock);
 
   return getDerived().RebuildOpenACCComputeConstruct(
-      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(), StrBlock);
+      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(),
+      TransformedClauses, StrBlock);
 }
 
 //===----------------------------------------------------------------------===//
