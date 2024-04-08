@@ -82,6 +82,26 @@ subroutine test_char_value(x) bind(c)
   call internal_call4(x)
 end
 
+! CHECK-LABEL:   func.func @_QPtest_call_char_value(
+! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.boxchar<1>
+! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1
+! CHECK:           %[[VAL_3:.*]] = fir.emboxchar %[[VAL_2]], %[[VAL_1]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
+! CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.char<1>>
+! CHECK:           fir.call @test_char_value(%[[VAL_5]]) {{.*}}: (!fir.char<1>) -> ()
+! CHECK:           return
+! CHECK:         }
+subroutine test_call_char_value(x)
+  character(*) :: x
+  interface
+    subroutine test_char_value(x) bind(c)
+      character(1), value :: x
+    end
+  end interface
+  call test_char_value(x)
+end subroutine
+
 ! CHECK-LABEL:   func.func @_QPtest_cptr_value(
 ! CHECK-SAME:                                  %[[VAL_0:.*]]: !fir.ref<i64>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>

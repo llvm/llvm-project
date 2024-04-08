@@ -1500,9 +1500,13 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // be loaded here.
         auto [exv, cleanup] = hlfir::convertToValue(loc, builder, value);
         mlir::Value loadedValue = fir::getBase(exv);
-        if (mlir::isa<fir::BoxCharType>(loadedValue.getType()))
-          loadedValue = builder.create<fir::BoxAddrOp>(
-              loc, fir::ReferenceType::get(argTy), loadedValue);
+        // Character actual arguments may have unknown length or a length longer
+        // than one. Cast the memory ref to the dummy type so that the load is
+        // valid and only loads what is needed.
+        if (mlir::Type baseTy = fir::dyn_cast_ptrEleTy(loadedValue.getType()))
+          if (fir::isa_char(baseTy))
+            loadedValue = builder.createConvert(
+                loc, fir::ReferenceType::get(argTy), loadedValue);
         if (fir::isa_ref_type(loadedValue.getType()))
           loadedValue = builder.create<fir::LoadOp>(loc, loadedValue);
         caller.placeInput(arg, loadedValue);
