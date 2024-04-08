@@ -472,11 +472,14 @@ void MipsAsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
 }
 
 // Print out an operand for an inline asm expression.
-bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                     const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                    unsigned OpNum,
+                                                    const char *ExtraCode,
+                                                    raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNum);
     switch (ExtraCode[0]) {
@@ -485,36 +488,36 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
     case 'X': // hex const int
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << "0x" << Twine::utohexstr(MO.getImm());
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'x': // hex const int (low 16 bits)
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << "0x" << Twine::utohexstr(MO.getImm() & 0xffff);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'd': // decimal const int
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << MO.getImm();
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'm': // decimal const int minus 1
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << MO.getImm() - 1;
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'y': // exact log2
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       if (!isPowerOf2_64(MO.getImm()))
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << Log2_64(MO.getImm());
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'z':
       // $0 if zero, regular printing otherwise
       if (MO.isImm() && MO.getImm() == 0) {
         O << "$0";
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       // If not, call printOperand as normal.
       break;
@@ -523,10 +526,10 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     case 'M': // High order register of a double word register operand
     {
       if (OpNum == 0)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &FlagsOP = MI->getOperand(OpNum - 1);
       if (!FlagsOP.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const InlineAsm::Flag Flags(FlagsOP.getImm());
       const unsigned NumVals = Flags.getNumOperandRegisters();
       // Number of registers represented by this operand. We are looking
@@ -535,9 +538,9 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         if (Subtarget->isGP64bit() && NumVals == 1 && MO.isReg()) {
           Register Reg = MO.getReg();
           O << '$' << MipsInstPrinter::getRegisterName(Reg);
-          return false;
+          return AsmOperandErrorCode::NO_ERROR;
         }
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       }
 
       unsigned RegOp = OpNum;
@@ -555,13 +558,13 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
           RegOp = OpNum + 1;
         }
         if (RegOp >= MI->getNumOperands())
-          return true;
+          return AsmOperandErrorCode::OPERAND_ERROR;
         const MachineOperand &MO = MI->getOperand(RegOp);
         if (!MO.isReg())
-          return true;
+          return AsmOperandErrorCode::OPERAND_ERROR;
         Register Reg = MO.getReg();
         O << '$' << MipsInstPrinter::getRegisterName(Reg);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       break;
     }
@@ -574,7 +577,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
   }
 
   printOperand(MI, OpNum, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool MipsAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

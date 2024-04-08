@@ -260,11 +260,14 @@ void CSKYAsmPrinter::emitAttributes() {
   CTS.emitTargetAttributes(STI);
 }
 
-bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                     const char *ExtraCode, raw_ostream &OS) {
+AsmOperandErrorCode CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                    unsigned OpNo,
+                                                    const char *ExtraCode,
+                                                    raw_ostream &OS) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (ExtraCode && ExtraCode[0]) {

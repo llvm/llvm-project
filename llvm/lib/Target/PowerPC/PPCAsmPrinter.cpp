@@ -196,8 +196,9 @@ public:
   void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
   void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 
@@ -355,11 +356,14 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
-bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                   unsigned OpNo,
+                                                   const char *ExtraCode,
+                                                   raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -370,7 +374,7 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (!MI->getOperand(OpNo).isReg() ||
           OpNo+1 == MI->getNumOperands() ||
           !MI->getOperand(OpNo+1).isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       ++OpNo;   // Return the high-part.
       break;
     case 'I':
@@ -378,10 +382,10 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       // addi vs add, etc.
       if (MI->getOperand(OpNo).isImm())
         O << "i";
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'x':
       if(!MI->getOperand(OpNo).isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       // This operand uses VSX numbering.
       // If the operand is a VMX register, convert it to a VSX register.
       Register Reg = MI->getOperand(OpNo).getReg();
@@ -393,12 +397,12 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       RegName = PPCInstPrinter::getRegisterName(Reg);
       RegName = PPC::stripRegisterPrefix(RegName);
       O << RegName;
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
   }
 
   printOperand(MI, OpNo, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 // At the moment, all inline asm memory operands are a single register.

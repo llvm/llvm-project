@@ -1240,21 +1240,24 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   Out.kernarg_segment_alignment = Log2(std::max(Align(16), MaxKernArgAlign));
 }
 
-bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                       const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                      unsigned OpNo,
+                                                      const char *ExtraCode,
+                                                      raw_ostream &O) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     case 'r':
       break;
     default:
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     }
   }
 
@@ -1263,7 +1266,7 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   if (MO.isReg()) {
     AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
                                        *MF->getSubtarget().getRegisterInfo());
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   } else if (MO.isImm()) {
     int64_t Val = MO.getImm();
     if (AMDGPU::isInlinableIntLiteral(Val)) {
@@ -1275,9 +1278,9 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     } else {
       O << format("0x%" PRIx64, static_cast<uint64_t>(Val));
     }
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   }
-  return true;
+  return AsmOperandErrorCode::OPERAND_ERROR;
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {

@@ -63,8 +63,9 @@ public:
 
   virtual bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 

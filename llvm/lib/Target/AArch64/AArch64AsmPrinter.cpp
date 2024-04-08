@@ -176,8 +176,9 @@ private:
                           const TargetRegisterClass *RC, unsigned AltName,
                           raw_ostream &O);
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
 
@@ -915,33 +916,38 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
   return false;
 }
 
-bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                        const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                       unsigned OpNum,
+                                                       const char *ExtraCode,
+                                                       raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNum);
 
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
     case 'w':      // Print W register
     case 'x':      // Print X register
       if (MO.isReg())
-        return printAsmMRegister(MO, ExtraCode[0], O);
+        return (printAsmMRegister(MO, ExtraCode[0], O)
+                    ? AsmOperandErrorCode::OPERAND_ERROR
+                    : AsmOperandErrorCode::NO_ERROR);
       if (MO.isImm() && MO.getImm() == 0) {
         unsigned Reg = ExtraCode[0] == 'w' ? AArch64::WZR : AArch64::XZR;
         O << AArch64InstPrinter::getRegisterName(Reg);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       printOperand(MI, OpNum, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'b': // Print B register.
     case 'h': // Print H register.
     case 's': // Print S register.
@@ -970,12 +976,14 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
           RC = &AArch64::ZPRRegClass;
           break;
         default:
-          return true;
+          return AsmOperandErrorCode::OPERAND_ERROR;
         }
-        return printAsmRegInClass(MO, RC, AArch64::NoRegAltName, O);
+        return (printAsmRegInClass(MO, RC, AArch64::NoRegAltName, O)
+                    ? AsmOperandErrorCode::OPERAND_ERROR
+                    : AsmOperandErrorCode::NO_ERROR);
       }
       printOperand(MI, OpNum, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
   }
 
@@ -987,11 +995,13 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     // If this is a w or x register, print an x register.
     if (AArch64::GPR32allRegClass.contains(Reg) ||
         AArch64::GPR64allRegClass.contains(Reg))
-      return printAsmMRegister(MO, 'x', O);
+      return (printAsmMRegister(MO, 'x', O) ? AsmOperandErrorCode::OPERAND_ERROR
+                                            : AsmOperandErrorCode::NO_ERROR);
 
     // If this is an x register tuple, print an x register.
     if (AArch64::GPR64x8ClassRegClass.contains(Reg))
-      return printAsmMRegister(MO, 't', O);
+      return (printAsmMRegister(MO, 't', O) ? AsmOperandErrorCode::OPERAND_ERROR
+                                            : AsmOperandErrorCode::NO_ERROR);
 
     unsigned AltName = AArch64::NoRegAltName;
     const TargetRegisterClass *RegClass;
@@ -1007,11 +1017,13 @@ bool AArch64AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     }
 
     // If this is a b, h, s, d, or q register, print it as a v register.
-    return printAsmRegInClass(MO, RegClass, AltName, O);
+    return (printAsmRegInClass(MO, RegClass, AltName, O)
+                ? AsmOperandErrorCode::OPERAND_ERROR
+                : AsmOperandErrorCode::NO_ERROR);
   }
 
   printOperand(MI, OpNum, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool AArch64AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

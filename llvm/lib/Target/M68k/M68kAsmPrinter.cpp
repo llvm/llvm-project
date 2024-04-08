@@ -64,12 +64,14 @@ void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
 }
 
-bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                     const char *ExtraCode, raw_ostream &OS) {
+AsmOperandErrorCode M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                    unsigned OpNo,
+                                                    const char *ExtraCode,
+                                                    raw_ostream &OS) {
   // Print the operand if there is no operand modifier.
   if (!ExtraCode || !ExtraCode[0]) {
     printOperand(MI, OpNo, OS);
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   }
 
   // Fallback to the default implementation.

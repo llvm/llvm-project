@@ -125,8 +125,9 @@ public:
 
   void emitEndOfAsmFile(Module &M) override;
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
 
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override;

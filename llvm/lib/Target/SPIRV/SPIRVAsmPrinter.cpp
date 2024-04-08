@@ -55,8 +55,9 @@ public:
 
   StringRef getPassName() const override { return "SPIRV Assembly Printer"; }
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
 
   void outputMCInst(MCInst &Inst);
   void outputInstruction(const MachineInstr *MI);
@@ -219,13 +220,17 @@ void SPIRVAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
 }
 
-bool SPIRVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode SPIRVAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                     unsigned OpNo,
+                                                     const char *ExtraCode,
+                                                     raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
-    return true; // Invalid instruction - SPIR-V does not have special modifiers
+    return AsmOperandErrorCode::OPERAND_ERROR; // Invalid instruction - SPIR-V
+                                               // does not have special
+                                               // modifiers
 
   printOperand(MI, OpNo, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 static bool isFuncOrHeaderInstr(const MachineInstr *MI,

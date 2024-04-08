@@ -688,42 +688,42 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 }
 
-bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
-                                            unsigned OpNo,
-                                            const char *ExtraCode,
-                                            raw_ostream &OS) {
+AsmOperandErrorCode
+WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                       const char *ExtraCode, raw_ostream &OS) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   if (!ExtraCode) {
     const MachineOperand &MO = MI->getOperand(OpNo);
     switch (MO.getType()) {
     case MachineOperand::MO_Immediate:
       OS << MO.getImm();
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case MachineOperand::MO_Register:
       // FIXME: only opcode that still contains registers, as required by
       // MachineInstr::getDebugVariable().
       assert(MI->getOpcode() == WebAssembly::INLINEASM);
       OS << regToString(MO);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case MachineOperand::MO_GlobalAddress:
       PrintSymbolOperand(MO, OS);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case MachineOperand::MO_ExternalSymbol:
       GetExternalSymbolSymbol(MO.getSymbolName())->print(OS, MAI);
       printOffset(MO.getOffset(), OS);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case MachineOperand::MO_MachineBasicBlock:
       MO.getMBB()->getSymbol()->print(OS, MAI);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     default:
       break;
     }
   }
 
-  return true;
+  return AsmOperandErrorCode::OPERAND_ERROR;
 }
 
 bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

@@ -925,9 +925,10 @@ static void printAddress(const MCAsmInfo *MAI, unsigned Base,
   }
 }
 
-bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                        const char *ExtraCode,
-                                        raw_ostream &OS) {
+AsmOperandErrorCode SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                       unsigned OpNo,
+                                                       const char *ExtraCode,
+                                                       raw_ostream &OS) {
   const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
@@ -943,7 +944,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     MCOp = Lower.lowerOperand(MO);
   }
   printOperand(MCOp, MAI, OS);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

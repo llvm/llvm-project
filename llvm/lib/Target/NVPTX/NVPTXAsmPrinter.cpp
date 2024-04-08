@@ -2170,11 +2170,13 @@ void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) {
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
-bool NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                     unsigned OpNo,
+                                                     const char *ExtraCode,
+                                                     raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -2187,7 +2189,7 @@ bool NVPTXAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
   printOperand(MI, OpNo, O);
 
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool NVPTXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

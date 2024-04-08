@@ -817,9 +817,15 @@ public:
   /// Print the specified operand of MI, an INLINEASM instruction, using the
   /// specified assembler variant.  Targets should override this to format as
   /// appropriate.  This method can return true if the operand is erroneous.
-  virtual bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                               const char *ExtraCode, raw_ostream &OS);
+  virtual AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI,
+                                              unsigned OpNo,
+                                              const char *ExtraCode,
+                                              raw_ostream &OS);
 
+  /// Print Operand Constraint Error related helpful message
+  virtual void diagnoseAsmOperandError(LLVMContext &C,
+                                       const AsmOperandErrorCode,
+                                       const char *AsmStr, uint64_t Loc);
   /// Print the specified operand of MI, an INLINEASM instruction, using the
   /// specified assembler variant as an address. Targets should override this to
   /// format as appropriate.  This method can return true if the operand is

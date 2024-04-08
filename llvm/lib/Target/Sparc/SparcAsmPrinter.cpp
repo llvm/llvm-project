@@ -60,8 +60,9 @@ namespace {
       return SparcInstPrinter::getRegisterName(Reg);
     }
 
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
+    AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                        const char *ExtraCode,
+                                        raw_ostream &O) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &O) override;
 
@@ -424,11 +425,13 @@ void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
-bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode,
-                                      raw_ostream &O) {
+AsmOperandErrorCode SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                     unsigned OpNo,
+                                                     const char *ExtraCode,
+                                                     raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -486,7 +489,7 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
   printOperand(MI, OpNo, O);
 
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool SparcAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

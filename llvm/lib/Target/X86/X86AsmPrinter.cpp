@@ -692,13 +692,32 @@ static bool printAsmVRegister(const MachineOperand &MO, char Mode,
   return false;
 }
 
+void X86AsmPrinter::diagnoseAsmOperandError(LLVMContext &C,
+                                            const AsmOperandErrorCode EC,
+                                            const char *AsmStr, uint64_t Loc) {
+  AsmPrinter::diagnoseAsmOperandError(C, EC, AsmStr, Loc);
+  std::string msg;
+  raw_string_ostream Msg(msg);
+  switch (EC) {
+  default:
+    break;
+  case AsmOperandErrorCode::CONSTRAINT_H_ERROR:
+    Msg << " 'H' modifier used on an operand that is a non-offsetable memory "
+           "reference.";
+    break;
+  }
+  C.emitError(Msg.str());
+}
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
 ///
-bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                    const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                   unsigned OpNo,
+                                                   const char *ExtraCode,
+                                                   raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
 
@@ -709,10 +728,10 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'a': // This is an address.  Currently only 'i' and 'r' are expected.
       switch (MO.getType()) {
       default:
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       case MachineOperand::MO_Immediate:
         O << MO.getImm();
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       case MachineOperand::MO_ConstantPoolIndex:
       case MachineOperand::MO_JumpTableIndex:
       case MachineOperand::MO_ExternalSymbol:
@@ -721,12 +740,12 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         PrintSymbolOperand(MO, O);
         if (Subtarget->isPICStyleRIPRel())
           O << "(%rip)";
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       case MachineOperand::MO_Register:
         O << '(';
         PrintOperand(MI, OpNo, O);
         O << ')';
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
 
     case 'c': // Don't print "$" before a global var name or constant.
@@ -745,15 +764,15 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         PrintSymbolOperand(MO, O);
         break;
       }
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
 
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
         O << '*';
         PrintOperand(MI, OpNo, O);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
 
     case 'b': // Print QImode register
     case 'h': // Print QImode high register
@@ -762,43 +781,47 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'q': // Print DImode register
     case 'V': // Print native register without '%'
       if (MO.isReg())
-        return printAsmMRegister(*this, MO, ExtraCode[0], O);
+        return (printAsmMRegister(*this, MO, ExtraCode[0], O)
+                    ? AsmOperandErrorCode::OPERAND_ERROR
+                    : AsmOperandErrorCode::NO_ERROR);
       PrintOperand(MI, OpNo, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
 
     case 'x': // Print V4SFmode register
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(MO, ExtraCode[0], O);
+        return (printAsmVRegister(MO, ExtraCode[0], O)
+                    ? AsmOperandErrorCode::OPERAND_ERROR
+                    : AsmOperandErrorCode::NO_ERROR);
       PrintOperand(MI, OpNo, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
 
     case 'p': {
       const MachineOperand &MO = MI->getOperand(OpNo);
       if (MO.getType() != MachineOperand::MO_GlobalAddress)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       PrintSymbolOperand(MO, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
 
     case 'P': // This is the operand of a call, treat specially.
       PrintPCRelImm(MI, OpNo, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
 
     case 'n': // Negate the immediate or print a '-' before the operand.
       // Note: this is a temporary solution. It should be handled target
       // independently as part of the 'MC' work.
       if (MO.isImm()) {
         O << -MO.getImm();
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       O << '-';
     }
   }
 
   PrintOperand(MI, OpNo, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,

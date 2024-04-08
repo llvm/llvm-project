@@ -66,8 +66,9 @@ class TargetMachine;
     void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);
 
     void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &OS) override;
+    AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                        const char *ExtraCode,
+                                        raw_ostream &OS) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &OS) override;
     void emitStartOfAsmFile(Module &M) override;

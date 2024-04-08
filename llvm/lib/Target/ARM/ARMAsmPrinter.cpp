@@ -283,11 +283,14 @@ GetARMJTIPICJumpTableLabel(unsigned uid) const {
   return OutContext.getOrCreateSymbol(Name);
 }
 
-bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                    const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                   unsigned OpNum,
+                                                   const char *ExtraCode,
+                                                   raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -296,7 +299,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     case 'P': // Print a VFP double precision register.
     case 'q': // Print a NEON quad precision register.
       printOperand(MI, OpNum, O);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'y': // Print a VFP single precision register as indexed double.
       if (MI->getOperand(OpNum).isReg()) {
         MCRegister Reg = MI->getOperand(OpNum).getReg().asMCReg();
@@ -308,23 +311,23 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
             continue;
           bool Lane0 = TRI->getSubReg(SR, ARM::ssub_0) == Reg;
           O << ARMInstPrinter::getRegisterName(SR) << (Lane0 ? "[0]" : "[1]");
-          return false;
+          return AsmOperandErrorCode::NO_ERROR;
         }
       }
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     case 'B': // Bitwise inverse of integer or symbol without a preceding #.
       if (!MI->getOperand(OpNum).isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << ~(MI->getOperand(OpNum).getImm());
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'L': // The low 16 bits of an immediate constant.
       if (!MI->getOperand(OpNum).isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << (MI->getOperand(OpNum).getImm() & 0xffff);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 'M': { // A register range suitable for LDM/STM.
       if (!MI->getOperand(OpNum).isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &MO = MI->getOperand(OpNum);
       Register RegBegin = MO.getReg();
       // This takes advantage of the 2 operand-ness of ldm/stm and that we've
@@ -352,15 +355,15 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       O << "}";
 
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
     case 'R': // The most significant register of a pair.
     case 'Q': { // The least significant register of a pair.
       if (OpNum == 0)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &FlagsOP = MI->getOperand(OpNum - 1);
       if (!FlagsOP.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       InlineAsm::Flag F(FlagsOP.getImm());
 
       // This operand may not be the one that actually provides the register. If
@@ -398,64 +401,64 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       if (F.hasRegClassConstraint(RC) &&
           ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
         if (NumVals != 1)
-          return true;
+          return AsmOperandErrorCode::OPERAND_ERROR;
         const MachineOperand &MO = MI->getOperand(OpNum);
         if (!MO.isReg())
-          return true;
+          return AsmOperandErrorCode::OPERAND_ERROR;
         const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
         Register Reg =
             TRI->getSubReg(MO.getReg(), FirstHalf ? ARM::gsub_0 : ARM::gsub_1);
         O << ARMInstPrinter::getRegisterName(Reg);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       if (NumVals != 2)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       unsigned RegOp = FirstHalf ? OpNum : OpNum + 1;
       if (RegOp >= MI->getNumOperands())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &MO = MI->getOperand(RegOp);
       if (!MO.isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       Register Reg = MO.getReg();
       O << ARMInstPrinter::getRegisterName(Reg);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
 
     case 'e': // The low doubleword register of a NEON quad register.
     case 'f': { // The high doubleword register of a NEON quad register.
       if (!MI->getOperand(OpNum).isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       Register Reg = MI->getOperand(OpNum).getReg();
       if (!ARM::QPRRegClass.contains(Reg))
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       Register SubReg =
           TRI->getSubReg(Reg, ExtraCode[0] == 'e' ? ARM::dsub_0 : ARM::dsub_1);
       O << ARMInstPrinter::getRegisterName(SubReg);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
 
     // This modifier is not yet supported.
     case 'h': // A range of VFP/NEON registers suitable for VLD1/VST1.
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     case 'H': { // The highest-numbered register of a pair.
       const MachineOperand &MO = MI->getOperand(OpNum);
       if (!MO.isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineFunction &MF = *MI->getParent()->getParent();
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       Register Reg = MO.getReg();
       if(!ARM::GPRPairRegClass.contains(Reg))
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       Reg = TRI->getSubReg(Reg, ARM::gsub_1);
       O << ARMInstPrinter::getRegisterName(Reg);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
     }
   }
 
   printOperand(MI, OpNum, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool ARMAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

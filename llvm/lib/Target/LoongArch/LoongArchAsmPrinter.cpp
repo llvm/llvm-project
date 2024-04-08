@@ -54,25 +54,27 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                          const char *ExtraCode,
-                                          raw_ostream &OS) {
+AsmOperandErrorCode LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                         unsigned OpNo,
+                                                         const char *ExtraCode,
+                                                         raw_ostream &OS) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
     case 'z':      // Print $zero register if zero, regular printing otherwise.
       if (MO.isImm() && MO.getImm() == 0) {
         OS << '$' << LoongArchInstPrinter::getRegisterName(LoongArch::R0);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       break;
     case 'w': // Print LSX registers.
@@ -81,14 +83,14 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         break;
       // The modifier is 'w' but the operand is not an LSX register; Report an
       // unknown operand error.
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     case 'u': // Print LASX registers.
       if (MO.getReg().id() >= LoongArch::XR0 &&
           MO.getReg().id() <= LoongArch::XR31)
         break;
       // The modifier is 'u' but the operand is not an LASX register; Report an
       // unknown operand error.
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
       // TODO: handle other extra codes if any.
     }
   }
@@ -96,18 +98,18 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   switch (MO.getType()) {
   case MachineOperand::MO_Immediate:
     OS << MO.getImm();
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   case MachineOperand::MO_Register:
     OS << '$' << LoongArchInstPrinter::getRegisterName(MO.getReg());
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   default:
     llvm_unreachable("not implemented");
   }
 
-  return true;
+  return AsmOperandErrorCode::OPERAND_ERROR;
 }
 
 bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

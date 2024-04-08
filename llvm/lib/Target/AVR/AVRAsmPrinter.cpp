@@ -51,8 +51,9 @@ public:
 
   void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
 
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
@@ -97,23 +98,26 @@ void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
   }
 }
 
-bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                                    const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                   unsigned OpNum,
+                                                   const char *ExtraCode,
+                                                   raw_ostream &O) {
   // Default asm printer can only deal with some extra codes,
   // so try it first.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   const MachineOperand &MO = MI->getOperand(OpNum);
 
   if (ExtraCode && ExtraCode[0]) {
     // Unknown extra code.
     if (ExtraCode[1] != 0 || ExtraCode[0] < 'A' || ExtraCode[0] > 'Z')
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
 
     // Operand must be a register when using 'A' ~ 'Z' extra code.
     if (!MO.isReg())
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
 
     Register Reg = MO.getReg();
 
@@ -130,7 +134,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
     unsigned RegIdx = ByteNumber / BytesPerReg;
     if (RegIdx >= NumOpRegs)
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     Reg = MI->getOperand(OpNum + RegIdx).getReg();
 
     if (BytesPerReg == 2) {
@@ -139,7 +143,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     }
 
     O << AVRInstPrinter::getPrettyRegisterName(Reg, MRI);
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   }
 
   if (MO.getType() == MachineOperand::MO_GlobalAddress)
@@ -147,7 +151,7 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
   else
     printOperand(MI, OpNum, O); // Fallback to ordinary cases.
 
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

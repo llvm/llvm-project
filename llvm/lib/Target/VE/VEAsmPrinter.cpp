@@ -61,8 +61,9 @@ public:
     return VEInstPrinter::getRegisterName(Reg);
   }
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &OS);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 };
@@ -373,11 +374,13 @@ void VEAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 // PrintAsmOperand - Print out an operand for an inline asm expression.
-bool VEAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                   const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode VEAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                  unsigned OpNo,
+                                                  const char *ExtraCode,
+                                                  raw_ostream &O) {
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -391,7 +394,7 @@ bool VEAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
   printOperand(MI, OpNo, O);
 
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool VEAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,

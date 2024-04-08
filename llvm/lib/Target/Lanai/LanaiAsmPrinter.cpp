@@ -49,8 +49,9 @@ public:
   StringRef getPassName() const override { return "Lanai Assembly Printer"; }
 
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
   void emitInstruction(const MachineInstr *MI) override;
   bool isBlockOnlyReachableByFallthrough(
       const MachineBasicBlock *MBB) const override;
@@ -108,41 +109,43 @@ void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 // PrintAsmOperand - Print out an operand for an inline asm expression.
-bool LanaiAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode LanaiAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                     unsigned OpNo,
+                                                     const char *ExtraCode,
+                                                     raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1])
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     // The highest-numbered register of a pair.
     case 'H': {
       if (OpNo == 0)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &FlagsOP = MI->getOperand(OpNo - 1);
       if (!FlagsOP.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const InlineAsm::Flag Flags(FlagsOP.getImm());
       const unsigned NumVals = Flags.getNumOperandRegisters();
       if (NumVals != 2)
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       unsigned RegOp = OpNo + 1;
       if (RegOp >= MI->getNumOperands())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       const MachineOperand &MO = MI->getOperand(RegOp);
       if (!MO.isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       Register Reg = MO.getReg();
       O << LanaiInstPrinter::getRegisterName(Reg);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
     default:
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
     }
   }
   printOperand(MI, OpNo, O);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 //===----------------------------------------------------------------------===//

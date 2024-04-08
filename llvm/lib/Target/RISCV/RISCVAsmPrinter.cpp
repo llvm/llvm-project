@@ -75,8 +75,9 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
@@ -262,53 +263,56 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, OutInst);
 }
 
-bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                      const char *ExtraCode, raw_ostream &OS) {
+AsmOperandErrorCode RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                     unsigned OpNo,
+                                                     const char *ExtraCode,
+                                                     raw_ostream &OS) {
   // First try the generic code, which knows about modifiers like 'c' and 'n'.
-  if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
-    return false;
+  if (AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS) ==
+      AsmOperandErrorCode::NO_ERROR)
+    return AsmOperandErrorCode::NO_ERROR;
 
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
     case 'z':      // Print zero register if zero, regular printing otherwise.
       if (MO.isImm() && MO.getImm() == 0) {
         OS << RISCVInstPrinter::getRegisterName(RISCV::X0);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       break;
     case 'i': // Literal 'i' if operand is not a register.
       if (!MO.isReg())
         OS << 'i';
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
   }
 
   switch (MO.getType()) {
   case MachineOperand::MO_Immediate:
     OS << MO.getImm();
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   case MachineOperand::MO_Register:
     OS << RISCVInstPrinter::getRegisterName(MO.getReg());
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   case MachineOperand::MO_BlockAddress: {
     MCSymbol *Sym = GetBlockAddressSymbol(MO.getBlockAddress());
     Sym->print(OS, MAI);
-    return false;
+    return AsmOperandErrorCode::NO_ERROR;
   }
   default:
     break;
   }
 
-  return true;
+  return AsmOperandErrorCode::OPERAND_ERROR;
 }
 
 bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

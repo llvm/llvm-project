@@ -528,6 +528,20 @@ public:
   }
 };
 
+/// Inline Asm specifies input & output constraint which can
+/// specifiy target specific criteria for operand. If this criteria
+/// does not match, we must throw error.
+/// NO_ERROR represents Operand constraints are valid/applicable
+/// OPERAND_ERROR represents some constraint(unspecified) failed
+/// UNKNOWN_MODIFIER_ERROR represents use of unknown char constraint
+/// CONSTRAINT_<char>_ERROR represents error regarding constraint.
+enum class AsmOperandErrorCode {
+  NO_ERROR = 0,
+  OPERAND_ERROR,
+  UNKNOWN_MODIFIER_ERROR,
+  CONSTRAINT_H_ERROR,
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INLINEASM_H

@@ -143,8 +143,13 @@ public:
 
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
+  AsmOperandErrorCode PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                      const char *ExtraCode,
+                                      raw_ostream &O) override;
+
+  void diagnoseAsmOperandError(LLVMContext &C, const AsmOperandErrorCode EC,
+                               const char *AsmStr, const uint64_t Loc) override;
+
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 

@@ -112,13 +112,14 @@ bool HexagonAsmPrinter::isBlockOnlyReachableByFallthrough(
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
-bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                        const char *ExtraCode,
-                                        raw_ostream &OS) {
+AsmOperandErrorCode HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                       unsigned OpNo,
+                                                       const char *ExtraCode,
+                                                       raw_ostream &OS) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
     if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     switch (ExtraCode[0]) {
     default:
@@ -130,7 +131,7 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       const MachineFunction &MF = *MI->getParent()->getParent();
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       if (!MO.isReg())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       Register RegNumber = MO.getReg();
       // This should be an assert in the frontend.
       if (Hexagon::DoubleRegsRegClass.contains(RegNumber))
@@ -138,19 +139,19 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                               Hexagon::isub_lo :
                                               Hexagon::isub_hi);
       OS << HexagonInstPrinter::getRegisterName(RegNumber);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
     case 'I':
       // Write 'i' if an integer constant, otherwise nothing.  Used to print
       // addi vs add, etc.
       if (MI->getOperand(OpNo).isImm())
         OS << "i";
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
   }
 
   printOperand(MI, OpNo, OS);
-  return false;
+  return AsmOperandErrorCode::NO_ERROR;
 }
 
 bool HexagonAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,

@@ -273,7 +273,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
         unsigned OpNo = InlineAsm::MIOp_FirstOperand;
 
         bool Error = false;
-
+        AsmOperandErrorCode OpErrorCode = AsmOperandErrorCode::NO_ERROR;
         // Scan to find the machine operand number for the operand.
         for (; Val; --Val) {
           if (OpNo >= MI->getNumOperands())
@@ -306,15 +306,15 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
             Error = AP->PrintAsmMemoryOperand(
                 MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           } else {
-            Error = AP->PrintAsmOperand(MI, OpNo,
-                                        Modifier[0] ? Modifier : nullptr, OS);
+            OpErrorCode = AP->PrintAsmOperand(
+                MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           }
         }
-        if (Error) {
-          std::string msg;
-          raw_string_ostream Msg(msg);
-          Msg << "invalid operand in inline asm: '" << AsmStr << "'";
-          MMI->getModule()->getContext().emitError(LocCookie, Msg.str());
+        if (Error || (OpErrorCode != AsmOperandErrorCode::NO_ERROR)) {
+          if (Error)
+            OpErrorCode = AsmOperandErrorCode::OPERAND_ERROR;
+          AP->diagnoseAsmOperandError(MMI->getModule()->getContext(),
+                                      OpErrorCode, AsmStr, LocCookie);
         }
       }
       break;
@@ -461,50 +461,62 @@ void AsmPrinter::PrintSymbolOperand(const MachineOperand &MO, raw_ostream &OS) {
   printOffset(MO.getOffset(), OS);
 }
 
+void AsmPrinter::diagnoseAsmOperandError(LLVMContext &C,
+                                         const AsmOperandErrorCode ErrCode,
+                                         const char *AsmStr,
+                                         const uint64_t Loc) {
+  std::string msg;
+  raw_string_ostream Msg(msg);
+  Msg << "invalid operand in inline asm: '" << AsmStr << "'";
+  C.emitError(Loc, Msg.str());
+}
 /// PrintAsmOperand - Print the specified operand of MI, an INLINEASM
 /// instruction, using the specified assembler variant.  Targets should
 /// override this to format as appropriate for machine specific ExtraCodes
 /// or when the arch-independent handling would be too complex otherwise.
-bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                                 const char *ExtraCode, raw_ostream &O) {
+AsmOperandErrorCode AsmPrinter::PrintAsmOperand(const MachineInstr *MI,
+                                                unsigned OpNo,
+                                                const char *ExtraCode,
+                                                raw_ostream &O) {
   // Does this asm operand have a single letter operand modifier?
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
 
     // https://gcc.gnu.org/onlinedocs/gccint/Output-Template.html
     const MachineOperand &MO = MI->getOperand(OpNo);
     switch (ExtraCode[0]) {
     default:
-      return true;  // Unknown modifier.
+      return AsmOperandErrorCode::UNKNOWN_MODIFIER_ERROR; // Unknown modifier.
     case 'a': // Print as memory address.
       if (MO.isReg()) {
         PrintAsmMemoryOperand(MI, OpNo, nullptr, O);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       [[fallthrough]]; // GCC allows '%a' to behave like '%c' with immediates.
     case 'c': // Substitute immediate value without immediate syntax
       if (MO.isImm()) {
         O << MO.getImm();
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
       if (MO.isGlobal()) {
         PrintSymbolOperand(MO, O);
-        return false;
+        return AsmOperandErrorCode::NO_ERROR;
       }
-      return true;
+      return AsmOperandErrorCode::OPERAND_ERROR;
     case 'n':  // Negate the immediate constant.
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << -MO.getImm();
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     case 's':  // The GCC deprecated s modifier
       if (!MO.isImm())
-        return true;
+        return AsmOperandErrorCode::OPERAND_ERROR;
       O << ((32 - MO.getImm()) & 31);
-      return false;
+      return AsmOperandErrorCode::NO_ERROR;
     }
   }
-  return true;
+  return AsmOperandErrorCode::OPERAND_ERROR;
 }
 
 bool AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
