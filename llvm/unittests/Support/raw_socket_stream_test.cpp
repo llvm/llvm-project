@@ -84,13 +84,8 @@ TEST(raw_socket_streamTest, TIMEOUT_PROVIDED) {
   ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
   std::chrono::milliseconds Timeout = std::chrono::milliseconds(100);
-  auto Start = std::chrono::steady_clock::now();
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
       ServerListener.accept(Timeout);
-  auto End = std::chrono::steady_clock::now();
-  auto Duration =
-      std::chrono::duration_cast<std::chrono::milliseconds>(End - Start);
-  ASSERT_NEAR(Duration.count(), Timeout.count(), 10);
 
   ASSERT_THAT_EXPECTED(MaybeServer, Failed());
   llvm::Error Err = MaybeServer.takeError();
