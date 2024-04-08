@@ -1570,7 +1570,6 @@ namespace dr391 { // dr391: 2.8 c++11
 // dr392 is in dr392.cpp
 
 namespace dr393 { // dr393: 2.7
-
 template <typename T>
 struct S {};
 
@@ -1578,6 +1577,14 @@ void f1(S<int (*)[]>);
 void f2(S<int (&)[]>);
 void g(int(*S<int>::*)[]);
 
+template<typename T>
+void sp_assert_convertible( T* ) {}
+
+template<typename T, typename U>
+void h() {
+  T (*p) [] = (U(*)[])0;
+  sp_assert_convertible<T[]>( (U(*)[])0 );
+}
 } // namespace dr393
 
 // dr394: na
