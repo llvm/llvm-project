@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# This test ensures that we're following the MSVC symbol searching behvior described in:
+# This test ensures that we're following the MSVC symbol searching behavior described in:
 # https://learn.microsoft.com/en-us/cpp/build/reference/link-input-files?view=msvc-170
 # "Object files on the command line are processed in the order they appear on the command line.
 # Libraries are searched in command line order as well, with the following caveat: Symbols that
@@ -8,7 +8,7 @@
 # first, and then the following libraries from the command line and /DEFAULTLIB (Specify default
 # library) directives, and then to any libraries at the beginning of the command line."
 
-# RUN: echo -e ".intel_syntax noprefix\n.globl libfunc\n.text\nlibfunc:\nmov eax, 1\nret\n.section .drectve\n.ascii \"/EXPORT:libfunc\"" > %t.lib.s
+# RUN: echo -e ".intel_syntax noprefix\n.globl libfunc\n.text\nlibfunc:\nmov eax, 1\nret\n.section .drectve\n.ascii \" /EXPORT:libfunc\"" > %t.lib.s
 # RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.lib.s -filetype=obj -o %t.lib.o
 # RUN: lld-link -dll -out:%t.lib.dll -entry:libfunc %t.lib.o -implib:%t.lib.dll.a
 
@@ -79,10 +79,38 @@
 # RUN: llvm-ar rcs %t.test.a %t.test1.o %t.test2.o
 
 # RUN: echo -e ".globl main\n.text\nmain:\ncall test\ncall helper\nret" > %t.main2.s
-# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %s -filetype=obj -o %t.main2.o
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.main2.s -filetype=obj -o %t.main2.o
 
 # RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.helper.a %t.test.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
 # LIB-TWO-NOT: duplicate symbol:
+
+
+# Test pulling symbols from /DEFAULTLIB archives. These archives should come
+# after all the other archives passed explictly on the command-line.
+
+# RUN: echo -e ".intel_syntax noprefix\n.globl libfunc\n.text\nlibfunc:\nmov eax, 3\nret" > %t.deflib.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.deflib.s -filetype=obj -o %t.deflib.o
+# RUN: llvm-ar rcs %t.deflib.a %t.deflib.o
+
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.helper1.a /DEFAULTLIB:%t.deflib.a %t.test.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
+
+# RUN: llvm-ar rcs %t.test1.a %t.test1.o
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.test1.a /DEFAULTLIB:%t.deflib.a %t.helper.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
+
+
+# Test implicit /DEFAULTLIB from .drectve sections. These archives should come
+# after all the other archives passed explictly on the command-line, and are
+# added dynamically while possibly parsing an existing OBJ file.
+
+# RUN: echo -e -n ".intel_syntax noprefix\n.globl test\n.text\ntest:\ncall libfunc\nret\n.section .drectve\n.ascii \" /DEFAULTLIB:" > %t.lib.s
+# RUN: echo -n "%/t.deflib.a" >> %t.lib.s
+# RUN: echo -e "\"" >> %t.lib.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc %t.lib.s -filetype=obj -o %t.lib.o
+# RUN: llvm-ar rcs %t.lib.a %t.lib.o
+
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.helper.a %t.lib.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
+# RUN: lld-link -out:%t.main.exe -entry:main %t.main2.o %t.lib.a %t.helper1.a 2>&1 | FileCheck --allow-empty --check-prefix=LIB-TWO %s
+
 
     .globl main
     .text
