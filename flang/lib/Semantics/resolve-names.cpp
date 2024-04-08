@@ -2253,7 +2253,7 @@ void ScopeHandler::SayWithDecl(
     const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
   bool isFatal{msg.IsFatal()};
   Say(name, std::move(msg), symbol.name())
-      .Attach(Message{name.source,
+      .Attach(Message{symbol.name(),
           symbol.test(Symbol::Flag::Implicit)
               ? "Implicit declaration of '%s'"_en_US
               : "Declaration of '%s'"_en_US,
@@ -7843,7 +7843,7 @@ const parser::Name *DeclarationVisitor::FindComponent(
   auto &symbol{base->symbol->GetUltimate()};
   if (!symbol.has<AssocEntityDetails>() && !ConvertToObjectEntity(symbol)) {
     SayWithDecl(*base, symbol,
-        "'%s' is an invalid base for a component reference"_err_en_US);
+        "'%s' is not an object and may not be used as the base of a component reference or type parameter inquiry"_err_en_US);
     return nullptr;
   }
   auto *type{symbol.GetType()};
