@@ -6025,6 +6025,11 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return false;
   }
   case BTT_IsLayoutCompatible: {
+    if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType())
+      Self.RequireCompleteType(KeyLoc, LhsT, diag::err_incomplete_type);
+    if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
+      Self.RequireCompleteType(KeyLoc, RhsT, diag::err_incomplete_type);
+
     if (LhsT->isVariableArrayType() || RhsT->isVariableArrayType())
       Self.Diag(KeyLoc, diag::err_vla_unsupported)
           << 1 << tok::kw___is_layout_compatible;
