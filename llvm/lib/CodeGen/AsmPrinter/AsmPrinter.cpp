@@ -927,21 +927,18 @@ void AsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
 
 void AsmPrinter::emitFunctionHeaderComment() {}
 
-void AsmPrinter::emitFunctionPrefix(
-    const SmallVector<const Constant *, 1> &Prefix) {
+void AsmPrinter::emitFunctionPrefix(ArrayRef<const Constant *> Prefix) {
   const Function &F = MF->getFunction();
   if (!MAI->hasSubsectionsViaSymbols()) {
-    for (auto &C : Prefix) {
+    for (auto &C : Prefix)
       emitGlobalConstant(F.getParent()->getDataLayout(), C);
-    }
     return;
   }
-  // Preserving prefix data on platforms which use subsections-via-symbols
-  // is a bit tricky. Here we introduce a symbol for the prefix data
+  // Preserving prefix-like data on platforms which use subsections-via-symbols
+  // is a bit tricky. Here we introduce a symbol for the prefix-like data
   // and use the .alt_entry attribute to mark the function's real entry point
-  // as an alternative entry point to the prefix-data symbol.
-  MCSymbol *PrefixSym = OutContext.createLinkerPrivateTempSymbol();
-  OutStreamer->emitLabel(PrefixSym);
+  // as an alternative entry point to the symbol that precedes the function..
+  OutStreamer->emitLabel(OutContext.createLinkerPrivateTempSymbol());
 
   for (auto &C : Prefix) {
     emitGlobalConstant(F.getParent()->getDataLayout(), C);
@@ -990,9 +987,8 @@ void AsmPrinter::emitFunctionHeader() {
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
   // Emit the prefix data.
-  if (F.hasPrefixData()) {
+  if (F.hasPrefixData())
     emitFunctionPrefix({F.getPrefixData()});
-  }
 
   // Emit KCFI type information before patchable-function-prefix nops.
   emitKCFITypeId(*MF);

@@ -8,7 +8,7 @@
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret
 
-; MACHO: ltmp0
+; MACHO:      ltmp0:
 ; MACHO-NEXT:   .long 3238382334 ; 0xc105cafe
 ; MACHO-NEXT:   .long 42 ; 0x2a
 ; MACHO-NEXT:   .alt_entry __Z3funv

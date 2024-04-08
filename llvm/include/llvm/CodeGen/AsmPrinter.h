@@ -869,7 +869,7 @@ private:
   virtual void emitFunctionHeaderComment();
 
   /// This method emits prefix-like data before the current function.
-  void emitFunctionPrefix(const SmallVector<const Constant *, 1> &Prefix);
+  void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
   void
