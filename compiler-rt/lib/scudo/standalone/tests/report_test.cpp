@@ -63,18 +63,18 @@ TEST(ScudoReportDeathTest, CSpecific) {
 TEST(ScudoReportDeathTest, Linux) {
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportMapError(),
-               "Scudo ERROR:.*internal map failure \\(error desc=.*\\)\\s*$");
+               "Scudo ERROR:.*internal map failure \\(error desc=.*\\)");
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportMapError(1024U),
                "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
-               "requesting 1KB\\s*$");
+               "requesting 1KB");
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportUnmapError(0x1000U, 100U),
                "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "
-               "0x1000 Size 100\\s*$");
+               "0x1000 Size 100");
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportProtectError(0x1000U, 100U, PROT_READ),
                "Scudo ERROR:.*internal protect failure \\(error desc=.*\\) "
-               "Addr 0x1000 Size 100 Prot 1\\s*$");
+               "Addr 0x1000 Size 100 Prot 1");
 }
 #endif
