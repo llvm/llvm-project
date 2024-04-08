@@ -537,7 +537,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name, InputFile *file) {
   return result;
 }
 
-static LazyIntrusiveNode *lazyNode(Symbol *s) {
+static LazyIntrusiveNode *getLazyNode(Symbol *s) {
   if (auto *sym = dyn_cast<LazyArchive>(s))
     return &sym->node;
   if (auto *sym = dyn_cast<LazyObject>(s))
@@ -545,9 +545,7 @@ static LazyIntrusiveNode *lazyNode(Symbol *s) {
   return nullptr;
 }
 
-static ArchiveFile *lazyParent(InputFile *f) {
-  if (!f)
-    return nullptr;
+static ArchiveFile *getLazyParent(InputFile *f) {
   if (auto *obj = dyn_cast<ObjFile>(f))
     return obj->parent;
   if (auto *obj = dyn_cast<BitcodeFile>(f))
@@ -555,11 +553,11 @@ static ArchiveFile *lazyParent(InputFile *f) {
   return nullptr;
 }
 
-static ArchiveFile *lazyArchive(Symbol *s) {
+static ArchiveFile *getLazyArchive(Symbol *s) {
   if (auto *sym = dyn_cast<LazyArchive>(s))
     return sym->file;
   if (auto *sym = dyn_cast<LazyObject>(s))
-    return lazyParent(sym->file);
+    return getLazyParent(sym->file);
   return nullptr;
 }
 
@@ -573,19 +571,32 @@ static ArchiveFile *lazyArchive(Symbol *s) {
 // that library first, and then the following libraries from the command
 // line and /DEFAULTLIB (Specify default library) directives, and then
 // to any libraries at the beginning of the command line."
-static Symbol *searchArchiveSymbol(Symbol *s, ArchiveFile *pivot) {
+static Symbol *lookupLazy(Symbol *frontSym, ArchiveFile *requestingArchive) {
   auto &Alloc = getSpecificAllocSingleton<SymbolUnion>().Allocator;
-  Symbol *curr = s;
+  Symbol *currentSym = frontSym;
   for (;;) {
-    if (lazyArchive(curr)->CmdLineIndex >= pivot->CmdLineIndex)
-      return curr;
-    uint32_t next = lazyNode(curr)->next;
-    if (!next)
+    ArchiveFile *currentArchive = getLazyArchive(currentSym);
+    assert(currentArchive && "Unhandled lazy archive");
+    if (currentArchive->CmdLineIndex >= requestingArchive->CmdLineIndex)
+      return currentSym;
+    LazyIntrusiveNode *node = getLazyNode(currentSym);
+    assert(node && "Unhandled lazy node");
+    if (!node->next)
       break;
-    curr = reinterpret_cast<LazyArchive *>(
-        Alloc.fromAlignedIndex<SymbolUnion>(next));
+    currentSym = reinterpret_cast<LazyArchive *>(
+        Alloc.fromAlignedIndex<SymbolUnion>(node->next));
   }
-  return s;
+  return frontSym;
+}
+
+static void collapseLazy(Symbol *frontSym, Symbol *selected, InputFile *f) {
+  if (frontSym != selected)
+    memcpy(frontSym, selected, sizeof(SymbolUnion));
+  LazyIntrusiveNode *node = getLazyNode(frontSym);
+  assert(node && "Unhandled lazy node");
+  *node = LazyIntrusiveNode();
+  if (!isa<BitcodeFile>(f))
+    frontSym->isUsedInRegularObj = true;
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
@@ -598,18 +609,16 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
   if (s->isLazy()) {
     if (s->pendingArchiveLoad)
       return s;
-    if (ArchiveFile *parent = lazyParent(f)) {
-      // We're placing a undefined symbol from an archive OBJ. The rules are
-      // different than regular OBJs on the command-line.
-      Symbol *selected = searchArchiveSymbol(s, parent);
+    if (ArchiveFile *parent = getLazyParent(f)) {
+      // Lookup the most suitable undefined symbol exposed by an archive OBJ.
+      // The rules are different than regular OBJs on the command-line (see
+      // above).
+      Symbol *selected = lookupLazy(s, parent);
       forceLazy(selected);
+
       // Now that we have selected a symbol, we don't need the linked list of
       // `LazyArchive`s anymore. Collapse to the selected symbol.
-      if (s != selected)
-        memcpy(s, selected, sizeof(SymbolUnion));
-      *lazyNode(s) = LazyIntrusiveNode();
-      if (!isa<BitcodeFile>(f))
-        s->isUsedInRegularObj = true;
+      collapseLazy(s, selected, f);
       return s;
     }
     // We're placing a undefined symbol from a command-line OBJ.
@@ -619,7 +628,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
 }
 
 // This creates a linked list of archives where a specific symbol was seen.
-// We later walk that list if a undefined symbol needs to be resolved from an
+// We later walk that list if an undefined symbol needs to be resolved from an
 // archive OBJ.
 template <typename T, typename... ArgT>
 static void chainLazy(LazyIntrusiveNode *front, ArgT &&...arg) {
@@ -636,7 +645,9 @@ static void chainLazy(LazyIntrusiveNode *front, ArgT &&...arg) {
   if (front->last) {
     Symbol *last = reinterpret_cast<Symbol *>(
         Alloc.fromAlignedIndex<SymbolUnion>(front->last));
-    lazyNode(last)->next = index;
+    LazyIntrusiveNode *node = getLazyNode(last);
+    assert(node && "Unhandled lazy node");
+    node->next = index;
   }
   front->last = index;
 }
@@ -648,7 +659,7 @@ void SymbolTable::addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym) {
     replaceSymbol<LazyArchive>(s, f, sym);
     return;
   }
-  if (auto *node = lazyNode(s)) {
+  if (auto *node = getLazyNode(s)) {
     if (!s->pendingArchiveLoad)
       chainLazy<LazyArchive>(node, f, sym);
     return;
@@ -667,7 +678,7 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
     replaceSymbol<LazyObject>(s, f, n);
     return;
   }
-  if (auto *node = lazyNode(s)) {
+  if (auto *node = getLazyNode(s)) {
     if (!s->pendingArchiveLoad)
       chainLazy<LazyObject>(node, f, n);
     return;
