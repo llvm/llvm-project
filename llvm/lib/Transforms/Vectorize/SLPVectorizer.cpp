@@ -11169,7 +11169,7 @@ public:
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.
-        for (auto [I, Idx] : enumerate(SubMask))
+        for (int &Idx : SubMask)
           if (Idx != PoisonMaskElem)
             Idx += VF;
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
