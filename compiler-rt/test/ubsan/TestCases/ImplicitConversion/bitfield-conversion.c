@@ -191,26 +191,26 @@ void test_c() {
 
   // Assignment
   x.c = v8;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint8_t' (aka 'unsigned char') of value 64 (8-bit, unsigned) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint8_t' (aka 'unsigned char') of value 64 (8-bit, unsigned) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
   x.c = v16;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint16_t' (aka 'unsigned short') of value 320 (16-bit, unsigned) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint16_t' (aka 'unsigned short') of value 320 (16-bit, unsigned) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
   x.c = v32;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 320 (32-bit, unsigned) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 320 (32-bit, unsigned) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
 
   // PrePostIncDec
   x.c = min;
   x.c--;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 63 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 63 (7-bit bitfield, signed)
   x.c = min;
   --x.c;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 63 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 63 (7-bit bitfield, signed)
 
   x.c = max;
   x.c++;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
   x.c = max;
   ++x.c;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
 
   x.c = min + 1;
   x.c++;
@@ -237,19 +237,19 @@ void test_c() {
   x.c += max;
   x.c = 0;
   x.c += (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
 
   x.c = 0;
   x.c -= (-min);
   x.c = 0;
   x.c -= (-min + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 63 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value -65 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 63 (7-bit bitfield, signed)
 
   x.c = 1;
   x.c *= max;
   x.c = 1;
   x.c *= (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -64 (7-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 64 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -64 (7-bit bitfield, signed)
 }
 
 void test_d() {
@@ -459,26 +459,26 @@ void test_h() {
 
   // Assignment
   x.h = v16;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int16_t' (aka 'short') of value 128 (16-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -128 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int16_t' (aka 'short') of value 128 (16-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -128 (8-bit bitfield, signed)
   x.h = v32;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int32_t' (aka 'int') of value 128 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -128 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int32_t' (aka 'int') of value 128 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -128 (8-bit bitfield, signed)
 
   // PrePostIncDec
   x.h = min;
   x.h--;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 127 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 127 (8-bit bitfield, signed)
   x.h = min;
   --x.h;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 127 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 127 (8-bit bitfield, signed)
   x.h = min + 1;
   x.h--;
 
   x.h = max;
   x.h++;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -128 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:6: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -128 (8-bit bitfield, signed)
   x.h = max;
   ++x.h;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -128 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:3: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -128 (8-bit bitfield, signed)
   x.h = max - 1;
   x.h++;
 
@@ -487,13 +487,13 @@ void test_h() {
   x.h += max;
   x.h = 0;
   x.h += (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to -128 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value 128 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to -128 (8-bit bitfield, signed)
 
   x.h = 0;
   x.h -= (-min);
   x.h = 0;
   x.h -= (-min + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka 'signed char') changed the value to 127 (8-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int' of value -129 (32-bit, signed) to type 'int8_t' (aka '{{(signed )?}}char') changed the value to 127 (8-bit bitfield, signed)
 }
 
 void test_i() {
