@@ -1374,53 +1374,6 @@ void ExtractStridedMetadataOp::getAsmResultNames(
   }
 }
 
-/// Helper function to perform the replacement of all constant uses of `values`
-/// by a materialized constant extracted from `maybeConstants`.
-/// `values` and `maybeConstants` are expected to have the same size.
-template <typename Container>
-static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
-                                  Container values,
-                                  ArrayRef<OpFoldResult> maybeConstants) {
-  assert(values.size() == maybeConstants.size() &&
-         " expected values and maybeConstants of the same size");
-  bool atLeastOneReplacement = false;
-  for (auto [maybeConstant, result] : llvm::zip(maybeConstants, values)) {
-    // Don't materialize a constant if there are no uses: this would indice
-    // infinite loops in the driver.
-    if (result.use_empty() || maybeConstant == getAsOpFoldResult(result))
-      continue;
-    assert(maybeConstant.template is<Attribute>() &&
-           "The constified value should be either unchanged (i.e., == result) "
-           "or a constant");
-    Value constantVal = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::cast<IntegerAttr>(maybeConstant.template get<Attribute>())
-                 .getInt());
-    for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
-      // modifyOpInPlace: lambda cannot capture structured bindings in C++17
-      // yet.
-      op->replaceUsesOfWith(result, constantVal);
-      atLeastOneReplacement = true;
-    }
-  }
-  return atLeastOneReplacement;
-}
-
-LogicalResult
-ExtractStridedMetadataOp::fold(FoldAdaptor adaptor,
-                               SmallVectorImpl<OpFoldResult> &results) {
-  OpBuilder builder(*this);
-
-  bool atLeastOneReplacement = replaceConstantUsesOf(
-      builder, getLoc(), ArrayRef<TypedValue<IndexType>>(getOffset()),
-      getConstifiedMixedOffset());
-  atLeastOneReplacement |= replaceConstantUsesOf(builder, getLoc(), getSizes(),
-                                                 getConstifiedMixedSizes());
-  atLeastOneReplacement |= replaceConstantUsesOf(
-      builder, getLoc(), getStrides(), getConstifiedMixedStrides());
-
-  return success(atLeastOneReplacement);
-}
-
 SmallVector<OpFoldResult> ExtractStridedMetadataOp::getConstifiedMixedSizes() {
   SmallVector<OpFoldResult> values = getAsOpFoldResult(getSizes());
   constifyIndexValues(values, getSource().getType(), getContext(),

@@ -1,25 +1,5 @@
 // RUN: mlir-opt --expand-strided-metadata -split-input-file %s -o - | FileCheck %s
 
-// CHECK-LABEL: func @extract_strided_metadata_constants
-//  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
-func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1], offset: 2>>)
-    -> (memref<f32>, index, index, index, index, index) {
-  //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-  //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-  //   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
-  //   CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
-
-  //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
-  %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %base :
-    memref<5x4xf32, strided<[4,1], offset:2>>
-    -> memref<f32>, index, index, index, index, index
-
-  // CHECK: %[[BASE]], %[[C2]], %[[C5]], %[[C4]], %[[C4]], %[[C1]]
-  return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
-    memref<f32>, index, index, index, index, index
-}
-
-// -----
 
 // Check that we simplify subview(src) into:
 // base, offset, sizes, strides xtract_strided_metadata src
@@ -1070,6 +1050,7 @@ func.func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride
 //
 //   CHECK-DAG: #[[$SIZE0_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 * s1) * 4)>
 //   CHECK-DAG: #[[$STRIDE0_MAP:.*]] = affine_map<()[s0] -> (s0)>
+//   CHECK-DAG: #[[$STRIDE1_MAP:.*]] = affine_map<()[s0, s1] -> (s0, s1, 42)>
 // CHECK-LABEL: func @extract_strided_metadata_of_collapse(
 //  CHECK-SAME: %[[ARG:.*]]: memref<?x?x4x?x6x7xi32>)
 //
@@ -1081,8 +1062,8 @@ func.func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride
 //
 //   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.min #[[$STRIDE0_MAP]]()[%[[STRIDES]]#0]
 //   CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$SIZE0_MAP]]()[%[[SIZES]]#1, %[[SIZES]]#3]
-//
-//       CHECK: return %[[BASE]], %[[C0]], %[[SIZES]]#0, %[[DYN_SIZE1]], %[[C42]], %[[DYN_STRIDE0]], %[[C42]], %[[C1]]
+//   CHECK-DAG:  %[[DYN_STRIDE1:.*]]  = affine.min #[[$STRIDE1_MAP]]()[%strides#1, %strides#2]
+//       CHECK: return %[[BASE]], %[[C0]], %[[SIZES]]#0, %[[DYN_SIZE1]], %[[C42]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]], %[[C1]]
 func.func @extract_strided_metadata_of_collapse(%arg : memref<?x?x4x?x6x7xi32>)
   -> (memref<i32>, index,
       index, index, index,
@@ -1383,12 +1364,9 @@ func.func @extract_strided_metadata_of_get_global_with_offset()
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_cast
 //  CHECK-SAME: %[[ARG:.*]]: memref<3x?xi32, strided<[4, ?], offset: ?>>)
-//
-//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
 //       CHECK: %[[BASE:.*]], %[[DYN_OFFSET:.*]], %[[DYN_SIZES:.*]]:2, %[[DYN_STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
 //
-//       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[C3]], %[[DYN_SIZES]]#1, %[[C4]], %[[DYN_STRIDES]]#1
+//       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[DYN_SIZES]]#0, %[[DYN_SIZES]]#1, %[[DYN_STRIDES]]#0, %[[DYN_STRIDES]]#1
 func.func @extract_strided_metadata_of_cast(
   %arg : memref<3x?xi32, strided<[4, ?], offset:?>>)
   -> (memref<i32>, index,
