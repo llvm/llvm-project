@@ -390,14 +390,6 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
   {
     ColorScope Color(OS, ShowColors, AttrColor);
     OS << C->getClauseKind();
-
-    // Handle clauses with parens for types that have no children, likely
-    // because there is no sub expression.
-    switch (C->getClauseKind()) {
-    default:
-      // Nothing to do here.
-      break;
-    }
   }
   dumpPointer(C);
   dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
