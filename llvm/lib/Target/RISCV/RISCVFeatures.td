@@ -104,7 +104,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -390,7 +390,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,

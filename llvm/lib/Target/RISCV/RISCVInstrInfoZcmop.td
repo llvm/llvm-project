@@ -8,8 +8,6 @@
 //
 // This file describes the RISC-V instructions from the standard Compressed
 // May-Be-Operations Extension (Zcmop).
-// This version is still experimental as the 'Zcmop' extension hasn't been
-// ratified yet. It is based on v0.2 of the specification.
 //
 //===----------------------------------------------------------------------===//
 
