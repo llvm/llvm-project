@@ -87,7 +87,7 @@ public:
   StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                    SourceLocation StartLoc,
                                    SourceLocation EndLoc,
-                                   MutableArrayRef<OpenACCClause *> Clauses,
+                                   ArrayRef<OpenACCClause *> Clauses,
                                    StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the

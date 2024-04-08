@@ -51,15 +51,13 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
 
 /// Destruct and deallocate any clauses that aren't going to be used because
 /// they don't have a Construct to attach to.
-void DestroyUnusedClauses(ASTContext &Ctx,
-                          MutableArrayRef<OpenACCClause *> Clauses) {
+void DestroyUnusedClauses(ASTContext &Ctx, ArrayRef<OpenACCClause *> Clauses) {
   auto *Itr = Clauses.begin();
   auto *End = Clauses.end();
 
   for (; Itr != End; ++Itr) {
     (*Itr)->~OpenACCClause();
     Ctx.Deallocate(*Itr);
-    *Itr = nullptr;
   }
 }
 } // namespace
@@ -114,9 +112,11 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
-StmtResult SemaOpenACC::ActOnEndStmtDirective(
-    OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation EndLoc,
-    MutableArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt) {
+StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
+                                              SourceLocation StartLoc,
+                                              SourceLocation EndLoc,
+                                              ArrayRef<OpenACCClause *> Clauses,
+                                              StmtResult AssocStmt) {
   switch (K) {
   default:
     DestroyUnusedClauses(getASTContext(), Clauses);

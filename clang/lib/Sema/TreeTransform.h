@@ -4002,9 +4002,11 @@ public:
     return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs, Type);
   }
 
-  StmtResult RebuildOpenACCComputeConstruct(
-      OpenACCDirectiveKind K, SourceLocation BeginLoc, SourceLocation EndLoc,
-      MutableArrayRef<OpenACCClause *> Clauses, StmtResult StrBlock) {
+  StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
+                                            SourceLocation BeginLoc,
+                                            SourceLocation EndLoc,
+                                            ArrayRef<OpenACCClause *> Clauses,
+                                            StmtResult StrBlock) {
     return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
                                                      Clauses, StrBlock);
   }
