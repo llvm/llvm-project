@@ -1557,7 +1557,7 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
 }
 
 void RISCVInstrInfo::finalizeInsInstrs(
-    MachineInstr &Root, MachineCombinerPattern &P,
+    MachineInstr &Root, int &Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {
   int16_t FrmOpIdx =
       RISCV::getNamedOperandIdx(Root.getOpcode(), RISCV::OpName::frm);
@@ -1745,10 +1745,9 @@ static bool canCombineFPFusedMultiply(const MachineInstr &Root,
   return RISCV::hasEqualFRM(Root, *MI);
 }
 
-static bool
-getFPFusedMultiplyPatterns(MachineInstr &Root,
-                           SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                           bool DoRegPressureReduce) {
+static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
+                                       SmallVectorImpl<int> &Patterns,
+                                       bool DoRegPressureReduce) {
   unsigned Opc = Root.getOpcode();
   bool IsFAdd = isFADD(Opc);
   if (!IsFAdd && !isFSUB(Opc))
@@ -1756,27 +1755,38 @@ getFPFusedMultiplyPatterns(MachineInstr &Root,
   bool Added = false;
   if (canCombineFPFusedMultiply(Root, Root.getOperand(1),
                                 DoRegPressureReduce)) {
-    Patterns.push_back(IsFAdd ? MachineCombinerPattern::FMADD_AX
-                              : MachineCombinerPattern::FMSUB);
+    Patterns.push_back(IsFAdd ? RISCVMachineCombinerPattern::FMADD_AX
+                              : RISCVMachineCombinerPattern::FMSUB);
     Added = true;
   }
   if (canCombineFPFusedMultiply(Root, Root.getOperand(2),
                                 DoRegPressureReduce)) {
-    Patterns.push_back(IsFAdd ? MachineCombinerPattern::FMADD_XA
-                              : MachineCombinerPattern::FNMSUB);
+    Patterns.push_back(IsFAdd ? RISCVMachineCombinerPattern::FMADD_XA
+                              : RISCVMachineCombinerPattern::FNMSUB);
     Added = true;
   }
   return Added;
 }
 
-static bool getFPPatterns(MachineInstr &Root,
-                          SmallVectorImpl<MachineCombinerPattern> &Patterns,
+static bool getFPPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns,
                           bool DoRegPressureReduce) {
   return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
 }
 
+CombinerObjective RISCVInstrInfo::getCombinerObjective(int Pattern) const {
+  switch (Pattern) {
+  case RISCVMachineCombinerPattern::FMADD_AX:
+  case RISCVMachineCombinerPattern::FMADD_XA:
+  case RISCVMachineCombinerPattern::FMSUB:
+  case RISCVMachineCombinerPattern::FNMSUB:
+    return CombinerObjective::MustReduceDepth;
+  default:
+    return TargetInstrInfo::getCombinerObjective(Pattern);
+  }
+}
+
 bool RISCVInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<int> &Patterns,
     bool DoRegPressureReduce) const {
 
   if (getFPPatterns(Root, Patterns, DoRegPressureReduce))
@@ -1786,8 +1796,7 @@ bool RISCVInstrInfo::getMachineCombinerPatterns(
                                                      DoRegPressureReduce);
 }
 
-static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc,
-                                         MachineCombinerPattern Pattern) {
+static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc, int Pattern) {
   switch (RootOpc) {
   default:
     llvm_unreachable("Unexpected opcode");
@@ -1798,32 +1807,32 @@ static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc,
   case RISCV::FADD_D:
     return RISCV::FMADD_D;
   case RISCV::FSUB_H:
-    return Pattern == MachineCombinerPattern::FMSUB ? RISCV::FMSUB_H
-                                                    : RISCV::FNMSUB_H;
+    return Pattern == RISCVMachineCombinerPattern::FMSUB ? RISCV::FMSUB_H
+                                                         : RISCV::FNMSUB_H;
   case RISCV::FSUB_S:
-    return Pattern == MachineCombinerPattern::FMSUB ? RISCV::FMSUB_S
-                                                    : RISCV::FNMSUB_S;
+    return Pattern == RISCVMachineCombinerPattern::FMSUB ? RISCV::FMSUB_S
+                                                         : RISCV::FNMSUB_S;
   case RISCV::FSUB_D:
-    return Pattern == MachineCombinerPattern::FMSUB ? RISCV::FMSUB_D
-                                                    : RISCV::FNMSUB_D;
+    return Pattern == RISCVMachineCombinerPattern::FMSUB ? RISCV::FMSUB_D
+                                                         : RISCV::FNMSUB_D;
   }
 }
 
-static unsigned getAddendOperandIdx(MachineCombinerPattern Pattern) {
+static unsigned getAddendOperandIdx(int Pattern) {
   switch (Pattern) {
   default:
     llvm_unreachable("Unexpected pattern");
-  case MachineCombinerPattern::FMADD_AX:
-  case MachineCombinerPattern::FMSUB:
+  case RISCVMachineCombinerPattern::FMADD_AX:
+  case RISCVMachineCombinerPattern::FMSUB:
     return 2;
-  case MachineCombinerPattern::FMADD_XA:
-  case MachineCombinerPattern::FNMSUB:
+  case RISCVMachineCombinerPattern::FMADD_XA:
+  case RISCVMachineCombinerPattern::FNMSUB:
     return 1;
   }
 }
 
 static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
-                                   MachineCombinerPattern Pattern,
+                                   int Pattern,
                                    SmallVectorImpl<MachineInstr *> &InsInstrs,
                                    SmallVectorImpl<MachineInstr *> &DelInstrs) {
   MachineFunction *MF = Root.getMF();
@@ -1865,8 +1874,7 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
 }
 
 void RISCVInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
-    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
@@ -1875,14 +1883,14 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::FMADD_AX:
-  case MachineCombinerPattern::FMSUB: {
+  case RISCVMachineCombinerPattern::FMADD_AX:
+  case RISCVMachineCombinerPattern::FMSUB: {
     MachineInstr &Prev = *MRI.getVRegDef(Root.getOperand(1).getReg());
     combineFPFusedMultiply(Root, Prev, Pattern, InsInstrs, DelInstrs);
     return;
   }
-  case MachineCombinerPattern::FMADD_XA:
-  case MachineCombinerPattern::FNMSUB: {
+  case RISCVMachineCombinerPattern::FMADD_XA:
+  case RISCVMachineCombinerPattern::FNMSUB: {
     MachineInstr &Prev = *MRI.getVRegDef(Root.getOperand(2).getReg());
     combineFPFusedMultiply(Root, Prev, Pattern, InsInstrs, DelInstrs);
     return;

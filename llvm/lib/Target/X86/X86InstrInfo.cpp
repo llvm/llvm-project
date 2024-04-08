@@ -10577,9 +10577,9 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   }
 }
 
-bool X86InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
-    bool DoRegPressureReduce) const {
+bool X86InstrInfo::getMachineCombinerPatterns(MachineInstr &Root,
+                                              SmallVectorImpl<int> &Patterns,
+                                              bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
   case X86::VPDPWSSDrr:
@@ -10587,7 +10587,7 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
     if (!Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
       return true;
     }
     break;
@@ -10599,8 +10599,8 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
    if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
-      return true;
+     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+     return true;
     }
     break;
   }
@@ -10700,8 +10700,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
 }
 
 void X86InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
-    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
@@ -10710,7 +10709,7 @@ void X86InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::DPWSSD:
+  case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;
