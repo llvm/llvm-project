@@ -13,7 +13,9 @@
 #include "ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -131,7 +133,7 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
                                           fir::FirOpBuilder &builder) {
   type = fir::unwrapRefType(type);
   if (!fir::isa_integer(type) && !fir::isa_real(type) &&
-      !mlir::isa<fir::LogicalType>(type))
+      !fir::isa_complex(type) && !mlir::isa<fir::LogicalType>(type))
     TODO(loc, "Reduction of some types is not supported");
   switch (redId) {
   case ReductionIdentifier::MAX: {
@@ -175,6 +177,16 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
   case ReductionIdentifier::OR:
   case ReductionIdentifier::EQV:
   case ReductionIdentifier::NEQV:
+    if (auto cplxTy = mlir::dyn_cast<fir::ComplexType>(type)) {
+      mlir::Type realTy =
+          Fortran::lower::convertReal(builder.getContext(), cplxTy.getFKind());
+      mlir::Value initRe = builder.createRealConstant(
+          loc, realTy, getOperationIdentity(redId, loc));
+      mlir::Value initIm = builder.createRealConstant(loc, realTy, 0);
+
+      return fir::factory::Complex{builder, loc}.createComplex(type, initRe,
+                                                               initIm);
+    }
     if (type.isa<mlir::FloatType>())
       return builder.create<mlir::arith::ConstantOp>(
           loc, type,
@@ -229,13 +241,13 @@ mlir::Value ReductionProcessor::createScalarCombiner(
     break;
   case ReductionIdentifier::ADD:
     reductionOp =
-        getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp>(
-            builder, type, loc, op1, op2);
+        getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp,
+                              fir::AddcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::MULTIPLY:
     reductionOp =
-        getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp>(
-            builder, type, loc, op1, op2);
+        getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp,
+                              fir::MulcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::AND: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
