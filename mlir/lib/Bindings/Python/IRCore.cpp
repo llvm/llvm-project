@@ -1252,8 +1252,7 @@ void PyOperationBase::writeBytecode(const py::object &fileObject,
 void PyOperationBase::walk(py::object callback, bool usePreOrder) {
   PyOperation &operation = getOperation();
   operation.checkValid();
-  MlirOperationWalkCallback walkCallback =
-   [](MlirOperation op,
+  MlirOperationWalkCallback walkCallback = [](MlirOperation op,
                                               void *userData) {
     py::object *fn = static_cast<py::object *>(userData);
     (*fn)(op);
@@ -3003,8 +3002,7 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            py::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, py::object, bool>(
-               &PyOperationBase::print),
+                             bool, py::object, bool>(&PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            py::arg("large_elements_limit") = py::none(),
            py::arg("enable_debug_info") = false,

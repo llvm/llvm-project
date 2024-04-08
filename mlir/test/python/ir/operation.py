@@ -1016,6 +1016,7 @@ def testOperationParse():
             f"op_with_source_name: {o.get_asm(enable_debug_info=True, use_local_scope=True)}"
         )
 
+
 # CHECK-LABEL: TEST: testOpWalk
 @run
 def testOpWalk():
@@ -1029,7 +1030,7 @@ def testOpWalk():
       }
     }
   """,
-    ctx,
+        ctx,
     )
     callback = lambda op: print(op.name)
     # Test post-order walk (default).
