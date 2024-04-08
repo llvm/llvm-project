@@ -35,13 +35,15 @@
 
 // FILE_DEPENDENCIES: echo.sh
 // RUN: %{build}
-// RUN: %{exec} bash echo.sh -ne "\n" > %t.expected
+// RUN: %{exec} bash echo.sh -ne "println blank line test: \n" > %t.expected
 // RUN: %{exec} "%t.exe" > %t.actual
 // RUN: diff -u %t.actual %t.expected
 
 #include <print>
 
 int main(int, char**) {
+  // On some configurations the `diff -u` test fails if we print a single blank line character `\n`, so we print some text first.
+  std::print("println blank line test: ");
   std::println();
 
   return 0;
