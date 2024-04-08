@@ -45,9 +45,9 @@ static cpp::optional<Action> next_action() {
 
 static cpp::optional<char *> next_cstr() {
   char *result = reinterpret_cast<char *>(global_buffer);
-  if (cpp::optional<uint64_t> len = next_uint64()) {
+  if (cpp::optional<uint8_t> len = next_u8()) {
     uint64_t length;
-    for (length = 0; length < *len % 128; length++) {
+    for (length = 0; length < *len; length++) {
       if (length >= remaining)
         return cpp::nullopt;
       if (*global_buffer == '\0')
@@ -87,7 +87,7 @@ template <typename Fn> struct CleanUpHook {
 #define register_cleanup(ID, ...)                                              \
   auto cleanup_hook##ID = __extension__({                                      \
     auto a = __VA_ARGS__;                                                      \
-    CleanUpHook<decltype(a)>{a};                                               \
+    CleanUpHook<decltype(a)>(cpp::move(a));                                    \
   });
 
 static void trap_with_message(const char *msg) { __builtin_trap(); }
@@ -103,8 +103,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   memcpy(global_buffer, data, size);
 
   remaining = size;
-  uint64_t size_a = get_value(next_uint64) % 256;
-  uint64_t size_b = get_value(next_uint64) % 256;
+  uint64_t size_a = get_value(next_u8);
+  uint64_t size_b = get_value(next_u8);
   uint64_t rand_a = get_value(next_uint64);
   uint64_t rand_b = get_value(next_uint64);
   internal::HashTable *table_a = internal::HashTable::allocate(size_a, rand_a);
