@@ -36,20 +36,44 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   }
   return false;
 }
+
+bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
+                                OpenACCClauseKind ClauseKind) {
+  switch (ClauseKind) {
+    // FIXME: For each clause as we implement them, we can add the
+    // 'legalization' list here.
+  default:
+    // Do nothing so we can go to the 'unimplemented' diagnostic instead.
+    return true;
+  }
+  llvm_unreachable("Invalid clause kind");
+}
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
 
-bool SemaOpenACC::ActOnClause(OpenACCClauseKind ClauseKind,
-                              SourceLocation StartLoc) {
-  if (ClauseKind == OpenACCClauseKind::Invalid)
-    return false;
-  // For now just diagnose that it is unsupported and leave the parsing to do
-  // whatever it can do. This function will eventually need to start returning
-  // some sort of Clause AST type, but for now just return true/false based on
-  // success.
-  return Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
+OpenACCClause *
+SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCParsedClause &Clause) {
+  if (Clause.getClauseKind() == OpenACCClauseKind::Invalid)
+    return nullptr;
+
+  // Diagnose that we don't support this clause on this directive.
+  if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
+                                  Clause.getClauseKind())) {
+    Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
+        << Clause.getDirectiveKind() << Clause.getClauseKind();
+    return nullptr;
+  }
+
+  // TODO OpenACC: Switch over the clauses we implement here and 'create'
+  // them.
+
+  Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
+      << Clause.getClauseKind();
+  return nullptr;
 }
+
 void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation StartLoc) {
   switch (K) {
@@ -79,6 +103,7 @@ bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
 StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc,
+                                              ArrayRef<OpenACCClause *> Clauses,
                                               StmtResult AssocStmt) {
   switch (K) {
   default:
@@ -90,8 +115,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Kernels:
     // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
-        getASTContext(), K, StartLoc, EndLoc,
-        /*Clauses=*/std::nullopt,
+        getASTContext(), K, StartLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
