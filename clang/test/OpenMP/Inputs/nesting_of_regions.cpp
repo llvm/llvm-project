@@ -1,15 +1,3 @@
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -fno-openmp-extensions -verify=expected,omp45,omp45warn,omp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fno-openmp-extensions -verify=expected,omp50,omp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-extensions -verify=expected,omp50 %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp -fno-openmp-extensions -Wno-openmp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp -fno-openmp-extensions -Wno-source-uses-openmp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=51 -verify=expected,omp51,omp -fno-openmp-extensions -Wno-source-uses-openmp %s
-
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -fno-openmp-extensions -verify=expected,omp45,omp45warn,omp %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50,omp -fno-openmp-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=51 -verify=expected,omp51,omp -fno-openmp-extensions %s
-// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
-
 void bar();
 
 template <class T>
@@ -19577,4 +19565,3 @@ void foo() {
 
   return foo<int>();
 }
-
