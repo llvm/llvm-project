@@ -35,7 +35,8 @@ Pointer null-checks
 
 The check currently supports null-checks on pointers that use
 ``operator bool``, such as when being used as the condition
-for an ``if`` statement.
+for an ``if`` statement. It also supports comparisons such as ``!= nullptr``, and
+``== other_ptr``.
 
 .. code-block:: c++
 

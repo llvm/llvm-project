@@ -64,7 +64,8 @@ using SR = SatisfiabilityResult;
 // FIXME: These AST matchers should also be exported via the
 // NullPointerAnalysisModel class, for tests
 auto ptrWithBinding(llvm::StringRef VarName = kVar) {
-  return expr(hasType(isAnyPointer())).bind(VarName);
+  return traverse(TK_IgnoreUnlessSpelledInSource,
+      expr(hasType(isAnyPointer())).bind(VarName));
 }
 
 auto derefMatcher() {
@@ -81,8 +82,8 @@ auto castExprMatcher() {
       .bind(kCond);
 }
 
-auto nullptrMatcher() {
-  return castExpr(hasCastKind(CK_NullToPointer)).bind(kVar);
+auto nullptrMatcher(llvm::StringRef VarName = kVar) {
+  return castExpr(hasCastKind(CK_NullToPointer)).bind(VarName);
 }
 
 auto addressofMatcher() {
@@ -97,6 +98,19 @@ auto functionCallMatcher() {
 auto assignMatcher() {
   return binaryOperation(isAssignmentOperator(), hasLHS(ptrWithBinding()),
                          hasRHS(expr().bind(kValue)));
+}
+
+auto nullCheckExprMatcher() {
+  return binaryOperator(hasAnyOperatorName("==", "!="),
+                        hasOperands(ptrWithBinding(), nullptrMatcher(kValue)));
+}
+
+// FIXME: When TK_IgnoreUnlessSpelledInSource is removed from ptrWithBinding(),
+// this matcher should be merged with nullCheckExprMatcher().
+auto equalExprMatcher() {
+  return binaryOperator(hasAnyOperatorName("==", "!="),
+                        hasOperands(ptrWithBinding(kVar),
+                                    ptrWithBinding(kValue)));
 }
 
 auto anyPointerMatcher() { return expr(hasType(isAnyPointer())).bind(kVar); }
@@ -217,34 +231,72 @@ void matchDereferenceExpr(const Stmt *stmt,
   Env.assume(Env.arena().makeNot(getVal(kIsNull, *RootValue).formula()));
 }
 
-void matchCastExpr(const CastExpr *cond, const MatchFinder::MatchResult &Result,
-                   NullPointerAnalysisModel::TransferArgs &Data) {
-  auto [IsNonnullBranch, Env] = Data;
-
+void matchNullCheckExpr(const Expr *NullCheck,
+                    const MatchFinder::MatchResult &Result,
+                    Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
+  // (bool)p or (p != nullptr)
+  bool IsNonnullOp = true;
+  if (auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
+      BinOp->getOpcode() == BO_EQ) {
+    IsNonnullOp = false;
+  }
+
   Value *RootValue = getValue(*Var, Env);
-
-  Value *NewRootValue = Env.createValue(Var->getType());
-
-  setGLValue(*Var, *NewRootValue, Env);
 
   Arena &A = Env.arena();
   BoolValue &IsNonnull = getVal(kIsNonnull, *RootValue);
   BoolValue &IsNull = getVal(kIsNull, *RootValue);
-
-  if (IsNonnullBranch) {
-    Env.assume(A.makeNot(IsNull.formula()));
-    NewRootValue->setProperty(kIsNull, Env.getBoolLiteralValue(false));
-
-    NewRootValue->setProperty(kIsNonnull, IsNonnull);
-  } else {
-    NewRootValue->setProperty(kIsNull, IsNull);
-
-    Env.assume(A.makeNot(IsNonnull.formula()));
-    NewRootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(false));
+  BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*NullCheck));
+  if (!CondValue) {
+    CondValue = &A.makeAtomValue();
+    Env.setValue(*NullCheck, *CondValue);
   }
+  const Formula &CondFormula = IsNonnullOp ? CondValue->formula()
+                                             : A.makeNot(CondValue->formula());
+
+  Env.assume(A.makeImplies(CondFormula, A.makeNot(IsNull.formula())));
+  Env.assume(A.makeImplies(A.makeNot(CondFormula),
+                           A.makeNot(IsNonnull.formula())));
+}
+
+void matchEqualExpr(const BinaryOperator *EqualExpr,
+                    const MatchFinder::MatchResult &Result,
+                    Environment &Env) {
+  bool IsNotEqualsOp = EqualExpr->getOpcode() == BO_NE;
+
+  const auto *LHSVar = Result.Nodes.getNodeAs<Expr>(kVar);
+  assert(LHSVar != nullptr);
+
+  const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
+  assert(RHSVar != nullptr);
+
+  Arena &A = Env.arena();
+  Value *LHSValue = getValue(*LHSVar, Env);
+  Value *RHSValue = getValue(*RHSVar, Env);
+
+  BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*EqualExpr));
+  if (!CondValue) {
+    CondValue = &A.makeAtomValue();
+    Env.setValue(*EqualExpr, *CondValue);
+  }
+
+  const Formula &CondFormula = IsNotEqualsOp ? A.makeNot(CondValue->formula())
+                                       : CondValue->formula();
+
+  // If the pointers are equal, the nullability properties are the same.
+  Env.assume(A.makeImplies(CondFormula, 
+      A.makeAnd(A.makeEquals(getVal(kIsNull, *LHSValue).formula(),
+                             getVal(kIsNull, *RHSValue).formula()),
+                A.makeEquals(getVal(kIsNonnull, *LHSValue).formula(),
+                             getVal(kIsNonnull, *RHSValue).formula()))));
+
+  // If the pointers are not equal, at most one of the pointers is null.
+  Env.assume(A.makeImplies(A.makeNot(CondFormula),
+      A.makeNot(A.makeAnd(getVal(kIsNull, *LHSValue).formula(),
+                          getVal(kIsNull, *RHSValue).formula()))));
 }
 
 void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
@@ -255,24 +307,31 @@ void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
   Value *RootValue = Env.getValue(*PrVar);
   if (!RootValue) {
     RootValue = Env.createValue(PrVar->getType());
+    Env.setValue(*PrVar, *RootValue);
   }
 
   RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(true));
   RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(false));
-  Env.setValue(*PrVar, *RootValue);
 }
 
 void matchAddressofExpr(const Expr *expr,
                         const MatchFinder::MatchResult &Result,
                         Environment &Env) {
-  const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
-  assert(PrVar != nullptr);
+  const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
+  assert(Var != nullptr);
 
-  Value *RootValue = Env.createValue(PrVar->getType());
+  Value *RootValue = Env.getValue(*Var);
+  if (!RootValue) {
+    RootValue = Env.createValue(Var->getType());
+
+    if (!RootValue)
+      return;
+
+    setUnknownValue(*Var, *RootValue, Env);
+  }
 
   RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(false));
   RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
-  Env.setValue(*PrVar, *RootValue);
 }
 
 void matchAnyPointerExpr(const Expr *fncall,
@@ -336,9 +395,9 @@ diagnoseAssignLocation(const Expr *Assign,
 }
 
 NullCheckAfterDereferenceDiagnoser::ResultType
-diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
-                 const NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
-
+diagnoseNullCheckExpr(const Expr *NullCheck,
+      const MatchFinder::MatchResult &Result,
+      const NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -352,6 +411,7 @@ diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
       bool IsNonnull = Env.allows(getVal(kIsNonnull, *RootValue).formula());
 
       if (!IsNull && IsNonnull) {
+        // FIXME: Separate function
         bool Inserted =
             WarningLocToVal.try_emplace(Var->getBeginLoc(), RootValue).second;
         assert(Inserted && "multiple warnings at the same source location");
@@ -370,14 +430,42 @@ diagnoseCastExpr(const CastExpr *Stmt, const MatchFinder::MatchResult &Result,
       }
     }
 
-    // If no matches are found, the cast itself signals a special location
+    // If no matches are found, the null-check itself signals a special location
     auto [It, Inserted] = ValToDerefLoc.try_emplace(RootValue, nullptr);
 
     if (Inserted)
-      It->second = Stmt;
+      It->second = NullCheck;
   }
 
   return {};
+}
+
+NullCheckAfterDereferenceDiagnoser::ResultType
+diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
+                  NullCheckAfterDereferenceDiagnoser::DiagnoseArgs &Data) {
+  auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
+
+  const auto *LHSVar = Result.Nodes.getNodeAs<Expr>(kVar);
+  assert(LHSVar != nullptr);
+  const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
+  assert(RHSVar != nullptr);
+  
+  Arena &A = Env.arena();
+  std::vector<SourceLocation> NullVarLocations;
+
+  if (Value *LHSValue = Env.getValue(*LHSVar);
+      Env.proves(A.makeNot(getVal(kIsNonnull, *LHSValue).formula()))) {
+    WarningLocToVal.try_emplace(LHSVar->getBeginLoc(), LHSValue);
+    NullVarLocations.push_back(LHSVar->getBeginLoc());
+  }
+
+  if (Value *RHSValue = Env.getValue(*RHSVar);
+      Env.proves(A.makeNot(getVal(kIsNonnull, *RHSValue).formula()))) {
+    WarningLocToVal.try_emplace(RHSVar->getBeginLoc(), RHSValue);
+    NullVarLocations.push_back(RHSVar->getBeginLoc());
+  }
+
+  return {NullVarLocations, {}};
 }
 
 auto buildTransferMatchSwitch() {
@@ -388,12 +476,16 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<Expr>(addressofMatcher(), matchAddressofExpr)
       .CaseOfCFGStmt<Expr>(functionCallMatcher(), matchAnyPointerExpr)
       .CaseOfCFGStmt<Expr>(anyPointerMatcher(), matchAnyPointerExpr)
+      .CaseOfCFGStmt<Expr>(castExprMatcher(), matchNullCheckExpr)
+      .CaseOfCFGStmt<Expr>(nullCheckExprMatcher(), matchNullCheckExpr)
+      .CaseOfCFGStmt<BinaryOperator>(equalExprMatcher(), matchEqualExpr)
       .Build();
 }
 
 auto buildBranchTransferMatchSwitch() {
   return ASTMatchSwitchBuilder<Stmt, NullPointerAnalysisModel::TransferArgs>()
-      .CaseOf<CastExpr>(castExprMatcher(), matchCastExpr)
+      // .CaseOf<CastExpr>(castExprMatcher(), matchNullCheckExpr)
+      // .CaseOf<BinaryOperator>(equalExprMatcher(), matchEqualExpr)
       .Build();
 }
 
@@ -403,7 +495,9 @@ auto buildDiagnoseMatchSwitch() {
       .CaseOfCFGStmt<Expr>(derefMatcher(), diagnoseDerefLocation)
       .CaseOfCFGStmt<Expr>(arrowMatcher(), diagnoseDerefLocation)
       .CaseOfCFGStmt<Expr>(assignMatcher(), diagnoseAssignLocation)
-      .CaseOfCFGStmt<CastExpr>(castExprMatcher(), diagnoseCastExpr)
+      .CaseOfCFGStmt<Expr>(castExprMatcher(), diagnoseNullCheckExpr)
+      .CaseOfCFGStmt<Expr>(nullCheckExprMatcher(), diagnoseNullCheckExpr)
+      .CaseOfCFGStmt<Expr>(equalExprMatcher(), diagnoseEqualExpr)
       .Build();
 }
 

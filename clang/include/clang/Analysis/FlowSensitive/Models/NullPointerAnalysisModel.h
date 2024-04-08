@@ -83,8 +83,8 @@ public:
     const Environment &Env;
   };
 
-  /// Checked when known to be null, and checked after already dereferenced,
-  /// respectively.
+  /// Returns source locations for pointers that were checked when known to be
+  // null, and checked after already dereferenced, respectively.
   using ResultType =
       std::pair<std::vector<SourceLocation>, std::vector<SourceLocation>>;
 

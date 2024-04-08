@@ -43,7 +43,41 @@ void no_warning(int *p, bool b) {
   }
 
   if (p) {
+    // no-warning
     *p += 20;
+  }
+}
+
+void equals_nullptr(int *p) {
+  *p = 42;
+
+  if (p == nullptr) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
+    return;
+  }
+
+  if (p != nullptr) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-10]]:3: note: one of the locations where the pointer's value cannot be null
+    *p += 20;
+  }
+
+  if (nullptr != p) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-16]]:3: note: one of the locations where the pointer's value cannot be null
+    *p += 20;
+  }
+}
+
+void equals_other_ptr(int *p, int *q) {
+  if (q)
+    return;
+
+  if (p == q) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: pointer value is checked but it can only be null at this point
+    // CHECK-MESSAGES: :[[@LINE-5]]:7: note: one of the locations where the pointer's value can only be null  
+    return;
   }
 }
 
@@ -105,6 +139,7 @@ int nullptr_assignment(int *nullptr_param, bool b) {
   }
 
   if (nullptr_assigned) {
+    // no-warning
     return *nullptr_assigned;
   } else {
     return 0;
@@ -197,9 +232,8 @@ int chained_if(int *a) {
     return 0;
   }
 
-  // FIXME: Negations are not tracked properly when the previous conditional returns
   if (a) {
-    // --CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
     *a += 20;
     return *a;
   } else {
@@ -212,8 +246,7 @@ int double_if(int *a) {
     if (a) {
       // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: pointer value is checked even though it cannot be null at this point
       // --CHECK-MESSAGES: :[[@LINE-3]]:5: note: one of the locations where the pointer's value cannot be null
-      // FIXME: Add warning for branch statements where pointer is not null afterwards
-      *a += 20;
+      // FIXME: Add warning for branch satements where pointer is not null afterwards
       return *a;
     } else {
       return 0;
