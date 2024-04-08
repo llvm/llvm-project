@@ -19,6 +19,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include <array>
 #include <optional>
@@ -1226,18 +1227,53 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-/// Check if any of the symbols part of the expression has a cuda data
-/// attribute.
-inline bool HasCUDAAttrs(const Expr<SomeType> &expr) {
+// Get the number of distinct symbols with CUDA attribute in the expression.
+template <typename A> inline int GetNbOfCUDASymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
   for (const Symbol &sym : CollectSymbols(expr)) {
     if (const auto *details =
             sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
       if (details->cudaDataAttr()) {
-        return true;
+        symbols.insert(sym);
       }
     }
   }
-  return false;
+  return symbols.size();
+}
+
+// Check if any of the symbols part of the expression has a CUDA data
+// attribute.
+template <typename A> inline bool HasCUDAAttrs(const A &expr) {
+  return GetNbOfCUDASymbols(expr) > 0;
+}
+
+/// Check if the expression is a mix of host and device variables that require
+/// implicit data transfer.
+inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+  unsigned hostSymbols{0};
+  unsigned deviceSymbols{0};
+  for (const Symbol &sym : CollectSymbols(expr)) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr()) {
+        ++deviceSymbols;
+      } else {
+        if (sym.owner().IsDerivedType()) {
+          if (const auto *details =
+                  sym.owner()
+                      .GetSymbol()
+                      ->GetUltimate()
+                      .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr()) {
+              ++deviceSymbols;
+            }
+          }
+        }
+        ++hostSymbols;
+      }
+    }
+  }
+  return hostSymbols > 0 && deviceSymbols > 0;
 }
 
 } // namespace Fortran::evaluate

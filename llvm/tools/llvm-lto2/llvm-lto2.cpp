@@ -194,6 +194,7 @@ static cl::opt<bool> TryUseNewDbgInfoFormat(
 
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -239,6 +240,10 @@ static int run(int argc, char **argv) {
     // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
+  // Since llvm-lto2 collects multiple IR modules together, for simplicity's
+  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single debug
+  // info format.
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
   // more than once if it is defined in module-level assembly and
