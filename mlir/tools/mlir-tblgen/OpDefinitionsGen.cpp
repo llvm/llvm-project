@@ -4167,8 +4167,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     // value, in which case the default value may be arbitrary code.
     auto *method = genericAdaptorBase.addMethod(
         attr.getStorageType(), emitName + "Attr",
-        attr.hasDefaultValue() ? Method::Properties::None
-                               : Method::Properties::Inline);
+        attr.hasDefaultValue() || !useProperties ? Method::Properties::None
+                                                 : Method::Properties::Inline);
     ERROR_IF_PRUNED(method, "Adaptor::" + emitName + "Attr", op);
     auto &body = method->body().indent();
     if (!useProperties)
