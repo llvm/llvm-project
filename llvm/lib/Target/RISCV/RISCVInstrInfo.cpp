@@ -2998,24 +2998,13 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
 #undef CASE_WIDEOP_OPCODE_LMULS
 #undef CASE_WIDEOP_OPCODE_COMMON
 
-void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
-                                           MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator II,
-                                           const DebugLoc &DL, Register DestReg,
-                                           int64_t Amount,
-                                           MachineInstr::MIFlag Flag) const {
-  assert(Amount > 0 && "There is no need to get VLEN scaled value.");
-  assert(Amount % 8 == 0 &&
-         "Reserve the stack by the multiple of one vector size.");
-
+void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator II, const DebugLoc &DL,
+                            Register DestReg, uint32_t Amount,
+                            MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  assert(isInt<32>(Amount / 8) &&
-         "Expect the number of vector registers within 32-bits.");
-  uint32_t NumOfVReg = Amount / 8;
-
-  BuildMI(MBB, II, DL, get(RISCV::PseudoReadVLENB), DestReg).setMIFlag(Flag);
-  if (llvm::has_single_bit<uint32_t>(NumOfVReg)) {
-    uint32_t ShiftAmount = Log2_32(NumOfVReg);
+  if (llvm::has_single_bit<uint32_t>(Amount)) {
+    uint32_t ShiftAmount = Log2_32(Amount);
     if (ShiftAmount == 0)
       return;
     BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
@@ -3023,23 +3012,23 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
   } else if (STI.hasStdExtZba() &&
-             ((NumOfVReg % 3 == 0 && isPowerOf2_64(NumOfVReg / 3)) ||
-              (NumOfVReg % 5 == 0 && isPowerOf2_64(NumOfVReg / 5)) ||
-              (NumOfVReg % 9 == 0 && isPowerOf2_64(NumOfVReg / 9)))) {
+             ((Amount % 3 == 0 && isPowerOf2_64(Amount / 3)) ||
+              (Amount % 5 == 0 && isPowerOf2_64(Amount / 5)) ||
+              (Amount % 9 == 0 && isPowerOf2_64(Amount / 9)))) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;
     uint32_t ShiftAmount;
-    if (NumOfVReg % 9 == 0) {
+    if (Amount % 9 == 0) {
       Opc = RISCV::SH3ADD;
-      ShiftAmount = Log2_64(NumOfVReg / 9);
-    } else if (NumOfVReg % 5 == 0) {
+      ShiftAmount = Log2_64(Amount / 9);
+    } else if (Amount % 5 == 0) {
       Opc = RISCV::SH2ADD;
-      ShiftAmount = Log2_64(NumOfVReg / 5);
-    } else if (NumOfVReg % 3 == 0) {
+      ShiftAmount = Log2_64(Amount / 5);
+    } else if (Amount % 3 == 0) {
       Opc = RISCV::SH1ADD;
-      ShiftAmount = Log2_64(NumOfVReg / 3);
+      ShiftAmount = Log2_64(Amount / 3);
     } else {
-      llvm_unreachable("Unexpected number of vregs");
+      llvm_unreachable("implied by if-clause");
     }
     if (ShiftAmount)
       BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
@@ -3050,9 +3039,9 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(DestReg, RegState::Kill)
         .addReg(DestReg)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(NumOfVReg - 1)) {
+  } else if (llvm::has_single_bit<uint32_t>(Amount - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    uint32_t ShiftAmount = Log2_32(NumOfVReg - 1);
+    uint32_t ShiftAmount = Log2_32(Amount - 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
         .addReg(DestReg)
         .addImm(ShiftAmount)
@@ -3061,9 +3050,9 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(NumOfVReg + 1)) {
+  } else if (llvm::has_single_bit<uint32_t>(Amount + 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    uint32_t ShiftAmount = Log2_32(NumOfVReg + 1);
+    uint32_t ShiftAmount = Log2_32(Amount + 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
         .addReg(DestReg)
         .addImm(ShiftAmount)
@@ -3074,7 +3063,7 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
         .setMIFlag(Flag);
   } else if (STI.hasStdExtM() || STI.hasStdExtZmmul()) {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    movImm(MBB, II, DL, N, NumOfVReg, Flag);
+    movImm(MBB, II, DL, N, Amount, Flag);
     BuildMI(MBB, II, DL, get(RISCV::MUL), DestReg)
         .addReg(DestReg, RegState::Kill)
         .addReg(N, RegState::Kill)
@@ -3082,14 +3071,14 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   } else {
     Register Acc;
     uint32_t PrevShiftAmount = 0;
-    for (uint32_t ShiftAmount = 0; NumOfVReg >> ShiftAmount; ShiftAmount++) {
-      if (NumOfVReg & (1U << ShiftAmount)) {
+    for (uint32_t ShiftAmount = 0; Amount >> ShiftAmount; ShiftAmount++) {
+      if (Amount & (1U << ShiftAmount)) {
         if (ShiftAmount)
           BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
               .addReg(DestReg, RegState::Kill)
               .addImm(ShiftAmount - PrevShiftAmount)
               .setMIFlag(Flag);
-        if (NumOfVReg >> (ShiftAmount + 1)) {
+        if (Amount >> (ShiftAmount + 1)) {
           // If we don't have an accmulator yet, create it and copy DestReg.
           if (!Acc) {
             Acc = MRI.createVirtualRegister(&RISCV::GPRRegClass);
