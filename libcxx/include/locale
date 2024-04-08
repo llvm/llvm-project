@@ -955,10 +955,11 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
   char* __a     = &__buf[0];
   char* __a_end = __a;
   unsigned __g[__num_get_base::__num_get_buf_sz];
-  unsigned* __g_end = __g;
-  unsigned __dc     = 0;
-  bool __in_units   = true;
-  char __exp        = 'E';
+  unsigned* __g_end        = __g;
+  unsigned __dc            = 0;
+  bool __in_units          = true;
+  char __exp               = 'E';
+  bool __is_leading_parsed = false;
   for (; __b != __e; ++__b) {
     if (__a_end == __a + __buf.size()) {
       size_t __tmp = __buf.size();
@@ -981,6 +982,21 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
             __dc,
             __atoms))
       break;
+
+    // the leading character excluding the sign must be a decimal digit
+    if (!__is_leading_parsed) {
+      if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
+        if ('0' <= __a[0] && __a[0] <= '9')
+          __is_leading_parsed = true;
+        else
+          break;
+      } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
+        if ('0' <= __a[1] && __a[1] <= '9')
+          __is_leading_parsed = true;
+        else
+          break;
+      }
+    }
   }
   if (__grouping.size() != 0 && __in_units && __g_end - __g < __num_get_base::__num_get_buf_sz)
     *__g_end++ = __dc;
