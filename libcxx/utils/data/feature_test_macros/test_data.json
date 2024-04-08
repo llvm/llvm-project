@@ -99,12 +99,27 @@
     ]
   },
   {
+    "name": "__cpp_lib_parallel_algorithm",
+    "values": {
+      "c++17": {
+        "201603": [
+          {
+            "implemented": true
+          }
+        ]
+      }
+    },
+    "headers": [
+      "algorithm",
+      "numeric"
+    ]
+  },
+  {
     "name": "__cpp_lib_variant",
     "values": {
       "c++17": {
         "202102": [
           {
-            "number": "",
             "title": "``std::visit`` for classes derived from ``std::variant``",
             "implemented": true
           }

@@ -1868,25 +1868,41 @@ Status
         f.write(doc_str)
 
 
-def get_table(data):
+def get_std_dialects(data):
+    """Impementation for feature_test_macros.get_std_dialects()."""
+    dialects = set()
+    for feature in data:
+        keys = feature["values"].keys()
+        assert len(keys) > 0, "'values' is empty"
+        dialects |= keys
+
+    return sorted(dialects)
+
+
+def get_dialect_versions(data, std_dialects, use_implemented_status):
+    """Impementation for feature_test_macros.get_(std_|)dialect_versions()."""
     result = dict()
     for feature in data:
         last = None
         entry = dict()
         implemented = True
-        for std in get_std_dialects():
+        for std in std_dialects:
             if std not in feature["values"].keys():
                 if last == None:
                     continue
                 else:
                     entry[std] = last
             else:
-                if last == None:
-                    last = ""
                 if implemented:
-                    for value in feature["values"][std]:
-                        for paper in list(feature["values"][std][value]):
-                            if not paper["implemented"]:
+                    values = feature["values"][std]
+                    assert len(values) > 0, f"{feature['name']}[{std}] has no entries"
+                    for value in values:
+                        papers = list(values[value])
+                        assert (
+                            len(papers) > 0
+                        ), f"{feature['name']}[{std}][{value}] has no entries"
+                        for paper in papers:
+                            if use_implemented_status and not paper["implemented"]:
                                 implemented = False
                                 break
                         if implemented:
@@ -1898,6 +1914,167 @@ def get_table(data):
         result[feature["name"]] = entry
 
     return result
+
+
+class feature_test_macros:
+    """Provides all feature-test macro (FMT) output components.
+
+    The class has several generators to use the feature-test macros in libc++:
+    - FTM status page
+    - The version header and its tests
+
+    This class is not intended to duplicate
+    https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations#library-feature-test-macros
+    SD-FeatureTest: Feature-Test Macros and Policies
+
+    Historically libc++ did not list all papers affecting a FTM, the new data
+    structure is able to do that. However there is no intention to add the
+    historical data. After papers have been implemented this information can be
+    removed. For example, __cpp_lib_format's value 201907 requires 3 papers,
+    once implemented it can be reduced to 1 paper and remove the paper number
+    and title. This would reduce the size of the data.
+
+    The input data is stored in the following JSON format:
+    [ # A list with multiple feature-test macro entries.
+      {
+        # required
+        # The name of the feature test macro. These names should be unique and
+        # sorted in the list.
+        "name": "__cpp_lib_any",
+
+        # required
+        # A map with the value of the FTM based on the language standard. Only
+        # the versions in which the value of the FTM changes are listed. For
+        # example, this macro's value does not change in C++20 so it does not
+        # list C++20. If it changes in C++26, it will have entries for C++17 and
+        # C++26.
+        "values": {
+
+          # required
+          # The language standard, also named dialect in this class.
+          "c++17": {
+
+            # required
+            # The value of the feature test macro. This contains an array with
+            # one or more papers that need to be implemented before this value
+            # is considered implemented.
+            "201606": [
+              {
+                # optional
+                # Contains the paper number that is part of the FTM version.
+                "number": "P0220R1",
+
+                # optional
+                # Contains the title of the paper that is part of the FTM
+                # version.
+                "title": "Adopt Library Fundamentals V1 TS Components for C++17"
+
+                # required
+                # The implementation status of the paper.
+                "implemented": true
+              }
+            ]
+          }
+        },
+
+        # required
+        # A sorted list of headers that should provide the FTM. The header
+        # <version> is automatically added to this list. This list could be
+        # empty. For example, __cpp_lib_modules is only present in version.
+        # Requiring the field makes it easier to detect accidental omission.
+        "headers": [
+          "any"
+        ],
+
+        # optional, required when libcxx_guard is present
+        # This field is used only to generate the unit tests for the
+        # feature-test macros. It can't depend on macros defined in <__config>
+        # because the `test/std/` parts of the test suite are intended to be
+        # portable to any C++ standard library implementation, not just libc++.
+        # It may depend on
+        # * macros defined by the compiler itself, or
+        # * macros generated by CMake.
+        # In some cases we add also depend on macros defined in
+        # <__availability>.
+        "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR"
+
+        # optional, required when test_suite_guard is present
+        # This field is used only to guard the feature-test macro in
+        # <version>. It may be the same as `test_suite_guard`, or it may
+        # depend on macros defined in <__config>.
+        "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR"
+      },
+    ]
+    """
+
+    # The JSON data structor.
+    __data = None
+
+    # These values are used internally multiple times. They are lazily loaded
+    # and cached. Values that are expected to be used once are not cached.
+    __std_dialects = None
+    __std_dialect_versions = None
+    __dialect_versions = None
+
+    def __init__(self, filename):
+        """Initializes the class with the JSON data in the file 'filename'."""
+        self.__data = json.load(open(filename))
+
+    def get_std_dialects(self):
+        """Returns the C++ dialects avaiable.
+
+        The available dialects are based on the 'c++xy' keys found the 'values'
+        entries in '__data'. So when WG21 starts to feature-test macros for a
+        future C++ Standard this dialect will automatically be available.
+
+        The return value is a sorted list with the C++ dialects used. Since FTM
+        were added in C++14 the list will not contain C++98 or C++11.
+        """
+        if not self.__std_dialects:
+            self.__std_dialects = get_std_dialects(self.__data)
+
+        return self.__std_dialects
+
+    def get_std_dialect_versions(self):
+        """Returns the FTM versions per dialect in the Standard.
+
+        This function does not use the 'implemented' flag. The output contains
+        the versions used in the Standard. When a FTM in libc++ is not
+        implemented according to the Standard to output may opt to show the
+        expected value.
+
+        The result is a dict with the following content
+        - key: Name of the feature test macro.
+        - value: A dict with the following content:
+          * key: The version of the C++ dialect.
+          * value: The value of the feature-test macro.
+        """
+        if not self.__std_dialect_versions:
+            self.__std_dialect_versions = get_dialect_versions(
+                self.__data, self.get_std_dialects(), False
+            )
+
+        return self.__std_dialect_versions
+
+    def get_dialect_versions(self):
+        """Returns the FTM versions per dialect implemented in libc++.
+
+        Unlike `get_std_dialect_versions` this function uses the 'implemented'
+        flag. This returns the actual implementation status in libc++.
+
+        The result is a dict with the following content
+        - key: Name of the feature test macro.
+        - value: A dict with the following content:
+          * key: The version of the C++ dialect.
+          * value: The value of the feature-test macro. When a feature-test
+            macro is not implemented its value is None.
+        """
+        if not self.__dialect_versions:
+            self.__dialect_versions = get_dialect_versions(
+                self.__data, self.get_std_dialects(), True
+            )
+
+        return self.__dialect_versions
 
 
 def main():
