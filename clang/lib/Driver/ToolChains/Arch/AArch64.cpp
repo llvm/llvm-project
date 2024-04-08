@@ -402,9 +402,6 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
 
-  if (Args.hasArg(options::OPT_ffixed_x30))
-    Features.push_back("+reserve-x30");
-
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");
 
