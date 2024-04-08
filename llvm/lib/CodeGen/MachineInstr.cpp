@@ -1028,8 +1028,9 @@ bool MachineInstr::hasRegisterImplicitUseOperand(Register Reg) const {
 /// findRegisterUseOperandIdx() - Returns the MachineOperand that is a use of
 /// the specific register or -1 if it is not found. It further tightens
 /// the search criteria to a use that kills the register if isKill is true.
-int MachineInstr::findRegisterUseOperandIdx(
-    Register Reg, bool isKill, const TargetRegisterInfo *TRI) const {
+int MachineInstr::findRegisterUseOperandIdx(Register Reg,
+                                            const TargetRegisterInfo *TRI,
+                                            bool isKill) const {
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
     if (!MO.isReg() || !MO.isUse())
@@ -1076,9 +1077,9 @@ MachineInstr::readsWritesVirtualRegister(Register Reg,
 /// the specified register or -1 if it is not found. If isDead is true, defs
 /// that are not dead are skipped. If TargetRegisterInfo is non-null, then it
 /// also checks if there is a def of a super-register.
-int
-MachineInstr::findRegisterDefOperandIdx(Register Reg, bool isDead, bool Overlap,
-                                        const TargetRegisterInfo *TRI) const {
+int MachineInstr::findRegisterDefOperandIdx(Register Reg,
+                                            const TargetRegisterInfo *TRI,
+                                            bool isDead, bool Overlap) const {
   bool isPhys = Reg.isPhysical();
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = getOperand(i);
@@ -2111,7 +2112,7 @@ void MachineInstr::setRegisterDefReadUndef(Register Reg, bool IsUndef) {
 void MachineInstr::addRegisterDefined(Register Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (Reg.isPhysical()) {
-    MachineOperand *MO = findRegisterDefOperand(Reg, false, false, RegInfo);
+    MachineOperand *MO = findRegisterDefOperand(Reg, RegInfo, false, false);
     if (MO)
       return;
   } else {
