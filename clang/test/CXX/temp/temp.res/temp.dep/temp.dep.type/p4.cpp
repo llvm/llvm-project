@@ -371,3 +371,24 @@ namespace N1 {
     }
   };
 } // namespace N1
+
+namespace N2 {
+  template<typename T>
+  struct A {
+    struct B {
+      using C = A;
+
+      void not_instantiated(A *a, B *b) {
+        b->x; // expected-error{{no member named 'x' in 'N2::A::B'}}
+        b->B::x; // expected-error{{no member named 'x' in 'N2::A::B'}}
+        a->B::C::x; // expected-error{{no member named 'x' in 'A<T>'}}
+      }
+    };
+
+    void not_instantiated(A *a, B *b) {
+      b->x;
+      b->B::x;
+      a->B::C::x;
+    }
+  };
+}
