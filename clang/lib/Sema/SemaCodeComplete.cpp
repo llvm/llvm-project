@@ -20,6 +20,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -764,6 +765,10 @@ getRequiredQualification(ASTContext &Context, const DeclContext *CurContext,
 // Filter out names reserved for the implementation if they come from a
 // system header.
 static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
+  // Debuggers want access to all identifiers, including reserved ones.
+  if (SemaRef.getLangOpts().DebuggerSupport)
+    return false;
+
   ReservedIdentifierStatus Status = ND->isReserved(SemaRef.getLangOpts());
   // Ignore reserved names for compiler provided decls.
   if (isReservedInAllContexts(Status) && ND->getLocation().isInvalid())
@@ -5673,6 +5678,10 @@ QualType getApproximateType(const Expr *E) {
       if (VD->hasInit())
         return getApproximateType(VD->getInit());
     }
+  }
+  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref)
+      return UO->getSubExpr()->getType()->getPointeeType();
   }
   return Unresolved;
 }

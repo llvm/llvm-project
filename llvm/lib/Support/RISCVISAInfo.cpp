@@ -36,6 +36,11 @@ struct RISCVSupportedExtension {
   }
 };
 
+struct RISCVProfile {
+  StringLiteral Name;
+  StringLiteral MArch;
+};
+
 } // end anonymous namespace
 
 static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
@@ -90,11 +95,14 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xcvmac", {1, 0}},
     {"xcvmem", {1, 0}},
     {"xcvsimd", {1, 0}},
+    {"xsfcease", {1, 0}},
     {"xsfvcp", {1, 0}},
     {"xsfvfnrclipxfqf", {1, 0}},
     {"xsfvfwmaccqqq", {1, 0}},
     {"xsfvqmaccdod", {1, 0}},
     {"xsfvqmaccqoq", {1, 0}},
+    {"xsifivecdiscarddlone", {1, 0}},
+    {"xsifivecflushdlone", {1, 0}},
     {"xtheadba", {1, 0}},
     {"xtheadbb", {1, 0}},
     {"xtheadbs", {1, 0}},
@@ -126,6 +134,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zcd", {1, 0}},
     {"zce", {1, 0}},
     {"zcf", {1, 0}},
+    {"zcmop", {1, 0}},
     {"zcmp", {1, 0}},
     {"zcmt", {1, 0}},
 
@@ -154,6 +163,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zihintntl", {1, 0}},
     {"zihintpause", {2, 0}},
     {"zihpm", {2, 0}},
+    {"zimop", {1, 0}},
 
     {"zk", {1, 0}},
     {"zkn", {1, 0}},
@@ -225,14 +235,10 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zalasr", {0, 1}},
     {"zalrsc", {0, 2}},
 
-    {"zcmop", {0, 2}},
-
     {"zfbfmin", {1, 0}},
 
     {"zicfilp", {0, 4}},
     {"zicfiss", {0, 4}},
-
-    {"zimop", {0, 1}},
 
     {"ztso", {0, 1}},
 
@@ -240,6 +246,42 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zvfbfwma", {1, 0}},
 };
 // clang-format on
+
+static constexpr RISCVProfile SupportedProfiles[] = {
+    {"rvi20u32", "rv32i"},
+    {"rvi20u64", "rv64i"},
+    {"rva20u64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_za128rs"},
+    {"rva20s64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zifencei_"
+                 "za128rs_ssccptr_sstvala_sstvecd_svade_svbare"},
+    {"rva22u64",
+     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
+     "zicntr_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt"},
+    {"rva22s64",
+     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
+     "zicntr_zifencei_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt_ssccptr_"
+     "sscounterenw_sstvala_sstvecd_svade_svbare_svinval_svpbmt"},
+    {"rva23u64",
+     "rv64imafdcv_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
+     "zicntr_zicond_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_zfa_zfhmin_"
+     "zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt"},
+    {"rva23s64",
+     "rv64imafdcvh_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
+     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
+     "zfa_zfhmin_zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt_shcounterenw_"
+     "shgatpa_shtvala_shvsatpa_shvstvala_shvstvecd_ssccptr_sscofpmf_"
+     "sscounterenw_ssnpm0p8_ssstateen_sstc_sstvala_sstvecd_ssu64xl_svade_"
+     "svbare_svinval_svnapot_svpbmt"},
+    {"rvb23u64", "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_"
+                 "zicclsm_ziccrse_zicntr_zicond_zihintntl_zihintpause_zihpm_"
+                 "zimop_za64rs_zawrs_zfa_zcb_zcmop_zba_zbb_zbs_zkt"},
+    {"rvb23s64",
+     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
+     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
+     "zfa_zcb_zcmop_zba_zbb_zbs_zkt_ssccptr_sscofpmf_sscounterenw_sstc_sstvala_"
+     "sstvecd_ssu64xl_svade_svbare_svinval_svnapot_svpbmt"},
+    {"rvm23u32", "rv32im_zicbop_zicond_zicsr_zihintntl_zihintpause_zimop_zca_"
+                 "zcb_zce_zcmop_zcmp_zcmt_zba_zbb_zbs"},
+};
 
 static void verifyTables() {
 #ifndef NDEBUG
@@ -258,7 +300,7 @@ static void PrintExtension(StringRef Name, StringRef Version,
                            StringRef Description) {
   outs().indent(4);
   unsigned VersionWidth = Description.empty() ? 0 : 10;
-  outs() << left_justify(Name, 20) << left_justify(Version, VersionWidth)
+  outs() << left_justify(Name, 21) << left_justify(Version, VersionWidth)
          << Description << "\n";
 }
 
@@ -852,6 +894,29 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   if (llvm::any_of(Arch, isupper)) {
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
+  }
+
+  if (Arch.starts_with("rvi") || Arch.starts_with("rva") ||
+      Arch.starts_with("rvb") || Arch.starts_with("rvm")) {
+    const auto *FoundProfile =
+        llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
+          return Arch.starts_with(Profile.Name);
+        });
+
+    if (FoundProfile == std::end(SupportedProfiles))
+      return createStringError(errc::invalid_argument, "unsupported profile");
+
+    std::string NewArch = FoundProfile->MArch.str();
+    StringRef ArchWithoutProfile = Arch.substr(FoundProfile->Name.size());
+    if (!ArchWithoutProfile.empty()) {
+      if (!ArchWithoutProfile.starts_with("_"))
+        return createStringError(
+            errc::invalid_argument,
+            "additional extensions must be after separator '_'");
+      NewArch += ArchWithoutProfile.str();
+    }
+    return parseArchString(NewArch, EnableExperimentalExtension,
+                           ExperimentalExtensionVersionCheck, IgnoreUnknown);
   }
 
   bool HasRV64 = Arch.starts_with("rv64");

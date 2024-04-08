@@ -123,6 +123,9 @@ public:
 
   unsigned getDepth() const { return Depth; }
 
+  void dump() const { dump(llvm::errs(), 0); }
+  void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
+
 private:
   /// Returns an original argument from the stack.
   template <typename T> const T &stackRef(unsigned Offset) const {

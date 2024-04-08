@@ -1079,16 +1079,16 @@ Expected<FileType> TextAPIReader::canRead(MemoryBufferRef InputBuffer) {
   if (!TAPIFile.ends_with("..."))
     return createStringError(std::errc::not_supported, "unsupported file type");
 
-  if (TAPIFile.starts_with("--- !tapi-tbd\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd"))
     return FileType::TBD_V4;
 
-  if (TAPIFile.starts_with("--- !tapi-tbd-v3\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd-v3"))
     return FileType::TBD_V3;
 
-  if (TAPIFile.starts_with("--- !tapi-tbd-v2\n"))
+  if (TAPIFile.starts_with("--- !tapi-tbd-v2"))
     return FileType::TBD_V2;
 
-  if (TAPIFile.starts_with("--- !tapi-tbd-v1\n") ||
+  if (TAPIFile.starts_with("--- !tapi-tbd-v1") ||
       TAPIFile.starts_with("---\narchs:"))
     return FileType::TBD_V1;
 

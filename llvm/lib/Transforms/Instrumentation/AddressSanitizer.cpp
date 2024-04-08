@@ -43,6 +43,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -643,20 +644,70 @@ static uint64_t GetCtorAndDtorPriority(Triple &TargetTriple) {
 
 namespace {
 /// Helper RAII class to post-process inserted asan runtime calls during a
-/// pass on a single Function. This is a no-op implementation, for a first NFC
-/// commit. Coming up: detect and add "funclet" opBundle to function calls that
-/// need them.
+/// pass on a single Function. Upon end of scope, detects and applies the
+/// required funclet OpBundle.
 class RuntimeCallInserter {
   Function *OwnerFn = nullptr;
+  bool TrackInsertedCalls = false;
+  SmallVector<CallInst *> InsertedCalls;
 
 public:
-  RuntimeCallInserter(Function &Fn) : OwnerFn(&Fn) {}
+  RuntimeCallInserter(Function &Fn) : OwnerFn(&Fn) {
+    if (Fn.hasPersonalityFn()) {
+      auto Personality = classifyEHPersonality(Fn.getPersonalityFn());
+      if (isScopedEHPersonality(Personality))
+        TrackInsertedCalls = true;
+    }
+  }
+
+  ~RuntimeCallInserter() {
+    if (InsertedCalls.empty())
+      return;
+    assert(TrackInsertedCalls && "Calls were wrongly tracked");
+
+    DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(*OwnerFn);
+    for (CallInst *CI : InsertedCalls) {
+      BasicBlock *BB = CI->getParent();
+      assert(BB && "Instruction doesn't belong to a BasicBlock");
+      assert(BB->getParent() == OwnerFn &&
+             "Instruction doesn't belong to the expected Function!");
+
+      ColorVector &Colors = BlockColors[BB];
+      // funclet opbundles are only valid in monochromatic BBs.
+      // Note that unreachable BBs are seen as colorless by colorEHFunclets()
+      // and will be DCE'ed later.
+      if (Colors.empty())
+        continue;
+      if (Colors.size() != 1) {
+        OwnerFn->getContext().emitError(
+            "Instruction's BasicBlock is not monochromatic");
+        continue;
+      }
+
+      BasicBlock *Color = Colors.front();
+      Instruction *EHPad = Color->getFirstNonPHI();
+
+      if (EHPad && EHPad->isEHPad()) {
+        // Replace CI with a clone with an added funclet OperandBundle
+        OperandBundleDef OB("funclet", EHPad);
+        auto *NewCall =
+            CallBase::addOperandBundle(CI, LLVMContext::OB_funclet, OB, CI);
+        NewCall->copyMetadata(*CI);
+        CI->replaceAllUsesWith(NewCall);
+        CI->eraseFromParent();
+      }
+    }
+  }
 
   CallInst *createRuntimeCall(IRBuilder<> &IRB, FunctionCallee Callee,
                               ArrayRef<Value *> Args = {},
                               const Twine &Name = "") {
     assert(IRB.GetInsertBlock()->getParent() == OwnerFn);
-    return IRB.CreateCall(Callee, Args, Name, nullptr);
+
+    CallInst *Inst = IRB.CreateCall(Callee, Args, Name, nullptr);
+    if (TrackInsertedCalls)
+      InsertedCalls.push_back(Inst);
+    return Inst;
   }
 };
 

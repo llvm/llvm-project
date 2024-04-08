@@ -63,7 +63,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
-  if (pair.GetNumChildren() > 1) {
+  if (pair.GetNumChildrenIgnoringErrors() > 1) {
     ValueObjectSP second_child = pair.GetChildAtIndex(1);
     if (second_child) {
       value = second_child->GetChildMemberWithName("__value_");
@@ -106,13 +106,13 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
     stream.Printf(
         " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
     stream.Printf(
         " Function in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
@@ -351,8 +351,8 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-uint32_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibCxxMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
@@ -509,8 +509,8 @@ lldb::ChildCacheState lldb_private::formatters::
   return lldb::ChildCacheState::eRefetch;
 }
 
-uint32_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
@@ -566,8 +566,8 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     Update();
 }
 
-uint32_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
   return (m_cntrl ? 1 : 0);
 }
 
@@ -661,8 +661,8 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
-uint32_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   if (m_value_ptr_sp)
     return m_deleter_sp ? 2 : 1;
   return 0;
@@ -1192,7 +1192,7 @@ bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
     return false;
 
   const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
-  if (weekday >= 0 && weekday < 7)
+  if (weekday < 7)
     stream << "weekday=" << weekdays[weekday];
   else
     stream.Printf("weekday=%u", weekday);

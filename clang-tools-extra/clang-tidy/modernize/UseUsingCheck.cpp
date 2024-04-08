@@ -8,6 +8,7 @@
 
 #include "UseUsingCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclGroup.h"
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
@@ -24,6 +25,7 @@ static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
 static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
 static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
 static constexpr llvm::StringLiteral TypedefName = "typedef";
+static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -41,7 +43,8 @@ void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
           unless(isInstantiated()),
           optionally(hasAncestor(
               linkageSpecDecl(isExternCLinkage()).bind(ExternCDeclName))),
-          hasParent(decl().bind(ParentDeclName)))
+          anyOf(hasParent(decl().bind(ParentDeclName)),
+                hasParent(declStmt().bind(DeclStmtName))))
           .bind(TypedefName),
       this);
 
@@ -51,17 +54,32 @@ void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
       tagDecl(
           anyOf(allOf(unless(anyOf(isImplicit(),
                                    classTemplateSpecializationDecl())),
-                      hasParent(decl().bind(ParentDeclName))),
+                      anyOf(hasParent(decl().bind(ParentDeclName)),
+                            hasParent(declStmt().bind(DeclStmtName)))),
                 // We want the parent of the ClassTemplateDecl, not the parent
                 // of the specialization.
                 classTemplateSpecializationDecl(hasAncestor(classTemplateDecl(
-                    hasParent(decl().bind(ParentDeclName)))))))
+                    anyOf(hasParent(decl().bind(ParentDeclName)),
+                          hasParent(declStmt().bind(DeclStmtName))))))))
           .bind(TagDeclName),
       this);
 }
 
 void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ParentDecl = Result.Nodes.getNodeAs<Decl>(ParentDeclName);
+
+  if (!ParentDecl) {
+    const auto *ParentDeclStmt = Result.Nodes.getNodeAs<DeclStmt>(DeclStmtName);
+    if (ParentDeclStmt) {
+      if (ParentDeclStmt->isSingleDecl())
+        ParentDecl = ParentDeclStmt->getSingleDecl();
+      else
+        ParentDecl =
+            ParentDeclStmt->getDeclGroup().getDeclGroup()
+                [ParentDeclStmt->getDeclGroup().getDeclGroup().size() - 1];
+    }
+  }
+
   if (!ParentDecl)
     return;
 

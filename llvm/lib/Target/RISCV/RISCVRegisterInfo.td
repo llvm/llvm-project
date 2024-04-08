@@ -64,9 +64,14 @@ def sub_vrm1_6 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_0>;
 def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 
 // GPR sizes change with HwMode.
-// FIXME: Support HwMode in SubRegIndex?
-def sub_gpr_even : SubRegIndex<-1>;
-def sub_gpr_odd  : SubRegIndex<-1, -1>;
+def sub_gpr_even : SubRegIndex<32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32>, SubRegRange<64>]>;
+}
+def sub_gpr_odd  : SubRegIndex<32, 32> {
+  let SubRegRanges = SubRegRangeByHwMode<[RV32, RV64],
+                                         [SubRegRange<32, 32>, SubRegRange<64, 64>]>;
+}
 } // Namespace = "RISCV"
 
 // Integer registers
@@ -127,8 +132,21 @@ def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
+class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
+    : RegisterClass<"RISCV", regTypes, align, regList> {
+  bit IsVRegClass = 0;
+  int VLMul = 1;
+  int NF = 1;
+
+  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
+
+  let TSFlags{0} = IsVRegClass;
+  let TSFlags{3-1} = !logtwo(VLMul);
+  let TSFlags{6-4} = !sub(NF, 1);
+}
+
 class GPRRegisterClass<dag regList>
-    : RegisterClass<"RISCV", [XLenVT, XLenFVT, i32], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT, i32], 32, regList> {
   let RegInfos = XLenRI;
 }
 
@@ -224,7 +242,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
+def FPR16 : RISCVRegisterClass<[f16, bf16], 16, (add
     (sequence "F%u_H", 15, 10), // fa5-fa0
     (sequence "F%u_H", 0, 7),   // ft0-f7
     (sequence "F%u_H", 16, 17), // fa6-fa7
@@ -233,7 +251,7 @@ def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
     (sequence "F%u_H", 18, 27)  // fs2-fs11
 )>;
 
-def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
+def FPR32 : RISCVRegisterClass<[f32], 32, (add
     (sequence "F%u_F", 15, 10),
     (sequence "F%u_F", 0, 7),
     (sequence "F%u_F", 16, 17),
@@ -242,14 +260,14 @@ def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
     (sequence "F%u_F", 18, 27)
 )>;
 
-def FPR32C : RegisterClass<"RISCV", [f32], 32, (add
+def FPR32C : RISCVRegisterClass<[f32], 32, (add
   (sequence "F%u_F", 15, 10),
   (sequence "F%u_F", 8, 9)
 )>;
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
+def FPR64 : RISCVRegisterClass<[f64], 64, (add
     (sequence "F%u_D", 15, 10),
     (sequence "F%u_D", 0, 7),
     (sequence "F%u_D", 16, 17),
@@ -258,7 +276,7 @@ def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
     (sequence "F%u_D", 18, 27)
 )>;
 
-def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
+def FPR64C : RISCVRegisterClass<[f64], 64, (add
   (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
 )>;
@@ -459,8 +477,8 @@ let isConstant = true in
 def VLENB  : RISCVReg<0, "vlenb">,
              DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 
-def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
-                          (add VTYPE, VL, VLENB)> {
+def VCSR : RISCVRegisterClass<[XLenVT], 32,
+                              (add VTYPE, VL, VLENB)> {
   let RegInfos = XLenRI;
   let isAllocatable = 0;
 }
@@ -478,12 +496,11 @@ foreach m = [1, 2, 4] in {
 }
 
 class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
-  : RegisterClass<"RISCV",
-                  regTypes,
-                  64, // The maximum supported ELEN is 64.
-                  regList> {
-  int VLMul = Vlmul;
-  int Size = !mul(Vlmul, 64);
+    : RISCVRegisterClass<regTypes,
+                         64, // The maximum supported ELEN is 64.
+                         regList> {
+  let IsVRegClass = 1;
+  let VLMul = Vlmul;
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -532,13 +549,11 @@ def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
-def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
-  let Size = 64;
-}
+def VMV0 : VReg<VMaskVTs, (add V0), 1>;
 
 let RegInfos = XLenRI in {
-def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
-def GPRF32  : RegisterClass<"RISCV", [f32], 32, (add GPR)>;
+def GPRF16  : RISCVRegisterClass<[f16], 16, (add GPR)>;
+def GPRF32  : RISCVRegisterClass<[f32], 32, (add GPR)>;
 } // RegInfos = XLenRI
 
 // Dummy zero register for use in the register pair containing X0 (as X1 is
@@ -573,9 +588,9 @@ let RegAltNameIndices = [ABIRegAltName] in {
 }
 
 let RegInfos = RegInfoByHwMode<[RV32, RV64],
-                               [RegInfo<64, 64, 64>, RegInfo<128, 128, 128>]>,
+                               [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>,
     DecoderMethod = "DecodeGPRPairRegisterClass" in
-def GPRPair : RegisterClass<"RISCV", [XLenPairFVT], 64, (add
+def GPRPair : RISCVRegisterClass<[XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
@@ -589,13 +604,17 @@ def VM : VReg<VMaskVTs, (add VR), 1>;
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-                                    !mul(nf, m)>;
-    def "VRN" # nf # "M" # m: VReg<[untyped],
-                               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-                                    !mul(nf, m)>;
+    let NF = nf in {
+      def "VRN" # nf # "M" # m # "NoV0"
+        : VReg<[untyped],
+               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+               m>;
+      def "VRN" # nf # "M" # m
+        : VReg<[untyped],
+               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+               m>;
+    }
   }
 }
 

@@ -318,7 +318,7 @@ func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tens
 func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
                          %arg1: index,
                          %arg2: f32) -> tensor<128xf32, #SparseVector> {
-  %0 = sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf32, #SparseVector>
+  %0 = tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf32, #SparseVector>
   return %0 : tensor<128xf32, #SparseVector>
 }
 

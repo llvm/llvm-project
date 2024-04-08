@@ -297,11 +297,11 @@ static void testDebugInfoAttributes(MlirContext ctx) {
                                                    1, 0, 8, di_type));
   // CHECK: #llvm.di_derived_type<{{.*}}>
   mlirAttributeDump(
-      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0));
+      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, di_type));
 
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
-      ctx, 0, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type));
+      ctx, 0, id, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1, &di_type));
 
   MlirAttribute subroutine_type =
       mlirLLVMDISubroutineTypeAttrGet(ctx, 0x0, 1, &di_type);

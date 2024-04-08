@@ -257,6 +257,26 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
       message(STATUS "Linker detection: unknown")
     endif()
   endif()
+
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    include(CheckLinkerFlag)
+    # Linkers that support Darwin allow a setting to internalize all symbol exports, 
+    # aiding in reducing binary size and often is applicable for executables.
+    check_linker_flag(C "-Wl,-no_exported_symbols" LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+    
+    if (NOT LLVM_USE_LINKER) 
+      # Apple's linker complains about duplicate libraries, which CMake likes to do
+      # to support ELF platforms. To silence that warning, we can use
+      # -no_warn_duplicate_libraries, but only in versions of the linker that
+      # support that flag.
+      check_linker_flag(C "-Wl,-no_warn_duplicate_libraries" LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    else()
+      set(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES OFF CACHE INTERNAL "")
+    endif()
+  
+  else() 
+    set(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS OFF CACHE INTERNAL "")
+  endif()
 endif()
 
 function(add_link_opts target_name)
@@ -308,6 +328,11 @@ function(add_link_opts target_name)
                      LINK_FLAGS " -Wl,-bnogc")
       endif()
     endif()
+  endif()
+
+  if(LLVM_LINKER_SUPPORTS_NO_WARN_DUPLICATE_LIBRARIES)
+    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                 LINK_FLAGS " -Wl,-no_warn_duplicate_libraries")
   endif()
 
   if(ARG_SUPPORT_PLUGINS AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
@@ -1013,6 +1038,17 @@ macro(add_llvm_executable name)
     add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
   endif(LLVM_EXPORTED_SYMBOL_FILE)
 
+  if (DEFINED LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES AND 
+      NOT LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES)
+    if(LLVM_LINKER_SUPPORTS_NO_EXPORTED_SYMBOLS)
+      set_property(TARGET ${name} APPEND_STRING PROPERTY
+        LINK_FLAGS " -Wl,-no_exported_symbols")
+    else()
+      message(FATAL_ERROR
+        "LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES cannot be disabled when linker does not support \"-no_exported_symbols\"")
+    endif()
+  endif()
+
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(USE_SHARED USE_SHARED)
   endif()
@@ -1621,8 +1657,14 @@ function(add_unittest test_suite test_name)
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
     if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,--lto-O0")
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
     elseif(LINKER_IS_LLD_LINK)
       set_property(TARGET ${test_name} APPEND_STRING PROPERTY
                     LINK_FLAGS " /opt:lldlto=0")
@@ -1947,18 +1989,11 @@ function(add_lit_target target comment)
     list(APPEND LIT_COMMAND --param ${param})
   endforeach()
   if (ARG_UNPARSED_ARGUMENTS)
-    if (LLVM_PARALLEL_LIT)
-     add_custom_target(${target}
-       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
-       COMMENT "${comment}"
-       )
-    else()
-     add_custom_target(${target}
-       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
-       COMMENT "${comment}"
-       USES_TERMINAL
-       )
-    endif()
+    add_custom_target(${target}
+      COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
+      COMMENT "${comment}"
+      USES_TERMINAL
+      )
   else()
     add_custom_target(${target}
       COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, no tools built.")
@@ -2081,7 +2116,7 @@ function(add_lit_testsuites project directory)
 endfunction()
 
 function(llvm_install_library_symlink name dest type)
-  cmake_parse_arguments(ARG "" "COMPONENT;SOVERSION" "" ${ARGN})
+  cmake_parse_arguments(ARG "FULL_DEST" "COMPONENT" "" ${ARGN})
   foreach(path ${CMAKE_MODULE_PATH})
     if(EXISTS ${path}/LLVMInstallSymlink.cmake)
       set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
@@ -2095,8 +2130,8 @@ function(llvm_install_library_symlink name dest type)
   endif()
 
   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
-  if (ARG_SOVERSION)
-    set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX}.${ARG_SOVERSION})
+  if (ARG_FULL_DEST)
+    set(full_dest ${dest})
   else()
     set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
   endif()

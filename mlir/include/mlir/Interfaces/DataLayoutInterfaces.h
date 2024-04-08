@@ -57,6 +57,17 @@ uint64_t
 getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
                              ArrayRef<DataLayoutEntryInterface> params);
 
+/// Default handler for the index bitwidth request. Computes the result for
+/// the built-in index type and dispatches to the DataLayoutTypeInterface for
+/// other types.
+std::optional<uint64_t>
+getDefaultIndexBitwidth(Type type, const DataLayout &dataLayout,
+                        ArrayRef<DataLayoutEntryInterface> params);
+
+/// Default handler for endianness request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
+
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
@@ -180,6 +191,14 @@ public:
   /// Returns the preferred of the given type in the current scope.
   uint64_t getTypePreferredAlignment(Type t) const;
 
+  /// Returns the bitwidth that should be used when performing index
+  /// computations for the given pointer-like type in the current scope. If the
+  /// type is not a pointer-like type, it returns std::nullopt.
+  std::optional<uint64_t> getTypeIndexBitwidth(Type t) const;
+
+  /// Returns the specified endianness.
+  Attribute getEndianness() const;
+
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
 
@@ -216,7 +235,10 @@ private:
   mutable DenseMap<Type, llvm::TypeSize> bitsizes;
   mutable DenseMap<Type, uint64_t> abiAlignments;
   mutable DenseMap<Type, uint64_t> preferredAlignments;
+  mutable DenseMap<Type, std::optional<uint64_t>> indexBitwidths;
 
+  /// Cache for the endianness.
+  mutable std::optional<Attribute> endianness;
   /// Cache for alloca, global, and program memory spaces.
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;

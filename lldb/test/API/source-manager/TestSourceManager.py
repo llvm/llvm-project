@@ -323,13 +323,12 @@ class SourceManagerTestCase(TestBase):
         )
 
         self.expect(
-            "run",
-            RUN_SUCCEEDED,
+            "process status",
             substrs=[
                 "stop reason = breakpoint",
-                "%s:%d" % (src_file, 0),
-                "Note: this address is compiler-generated code in " "function",
-                "that has no source code associated " "with it.",
+                f"{src_file}:0",
+                "Note: this address is compiler-generated code in function",
+                "that has no source code associated with it.",
             ],
         )
 

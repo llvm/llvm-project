@@ -13,6 +13,7 @@
 #include "PluginInterface.h"
 
 #if defined(LIBOMPTARGET_RPC_SUPPORT)
+#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "llvmlibc_rpc_server.h"
 #endif
 
@@ -20,13 +21,8 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
-RPCServerTy::RPCServerTy(uint32_t NumDevices) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  // If this fails then something is catastrophically wrong, just exit.
-  if (rpc_status_t Err = rpc_init(NumDevices))
-    FATAL_MESSAGE(1, "Error initializing the RPC server: %d\n", Err);
-#endif
-}
+RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
+    : Handles(Plugin.getNumDevices()) {}
 
 llvm::Expected<bool>
 RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
@@ -43,7 +39,6 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
-  uint32_t DeviceId = Device.getDeviceId();
   auto Alloc = [](uint64_t Size, void *Data) {
     plugin::GenericDeviceTy &Device =
         *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
@@ -51,10 +46,12 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   };
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), RPC_MAXIMUM_PORT_COUNT);
-  if (rpc_status_t Err = rpc_server_init(DeviceId, NumPorts,
+  rpc_device_t RPCDevice;
+  if (rpc_status_t Err = rpc_server_init(&RPCDevice, NumPorts,
                                          Device.getWarpSize(), Alloc, &Device))
     return plugin::Plugin::error(
-        "Failed to initialize RPC server for device %d: %d", DeviceId, Err);
+        "Failed to initialize RPC server for device %d: %d",
+        Device.getDeviceId(), Err);
 
   // Register a custom opcode handler to perform plugin specific allocation.
   auto MallocHandler = [](rpc_port_t Port, void *Data) {
@@ -69,10 +66,10 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         Data);
   };
   if (rpc_status_t Err =
-          rpc_register_callback(DeviceId, RPC_MALLOC, MallocHandler, &Device))
+          rpc_register_callback(RPCDevice, RPC_MALLOC, MallocHandler, &Device))
     return plugin::Plugin::error(
-        "Failed to register RPC malloc handler for device %d: %d\n", DeviceId,
-        Err);
+        "Failed to register RPC malloc handler for device %d: %d\n",
+        Device.getDeviceId(), Err);
 
   // Register a custom opcode handler to perform plugin specific deallocation.
   auto FreeHandler = [](rpc_port_t Port, void *Data) {
@@ -87,10 +84,10 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         Data);
   };
   if (rpc_status_t Err =
-          rpc_register_callback(DeviceId, RPC_FREE, FreeHandler, &Device))
+          rpc_register_callback(RPCDevice, RPC_FREE, FreeHandler, &Device))
     return plugin::Plugin::error(
-        "Failed to register RPC free handler for device %d: %d\n", DeviceId,
-        Err);
+        "Failed to register RPC free handler for device %d: %d\n",
+        Device.getDeviceId(), Err);
 
   // Get the address of the RPC client from the device.
   void *ClientPtr;
@@ -103,17 +100,19 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                                      sizeof(void *), nullptr))
     return Err;
 
-  const void *ClientBuffer = rpc_get_client_buffer(DeviceId);
+  const void *ClientBuffer = rpc_get_client_buffer(RPCDevice);
   if (auto Err = Device.dataSubmit(ClientPtr, ClientBuffer,
                                    rpc_get_client_size(), nullptr))
     return Err;
+  Handles[Device.getDeviceId()] = RPCDevice.handle;
 #endif
   return Error::success();
 }
 
 Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
-  if (rpc_status_t Err = rpc_handle_server(Device.getDeviceId()))
+  rpc_device_t RPCDevice{Handles[Device.getDeviceId()]};
+  if (rpc_status_t Err = rpc_handle_server(RPCDevice))
     return plugin::Plugin::error(
         "Error while running RPC server on device %d: %d", Device.getDeviceId(),
         Err);
@@ -123,22 +122,16 @@ Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
 #ifdef LIBOMPTARGET_RPC_SUPPORT
+  rpc_device_t RPCDevice{Handles[Device.getDeviceId()]};
   auto Dealloc = [](void *Ptr, void *Data) {
     plugin::GenericDeviceTy &Device =
         *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
     Device.free(Ptr, TARGET_ALLOC_HOST);
   };
-  if (rpc_status_t Err =
-          rpc_server_shutdown(Device.getDeviceId(), Dealloc, &Device))
+  if (rpc_status_t Err = rpc_server_shutdown(RPCDevice, Dealloc, &Device))
     return plugin::Plugin::error(
         "Failed to shut down RPC server for device %d: %d",
         Device.getDeviceId(), Err);
 #endif
   return Error::success();
-}
-
-RPCServerTy::~RPCServerTy() {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  rpc_shutdown();
-#endif
 }

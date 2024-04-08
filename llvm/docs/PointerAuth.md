@@ -10,6 +10,9 @@ Before the pointer is used, it needs to be authenticated, i.e., have its
 signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
+For more details, see the clang documentation page for
+[Pointer Authentication](https://clang.llvm.org/docs/PointerAuthentication.html).
+
 At the IR level, it is represented using:
 
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)

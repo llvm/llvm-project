@@ -356,6 +356,29 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
+    uint32_t X = Attr->getMaxNumWorkGroupsX()
+                     ->EvaluateKnownConstInt(M.getContext())
+                     .getExtValue();
+    // Y and Z dimensions default to 1 if not specified
+    uint32_t Y = Attr->getMaxNumWorkGroupsY()
+                     ? Attr->getMaxNumWorkGroupsY()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+    uint32_t Z = Attr->getMaxNumWorkGroupsZ()
+                     ? Attr->getMaxNumWorkGroupsZ()
+                           ->EvaluateKnownConstInt(M.getContext())
+                           .getExtValue()
+                     : 1;
+
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+
+    F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
+  }
 }
 
 /// Emits control constants used to change per-architecture behaviour in the
