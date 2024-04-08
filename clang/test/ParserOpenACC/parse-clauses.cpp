@@ -56,9 +56,8 @@ void function();
   // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind(NS::NSFunc)
-  // expected-error@+4{{'RecordTy' does not refer to a value}}
+  // expected-error@+3{{'RecordTy' does not refer to a value}}
   // expected-note@#RecTy{{declared here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind(NS::RecordTy)
   // expected-error@+4{{'Value' is a private member of 'NS::RecordTy'}}
@@ -72,8 +71,7 @@ void function();
   // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind(NS::TemplTy<int>)
-  // expected-error@+3{{no member named 'unknown' in namespace 'NS'}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
+  // expected-error@+2{{no member named 'unknown' in namespace 'NS'}}
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind(NS::unknown<int>)
   // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
@@ -88,8 +86,7 @@ void function();
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind(NS::RecordTy::mem_function)
 
-  // expected-error@+3{{string literal with user-defined suffix cannot be used here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
+  // expected-error@+2{{string literal with user-defined suffix cannot be used here}}
   // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
 #pragma acc routine(use) bind("unknown udl"_UDL)
 
