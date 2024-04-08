@@ -2511,6 +2511,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
     assert(!Locals.contains(VD));
+    (void)VD;
   }
 
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
