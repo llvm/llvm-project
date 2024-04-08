@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.unix.Stream \
+// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true \
 // RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
