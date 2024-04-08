@@ -14160,6 +14160,11 @@ bool BoUpSLP::collectValuesToDemote(
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
     if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      APInt Mask = DB->getDemandedBits(I);
+      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      BitWidth1 = std::min(BitWidth1, BitWidth2);
+    }
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
