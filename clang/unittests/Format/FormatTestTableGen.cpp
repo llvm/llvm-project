@@ -290,6 +290,16 @@ TEST_F(FormatTestTableGen, MultiClass) {
                "}\n");
 }
 
+TEST_F(FormatTestTableGen, MultiClassesWithPasteOperator) {
+  // This is a sensitive example for the handling of the paste operators in
+  // brace type calculation.
+  verifyFormat("multiclass MultiClass1<int i> {\n"
+               "  def : Def#x<i>;\n"
+               "  def : Def#y<i>;\n"
+               "}\n"
+               "multiclass MultiClass2<int i> { def : Def#x<i>; }\n");
+}
+
 TEST_F(FormatTestTableGen, Defm) {
   verifyFormat("defm : Multiclass<0>;\n");
 
