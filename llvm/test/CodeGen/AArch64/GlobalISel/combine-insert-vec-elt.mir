@@ -16,10 +16,10 @@ body:             |
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %7:_(s32) = G_CONSTANT i32 0
-    %8:_(s32) = G_CONSTANT i32 1
-    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s32)
-    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s32)
+    %7:_(s64) = G_CONSTANT i64 0
+    %8:_(s64) = G_CONSTANT i64 1
+    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s64)
+    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s64)
     $x0 = COPY %4
 ...
 ---
@@ -38,10 +38,10 @@ body:             |
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %7:_(s32) = G_CONSTANT i32 1
-    %8:_(s32) = G_CONSTANT i32 0
-    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s32)
-    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s32)
+    %7:_(s64) = G_CONSTANT i64 1
+    %8:_(s64) = G_CONSTANT i64 0
+    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s64)
+    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s64)
     $x0 = COPY %4
 ...
 ---
@@ -63,8 +63,8 @@ body:             |
     %6:_(s32) = COPY $w2
     %7:_(s32) = COPY $w3
     %2:_(<4 x s32>) = G_BUILD_VECTOR %0, %1, %6, %7
-    %3:_(s32) = G_CONSTANT i32 1
-    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 1
+    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     $q0 = COPY %4
 ...
 ---
@@ -83,33 +83,33 @@ body:             |
     %6:_(s32) = COPY $w2
     %7:_(s32) = COPY $w3
     %2:_(<4 x s32>) = G_BUILD_VECTOR %0, %1, %6, %7
-    %3:_(s32) = G_CONSTANT i32 4
-    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %3:_(s64) = G_CONSTANT i64 4
+    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s64)
     $q0 = COPY %4
 ...
 ---
 name:            test_combine_insert_vec_build_vec_variable
 body:             |
   bb.1:
-    liveins: $w0, $w1, $w2, $w3
+    liveins: $x0, $w1, $w2, $w3
 
     ; CHECK-LABEL: name: test_combine_insert_vec_build_vec_variable
-    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK: liveins: $x0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[COPY]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY1]](s32), [[COPY]](s64)
     ; CHECK-NEXT: $q0 = COPY [[IVEC]](<4 x s32>)
-    %0:_(s32) = COPY $w0
+    %0:_(s64) = COPY $x0
     %1:_(s32) = COPY $w1
     %6:_(s32) = COPY $w2
     %7:_(s32) = COPY $w3
-    %2:_(<4 x s32>) = G_BUILD_VECTOR %0, %1, %6, %7
-    %3:_(s32) = COPY %0
-    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %2:_(<4 x s32>) = G_BUILD_VECTOR %1, %1, %6, %7
+    %3:_(s64) = COPY %0
+    %4:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %1(s32), %3(s64)
     $q0 = COPY %4
 ...
 ---
@@ -128,11 +128,11 @@ body:             |
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %7:_(s32) = G_CONSTANT i32 0
-    %8:_(s32) = G_CONSTANT i32 1
-    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s32)
-    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s32)
-    %5:_(<2 x s32>) = G_INSERT_VECTOR_ELT %4, %1(s32), %8(s32)
+    %7:_(s64) = G_CONSTANT i64 0
+    %8:_(s64) = G_CONSTANT i64 1
+    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s64)
+    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %8(s64)
+    %5:_(<2 x s32>) = G_INSERT_VECTOR_ELT %4, %1(s32), %8(s64)
     $x0 = COPY %5
 ...
 ---
@@ -150,11 +150,11 @@ body:             |
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %7:_(s32) = G_CONSTANT i32 0
-    %8:_(s32) = G_CONSTANT i32 1
-    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s32)
-    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %7(s32)
-    %5:_(<2 x s32>) = G_INSERT_VECTOR_ELT %4, %1(s32), %8(s32)
+    %7:_(s64) = G_CONSTANT i64 0
+    %8:_(s64) = G_CONSTANT i64 1
+    %3:_(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s64)
+    %4:_(<2 x s32>) = G_INSERT_VECTOR_ELT %3, %1(s32), %7(s64)
+    %5:_(<2 x s32>) = G_INSERT_VECTOR_ELT %4, %1(s32), %8(s64)
     $x0 = COPY %5
 ...
 ---
@@ -174,12 +174,12 @@ body:             |
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
-    %7:_(s32) = G_CONSTANT i32 0
-    %8:_(s32) = G_CONSTANT i32 2
-    %9:_(s32) = G_CONSTANT i32 3
-    %10:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s32)
-    %11:_(<4 x s32>) = G_INSERT_VECTOR_ELT %10, %1(s32), %8(s32)
-    %12:_(<4 x s32>) = G_INSERT_VECTOR_ELT %11, %0(s32), %9(s32)
+    %7:_(s64) = G_CONSTANT i64 0
+    %8:_(s64) = G_CONSTANT i64 2
+    %9:_(s64) = G_CONSTANT i64 3
+    %10:_(<4 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %7(s64)
+    %11:_(<4 x s32>) = G_INSERT_VECTOR_ELT %10, %1(s32), %8(s64)
+    %12:_(<4 x s32>) = G_INSERT_VECTOR_ELT %11, %0(s32), %9(s64)
     $q0 = COPY %12
 ...
 ---
