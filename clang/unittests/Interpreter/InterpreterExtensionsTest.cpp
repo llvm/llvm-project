@@ -30,7 +30,7 @@
 
 #include <system_error>
 
-#if defined(_AIX)
+#if defined(_AIX) || defined(__MVS__)
 #define CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 #endif
 
