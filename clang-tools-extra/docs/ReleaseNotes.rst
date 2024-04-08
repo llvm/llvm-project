@@ -123,6 +123,12 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check.
+
+  Enforces consistent style for enumerators' initialization, covering three
+  styles: none, first only, or all initialized explicitly.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
@@ -204,6 +210,10 @@ Changes in existing checks
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
 
+- Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
+  check by ignoring other functions with same prefixes as the target specific
+  functions.
+
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -245,10 +255,19 @@ Changes in existing checks
   analyzed, se the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
 
+- Improved :doc:`readability-avoid-return-with-void-value
+  <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
+  fix-its.
+
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by excluding include
+  directives that form the filename using macro.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
-  Prefix when configured to `LowerCase`.
+  Prefix when configured to `LowerCase`. Added support for renaming designated
+  initializers.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide

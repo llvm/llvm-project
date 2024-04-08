@@ -56,8 +56,13 @@ using namespace CodeGen;
 // Experiment to make sanitizers easier to debug
 static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
     "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"),
-    llvm::cl::init(false));
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
+
+// TODO: Introduce frontend options to enabled per sanitizers, similar to
+// `fsanitize-trap`.
+static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+    "ubsan-guard-checks", llvm::cl::Optional,
+    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -3523,6 +3528,17 @@ void CodeGenFunction::EmitCheck(
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
   }
 
+  if (ClSanitizeGuardChecks) {
+    llvm::Value *Allow =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
+
+    for (llvm::Value **Cond : {&FatalCond, &RecoverableCond, &TrapCond}) {
+      if (*Cond)
+        *Cond = Builder.CreateOr(*Cond, Builder.CreateNot(Allow));
+    }
+  }
+
   if (TrapCond)
     EmitTrapCheck(TrapCond, CheckHandler);
   if (!FatalCond && !RecoverableCond)
@@ -5190,6 +5206,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLArrayRValue:
     return EmitUnsupportedLValue(E, "unexpected cast lvalue");
 
   case CK_Dependent:

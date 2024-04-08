@@ -39961,8 +39961,10 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
                                          const SDLoc &DL) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ShuffleVT = N.getValueType();
+  unsigned Opc = N.getOpcode();
 
-  auto IsMergeableWithShuffle = [&DAG](SDValue Op, bool FoldLoad = false) {
+  auto IsMergeableWithShuffle = [Opc, &DAG](SDValue Op, bool FoldShuf = true,
+                                            bool FoldLoad = false) {
     // AllZeros/AllOnes constants are freely shuffled and will peek through
     // bitcasts. Other constant build vectors do not peek through bitcasts. Only
     // merge with target shuffles if it has one use so shuffle combining is
@@ -39972,8 +39974,9 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
            ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
            getTargetConstantFromNode(dyn_cast<LoadSDNode>(Op)) ||
+           (Op.getOpcode() == Opc && Op->hasOneUse()) ||
            (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op->hasOneUse()) ||
-           (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
+           (FoldShuf && isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
            (FoldLoad && isShuffleFoldableLoad(Op)) ||
            DAG.isSplatValue(Op, /*AllowUndefs*/ false);
   };
@@ -39984,7 +39987,6 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
            (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
   };
 
-  unsigned Opc = N.getOpcode();
   switch (Opc) {
   // Unary and Unary+Permute Shuffles.
   case X86ISD::PSHUFB: {
@@ -40010,8 +40012,10 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
-        if (IsMergeableWithShuffle(Op00, Opc != X86ISD::PSHUFB) ||
-            IsMergeableWithShuffle(Op01, Opc != X86ISD::PSHUFB)) {
+        if (IsMergeableWithShuffle(Op00, Opc != X86ISD::VPERMI,
+                                   Opc != X86ISD::PSHUFB) ||
+            IsMergeableWithShuffle(Op01, Opc != X86ISD::VPERMI,
+                                   Opc != X86ISD::PSHUFB)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
@@ -42721,6 +42725,8 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   switch (Op.getOpcode()) {
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
+  case X86ISD::UNPCKH:
+  case X86ISD::UNPCKL:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -44701,6 +44707,17 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
         }
         return SDValue(N, 0);
       }
+    }
+  }
+
+  // Attempt to fold extract(trunc(x),c) -> trunc(extract(x,c)).
+  if (CIdx && InputVector.getOpcode() == ISD::TRUNCATE) {
+    SDValue TruncSrc = InputVector.getOperand(0);
+    EVT TruncSVT = TruncSrc.getValueType().getScalarType();
+    if (DCI.isBeforeLegalize() && TLI.isTypeLegal(TruncSVT)) {
+      SDValue NewExt =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TruncSVT, TruncSrc, EltIdx);
+      return DAG.getAnyExtOrTrunc(NewExt, dl, VT);
     }
   }
 

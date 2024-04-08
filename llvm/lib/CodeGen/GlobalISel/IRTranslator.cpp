@@ -2495,6 +2495,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
   case Intrinsic::ubsantrap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
+    return true;
   case Intrinsic::amdgcn_cs_chain:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
@@ -3082,7 +3087,21 @@ bool IRTranslator::translateInsertElement(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
   Register Elt = getOrCreateVReg(*U.getOperand(1));
-  Register Idx = getOrCreateVReg(*U.getOperand(2));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  Register Idx;
+  if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(2))) {
+    if (CI->getBitWidth() != PreferredVecIdxWidth) {
+      APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+      auto *NewIdxCI = ConstantInt::get(CI->getContext(), NewIdx);
+      Idx = getOrCreateVReg(*NewIdxCI);
+    }
+  }
+  if (!Idx)
+    Idx = getOrCreateVReg(*U.getOperand(2));
+  if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
+  }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
   return true;
 }
