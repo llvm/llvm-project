@@ -221,6 +221,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
+  for recursive forwarding reference.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
