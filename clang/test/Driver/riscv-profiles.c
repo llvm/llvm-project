@@ -50,7 +50,7 @@
 // RVA20S64: "-target-feature" "+svade"
 // RVA20S64: "-target-feature" "+svbare"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva22u64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64 \
 // RUN:   | FileCheck -check-prefix=RVA22U64 %s
 // RVA22U64: "-target-feature" "+m"
 // RVA22U64: "-target-feature" "+a"
@@ -76,7 +76,7 @@
 // RVA22U64: "-target-feature" "+zbs"
 // RVA22U64: "-target-feature" "+zkt"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva22s64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva22s64 \
 // RUN:   | FileCheck -check-prefix=RVA22S64 %s
 // RVA22S64: "-target-feature" "+m"
 // RVA22S64: "-target-feature" "+a"
@@ -111,7 +111,7 @@
 // RVA22S64: "-target-feature" "+svinval"
 // RVA22S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva23u64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 -menable-experimental-extensions \
 // RUN:   | FileCheck -check-prefix=RVA23U64 %s
 // RVA23U64: "-target-feature" "+m"
 // RVA23U64: "-target-feature" "+a"
