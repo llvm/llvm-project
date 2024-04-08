@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/StmtOpenACC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Sema.h"
 
@@ -31,8 +31,7 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
     if (!IsStmt)
-      return S.SemaRef.Diag(StartLoc, diag::err_acc_construct_appertainment)
-             << K;
+      return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
   }
   return false;
@@ -65,11 +64,7 @@ void DestroyUnusedClauses(ASTContext &Ctx,
 }
 } // namespace
 
-SemaOpenACC::SemaOpenACC(Sema &S) : SemaRef(S) {}
-
-ASTContext &SemaOpenACC::getASTContext() const { return SemaRef.Context; }
-DiagnosticsEngine &SemaOpenACC::getDiagnostics() const { return SemaRef.Diags; }
-const LangOptions &SemaOpenACC::getLangOpts() const { return SemaRef.LangOpts; }
+SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
 
 OpenACCClause *
 SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -80,7 +75,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   // Diagnose that we don't support this clause on this directive.
   if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
                                   Clause.getClauseKind())) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
+    Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
         << Clause.getDirectiveKind() << Clause.getClauseKind();
     return nullptr;
   }
@@ -88,7 +83,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   // TODO OpenACC: Switch over the clauses we implement here and 'create'
   // them.
 
-  SemaRef.Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
+  Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
       << Clause.getClauseKind();
   return nullptr;
 }
@@ -109,7 +104,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
     // here as these constructs do not take any arguments.
     break;
   default:
-    SemaRef.Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
+    Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
   }
 }

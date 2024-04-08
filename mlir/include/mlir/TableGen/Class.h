@@ -681,7 +681,7 @@ public:
   Method *addMethod(RetTypeT &&retType, NameT &&name,
                     Method::Properties properties,
                     ArrayRef<MethodParameter> parameters) {
-    // If the class has template parameters, the has to defined inline.
+    // If the class has template parameters, then it has to be defined inline.
     if (!templateParams.empty())
       properties |= Method::Inline;
     return addMethodAndPrune(Method(std::forward<RetTypeT>(retType),
