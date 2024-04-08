@@ -24,6 +24,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/from_range.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/transform_view.h>
 #include <__type_traits/add_pointer.h>
