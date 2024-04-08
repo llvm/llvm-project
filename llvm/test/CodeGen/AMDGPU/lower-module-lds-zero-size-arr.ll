@@ -4,7 +4,7 @@
 ; This is an extension and should be rejected by the front-end in most cases.
 ; If it goes through, lower it as dynlds.
 
-@Var0 = linkonce_odr hidden local_unnamed_addr addrspace(3) global [0 x float] undef
+@Var0 = linkonce_odr hidden local_unnamed_addr addrspace(3) global [0 x float] poison
 
 define void @fn(float %val, i32 %idx) {
 ; CHECK-LABEL: define void @fn(
