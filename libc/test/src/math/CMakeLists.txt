@@ -1,15 +1,5 @@
 add_custom_target(libc-math-unittests)
 
-# FIXME: We shouldn't have regular libraries created because we could be
-#        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_library(
-    libc_math_test_utils
-    RandUtils.cpp
-    RandUtils.h
-  )
-endif()
-
 add_fp_unittest(
   cosf_test
   NEED_MPFR
@@ -1280,6 +1270,7 @@ add_fp_unittest(
     fmaf_test.cpp
   DEPENDS
     libc.src.math.fmaf
+    libc.src.stdlib.rand
     libc.src.__support.FPUtil.fp_bits
   FLAGS
     FMA_OPT__ONLY
@@ -1294,6 +1285,7 @@ add_fp_unittest(
     fma_test.cpp
   DEPENDS
     libc.src.math.fma
+    libc.src.stdlib.rand
     libc.src.__support.FPUtil.fp_bits
 )
 
