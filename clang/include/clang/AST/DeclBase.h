@@ -268,6 +268,9 @@ private:
   ///   }
   ///   void A::f(); // SemanticDC == namespace 'A'
   ///                // LexicalDC == global namespace
+
+  // Compress the InvalidDecl and HasAttrs bits into DeclCtx to keep Decl below
+  // 32 bytes in size
   llvm::PointerIntPair<
       llvm::PointerIntPair<llvm::PointerUnion<DeclContext *, MultipleDC *>, 1,
                            bool>,
