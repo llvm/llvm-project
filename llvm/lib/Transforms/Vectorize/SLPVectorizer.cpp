@@ -9849,11 +9849,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
       unsigned OriginalSz = DL->getTypeSizeInBits(DstTy);
-      if (OriginalSz != BWIt->second.first) {
+      unsigned SrcSz =
+          ReductionBitWidth == 0 ? BWIt->second.first : ReductionBitWidth;
+      if (OriginalSz != SrcSz) {
         unsigned Opcode = Instruction::Trunc;
-        if (OriginalSz < BWIt->second.first)
+        if (OriginalSz > SrcSz)
           Opcode = BWIt->second.second ? Instruction::SExt : Instruction::ZExt;
-        Type *SrcTy = IntegerType::get(DstTy->getContext(), BWIt->second.first);
+        Type *SrcTy = IntegerType::get(DstTy->getContext(), SrcSz);
         Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
                                       TTI::CastContextHint::None,
                                       TTI::TCK_RecipThroughput);
@@ -11167,7 +11169,7 @@ public:
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.
-        for (auto [I, Idx] : enumerate(SubMask))
+        for (int &Idx : SubMask)
           if (Idx != PoisonMaskElem)
             Idx += VF;
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
@@ -14158,6 +14160,11 @@ bool BoUpSLP::collectValuesToDemote(
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
     if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      APInt Mask = DB->getDemandedBits(I);
+      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      BitWidth1 = std::min(BitWidth1, BitWidth2);
+    }
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
@@ -14368,10 +14375,27 @@ bool BoUpSLP::collectValuesToDemote(
         ID != Intrinsic::smax && ID != Intrinsic::umin && ID != Intrinsic::umax)
       break;
     SmallVector<Value *> Operands(1, I->getOperand(0));
+    function_ref<bool(unsigned, unsigned)> CallChecker;
+    auto CompChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+      if (ID == Intrinsic::umin || ID == Intrinsic::umax) {
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
+               MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+      }
+      assert((ID == Intrinsic::smin || ID == Intrinsic::smax) &&
+             "Expected min/max intrinsics only.");
+      unsigned SignBits = OrigBitWidth - BitWidth;
+      return SignBits <= ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
+                                            nullptr, DT) &&
+             SignBits <=
+                 ComputeNumSignBits(I->getOperand(1), *DL, 0, AC, nullptr, DT);
+    };
     End = 1;
     if (ID != Intrinsic::abs) {
       Operands.push_back(I->getOperand(1));
       End = 2;
+      CallChecker = CompChecker;
     }
     InstructionCost BestCost =
         std::numeric_limits<InstructionCost::CostType>::max();
@@ -14395,7 +14419,7 @@ bool BoUpSLP::collectValuesToDemote(
     [[maybe_unused]] bool NeedToExit;
     (void)AttemptCheckBitwidth(Checker, NeedToExit);
     BitWidth = BestBitWidth;
-    return TryProcessInstruction(I, *ITE, BitWidth, Operands);
+    return TryProcessInstruction(I, *ITE, BitWidth, Operands, CallChecker);
   }
 
   // Otherwise, conservatively give up.

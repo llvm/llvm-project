@@ -15,11 +15,11 @@ libc_support_library(
     srcs = ["TestLogger.cpp"],
     hdrs = ["TestLogger.h"],
     deps = [
+        "//libc:__support_big_int",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_macros_properties_types",
         "//libc:__support_osutil_io",
-        "//libc:__support_uint",
         "//libc:__support_uint128",
     ],
 )
@@ -128,8 +128,8 @@ libc_support_library(
         "StringUtils.h",
     ],
     deps = [
+        "//libc:__support_big_int",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_type_traits",
-        "//libc:__support_uint",
     ],
 )

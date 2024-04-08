@@ -423,3 +423,31 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
 // CHECK: ![[SR_TYPES]] = !{![[COMP]]}
+
+// -----
+
+// Ensures nested recursive decls work.
+// The output should be identical to if the inner composite type decl was
+// replaced with the recursive self reference.
+
+#di_file = #llvm.di_file<"test.mlir" in "/">
+#di_composite_type_self = #llvm.di_composite_type<tag = DW_TAG_null, recId = distinct[0]<>>
+
+#di_subroutine_type_inner = #llvm.di_subroutine_type<types = #di_composite_type_self>
+#di_subprogram_inner = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type_inner>
+#di_composite_type_inner = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram_inner>
+
+#di_subroutine_type = #llvm.di_subroutine_type<types = #di_composite_type_inner>
+#di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
+#di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram>
+
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
+#di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
+
+llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
+
+// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
+// CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
+// CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
+// CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])
+// CHECK: ![[SR_TYPES]] = !{![[COMP]]}

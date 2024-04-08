@@ -493,7 +493,7 @@ static Error writeMemProfV1(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
-  OS.write(memprof::Version0);
+  OS.write(memprof::Version1);
   uint64_t HeaderUpdatePos = OS.tell();
   OS.write(0ULL); // Reserve space for the memprof record table offset.
   OS.write(0ULL); // Reserve space for the memprof frame payload offset.
