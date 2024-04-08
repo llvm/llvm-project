@@ -440,6 +440,7 @@ cc_library(
         "source/Host/macosx/objcxx/*.h",
     ]),
     strip_include_prefix = "source",
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -453,6 +454,7 @@ objc_library(
         "source/Host/macosx/objcxx/*.mm",
     ]),
     copts = OBJCPP_COPTS,
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -780,6 +782,7 @@ objc_library(
     name = "DebugServerMacOSX",
     srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     copts = OBJCPP_COPTS,
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -796,6 +799,7 @@ cc_library(
         ["tools/debugserver/source/**/*.cpp"],
         exclude = ["tools/debugserver/source/debugserver.cpp"],
     ),
+    tags = ["nobuildkite"],
     local_defines = ["LLDB_USE_OS_LOG"],
     deps = [
         ":DebugServerCommonHeaders",
@@ -814,6 +818,7 @@ genrule(
         "mach_excUser.c",
     ],
     cmd = "mig -header $(location :mach_exc.h) -server $(location :mach_excServer.c) -user $(location :mach_excUser.c) $(SRCS)",
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -834,6 +839,7 @@ cc_binary(
         ":debugserver_version_gen",
         ":mach_gen",
     ],
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
