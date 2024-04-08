@@ -29,12 +29,10 @@ def is_implemented(hname: str, fname: str) -> bool:
         hname.rstrip(".h")
     )
     source_file_name = fname + ".cpp"
-    if path.joinpath(source_file_name).exists():
-        return True
-    
-    # Attempt to search in the subfolders with 1-depth.
-    for sub_dir in path.iterdir():
-        if (sub_dir.joinpath(source_file_name)).exists():
+    # Recursively search for the target source file in the subdirectories under
+    # libc/src/{hname}.
+    for sub_dir in path.glob("**"):
+        if sub_dir.joinpath(source_file_name).exists():
             return True
 
     return False
