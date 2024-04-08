@@ -419,6 +419,29 @@ enum class OpenACCDefaultClauseKind {
   Invalid,
 };
 
+template <typename StreamTy>
+inline StreamTy &PrintOpenACCDefaultClauseKind(StreamTy &Out,
+                                               OpenACCDefaultClauseKind K) {
+  switch (K) {
+  case OpenACCDefaultClauseKind::None:
+    return Out << "none";
+  case OpenACCDefaultClauseKind::Present:
+    return Out << "present";
+  case OpenACCDefaultClauseKind::Invalid:
+    return Out << "<invalid>";
+  }
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDefaultClauseKind K) {
+  return PrintOpenACCDefaultClauseKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCDefaultClauseKind K) {
+  return PrintOpenACCDefaultClauseKind(Out, K);
+}
+
 enum class OpenACCReductionOperator {
   /// '+'.
   Addition,

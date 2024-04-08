@@ -831,9 +831,13 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
 
       ConsumeToken();
 
-      if (getOpenACCDefaultClauseKind(DefKindTok) ==
-          OpenACCDefaultClauseKind::Invalid)
+      OpenACCDefaultClauseKind DefKind =
+          getOpenACCDefaultClauseKind(DefKindTok);
+
+      if (DefKind == OpenACCDefaultClauseKind::Invalid)
         Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
+      else
+        ParsedClause.setDefaultDetails(DefKind);
 
       break;
     }
