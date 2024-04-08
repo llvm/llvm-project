@@ -3282,6 +3282,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
   static const unsigned BUFOps[4] = {
       AMDGPU::OpName::vaddr, AMDGPU::OpName::OPERAND_LAST,
       AMDGPU::OpName::OPERAND_LAST, AMDGPU::OpName::vdata};
+  static const unsigned VIMGOps[4] = {
+      AMDGPU::OpName::vaddr0, AMDGPU::OpName::vaddr1, AMDGPU::OpName::vaddr2,
+      AMDGPU::OpName::vdata};
 
   // For VOPD instructions MSB of a corresponding Y component operand VGPR
   // address is supposed to match X operand, otherwise VOPD shall not be
@@ -3314,12 +3317,16 @@ getVGPRLoweringOperandTables(const MCInstrDesc& Desc) {
   if (TSFlags & (SIInstrFlags::MUBUF | SIInstrFlags::MTBUF))
     return { BUFOps, nullptr };
 
+  if (TSFlags & SIInstrFlags::VIMAGE)
+    return { VIMGOps, nullptr };
+
   if (AMDGPU::isVOPD(Desc.getOpcode()))
     return { VOPDOpsX, VOPDOpsY };
 
-  if (TSFlags & (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE |
-                 SIInstrFlags::MIMG | SIInstrFlags::EXP))
-    llvm_unreachable("Image and export VGPR lowering is not implemented and"
+  assert(!(TSFlags & SIInstrFlags::MIMG));
+
+  if (TSFlags & (SIInstrFlags::VSAMPLE | SIInstrFlags::EXP))
+    llvm_unreachable("Sample and export VGPR lowering is not implemented and"
                      " these instructions are not expected on gfx1210");
 
   return {};
