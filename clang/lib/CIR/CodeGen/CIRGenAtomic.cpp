@@ -327,6 +327,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
   mlir::cir::AtomicFetchKindAttr fetchAttr;
+  bool fetchFirst = true;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -384,28 +385,28 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__hip_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::Add);
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::Sub);
     break;
@@ -436,54 +437,54 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__scoped_atomic_and_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__hip_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::And);
     break;
 
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_or_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__hip_atomic_fetch_or:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::Or);
     break;
 
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::Xor);
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
-    // In LLVM codegen, the post operation codegen is tracked here.
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    Op = mlir::cir::AtomicFetch::getOperationName();
     fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
         builder.getContext(), mlir::cir::AtomicFetchKind::Nand);
     break;
@@ -504,6 +505,9 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   RMWI->setAttr("mem_order", orderAttr);
   if (E->isVolatile())
     RMWI->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
+  if (fetchFirst)
+    RMWI->setAttr("fetch_first", mlir::UnitAttr::get(builder.getContext()));
+
   auto Result = RMWI->getResult(0);
 
   if (PostOpMinMax)

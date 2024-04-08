@@ -2707,7 +2707,7 @@ LogicalResult GetRuntimeMemberOp::verify() {
 // Atomic Definitions
 //===----------------------------------------------------------------------===//
 
-LogicalResult AtomicBinopFetch::verify() {
+LogicalResult AtomicFetch::verify() {
   if (getBinop() == mlir::cir::AtomicFetchKind::Add ||
       getBinop() == mlir::cir::AtomicFetchKind::Sub)
     return mlir::success();

@@ -1039,6 +1039,6 @@ cir.func @popcount_invalid_result_ty(%arg0 : !u32i) -> () {
 
 cir.func @bad_fetch(%x: !cir.ptr<!cir.float>, %y: !cir.float) -> () {
   // expected-error@+1 {{only operates on integer values}}
-  %12 = cir.atomic.binop_fetch(xor, %x : !cir.ptr<!cir.float>, %y : !cir.float, seq_cst) : !cir.float
+  %12 = cir.atomic.fetch(xor, %x : !cir.ptr<!cir.float>, %y : !cir.float, seq_cst) : !cir.float
   cir.return
 }
