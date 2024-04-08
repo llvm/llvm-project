@@ -129,7 +129,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Container to(_Range&& __r
     // Try the recursive case.
   } else if constexpr (input_range<range_reference_t<_Range>>) {
     return ranges::to<_Container>(
-        __range | views::transform([](auto&& __elem) {
+        ranges::ref_view(__range) | views::transform([](auto&& __elem) {
           return ranges::to<range_value_t<_Container>>(std::forward<decltype(__elem)>(__elem));
         }),
         std::forward<_Args>(__args)...);
