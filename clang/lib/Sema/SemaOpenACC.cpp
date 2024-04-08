@@ -48,18 +48,6 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
   }
   llvm_unreachable("Invalid clause kind");
 }
-
-/// Destruct and deallocate any clauses that aren't going to be used because
-/// they don't have a Construct to attach to.
-void DestroyUnusedClauses(ASTContext &Ctx, ArrayRef<OpenACCClause *> Clauses) {
-  auto *Itr = Clauses.begin();
-  auto *End = Clauses.end();
-
-  for (; Itr != End; ++Itr) {
-    (*Itr)->~OpenACCClause();
-    Ctx.Deallocate(*Itr);
-  }
-}
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -119,10 +107,8 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                               StmtResult AssocStmt) {
   switch (K) {
   default:
-    DestroyUnusedClauses(getASTContext(), Clauses);
     return StmtEmpty();
   case OpenACCDirectiveKind::Invalid:
-    DestroyUnusedClauses(getASTContext(), Clauses);
     return StmtError();
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
