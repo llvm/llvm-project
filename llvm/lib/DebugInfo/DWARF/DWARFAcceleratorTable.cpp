@@ -552,11 +552,12 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
   return Abbrev(Code, dwarf::Tag(Tag), AbbrevOffset, std::move(*AttrEncOr));
 }
 
-void llvm::findDebugNamesOffsets(
-    DWARFDebugNames::DWARFDebugNamesOffsets &Offsets, uint64_t HdrSize,
-    dwarf::DwarfFormat Format, const DWARFDebugNames::Header &Hdr) {
-  uint32_t DwarfSize = (Format == llvm::dwarf::DwarfFormat::DWARF64) ? 8 : 4;
-  uint64_t Offset = HdrSize;
+DWARFDebugNames::DWARFDebugNamesOffsets
+dwarf::findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
+                             const DWARFDebugNames::Header &Hdr) {
+  DWARFDebugNames::DWARFDebugNamesOffsets Offsets;
+  uint32_t DwarfSize = Hdr.Format == dwarf::DwarfFormat::DWARF64 ? 8 : 4;
+  uint64_t Offset = EndOfHeaderOffset;
   Offsets.CUsBase = Offset;
   Offset += Hdr.CompUnitCount * DwarfSize;
   Offset += Hdr.LocalTypeUnitCount * DwarfSize;
@@ -577,6 +578,7 @@ void llvm::findDebugNamesOffsets(
 
   Offset += Hdr.AbbrevTableSize;
   Offsets.EntriesBase = Offset;
+  return Offsets;
 }
 
 Error DWARFDebugNames::NameIndex::extract() {
@@ -586,7 +588,7 @@ Error DWARFDebugNames::NameIndex::extract() {
     return E;
 
   const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
-  findDebugNamesOffsets(Offsets, hdrSize, Hdr.Format, Hdr);
+  Offsets = dwarf::findDebugNamesOffsets(hdrSize, Hdr);
 
   uint64_t Offset =
       Offsets.EntryOffsetsBase + (Hdr.NameCount * SectionOffsetSize);
