@@ -202,11 +202,11 @@ do.end:                                           ; preds = %do.body
 ; 64-NEXT: # %bb.0:
 ; 64-NEXT: xchgw   %ax, %ax                        # encoding: [0x66,0x90]
 ; 64-NEXT: #APP
-; 64-NEXT: nop                                     # encoding: [0x90]
+; 64-NEXT: int3                                    # encoding: [0xcc]
 ; 64-NEXT: #NO_APP
 
 define dso_local void @inline_asm() "patchable-function"="prologue-short-redirect" {
 entry:
-  call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"()
+  call void asm sideeffect "int3", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }
