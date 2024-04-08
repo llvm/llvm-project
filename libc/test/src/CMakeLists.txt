@@ -24,7 +24,7 @@ function(add_fp_unittest name)
       message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
     endif()
     set(test_type UNIT_TEST_ONLY)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
