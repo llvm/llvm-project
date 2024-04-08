@@ -25,6 +25,9 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
+  /// A map to keep track of lane-shared-memory objects and their offsets
+  /// within the lane-shared-memory space.
+  SmallDenseMap<const GlobalValue *, unsigned, 4> LaneSharedMemoryObjects;
 
 protected:
   uint64_t ExplicitKernArgSize = 0; // Cache for this.
@@ -45,6 +48,9 @@ protected:
   /// The maximal alignment is updated during IR translation or lowering
   /// stages.
   Align DynLDSAlign;
+
+  /// Number of bytes in the lane-shared that are being used.
+  uint32_t LaneSharedSize = 0;
 
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
@@ -84,6 +90,8 @@ public:
     return GDSSize;
   }
 
+  uint32_t getLaneSharedSize() const { return LaneSharedSize; }
+
   bool isEntryFunction() const {
     return IsEntryFunction;
   }
@@ -115,6 +123,9 @@ public:
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV,
                              Align Trailing);
+
+  unsigned allocateLaneSharedGlobal(const DataLayout &DL,
+                                    const GlobalVariable &GV);
 
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
   static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);

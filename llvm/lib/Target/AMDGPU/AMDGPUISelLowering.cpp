@@ -1478,6 +1478,13 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     // The initializer will anyway get errored out during assembly emission.
     unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
     return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+  } else if (G->getAddressSpace() == AMDGPUAS::LANE_SHARED) {
+    // XXX: What does the value of G->getOffset() mean?
+    assert(G->getOffset() == 0 &&
+           "Do not know what to do with an non-zero offset");
+    unsigned Offset =
+        MFI->allocateLaneSharedGlobal(DL, *cast<GlobalVariable>(GV));
+    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
   }
   return SDValue();
 }

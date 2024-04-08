@@ -163,6 +163,26 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
+unsigned
+AMDGPUMachineFunction::allocateLaneSharedGlobal(const DataLayout &DL,
+                                                const GlobalVariable &GV) {
+  auto Entry = LaneSharedMemoryObjects.insert(std::pair(&GV, 0));
+  if (!Entry.second)
+    return Entry.first->second;
+
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
+
+  unsigned Offset;
+  assert(GV.getAddressSpace() == AMDGPUAS::LANE_SHARED &&
+         "expected lane-shared address space");
+  Offset = LaneSharedSize = alignTo(LaneSharedSize, Alignment);
+  LaneSharedSize += DL.getTypeAllocSize(GV.getValueType());
+
+  Entry.first->second = Offset;
+  return Offset;
+}
+
 std::optional<uint32_t>
 AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
   // TODO: Would be more consistent with the abs symbols to use a range

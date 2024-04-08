@@ -19,6 +19,7 @@ class AddressSpacesImpl {
   int Constant = 4;
   int Private = 5;
   int Constant32Bit = 6;
+  int LaneShared = 10;
 }
 
 def AddrSpaces : AddressSpacesImpl;
@@ -476,9 +477,10 @@ def StoreAddress_local : AddressSpaceList<[ AddrSpaces.Local ]>;
 def LoadAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 def StoreAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 
+def LoadAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
+def StoreAddress_laneshared : AddressSpaceList<[ AddrSpaces.LaneShared ]>;
 
-
-foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
 def load_#as : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {
@@ -533,7 +535,7 @@ def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
 } // End foreach as
 
 
-foreach as = [ "global", "flat", "local", "private", "region" ] in {
+foreach as = [ "global", "flat", "local", "private", "region", "laneshared" ] in {
 let IsStore = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
 def store_#as : PatFrag<(ops node:$val, node:$ptr),
                     (unindexedstore node:$val, node:$ptr)> {
@@ -658,7 +660,7 @@ multiclass noret_ternary_atomic_op<SDNode atomic_op> {
 }
 
 multiclass binary_atomic_op_all_as<SDNode atomic_op, bit IsInt = 1> {
-  foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+  foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
     let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
       defm "_"#as : binary_atomic_op<atomic_op, IsInt>;
       defm "_"#as : noret_binary_atomic_op<atomic_op, IsInt>;
