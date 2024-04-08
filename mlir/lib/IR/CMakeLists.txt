@@ -40,6 +40,7 @@ add_mlir_library(MLIRIR
   Unit.cpp
   Value.cpp
   ValueRange.cpp
+  VectorTypes.cpp
   Verifier.cpp
   Visitors.cpp
   ${pdl_src}
