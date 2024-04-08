@@ -351,8 +351,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind,
-    DefaultValuedParameter<
-      "DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+    OptionalParameter<"DINameTableKind">:$nameTableKind
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
