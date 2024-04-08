@@ -7,21 +7,21 @@
 
 define noundef half @test_fmax_half(half noundef %a, half noundef %b) {
 entry:
-; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] FMin %[[#]] %[[#]]
+; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] NMin %[[#]] %[[#]]
   %0 = call half @llvm.minnum.f16(half %a, half %b)
   ret half %0
 }
 
 define noundef float @test_fmax_float(float noundef %a, float noundef %b) {
 entry:
-; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] FMin %[[#]] %[[#]]
+; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] NMin %[[#]] %[[#]]
   %0 = call float @llvm.minnum.f32(float %a, float %b)
   ret float %0
 }
 
 define noundef double @test_fmax_double(double noundef %a, double noundef %b) {
 entry:
-; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] FMin %[[#]] %[[#]]
+; CHECK: %[[#]] = OpExtInst %[[#]] %[[#]] NMin %[[#]] %[[#]]
   %0 = call double @llvm.minnum.f64(double %a, double %b)
   ret double %0
 }
