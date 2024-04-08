@@ -4501,7 +4501,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  if (auto *CFP = dyn_cast_or_null<ConstantFP>(V)) {
+  if (auto *CFP = dyn_cast<ConstantFP>(V)) {
     Known.KnownFPClasses = CFP->getValueAPF().classify();
     Known.SignBit = CFP->isNegative();
     return;
