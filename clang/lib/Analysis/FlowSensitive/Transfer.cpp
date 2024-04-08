@@ -470,8 +470,14 @@ public:
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
-    if (!(S->getType()->isRecordType() && S->isPRValue()))
-      propagateValueOrStorageLocation(*InitExpr, *S, Env);
+
+    // If this is a prvalue of record type, the handler for `*InitExpr` (if one
+    // exists) will initialize the result object; there is no value to propgate
+    // here.
+    if (S->getType()->isRecordType() && S->isPRValue())
+      return;
+
+    propagateValueOrStorageLocation(*InitExpr, *S, Env);
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *S) {

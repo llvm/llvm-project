@@ -27,6 +27,8 @@
 #include <cassert>
 #include <utility>
 
+#define DEBUG_TYPE "dataflow"
+
 namespace clang {
 namespace dataflow {
 
@@ -553,8 +555,10 @@ public:
     // All other expression nodes that propagate a record prvalue should have
     // exactly one child.
     llvm::SmallVector<Stmt *> Children(E->child_begin(), E->child_end());
-    if (Children.size() != 1)
-      E->dump();
+    LLVM_DEBUG({
+      if (Children.size() != 1)
+        E->dump();
+    });
     assert(Children.size() == 1);
     for (Stmt *S : Children)
       PropagateResultObject(cast<Expr>(S), Loc);
