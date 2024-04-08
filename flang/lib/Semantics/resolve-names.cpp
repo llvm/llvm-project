@@ -1635,6 +1635,8 @@ private:
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
   void UseCUDABuiltinNames();
+  void HandleDerivedTypesInImplicitStmts(const parser::ImplicitPart &,
+      const std::list<parser::DeclarationConstruct> &);
 };
 
 // ImplicitRules implementation
@@ -2035,6 +2037,7 @@ bool ImplicitRulesVisitor::Pre(const parser::ImplicitSpec &) {
 }
 
 void ImplicitRulesVisitor::Post(const parser::ImplicitSpec &) {
+  set_allowForwardReferenceToDerivedType(false);
   EndDeclTypeSpec();
 }
 
@@ -8329,6 +8332,67 @@ static bool NeedsExplicitType(const Symbol &symbol) {
   }
 }
 
+void ResolveNamesVisitor::HandleDerivedTypesInImplicitStmts(
+    const parser::ImplicitPart &implicitPart,
+    const std::list<parser::DeclarationConstruct> &decls) {
+  // Detect derived type definitions and create symbols for them now if
+  // they appear in IMPLICIT statements so that these forward-looking
+  // references will not be ambiguous with host associations.
+  std::set<SourceName> implicitDerivedTypes;
+  for (const auto &ipStmt : implicitPart.v) {
+    if (const auto *impl{std::get_if<
+            parser::Statement<common::Indirection<parser::ImplicitStmt>>>(
+            &ipStmt.u)}) {
+      if (const auto *specs{std::get_if<std::list<parser::ImplicitSpec>>(
+              &impl->statement.value().u)}) {
+        for (const auto &spec : *specs) {
+          const auto &declTypeSpec{
+              std::get<parser::DeclarationTypeSpec>(spec.t)};
+          if (const auto *dtSpec{common::visit(
+                  common::visitors{
+                      [](const parser::DeclarationTypeSpec::Type &x) {
+                        return &x.derived;
+                      },
+                      [](const parser::DeclarationTypeSpec::Class &x) {
+                        return &x.derived;
+                      },
+                      [](const auto &) -> const parser::DerivedTypeSpec * {
+                        return nullptr;
+                      }},
+                  declTypeSpec.u)}) {
+            implicitDerivedTypes.emplace(
+                std::get<parser::Name>(dtSpec->t).source);
+          }
+        }
+      }
+    }
+  }
+  if (!implicitDerivedTypes.empty()) {
+    for (const auto &decl : decls) {
+      if (const auto *spec{
+              std::get_if<parser::SpecificationConstruct>(&decl.u)}) {
+        if (const auto *dtDef{
+                std::get_if<common::Indirection<parser::DerivedTypeDef>>(
+                    &spec->u)}) {
+          const parser::DerivedTypeStmt &dtStmt{
+              std::get<parser::Statement<parser::DerivedTypeStmt>>(
+                  dtDef->value().t)
+                  .statement};
+          const parser::Name &name{std::get<parser::Name>(dtStmt.t)};
+          if (implicitDerivedTypes.find(name.source) !=
+                  implicitDerivedTypes.end() &&
+              !FindInScope(name)) {
+            DerivedTypeDetails details;
+            details.set_isForwardReferenced(true);
+            Resolve(name, MakeSymbol(name, std::move(details)));
+            implicitDerivedTypes.erase(name.source);
+          }
+        }
+      }
+    }
+  }
+}
+
 bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   const auto &[accDecls, ompDecls, compilerDirectives, useStmts, importStmts,
       implicitPart, decls] = x.t;
@@ -8347,6 +8411,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   ClearUseOnly();
   ClearModuleUses();
   Walk(importStmts);
+  HandleDerivedTypesInImplicitStmts(implicitPart, decls);
   Walk(implicitPart);
   for (const auto &decl : decls) {
     if (const auto *spec{
