@@ -39,6 +39,8 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+
 class MachineInstr;
 class MachineFunction;
 class MachineOperand;
@@ -205,6 +207,18 @@ static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
 
   auto newLiveIns = MBB.getLiveIns();
   return oldLiveIns != newLiveIns;
+}
+
+/// Convenience function for recomputing live-in's for a set of MBBs until the
+/// computation converges.
+static inline void
+fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
+  bool AnyChange;
+  do {
+    AnyChange = false;
+    for (MachineBasicBlock *MBB : MBBs)
+      AnyChange = recomputeLiveIns(*MBB) || AnyChange;
+  } while (AnyChange);
 }
 
 } // end namespace llvm
