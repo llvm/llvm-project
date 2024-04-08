@@ -1,6 +1,25 @@
 // RUN: mlir-opt --expand-strided-metadata -split-input-file %s -o - | FileCheck %s
 
 
+// memref.extract_strided_metadata is not folded away becuase meta-data on the %base memref 
+// can change in a future pass and folding away the Op here will cuase incorrect lowering.
+// CHECK-LABEL: func @extract_strided_metadata_constants
+//  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
+func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1], offset: 2>>)
+    -> (memref<f32>, index, index, index, index, index) {
+
+  //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+  %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %base :
+    memref<5x4xf32, strided<[4,1], offset:2>>
+    -> memref<f32>, index, index, index, index, index
+
+  // CHECK: %[[BASE]], %[[OFFSET]], %[[SIZES]]#0, %[[SIZES]]#1, %[[STRIDES]]#0, %[[STRIDES]]#1
+  return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+    memref<f32>, index, index, index, index, index
+}
+
+// -----
+
 // Check that we simplify subview(src) into:
 // base, offset, sizes, strides xtract_strided_metadata src
 // final_sizes = subSizes
@@ -1062,7 +1081,7 @@ func.func @simplify_collapse_with_dim_of_size1_and_resulting_dyn_stride
 //
 //   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.min #[[$STRIDE0_MAP]]()[%[[STRIDES]]#0]
 //   CHECK-DAG: %[[DYN_SIZE1:.*]] = affine.apply #[[$SIZE0_MAP]]()[%[[SIZES]]#1, %[[SIZES]]#3]
-//   CHECK-DAG:  %[[DYN_STRIDE1:.*]]  = affine.min #[[$STRIDE1_MAP]]()[%strides#1, %strides#2]
+//   CHECK-DAG:  %[[DYN_STRIDE1:.*]]  = affine.min #[[$STRIDE1_MAP]]()[%[[STRIDES]]#1, %[[STRIDES]]#2]
 //       CHECK: return %[[BASE]], %[[C0]], %[[SIZES]]#0, %[[DYN_SIZE1]], %[[C42]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]], %[[C1]]
 func.func @extract_strided_metadata_of_collapse(%arg : memref<?x?x4x?x6x7xi32>)
   -> (memref<i32>, index,

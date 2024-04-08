@@ -883,6 +883,36 @@ func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?x
 
 // -----
 
+// Check that we don't simplify reinterpret cast of extract strided metadata
+// when the strides don't match.
+// CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_w_different_stride
+//  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [4, 2, 2], strides: [1, 1, %[[STRIDES]]#1]
+//       CHECK: return %[[RES]]
+func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : memref<8x2xf32>) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> {
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
+  %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [4, 2, 2], strides: [1, 1, %strides#1] : memref<f32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  return %m2 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+}
+// -----
+
+// Check that we don't simplify reinterpret cast of extract strided metadata
+// when the offset doesn't match.
+// CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_w_different_offset
+//  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [1], sizes: [%[[SIZES]]#0, %[[SIZES]]#1], strides: [%[[STRIDES]]#0, %[[STRIDES]]#1]
+//       CHECK: return %[[RES]]
+func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
+  %m2 = memref.reinterpret_cast %base to offset: [1], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %m2 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+}
+
+// -----
+
+
 func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
     %arg1 : index) -> memref<?xf32, strided<[?], offset: ?>> {
   %c0 = arith.constant 0 : index
