@@ -306,10 +306,10 @@ void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
 bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
                                                SmallVector<Register> &Ops) {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-  auto ConcatMI1 = dyn_cast<GConcatVectors>(
-      getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI));
-  auto ConcatMI2 = dyn_cast<GConcatVectors>(
-      getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI));
+  auto ConcatMI1 =
+      dyn_cast<GConcatVectors>(MRI.getVRegDef(MI.getOperand(1).getReg()));
+  auto ConcatMI2 =
+      dyn_cast<GConcatVectors>(MRI.getVRegDef(MI.getOperand(2).getReg()));
   if (!ConcatMI1 || !ConcatMI2)
     return false;
 
@@ -336,7 +336,7 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
       for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
         if (i + j >= Mask.size())
           return false;
-        if (Mask[i + j] != Mask[i] + (int)j)
+        if (Mask[i + j] != Mask[i] + static_cast<int>(j))
           return false;
       }
       // Retrieve the source register from its respective G_CONCAT_VECTORS
@@ -352,14 +352,7 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
     }
   }
 
-  if (Ops.size() == 0)
-    return false;
-  // Only deal with cases where G_CONCAT_VECTORS sources are all the same type
-  if ((Mask.size() - (Ops.size() * ConcatSrcNumElt)) %
-          MRI.getType(Ops[0]).getNumElements() !=
-      0)
-    return false;
-  return true;
+  return !Ops.empty();
 }
 
 void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
