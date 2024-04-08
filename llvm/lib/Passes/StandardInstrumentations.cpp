@@ -235,12 +235,12 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR) {
+std::string getIRName(Any IR, bool demangled = false) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
   if (const auto *F = unwrapIR<Function>(IR))
-    return F->getName().str();
+    return demangled ? demangle(F->getName()) : F->getName().str();
 
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
     return C->getName();
@@ -249,7 +249,7 @@ std::string getIRName(Any IR) {
     return L->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return MF->getName().str();
+    return demangled ? demangle(MF->getName()) : MF->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -1577,7 +1577,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, demangle(getIRName(IR)));
+  timeTraceProfilerBegin(PassID, getIRName(IR, true));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
