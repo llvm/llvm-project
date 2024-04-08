@@ -24083,6 +24083,55 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
                      BinOp->getFlags());
 }
 
+/// If we are extracting a subvector produced by a wide unary operator try
+/// to use a narrow unary operator and/or avoid extraction.
+static SDValue narrowExtractedVectorUnaryOp(SDNode *Extract, SelectionDAG &DAG,
+                                          bool LegalOperations) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue UnaryOp = Extract->getOperand(0);
+  unsigned UnaryOpcode = UnaryOp.getOpcode();
+  
+  if (UnaryOpcode != ISD::FP_TO_SINT || UnaryOp->getNumValues() != 1)
+    return SDValue();
+
+  // The extract index must be a constant, so we can map it to a concat operand.
+  auto *ExtractIndexC = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
+  if (!ExtractIndexC)
+    return SDValue();
+
+  EVT WideUVT = UnaryOp.getValueType();
+  if (!WideUVT.isFixedLengthVector())
+    return SDValue();
+  
+  EVT VT = Extract->getValueType(0);
+  unsigned ExtractIndex = ExtractIndexC->getZExtValue();
+  assert(ExtractIndex % VT.getVectorNumElements() == 0 &&
+         "Extract index is not a multiple of the vector length.");
+
+  // Bail out if this is not a proper multiple width extraction.
+  unsigned WideWidth = WideUVT.getSizeInBits();
+  unsigned NarrowWidth = VT.getSizeInBits();
+  if (WideWidth % NarrowWidth != 0)
+    return SDValue();
+
+  unsigned NarrowingRatio = WideWidth / NarrowWidth;
+  unsigned WideNumElts = WideUVT.getVectorNumElements();
+
+  // Bail out if the target does not support a narrower version of the unaryop.
+  EVT NarrowUVT = EVT::getVectorVT(*DAG.getContext(), WideUVT.getScalarType(),
+                                   WideNumElts / NarrowingRatio);
+  if (!TLI.isOperationLegalOrCustomOrPromote(UnaryOpcode, NarrowUVT,
+                                             LegalOperations))
+    return SDValue();
+  
+  SDLoc DL(Extract);
+  auto ret = DAG.getNode(UnaryOpcode, DL, NarrowUVT, UnaryOp.getOperand(0));
+  dbgs() << "reduced node found: \n";
+  ret.dump();
+
+  return ret;
+}
+
 /// If we are extracting a subvector produced by a wide binary operator try
 /// to use a narrow binary operator and/or avoid concatenation and extraction.
 static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG,
@@ -24612,6 +24661,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
         N->getOperand(1));
   }
+
+  if (SDValue NarrowUOp = narrowExtractedVectorUnaryOp(N, DAG, LegalOperations))
+    return NarrowUOp;
 
   if (SDValue NarrowBOp = narrowExtractedVectorBinOp(N, DAG, LegalOperations))
     return NarrowBOp;
