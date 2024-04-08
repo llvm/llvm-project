@@ -418,7 +418,7 @@ void test_g() {
 
   // Assignment
   x.g = v64;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned {{long|long long}}') of value 4294967296 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 0 (32-bit bitfield, unsigned)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned long{{( long)?}}') of value 4294967296 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 0 (32-bit bitfield, unsigned)
 
   // PrePostIncDec
   x.g = min;
@@ -440,13 +440,13 @@ void test_g() {
   x.g += max;
   x.g = 0;
   x.g += (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned {{long|long long}}') of value 4294967296 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 0 (32-bit bitfield, unsigned)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned long{{( long)?}}') of value 4294967296 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 0 (32-bit bitfield, unsigned)
 
   x.g = max;
   x.g -= max;
   x.g = max;
   x.g -= (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned {{long|long long}}') of value 18446744073709551615 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 4294967295 (32-bit bitfield, unsigned)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'uint64_t' (aka 'unsigned long{{( long)?}}') of value 18446744073709551615 (64-bit, unsigned) to type 'uint32_t' (aka 'unsigned int') changed the value to 4294967295 (32-bit bitfield, unsigned)
 }
 
 void test_h() {
@@ -549,7 +549,7 @@ void test_j() {
 
   // Assignment
   x.j = v64;
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka '{{long|long long}}') of value 2147483648 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to -2147483648 (32-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka 'long{{( long)?}}') of value 2147483648 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to -2147483648 (32-bit bitfield, signed)
 
   // PrePostIncDec
   x.j = min;
@@ -571,13 +571,13 @@ void test_j() {
   x.j += max;
   x.j = 0;
   x.j += (max + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka '{{long|long long}}') of value 2147483648 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to -2147483648 (32-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka 'long{{( long)?}}') of value 2147483648 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to -2147483648 (32-bit bitfield, signed)
 
   x.j = 0;
   x.j -= (-min);
   x.j = 0;
   x.j -= (-min + 1);
-  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka '{{long|long long}}') of value -2147483649 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to 2147483647 (32-bit bitfield, signed)
+  // CHECK: {{.*}}bitfield-conversion.c:[[@LINE-1]]:7: runtime error: implicit conversion from type 'int64_t' (aka 'long{{( long)?}}') of value -2147483649 (64-bit, signed) to type 'int32_t' (aka 'int') changed the value to 2147483647 (32-bit bitfield, signed)
 }
 
 void test_k_l() {
