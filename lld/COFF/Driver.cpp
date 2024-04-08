@@ -511,7 +511,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
 
   // If we are running off the low-priority task list, execute and drain the
   // high priority task list before going any further. This is to ensure symbols
-  // provided by /DEFAULTLIB archives are linked property in the symbol table.
+  // provided by /DEFAULTLIB archives are linked properly in the symbol table.
   executeFirstQueue(firstTaskQueue);
 }
 
