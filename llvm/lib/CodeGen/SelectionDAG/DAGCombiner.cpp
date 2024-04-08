@@ -24123,7 +24123,30 @@ static SDValue narrowExtractedVectorUnaryOp(SDNode *Extract, SelectionDAG &DAG,
   if (!TLI.isOperationLegalOrCustomOrPromote(UnaryOpcode, NarrowUVT,
                                              LegalOperations))
     return SDValue();
-  
+
+  EVT NarrowUEltVT = EVT::getVectorVT(*DAG.getContext(), UnaryOp.getOperand(0).getValueType().getScalarType(),
+                                   WideNumElts / NarrowingRatio);
+  // if (!TLI.isOperationLegalOrCustomOrPromote(ISD::EXTRACT_SUBVECTOR, NarrowUEltVT,
+  //                                            LegalOperations))
+  //   return SDValue();
+
+  // If extraction is cheap, we don't need to look at the binop operands
+  // for concat ops. The narrow binop alone makes this transform profitable.
+  if (TLI.isExtractSubvectorCheap(NarrowUVT, WideUVT, ExtractIndex) &&
+      UnaryOp.hasOneUse() && Extract->getOperand(0)->hasOneUse()) {
+    // extract (binop B0, B1), N --> binop (extract B0, N), (extract B1, N)
+    SDLoc DL(Extract);
+    NarrowUVT.dump();
+    NarrowUEltVT.dump();
+    SDValue X = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowUEltVT,
+                            UnaryOp.getOperand(0), Extract->getOperand(1));
+    SDValue NarrowUnaryOp = DAG.getNode(UnaryOpcode, DL, NarrowUVT, X);
+    X.dump();
+    NarrowUnaryOp.dump();
+    dbgs() << "reduced node found (smol)\n";
+    return DAG.getBitcast(VT, NarrowUnaryOp);
+  }
+
   SDLoc DL(Extract);
   auto ret = DAG.getNode(UnaryOpcode, DL, NarrowUVT, UnaryOp.getOperand(0));
   dbgs() << "reduced node found: \n";
