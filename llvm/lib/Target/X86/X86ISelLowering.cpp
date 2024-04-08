@@ -44710,6 +44710,17 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to fold extract(trunc(x),c) -> trunc(extract(x,c)).
+  if (CIdx && InputVector.getOpcode() == ISD::TRUNCATE) {
+    SDValue TruncSrc = InputVector.getOperand(0);
+    EVT TruncSVT = TruncSrc.getValueType().getScalarType();
+    if (DCI.isBeforeLegalize() && TLI.isTypeLegal(TruncSVT)) {
+      SDValue NewExt =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TruncSVT, TruncSrc, EltIdx);
+      return DAG.getAnyExtOrTrunc(NewExt, dl, VT);
+    }
+  }
+
   return SDValue();
 }
 

@@ -1469,7 +1469,7 @@ static void lowerExplicitLowerBounds(
 /// CFI_desc_t requirements in 18.5.3 point 5.).
 static mlir::Value getAssumedSizeExtent(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-  return builder.createIntegerConstant(loc, builder.getIndexType(), -1);
+  return builder.createMinusOneInteger(loc, builder.getIndexType());
 }
 
 /// Lower explicit extents into \p result if this is an explicit-shape or

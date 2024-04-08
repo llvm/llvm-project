@@ -13,8 +13,8 @@ body: |
     ; CHECK-NEXT: $x0 = COPY [[EVEC]](s64)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(<2 x s64>) = COPY $q0
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s64) = G_EXTRACT_VECTOR_ELT %0(<2 x s64>), %1(s64)
     $x0 = COPY %2(s64)
     RET_ReallyLR
 ...
