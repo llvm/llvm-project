@@ -2441,6 +2441,26 @@ public:
         ->getResult(0);
   }
 
+  mlir::Value buildMinMaxPostOp(mlir::cir::AtomicFetch op, OpAdaptor adaptor,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                mlir::Value rmwVal, bool isSigned) const {
+    auto loc = op.getLoc();
+    mlir::LLVM::ICmpPredicate pred;
+    if (op.getBinop() == mlir::cir::AtomicFetchKind::Max) {
+      pred = isSigned ? mlir::LLVM::ICmpPredicate::sgt
+                      : mlir::LLVM::ICmpPredicate::ugt;
+    } else { // Min
+      pred = isSigned ? mlir::LLVM::ICmpPredicate::slt
+                      : mlir::LLVM::ICmpPredicate::ult;
+    }
+
+    auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+        loc, mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(), pred),
+        rmwVal, adaptor.getVal());
+    return rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, rmwVal,
+                                                 adaptor.getVal());
+  }
+
   llvm::StringLiteral getLLVMBinop(mlir::cir::AtomicFetchKind k,
                                    bool isInt) const {
     switch (k) {
@@ -2459,12 +2479,16 @@ public:
     case mlir::cir::AtomicFetchKind::Nand:
       // There's no nand binop in LLVM, this is later fixed with a not.
       return mlir::LLVM::AndOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::Max:
+    case mlir::cir::AtomicFetchKind::Min:
+      llvm_unreachable("handled in buildMinMaxPostOp");
     }
     llvm_unreachable("Unknown atomic fetch opcode");
   }
 
   mlir::LLVM::AtomicBinOp getLLVMAtomicBinOp(mlir::cir::AtomicFetchKind k,
-                                             bool isInt) const {
+                                             bool isInt,
+                                             bool isSignedInt) const {
     switch (k) {
     case mlir::cir::AtomicFetchKind::Add:
       return isInt ? mlir::LLVM::AtomicBinOp::add
@@ -2480,6 +2504,18 @@ public:
       return mlir::LLVM::AtomicBinOp::_or;
     case mlir::cir::AtomicFetchKind::Nand:
       return mlir::LLVM::AtomicBinOp::nand;
+    case mlir::cir::AtomicFetchKind::Max: {
+      if (!isInt)
+        return mlir::LLVM::AtomicBinOp::fmax;
+      return isSignedInt ? mlir::LLVM::AtomicBinOp::max
+                         : mlir::LLVM::AtomicBinOp::umax;
+    }
+    case mlir::cir::AtomicFetchKind::Min: {
+      if (!isInt)
+        return mlir::LLVM::AtomicBinOp::fmin;
+      return isSignedInt ? mlir::LLVM::AtomicBinOp::min
+                         : mlir::LLVM::AtomicBinOp::umin;
+    }
     }
     llvm_unreachable("Unknown atomic fetch opcode");
   }
@@ -2488,12 +2524,13 @@ public:
   matchAndRewrite(mlir::cir::AtomicFetch op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
-    bool isInt; // otherwise it's float.
-    if (op.getVal().getType().isa<mlir::cir::IntType>())
+    bool isInt, isSignedInt = false; // otherwise it's float.
+    if (auto intTy = op.getVal().getType().dyn_cast<mlir::cir::IntType>()) {
       isInt = true;
-    else if (op.getVal()
-                 .getType()
-                 .isa<mlir::cir::SingleType, mlir::cir::DoubleType>())
+      isSignedInt = intTy.isSigned();
+    } else if (op.getVal()
+                   .getType()
+                   .isa<mlir::cir::SingleType, mlir::cir::DoubleType>())
       isInt = false;
     else {
       return op.emitError()
@@ -2502,13 +2539,18 @@ public:
 
     // FIXME: add syncscope.
     auto llvmOrder = getLLVMAtomicOrder(adaptor.getMemOrder());
-    auto llvmBinOpc = getLLVMAtomicBinOp(op.getBinop(), isInt);
+    auto llvmBinOpc = getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
     auto rmwVal = rewriter.create<mlir::LLVM::AtomicRMWOp>(
         op.getLoc(), llvmBinOpc, adaptor.getPtr(), adaptor.getVal(), llvmOrder);
 
     mlir::Value result = rmwVal.getRes();
     if (!op.getFetchFirst()) {
-      result = buildPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt);
+      if (op.getBinop() == mlir::cir::AtomicFetchKind::Max ||
+          op.getBinop() == mlir::cir::AtomicFetchKind::Min)
+        result = buildMinMaxPostOp(op, adaptor, rewriter, rmwVal.getRes(),
+                                   isSignedInt);
+      else
+        result = buildPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt);
 
       // Compensate lack of nand binop in LLVM IR.
       if (op.getBinop() == mlir::cir::AtomicFetchKind::Nand) {

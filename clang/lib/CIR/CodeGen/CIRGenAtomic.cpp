@@ -322,7 +322,6 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           uint8_t Scope) {
   assert(!UnimplementedFeature::syncScopeID());
   StringRef Op;
-  [[maybe_unused]] bool PostOpMinMax = false;
 
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
@@ -413,26 +412,30 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
-    PostOpMinMax = true;
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_min:
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Min);
     break;
 
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
-    PostOpMinMax = true;
+    fetchFirst = false;
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__opencl_atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Max);
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -509,10 +512,6 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
     RMWI->setAttr("fetch_first", mlir::UnitAttr::get(builder.getContext()));
 
   auto Result = RMWI->getResult(0);
-
-  if (PostOpMinMax)
-    llvm_unreachable("NYI");
-
   builder.createStore(loc, Result, Dest);
 }
 

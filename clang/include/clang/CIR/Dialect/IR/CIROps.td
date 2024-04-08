@@ -3479,12 +3479,14 @@ def Atomic_And  : I32EnumAttrCase<"And",  2, "and">;
 def Atomic_Xor  : I32EnumAttrCase<"Xor",  3, "xor">;
 def Atomic_Or   : I32EnumAttrCase<"Or",   4, "or">;
 def Atomic_Nand : I32EnumAttrCase<"Nand", 5, "nand">;
+def Atomic_Max  : I32EnumAttrCase<"Max",  6, "max">;
+def Atomic_Min  : I32EnumAttrCase<"Min",  7, "min">;
 
 def AtomicFetchKind : I32EnumAttr<
     "AtomicFetchKind",
     "Binary opcode for atomic fetch operations",
-    [Atomic_Add, Atomic_Sub, Atomic_And,
-     Atomic_Xor, Atomic_Or, Atomic_Nand]> {
+    [Atomic_Add, Atomic_Sub, Atomic_And, Atomic_Xor, Atomic_Or, Atomic_Nand,
+     Atomic_Max, Atomic_Min]> {
   let cppNamespace = "::mlir::cir";
 }
 

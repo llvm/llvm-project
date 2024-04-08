@@ -114,3 +114,28 @@ int fetch_binop(int *i) {
 // LLVM-NOT: xor {{.*}}
 // LLVM: atomicrmw nand ptr
 // LLVM-NOT: nand {{.*}}
+
+void min_max_fetch(int *i) {
+  __atomic_fetch_max(i, 1, memory_order_seq_cst);
+  __atomic_fetch_min(i, 1, memory_order_seq_cst);
+  __atomic_max_fetch(i, 1, memory_order_seq_cst);
+  __atomic_min_fetch(i, 1, memory_order_seq_cst);
+}
+
+// CHECK: cir.func @_Z13min_max_fetchPi
+// CHECK: = cir.atomic.fetch(max, {{.*}}) fetch_first
+// CHECK: = cir.atomic.fetch(min, {{.*}}) fetch_first
+// CHECK: = cir.atomic.fetch(max, {{.*}}) : !s32i
+// CHECK: = cir.atomic.fetch(min, {{.*}}) : !s32i
+
+// LLVM: define void @_Z13min_max_fetchPi
+// LLVM: atomicrmw max ptr
+// LLVM-NOT: icmp {{.*}}
+// LLVM: atomicrmw min ptr
+// LLVM-NOT: icmp {{.*}}
+// LLVM: %[[MAX:.*]] = atomicrmw max ptr
+// LLVM: %[[ICMP_MAX:.*]] = icmp sgt i32 %[[MAX]]
+// LLVM: select i1 %[[ICMP_MAX]], i32 %[[MAX]]
+// LLVM: %[[MIN:.*]] = atomicrmw min ptr
+// LLVM: %[[ICMP_MIN:.*]] = icmp slt i32 %[[MIN]]
+// LLVM: select i1 %[[ICMP_MIN]], i32 %[[MIN]]
