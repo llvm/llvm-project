@@ -1579,13 +1579,7 @@ public:
   /// Returns true if VP intrinsics with explicit vector length support should
   /// be generated in the tail folded loop.
   bool foldTailWithEVL() const {
-    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL &&
-           // FIXME: remove this once vp_reverse is supported.
-           none_of(
-               WideningDecisions,
-               [](const std::pair<std::pair<Instruction *, ElementCount>,
-                                  std::pair<InstWidening, InstructionCost>>
-                      &Data) { return Data.second.first == CM_Widen_Reverse; });
+    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL;
   }
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -9361,10 +9355,17 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 
 /// Creates either vp_store or vp_scatter intrinsics calls to represent
 /// predicated store/scatter.
-static Instruction *
-lowerStoreUsingVectorIntrinsics(IRBuilderBase &Builder, Value *Addr,
-                                Value *StoredVal, bool IsScatter, Value *Mask,
-                                Value *EVL, const Align &Alignment) {
+static Instruction *lowerStoreUsingVectorIntrinsics(
+    IRBuilderBase &Builder, Value *Addr, Value *StoredVal, bool IsScatter,
+    bool IsReverse, Value *Mask, Value *EVL, const Align &Alignment) {
+  if (IsReverse) {
+    auto *StoredValTy = cast<VectorType>(StoredVal->getType());
+    Value *BlockInMaskPart =
+        Builder.getAllOnesMask(StoredValTy->getElementCount());
+    StoredVal = Builder.CreateIntrinsic(
+        StoredValTy, Intrinsic::experimental_vp_reverse,
+        {StoredVal, BlockInMaskPart, EVL}, nullptr, "vp.reverse");
+  }
   CallInst *Call;
   if (IsScatter) {
     Call = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
@@ -9384,11 +9385,9 @@ lowerStoreUsingVectorIntrinsics(IRBuilderBase &Builder, Value *Addr,
 
 /// Creates either vp_load or vp_gather intrinsics calls to represent
 /// predicated load/gather.
-static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
-                                                   VectorType *DataTy,
-                                                   Value *Addr, bool IsGather,
-                                                   Value *Mask, Value *EVL,
-                                                   const Align &Alignment) {
+static Instruction *lowerLoadUsingVectorIntrinsics(
+    IRBuilderBase &Builder, VectorType *DataTy, Value *Addr, bool IsGather,
+    bool IsReverse, Value *Mask, Value *EVL, const Align &Alignment) {
   CallInst *Call;
   if (IsGather) {
     Call =
@@ -9402,7 +9401,14 @@ static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
   }
   Call->addParamAttr(
       0, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
+  Instruction *Res = Call;
+  if (IsReverse) {
+    Value *BlockInMaskPart = Builder.getAllOnesMask(DataTy->getElementCount());
+    Res = Builder.CreateIntrinsic(DataTy, Intrinsic::experimental_vp_reverse,
+                                  {Res, BlockInMaskPart, EVL}, nullptr,
+                                  "vp.reverse");
+  }
+  return Res;
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
@@ -9430,7 +9436,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     // a null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Mask = State.get(getMask(), Part);
-      if (isReverse())
+      if (isReverse() && !State.EVL)
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
       BlockInMaskParts[Part] = Mask;
     }
@@ -9456,11 +9462,20 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         // is created only if TTI prefers predicated vectorization, thus if EVL
         // is not nullptr it also implies preference for predicated
         // vectorization.
-        // FIXME: Support reverse store after vp_reverse is added.
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+        if (isMaskRequired && isReverse() && !getMask()->isLiveIn()) {
+          VectorType *MaskTy = cast<VectorType>(MaskPart->getType());
+          Value *BlockInMaskPart =
+              Builder.getAllOnesMask(MaskTy->getElementCount());
+          MaskPart = Builder.CreateIntrinsic(
+              MaskTy, Intrinsic::experimental_vp_reverse,
+              {MaskPart, BlockInMaskPart, EVL}, nullptr, "vp.reverse.mask");
+          BlockInMaskParts[Part] = MaskPart;
+        }
         NewSI = lowerStoreUsingVectorIntrinsics(
             Builder, State.get(getAddr(), Part, !CreateGatherScatter),
-            StoredVal, CreateGatherScatter, MaskPart, EVL, Alignment);
+            StoredVal, CreateGatherScatter, isReverse(), MaskPart, EVL,
+            Alignment);
       } else if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         Value *VectorGep = State.get(getAddr(), Part);
@@ -9504,11 +9519,19 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
       // is created only if TTI prefers predicated vectorization, thus if EVL
       // is not nullptr it also implies preference for predicated
       // vectorization.
-      // FIXME: Support reverse loading after vp_reverse is added.
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+      if (isMaskRequired && isReverse() && !getMask()->isLiveIn()) {
+        VectorType *MaskTy = cast<VectorType>(MaskPart->getType());
+        Value *BlockInMaskPart =
+            Builder.getAllOnesMask(MaskTy->getElementCount());
+        MaskPart = Builder.CreateIntrinsic(
+            MaskTy, Intrinsic::experimental_vp_reverse,
+            {MaskPart, BlockInMaskPart, EVL}, nullptr, "vp.reverse.mask");
+        BlockInMaskParts[Part] = MaskPart;
+      }
       NewLI = lowerLoadUsingVectorIntrinsics(
           Builder, DataTy, State.get(getAddr(), Part, !CreateGatherScatter),
-          CreateGatherScatter, MaskPart, EVL, Alignment);
+          CreateGatherScatter, isReverse(), MaskPart, EVL, Alignment);
     } else if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(getAddr(), Part);
