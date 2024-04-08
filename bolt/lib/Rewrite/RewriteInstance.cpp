@@ -1417,9 +1417,26 @@ void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
 
+  if (BAT) {
+    // Register fragments using BAT cold mapping.
+    for (auto &BFI : BC->getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      if (!Function.isFragment())
+        continue;
+      const uint64_t Address = Function.getAddress();
+      const uint64_t ParentAddress = BAT->fetchParentAddress(Address);
+      if (!ParentAddress)
+        continue;
+      BinaryFunction *ParentFunction =
+          BC->getBinaryFunctionAtAddress(ParentAddress);
+      assert(ParentFunction);
+      BC->registerFragment(Function, *ParentFunction);
+    }
+  }
+
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
-    if (!Function.isFragment())
+    if (!Function.isFragment() || !Function.getParentFragments()->empty())
       continue;
     unsigned ParentsFound = 0;
     for (StringRef Name : Function.getNames()) {
