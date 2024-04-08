@@ -57,7 +57,7 @@ private:
 
 } // namespace
 
-FailureOr<BoundType> parseBoundType(const std::string &type) {
+static FailureOr<BoundType> parseBoundType(const std::string &type) {
   if (type == "EQ")
     return BoundType::EQ;
   if (type == "LB")
@@ -65,6 +65,34 @@ FailureOr<BoundType> parseBoundType(const std::string &type) {
   if (type == "UB")
     return BoundType::UB;
   return failure();
+}
+
+static FailureOr<ValueBoundsConstraintSet::ComparisonOperator>
+parseComparisonOperator(const std::string &type) {
+  if (type == "EQ")
+    return ValueBoundsConstraintSet::ComparisonOperator::EQ;
+  if (type == "LT")
+    return ValueBoundsConstraintSet::ComparisonOperator::LT;
+  if (type == "LE")
+    return ValueBoundsConstraintSet::ComparisonOperator::LE;
+  if (type == "GT")
+    return ValueBoundsConstraintSet::ComparisonOperator::GT;
+  if (type == "GE")
+    return ValueBoundsConstraintSet::ComparisonOperator::GE;
+  return failure();
+}
+
+static ValueBoundsConstraintSet::ComparisonOperator
+invertComparisonOperator(ValueBoundsConstraintSet::ComparisonOperator cmp) {
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::LT)
+    return ValueBoundsConstraintSet::ComparisonOperator::GE;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::LE)
+    return ValueBoundsConstraintSet::ComparisonOperator::GT;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::GT)
+    return ValueBoundsConstraintSet::ComparisonOperator::LE;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::GE)
+    return ValueBoundsConstraintSet::ComparisonOperator::LT;
+  llvm_unreachable("unsupported comparison operator");
 }
 
 /// Look for "test.reify_bound" ops in the input and replace their results with
@@ -215,18 +243,34 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
   return failure(result.wasInterrupted());
 }
 
-/// Look for "test.are_equal" ops and emit errors/remarks.
+/// Look for "test.compare" ops and emit errors/remarks.
 static LogicalResult testEquality(func::FuncOp funcOp) {
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](Operation *op) {
-    // Look for test.are_equal ops.
-    if (op->getName().getStringRef() == "test.are_equal") {
+    // Look for test.compare ops.
+    if (op->getName().getStringRef() == "test.compare") {
       if (op->getNumOperands() != 2 || !op->getOperand(0).getType().isIndex() ||
           !op->getOperand(1).getType().isIndex()) {
         op->emitOpError("invalid op");
         return WalkResult::skip();
       }
+
+      // Get comparison operator.
+      std::string cmpStr = "EQ";
+      if (auto cmpAttr = op->getAttrOfType<StringAttr>("cmp"))
+        cmpStr = cmpAttr.str();
+      auto cmpType = parseComparisonOperator(cmpStr);
+      if (failed(cmpType)) {
+        op->emitOpError("invalid comparison operator");
+        return WalkResult::interrupt();
+      }
+
       if (op->hasAttr("compose")) {
+        if (cmpType != ValueBoundsConstraintSet::EQ) {
+          op->emitOpError(
+              "comparison operator must be EQ when 'composed' is specified");
+          return WalkResult::interrupt();
+        }
         FailureOr<int64_t> delta = affine::fullyComposeAndComputeConstantDelta(
             op->getOperand(0), op->getOperand(1));
         if (failed(delta)) {
@@ -236,16 +280,25 @@ static LogicalResult testEquality(func::FuncOp funcOp) {
         } else {
           op->emitRemark("different");
         }
+        return WalkResult::advance();
+      }
+
+      auto compare = [&](ValueBoundsConstraintSet::ComparisonOperator cmp) {
+        return ValueBoundsConstraintSet::compare(
+            /*lhs=*/op->getOperand(0), /*lhsDim=*/std::nullopt, cmp,
+            /*rhs=*/op->getOperand(1), /*rhsDim=*/std::nullopt);
+      };
+      if (compare(*cmpType)) {
+        op->emitRemark("true");
+      } else if (*cmpType != ValueBoundsConstraintSet::EQ &&
+                 compare(invertComparisonOperator(*cmpType))) {
+        op->emitRemark("false");
+      } else if (*cmpType == ValueBoundsConstraintSet::EQ &&
+                 (compare(ValueBoundsConstraintSet::ComparisonOperator::LT) ||
+                  compare(ValueBoundsConstraintSet::ComparisonOperator::GT))) {
+        op->emitRemark("false");
       } else {
-        FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
-            op->getOperand(0), op->getOperand(1));
-        if (failed(equal)) {
-          op->emitError("could not determine equality");
-        } else if (*equal) {
-          op->emitRemark("equal");
-        } else {
-          op->emitRemark("different");
-        }
+        op->emitError("unknown");
       }
     }
     return WalkResult::advance();
