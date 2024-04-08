@@ -369,7 +369,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
 
 void LinkerDriver::enqueueLazyFile(InputFile *file) {
   enqueueSecondaryTask([=]() {
-    // Once it has been enqued, it cannot be lazy anymore.
+    // Once it has been enqueued, it cannot be lazy anymore.
     file->lazy = false;
     ctx.symtab.addFile(file);
   });
