@@ -332,7 +332,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT "${spv_suffix}"
-        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" ${builtins_link_lib_tgt}
+        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" $<TARGET_FILE:${builtins_link_lib_tgt}>
         DEPENDS ${builtins_link_lib_tgt} )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
