@@ -234,6 +234,7 @@ private:
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
+  static APFloat getZeroFP(const Type *LLVMFloatTy);
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -1168,6 +1169,10 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   Register InputRegister = I.getOperand(2).getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+  
+  if(!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
   bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
   if (IsBoolTy && !IsVectorTy) {
@@ -1187,23 +1192,21 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   Register NotEqualReg = ResVReg;
 
   if (IsVectorTy) {
-    NotEqualReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    NotEqualReg = IsBoolTy ? InputRegister : MRI->createVirtualRegister(&SPIRV::IDRegClass);
     const unsigned NumElts = InputType->getOperand(2).getImm();
     SpvBoolTy = GR.getOrCreateSPIRVVectorType(SpvBoolTy, NumElts, I, TII);
   }
 
   if (!IsBoolTy) {
-    Register ConstCompositeZeroReg =
+    Register ConstZeroReg =
         IsFloatTy ? buildZerosValF(InputType, I) : buildZerosVal(InputType, I);
 
     BuildMI(BB, I, I.getDebugLoc(), TII.get(SpirvNotEqualId))
         .addDef(NotEqualReg)
         .addUse(GR.getSPIRVTypeID(SpvBoolTy))
         .addUse(InputRegister)
-        .addUse(ConstCompositeZeroReg)
+        .addUse(ConstZeroReg)
         .constrainAllUses(TII, TRI, RBI);
-  } else {
-    NotEqualReg = InputRegister;
   }
 
   if (!IsVectorTy)
@@ -1459,7 +1462,7 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
-APFloat getZeroFP(const Type *LLVMFloatTy) {
+APFloat SPIRVInstructionSelector::getZeroFP(const Type *LLVMFloatTy) {
   if (!LLVMFloatTy)
     return APFloat::getZero(APFloat::IEEEsingle());
   switch (LLVMFloatTy->getScalarType()->getTypeID()) {

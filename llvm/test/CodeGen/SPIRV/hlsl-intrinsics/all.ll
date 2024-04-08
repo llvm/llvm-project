@@ -4,49 +4,49 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; Make sure spirv operation function calls for all are generated.
 
-; CHECK-HLSL: OpMemoryModel Logical GLSL450
-; CHECK-OCL: OpMemoryModel Physical32 OpenCL
-; CHECK: OpName %[[#all_bool_arg:]] "a"
-; CHECK: %[[#int_64:]] = OpTypeInt 64 0
-; CHECK: %[[#bool:]] = OpTypeBool
-; CHECK: %[[#int_32:]] = OpTypeInt 32 0
-; CHECK: %[[#int_16:]] = OpTypeInt 16 0
-; CHECK: %[[#float_64:]] = OpTypeFloat 64
-; CHECK: %[[#float_32:]] = OpTypeFloat 32
-; CHECK: %[[#float_16:]] = OpTypeFloat 16
-; CHECK: %[[#vec_1_4:]] = OpTypeVector %[[#bool]] 4
-; CHECK: %[[#vec_16_4:]] = OpTypeVector %[[#int_16]] 4
-; CHECK: %[[#vec_32_4:]] = OpTypeVector %[[#int_32]] 4
-; CHECK: %[[#vec_64_4:]] = OpTypeVector %[[#int_64]] 4
-; CHECK: %[[#vec_float_16_4:]] = OpTypeVector %[[#float_16]] 4
-; CHECK: %[[#vec_float_32_4:]] = OpTypeVector %[[#float_32]] 4
-; CHECK: %[[#vec_float_64_4:]] = OpTypeVector %[[#float_64]] 4
+; CHECK-HLSL-DAG: OpMemoryModel Logical GLSL450
+; CHECK-OCL-DAG: OpMemoryModel Physical32 OpenCL
+; CHECK-DAG: OpName %[[#all_bool_arg:]] "a"
+; CHECK-DAG: %[[#int_64:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#bool:]] = OpTypeBool
+; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#int_16:]] = OpTypeInt 16 0
+; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
+; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#float_16:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#vec_1_4:]] = OpTypeVector %[[#bool]] 4
+; CHECK-DAG: %[[#vec_16_4:]] = OpTypeVector %[[#int_16]] 4
+; CHECK-DAG: %[[#vec_32_4:]] = OpTypeVector %[[#int_32]] 4
+; CHECK-DAG: %[[#vec_64_4:]] = OpTypeVector %[[#int_64]] 4
+; CHECK-DAG: %[[#vec_float_16_4:]] = OpTypeVector %[[#float_16]] 4
+; CHECK-DAG: %[[#vec_float_32_4:]] = OpTypeVector %[[#float_32]] 4
+; CHECK-DAG: %[[#vec_float_64_4:]] = OpTypeVector %[[#float_64]] 4
 
-; CHECK-HLSL: %[[#const_int_64:]] = OpConstant %[[#int_64]] 0
-; CHECK-HLSL: %[[#const_int_32:]] = OpConstant %[[#int_32]] 0
-; CHECK-HLSL: %[[#const_int_16:]] = OpConstant %[[#int_16]] 0
-; CHECK-HLSL: %[[#const_float_64:]] = OpConstant %[[#float_64]] 0
-; CHECK-HLSL: %[[#const_float_32:]] = OpConstant %[[#float_32:]] 0
-; CHECK-HLSL: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
-; CHECK-HLSL: %[[#vec_zero_const_i16_4:]] = OpConstantComposite %[[#vec_16_4:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]]
-; CHECK-HLSL: %[[#vec_zero_const_i32_4:]] = OpConstantComposite %[[#vec_32_4:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]]
-; CHECK-HLSL: %[[#vec_zero_const_i64_4:]] = OpConstantComposite %[[#vec_64_4:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]]
-; CHECK-HLSL: %[[#vec_zero_const_f16_4:]] = OpConstantComposite %[[#vec_float_16_4:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]]
-; CHECK-HLSL: %[[#vec_zero_const_f32_4:]] = OpConstantComposite %[[#vec_float_32_4:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]]
-; CHECK-HLSL: %[[#vec_zero_const_f64_4:]] = OpConstantComposite %[[#vec_float_64_4:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]]
+; CHECK-HLSL-DAG: %[[#const_int_64:]] = OpConstant %[[#int_64]] 0
+; CHECK-HLSL-DAG: %[[#const_int_32:]] = OpConstant %[[#int_32]] 0
+; CHECK-HLSL-DAG: %[[#const_int_16:]] = OpConstant %[[#int_16]] 0
+; CHECK-HLSL-DAG: %[[#const_float_64:]] = OpConstant %[[#float_64]] 0
+; CHECK-HLSL-DAG: %[[#const_float_32:]] = OpConstant %[[#float_32:]] 0
+; CHECK-HLSL-DAG: %[[#const_float_16:]] = OpConstant %[[#float_16:]] 0
+; CHECK-HLSL-DAG: %[[#vec_zero_const_i16_4:]] = OpConstantComposite %[[#vec_16_4:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]] %[[#const_int_16:]]
+; CHECK-HLSL-DAG: %[[#vec_zero_const_i32_4:]] = OpConstantComposite %[[#vec_32_4:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]] %[[#const_int_32:]]
+; CHECK-HLSL-DAG: %[[#vec_zero_const_i64_4:]] = OpConstantComposite %[[#vec_64_4:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]] %[[#const_int_64:]]
+; CHECK-HLSL-DAG: %[[#vec_zero_const_f16_4:]] = OpConstantComposite %[[#vec_float_16_4:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]] %[[#const_float_16:]]
+; CHECK-HLSL-DAG: %[[#vec_zero_const_f32_4:]] = OpConstantComposite %[[#vec_float_32_4:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]] %[[#const_float_32:]]
+; CHECK-HLSL-DAG: %[[#vec_zero_const_f64_4:]] = OpConstantComposite %[[#vec_float_64_4:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]] %[[#const_float_64:]]
 
-; CHECK-OCL: %[[#const_int_64:]] = OpConstantNull %[[#int_64]]
-; CHECK-OCL: %[[#const_int_32:]] = OpConstantNull %[[#int_32]]
-; CHECK-OCL: %[[#const_int_16:]] = OpConstantNull %[[#int_16]]
-; CHECK-OCL: %[[#const_float_64:]] = OpConstantNull %[[#float_64]] 
-; CHECK-OCL: %[[#const_float_32:]] = OpConstantNull %[[#float_32:]]
-; CHECK-OCL: %[[#const_float_16:]] = OpConstantNull %[[#float_16:]]
-; CHECK-OCL: %[[#vec_zero_const_i16_4:]] = OpConstantNull %[[#vec_16_4:]]
-; CHECK-OCL: %[[#vec_zero_const_i32_4:]] = OpConstantNull %[[#vec_32_4:]]
-; CHECK-OCL: %[[#vec_zero_const_i64_4:]] = OpConstantNull %[[#vec_64_4:]]
-; CHECK-OCL: %[[#vec_zero_const_f16_4:]] = OpConstantNull %[[#vec_float_16_4:]]
-; CHECK-OCL: %[[#vec_zero_const_f32_4:]] = OpConstantNull %[[#vec_float_32_4:]]
-; CHECK-OCL: %[[#vec_zero_const_f64_4:]] = OpConstantNull %[[#vec_float_64_4:]]
+; CHECK-OCL-DAG: %[[#const_int_64:]] = OpConstantNull %[[#int_64]]
+; CHECK-OCL-DAG: %[[#const_int_32:]] = OpConstantNull %[[#int_32]]
+; CHECK-OCL-DAG: %[[#const_int_16:]] = OpConstantNull %[[#int_16]]
+; CHECK-OCL-DAG: %[[#const_float_64:]] = OpConstantNull %[[#float_64]] 
+; CHECK-OCL-DAG: %[[#const_float_32:]] = OpConstantNull %[[#float_32:]]
+; CHECK-OCL-DAG: %[[#const_float_16:]] = OpConstantNull %[[#float_16:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_i16_4:]] = OpConstantNull %[[#vec_16_4:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_i32_4:]] = OpConstantNull %[[#vec_32_4:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_i64_4:]] = OpConstantNull %[[#vec_64_4:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_f16_4:]] = OpConstantNull %[[#vec_float_16_4:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_f32_4:]] = OpConstantNull %[[#vec_float_32_4:]]
+; CHECK-OCL-DAG: %[[#vec_zero_const_f64_4:]] = OpConstantNull %[[#vec_float_64_4:]]
 
 define noundef i1 @all_int64_t(i64 noundef %p0) {
 entry:
