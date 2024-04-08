@@ -702,7 +702,6 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
-        ":math_utils",
     ],
 )
 
@@ -1244,19 +1243,6 @@ libc_function(
 ################################ math targets ################################
 
 libc_support_library(
-    name = "math_utils",
-    srcs = ["src/math/generic/math_utils.cpp"],
-    hdrs = ["src/math/generic/math_utils.h"],
-    deps = [
-        "__support_cpp_bit",
-        "__support_cpp_type_traits",
-        ":__support_common",
-        ":errno",
-        ":hdr_math_macros",
-    ],
-)
-
-libc_support_library(
     name = "common_constants",
     srcs = ["src/math/generic/common_constants.cpp"],
     hdrs = ["src/math/generic/common_constants.h"],
@@ -1304,7 +1290,6 @@ libc_support_library(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":common_constants",
-        ":math_utils",
     ],
 )
 
@@ -1712,7 +1697,6 @@ libc_math_function(
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":inv_trigf_utils",
-        ":math_utils",
     ],
 )
 
