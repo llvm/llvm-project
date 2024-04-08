@@ -441,18 +441,29 @@ public:
 
   virtual int64_t GetValueAsSigned(int64_t fail_value, bool *success = nullptr);
 
-  llvm::APSInt GetValueAsAPSInt();
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to an APSInt and return that. Otherwise return an error.
+  llvm::Expected<llvm::APSInt> GetValueAsAPSInt();
 
-  llvm::APFloat GetValueAsFloat();
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to an APFloat and return that. Otherwise return an error.
+  llvm::Expected<llvm::APFloat> GetValueAsAPFloat();
 
-  bool GetValueAsBool();
+  /// If the current ValueObject is of an appropriate type, convert the
+  /// value to a boolean and return that. Otherwise return an error.
+  llvm::Expected<bool> GetValueAsBool();
 
-  /// Update the value of the current object to be the integer in the 'value'
-  /// parameter.
-  void UpdateIntegerValue(const llvm::APInt &value);
+  /// Update an existing integer ValueObject with a new integer value. This
+  /// is only intended to be used with 'temporary' ValueObjects, i.e. ones that
+  /// are not associated with program variables. It does not update program
+  /// memory, registers, stack, etc.
+  void SetValueFromInteger(const llvm::APInt &value, Status &error);
 
-  /// Assign the integer value 'new_val_sp' to the current object.
-  void UpdateIntegerValue(lldb::ValueObjectSP new_val_sp);
+  /// Update an existing integer ValueObject with an integer value created
+  /// frome 'new_val_sp'.  This is only intended to be used with 'temporary'
+  /// ValueObjects, i.e. ones that are not associated with program variables.
+  /// It does not update program  memory, registers, stack, etc.
+  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
@@ -631,7 +642,7 @@ public:
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
                                               lldb::TypeSP &type_sp);
 
-  /// Return the target load address assocaited with this value object.
+  /// Return the target load address associated with this value object.
   lldb::addr_t GetLoadAddress();
 
   lldb::ValueObjectSP CastDerivedToBaseType(CompilerType type,
