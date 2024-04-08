@@ -886,9 +886,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, p0, 2);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
-      .legalIf(typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64}))
+      .legalIf(
+          typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64, v2p0}))
       .moreElementsToNextPow2(0)
-      .widenVectorEltsToVectorMinSize(0, 64);
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},

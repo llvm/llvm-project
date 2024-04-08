@@ -385,6 +385,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_UNICODE
 #endif
 
+#if defined(_LIBCPP_HAS_OPEN_WITH_WCHAR)
+#  define TEST_HAS_OPEN_WITH_WCHAR
+#endif
+
 #if defined(_LIBCPP_HAS_NO_INT128) || defined(_MSVC_STL_VERSION)
 #   define TEST_HAS_NO_INT128
 #endif

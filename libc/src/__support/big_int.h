@@ -249,19 +249,15 @@ LIBC_INLINE constexpr bool is_negative(cpp::array<word, N> &array) {
 enum Direction { LEFT, RIGHT };
 
 // A bitwise shift on an array of elements.
-// TODO: Make the result UB when 'offset' is greater or equal to the number of
-// bits in 'array'. This will allow for better code performance.
+// 'offset' must be less than TOTAL_BITS (i.e., sizeof(word) * CHAR_BIT * N)
+// otherwise the behavior is undefined.
 template <Direction direction, bool is_signed, typename word, size_t N>
 LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
                                                 size_t offset) {
   static_assert(direction == LEFT || direction == RIGHT);
   constexpr size_t WORD_BITS = cpp::numeric_limits<word>::digits;
-  constexpr size_t TOTAL_BITS = N * WORD_BITS;
-  if (LIBC_UNLIKELY(offset == 0))
-    return array;
-  if (LIBC_UNLIKELY(offset >= TOTAL_BITS))
-    return {};
 #ifdef LIBC_TYPES_HAS_INT128
+  constexpr size_t TOTAL_BITS = N * WORD_BITS;
   if constexpr (TOTAL_BITS == 128) {
     using type = cpp::conditional_t<is_signed, __int128_t, __uint128_t>;
     auto tmp = cpp::bit_cast<type>(array);
@@ -272,6 +268,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     return cpp::bit_cast<cpp::array<word, N>>(tmp);
   }
 #endif
+  if (LIBC_UNLIKELY(offset == 0))
+    return array;
   const bool is_neg = is_signed && is_negative(array);
   constexpr auto at = [](size_t index) -> int {
     // reverse iteration when direction == LEFT.

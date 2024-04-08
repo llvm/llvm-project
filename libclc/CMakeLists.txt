@@ -122,7 +122,11 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   Support
 )
-add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
+else()
+  add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+endif()
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
 target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
@@ -328,7 +332,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT "${spv_suffix}"
-        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" ${builtins_opt_lib_tgt}
+        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" ${builtins_link_lib_tgt}
         DEPENDS ${builtins_link_lib_tgt} )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
