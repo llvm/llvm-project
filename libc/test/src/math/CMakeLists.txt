@@ -1019,6 +1019,7 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
+    libc.hdr.math_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f
     libc.src.__support.CPP.array
@@ -1082,6 +1083,21 @@ add_fp_unittest(
     exp10m1f16_test.cpp
   DEPENDS
     libc.src.math.exp10m1f16
+)
+
+add_fp_unittest(
+  exp10m1f_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    libc.hdr.math_macros
+    libc.src.errno.errno
+    libc.src.math.exp10m1f
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
