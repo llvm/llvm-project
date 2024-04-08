@@ -346,6 +346,10 @@ end
 * A `NAMELIST` input group may begin with either `&` or `$`.
 * A comma in a fixed-width numeric input field terminates the
   field rather than signaling an invalid character error.
+* Arguments to the intrinsic functions `MAX` and `MIN` are converted
+  when necessary to the type of the result.
+  An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
+  the first two cannot be converted, as it may not be present.
 
 ### Extensions supported when enabled by options
 
