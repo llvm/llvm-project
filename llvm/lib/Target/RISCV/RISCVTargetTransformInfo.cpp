@@ -869,16 +869,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
       auto LT = getTypeLegalizationCost(ExpRetTy);
 
-      // vid.v   v8
+      // vid.v   v8  // considered hoisted
       // vsaddu.vx   v8, v8, a0
       // vmsltu.vx   v0, v8, a1
-      return getRISCVInstructionCost(
-                 {RISCV::VID_V, RISCV::VSADDU_VX, RISCV::VMSLTU_VX}, LT.second,
-                 CostKind) +
-             (LT.first - 1) *
-                 getRISCVInstructionCost(
-                     {RISCV::VADD_VX, RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
-                     LT.second, CostKind);
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
+                                     LT.second, CostKind);
     }
     break;
   }
