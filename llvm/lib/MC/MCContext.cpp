@@ -656,7 +656,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          GOFF::ESDBindingAlgorithm BindAlgorithm,
                                          GOFF::ESDLoadingBehavior LoadBehavior,
                                          GOFF::ESDBindingScope BindingScope,
-                                         bool isRooted, MCSymbolGOFF *TextOwner) {
+                                         bool isRooted, const MCSymbolGOFF *TextOwner) {
   return getGOFFSection(Section, Kind, nullptr, nullptr, GOFF::GOFFSectionType::Other,
   TextStyle, BindAlgorithm, LoadBehavior, BindingScope, isRooted, TextOwner);
 }
@@ -669,7 +669,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          GOFF::ESDBindingAlgorithm BindAlgorithm,
                                          GOFF::ESDLoadingBehavior LoadBehavior,
                                          GOFF::ESDBindingScope BindingScope,
-                                         bool isRooted, MCSymbolGOFF *TextOwner) {
+                                         bool isRooted, const MCSymbolGOFF *TextOwner) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool = GOFFUniquingMap.insert(std::make_pair(
       GOFFSectionKey{Section.str(), SectionType, (Parent != nullptr)},

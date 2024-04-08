@@ -52,7 +52,7 @@ class MCSectionGOFF final : public MCSection {
   /// TextOwner - Valid if owned the text record containing the body of this section
   /// is not owned by an ED Symbol. The MCSymbol that represents the part or label that
   /// actually owns the TXT Record.
-  MCSymbolGOFF *TextOwner = nullptr;
+  const MCSymbolGOFF *TextOwner = nullptr;
 
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
@@ -60,7 +60,7 @@ class MCSectionGOFF final : public MCSection {
   
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub,
                 GOFF::ESDTextStyle TextStyle, GOFF::ESDBindingAlgorithm BindAlgorithm,
-                GOFF::ESDLoadingBehavior LoadBehavior, GOFF::ESDBindingScope BindingScope, bool IsRooted, MCSymbolGOFF *TextOwner)
+                GOFF::ESDLoadingBehavior LoadBehavior, GOFF::ESDBindingScope BindingScope, bool IsRooted, const MCSymbolGOFF *TextOwner)
       : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub),
         TextStyle(TextStyle), BindAlgorithm(BindAlgorithm), LoadBehavior(LoadBehavior), BindingScope(BindingScope), IsRooted(IsRooted), TextOwner(TextOwner) {}
 
@@ -124,7 +124,7 @@ public:
       case GOFF::GOFFSectionType::Static:
         return "C_WSA64";
       case GOFF::GOFFSectionType::PPA2Offset:
-        return "C_QPPA2";
+        return "C_@@QPPA2";
       case GOFF::GOFFSectionType::B_IDRL:
         return "B_IDRL";
       case GOFF::GOFFSectionType::Other:
@@ -133,7 +133,7 @@ public:
     return "";
   }
 
-  std::optional<MCSymbolGOFF *> getTextOwner() const {
+  std::optional<const MCSymbolGOFF *> getTextOwner() const {
     if (TextOwnedByED)
       return std::nullopt;
     else if (TextOwner)

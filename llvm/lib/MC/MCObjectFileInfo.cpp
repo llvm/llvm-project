@@ -556,8 +556,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
   PPA2Section =
       Ctx->getGOFFSection(".ppa2", SectionKind::getMetadata(), TextSection,
-                          MCConstantExpr::create(GOFF::SK_PPA2, *Ctx),
-                          GOFF::GOFFSectionType::PPA2Offset);
+                          MCConstantExpr::create(GOFF::SK_PPA2, *Ctx));
 
   PPA2ListSection =
       Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr, nullptr,

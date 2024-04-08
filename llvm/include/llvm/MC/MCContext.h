@@ -660,7 +660,7 @@ public:
                                 GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
                                 GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
                                 bool isRooted = false,
-                                MCSymbolGOFF *TextOwner = nullptr);
+                                const MCSymbolGOFF *TextOwner = nullptr);
 
   MCSectionGOFF *
   getGOFFSection(StringRef Section, SectionKind Kind,
@@ -671,7 +671,7 @@ public:
                  GOFF::ESDBindingAlgorithm BindAlgorithm = GOFF::ESD_BA_Concatenate,
                  GOFF::ESDLoadingBehavior LoadBehavior = GOFF::ESD_LB_Initial,
                  GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified,
-                 bool isRooted = false, MCSymbolGOFF * TextOwner = nullptr);
+                 bool isRooted = false, const MCSymbolGOFF * TextOwner = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 SectionKind Kind, StringRef COMDATSymName,
