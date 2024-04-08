@@ -21,7 +21,6 @@
 #include <locale>
 #include <ios>
 #include <cassert>
-#include <cfloat>
 #include <streambuf>
 #include <cmath>
 #include "test_macros.h"
@@ -183,7 +182,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "P00";
@@ -193,7 +192,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "+p00";
@@ -203,7 +202,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "+P00";
@@ -213,7 +212,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "-p00";
@@ -223,7 +222,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "-P00";
@@ -233,7 +232,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "e00";
@@ -243,7 +242,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "E00";
@@ -253,7 +252,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "+e00";
@@ -263,7 +262,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "+E00";
@@ -273,7 +272,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "-e00";
@@ -283,7 +282,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
       const char str[] = "-E00";
@@ -293,7 +292,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0l);
     }
     {
         const char str[] = "1.189731495357231765021264e+49321";
@@ -319,7 +318,6 @@ int main(int, char**)
         assert(err == ios.failbit);
         assert(v == INFINITY);
     }
-#if LDBL_MANT_DIG >= 64
     {
         const char str[] = "11.189731495357231765021264e+4932";
         std::ios_base::iostate err = ios.goodbit;
@@ -356,7 +354,6 @@ int main(int, char**)
         assert(err != ios.failbit);
         assert(v == 304888344611713860501504000000.0L);
     }
-#endif // LDBL_MANT_DIG >= 64
     {
         v = -1;
         const char str[] = "1.19973e+4933"; // unrepresentable

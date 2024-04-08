@@ -368,10 +368,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
 
   static int __get_base(ios_base&);
-  static const char __src[33];            // "0123456789abcdefABCDEFxX+-pPiInN"
-  static const size_t __int_chr_cnt = 26; // count of leading characters in __src used for parsing integers ("012..X+-")
-  static const size_t __fp_chr_cnt =
-      28; // count of leading characters in __src used for parsing floating-point values ("012..-pP")
+  static const char __src[33]; // "0123456789abcdefABCDEFxX+-pPiInN"
+  // count of leading characters in __src used for parsing integers ("012..X+-")
+  static const size_t __int_chr_cnt = 26;
+  // count of leading characters in __src used for parsing floating-point values ("012..-pP")
+  static const size_t __fp_chr_cnt = 28;
 };
 
 _LIBCPP_EXPORTED_FROM_ABI void

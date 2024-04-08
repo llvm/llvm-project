@@ -182,7 +182,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "P00";
@@ -192,7 +192,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "+p00";
@@ -202,7 +202,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "+P00";
@@ -212,7 +212,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "-p00";
@@ -222,7 +222,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "-P00";
@@ -232,7 +232,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "e00";
@@ -242,7 +242,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "E00";
@@ -252,7 +252,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "+e00";
@@ -262,7 +262,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "+E00";
@@ -272,7 +272,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "-e00";
@@ -282,7 +282,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
       const char str[] = "-E00";
@@ -292,7 +292,7 @@ int main(int, char**)
           cpp17_input_iterator<const char*>(str), cpp17_input_iterator<const char*>(str + sizeof(str)), ios, err, v);
       assert(base(iter) == str + 1);
       assert(err == ios.failbit);
-      assert(v == 0.0);
+      assert(v == 0.0f);
     }
     {
         v = -1;
