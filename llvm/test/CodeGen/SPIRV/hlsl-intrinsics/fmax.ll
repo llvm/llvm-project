@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; TODO: This need to be NMax: See https://github.com/llvm/llvm-project/issues/87072
 ; CHECK: OpExtInstImport "GLSL.std.450"
 
 define noundef half @test_fmax_half(half noundef %a, half noundef %b) {

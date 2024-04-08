@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; TODO: This need to be NMin: See https://github.com/llvm/llvm-project/issues/87072
 
 ; CHECK: OpExtInstImport "GLSL.std.450"
 ; CHECK: OpMemoryModel Logical GLSL450
