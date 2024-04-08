@@ -234,7 +234,6 @@ private:
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
-  static APFloat getZeroFP(const Type *LLVMFloatTy);
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -1169,8 +1168,8 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   MachineBasicBlock &BB = *I.getParent();
   Register InputRegister = I.getOperand(2).getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
-  
-  if(!InputType)
+
+  if (!InputType)
     report_fatal_error("Input Type could not be determined.");
 
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
@@ -1192,7 +1191,8 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   Register NotEqualReg = ResVReg;
 
   if (IsVectorTy) {
-    NotEqualReg = IsBoolTy ? InputRegister : MRI->createVirtualRegister(&SPIRV::IDRegClass);
+    NotEqualReg = IsBoolTy ? InputRegister
+                           : MRI->createVirtualRegister(&SPIRV::IDRegClass);
     const unsigned NumElts = InputType->getOperand(2).getImm();
     SpvBoolTy = GR.getOrCreateSPIRVVectorType(SpvBoolTy, NumElts, I, TII);
   }
@@ -1462,7 +1462,7 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
-APFloat SPIRVInstructionSelector::getZeroFP(const Type *LLVMFloatTy) {
+static APFloat getZeroFP(const Type *LLVMFloatTy) {
   if (!LLVMFloatTy)
     return APFloat::getZero(APFloat::IEEEsingle());
   switch (LLVMFloatTy->getScalarType()->getTypeID()) {
