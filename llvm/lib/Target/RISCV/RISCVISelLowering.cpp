@@ -14090,7 +14090,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
     return CombineResult(NodeExtensionHelper::getSExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                          /*RHSExt=*/{ExtKind::SExt});
-  if ((AllowExtMask & ExtKind::FPExt) && RHS.SupportsFPExt)
+  if ((AllowExtMask & ExtKind::FPExt) && LHS.SupportsFPExt && RHS.SupportsFPExt)
     return CombineResult(NodeExtensionHelper::getFPExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::FPExt}, RHS,
                          /*RHSExt=*/{ExtKind::FPExt});
