@@ -44,6 +44,8 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/GenericDomTree.h"
 
@@ -74,6 +76,13 @@ template <class BlockT, class LoopT> class LoopBase {
   LoopBase(const LoopBase<BlockT, LoopT> &) = delete;
   const LoopBase<BlockT, LoopT> &
   operator=(const LoopBase<BlockT, LoopT> &) = delete;
+
+  // Induction variable exit value and its debug users, preserved by the
+  // 'indvars' pass, when it detects that the loop can be deleted and the
+  // there are no PHIs to be rewritten.
+  // For now, we only preserve single induction variables.
+  Value *IndVarFinalValue = nullptr;
+  SmallVector<WeakVH> IndVarDebugUsers;
 
 public:
   /// Return the nesting level of this loop.  An outer-most loop has depth 1,
@@ -249,6 +258,21 @@ public:
     assert(!isInvalid() && "Loop not in a valid state!");
     return llvm::count_if(inverse_children<BlockT *>(getHeader()),
                           [&](BlockT *Pred) { return contains(Pred); });
+  }
+
+  /// Preserve the induction variable exit value and its debug users by the
+  /// 'indvars' pass if the loop can deleted. Those debug users will be used
+  /// by the 'loop-delete' pass.
+  void preserveDebugInductionVariableInfo(
+      Value *FinalValue, SmallVector<DbgVariableIntrinsic *> DbgUsers) {
+    IndVarFinalValue = FinalValue;
+    for (DbgVariableIntrinsic *DebugUser : DbgUsers)
+      IndVarDebugUsers.push_back(DebugUser);
+  }
+
+  Value *getDebugInductionVariableFinalValue() { return IndVarFinalValue; }
+  SmallVector<WeakVH> &getDebugInductionVariableDebugUsers() {
+    return IndVarDebugUsers;
   }
 
   //===--------------------------------------------------------------------===//

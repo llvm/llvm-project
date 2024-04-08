@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -608,6 +609,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
   if (ExitBlock) {
+    if (ExitBlock->phis().empty()) {
+      // As the loop is deleted, replace the debug users with the preserved
+      // induction variable final value recorded by the 'indvar' pass.
+      Value *FinalValue = L->getDebugInductionVariableFinalValue();
+      SmallVector<WeakVH> &DbgUsers = L->getDebugInductionVariableDebugUsers();
+      for (WeakVH &DebugUser : DbgUsers)
+        if (DebugUser)
+          cast<DbgVariableIntrinsic>(DebugUser)->replaceVariableLocationOp(
+              0u, FinalValue);
+    }
+
     // Given LCSSA form is satisfied, we should not have users of instructions
     // within the dead loop outside of the loop. However, LCSSA doesn't take
     // unreachable uses into account. We handle them here.
@@ -1401,6 +1413,36 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
 }
 
+void llvm::addDebugValuesToIncomingValue(BasicBlock *Successor, Value *IndVar,
+                                         PHINode *PN) {
+  SmallVector<DbgVariableIntrinsic *> DbgUsers;
+  findDbgUsers(DbgUsers, IndVar);
+  for (auto *DebugUser : DbgUsers) {
+    // Skip debug-users with variadic variable locations; they will not,
+    // get updated, which is fine as that is the existing behaviour.
+    if (DebugUser->hasArgList())
+      continue;
+    auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+    Cloned->replaceVariableLocationOp(0u, PN);
+    Cloned->insertBefore(*Successor, Successor->getFirstNonPHIIt());
+  }
+}
+
+void llvm::addDebugValuesToLoopVariable(BasicBlock *Successor, Value *ExitValue,
+                                        PHINode *PN) {
+  SmallVector<DbgVariableIntrinsic *> DbgUsers;
+  findDbgUsers(DbgUsers, PN);
+  for (auto *DebugUser : DbgUsers) {
+    // Skip debug-users with variadic variable locations; they will not,
+    // get updated, which is fine as that is the existing behaviour.
+    if (DebugUser->hasArgList())
+      continue;
+    auto *Cloned = cast<DbgVariableIntrinsic>(DebugUser->clone());
+    Cloned->replaceVariableLocationOp(0u, ExitValue);
+    Cloned->insertBefore(*Successor, Successor->getFirstNonPHIIt());
+  }
+}
+
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 ScalarEvolution *SE,
                                 const TargetTransformInfo *TTI,
@@ -1542,6 +1584,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
         RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+
+        // Add debug values for the candidate PHINode incoming value.
+        if (BasicBlock *Successor = ExitBB->getSingleSuccessor())
+          addDebugValuesToIncomingValue(Successor, PN->getIncomingValue(i), PN);
       }
     }
   }
@@ -1600,8 +1646,27 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
+      addDebugValuesToLoopVariable(PN->getParent(), ExitVal, PN);
       PN->replaceAllUsesWith(ExitVal);
       PN->eraseFromParent();
+    }
+  }
+
+  // If the loop can be deleted and there are no PHIs to be rewritten (there
+  // are no loop live-out values), record debug variables corresponding to the
+  // induction variable with their constant exit-values. Those values will be
+  // inserted by the 'deletion loop' logic.
+  if (LoopCanBeDel && RewritePhiSet.empty()) {
+    if (auto *IndVar = L->getInductionVariable(*SE)) {
+      const SCEV *PNSCEV = SE->getSCEVAtScope(IndVar, L->getParentLoop());
+      if (auto *Const = dyn_cast<SCEVConstant>(PNSCEV)) {
+        Value *FinalIVValue = Const->getValue();
+        if (L->getUniqueExitBlock()) {
+          SmallVector<DbgVariableIntrinsic *> DbgUsers;
+          findDbgUsers(DbgUsers, IndVar);
+          L->preserveDebugInductionVariableInfo(FinalIVValue, DbgUsers);
+        }
+      }
     }
   }
 
