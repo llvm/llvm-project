@@ -11,9 +11,9 @@
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cinttypes>
 #include <cstring>
-#include <ctype.h>
 #include <utility>
 
 namespace Fortran::decimal {
@@ -468,8 +468,8 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
         ++q;
       }
     }
-    if ((!limit || limit >= q + 3) && toupper(q[0]) == 'N' &&
-        toupper(q[1]) == 'A' && toupper(q[2]) == 'N') {
+    if ((!limit || limit >= q + 3) && runtime::toupper(q[0]) == 'N' &&
+        runtime::toupper(q[1]) == 'A' && runtime::toupper(q[2]) == 'N') {
       // NaN
       p = q + 3;
       bool isQuiet{true};
@@ -493,11 +493,11 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
       }
       return {Real{NaN(isQuiet)}};
     } else { // Inf?
-      if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
-          toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
-        if ((!limit || limit >= q + 8) && toupper(q[3]) == 'I' &&
-            toupper(q[4]) == 'N' && toupper(q[5]) == 'I' &&
-            toupper(q[6]) == 'T' && toupper(q[7]) == 'Y') {
+      if ((!limit || limit >= q + 3) && runtime::toupper(q[0]) == 'I' &&
+          runtime::toupper(q[1]) == 'N' && runtime::toupper(q[2]) == 'F') {
+        if ((!limit || limit >= q + 8) && runtime::toupper(q[3]) == 'I' &&
+            runtime::toupper(q[4]) == 'N' && runtime::toupper(q[5]) == 'I' &&
+            runtime::toupper(q[6]) == 'T' && runtime::toupper(q[7]) == 'Y') {
           p = q + 8;
         } else {
           p = q + 3;
