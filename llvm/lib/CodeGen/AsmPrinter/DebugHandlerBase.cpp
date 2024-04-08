@@ -189,10 +189,10 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
         // FIXME: Enums without a fixed underlying type have unknown signedness
         // here, leading to incorrectly emitted constants.
         return false;
-    }
-    // (Pieces of) aggregate types that get hacked apart by SROA may be
-    // represented by a constant. Encode them as unsigned bytes.
-    return true;
+    } else
+      // (Pieces of) aggregate types that get hacked apart by SROA may be
+      // represented by a constant. Encode them as unsigned bytes.
+      return true;
   }
 
   if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
@@ -215,25 +215,26 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
     return isUnsignedDIType(DTy->getBaseType());
   }
 
-  auto *BTy = cast<DIBasicType>(Ty);
-  unsigned Encoding = BTy->getEncoding();
-  assert((Encoding == dwarf::DW_ATE_unsigned ||
-          Encoding == dwarf::DW_ATE_unsigned_char ||
-          Encoding == dwarf::DW_ATE_signed ||
-          Encoding == dwarf::DW_ATE_signed_char ||
-          Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
-          Encoding == dwarf::DW_ATE_boolean ||
-          Encoding == dwarf::DW_ATE_complex_float ||
-          Encoding == dwarf::DW_ATE_signed_fixed ||
-          Encoding == dwarf::DW_ATE_unsigned_fixed ||
-          (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
-           Ty->getName() == "decltype(nullptr)")) &&
-         "Unsupported encoding");
-  return Encoding == dwarf::DW_ATE_unsigned ||
-         Encoding == dwarf::DW_ATE_unsigned_char ||
-         Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
-         Encoding == llvm::dwarf::DW_ATE_unsigned_fixed ||
-         Ty->getTag() == dwarf::DW_TAG_unspecified_type;
+  if (auto *BTy = dyn_cast<DIBasicType>(Ty)) {
+    unsigned Encoding = BTy->getEncoding();
+    assert((Encoding == dwarf::DW_ATE_unsigned ||
+            Encoding == dwarf::DW_ATE_unsigned_char ||
+            Encoding == dwarf::DW_ATE_signed ||
+            Encoding == dwarf::DW_ATE_signed_char ||
+            Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
+            Encoding == dwarf::DW_ATE_boolean ||
+            Encoding == dwarf::DW_ATE_complex_float ||
+            (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
+             Ty->getName() == "decltype(nullptr)")) &&
+           "Unsupported encoding");
+    return Encoding == dwarf::DW_ATE_unsigned ||
+           Encoding == dwarf::DW_ATE_unsigned_char ||
+           Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
+           Ty->getTag() == dwarf::DW_TAG_unspecified_type;
+  }
+  // FIXME: the signedness should come from the expression where the type is
+  // used in, not the type itself.
+  return true;
 }
 
 static bool hasDebugInfo(const MachineModuleInfo *MMI,
