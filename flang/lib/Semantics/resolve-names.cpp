@@ -8525,7 +8525,9 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
   Symbol *symbol{name.symbol};
   auto *details{symbol ? symbol->detailsIf<SubprogramDetails>() : nullptr};
   if (!details || !symbol->scope() ||
-      &symbol->scope()->parent() != &currScope()) {
+      &symbol->scope()->parent() != &currScope() || details->isInterface() ||
+      details->isDummy() || details->entryScope() ||
+      details->moduleInterface() || symbol->test(Symbol::Flag::Subroutine)) {
     return; // error recovery
   }
   // Resolve the symbols on the RHS of the statement function.
