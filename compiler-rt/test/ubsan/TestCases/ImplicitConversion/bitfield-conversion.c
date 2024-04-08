@@ -33,7 +33,7 @@ typedef struct _X {
   int32_t j : 32;
   uint32_t k : 1;
   int32_t l : 1;
-  _Bool m : 1;
+  bool m : 1;
 } X;
 
 void test_a() {
