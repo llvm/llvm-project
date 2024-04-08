@@ -250,7 +250,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
 
   // Use shNadd if doing so lets us materialize a 12 bit immediate with a single
   // instruction.  This saves 1 instruction over the full lui/addi+add fallback
-  // path.  We avoid anything which can be done with a single lui as it night
+  // path.  We avoid anything which can be done with a single lui as it might
   // be compressible.  Note that the sh1add case is fully covered by the 2x addi
   // case just above and is thus ommitted.
   if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
