@@ -20,7 +20,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv64/lib/SOURCES
 )
 
-set( LIBCLC_MIN_LLVM "3.9.0" )
+set( LIBCLC_MIN_LLVM 3.9.0 )
 
 set( LIBCLC_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or 'all'." )
@@ -32,7 +32,7 @@ include(AddLLVM)
 
 message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
 
-if( ${LLVM_PACKAGE_VERSION} VERSION_LESS ${LIBCLC_MIN_LLVM} )
+if( LLVM_PACKAGE_VERSION VERSION_LESS LIBCLC_MIN_LLVM )
   message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
 endif()
 
@@ -66,7 +66,7 @@ set( LIBCLC_TARGETS_ALL
 )
 
 # mesa3d environment is only available since LLVM 4.0
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "3.9.0" )
+if( LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 4.0.0 )
   list( APPEND LIBCLC_TARGETS_ALL amdgcn-mesa-mesa3d )
 endif()
 
@@ -102,7 +102,7 @@ set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MIN
 
 
 # LLVM 13 enables standard includes by default
-if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "12.99.99" )
+if( LLVM_PACKAGE_VERSION VERSION_GREATER_EQUAL 13.0.0 )
   set( CMAKE_LLAsm_FLAGS "${CMAKE_LLAsm_FLAGS} -cl-no-stdinc" )
   set( CMAKE_CLC_FLAGS "${CMAKE_CLC_FLAGS} -cl-no-stdinc" )
 endif()
@@ -122,7 +122,11 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   Support
 )
-add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
+else()
+  add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+endif()
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
 target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
@@ -205,7 +209,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list( APPEND dirs amdgpu )
   endif()
 
-  #nvptx is special
+  # nvptx is special
   if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
   else()
@@ -226,8 +230,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     endforeach()
   endforeach()
 
-  # Add the generated convert.cl here to prevent adding
-  # the one listed in SOURCES
+  # Add the generated convert.cl here to prevent adding the one listed in
+  # SOURCES
   if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" )
     if( NOT ENABLE_RUNTIME_SUBNORMAL AND NOT ${ARCH} STREQUAL "clspv" AND
         NOT ${ARCH} STREQUAL "clspv64" )
@@ -328,7 +332,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT "${spv_suffix}"
-        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" ${builtins_opt_lib_tgt}
+        COMMAND ${LLVM_SPIRV} ${spvflags} -o "${spv_suffix}" ${builtins_link_lib_tgt}
         DEPENDS ${builtins_link_lib_tgt} )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}

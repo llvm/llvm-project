@@ -122,31 +122,11 @@ bool LLVM::StoreOp::storesTo(const MemorySlot &slot) {
   return getAddr() == slot.ptr;
 }
 
-Value LLVM::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter) {
-  return getValue();
-}
-
 /// Checks that two types are the same or can be cast into one another.
 static bool areCastCompatible(const DataLayout &layout, Type lhs, Type rhs) {
   return lhs == rhs || (!isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(lhs) &&
                         !isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(rhs) &&
                         layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
-}
-
-bool LLVM::LoadOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses,
-    const DataLayout &dataLayout) {
-  if (blockingUses.size() != 1)
-    return false;
-  Value blockingUse = (*blockingUses.begin())->get();
-  // If the blocking use is the slot ptr itself, there will be enough
-  // context to reconstruct the result of the load at removal time, so it can
-  // be removed (provided it loads the exact stored value and is not
-  // volatile).
-  return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         areCastCompatible(dataLayout, getResult().getType(), slot.elemType) &&
-         !getVolatile_();
 }
 
 /// Constructs operations that convert `inputValue` into a new value of type
@@ -168,6 +148,27 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
 
   return rewriter.createOrFold<LLVM::AddrSpaceCastOp>(loc, targetType,
                                                       inputValue);
+}
+
+Value LLVM::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter) {
+  return createConversionSequence(rewriter, getLoc(), getValue(),
+                                  slot.elemType);
+}
+
+bool LLVM::LoadOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  Value blockingUse = (*blockingUses.begin())->get();
+  // If the blocking use is the slot ptr itself, there will be enough
+  // context to reconstruct the result of the load at removal time, so it can
+  // be removed (provided it loads the exact stored value and is not
+  // volatile).
+  return blockingUse == slot.ptr && getAddr() == slot.ptr &&
+         areCastCompatible(dataLayout, getResult().getType(), slot.elemType) &&
+         !getVolatile_();
 }
 
 DeletionKind LLVM::LoadOp::removeBlockingUses(
@@ -192,19 +193,14 @@ bool LLVM::StoreOp::canUsesBeRemoved(
   // fine, provided we are currently promoting its target value. Don't allow a
   // store OF the slot pointer, only INTO the slot pointer.
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getValue() != slot.ptr && !getVolatile_();
+         getValue() != slot.ptr &&
+         areCastCompatible(dataLayout, slot.elemType, getValue().getType()) &&
+         !getVolatile_();
 }
 
 DeletionKind LLVM::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     RewriterBase &rewriter, Value reachingDefinition) {
-  // `canUsesBeRemoved` checked this blocking use must be the stored slot
-  // pointer.
-  for (Operation *user : slot.ptr.getUsers())
-    if (auto declareOp = dyn_cast<LLVM::DbgDeclareOp>(user))
-      rewriter.create<LLVM::DbgValueOp>(declareOp->getLoc(), getValue(),
-                                        declareOp.getVarInfo(),
-                                        declareOp.getLocationExpr());
   return DeletionKind::Delete;
 }
 
@@ -435,6 +431,18 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
       rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
   rewriter.modifyOpInPlace(*this, [&] { getValueMutable().assign(undef); });
   return DeletionKind::Keep;
+}
+
+bool LLVM::DbgDeclareOp::requiresReplacedValues() { return true; }
+
+void LLVM::DbgDeclareOp::visitReplacedValues(
+    ArrayRef<std::pair<Operation *, Value>> definitions,
+    RewriterBase &rewriter) {
+  for (auto [op, value] : definitions) {
+    rewriter.setInsertionPointAfter(op);
+    rewriter.create<LLVM::DbgValueOp>(getLoc(), value, getVarInfo(),
+                                      getLocationExpr());
+  }
 }
 
 //===----------------------------------------------------------------------===//

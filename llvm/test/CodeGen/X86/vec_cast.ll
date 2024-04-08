@@ -156,7 +156,7 @@ define <3 x i16> @h(<3 x i32> %a) nounwind {
 ; CHECK-WIN-LABEL: h:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm0
-; CHECK-WIN-NEXT:    movd %xmm0, %eax
+; CHECK-WIN-NEXT:    movl (%rcx), %eax
 ; CHECK-WIN-NEXT:    pextrw $2, %xmm0, %edx
 ; CHECK-WIN-NEXT:    pextrw $4, %xmm0, %ecx
 ; CHECK-WIN-NEXT:    # kill: def $ax killed $ax killed $eax

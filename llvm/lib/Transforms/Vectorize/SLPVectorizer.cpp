@@ -9824,11 +9824,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
       unsigned OriginalSz = DL->getTypeSizeInBits(DstTy);
-      if (OriginalSz != BWIt->second.first) {
+      unsigned SrcSz =
+          ReductionBitWidth == 0 ? BWIt->second.first : ReductionBitWidth;
+      if (OriginalSz != SrcSz) {
         unsigned Opcode = Instruction::Trunc;
-        if (OriginalSz < BWIt->second.first)
+        if (OriginalSz > SrcSz)
           Opcode = BWIt->second.second ? Instruction::SExt : Instruction::ZExt;
-        Type *SrcTy = IntegerType::get(DstTy->getContext(), BWIt->second.first);
+        Type *SrcTy = IntegerType::get(DstTy->getContext(), SrcSz);
         Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
                                       TTI::CastContextHint::None,
                                       TTI::TCK_RecipThroughput);
@@ -14140,6 +14142,17 @@ bool BoUpSLP::collectValuesToDemote(
         return isa<InsertElementInst>(U) && !getTreeEntry(U);
       }))
     return FinalAnalysis();
+
+  if (!all_of(I->users(),
+              [=](User *U) {
+                return getTreeEntry(U) ||
+                       (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                       (U->getType()->isSized() &&
+                        !U->getType()->isScalableTy() &&
+                        DL->getTypeSizeInBits(U->getType()) <= BitWidth);
+              }) &&
+      !IsPotentiallyTruncated(I, BitWidth))
+    return false;
 
   unsigned Start = 0;
   unsigned End = I->getNumOperands();

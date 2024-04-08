@@ -738,6 +738,18 @@ func.func @extract_element_with_value_1d(%arg0: vector<16xf32>, %arg1: index) ->
 
 // -----
 
+func.func @extract_element_with_value_2d(%arg0: vector<1x16xf32>, %arg1: index) -> f32 {
+  %0 = vector.extract %arg0[0, %arg1]: f32 from vector<1x16xf32>
+  return %0 : f32
+}
+
+// Multi-dim vectors are not supported but this test shouldn't crash.
+
+// CHECK-LABEL: @extract_element_with_value_2d(
+//       CHECK:   vector.extract
+
+// -----
+
 // CHECK-LABEL: @insert_element_0d
 // CHECK-SAME: %[[A:.*]]: f32,
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
@@ -850,6 +862,19 @@ func.func @insert_element_with_value_1d(%arg0: vector<16xf32>, %arg1: f32, %arg2
 //  CHECK-SAME:   %[[DST:.+]]: vector<16xf32>, %[[SRC:.+]]: f32, %[[INDEX:.+]]: index
 //       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
 //       CHECK:   llvm.insertelement %[[SRC]], %[[DST]][%[[UC]] : i64] : vector<16xf32>
+
+// -----
+
+func.func @insert_element_with_value_2d(%base: vector<1x16xf32>, %value: f32, %idx: index)
+                                        -> vector<1x16xf32> {
+  %0 = vector.insert %value, %base[0, %idx]: f32 into vector<1x16xf32>
+  return %0 : vector<1x16xf32>
+}
+
+// Multi-dim vectors are not supported but this test shouldn't crash.
+
+// CHECK-LABEL: @insert_element_with_value_2d(
+//       CHECK:   vector.insert
 
 // -----
 
