@@ -1,8 +1,8 @@
 // RUN: mlir-opt --expand-strided-metadata -split-input-file %s -o - | FileCheck %s
 
 
-// memref.extract_strided_metadata is not folded away becuase meta-data on the %base memref 
-// can change in a future pass and folding away the Op here will cuase incorrect lowering.
+// memref.extract_strided_metadata is not folded away because meta-data on the %base memref 
+// can change in a future pass and folding away the Op here will cause incorrect lowering.
 // CHECK-LABEL: func @extract_strided_metadata_constants
 //  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
 func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1], offset: 2>>)
