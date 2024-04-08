@@ -1458,11 +1458,11 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     parentScope = ancestor;
   }
   // Process declarations from the module file
-  bool wasInModuleFile{context_.foldingContext().inModuleFile()};
-  context_.foldingContext().set_inModuleFile(true);
+  auto wasModuleFileName{context_.foldingContext().moduleFileName()};
+  context_.foldingContext().set_moduleFileName(name);
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
-  context_.foldingContext().set_inModuleFile(wasInModuleFile);
+  context_.foldingContext().set_moduleFileName(wasModuleFileName);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
