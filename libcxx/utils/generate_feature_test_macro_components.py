@@ -3,6 +3,7 @@
 import os
 from builtins import range
 from functools import reduce
+import json
 
 
 def get_libcxx_paths():
@@ -1865,6 +1866,38 @@ Status
     table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.rst")
     with open(table_doc_path, "w", newline="\n") as f:
         f.write(doc_str)
+
+
+def get_table(data):
+    result = dict()
+    for feature in data:
+        last = None
+        entry = dict()
+        implemented = True
+        for std in get_std_dialects():
+            if std not in feature["values"].keys():
+                if last == None:
+                    continue
+                else:
+                    entry[std] = last
+            else:
+                if last == None:
+                    last = ""
+                if implemented:
+                    for value in feature["values"][std]:
+                        for paper in list(feature["values"][std][value]):
+                            if not paper["implemented"]:
+                                implemented = False
+                                break
+                        if implemented:
+                            last = f"{value}L"
+                        else:
+                            break
+
+                entry[std] = last
+        result[feature["name"]] = entry
+
+    return result
 
 
 def main():
