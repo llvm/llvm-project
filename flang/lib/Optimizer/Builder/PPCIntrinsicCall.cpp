@@ -2120,7 +2120,7 @@ PPCIntrinsicLibrary::genVecPerm(mlir::Type resultType,
     if (isNativeVecElemOrderOnLE()) {
       auto i8Ty{mlir::IntegerType::get(context, 8)};
       auto v8Ty{mlir::VectorType::get(16, i8Ty)};
-      auto negOne{builder.createIntegerConstant(loc, i8Ty, -1)};
+      auto negOne{builder.createMinusOneInteger(loc, i8Ty)};
       auto vNegOne{
           builder.create<mlir::vector::BroadcastOp>(loc, v8Ty, negOne)};
 
@@ -2209,7 +2209,7 @@ PPCIntrinsicLibrary::genVecSel(mlir::Type resultType,
   auto vargs{convertVecArgs(builder, loc, vecTyInfos, argBases)};
 
   auto i8Ty{mlir::IntegerType::get(builder.getContext(), 8)};
-  auto negOne{builder.createIntegerConstant(loc, i8Ty, -1)};
+  auto negOne{builder.createMinusOneInteger(loc, i8Ty)};
 
   // construct a constant <16 x i8> vector with value -1 for bitcast
   auto bcVecTy{mlir::VectorType::get(16, i8Ty)};
