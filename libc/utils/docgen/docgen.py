@@ -23,12 +23,21 @@ def load_api(hname: str) -> Dict:
 # TODO: we may need to get more sophisticated for less generic implementations.
 # Does libc/src/{hname minus .h suffix}/{fname}.cpp exist?
 def is_implemented(hname: str, fname: str) -> bool:
-    return Path(
+    path = Path(
         Path(__file__).parent.parent.parent,
         "src",
-        hname.rstrip(".h"),
-        fname + ".cpp",
-    ).exists()
+        hname.rstrip(".h")
+    )
+    source_file_name = fname + ".cpp"
+    if path.joinpath(source_file_name).exists():
+        return True
+    
+    # Attempt to search in the subfolders with 1-depth.
+    for sub_dir in path.iterdir():
+        if (sub_dir.joinpath(source_file_name)).exists():
+            return True
+
+    return False
 
 
 def print_functions(header: str, functions: Dict):
