@@ -45950,16 +45950,27 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (N->getOpcode() == ISD::VSELECT && LHS.getOpcode() == ISD::SRL &&
-      supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+
+  // Unlike general shift instructions (SHL/SRL), AVX2's VSHLV/VSRLV handle
+  // shift amounts exceeding the element bitwidth. VSHLV clamps the amount to
+  // bitwidth-1 for unsigned shifts, effectively performing a maximum left shift
+  // of bitwidth-1 positions. Similarly, VSRLV returns zero for unsigned shifts
+  // exceeding bitwidth-1, achieving a maximum right shift of bitwidth-1.
+  if (N->getOpcode() == ISD::VSELECT &&
+      (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
+      supportedVectorVarShift(VT, Subtarget, LHS.getOpcode())) {
     APInt SV;
-    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == LHS.getOperand(1) &&
+    if (Cond.getOpcode() == ISD::SETCC &&
+        Cond.getOperand(0) == LHS.getOperand(1) &&
         cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
         ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
         ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
         SV == VT.getScalarSizeInBits()) {
-      SDLoc DL(LHS);
-      return DAG.getNode(X86ISD::VSRLV, DL, LHS->getVTList(), LHS.getOperand(0), LHS.getOperand(1));
+      return DAG.getNode(
+          LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV : X86ISD::VSHLV, DL,
+          LHS->getVTList(), LHS.getOperand(0), LHS.getOperand(1));
     }
   }
 
@@ -47720,6 +47731,24 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   EVT VT = N0.getValueType();
 
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, DAG.getSubtarget<X86Subtarget>(), ISD::SHL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::VSHLV, DL, N->getVTList(), N00, N1);
+    }
+  }
+
   // fold (shl (and (setcc_c), c1), c2) -> (and setcc_c, (c1 << c2))
   // since the result of setcc_c is all zero's or all ones.
   if (VT.isInteger() && !VT.isVector() &&
@@ -47838,6 +47867,8 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
     return V;
 
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
   if (N0.getOpcode() == ISD::VSELECT &&
       supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
     SDValue Cond = N0.getOperand(0);
