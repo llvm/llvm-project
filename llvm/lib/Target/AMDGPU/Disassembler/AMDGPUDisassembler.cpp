@@ -33,7 +33,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 using namespace llvm;
 
@@ -1786,19 +1785,19 @@ bool AMDGPUDisassembler::hasKernargPreload() const {
 /// offset BaseBytes for use in error comments. Mask is a single continuous
 /// range of 1s surrounded by zeros. The format here is meant to align with the
 /// tables that describe these bits in llvm.org/docs/AMDGPUUsage.html.
-static SmallString<20> getBitRangeFromMask(uint32_t Mask, unsigned BaseBytes) {
-  SmallString<20> Result;
+static SmallString<32> getBitRangeFromMask(uint32_t Mask, unsigned BaseBytes) {
+  SmallString<32> Result;
   raw_svector_ostream S(Result);
 
   int TrailingZeros = llvm::countr_zero(Mask);
   int PopCount = llvm::popcount(Mask);
 
   if (PopCount == 1) {
-    S << "bit (" << (TrailingZeros + BaseBytes * CHAR_BIT) << ")";
+    S << "bit (" << (TrailingZeros + BaseBytes * CHAR_BIT) << ')';
   } else {
     S << "bits in range ("
-      << (TrailingZeros + PopCount - 1 + BaseBytes * CHAR_BIT) << ":"
-      << (TrailingZeros + BaseBytes * CHAR_BIT) << ")";
+      << (TrailingZeros + PopCount - 1 + BaseBytes * CHAR_BIT) << ':'
+      << (TrailingZeros + BaseBytes * CHAR_BIT) << ')';
   }
 
   return Result;
@@ -1818,9 +1817,10 @@ static SmallString<20> getBitRangeFromMask(uint32_t Mask, unsigned BaseBytes) {
 #define CHECK_RESERVED_BITS_IMPL(MASK, DESC, MSG)                              \
   do {                                                                         \
     if (FourByteBuffer & (MASK)) {                                             \
-      *CommentStream << "kernel descriptor " DESC " reserved "                 \
-                     << getBitRangeFromMask((MASK), 0) << " set" MSG "\n";     \
-      return MCDisassembler::Fail;                                             \
+      return createStringError(std::errc::invalid_argument,                    \
+                               "kernel descriptor " DESC                       \
+                               " reserved %s set" MSG,                         \
+                               getBitRangeFromMask((MASK), 0).c_str());        \
     }                                                                          \
   } while (0)
 
@@ -1833,7 +1833,7 @@ static SmallString<20> getBitRangeFromMask(uint32_t Mask, unsigned BaseBytes) {
   CHECK_RESERVED_BITS_IMPL(MASK, DESC, ", " MSG)
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
+Error AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
     uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
   using namespace amdhsa;
   StringRef Indent = "\t";
@@ -1937,11 +1937,11 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
     PRINT_DIRECTIVE(".amdhsa_round_robin_scheduling",
                     COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN);
 
-  return MCDisassembler::Success;
+  return Error::success();
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
+Error AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
     uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
   using namespace amdhsa;
   StringRef Indent = "\t";
@@ -1985,11 +1985,11 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
 
   CHECK_RESERVED_BITS_DESC(COMPUTE_PGM_RSRC2_RESERVED0, "COMPUTE_PGM_RSRC2");
 
-  return MCDisassembler::Success;
+  return Error::success();
 }
 
 // NOLINTNEXTLINE(readability-identifier-naming)
-MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
+Error AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
   using namespace amdhsa;
   StringRef Indent = "\t";
@@ -2066,11 +2066,11 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
                                    "must be zero on gfx10");
     }
   } else if (FourByteBuffer) {
-    *CommentStream
-        << "kernel descriptor COMPUTE_PGM_RSRC3 must be all zero before gfx9\n";
-    return MCDisassembler::Fail;
+    return createStringError(
+        std::errc::invalid_argument,
+        "kernel descriptor COMPUTE_PGM_RSRC3 must be all zero before gfx9");
   }
-  return MCDisassembler::Success;
+  return Error::success();
 }
 #undef PRINT_PSEUDO_DIRECTIVE_COMMENT
 #undef PRINT_DIRECTIVE
@@ -2081,27 +2081,28 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
 #undef CHECK_RESERVED_BITS_DESC
 #undef CHECK_RESERVED_BITS_DESC_MSG
 
-static void printReservedKDBitsError(raw_ostream *CommentStream, uint32_t Mask,
-                                     unsigned BaseInBytes, StringRef Msg = "") {
-  *CommentStream << "kernel descriptor reserved "
-                 << getBitRangeFromMask(Mask, BaseInBytes) << " set";
-  if (!Msg.empty())
-    *CommentStream << ", " << Msg;
-  *CommentStream << '\n';
+/// Create an error object to return from onSymbolStart for reserved kernel
+/// descriptor bits being set.
+static Error createReservedKDBitsError(uint32_t Mask, unsigned BaseBytes,
+                                       const char *Msg = "") {
+  return createStringError(
+      std::errc::invalid_argument, "kernel descriptor reserved %s set%s%s",
+      getBitRangeFromMask(Mask, BaseBytes).c_str(), *Msg ? ", " : "", Msg);
 }
 
-static void printReservedKDBytesError(raw_ostream *CommentStream,
-                                      unsigned BaseInBytes,
-                                      unsigned WidthInBytes) {
-  // Print an error comment in the same format as the "Kernel Descriptor"
+/// Create an error object to return from onSymbolStart for reserved kernel
+/// descriptor bytes being set.
+static Error createReservedKDBytesError(unsigned BaseInBytes,
+                                        unsigned WidthInBytes) {
+  // Create an error comment in the same format as the "Kernel Descriptor"
   // table here: https://llvm.org/docs/AMDGPUUsage.html#kernel-descriptor .
-  *CommentStream << "kernel descriptor reserved bits set in range "
-                 << ((BaseInBytes + WidthInBytes) * CHAR_BIT - 1) << ":"
-                 << (BaseInBytes * CHAR_BIT) << '\n';
+  return createStringError(
+      std::errc::invalid_argument,
+      "kernel descriptor reserved bits in range (%u:%u) set",
+      (BaseInBytes + WidthInBytes) * CHAR_BIT - 1, BaseInBytes * CHAR_BIT);
 }
 
-MCDisassembler::DecodeStatus
-AMDGPUDisassembler::decodeKernelDescriptorDirective(
+Error AMDGPUDisassembler::decodeKernelDescriptorDirective(
     DataExtractor::Cursor &Cursor, ArrayRef<uint8_t> Bytes,
     raw_string_ostream &KdStream) const {
 #define PRINT_DIRECTIVE(DIRECTIVE, MASK)                                       \
@@ -2124,48 +2125,44 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     FourByteBuffer = DE.getU32(Cursor);
     KdStream << Indent << ".amdhsa_group_segment_fixed_size " << FourByteBuffer
              << '\n';
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::PRIVATE_SEGMENT_FIXED_SIZE_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
     KdStream << Indent << ".amdhsa_private_segment_fixed_size "
              << FourByteBuffer << '\n';
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::KERNARG_SIZE_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
     KdStream << Indent << ".amdhsa_kernarg_size "
              << FourByteBuffer << '\n';
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::RESERVED0_OFFSET:
     // 4 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
     for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0) {
-        printReservedKDBytesError(CommentStream, amdhsa::RESERVED0_OFFSET, 4);
-        return MCDisassembler::Fail;
-      }
+      if (ReservedBytes[I] != 0)
+        return createReservedKDBytesError(amdhsa::RESERVED0_OFFSET, 4);
     }
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET:
     // KERNEL_CODE_ENTRY_BYTE_OFFSET
     // So far no directive controls this for Code Object V3, so simply skip for
     // disassembly.
     DE.skip(Cursor, 8);
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::RESERVED1_OFFSET:
     // 20 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 20);
     for (int I = 0; I < 20; ++I) {
-      if (ReservedBytes[I] != 0) {
-        printReservedKDBytesError(CommentStream, amdhsa::RESERVED1_OFFSET, 20);
-        return MCDisassembler::Fail;
-      }
+      if (ReservedBytes[I] != 0)
+        return createReservedKDBytesError(amdhsa::RESERVED1_OFFSET, 20);
     }
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::COMPUTE_PGM_RSRC3_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
@@ -2200,19 +2197,16 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     PRINT_DIRECTIVE(".amdhsa_user_sgpr_private_segment_size",
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
 
-    if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0) {
-      printReservedKDBitsError(CommentStream, KERNEL_CODE_PROPERTY_RESERVED0,
-                               amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
-      return MCDisassembler::Fail;
-    }
+    if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
 
     // Reserved for GFX9
     if (isGFX9() &&
         (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32)) {
-      printReservedKDBitsError(
-          CommentStream, KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
+      return createReservedKDBitsError(
+          KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
           amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
-      return MCDisassembler::Fail;
     } else if (isGFX10Plus()) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
@@ -2223,12 +2217,11 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1) {
-      printReservedKDBitsError(CommentStream, KERNEL_CODE_PROPERTY_RESERVED1,
-                               amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
-      return MCDisassembler::Fail;
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED1,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);
     }
 
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::KERNARG_PRELOAD_OFFSET:
     using namespace amdhsa;
@@ -2242,33 +2235,32 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
       PRINT_DIRECTIVE(".amdhsa_user_sgpr_kernarg_preload_offset",
                       KERNARG_PRELOAD_SPEC_OFFSET);
     }
-    return MCDisassembler::Success;
+    return Error::success();
 
   case amdhsa::RESERVED3_OFFSET:
     // 4 bytes from here are reserved, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
     for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0) {
-        printReservedKDBytesError(CommentStream, amdhsa::RESERVED3_OFFSET, 4);
-        return MCDisassembler::Fail;
-      }
+      if (ReservedBytes[I] != 0)
+        return createReservedKDBytesError(amdhsa::RESERVED3_OFFSET, 4);
     }
-    return MCDisassembler::Success;
+    return Error::success();
 
   default:
     llvm_unreachable("Unhandled index. Case statements cover everything.");
-    return MCDisassembler::Fail;
+    return Error::success();
   }
 #undef PRINT_DIRECTIVE
 }
 
-MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
-    StringRef KdName, ArrayRef<uint8_t> Bytes, uint64_t KdAddress) const {
+Error AMDGPUDisassembler::decodeKernelDescriptor(StringRef KdName,
+                                                 ArrayRef<uint8_t> Bytes,
+                                                 uint64_t KdAddress) const {
+
   // CP microcode requires the kernel descriptor to be 64 aligned.
-  if (Bytes.size() != 64 || KdAddress % 64 != 0) {
-    *CommentStream << "kernel descriptor must be 64-byte aligned\n";
-    return MCDisassembler::Fail;
-  }
+  if (Bytes.size() != 64 || KdAddress % 64 != 0)
+    return createStringError(std::errc::invalid_argument,
+                             "kernel descriptor must be 64-byte aligned");
 
   // FIXME: We can't actually decode "in order" as is done below, as e.g. GFX10
   // requires us to know the setting of .amdhsa_wavefront_size32 in order to
@@ -2290,46 +2282,46 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
 
   DataExtractor::Cursor C(0);
   while (C && C.tell() < Bytes.size()) {
-    MCDisassembler::DecodeStatus Status =
-        decodeKernelDescriptorDirective(C, Bytes, KdStream);
+    Error Err = decodeKernelDescriptorDirective(C, Bytes, KdStream);
 
     cantFail(C.takeError());
 
-    if (Status == MCDisassembler::Fail)
-      return MCDisassembler::Fail;
+    if (Err)
+      return Err;
   }
   KdStream << ".end_amdhsa_kernel\n";
   outs() << KdStream.str();
-  return MCDisassembler::Success;
+  return Error::success();
 }
 
-std::optional<MCDisassembler::DecodeStatus>
-AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                  ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                  raw_ostream &CStream) const {
+bool AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address, Error &Err) const {
   // Right now only kernel descriptor needs to be handled.
   // We ignore all other symbols for target specific handling.
   // TODO:
   // Fix the spurious symbol issue for AMDGPU kernels. Exists for both Code
   // Object V2 and V3 when symbols are marked protected.
 
-  SaveAndRestore CommentStreamRAII(CommentStream, &CStream);
+  ErrorAsOutParameter ErrOutParam(&Err);
 
   // amd_kernel_code_t for Code Object V2.
   if (Symbol.Type == ELF::STT_AMDGPU_HSA_KERNEL) {
     Size = 256;
-    *CommentStream << "code object v2 is not supported";
-    return MCDisassembler::Fail;
+    Err = createStringError(std::errc::invalid_argument,
+                            "code object v2 is not supported");
+    return true;
   }
 
   // Code Object V3 kernel descriptors.
   StringRef Name = Symbol.Name;
   if (Symbol.Type == ELF::STT_OBJECT && Name.ends_with(StringRef(".kd"))) {
     Size = 64; // Size = 64 regardless of success or failure.
-    return decodeKernelDescriptor(Name.drop_back(3), Bytes, Address);
+    Err = decodeKernelDescriptor(Name.drop_back(3), Bytes, Address);
+    return true;
   }
 
-  return std::nullopt;
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
