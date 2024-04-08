@@ -63,7 +63,7 @@ static cpp::optional<char *> next_cstr() {
   return cpp::nullopt;
 }
 
-#define GET_VAL(op)                                                            \
+#define get_value(op)                                                          \
   __extension__({                                                              \
     auto val = op();                                                           \
     if (!val)                                                                  \
@@ -103,10 +103,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   memcpy(global_buffer, data, size);
 
   remaining = size;
-  uint64_t size_a = GET_VAL(next_uint64) % 256;
-  uint64_t size_b = GET_VAL(next_uint64) % 256;
-  uint64_t rand_a = GET_VAL(next_uint64);
-  uint64_t rand_b = GET_VAL(next_uint64);
+  uint64_t size_a = get_value(next_uint64) % 256;
+  uint64_t size_b = get_value(next_uint64) % 256;
+  uint64_t rand_a = get_value(next_uint64);
+  uint64_t rand_b = get_value(next_uint64);
   internal::HashTable *table_a = internal::HashTable::allocate(size_a, rand_a);
   register_cleanup(1, [&table_a] {
     if (table_a)
@@ -120,17 +120,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   if (!table_a || !table_b)
     return 0;
   for (;;) {
-    Action action = GET_VAL(next_action);
+    Action action = get_value(next_action);
     switch (action) {
     case Action::Find: {
-      const char *key = GET_VAL(next_cstr);
+      const char *key = get_value(next_cstr);
       if (static_cast<bool>(table_a->find(key)) !=
           static_cast<bool>(table_b->find(key)))
         trap_with_message(key);
       break;
     }
     case Action::Insert: {
-      char *key = GET_VAL(next_cstr);
+      char *key = get_value(next_cstr);
       ENTRY *a = internal::HashTable::insert(table_a, ENTRY{key, key});
       ENTRY *b = internal::HashTable::insert(table_b, ENTRY{key, key});
       if (a->data != b->data)
