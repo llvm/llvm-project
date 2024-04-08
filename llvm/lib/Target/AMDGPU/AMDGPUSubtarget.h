@@ -54,6 +54,7 @@ protected:
   bool HasBF8ConversionScaleInsts = false;
   bool HasFP4ConversionScaleInsts = false;
   bool HasFP6BF6ConversionScaleInsts = false;
+  bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
   bool EnableRealTrue16Insts = false;
   bool HasBF16ConversionInsts = false;
   bool HasMadMixInsts = false;
@@ -186,6 +187,8 @@ public:
   bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
 
   bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
 
   bool hasMadMacF32Insts() const {
     return HasMadMacF32Insts || !isGCN();
