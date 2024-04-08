@@ -229,3 +229,96 @@ define void @vst4(ptr %p) {
 
   ret void
 }
+
+
+define void @splatstore(ptr %p) {
+; CHECK-LABEL: 'splatstore'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> %v4i8, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> %v8i8, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i8> %v16i8, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> %v32i8, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <64 x i8> %v64i8, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> %v4i16, ptr %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> %v8i16, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i16> %v16i16, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <32 x i16> %v32i16, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <64 x i16> %v64i16, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> %v4i32, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i32> %v8i32, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i32> %v16i32, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i32> %v32i32, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <64 x i32> %v64i32, ptr %p, align 256
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> %v4i64, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i64> %v8i64, ptr %p, align 64
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x i64> %v16i64, ptr %p, align 128
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x i64> %v32i64, ptr %p, align 256
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <64 x i64> %v64i64, ptr %p, align 512
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> zeroinitializer
+  store <4 x i8> %v4i8, ptr %p
+  %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> zeroinitializer
+  store <8 x i8> %v8i8, ptr %p
+  %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> zeroinitializer
+  store <16 x i8> %v16i8, ptr %p
+  %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> zeroinitializer
+  store <32 x i8> %v32i8, ptr %p
+  %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> zeroinitializer
+  store <64 x i8> %v64i8, ptr %p
+
+  %v4i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> zeroinitializer
+  store <4 x i16> %v4i16, ptr %p
+  %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> zeroinitializer
+  store <8 x i16> %v8i16, ptr %p
+  %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> zeroinitializer
+  store <16 x i16> %v16i16, ptr %p
+  %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> zeroinitializer
+  store <32 x i16> %v32i16, ptr %p
+  %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> zeroinitializer
+  store <64 x i16> %v64i16, ptr %p
+
+  %v4i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> zeroinitializer
+  store <4 x i32> %v4i32, ptr %p
+  %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> zeroinitializer
+  store <8 x i32> %v8i32, ptr %p
+  %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> zeroinitializer
+  store <16 x i32> %v16i32, ptr %p
+  %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> zeroinitializer
+  store <32 x i32> %v32i32, ptr %p
+  %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> zeroinitializer
+  store <64 x i32> %v64i32, ptr %p
+
+  %v4i64 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
+  store <4 x i64> %v4i64, ptr %p
+  %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> zeroinitializer
+  store <8 x i64> %v8i64, ptr %p
+  %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> zeroinitializer
+  store <16 x i64> %v16i64, ptr %p
+  %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> zeroinitializer
+  store <32 x i64> %v32i64, ptr %p
+  %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> zeroinitializer
+  store <64 x i64> %v64i64, ptr %p
+
+  ret void
+}
+
