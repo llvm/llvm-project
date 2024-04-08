@@ -277,9 +277,73 @@ private:
         },
         ec.u);
   }
+  template <typename SEEK, typename A>
+  static const SEEK *GetIOControl(const A &stmt) {
+    for (const auto &spec : stmt.controls) {
+      if (const auto *result{std::get_if<SEEK>(&spec.u)}) {
+        return result;
+      }
+    }
+    return nullptr;
+  }
+  template <typename A> static bool IsInternalIO(const A &stmt) {
+    if (stmt.iounit.has_value()) {
+      return std::holds_alternative<Fortran::parser::Variable>(stmt.iounit->u);
+    }
+    if (auto *unit{GetIOControl<Fortran::parser::IoUnit>(stmt)}) {
+      return std::holds_alternative<Fortran::parser::Variable>(unit->u);
+    }
+    return false;
+  }
+  void WarnOnIoStmt(const parser::CharBlock &source) {
+    context_.Say(
+        source, "I/O statement might not be supported on device"_warn_en_US);
+  }
+  template <typename A>
+  void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {
+    if (!IsInternalIO(stmt)) {
+      WarnOnIoStmt(source);
+    }
+  }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::PrintStmt> &) {},
+            [&](const common::Indirection<parser::WriteStmt> &x) {
+              if (x.value().format) { // Formatted write to '*' or '6'
+                if (std::holds_alternative<Fortran::parser::Star>(
+                        x.value().format->u)) {
+                  if (x.value().iounit) {
+                    if (std::holds_alternative<Fortran::parser::Star>(
+                            x.value().iounit->u)) {
+                      return;
+                    }
+                  }
+                }
+              }
+              WarnIfNotInternal(x.value(), source);
+            },
+            [&](const common::Indirection<parser::CloseStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::EndfileStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::OpenStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::ReadStmt> &x) {
+              WarnIfNotInternal(x.value(), source);
+            },
+            [&](const common::Indirection<parser::InquireStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::RewindStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::BackspaceStmt> &x) {
+              WarnOnIoStmt(source);
+            },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
