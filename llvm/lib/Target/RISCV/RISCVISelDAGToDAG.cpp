@@ -2105,6 +2105,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       bool ExactlyVecRegSized =
           Subtarget->expandVScale(SubVecVT.getSizeInBits())
               .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
+      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
+                               .getKnownMinValue()));
       assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
 #endif
     }

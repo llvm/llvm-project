@@ -9861,6 +9861,8 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   }
 
   TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+  assert(isPowerOf2_64(
+      Subtarget.expandVScale(SubVecVT.getSizeInBits()).getKnownMinValue()));
   bool ExactlyVecRegSized =
       Subtarget.expandVScale(SubVecVT.getSizeInBits())
           .isKnownMultipleOf(Subtarget.expandVScale(VecRegSize));
