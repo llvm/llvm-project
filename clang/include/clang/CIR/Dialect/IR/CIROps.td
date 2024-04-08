@@ -3488,15 +3488,29 @@ def AtomicFetchKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-def AtomicBinopFetch : CIR_Op<"atomic.binop_fetch",
-                              [Pure, SameSecondOperandAndResultType]> {
-  let summary = "Represents the __atomic_binop_fetch builtin";
-  let description = [{}];
+def AtomicFetch : CIR_Op<"atomic.fetch",
+                         [Pure, SameSecondOperandAndResultType]> {
+  let summary = "Atomic fetch with unary and binary operations";
+  let description = [{
+    Represents `__atomic_binop_fetch` and `__atomic_fetch_binop` builtins,
+    where `binop` is on of the binary opcodes : `add`, `sub`, `and`, `xor`,
+    `or` and `nand`.
+
+    `ptr` is an integer or fp pointer, followed by `val`, which must be
+    an integer or fp (only supported for `add` and `sub`). The operation
+    can also be marked `volatile`.
+
+    If `fetch_first` is present, the operation works like
+    `__atomic_fetch_binop` and returns the value that had
+    previously been in *ptr, otherwise it returns the final result
+    of the computation (`__atomic_binop_fetch`).
+  }];
   let results = (outs CIR_AnyIntOrFloat:$result);
   let arguments = (ins IntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
                        AtomicFetchKind:$binop,
                        Arg<MemOrder, "memory order">:$mem_order,
-                       UnitAttr:$is_volatile);
+                       UnitAttr:$is_volatile,
+                       UnitAttr:$fetch_first);
 
   let assemblyFormat = [{
     `(`
@@ -3505,6 +3519,7 @@ def AtomicBinopFetch : CIR_Op<"atomic.binop_fetch",
     $val `:` type($val) `,`
     $mem_order `)`
     (`volatile` $is_volatile^)?
+    (`fetch_first` $fetch_first^)?
     `:` type($result) attr-dict
   }];
 

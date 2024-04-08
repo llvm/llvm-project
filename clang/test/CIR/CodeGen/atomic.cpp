@@ -28,7 +28,7 @@ int basic_binop_fetch(int *i) {
 // CHECK:  %[[ONE:.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK:  cir.store %[[ONE]], %[[ONE_ADDR]] : !s32i, cir.ptr <!s32i>
 // CHECK:  %[[VAL:.*]] = cir.load %[[ONE_ADDR]] : cir.ptr <!s32i>, !s32i
-// CHECK:  cir.atomic.binop_fetch(add, %[[I]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) : !s32i
+// CHECK:  cir.atomic.fetch(add, %[[I]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) : !s32i
 
 // LLVM: define i32 @_Z17basic_binop_fetchPi
 // LLVM: %[[RMW:.*]] = atomicrmw add ptr {{.*}}, i32 %[[VAL:.*]] seq_cst, align 4
@@ -42,10 +42,10 @@ int other_binop_fetch(int *i) {
 }
 
 // CHECK: cir.func @_Z17other_binop_fetchPi
-// CHECK: cir.atomic.binop_fetch(sub, {{.*}}, relaxed
-// CHECK: cir.atomic.binop_fetch(and, {{.*}}, acquire
-// CHECK: cir.atomic.binop_fetch(or, {{.*}}, acquire
-// CHECK: cir.atomic.binop_fetch(xor, {{.*}}, release
+// CHECK: cir.atomic.fetch(sub, {{.*}}, relaxed
+// CHECK: cir.atomic.fetch(and, {{.*}}, acquire
+// CHECK: cir.atomic.fetch(or, {{.*}}, acquire
+// CHECK: cir.atomic.fetch(xor, {{.*}}, release
 
 // LLVM: define i32 @_Z17other_binop_fetchPi
 // LLVM: %[[RMW_SUB:.*]] = atomicrmw sub ptr {{.*}} monotonic
@@ -62,7 +62,7 @@ int nand_binop_fetch(int *i) {
 }
 
 // CHECK: cir.func @_Z16nand_binop_fetchPi
-// CHECK: cir.atomic.binop_fetch(nand, {{.*}}, acq_rel
+// CHECK: cir.atomic.fetch(nand, {{.*}}, acq_rel
 
 // LLVM: define i32 @_Z16nand_binop_fetchPi
 // LLVM: %[[RMW_NAND:.*]] = atomicrmw nand ptr {{.*}} acq_rel
@@ -75,10 +75,42 @@ int fp_binop_fetch(float *i) {
 }
 
 // CHECK: cir.func @_Z14fp_binop_fetchPf
-// CHECK: cir.atomic.binop_fetch(add,
-// CHECK: cir.atomic.binop_fetch(sub,
+// CHECK: cir.atomic.fetch(add,
+// CHECK: cir.atomic.fetch(sub,
 
+// LLVM: define i32 @_Z14fp_binop_fetchPf
 // LLVM: %[[RMW_FADD:.*]] = atomicrmw fadd ptr
 // LLVM: fadd float %[[RMW_FADD]]
 // LLVM: %[[RMW_FSUB:.*]] = atomicrmw fsub ptr
 // LLVM: fsub float %[[RMW_FSUB]]
+
+int fetch_binop(int *i) {
+  __atomic_fetch_add(i, 1, memory_order_seq_cst);
+  __atomic_fetch_sub(i, 1, memory_order_seq_cst);
+  __atomic_fetch_and(i, 1, memory_order_seq_cst);
+  __atomic_fetch_or(i, 1, memory_order_seq_cst);
+  __atomic_fetch_xor(i, 1, memory_order_seq_cst);
+  return __atomic_fetch_nand(i, 1, memory_order_seq_cst);
+}
+
+// CHECK: cir.func @_Z11fetch_binopPi
+// CHECK: cir.atomic.fetch(add, {{.*}}) fetch_first
+// CHECK: cir.atomic.fetch(sub, {{.*}}) fetch_first
+// CHECK: cir.atomic.fetch(and, {{.*}}) fetch_first
+// CHECK: cir.atomic.fetch(or, {{.*}}) fetch_first
+// CHECK: cir.atomic.fetch(xor, {{.*}}) fetch_first
+// CHECK: cir.atomic.fetch(nand, {{.*}}) fetch_first
+
+// LLVM: define i32 @_Z11fetch_binopPi
+// LLVM: atomicrmw add ptr
+// LLVM-NOT: add {{.*}}
+// LLVM: atomicrmw sub ptr
+// LLVM-NOT: sub {{.*}}
+// LLVM: atomicrmw and ptr
+// LLVM-NOT: and {{.*}}
+// LLVM: atomicrmw or ptr
+// LLVM-NOT: or {{.*}}
+// LLVM: atomicrmw xor ptr
+// LLVM-NOT: xor {{.*}}
+// LLVM: atomicrmw nand ptr
+// LLVM-NOT: nand {{.*}}

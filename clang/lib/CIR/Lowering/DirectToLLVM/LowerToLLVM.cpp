@@ -2407,9 +2407,9 @@ public:
 };
 
 class CIRAtomicFetchLowering
-    : public mlir::OpConversionPattern<mlir::cir::AtomicBinopFetch> {
+    : public mlir::OpConversionPattern<mlir::cir::AtomicFetch> {
 public:
-  using OpConversionPattern<mlir::cir::AtomicBinopFetch>::OpConversionPattern;
+  using OpConversionPattern<mlir::cir::AtomicFetch>::OpConversionPattern;
 
   mlir::LLVM::AtomicOrdering
   getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
@@ -2429,7 +2429,7 @@ public:
     llvm_unreachable("shouldn't get here");
   }
 
-  mlir::Value buildPostOp(mlir::cir::AtomicBinopFetch op, OpAdaptor adaptor,
+  mlir::Value buildPostOp(mlir::cir::AtomicFetch op, OpAdaptor adaptor,
                           mlir::ConversionPatternRewriter &rewriter,
                           mlir::Value rmwVal, bool isInt) const {
     SmallVector<mlir::Value> atomicOperands = {rmwVal, adaptor.getVal()};
@@ -2485,7 +2485,7 @@ public:
   }
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::AtomicBinopFetch op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::cir::AtomicFetch op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     bool isInt; // otherwise it's float.
@@ -2506,18 +2506,17 @@ public:
     auto rmwVal = rewriter.create<mlir::LLVM::AtomicRMWOp>(
         op.getLoc(), llvmBinOpc, adaptor.getPtr(), adaptor.getVal(), llvmOrder);
 
-    // FIXME: Make the rewrite generic and expand this to more opcodes.
-    bool hasPostOp = isa<mlir::cir::AtomicBinopFetch>(op);
-
     mlir::Value result = rmwVal.getRes();
-    if (hasPostOp)
+    if (!op.getFetchFirst()) {
       result = buildPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt);
 
-    // Compensate lack of nand binop in LLVM IR.
-    if (op.getBinop() == mlir::cir::AtomicFetchKind::Nand) {
-      auto negOne = rewriter.create<mlir::LLVM::ConstantOp>(
-          op.getLoc(), result.getType(), -1);
-      result = rewriter.create<mlir::LLVM::XOrOp>(op.getLoc(), result, negOne);
+      // Compensate lack of nand binop in LLVM IR.
+      if (op.getBinop() == mlir::cir::AtomicFetchKind::Nand) {
+        auto negOne = rewriter.create<mlir::LLVM::ConstantOp>(
+            op.getLoc(), result.getType(), -1);
+        result =
+            rewriter.create<mlir::LLVM::XOrOp>(op.getLoc(), result, negOne);
+      }
     }
 
     rewriter.replaceOp(op, result);
