@@ -1325,7 +1325,7 @@ def Vector_TransferReadOp :
           // Update the temporary gathered slice with the individual element
           %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
           %updated = vector.insert %a, %slice[%i, %j, %k] : f32 into vector<3x4x5xf32>
-          memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+          memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
@@ -1348,7 +1348,7 @@ def Vector_TransferReadOp :
         %slice = memref.load %tmp : memref<vector<3x4x5xf32>> -> vector<3x4x5xf32>
         // Here we only store to the first element in dimension one
         %updated = vector.insert %a, %slice[%i, 0, %k] : f32 into vector<3x4x5xf32>
-        memref.store %updated, %temp : memref<vector<3x4x5xf32>>
+        memref.store %updated, %tmp : memref<vector<3x4x5xf32>>
     }}
     // At this point we gathered the elements from the original
     // memref into the desired vector layout, stored in the `%tmp` allocation.
