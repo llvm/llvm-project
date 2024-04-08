@@ -10,16 +10,12 @@ define {i64, i1} @test_sadd_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
@@ -32,16 +28,12 @@ define {i64, i1} @test_uadd_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
@@ -54,16 +46,12 @@ define {i64, i1} @test_smul_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %a, i64 %b)
@@ -75,16 +63,12 @@ define {i64, i1} @test_umul_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
@@ -96,16 +80,12 @@ define {i64, i1} @test_ssub_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
@@ -117,16 +97,12 @@ define {i64, i1} @test_usub_with_overflow(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i64, i1 } poison, i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i64, i1 } [[TMP5]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store { i64, i1 } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { i64, i1 } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { i64, i1 } [[RES]]
 ;
   %res = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
@@ -139,18 +115,12 @@ define {<4 x i32>, <4 x i1>} @test_sadd_with_overflow_vec(<4 x i32> %a, <4 x i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { <4 x i32>, <4 x i1> } poison, <4 x i32> [[TMP3]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <4 x i32>, <4 x i1> } [[TMP5]], <4 x i1> [[TMP4]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
-; CHECK-NEXT:    store { <4 x i32>, <4 x i1> } zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store { <4 x i32>, <4 x i1> } [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret { <4 x i32>, <4 x i1> } [[RES]]
 ;
   %res = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> %a, <4 x i32> %b)
@@ -158,6 +128,3 @@ define {<4 x i32>, <4 x i1>} @test_sadd_with_overflow_vec(<4 x i32> %a, <4 x i32
 }
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1000}
-;.
