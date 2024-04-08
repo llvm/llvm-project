@@ -2704,6 +2704,21 @@ LogicalResult GetRuntimeMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// Atomic Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicBinopFetch::verify() {
+  if (getBinop() == mlir::cir::AtomicFetchKind::Add ||
+      getBinop() == mlir::cir::AtomicFetchKind::Sub)
+    return mlir::success();
+
+  if (!getVal().getType().isa<mlir::cir::IntType>())
+    return emitError() << "only operates on integer values";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

@@ -3482,7 +3482,7 @@ def Atomic_Nand : I32EnumAttrCase<"Nand", 5, "nand">;
 
 def AtomicFetchKind : I32EnumAttr<
     "AtomicFetchKind",
-    "Binary opcode for cir.atomic.fetch.binop and cir.atomic.binop.fetch",
+    "Binary opcode for atomic fetch operations",
     [Atomic_Add, Atomic_Sub, Atomic_And,
      Atomic_Xor, Atomic_Or, Atomic_Nand]> {
   let cppNamespace = "::mlir::cir";
@@ -3508,7 +3508,7 @@ def AtomicBinopFetch : CIR_Op<"atomic.binop_fetch",
     `:` type($result) attr-dict
   }];
 
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
