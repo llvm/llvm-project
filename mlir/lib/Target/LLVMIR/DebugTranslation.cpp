@@ -218,18 +218,15 @@ DebugTranslation::translateImpl(DIGlobalVariableAttr attr) {
 llvm::DIType *
 DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
   DistinctAttr recursiveId = attr.getRecId();
-  if (attr.isRecSelf()) {
-    auto *iter = recursiveTypeMap.find(recursiveId);
-    assert(iter != recursiveTypeMap.end() && "unbound DI recursive self type");
+  if (auto *iter = recursiveTypeMap.find(recursiveId);
+      iter != recursiveTypeMap.end()) {
     return iter->second;
+  } else {
+    assert(!attr.isRecSelf() && "unbound DI recursive self type");
   }
 
   auto setRecursivePlaceholder = [&](llvm::DIType *placeholder) {
-    [[maybe_unused]] auto [iter, inserted] =
-        recursiveTypeMap.try_emplace(recursiveId, placeholder);
-    (void)iter;
-    (void)inserted;
-    assert(inserted && "illegal reuse of recursive id");
+    recursiveTypeMap.try_emplace(recursiveId, placeholder);
   };
 
   llvm::DIType *result =
