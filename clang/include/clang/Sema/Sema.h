@@ -182,6 +182,7 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaHLSL;
 class SemaOpenACC;
 class StandardConversionSequence;
 class Stmt;
@@ -465,9 +466,8 @@ class Sema final : public SemaBase {
   // 36. FixIt Helpers (SemaFixItUtils.cpp)
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
-  // 39. HLSL Constructs (SemaHLSL.cpp)
-  // 40. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 41. SYCL Constructs (SemaSYCL.cpp)
+  // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
+  // 40. SYCL Constructs (SemaSYCL.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -964,6 +964,11 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaHLSL &HLSL() {
+    assert(HLSLPtr);
+    return *HLSLPtr;
+  }
+
   SemaOpenACC &OpenACC() {
     assert(OpenACCPtr);
     return *OpenACCPtr;
@@ -999,6 +1004,7 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
 
   ///@}
@@ -1966,6 +1972,11 @@ public:
 
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
+
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool BuiltinVectorToScalarMath(CallExpr *TheCall);
+
+  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -13136,29 +13147,6 @@ public:
 
 private:
   unsigned ForceCUDAHostDeviceDepth = 0;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name HLSL Constructs
-  /// Implementations are in SemaHLSL.cpp
-  ///@{
-
-public:
-  Decl *ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
-                             SourceLocation KwLoc, IdentifierInfo *Ident,
-                             SourceLocation IdentLoc, SourceLocation LBrace);
-  void ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace);
-
-  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
-  bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   ///@}
 

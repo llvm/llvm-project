@@ -8,27 +8,31 @@
 // This implements Semantic Analysis for HLSL constructs.
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/Sema.h"
 
 using namespace clang;
 
-Decl *Sema::ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
-                                 SourceLocation KwLoc, IdentifierInfo *Ident,
-                                 SourceLocation IdentLoc,
-                                 SourceLocation LBrace) {
-  // For anonymous namespace, take the location of the left brace.
-  DeclContext *LexicalParent = getCurLexicalContext();
-  HLSLBufferDecl *Result = HLSLBufferDecl::Create(
-      Context, LexicalParent, CBuffer, KwLoc, Ident, IdentLoc, LBrace);
+SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
 
-  PushOnScopeChains(Result, BufferScope);
-  PushDeclContext(BufferScope, Result);
+Decl *SemaHLSL::ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
+                                     SourceLocation KwLoc,
+                                     IdentifierInfo *Ident,
+                                     SourceLocation IdentLoc,
+                                     SourceLocation LBrace) {
+  // For anonymous namespace, take the location of the left brace.
+  DeclContext *LexicalParent = SemaRef.getCurLexicalContext();
+  HLSLBufferDecl *Result = HLSLBufferDecl::Create(
+      getASTContext(), LexicalParent, CBuffer, KwLoc, Ident, IdentLoc, LBrace);
+
+  SemaRef.PushOnScopeChains(Result, BufferScope);
+  SemaRef.PushDeclContext(BufferScope, Result);
 
   return Result;
 }
 
-void Sema::ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace) {
+void SemaHLSL::ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
   BufDecl->setRBraceLoc(RBrace);
-  PopDeclContext();
+  SemaRef.PopDeclContext();
 }
