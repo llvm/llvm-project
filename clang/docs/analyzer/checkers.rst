@@ -3138,13 +3138,16 @@ are detected:
   allowed in this state.
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
-The checker assumes by default that any of the stream operations, except the
-write operations (like ``fwrite``, ``fprintf``) can fail. The option
-``Pedantic`` controls if the write operations are assumed to be successful or
-not. If set to ``true``, the write operations (including change of file
-position) can fail too (default is ``false``). This option was added to prevent
-many checker warnings if the code contains many write operations without error
-check.
+The stream operations are by this checker usually split into two cases, a success
+and a failure case. However, in the case of write operations (like ``fwrite``,
+``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
+unwanted reports on projects that don't have error checks around the write
+operations, so by default the checker assumes that write operations always succeed.
+This behavior can be controlled by the ``Pedantic`` flag: With
+``-analyzer-config alpha.unix.Stream:Pedantic=true`` the checker will model the
+cases where a write operation fails and report situations where this leads to
+erroneous behavior. (The default is ``Pedantic=false``, where write operations
+are assumed to succeed.)
 
 .. code-block:: c
 
