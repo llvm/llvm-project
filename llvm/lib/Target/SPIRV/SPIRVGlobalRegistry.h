@@ -374,20 +374,15 @@ private:
       APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
-
-  Register getOrCreateIntCompositeOrNull(Constant *Val, MachineInstr &I,
-                                         SPIRVType *SpvType,
-                                         const SPIRVInstrInfo &TII,
-                                         Constant *CA, unsigned BitWidth,
-                                         unsigned ElemCnt,
-                                         bool ZeroAsNull = true);
-
-  Register getOrCreateFloatCompositeOrNull(Constant *Val, MachineInstr &I,
-                                           SPIRVType *SpvType,
-                                           const SPIRVInstrInfo &TII,
-                                           Constant *CA, unsigned BitWidth,
-                                           unsigned ElemCnt,
-                                           bool ZeroAsNull = true);
+  Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
+                                   SPIRVType *SpvType,
+                                   const SPIRVInstrInfo &TII,
+                                   unsigned BitWidth);
+  Register getOrCreateCompositeOrNull(Constant *Val, MachineInstr &I,
+                                      SPIRVType *SpvType,
+                                      const SPIRVInstrInfo &TII, Constant *CA,
+                                      unsigned BitWidth, unsigned ElemCnt,
+                                      bool ZeroAsNull = true);
 
   Register getOrCreateIntCompositeOrNull(uint64_t Val,
                                          MachineIRBuilder &MIRBuilder,
@@ -402,7 +397,8 @@ public:
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
   Register getOrCreateConstFP(APFloat Val, MachineInstr &I, SPIRVType *SpvType,
-                              const SPIRVInstrInfo &TII, bool ZeroAsNull);
+                              const SPIRVInstrInfo &TII,
+                              bool ZeroAsNull = true);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
                            SPIRVType *SpvType = nullptr);
 
