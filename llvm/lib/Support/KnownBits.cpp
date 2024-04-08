@@ -784,7 +784,7 @@ KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 | C2) - (C1 ^ C2).ashr(1)
-  KnownBits andResult = LHS & RHS;
+  KnownBits andResult = LHS | RHS;
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.ashrInPlace(1);
   xorResult.One.ashrInPlace(1);
@@ -794,7 +794,7 @@ KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 | C2) - (C1 ^ C2).lshr(1)
-  KnownBits andResult = LHS & RHS;
+  KnownBits andResult = LHS | RHS;
   KnownBits xorResult = LHS ^ RHS;
   xorResult.Zero.lshrInPlace(1);
   xorResult.One.lshrInPlace(1);
