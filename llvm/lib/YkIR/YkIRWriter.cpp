@@ -60,6 +60,7 @@ enum OperandKind {
   Arg,
   Global,
   Predicate,
+  OpKindBinOp,
   UnimplementedOperand = 255,
 };
 
@@ -330,7 +331,7 @@ private:
     // left-hand side:
     serialiseOperand(I, VLMap, I->getOperand(0));
     // binary operator:
-    serialiseBinOperator(I->getOpcode());
+    serialiseBinOperatorOperand(I->getOpcode());
     // right-hand side:
     serialiseOperand(I, VLMap, I->getOperand(1));
 
@@ -339,7 +340,10 @@ private:
   }
 
   // Serialise a binary operator.
-  void serialiseBinOperator(Instruction::BinaryOps BO) {
+  void serialiseBinOperatorOperand(Instruction::BinaryOps BO) {
+    // operand kind:
+    OutStreamer.emitInt8(OperandKind::OpKindBinOp);
+    // the operator:
     switch (BO) {
     case Instruction::BinaryOps::Add:
       OutStreamer.emitInt8(BinOp::BinOpAdd);
@@ -395,8 +399,8 @@ private:
     case Instruction::BinaryOps::URem:
       OutStreamer.emitInt8(BinOp::BinOpURem);
       break;
-    case Instruction::BinaryOps::BinaryOpsEnd:
-      break;
+    default:
+      llvm::report_fatal_error("unknown binary operator");
     }
   }
 
