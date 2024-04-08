@@ -55,9 +55,12 @@ enum Op {
   ANDI = 0x03400000,
   PCADDI = 0x18000000,
   PCADDU12I = 0x1c000000,
+  PCADDU18I = 0x1e000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
   JIRL = 0x4c000000,
+  B = 0x50000000,
+  BL = 0x54000000,
 };
 
 enum Reg {
@@ -830,6 +833,45 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   remove = 4;
 }
 
+static bool isInsnPairCall36(uint64_t pair) {
+  const uint32_t insn1 = extractBits(pair, 31, 0);
+  const uint32_t insn2 = extractBits(pair, 63, 32);
+  if ((insn1 & 0xfe000000) != PCADDU18I)
+    return false;
+  if ((insn2 & 0xfc000000) != JIRL)
+    return false;
+
+  const uint32_t rd1 = extractBits(insn1, 4, 0);
+  const uint32_t rd2 = extractBits(insn2, 4, 0);
+  const uint32_t rj2 = extractBits(insn2, 9, 5);
+  if (rd1 != rj2)
+    return false;
+  if (rd2 != R_ZERO && rd2 != R_RA)
+    return false;
+
+  return true;
+}
+
+// Relax R_LARCH_CALL36 pcaddu18i+jirl to b or bl.
+static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
+                      Relocation &r, uint32_t &remove) {
+  const Symbol &sym = *r.sym;
+  const uint64_t insnPair = read64le(sec.content().data() + r.offset);
+  if (!isInsnPairCall36(insnPair))
+    return;
+
+  const bool isTail = extractBits(insnPair, 32 + 4, 32 + 0) == R_ZERO;
+  const uint64_t dest =
+      (r.expr == R_PLT_PC ? sym.getPltVA(ctx) : sym.getVA(ctx)) + r.addend;
+  const int64_t displace = dest - loc;
+
+  if (isInt<28>(displace) && !(displace & 0x3)) {
+    sec.relaxAux->relocTypes[i] = R_LARCH_B26;
+    sec.relaxAux->writes.push_back(isTail ? B : BL);
+    remove = 4;
+  }
+}
+
 static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
@@ -873,6 +915,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // The overflow check for i+2 will be carried out in isPairRelaxable.
       if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+      break;
+    case R_LARCH_CALL36:
+      if (relaxable(relocs, i))
+        relaxCall(ctx, sec, i, loc, r, remove);
       break;
     }
 
@@ -971,6 +1017,7 @@ void LoongArch::finalizeRelax(int passes) const {
           switch (newType) {
           case R_LARCH_RELAX:
             break;
+          case R_LARCH_B26:
           case R_LARCH_PCREL20_S2:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
