@@ -110,6 +110,11 @@ C++20 Feature Support
   templates (`P1814R0 <https://wg21.link/p1814r0>`_).
   (#GH54051).
 
+- __cpp_concepts macro now updated to `202002L`, as we are confident that,
+  modulo a handful of bugs and core issues, that our concepts implementation is
+  sufficient. This should enable libstdc++'s `<expected>` to work correctly in
+  clang.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
