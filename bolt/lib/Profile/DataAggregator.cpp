@@ -2332,8 +2332,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       uint64_t FuncAddress = BD->getAddress();
       if (!BAT->isBATFunction(FuncAddress))
         continue;
-      // Cold fragments must be handled by doBranch.
-      assert(BD->getSectionName().equals(BC.getMainCodeSectionName()));
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
       YamlBF.Name = FuncName.str();
