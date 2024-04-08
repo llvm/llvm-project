@@ -2407,9 +2407,9 @@ public:
 };
 
 class CIRAtomicFetchLowering
-    : public mlir::OpConversionPattern<mlir::cir::AtomicAddFetch> {
+    : public mlir::OpConversionPattern<mlir::cir::AtomicBinopFetch> {
 public:
-  using OpConversionPattern<mlir::cir::AtomicAddFetch>::OpConversionPattern;
+  using OpConversionPattern<mlir::cir::AtomicBinopFetch>::OpConversionPattern;
 
   mlir::LLVM::AtomicOrdering
   getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
@@ -2429,38 +2429,98 @@ public:
     llvm_unreachable("shouldn't get here");
   }
 
-  mlir::LogicalResult buildPostOp(mlir::cir::AtomicAddFetch op,
-                                  OpAdaptor adaptor,
-                                  mlir::ConversionPatternRewriter &rewriter,
-                                  mlir::Value rmwVal) const {
-    if (op.getVal().getType().isa<mlir::cir::IntType>())
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, rmwVal,
-                                                     adaptor.getVal());
-    else if (op.getVal()
-                 .getType()
-                 .isa<mlir::cir::SingleType, mlir::cir::DoubleType>())
-      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, rmwVal,
-                                                      adaptor.getVal());
-    else
-      return op.emitError() << "Unsupported type";
-    return mlir::success();
+  mlir::Value buildPostOp(mlir::cir::AtomicBinopFetch op, OpAdaptor adaptor,
+                          mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Value rmwVal, bool isInt) const {
+    SmallVector<mlir::Value> atomicOperands = {rmwVal, adaptor.getVal()};
+    SmallVector<mlir::Type> atomicResTys = {rmwVal.getType()};
+    return rewriter
+        .create(op.getLoc(),
+                rewriter.getStringAttr(getLLVMBinop(op.getBinop(), isInt)),
+                atomicOperands, atomicResTys, {})
+        ->getResult(0);
+  }
+
+  llvm::StringLiteral getLLVMBinop(mlir::cir::AtomicFetchKind k,
+                                   bool isInt) const {
+    switch (k) {
+    case mlir::cir::AtomicFetchKind::Add:
+      return isInt ? mlir::LLVM::AddOp::getOperationName()
+                   : mlir::LLVM::FAddOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::Sub:
+      return isInt ? mlir::LLVM::SubOp::getOperationName()
+                   : mlir::LLVM::FSubOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::And:
+      return mlir::LLVM::AndOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::Xor:
+      return mlir::LLVM::XOrOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::Or:
+      return mlir::LLVM::OrOp::getOperationName();
+    case mlir::cir::AtomicFetchKind::Nand:
+      // There's no nand binop in LLVM, this is later fixed with a not.
+      return mlir::LLVM::AndOp::getOperationName();
+    }
+    llvm_unreachable("Unknown atomic fetch opcode");
+  }
+
+  mlir::LLVM::AtomicBinOp getLLVMAtomicBinOp(mlir::cir::AtomicFetchKind k,
+                                             bool isInt) const {
+    switch (k) {
+    case mlir::cir::AtomicFetchKind::Add:
+      return isInt ? mlir::LLVM::AtomicBinOp::add
+                   : mlir::LLVM::AtomicBinOp::fadd;
+    case mlir::cir::AtomicFetchKind::Sub:
+      return isInt ? mlir::LLVM::AtomicBinOp::sub
+                   : mlir::LLVM::AtomicBinOp::fsub;
+    case mlir::cir::AtomicFetchKind::And:
+      return mlir::LLVM::AtomicBinOp::_and;
+    case mlir::cir::AtomicFetchKind::Xor:
+      return mlir::LLVM::AtomicBinOp::_xor;
+    case mlir::cir::AtomicFetchKind::Or:
+      return mlir::LLVM::AtomicBinOp::_or;
+    case mlir::cir::AtomicFetchKind::Nand:
+      return mlir::LLVM::AtomicBinOp::nand;
+    }
+    llvm_unreachable("Unknown atomic fetch opcode");
   }
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::AtomicAddFetch op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::cir::AtomicBinopFetch op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto llvmOrder = getLLVMAtomicOrder(adaptor.getMemOrder());
+
+    bool isInt; // otherwise it's float.
+    if (op.getVal().getType().isa<mlir::cir::IntType>())
+      isInt = true;
+    else if (op.getVal()
+                 .getType()
+                 .isa<mlir::cir::SingleType, mlir::cir::DoubleType>())
+      isInt = false;
+    else {
+      return op.emitError()
+             << "Unsupported type: " << adaptor.getVal().getType();
+    }
 
     // FIXME: add syncscope.
+    auto llvmOrder = getLLVMAtomicOrder(adaptor.getMemOrder());
+    auto llvmBinOpc = getLLVMAtomicBinOp(op.getBinop(), isInt);
     auto rmwVal = rewriter.create<mlir::LLVM::AtomicRMWOp>(
-        op.getLoc(), mlir::LLVM::AtomicBinOp::add, adaptor.getPtr(),
-        adaptor.getVal(), llvmOrder);
+        op.getLoc(), llvmBinOpc, adaptor.getPtr(), adaptor.getVal(), llvmOrder);
 
     // FIXME: Make the rewrite generic and expand this to more opcodes.
-    bool hasPostOp = isa<mlir::cir::AtomicAddFetch>(op);
+    bool hasPostOp = isa<mlir::cir::AtomicBinopFetch>(op);
 
+    mlir::Value result = rmwVal.getRes();
     if (hasPostOp)
-      return buildPostOp(op, adaptor, rewriter, rmwVal.getRes());
+      result = buildPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt);
+
+    // Compensate lack of nand binop in LLVM IR.
+    if (op.getBinop() == mlir::cir::AtomicFetchKind::Nand) {
+      auto negOne = rewriter.create<mlir::LLVM::ConstantOp>(
+          op.getLoc(), result.getType(), -1);
+      result = rewriter.create<mlir::LLVM::XOrOp>(op.getLoc(), result, negOne);
+    }
+
+    rewriter.replaceOp(op, result);
     return mlir::success();
   }
 };

@@ -323,7 +323,10 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   assert(!UnimplementedFeature::syncScopeID());
   StringRef Op;
   [[maybe_unused]] bool PostOpMinMax = false;
+
+  auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
+  mlir::cir::AtomicFetchKindAttr fetchAttr;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -388,20 +391,23 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
-    Op = mlir::cir::AtomicAddFetch::getOperationName();
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Add);
     break;
 
   case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
     // In LLVM codegen, the post operation codegen is tracked here.
-    llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
   case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Sub);
     break;
 
   case AtomicExpr::AO__atomic_min_fetch:
@@ -431,57 +437,59 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__scoped_atomic_and_fetch:
     // In LLVM codegen, the post operation codegen is tracked here.
-    llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__hip_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::And);
     break;
 
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_or_fetch:
     // In LLVM codegen, the post operation codegen is tracked here.
-    llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__hip_atomic_fetch_or:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Or);
     break;
 
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
     // In LLVM codegen, the post operation codegen is tracked here.
-    llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
   case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Xor);
     break;
 
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
     // In LLVM codegen, the post operation codegen is tracked here.
-    llvm_unreachable("NYI");
     [[fallthrough]];
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    llvm_unreachable("NYI");
+    Op = mlir::cir::AtomicBinopFetch::getOperationName();
+    fetchAttr = mlir::cir::AtomicFetchKindAttr::get(
+        builder.getContext(), mlir::cir::AtomicFetchKind::Nand);
     break;
   }
 
   assert(Op.size() && "expected operation name to build");
-  auto &builder = CGF.getBuilder();
-
   auto LoadVal1 = builder.createLoad(loc, Val1);
 
   SmallVector<mlir::Value> atomicOperands = {Ptr.getPointer(), LoadVal1};
@@ -490,17 +498,15 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   auto orderAttr = mlir::cir::MemOrderAttr::get(builder.getContext(), Order);
   auto RMWI = builder.create(loc, builder.getStringAttr(Op), atomicOperands,
                              atomicResTys, {});
+
+  if (fetchAttr)
+    RMWI->setAttr("binop", fetchAttr);
   RMWI->setAttr("mem_order", orderAttr);
   if (E->isVolatile())
     RMWI->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
   auto Result = RMWI->getResult(0);
 
   if (PostOpMinMax)
-    llvm_unreachable("NYI");
-
-  // This should be handled in LowerToLLVM.cpp, still tracking here for now.
-  if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch ||
-      E->getOp() == AtomicExpr::AO__scoped_atomic_nand_fetch)
     llvm_unreachable("NYI");
 
   builder.createStore(loc, Result, Dest);
