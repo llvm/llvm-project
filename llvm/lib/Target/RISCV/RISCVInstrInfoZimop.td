@@ -8,8 +8,6 @@
 //
 // This file describes the RISC-V instructions from the standard
 // May-Be-Operations Extension (Zimop).
-// This version is still experimental as the 'Zimop' extension hasn't been
-// ratified yet. It is based on v0.1 of the specification.
 //
 //===----------------------------------------------------------------------===//
 
