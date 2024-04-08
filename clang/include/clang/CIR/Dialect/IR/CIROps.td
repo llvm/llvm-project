@@ -3456,6 +3456,7 @@ def IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
+// Memory order related definitions.
 def MemOrderRelaxed : I32EnumAttrCase<"Relaxed", 0, "relaxed">;
 def MemOrderConsume : I32EnumAttrCase<"Consume", 1, "consume">;
 def MemOrderAcquire : I32EnumAttrCase<"Acquire", 2, "acquire">;
@@ -3471,17 +3472,35 @@ def MemOrder : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-def AtomicAddFetch : CIR_Op<"atomic.add_fetch",
-                            [Pure, SameSecondOperandAndResultType]> {
-  let summary = "Represents the __atomic_add_fetch builtin";
+// Binary opcodes for atomic fetch.
+def Atomic_Add  : I32EnumAttrCase<"Add",  0, "add">;
+def Atomic_Sub  : I32EnumAttrCase<"Sub",  1, "sub">;
+def Atomic_And  : I32EnumAttrCase<"And",  2, "and">;
+def Atomic_Xor  : I32EnumAttrCase<"Xor",  3, "xor">;
+def Atomic_Or   : I32EnumAttrCase<"Or",   4, "or">;
+def Atomic_Nand : I32EnumAttrCase<"Nand", 5, "nand">;
+
+def AtomicFetchKind : I32EnumAttr<
+    "AtomicFetchKind",
+    "Binary opcode for cir.atomic.fetch.binop and cir.atomic.binop.fetch",
+    [Atomic_Add, Atomic_Sub, Atomic_And,
+     Atomic_Xor, Atomic_Or, Atomic_Nand]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def AtomicBinopFetch : CIR_Op<"atomic.binop_fetch",
+                              [Pure, SameSecondOperandAndResultType]> {
+  let summary = "Represents the __atomic_binop_fetch builtin";
   let description = [{}];
   let results = (outs CIR_AnyIntOrFloat:$result);
   let arguments = (ins IntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
+                       AtomicFetchKind:$binop,
                        Arg<MemOrder, "memory order">:$mem_order,
                        UnitAttr:$is_volatile);
 
   let assemblyFormat = [{
     `(`
+    $binop `,`
     $ptr `:` type($ptr) `,`
     $val `:` type($val) `,`
     $mem_order `)`
