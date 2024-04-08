@@ -22,9 +22,9 @@ main:
         movq    %rsp, %rbp
         pushq   %rbx
         .cfi_def_cfa_register 6
-        movl    %edi, -12(%rbp)
-        movq    %rsi, -20(%rbp)
-        movl    -12(%rbp), %ebx
+        movl    %edi, -16(%rbp)
+        movq    %rsi, -24(%rbp)
+        movl    -16(%rbp), %ebx
         addl    $1, %ebx
         movl    $0, %eax
         popq    %rbx
