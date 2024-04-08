@@ -47,24 +47,7 @@ enum OpCode {
   Ret,
   InsertValue,
   PtrAdd,
-  Add,
-  Sub,
-  Mul,
-  Or,
-  And,
-  Xor,
-  Shl,
-  AShr,
-  FAdd,
-  FDiv,
-  FMul,
-  FRem,
-  FSub,
-  LShr,
-  SDiv,
-  SRem,
-  UDiv,
-  URem,
+  BinOp,
   UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -101,6 +84,28 @@ enum CmpPredicate {
   PredSignedGreaterEqual,
   PredSignedLess,
   PredSignedLessEqual,
+};
+
+// A binary operator.
+enum BinOp {
+  BinOpAdd,
+  BinOpSub,
+  BinOpMul,
+  BinOpOr,
+  BinOpAnd,
+  BinOpXor,
+  BinOpShl,
+  BinOpAShr,
+  BinOpFAdd,
+  BinOpFDiv,
+  BinOpFMul,
+  BinOpFRem,
+  BinOpFSub,
+  BinOpLShr,
+  BinOpSDiv,
+  BinOpSRem,
+  BinOpUDiv,
+  BinOpURem,
 };
 
 template <class T> string toString(T *X) {
@@ -314,71 +319,81 @@ private:
   void serialiseBinaryOperation(llvm::BinaryOperator *I,
                                 ValueLoweringMap &VLMap, unsigned BBIdx,
                                 unsigned &InstIdx) {
+    assert(I->getNumOperands() == 2);
+
+    // type index:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
-    serialiseBinOpcode(I->getOpcode());
-    OutStreamer.emitInt32(I->getNumOperands());
-    for (Value *O : I->operands()) {
-      serialiseOperand(I, VLMap, O);
-    }
+    // opcode:
+    OutStreamer.emitInt8(OpCode::BinOp);
+    // num operands:
+    OutStreamer.emitInt32(3);
+    // left-hand side:
+    serialiseOperand(I, VLMap, I->getOperand(0));
+    // binary operator:
+    serialiseBinOperator(I->getOpcode());
+    // right-hand side:
+    serialiseOperand(I, VLMap, I->getOperand(1));
+
     VLMap[I] = {BBIdx, InstIdx};
     InstIdx++;
   }
 
-  void serialiseBinOpcode(Instruction::BinaryOps BO) {
+  // Serialise a binary operator.
+  void serialiseBinOperator(Instruction::BinaryOps BO) {
     switch (BO) {
     case Instruction::BinaryOps::Add:
-      OutStreamer.emitInt8(OpCode::Add);
+      OutStreamer.emitInt8(BinOp::BinOpAdd);
       break;
     case Instruction::BinaryOps::Sub:
-      OutStreamer.emitInt8(OpCode::Sub);
+      OutStreamer.emitInt8(BinOp::BinOpSub);
       break;
     case Instruction::BinaryOps::Mul:
-      OutStreamer.emitInt8(OpCode::Mul);
+      OutStreamer.emitInt8(BinOp::BinOpMul);
       break;
     case Instruction::BinaryOps::Or:
-      OutStreamer.emitInt8(OpCode::Or);
+      OutStreamer.emitInt8(BinOp::BinOpOr);
       break;
     case Instruction::BinaryOps::And:
-      OutStreamer.emitInt8(OpCode::And);
+      OutStreamer.emitInt8(BinOp::BinOpAnd);
       break;
     case Instruction::BinaryOps::Xor:
-      OutStreamer.emitInt8(OpCode::Xor);
+      OutStreamer.emitInt8(BinOp::BinOpXor);
       break;
     case Instruction::BinaryOps::Shl:
-      OutStreamer.emitInt8(OpCode::Shl);
+      OutStreamer.emitInt8(BinOp::BinOpShl);
       break;
     case Instruction::BinaryOps::AShr:
-      OutStreamer.emitInt8(OpCode::AShr);
+      OutStreamer.emitInt8(BinOp::BinOpAShr);
       break;
     case Instruction::BinaryOps::FAdd:
-      OutStreamer.emitInt8(OpCode::FAdd);
+      OutStreamer.emitInt8(BinOp::BinOpFAdd);
       break;
     case Instruction::BinaryOps::FDiv:
-      OutStreamer.emitInt8(OpCode::FDiv);
+      OutStreamer.emitInt8(BinOp::BinOpFDiv);
       break;
     case Instruction::BinaryOps::FMul:
-      OutStreamer.emitInt8(OpCode::FMul);
+      OutStreamer.emitInt8(BinOp::BinOpFMul);
       break;
     case Instruction::BinaryOps::FRem:
-      OutStreamer.emitInt8(OpCode::FRem);
+      OutStreamer.emitInt8(BinOp::BinOpFRem);
       break;
     case Instruction::BinaryOps::FSub:
-      OutStreamer.emitInt8(OpCode::FSub);
+      OutStreamer.emitInt8(BinOp::BinOpFSub);
       break;
     case Instruction::BinaryOps::LShr:
-      OutStreamer.emitInt8(OpCode::LShr);
+      OutStreamer.emitInt8(BinOp::BinOpLShr);
       break;
     case Instruction::BinaryOps::SDiv:
-      OutStreamer.emitInt8(OpCode::SDiv);
+      OutStreamer.emitInt8(BinOp::BinOpSDiv);
       break;
     case Instruction::BinaryOps::SRem:
-      OutStreamer.emitInt8(OpCode::SRem);
+      OutStreamer.emitInt8(BinOp::BinOpSRem);
       break;
     case Instruction::BinaryOps::UDiv:
-      OutStreamer.emitInt8(OpCode::UDiv);
+      OutStreamer.emitInt8(BinOp::BinOpUDiv);
       break;
     case Instruction::BinaryOps::URem:
-      OutStreamer.emitInt8(OpCode::URem);
+      OutStreamer.emitInt8(BinOp::BinOpURem);
       break;
     case Instruction::BinaryOps::BinaryOpsEnd:
       break;
