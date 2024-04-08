@@ -774,7 +774,8 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                        << Typo << DC << DroppedSpecifier
                                        << SS.getRange());
         } else {
-          SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << DC << BaseRange;
+          SemaRef.Diag(TypoLoc, diag::err_no_member)
+              << Typo << DC << (SS.isSet() ? SS.getRange() : BaseRange);
         }
       },
       [=](Sema &SemaRef, TypoExpr *TE, TypoCorrection TC) mutable {
@@ -1057,8 +1058,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   if (R.empty()) {
     // Rederive where we looked up.
-    DeclContext *DC = (SS.isSet() ? computeDeclContext(SS, false)
-                                  : computeDeclContext(BaseType));
+    DeclContext *DC =
+        (SS.isSet() ? computeDeclContext(SS) : computeDeclContext(BaseType));
     if (ExtraArgs) {
       ExprResult RetryExpr;
       if (!IsArrow && BaseExpr && !BaseExpr->isTypeDependent()) {
@@ -1084,19 +1085,12 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       }
     }
 
-    if (SS.isNotEmpty() && !DC) {
-      Diag(R.getNameLoc(), diag::err_undeclared_use)
-          << MemberName << SS.getRange();
-    } else if (DC) {
-      Diag(R.getNameLoc(), diag::err_no_member)
-          << MemberName << DC
-          << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
-    } else {
-      // FIXME: Is this needed?
-      Diag(R.getNameLoc(), diag::err_no_member)
-          << MemberName << BaseExprType
-          << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
-    }
+    assert(DC);
+    Diag(R.getNameLoc(), diag::err_no_member)
+        << MemberName << DC
+        << (SS.isSet()
+                ? SS.getRange()
+                : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
     return ExprError();
   }
 
