@@ -2020,7 +2020,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   uint64_t CommonStride = StrideA == StrideB ? StrideA : 0;
   if (isa<SCEVCouldNotCompute>(Dist)) {
-      FoundNonConstantDistanceDependence = true;
+    FoundNonConstantDistanceDependence = true;
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
@@ -2107,7 +2107,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return Dependence::Unknown;
   }
 
-  // The logic below currently only supports StrideA ==  StrideB, i.e. there's a common stride.
+  // The logic below currently only supports StrideA ==  StrideB, i.e. there's a
+  // common stride.
   if (!CommonStride)
     return Dependence::Unknown;
 
