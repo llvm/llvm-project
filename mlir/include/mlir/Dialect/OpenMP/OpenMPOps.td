@@ -1635,11 +1635,11 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
     that specify the dependencies of this particular target task in relation to
     other tasks.
 
-    The optional $is_device_ptr indicates list items are device pointers
+    The optional $is_device_ptr indicates list items are device pointers.
 
     The optional $has_device_addr indicates that list items already have device
-    addresses, so may be directly accessed from target device. May include array
-    sections.
+    addresses, so they may be directly accessed from the target device. This
+    includes array sections.
 
     The optional $map_operands maps data from the task’s environment to the
     device environment.
