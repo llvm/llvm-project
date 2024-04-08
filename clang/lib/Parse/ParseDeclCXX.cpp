@@ -5064,8 +5064,8 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
 
         // For HLSL we want to handle all attributes, but for MSVC compat, we
         // silently ignore unknown Microsoft attributes.
-        int Attr = hasAttribute(AttributeCommonInfo::Syntax::AS_Microsoft, nullptr,
-                                II, getTargetInfo(), getLangOpts());
+        int Attr = hasAttribute(AttributeCommonInfo::Syntax::AS_Microsoft,
+                                nullptr, II, getTargetInfo(), getLangOpts());
         if (getLangOpts().HLSL || Attr != 0) {
           bool AttrParsed = false;
           if (Tok.is(tok::l_paren)) {
