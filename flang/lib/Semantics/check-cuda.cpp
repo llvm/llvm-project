@@ -282,7 +282,7 @@ private:
         return result;
       }
     }
-    return static_cast<const SEEK *>(nullptr);
+    return nullptr;
   }
   template <typename A> static bool IsInternalIO(const A &stmt) {
     if (stmt.iounit.has_value()) {
