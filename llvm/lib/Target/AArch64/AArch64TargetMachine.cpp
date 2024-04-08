@@ -619,6 +619,9 @@ void AArch64PassConfig::addIRPasses() {
     // Do loop invariant code motion in case part of the lowered result is
     // invariant.
     addPass(createLICMPass());
+    // This pass expands conditional store intrinsics,
+    //  which are not supported in the target
+    addPass(createLowerConditionalStoreIntrinsicPass());
   }
 
   TargetPassConfig::addIRPasses();

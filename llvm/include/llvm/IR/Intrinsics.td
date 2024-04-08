@@ -2322,6 +2322,21 @@ def int_vp_is_fpclass:
                                 llvm_i32_ty],
                               [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
+//===-------------------------- Conditional Intrinsics --------------------===//
+//
+
+def int_conditional_store:
+  DefaultAttrsIntrinsic</*ret_types*/[],
+                        /*param_types*/[/*Val*/llvm_any_ty,
+                                        /*Ptr*/llvm_anyptr_ty,
+                                        /*Alignment*/llvm_i32_ty,
+                                        /*Condition*/llvm_i1_ty],
+                        /*intr_properties*/[IntrWriteMem,
+                                            IntrArgMemOnly,
+                                            IntrWillReturn,
+                 /*Alignment is a constant*/ImmArg<ArgIndex<2>>,
+                                            NoCapture<ArgIndex<1>>]>;
+
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
 def int_masked_load:

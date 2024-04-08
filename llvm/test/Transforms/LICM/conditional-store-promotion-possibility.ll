@@ -1,4 +1,5 @@
-; RUN: opt -S -passes=licm < %s | FileCheck %s
+; RUN: opt -S -passes=licm -licm-conditional-access-promotion=true < %s > %t
+; RUN: opt -S -passes=lower-conditional-store < %t | FileCheck %s
 @res = dso_local local_unnamed_addr global i32 0, align 4
 
 define dso_local void @test(ptr noalias nocapture noundef readonly %a, i32 noundef signext %N) local_unnamed_addr #0 {
@@ -39,6 +40,7 @@ define dso_local void @test(ptr noalias nocapture noundef readonly %a, i32 nound
 ; CHECK:    br label %for.cond
 
 ; CHECK:  for.cond:
+; CHECK:    %res.flag4 = phi i1 [ false, %entry ], [ %res.flag, %for.inc ]
 ; CHECK:    %inc3 = phi i32 [ %res.promoted, %entry ], [ %inc2, %for.inc ]
 ; CHECK:    %i.0 = phi i32 [ 0, %entry ], [ %inc1, %for.inc ]
 ; CHECK:    %cmp = icmp slt i32 %i.0, %N
@@ -53,14 +55,22 @@ define dso_local void @test(ptr noalias nocapture noundef readonly %a, i32 nound
 
 ; CHECK:  if.then:
 ; CHECK:    %inc = add nsw i32 %inc3, 1
-; CHECK:    store i32 %inc, ptr @res, align 4
 ; CHECK:    br label %for.inc
 
 ; CHECK:  for.inc:
+; CHECK:    %res.flag = phi i1 [ true, %if.then ], [ %res.flag4, %for.body ]
 ; CHECK:    %inc2 = phi i32 [ %inc, %if.then ], [ %inc3, %for.body ]
 ; CHECK:    %inc1 = add nuw nsw i32 %i.0, 1
 ; CHECK:    br label %for.cond
 
 ; CHECK:  for.cond.cleanup:
-  ; CHECK:    ret void
-; CHECK:  }
+; CHECK:    %res.flag4.lcssa = phi i1 [ %res.flag4, %for.cond ]
+; CHECK:    %inc3.lcssa = phi i32 [ %inc3, %for.cond ]
+; CHECK:    br i1 %res.flag4.lcssa, label %1, label %2
+
+; CHECK:  1:
+; CHECK:    store i32 %inc3.lcssa, ptr @res, align 4
+; CHECK:    br label %2
+
+; CHECK:  2:
+; CHECK:    ret void

@@ -1046,8 +1046,12 @@ void AMDGPUPassConfig::addIRPasses() {
 
     // Try to hoist loop invariant parts of divisions AMDGPUCodeGenPrepare may
     // have expanded.
-    if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    if (TM.getOptLevel() > CodeGenOptLevel::Less) {
       addPass(createLICMPass());
+      // This pass expands conditional store intrinsics,
+      //  which are not supported in the target
+      addPass(createLowerConditionalStoreIntrinsicPass());
+    }
   }
 
   TargetPassConfig::addIRPasses();

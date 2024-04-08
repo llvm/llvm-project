@@ -818,6 +818,10 @@ public:
   /// Create a call to llvm.threadlocal.address intrinsic.
   CallInst *CreateThreadLocalAddress(Value *Ptr);
 
+  // Create a call to a Conditional Store intrinsic
+  CallInst *CreateConditionalStore(Value *Val, Value *Ptr, Align Alignment,
+                                   Value *Condition);
+
   /// Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Type *Ty, Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");

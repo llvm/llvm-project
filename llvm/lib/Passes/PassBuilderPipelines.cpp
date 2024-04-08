@@ -110,6 +110,7 @@
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
+#include "llvm/Transforms/Scalar/LowerConditionalStoreIntrinsic.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
@@ -499,7 +500,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
                                               /*UseMemorySSA=*/false,
                                               /*UseBlockFrequencyInfo=*/false));
-
+  FPM.addPass(LowerConditionalStoreIntrinsicPass());
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
 
@@ -691,7 +692,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
                                               /*UseMemorySSA=*/false,
                                               /*UseBlockFrequencyInfo=*/false));
-
+  FPM.addPass(LowerConditionalStoreIntrinsicPass());
   // Delete small array after loop unroll.
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
 
@@ -744,7 +745,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
       /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
-
+  FPM.addPass(LowerConditionalStoreIntrinsicPass());
   FPM.addPass(CoroElidePass());
 
   invokeScalarOptimizerLateEPCallbacks(FPM, Level);
@@ -1279,6 +1280,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     ExtraPasses.addPass(InstCombinePass());
     FPM.addPass(std::move(ExtraPasses));
+    FPM.addPass(LowerConditionalStoreIntrinsicPass());
   }
 
   // Now that we've formed fast to execute loop structures, we do further
@@ -1354,6 +1356,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
       /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+  FPM.addPass(LowerConditionalStoreIntrinsicPass());
 
   // Now that we've vectorized and unrolled loops, we may have more refined
   // alignment information, try to re-derive it here.
@@ -1950,6 +1953,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                /*AllowSpeculation=*/true),
       /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
+  MainFPM.addPass(LowerConditionalStoreIntrinsicPass());
 
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());

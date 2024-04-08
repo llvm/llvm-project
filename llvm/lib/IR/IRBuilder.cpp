@@ -566,6 +566,22 @@ Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
   return CreateCall(FnIntrinsic, {Scope});
 }
 
+/// Create a call to a Conditional Store intrinsic.
+/// \p Val       - data to be stored,
+/// \p Ptr       - base pointer for the store
+/// \p Alignment - alignment of the destination location
+/// \p Condition - boolean that indicates if store should be performed
+CallInst *IRBuilderBase::CreateConditionalStore(Value *Val, Value *Ptr,
+                                                Align Alignment,
+                                                Value *Condition) {
+  auto *PtrTy = cast<PointerType>(Ptr->getType());
+  Type *DataTy = Val->getType();
+  Type *OverloadedTypes[] = {DataTy, PtrTy};
+  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Condition};
+  return CreateMaskedIntrinsic(Intrinsic::conditional_store, Ops,
+                               OverloadedTypes);
+}
+
 /// Create a call to a Masked Load intrinsic.
 /// \p Ty        - vector type to load
 /// \p Ptr       - base pointer for the load

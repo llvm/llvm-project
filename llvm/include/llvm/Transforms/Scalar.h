@@ -145,6 +145,11 @@ extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//
 //
+//  Lower conditional store intrinsic
+FunctionPass *createLowerConditionalStoreIntrinsicPass();
+
+//===----------------------------------------------------------------------===//
+//
 // TLSVariableHoist - This pass reduce duplicated TLS address call.
 //
 FunctionPass *createTLSVariableHoistPass();
