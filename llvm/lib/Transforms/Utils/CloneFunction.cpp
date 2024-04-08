@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -540,18 +541,13 @@ void PruningFunctionCloner::CloneBlock(
       RemapInstruction(NewInst, VMap,
                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
 
-      // If we can simplify this instruction to some other value, simply add
-      // a mapping to that value rather than inserting a new instruction into
-      // the basic block.
-      if (Value *V =
-              simplifyInstruction(NewInst, BB->getModule()->getDataLayout())) {
-        // On the off-chance that this simplifies to an instruction in the old
-        // function, map it back into the new function.
-        if (NewFunc != OldFunc)
-          if (Value *MappedV = VMap.lookup(V))
-            V = MappedV;
-
-        if (!NewInst->mayHaveSideEffects()) {
+      // Eagerly constant fold the newly cloned instruction. If successful, add
+      // a mapping to the new value. Non-constant operands may be incomplete at
+      // this stage, thus instruction simplification is performed after
+      // processing phi-nodes.
+      if (Value *V = ConstantFoldInstruction(
+              NewInst, BB->getModule()->getDataLayout())) {
+        if (isInstructionTriviallyDead(NewInst)) {
           VMap[&*II] = V;
           NewInst->eraseFromParent();
           continue;
@@ -823,52 +819,34 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
   }
 
-  // Make a second pass over the PHINodes now that all of them have been
-  // remapped into the new function, simplifying the PHINode and performing any
-  // recursive simplifications exposed. This will transparently update the
-  // WeakTrackingVH in the VMap. Notably, we rely on that so that if we coalesce
-  // two PHINodes, the iteration over the old PHIs remains valid, and the
-  // mapping will just map us to the new node (which may not even be a PHI
-  // node).
+  // As phi-nodes have been now remapped, allow incremental simplification of
+  // newly-cloned instructions.
   const DataLayout &DL = NewFunc->getParent()->getDataLayout();
-  SmallSetVector<const Value *, 8> Worklist;
-  for (unsigned Idx = 0, Size = PHIToResolve.size(); Idx != Size; ++Idx)
-    if (isa<PHINode>(VMap[PHIToResolve[Idx]]))
-      Worklist.insert(PHIToResolve[Idx]);
+  for (const auto &BB : *OldFunc) {
+    for (const auto &I : BB) {
+      auto *NewI = dyn_cast_or_null<Instruction>(VMap.lookup(&I));
+      if (!NewI)
+        continue;
 
-  // Note that we must test the size on each iteration, the worklist can grow.
-  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
-    const Value *OrigV = Worklist[Idx];
-    auto *I = dyn_cast_or_null<Instruction>(VMap.lookup(OrigV));
-    if (!I)
-      continue;
+      // Skip over non-intrinsic callsites, we don't want to remove any nodes
+      // from the CGSCC.
+      CallBase *CB = dyn_cast<CallBase>(NewI);
+      if (CB && CB->getCalledFunction() &&
+          !CB->getCalledFunction()->isIntrinsic())
+        continue;
 
-    // Skip over non-intrinsic callsites, we don't want to remove any nodes from
-    // the CGSCC.
-    CallBase *CB = dyn_cast<CallBase>(I);
-    if (CB && CB->getCalledFunction() &&
-        !CB->getCalledFunction()->isIntrinsic())
-      continue;
+      if (Value *V = simplifyInstruction(NewI, DL)) {
+        NewI->replaceAllUsesWith(V);
 
-    // See if this instruction simplifies.
-    Value *SimpleV = simplifyInstruction(I, DL);
-    if (!SimpleV)
-      continue;
-
-    // Stash away all the uses of the old instruction so we can check them for
-    // recursive simplifications after a RAUW. This is cheaper than checking all
-    // uses of To on the recursive step in most cases.
-    for (const User *U : OrigV->users())
-      Worklist.insert(cast<Instruction>(U));
-
-    // Replace the instruction with its simplified value.
-    I->replaceAllUsesWith(SimpleV);
-
-    // If the original instruction had no side effects, remove it.
-    if (isInstructionTriviallyDead(I))
-      I->eraseFromParent();
-    else
-      VMap[OrigV] = I;
+        if (isInstructionTriviallyDead(NewI)) {
+          NewI->eraseFromParent();
+        } else {
+          // Did not erase it? Restore the new instruction into VMap previously
+          // dropped by `ValueIsRAUWd`.
+          VMap[&I] = NewI;
+        }
+      }
+    }
   }
 
   // Remap debug intrinsic operands now that all values have been mapped.
