@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/offsetof-macro.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
@@ -16,33 +17,29 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+__attribute__((naked))
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
-  asm("mov %%rbx, %[rbx]\n\t"
-      "mov %%r12, %[r12]\n\t"
-      "mov %%r13, %[r13]\n\t"
-      "mov %%r14, %[r14]\n\t"
-      "mov %%r15, %[r15]"
-      : [rbx] "=m"(buf->rbx), [r12] "=m"(buf->r12), [r13] "=m"(buf->r13),
-        [r14] "=m"(buf->r14), [r15] "=m"(buf->r15));
+  asm("mov %%rbx, %c[rbx](%%rdi)\n\t"
+      "mov %%rbp, %c[rbp](%%rdi)\n\t"
+      "mov %%r12, %c[r12](%%rdi)\n\t"
+      "mov %%r13, %c[r13](%%rdi)\n\t"
+      "mov %%r14, %c[r14](%%rdi)\n\t"
+      "mov %%r15, %c[r15](%%rdi)\n\t"
 
-  // We want the rbp of the caller, which is what __builtin_frame_address(1)
-  // should return. But, compilers generate a warning that calling
-  // __builtin_frame_address with non-zero argument is unsafe. So, we use
-  // the knowledge of the x86_64 ABI to fetch the callers rbp. As per the ABI,
-  // the rbp of the caller is pushed on to the stack and then new top is saved
-  // in this function's rbp. So, we fetch it from location at which this
-  // functions's rbp is pointing.
-  buf->rbp = *reinterpret_cast<__UINTPTR_TYPE__ *>(__builtin_frame_address(0));
+      "lea 8(%%rsp), %%rax\n\t"
+      "mov %%rax, %c[rsp](%%rdi)\n\t"
 
-  // The callers stack address is exactly 2 pointer widths ahead of the current
-  // frame pointer - between the current frame pointer and the rsp of the caller
-  // are the return address (pushed by the x86_64 call instruction) and the
-  // previous stack pointer as required by the x86_64 ABI.
-  // The stack pointer is ahead because the stack grows down on x86_64.
-  buf->rsp = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_frame_address(0)) +
-             sizeof(__UINTPTR_TYPE__) * 2;
-  buf->rip = reinterpret_cast<__UINTPTR_TYPE__>(__builtin_return_address(0));
-  return 0;
+      "mov %[read_rip], %c[rip](%%rdi)\n\t"
+
+      "xorl %%eax, %%eax\n\t"
+      "retq"
+      ::
+      [rbx] "i"(offsetof(__jmp_buf, rbx)), [r12] "i"(offsetof(__jmp_buf, r12)),
+      [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
+      [r15] "i"(offsetof(__jmp_buf, r15)), [rbp] "i"(offsetof(__jmp_buf, rbp)),
+      [rsp] "i"(offsetof(__jmp_buf, rsp)), [rip] "i"(offsetof(__jmp_buf, rip)),
+      [read_rip] "r" (reinterpret_cast<__UINTPTR_TYPE__>(__builtin_return_address(0)))
+      : "rax");
 }
 
 } // namespace LIBC_NAMESPACE_DECL
