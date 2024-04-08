@@ -222,6 +222,37 @@ body:             |
 
 ...
 ---
+# This test checks that this combine runs after the insertvec->build_vector
+name:            extract_from_insert2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $q0, $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert2
+    ; CHECK: liveins: $q0, $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %ins2:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: $q0 = COPY %ins2(<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %arg0:_(<2 x s64>) = COPY $q0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %zero:_(s32) = G_CONSTANT i32 0
+    %one:_(s32) = G_CONSTANT i32 1
+    %ins1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %arg0, %arg1(s64), %zero(s32)
+    %ins2:_(<2 x s64>) = G_INSERT_VECTOR_ELT %ins1, %arg2(s64), %one(s32)
+    $q0 = COPY %ins2(<2 x s64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
 name:            extract_from_idx_negative
 alignment:       4
 liveins:

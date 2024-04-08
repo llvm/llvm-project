@@ -10,8 +10,7 @@
 
 namespace llvm {
 namespace memprof {
-namespace {
-size_t serializedSizeV0(const IndexedAllocationInfo &IAI) {
+static size_t serializedSizeV0(const IndexedAllocationInfo &IAI) {
   size_t Size = 0;
   // The number of frames to serialize.
   Size += sizeof(uint64_t);
@@ -22,7 +21,7 @@ size_t serializedSizeV0(const IndexedAllocationInfo &IAI) {
   return Size;
 }
 
-size_t serializedSizeV2(const IndexedAllocationInfo &IAI) {
+static size_t serializedSizeV2(const IndexedAllocationInfo &IAI) {
   size_t Size = 0;
   // The CallStackId
   Size += sizeof(CallStackId);
@@ -30,7 +29,6 @@ size_t serializedSizeV2(const IndexedAllocationInfo &IAI) {
   Size += PortableMemInfoBlock::serializedSize();
   return Size;
 }
-} // namespace
 
 size_t IndexedAllocationInfo::serializedSize(IndexedVersion Version) const {
   switch (Version) {
@@ -43,8 +41,7 @@ size_t IndexedAllocationInfo::serializedSize(IndexedVersion Version) const {
   llvm_unreachable("unsupported MemProf version");
 }
 
-namespace {
-size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
+static size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
   size_t Result = sizeof(GlobalValue::GUID);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version0);
@@ -59,7 +56,7 @@ size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
   return Result;
 }
 
-size_t serializedSizeV2(const IndexedMemProfRecord &Record) {
+static size_t serializedSizeV2(const IndexedMemProfRecord &Record) {
   size_t Result = sizeof(GlobalValue::GUID);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version2);
@@ -70,7 +67,6 @@ size_t serializedSizeV2(const IndexedMemProfRecord &Record) {
   Result += Record.CallSiteIds.size() * sizeof(CallStackId);
   return Result;
 }
-} // namespace
 
 size_t IndexedMemProfRecord::serializedSize(IndexedVersion Version) const {
   switch (Version) {
@@ -83,9 +79,8 @@ size_t IndexedMemProfRecord::serializedSize(IndexedVersion Version) const {
   llvm_unreachable("unsupported MemProf version");
 }
 
-namespace {
-void serializeV0(const IndexedMemProfRecord &Record,
-                 const MemProfSchema &Schema, raw_ostream &OS) {
+static void serializeV0(const IndexedMemProfRecord &Record,
+                        const MemProfSchema &Schema, raw_ostream &OS) {
   using namespace support;
 
   endian::Writer LE(OS, llvm::endianness::little);
@@ -107,8 +102,8 @@ void serializeV0(const IndexedMemProfRecord &Record,
   }
 }
 
-void serializeV2(const IndexedMemProfRecord &Record,
-                 const MemProfSchema &Schema, raw_ostream &OS) {
+static void serializeV2(const IndexedMemProfRecord &Record,
+                        const MemProfSchema &Schema, raw_ostream &OS) {
   using namespace support;
 
   endian::Writer LE(OS, llvm::endianness::little);
@@ -124,7 +119,6 @@ void serializeV2(const IndexedMemProfRecord &Record,
   for (const auto &CSId : Record.CallSiteIds)
     LE.write<CallStackId>(CSId);
 }
-} // namespace
 
 void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
                                      raw_ostream &OS, IndexedVersion Version) {
@@ -140,9 +134,8 @@ void IndexedMemProfRecord::serialize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-namespace {
-IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
-                                   const unsigned char *Ptr) {
+static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
+                                          const unsigned char *Ptr) {
   using namespace support;
 
   IndexedMemProfRecord Record;
@@ -185,8 +178,8 @@ IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
   return Record;
 }
 
-IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
-                                   const unsigned char *Ptr) {
+static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
+                                          const unsigned char *Ptr) {
   using namespace support;
 
   IndexedMemProfRecord Record;
@@ -214,7 +207,6 @@ IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
 
   return Record;
 }
-} // namespace
 
 IndexedMemProfRecord
 IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,

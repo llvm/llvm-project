@@ -2332,8 +2332,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       uint64_t FuncAddress = BD->getAddress();
       if (!BAT->isBATFunction(FuncAddress))
         continue;
-      // Cold fragments must be handled by doBranch.
-      assert(BD->getSectionName().equals(BC.getMainCodeSectionName()));
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
       YamlBF.Name = FuncName.str();
@@ -2381,8 +2379,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         unsigned Index = BlockMap.getBBIndex(FromOffset);
         yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
         for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
-          YamlBB.Successors.emplace_back(
-              getSuccessorInfo(SuccOffset, SuccDataIdx));
+          if (BlockMap.isInputBlock(SuccOffset))
+            YamlBB.Successors.emplace_back(
+                getSuccessorInfo(SuccOffset, SuccDataIdx));
       }
       for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
         auto BlockIt = BlockMap.upper_bound(FromOffset);
