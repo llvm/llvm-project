@@ -358,9 +358,16 @@ static mlir::Value genComponentDefaultInit(
   } else if (const auto *proc{
                  component
                      .detailsIf<Fortran::semantics::ProcEntityDetails>()}) {
-    if (proc->init().has_value())
-      TODO(loc, "procedure pointer component default initialization");
-    else
+    if (proc->init().has_value()) {
+      auto sym{*proc->init()};
+      if (sym) // Has a procedure target.
+        componentValue =
+            Fortran::lower::convertProcedureDesignatorInitialTarget(converter,
+                                                                    loc, *sym);
+      else // Has NULL() target.
+        componentValue =
+            fir::factory::createNullBoxProc(builder, loc, componentTy);
+    } else
       componentValue = builder.create<fir::ZeroOp>(loc, componentTy);
   }
   assert(componentValue && "must have been computed");
