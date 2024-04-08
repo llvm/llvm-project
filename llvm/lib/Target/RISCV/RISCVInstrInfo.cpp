@@ -3082,7 +3082,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
       Opc = RISCV::SH1ADD;
       ShiftAmount = Log2_64(Amount / 3);
     } else {
-      llvm_unreachable("impied by if-clause");
+      llvm_unreachable("implied by if-clause");
     }
     if (ShiftAmount)
       BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
