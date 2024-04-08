@@ -1214,9 +1214,6 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(SpvBoolScalarTy))
       .addUse(NotEqualReg)
       .constrainAllUses(TII, TRI, RBI);
-
-  // bool IsSigned = GR.isScalarOrVectorSigned(InputType);
-  // return selectSelect(ResVReg, ResType, OpAllReg, I, IsSigned);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
