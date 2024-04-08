@@ -668,20 +668,20 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
   return ComparisonResult::Same;
 }
 
-Value *NullPointerAnalysisModel::widen(QualType Type, Value &Prev,
+std::optional<WidenResult> NullPointerAnalysisModel::widen(QualType Type, Value &Prev,
                                        const Environment &PrevEnv,
                                        Value &Current,
                                        Environment &CurrentEnv) {
   if (!Type->isAnyPointerType())
-    return nullptr;
+    return std::nullopt;
 
   switch (compareAndReplace(Type, Prev, PrevEnv, Current, CurrentEnv)) {
   case ComparisonResult::Same:
-    return &Prev;
+    return WidenResult{&Prev, LatticeEffect::Unchanged};
   case ComparisonResult::Unknown:
-    return nullptr;
+    return std::nullopt;
   case ComparisonResult::Different:
-    return &Current;
+    return WidenResult{&Current, LatticeEffect::Changed};
   }
 }
 
