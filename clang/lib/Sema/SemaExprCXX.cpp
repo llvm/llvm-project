@@ -3938,9 +3938,8 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
 
-ExprResult
-Sema::SemaBuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
-                                             bool IsDelete) {
+ExprResult Sema::BuiltinOperatorNewDeleteOverloaded(ExprResult TheCallResult,
+                                                    bool IsDelete) {
   CallExpr *TheCall = cast<CallExpr>(TheCallResult.get());
   if (!getLangOpts().CPlusPlus) {
     Diag(TheCall->getExprLoc(), diag::err_builtin_requires_language)
@@ -4416,6 +4415,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                .get();
     break;
 
+  case ICK_HLSL_Array_RValue:
+    FromType = Context.getArrayParameterType(FromType);
+    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
+    break;
+
   case ICK_Function_To_Pointer:
     FromType = Context.getPointerType(FromType);
     From = ImpCastExprToType(From, FromType, CK_FunctionToPointerDecay,
@@ -4793,6 +4799,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Num_Conversion_Kinds:
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
+  case ICK_HLSL_Array_RValue:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -6018,6 +6025,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     return false;
   }
   case BTT_IsLayoutCompatible: {
+    if (LhsT->isVariableArrayType() || RhsT->isVariableArrayType())
+      Self.Diag(KeyLoc, diag::err_vla_unsupported)
+          << 1 << tok::kw___is_layout_compatible;
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
     default: llvm_unreachable("not a BTT");
@@ -6083,7 +6093,7 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
 
       if (Matched && T->isArrayType()) {
         if (const ConstantArrayType *CAT = Self.Context.getAsConstantArrayType(T))
-          return CAT->getSize().getLimitedValue();
+          return CAT->getLimitedSize();
       }
     }
     return 0;

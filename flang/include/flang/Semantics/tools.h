@@ -53,7 +53,8 @@ const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindFunctionResult(const Symbol &);
-const Symbol *FindOverriddenBinding(const Symbol &);
+const Symbol *FindOverriddenBinding(
+    const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
 
 const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);

@@ -273,7 +273,8 @@ class FirConverter : public Fortran::lower::AbstractConverter {
 public:
   explicit FirConverter(Fortran::lower::LoweringBridge &bridge)
       : Fortran::lower::AbstractConverter(bridge.getLoweringOptions()),
-        bridge{bridge}, foldingContext{bridge.createFoldingContext()} {}
+        bridge{bridge}, foldingContext{bridge.createFoldingContext()},
+        mlirSymbolTable{bridge.getModule()} {}
   virtual ~FirConverter() = default;
 
   /// Convert the PFT to FIR.
@@ -329,8 +330,8 @@ public:
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
               [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
-                builder = new fir::FirOpBuilder(bridge.getModule(),
-                                                bridge.getKindMap());
+                builder = new fir::FirOpBuilder(
+                    bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
                 Fortran::lower::genOpenACCRoutineConstruct(
                     *this, bridge.getSemanticsContext(), bridge.getModule(),
                     d.routine, accRoutineInfos);
@@ -1035,6 +1036,8 @@ private:
       return v;
     return {};
   }
+
+  mlir::SymbolTable *getMLIRSymbolTable() override { return &mlirSymbolTable; }
 
   /// Add the symbol to the local map and return `true`. If the symbol is
   /// already in the map and \p forced is `false`, the map is not updated.
@@ -3490,7 +3493,8 @@ private:
       if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
               assign.rhs)) {
         // rhs is null(). rhs being null(pptr) is handled in genNull.
-        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        auto boxTy{
+            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
         hlfir::Entity rhs(
             fir::factory::createNullBoxProc(*builder, loc, boxTy));
         builder->createStoreWithConvert(loc, rhs, lhs);
@@ -3706,15 +3710,112 @@ private:
     return false;
   }
 
+  void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const Fortran::evaluate::Assignment &assign,
+                           hlfir::Entity &lhs, hlfir::Entity &rhs) {
+    bool lhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.lhs);
+    bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    if (rhs.isBoxAddressOrValue() || lhs.isBoxAddressOrValue())
+      TODO(loc, "CUDA data transfler with descriptors");
+
+    // device = host
+    if (lhsIsDevice && !rhsIsDevice) {
+      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+          builder.getContext(), fir::CUDADataTransferKind::HostDevice);
+      if (!rhs.isVariable()) {
+        auto associate = hlfir::genAssociateExpr(
+            loc, builder, rhs, rhs.getType(), ".cuf_host_tmp");
+        builder.create<fir::CUDADataTransferOp>(loc, associate.getBase(), lhs,
+                                                transferKindAttr);
+        builder.create<hlfir::EndAssociateOp>(loc, associate);
+      } else {
+        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
+                                                transferKindAttr);
+      }
+      return;
+    }
+
+    // host = device
+    if (!lhsIsDevice && rhsIsDevice) {
+      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+          builder.getContext(), fir::CUDADataTransferKind::DeviceHost);
+      if (!rhs.isVariable()) {
+        // evaluateRhs loads scalar. Look for the memory reference to be used in
+        // the transfer.
+        if (mlir::isa_and_nonnull<fir::LoadOp>(rhs.getDefiningOp())) {
+          auto loadOp = mlir::dyn_cast<fir::LoadOp>(rhs.getDefiningOp());
+          builder.create<fir::CUDADataTransferOp>(loc, loadOp.getMemref(), lhs,
+                                                  transferKindAttr);
+          return;
+        }
+      } else {
+        builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs,
+                                                transferKindAttr);
+      }
+      return;
+    }
+
+    if (lhsIsDevice && rhsIsDevice) {
+      assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
+      auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+          builder.getContext(), fir::CUDADataTransferKind::DeviceDevice);
+      builder.create<fir::CUDADataTransferOp>(loc, rhs, lhs, transferKindAttr);
+      return;
+    }
+    llvm_unreachable("Unhandled CUDA data transfer");
+  }
+
+  llvm::SmallVector<mlir::Value>
+  genCUDAImplicitDataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
+                              const Fortran::evaluate::Assignment &assign) {
+    llvm::SmallVector<mlir::Value> temps;
+    localSymbols.pushScope();
+    auto transferKindAttr = fir::CUDADataTransferKindAttr::get(
+        builder.getContext(), fir::CUDADataTransferKind::DeviceHost);
+    [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
+    for (const Fortran::semantics::Symbol &sym :
+         Fortran::evaluate::CollectSymbols(assign.rhs)) {
+      if (const auto *details =
+              sym.GetUltimate()
+                  .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+        if (details->cudaDataAttr()) {
+          if (sym.owner().IsDerivedType() && IsAllocatable(sym.GetUltimate()))
+            TODO(loc, "Device resident allocatable derived-type component");
+          // TODO: This should probably being checked in semantic and give a
+          // proper error.
+          assert(
+              nbDeviceResidentObject <= 1 &&
+              "Only one reference to the device resident object is supported");
+          auto addr = getSymbolAddress(sym);
+          hlfir::Entity entity{addr};
+          auto [temp, cleanup] =
+              hlfir::createTempFromMold(loc, builder, entity);
+          auto needCleanup = fir::getIntIfConstant(cleanup);
+          if (needCleanup && *needCleanup)
+            temps.push_back(temp);
+          addSymbol(sym, temp, /*forced=*/true);
+          builder.create<fir::CUDADataTransferOp>(loc, addr, temp,
+                                                  transferKindAttr);
+          ++nbDeviceResidentObject;
+        }
+      }
+    }
+    return temps;
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    if (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-        Fortran::evaluate::HasCUDAAttrs(assign.rhs))
-      TODO(loc, "Assignement with CUDA Fortran variables");
+    bool isCUDATransfer = Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
+                          Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    bool hasCUDAImplicitTransfer =
+        Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
+    llvm::SmallVector<mlir::Value> implicitTemps;
+    if (hasCUDAImplicitTransfer)
+      implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
@@ -3772,9 +3873,17 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      builder.create<hlfir::AssignOp>(loc, rhs, lhs,
-                                      isWholeAllocatableAssignment,
-                                      keepLhsLengthInAllocatableAssignment);
+      if (isCUDATransfer && !hasCUDAImplicitTransfer)
+        genCUDADataTransfer(builder, loc, assign, lhs, rhs);
+      else
+        builder.create<hlfir::AssignOp>(loc, rhs, lhs,
+                                        isWholeAllocatableAssignment,
+                                        keepLhsLengthInAllocatableAssignment);
+      if (hasCUDAImplicitTransfer) {
+        localSymbols.popScope();
+        for (mlir::Value temp : implicitTemps)
+          builder.create<fir::FreeMemOp>(loc, temp);
+      }
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted
@@ -4542,7 +4651,8 @@ private:
                llvm::dbgs() << "\n");
     Fortran::lower::CalleeInterface callee(funit, *this);
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
-    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    builder =
+        new fir::FirOpBuilder(func, bridge.getKindMap(), &mlirSymbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     builder->setInsertionPointToStart(&func.front());
@@ -4810,12 +4920,14 @@ private:
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
     mlir::MLIRContext *context = &getMLIRContext();
+    mlir::SymbolTable *symbolTable = getMLIRSymbolTable();
     mlir::func::FuncOp func = fir::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
         fir::NameUniquer::doGenerated("Sham"),
-        mlir::FunctionType::get(context, std::nullopt, std::nullopt));
+        mlir::FunctionType::get(context, std::nullopt, std::nullopt),
+        symbolTable);
     func.addEntryBlock();
-    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     createGlobals();
@@ -5307,6 +5419,11 @@ private:
   /// utilities to deal with procedure pointer components whose arguments have
   /// the type of the containing derived type.
   Fortran::lower::TypeConstructionStack typeConstructionStack;
+  /// MLIR symbol table of the fir.global/func.func operations. Note that it is
+  /// not guaranteed to contain all operations of the ModuleOp with Symbol
+  /// attribute since mlirSymbolTable must pro-actively be maintained when
+  /// new Symbol operations are created.
+  mlir::SymbolTable mlirSymbolTable;
 };
 
 } // namespace

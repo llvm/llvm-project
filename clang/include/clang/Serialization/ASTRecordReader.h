@@ -24,6 +24,7 @@
 #include "llvm/ADT/APSInt.h"
 
 namespace clang {
+class OpenACCClause;
 class OMPTraitInfo;
 class OMPChildren;
 
@@ -277,6 +278,12 @@ public:
 
   /// Read an OpenMP children, advancing Idx.
   void readOMPChildren(OMPChildren *Data);
+
+  /// Read an OpenACC clause, advancing Idx.
+  OpenACCClause *readOpenACCClause();
+
+  /// Read a list of OpenACC clauses into the passed SmallVector.
+  void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
 
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {

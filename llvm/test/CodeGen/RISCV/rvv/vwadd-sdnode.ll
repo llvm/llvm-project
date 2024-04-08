@@ -435,10 +435,10 @@ define <vscale x 1 x i64> @vwadd_vv_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, <vsc
 define <vscale x 1 x i64> @vwaddu_vv_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf2 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 1 x i16> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i16> %vb to <vscale x 1 x i64>
@@ -468,11 +468,9 @@ define <vscale x 1 x i64> @vwaddu_vx_nxv1i64_nxv1i16(<vscale x 1 x i16> %va, i16
 ; CHECK-LABEL: vwaddu_vx_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf2 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> poison, i16 %b, i16 0
   %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
@@ -555,10 +553,10 @@ define <vscale x 2 x i64> @vwadd_vv_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, <vsc
 define <vscale x 2 x i64> @vwaddu_vv_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf2 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 2 x i16> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i16> %vb to <vscale x 2 x i64>
@@ -588,11 +586,9 @@ define <vscale x 2 x i64> @vwaddu_vx_nxv2i64_nxv2i16(<vscale x 2 x i16> %va, i16
 ; CHECK-LABEL: vwaddu_vx_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf2 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vwaddu.vx v10, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> poison, i16 %b, i16 0
   %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
@@ -675,10 +671,10 @@ define <vscale x 4 x i64> @vwadd_vv_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, <vsc
 define <vscale x 4 x i64> @vwaddu_vv_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv4i64_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vzext.vf2 v14, v9
-; CHECK-NEXT:    vwaddu.vv v8, v12, v14
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vwaddu.vv v12, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 4 x i16> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i16> %vb to <vscale x 4 x i64>
@@ -708,11 +704,9 @@ define <vscale x 4 x i64> @vwaddu_vx_nxv4i64_nxv4i16(<vscale x 4 x i16> %va, i16
 ; CHECK-LABEL: vwaddu_vx_nxv4i64_nxv4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vzext.vf2 v14, v9
-; CHECK-NEXT:    vwaddu.vv v8, v12, v14
+; CHECK-NEXT:    vwaddu.vx v12, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> poison, i16 %b, i16 0
   %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
@@ -795,10 +789,10 @@ define <vscale x 8 x i64> @vwadd_vv_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, <vsc
 define <vscale x 8 x i64> @vwaddu_vv_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv8i64_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8
-; CHECK-NEXT:    vzext.vf2 v20, v10
-; CHECK-NEXT:    vwaddu.vv v8, v16, v20
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vwaddu.vv v16, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v16
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 8 x i16> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i16> %vb to <vscale x 8 x i64>
@@ -828,11 +822,9 @@ define <vscale x 8 x i64> @vwaddu_vx_nxv8i64_nxv8i16(<vscale x 8 x i16> %va, i16
 ; CHECK-LABEL: vwaddu_vx_nxv8i64_nxv8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8
-; CHECK-NEXT:    vzext.vf2 v20, v10
-; CHECK-NEXT:    vwaddu.vv v8, v16, v20
+; CHECK-NEXT:    vwaddu.vx v16, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i16 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -915,10 +907,10 @@ define <vscale x 1 x i64> @vwadd_vv_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, <vscal
 define <vscale x 1 x i64> @vwaddu_vv_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf4 v10, v8
-; CHECK-NEXT:    vzext.vf4 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 1 x i8> %va to <vscale x 1 x i64>
   %vd = zext <vscale x 1 x i8> %vb to <vscale x 1 x i64>
@@ -948,11 +940,9 @@ define <vscale x 1 x i64> @vwaddu_vx_nxv1i64_nxv1i8(<vscale x 1 x i8> %va, i8 %b
 ; CHECK-LABEL: vwaddu_vx_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf4 v10, v8
-; CHECK-NEXT:    vzext.vf4 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> poison, i8 %b, i8 0
   %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
@@ -1035,10 +1025,10 @@ define <vscale x 2 x i64> @vwadd_vv_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, <vscal
 define <vscale x 2 x i64> @vwaddu_vv_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf4 v10, v8
-; CHECK-NEXT:    vzext.vf4 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 2 x i8> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i8> %vb to <vscale x 2 x i64>
@@ -1068,11 +1058,9 @@ define <vscale x 2 x i64> @vwaddu_vx_nxv2i64_nxv2i8(<vscale x 2 x i8> %va, i8 %b
 ; CHECK-LABEL: vwaddu_vx_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf4 v10, v8
-; CHECK-NEXT:    vzext.vf4 v11, v9
-; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    vwaddu.vx v10, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> poison, i8 %b, i8 0
   %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
@@ -1155,10 +1143,10 @@ define <vscale x 4 x i64> @vwadd_vv_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, <vscal
 define <vscale x 4 x i64> @vwaddu_vv_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv4i64_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf4 v12, v8
-; CHECK-NEXT:    vzext.vf4 v14, v9
-; CHECK-NEXT:    vwaddu.vv v8, v12, v14
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vv v12, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 4 x i8> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i8> %vb to <vscale x 4 x i64>
@@ -1188,11 +1176,9 @@ define <vscale x 4 x i64> @vwaddu_vx_nxv4i64_nxv4i8(<vscale x 4 x i8> %va, i8 %b
 ; CHECK-LABEL: vwaddu_vx_nxv4i64_nxv4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf4 v12, v8
-; CHECK-NEXT:    vzext.vf4 v14, v9
-; CHECK-NEXT:    vwaddu.vv v8, v12, v14
+; CHECK-NEXT:    vwaddu.vx v12, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> poison, i8 %b, i8 0
   %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
@@ -1275,10 +1261,10 @@ define <vscale x 8 x i64> @vwadd_vv_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, <vscal
 define <vscale x 8 x i64> @vwaddu_vv_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb) {
 ; CHECK-LABEL: vwaddu_vv_nxv8i64_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v16, v8
-; CHECK-NEXT:    vzext.vf4 v20, v9
-; CHECK-NEXT:    vwaddu.vv v8, v16, v20
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vwaddu.vv v16, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v16
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 8 x i8> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i8> %vb to <vscale x 8 x i64>
@@ -1308,11 +1294,9 @@ define <vscale x 8 x i64> @vwaddu_vx_nxv8i64_nxv8i8(<vscale x 8 x i8> %va, i8 %b
 ; CHECK-LABEL: vwaddu_vx_nxv8i64_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v16, v8
-; CHECK-NEXT:    vzext.vf4 v20, v9
-; CHECK-NEXT:    vwaddu.vv v8, v16, v20
+; CHECK-NEXT:    vwaddu.vx v16, v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vzext.vf4 v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i8 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -1407,4 +1391,78 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
 ; time combineBinOp_VLToVWBinOp_VL is called.
   store i9 42, ptr %p
   ret <vscale x 1 x i64> %vd
+}
+
+; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
+; FIXME: We should be able to recover the or into vwaddu.vv if the disjoint
+; flag is set.
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
+; CHECK-NEXT:    ret
+  %x.i16 = zext <vscale x 2 x i8> %x.i8 to <vscale x 2 x i16>
+  %x.shl = shl <vscale x 2 x i16> %x.i16, shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 8, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+  %x.i32 = zext <vscale x 2 x i16> %x.shl to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i8> %y.i8 to <vscale x 2 x i32>
+  %add = add <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %add
+}
+
+; TODO: We could select vwaddu.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+; TODO: We could select vwadd.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwadd_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwaddu_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwadd_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
 }

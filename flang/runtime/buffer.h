@@ -12,6 +12,7 @@
 #define FORTRAN_RUNTIME_BUFFER_H_
 
 #include "io-error.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cinttypes>
@@ -19,7 +20,8 @@
 
 namespace Fortran::runtime::io {
 
-void LeftShiftBufferCircularly(char *, std::size_t bytes, std::size_t shift);
+RT_API_ATTRS void LeftShiftBufferCircularly(
+    char *, std::size_t bytes, std::size_t shift);
 
 // Maintains a view of a contiguous region of a file in a memory buffer.
 // The valid data in the buffer may be circular, but any active frame
@@ -48,22 +50,24 @@ template <typename STORE, std::size_t minBuffer = 65536> class FileFrame {
 public:
   using FileOffset = std::int64_t;
 
-  ~FileFrame() { FreeMemoryAndNullify(buffer_); }
+  RT_API_ATTRS ~FileFrame() { FreeMemoryAndNullify(buffer_); }
 
   // The valid data in the buffer begins at buffer_[start_] and proceeds
   // with possible wrap-around for length_ bytes.  The current frame
   // is offset by frame_ bytes into that region and is guaranteed to
   // be contiguous for at least as many bytes as were requested.
 
-  FileOffset FrameAt() const { return fileOffset_ + frame_; }
-  char *Frame() const { return buffer_ + start_ + frame_; }
-  std::size_t FrameLength() const {
+  RT_API_ATTRS FileOffset FrameAt() const { return fileOffset_ + frame_; }
+  RT_API_ATTRS char *Frame() const { return buffer_ + start_ + frame_; }
+  RT_API_ATTRS std::size_t FrameLength() const {
     return std::min<std::size_t>(length_ - frame_, size_ - (start_ + frame_));
   }
-  std::size_t BytesBufferedBeforeFrame() const { return frame_ - start_; }
+  RT_API_ATTRS std::size_t BytesBufferedBeforeFrame() const {
+    return frame_ - start_;
+  }
 
   // Returns a short frame at a non-fatal EOF.  Can return a long frame as well.
-  std::size_t ReadFrame(
+  RT_API_ATTRS std::size_t ReadFrame(
       FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
     Flush(handler);
     Reallocate(bytes, handler);
@@ -92,7 +96,8 @@ public:
     return FrameLength();
   }
 
-  void WriteFrame(FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
+  RT_API_ATTRS void WriteFrame(
+      FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
     Reallocate(bytes, handler);
     std::int64_t newFrame{at - fileOffset_};
     if (!dirty_ || newFrame < 0 || newFrame > length_) {
@@ -110,7 +115,7 @@ public:
     length_ = std::max<std::int64_t>(length_, frame_ + bytes);
   }
 
-  void Flush(IoErrorHandler &handler, std::int64_t keep = 0) {
+  RT_API_ATTRS void Flush(IoErrorHandler &handler, std::int64_t keep = 0) {
     if (dirty_) {
       while (length_ > keep) {
         std::size_t chunk{
@@ -128,7 +133,7 @@ public:
     }
   }
 
-  void TruncateFrame(std::int64_t at, IoErrorHandler &handler) {
+  RT_API_ATTRS void TruncateFrame(std::int64_t at, IoErrorHandler &handler) {
     RUNTIME_CHECK(handler, !dirty_);
     if (at <= fileOffset_) {
       Reset(at);
@@ -138,9 +143,10 @@ public:
   }
 
 private:
-  STORE &Store() { return static_cast<STORE &>(*this); }
+  RT_API_ATTRS STORE &Store() { return static_cast<STORE &>(*this); }
 
-  void Reallocate(std::int64_t bytes, const Terminator &terminator) {
+  RT_API_ATTRS void Reallocate(
+      std::int64_t bytes, const Terminator &terminator) {
     if (bytes > size_) {
       char *old{buffer_};
       auto oldSize{size_};
@@ -160,13 +166,14 @@ private:
     }
   }
 
-  void Reset(FileOffset at) {
+  RT_API_ATTRS void Reset(FileOffset at) {
     start_ = length_ = frame_ = 0;
     fileOffset_ = at;
     dirty_ = false;
   }
 
-  void DiscardLeadingBytes(std::int64_t n, const Terminator &terminator) {
+  RT_API_ATTRS void DiscardLeadingBytes(
+      std::int64_t n, const Terminator &terminator) {
     RUNTIME_CHECK(terminator, length_ >= n);
     length_ -= n;
     if (length_ == 0) {
@@ -185,19 +192,20 @@ private:
     fileOffset_ += n;
   }
 
-  void MakeDataContiguous(IoErrorHandler &handler, std::size_t bytes) {
+  RT_API_ATTRS void MakeDataContiguous(
+      IoErrorHandler &handler, std::size_t bytes) {
     if (static_cast<std::int64_t>(start_ + bytes) > size_) {
       // Frame would wrap around; shift current data (if any) to force
       // contiguity.
       RUNTIME_CHECK(handler, length_ < size_);
       if (start_ + length_ <= size_) {
         // [......abcde..] -> [abcde........]
-        std::memmove(buffer_, buffer_ + start_, length_);
+        runtime::memmove(buffer_, buffer_ + start_, length_);
       } else {
         // [cde........ab] -> [abcde........]
         auto n{start_ + length_ - size_}; // 3 for cde
         RUNTIME_CHECK(handler, length_ >= n);
-        std::memmove(buffer_ + n, buffer_ + start_, length_ - n); // cdeab
+        runtime::memmove(buffer_ + n, buffer_ + start_, length_ - n); // cdeab
         LeftShiftBufferCircularly(buffer_, length_, n); // abcde
       }
       start_ = 0;
