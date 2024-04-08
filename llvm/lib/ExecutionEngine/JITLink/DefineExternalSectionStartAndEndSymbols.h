@@ -127,6 +127,29 @@ identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
   return {};
 }
 
+/// MachO section start/end symbol detection.
+inline SectionRangeSymbolDesc
+identifyMachOSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
+  constexpr StringRef StartSymbolPrefix = "section$start$";
+  constexpr StringRef EndSymbolPrefix = "section$end$";
+
+  auto SymName = Sym.getName();
+  if (SymName.starts_with(StartSymbolPrefix)) {
+    auto [SegName, SecName] =
+      SymName.drop_front(StartSymbolPrefix.size()).split('$');
+    std::string SectionName = (SegName + "," + SecName).str();
+    if (auto *Sec = G.findSectionByName(SectionName))
+      return {*Sec, true};
+  } else if (SymName.starts_with(EndSymbolPrefix)) {
+    auto [SegName, SecName] =
+      SymName.drop_front(EndSymbolPrefix.size()).split('$');
+    std::string SectionName = (SegName + "," + SecName).str();
+    if (auto *Sec = G.findSectionByName(SectionName))
+      return {*Sec, false};
+  }
+  return {};
+}
+
 } // end namespace jitlink
 } // end namespace llvm
 

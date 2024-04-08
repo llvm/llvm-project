@@ -70,6 +70,11 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
   return false;
 }
 
+bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
+  return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
+         isSupportedIntegerType(type);
+}
+
 bool mlir::emitc::isSupportedFloatType(Type type) {
   if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     switch (floatType.getWidth()) {
@@ -224,8 +229,7 @@ LogicalResult emitc::CallOpaqueOp::verify() {
     }
   }
 
-  if (llvm::any_of(getResultTypes(),
-                   [](Type type) { return isa<ArrayType>(type); })) {
+  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
     return emitOpError() << "cannot return array type";
   }
 
@@ -781,12 +785,61 @@ LogicalResult emitc::YieldOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::SubscriptOp::verify() {
-  if (getIndices().size() != (size_t)getArray().getType().getRank()) {
-    return emitOpError() << "requires number of indices ("
-                         << getIndices().size()
-                         << ") to match the rank of the array type ("
-                         << getArray().getType().getRank() << ")";
+  // Checks for array operand.
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != (size_t)arrayType.getRank()) {
+      return emitOpError() << "on array operand requires number of indices ("
+                           << getIndices().size()
+                           << ") to match the rank of the array type ("
+                           << arrayType.getRank() << ")";
+    }
+    // Check types of index operands.
+    for (unsigned i = 0, e = getIndices().size(); i != e; ++i) {
+      Type type = getIndices()[i].getType();
+      if (!isIntegerIndexOrOpaqueType(type)) {
+        return emitOpError() << "on array operand requires index operand " << i
+                             << " to be integer-like, but got " << type;
+      }
+    }
+    // Check element type.
+    Type elementType = arrayType.getElementType();
+    if (elementType != getType()) {
+      return emitOpError() << "on array operand requires element type ("
+                           << elementType << ") and result type (" << getType()
+                           << ") to match";
+    }
+    return success();
   }
+
+  // Checks for pointer operand.
+  if (auto pointerType =
+          llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != 1) {
+      return emitOpError()
+             << "on pointer operand requires one index operand, but got "
+             << getIndices().size();
+    }
+    // Check types of index operand.
+    Type type = getIndices()[0].getType();
+    if (!isIntegerIndexOrOpaqueType(type)) {
+      return emitOpError() << "on pointer operand requires index operand to be "
+                              "integer-like, but got "
+                           << type;
+    }
+    // Check pointee type.
+    Type pointeeType = pointerType.getPointee();
+    if (pointeeType != getType()) {
+      return emitOpError() << "on pointer operand requires pointee type ("
+                           << pointeeType << ") and result type (" << getType()
+                           << ") to match";
+    }
+    return success();
+  }
+
+  // The operand has opaque type, so we can't assume anything about the number
+  // or types of index operands.
   return success();
 }
 

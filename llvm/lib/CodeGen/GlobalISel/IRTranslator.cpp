@@ -1562,9 +1562,14 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   if (U.getType()->getScalarType()->isBFloatTy() ||
       U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
     return false;
+
+  uint32_t Flags = 0;
+  if (const Instruction *I = dyn_cast<Instruction>(&U))
+    Flags = MachineInstr::copyFlagsFromInstruction(*I);
+
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode, {Res}, {Op});
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op}, Flags);
   return true;
 }
 
@@ -2490,6 +2495,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
   case Intrinsic::ubsantrap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
+    return true;
   case Intrinsic::amdgcn_cs_chain:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {

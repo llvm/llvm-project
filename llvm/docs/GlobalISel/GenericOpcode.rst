@@ -690,6 +690,10 @@ G_SPLAT_VECTOR
 
 Create a vector where all elements are the scalar from the source operand.
 
+The type of the operand must be equal to or larger than the vector element
+type. If the operand is larger than the vector element type, the scalar is
+implicitly truncated to the vector element type.
+
 Vector Reduction Operations
 ---------------------------
 

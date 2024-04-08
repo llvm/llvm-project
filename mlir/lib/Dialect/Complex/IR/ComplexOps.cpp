@@ -370,6 +370,32 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
+  auto rhs = adaptor.getRhs();
+  if (!rhs)
+    return {};
+
+  ArrayAttr arrayAttr = rhs.dyn_cast<ArrayAttr>();
+  if (!arrayAttr || arrayAttr.size() != 2)
+    return {};
+
+  APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
+  APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
+
+  if (!imag.isZero())
+    return {};
+
+  // complex.div(a, complex.constant<1.0, 0.0>) -> a
+  if (real == APFloat(real.getSemantics(), 1))
+    return getLhs();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

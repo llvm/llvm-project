@@ -3419,13 +3419,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::mulhs(Known, Known2);
     break;
   }
-  case ISD::AVGCEILU: {
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGCEILS: {
+    bool IsCeil = Opcode == ISD::AVGCEILU || Opcode == ISD::AVGCEILS;
+    bool IsSigned = Opcode == ISD::AVGFLOORS || Opcode == ISD::AVGCEILS;
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth + 1);
-    Known2 = Known2.zext(BitWidth + 1);
-    KnownBits One = KnownBits::makeConstant(APInt(1, 1));
-    Known = KnownBits::computeForAddCarry(Known, Known2, One);
+    Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+    Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+    KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
     Known = Known.extractBits(BitWidth, 1);
     break;
   }
@@ -5144,6 +5149,17 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::OR:
     return ConsiderFlags && Op->getFlags().hasDisjoint();
 
+  case ISD::SCALAR_TO_VECTOR:
+    // Check if we demand any upper (undef) elements.
+    return !PoisonOnly && DemandedElts.ugt(1);
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // Ensure that the element index is in bounds.
+    EVT VecVT = Op.getOperand(0).getValueType();
+    KnownBits KnownIdx = computeKnownBits(Op.getOperand(1), Depth + 1);
+    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+  }
+
   case ISD::INSERT_VECTOR_ELT:{
     // Ensure that the element index is in bounds.
     EVT VecVT = Op.getOperand(0).getValueType();
@@ -5362,10 +5378,44 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
-    // TODO for smin/smax: If either operand is known negative/positive
+    // For smin/smax: If either operand is known negative/positive
     // respectively we don't need the other to be known at all.
-  case ISD::SMAX:
-  case ISD::SMIN:
+  case ISD::SMAX: {
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op1.isStrictlyPositive())
+      return true;
+
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Op0.isStrictlyPositive())
+      return true;
+
+    if (Op1.isNonZero() && Op0.isNonZero())
+      return true;
+
+    if (KnownBits::smax(Op0, Op1).isNonZero())
+      return true;
+
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  }
+  case ISD::SMIN: {
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op1.isNegative())
+      return true;
+
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (Op0.isNegative())
+      return true;
+
+    if (Op1.isNonZero() && Op0.isNonZero())
+      return true;
+
+    if (KnownBits::smin(Op0, Op1).isNonZero())
+      return true;
+
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+  }
   case ISD::UMIN:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
@@ -6039,18 +6089,6 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     if (!C2.getBoolValue())
       break;
     return C1.srem(C2);
-  case ISD::MULHS: {
-    unsigned FullWidth = C1.getBitWidth() * 2;
-    APInt C1Ext = C1.sext(FullWidth);
-    APInt C2Ext = C2.sext(FullWidth);
-    return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
-  }
-  case ISD::MULHU: {
-    unsigned FullWidth = C1.getBitWidth() * 2;
-    APInt C1Ext = C1.zext(FullWidth);
-    APInt C2Ext = C2.zext(FullWidth);
-    return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
-  }
   case ISD::AVGFLOORS:
     return APIntOps::avgFloorS(C1, C2);
   case ISD::AVGFLOORU:
@@ -6063,10 +6101,13 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::abds(C1, C2);
   case ISD::ABDU:
     return APIntOps::abdu(C1, C2);
+  case ISD::MULHS:
+    return APIntOps::mulhs(C1, C2);
+  case ISD::MULHU:
+    return APIntOps::mulhu(C1, C2);
   }
   return std::nullopt;
 }
-
 // Handle constant folding with UNDEF.
 // TODO: Handle more cases.
 static std::optional<APInt> FoldValueWithUndef(unsigned Opcode, const APInt &C1,
@@ -11515,30 +11556,32 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
                              unsigned OperandNo) {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
-  if (auto *Const = isConstOrConstSplat(V)) {
+  if (auto *ConstV = isConstOrConstSplat(V, /*AllowUndefs*/ false,
+                                         /*AllowTruncation*/ true)) {
+    APInt Const = ConstV->getAPIntValue().trunc(V.getScalarValueSizeInBits());
     switch (Opcode) {
     case ISD::ADD:
     case ISD::OR:
     case ISD::XOR:
     case ISD::UMAX:
-      return Const->isZero();
+      return Const.isZero();
     case ISD::MUL:
-      return Const->isOne();
+      return Const.isOne();
     case ISD::AND:
     case ISD::UMIN:
-      return Const->isAllOnes();
+      return Const.isAllOnes();
     case ISD::SMAX:
-      return Const->isMinSignedValue();
+      return Const.isMinSignedValue();
     case ISD::SMIN:
-      return Const->isMaxSignedValue();
+      return Const.isMaxSignedValue();
     case ISD::SUB:
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:
-      return OperandNo == 1 && Const->isZero();
+      return OperandNo == 1 && Const.isZero();
     case ISD::UDIV:
     case ISD::SDIV:
-      return OperandNo == 1 && Const->isOne();
+      return OperandNo == 1 && Const.isOne();
     }
   } else if (auto *ConstFP = isConstOrConstSplatFP(V)) {
     switch (Opcode) {

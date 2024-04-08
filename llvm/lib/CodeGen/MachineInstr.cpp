@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -553,6 +554,22 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (OB->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  } else if (const TruncInst *TI = dyn_cast<TruncInst>(&I)) {
+    if (TI->hasNoSignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoSWrap;
+    if (TI->hasNoUnsignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  }
+
+  // Copy the nonneg flag.
+  if (const PossiblyNonNegInst *PNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+    if (PNI->hasNonNeg())
+      MIFlags |= MachineInstr::MIFlag::NonNeg;
+    // Copy the disjoint flag.
+  } else if (const PossiblyDisjointInst *PD =
+                 dyn_cast<PossiblyDisjointInst>(&I)) {
+    if (PD->isDisjoint())
+      MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
   // Copy the exact flag.
@@ -1706,6 +1723,10 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NonNeg))
+    OS << "nneg ";
+  if (getFlag(MachineInstr::Disjoint))
+    OS << "disjoint ";
 
   // Print the opcode name.
   if (TII)

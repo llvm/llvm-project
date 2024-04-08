@@ -124,7 +124,8 @@ View the diff from {self.name} here.
         existing_comment = self.find_comment(pr)
 
         if args.write_comment_to_file:
-            self.comment = {"body": comment_text}
+            if create_new or existing_comment:
+                self.comment = {"body": comment_text}
             if existing_comment:
                 self.comment["id"] = existing_comment.id
             return

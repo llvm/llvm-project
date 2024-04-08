@@ -2,8 +2,10 @@
 // RUN:     FileCheck %s --check-prefix=ENCODER
 // RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | \
 // RUN:     FileCheck %s --check-prefix=DECODER
-// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates -I \
-// RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS
+// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O1 -I \
+// RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS-O1
+// RUN: llvm-tblgen -gen-disassembler --suppress-per-hwmode-duplicates=O2 -I \
+// RUN:     %p/../../include %s | FileCheck %s --check-prefix=DECODER-SUPPRESS-O2
 
 include "llvm/Target/Target.td"
 
@@ -99,16 +101,20 @@ def unrelated: Instruction {
 }
 
 
-// DECODER-LABEL: DecoderTableAlt_DefaultMode32[] =
+// Under default settings, using 'HwMode' to dictate instruction encodings results in
+// significant duplication of DecoderTables. The three tables ‘DecoderTableAlt32’,
+// ‘DecoderTableAlt_ModeA32’, and ‘DecoderTableAlt_ModeB32’ are exact duplicates and
+// could effectively be merged into one.
+// DECODER-LABEL: DecoderTable32[] =
+// DECODER-DAG: Opcode: bar
+// DECODER-LABEL: DecoderTable64[] =
+// DECODER-DAG: Opcode: fooTypeEncDefault:foo
+// DECODER-LABEL: DecoderTableAlt32[] =
 // DECODER-DAG: Opcode: unrelated
 // DECODER-LABEL: DecoderTableAlt_ModeA32[] =
 // DECODER-DAG: Opcode: unrelated
 // DECODER-LABEL: DecoderTableAlt_ModeB32[] =
 // DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTable_DefaultMode32[] =
-// DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_DefaultMode64[] =
-// DECODER-DAG: Opcode: fooTypeEncDefault:foo
 // DECODER-LABEL: DecoderTable_ModeA32[] =
 // DECODER-DAG: Opcode: fooTypeEncA:foo
 // DECODER-DAG: Opcode: bar
@@ -117,21 +123,42 @@ def unrelated: Instruction {
 // DECODER-DAG: Opcode: fooTypeEncA:baz
 // DECODER-DAG: Opcode: bar
 
+// Under the 'O1' optimization level, unnecessary duplicate tables will be eliminated,
+// reducing the three ‘Alt’ tables down to just one.
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable32[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable64[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncDefault:foo
+// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: unrelated
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:foo
+// DECODER-SUPPRESS-O1-DAG: Opcode: bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeB32[] =
+// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncB:foo
+// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:baz
+// DECODER-SUPPRESS-O1-DAG: Opcode: bar
 
-// DECODER-SUPPRESS-LABEL: DecoderTableAlt_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-LABEL: DecoderTable_AllModes32[] =
-// DECODER-SUPPRESS-DAG: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_DefaultMode64[] =
-// DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeA32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-NOT: Opcode: bar
-// DECODER-SUPPRESS-LABEL: DecoderTable_ModeB32[] =
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-NOT: Opcode: bar
+// Under the 'O2' optimization condition, instructions possessing the 'EncodingByHwMode'
+// attribute will be extracted from their original DecoderNamespace and placed into their
+// respective HwMode tables. Meanwhile, other instructions that do not have the 'EncodingByHwMode'
+// attribute but are within the same DecoderNamespace will be stored in the 'Default' table. This
+// approach will significantly reduce instruction redundancy, but it necessitates users to thoroughly
+// consider the interplay between HwMode and DecoderNamespace for their instructions.
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable32[] =
+// DECODER-SUPPRESS-O2-DAG: Opcode: bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable64[] =
+// DECODER-SUPPRESS-O2-NOT: Opcode: bar
+// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncDefault:foo
+// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32[] =
+// DECODER-SUPPRESS-O2-DAG: Opcode: unrelated
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32[] =
+// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:foo
+// DECODER-SUPPRESS-O2-NOT: Opcode: bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeB32[] =
+// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncB:foo
+// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:baz
+// DECODER-SUPPRESS-O2-NOT: Opcode: bar
 
 // ENCODER-LABEL:   static const uint64_t InstBits_DefaultMode[] = {
 // ENCODER:         UINT64_C(2),        // bar
