@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/StmtOpenACC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Sema.h"
 
@@ -31,19 +31,14 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
     if (!IsStmt)
-      return S.SemaRef.Diag(StartLoc, diag::err_acc_construct_appertainment)
-             << K;
+      return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
   }
   return false;
 }
 } // namespace
 
-SemaOpenACC::SemaOpenACC(Sema &S) : SemaRef(S) {}
-
-ASTContext &SemaOpenACC::getASTContext() const { return SemaRef.Context; }
-DiagnosticsEngine &SemaOpenACC::getDiagnostics() const { return SemaRef.Diags; }
-const LangOptions &SemaOpenACC::getLangOpts() const { return SemaRef.LangOpts; }
+SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
 
 bool SemaOpenACC::ActOnClause(OpenACCClauseKind ClauseKind,
                               SourceLocation StartLoc) {
@@ -53,8 +48,7 @@ bool SemaOpenACC::ActOnClause(OpenACCClauseKind ClauseKind,
   // whatever it can do. This function will eventually need to start returning
   // some sort of Clause AST type, but for now just return true/false based on
   // success.
-  return SemaRef.Diag(StartLoc, diag::warn_acc_clause_unimplemented)
-         << ClauseKind;
+  return Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
 }
 void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation StartLoc) {
@@ -72,7 +66,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
     // here as these constructs do not take any arguments.
     break;
   default:
-    SemaRef.Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
+    Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
   }
 }
@@ -94,8 +88,10 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+    // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
         getASTContext(), K, StartLoc, EndLoc,
+        /*Clauses=*/std::nullopt,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
