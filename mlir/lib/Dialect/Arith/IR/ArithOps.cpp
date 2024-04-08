@@ -213,12 +213,6 @@ LogicalResult arith::ConstantOp::verify() {
     return emitOpError(
         "value must be an integer, float, or elements attribute");
   }
-
-  auto vecType = dyn_cast<VectorType>(type);
-  if (vecType && vecType.isScalable() && !isa<SplatElementsAttr>(getValue()))
-    return emitOpError(
-        "intializing scalable vectors with elements attribute is not supported"
-        " unless it's a vector splat");
   return success();
 }
 
