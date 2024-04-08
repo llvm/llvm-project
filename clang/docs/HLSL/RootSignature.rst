@@ -236,7 +236,7 @@ It will be look like this:
   namespace dxbc {
     namespace SerializedRootSignature {
       namespace v_1_0 {
-     
+
         struct DxilContainerDescriptorRange {
           uint32_t RangeType;
           uint32_t NumDescriptors;
