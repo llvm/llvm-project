@@ -20,6 +20,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -5677,6 +5678,10 @@ QualType getApproximateType(const Expr *E) {
       if (VD->hasInit())
         return getApproximateType(VD->getInit());
     }
+  }
+  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref)
+      return UO->getSubExpr()->getType()->getPointeeType();
   }
   return Unresolved;
 }

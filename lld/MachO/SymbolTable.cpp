@@ -377,7 +377,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     // live. Marking the isec live ensures an OutputSection is created that the
     // start/end symbol can refer to.
     assert(sym.isLive());
-    isec->live = true;
+    assert(isec->live);
 
     // This runs after gatherInputSections(), so need to explicitly set parent
     // and add to inputSections.

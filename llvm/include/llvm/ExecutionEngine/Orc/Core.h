@@ -1237,6 +1237,8 @@ private:
   // * Pending queries holds any not-yet-completed queries that include this
   //   symbol.
   struct MaterializingInfo {
+    friend class ExecutionSession;
+
     std::shared_ptr<EmissionDepUnit> DefiningEDU;
     DenseSet<EmissionDepUnit *> DependantEDUs;
 
@@ -1745,6 +1747,11 @@ public:
 
   /// Dump the state of all the JITDylibs in this session.
   void dump(raw_ostream &OS);
+
+  /// Check the internal consistency of ExecutionSession data structures.
+#ifdef EXPENSIVE_CHECKS
+  bool verifySessionState(Twine Phase);
+#endif
 
 private:
   static void logErrorsToStdErr(Error Err) {

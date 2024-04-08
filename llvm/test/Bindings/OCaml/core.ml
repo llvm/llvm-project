@@ -252,7 +252,7 @@ let test_constants () =
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw
-   * CHECK: @const_nuw_neg = global i64 sub nuw
+   * CHECK: @const_nuw_neg = global i64 sub
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw

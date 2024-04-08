@@ -2277,6 +2277,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::DependentTemplateSpecialization:
     case Type::PackExpansion:
     case Type::Pipe:
+    case Type::ArrayParameter:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -3139,13 +3140,15 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
   return TemplateDeductionResult::Success;
 }
 
-/// Perform template argument deduction to determine whether
-/// the given template arguments match the given class template
-/// partial specialization per C++ [temp.class.spec.match].
-TemplateDeductionResult
-Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
-                              ArrayRef<TemplateArgument> TemplateArgs,
-                              TemplateDeductionInfo &Info) {
+/// Perform template argument deduction to determine whether the given template
+/// arguments match the given class or variable template partial specialization
+/// per C++ [temp.class.spec.match].
+template <typename T>
+static std::enable_if_t<IsPartialSpecialization<T>::value,
+                        TemplateDeductionResult>
+DeduceTemplateArguments(Sema &S, T *Partial,
+                        ArrayRef<TemplateArgument> TemplateArgs,
+                        TemplateDeductionInfo &Info) {
   if (Partial->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
 
@@ -3157,25 +3160,25 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
 
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
-  SFINAETrap Trap(*this);
+      S, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap Trap(S);
 
   // This deduction has no relation to any outer instantiation we might be
   // performing.
-  LocalInstantiationScope InstantiationScope(*this);
+  LocalInstantiationScope InstantiationScope(S);
 
   SmallVector<DeducedTemplateArgument, 4> Deduced;
   Deduced.resize(Partial->getTemplateParameters()->size());
   if (TemplateDeductionResult Result = ::DeduceTemplateArguments(
-          *this, Partial->getTemplateParameters(),
+          S, Partial->getTemplateParameters(),
           Partial->getTemplateArgs().asArray(), TemplateArgs, Info, Deduced,
           /*NumberOfArgumentsMustMatch=*/false);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
-  InstantiatingTemplate Inst(*this, Info.getLocation(), Partial, DeducedArgs,
-                             Info);
+  Sema::InstantiatingTemplate Inst(S, Info.getLocation(), Partial, DeducedArgs,
+                                   Info);
   if (Inst.isInvalid())
     return TemplateDeductionResult::InstantiationDepth;
 
@@ -3183,64 +3186,25 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
     return TemplateDeductionResult::SubstitutionFailure;
 
   TemplateDeductionResult Result;
-  runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = ::FinishTemplateArgumentDeduction(*this, Partial,
+  S.runWithSufficientStackSpace(Info.getLocation(), [&] {
+    Result = ::FinishTemplateArgumentDeduction(S, Partial,
                                                /*IsPartialOrdering=*/false,
                                                TemplateArgs, Deduced, Info);
   });
   return Result;
 }
 
-/// Perform template argument deduction to determine whether
-/// the given template arguments match the given variable template
-/// partial specialization per C++ [temp.class.spec.match].
+TemplateDeductionResult
+Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
+                              ArrayRef<TemplateArgument> TemplateArgs,
+                              TemplateDeductionInfo &Info) {
+  return ::DeduceTemplateArguments(*this, Partial, TemplateArgs, Info);
+}
 TemplateDeductionResult
 Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
                               ArrayRef<TemplateArgument> TemplateArgs,
                               TemplateDeductionInfo &Info) {
-  if (Partial->isInvalidDecl())
-    return TemplateDeductionResult::Invalid;
-
-  // C++ [temp.class.spec.match]p2:
-  //   A partial specialization matches a given actual template
-  //   argument list if the template arguments of the partial
-  //   specialization can be deduced from the actual template argument
-  //   list (14.8.2).
-
-  // Unevaluated SFINAE context.
-  EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
-  SFINAETrap Trap(*this);
-
-  // This deduction has no relation to any outer instantiation we might be
-  // performing.
-  LocalInstantiationScope InstantiationScope(*this);
-
-  SmallVector<DeducedTemplateArgument, 4> Deduced;
-  Deduced.resize(Partial->getTemplateParameters()->size());
-  if (TemplateDeductionResult Result = ::DeduceTemplateArguments(
-          *this, Partial->getTemplateParameters(),
-          Partial->getTemplateArgs().asArray(), TemplateArgs, Info, Deduced,
-          /*NumberOfArgumentsMustMatch=*/false);
-      Result != TemplateDeductionResult::Success)
-    return Result;
-
-  SmallVector<TemplateArgument, 4> DeducedArgs(Deduced.begin(), Deduced.end());
-  InstantiatingTemplate Inst(*this, Info.getLocation(), Partial, DeducedArgs,
-                             Info);
-  if (Inst.isInvalid())
-    return TemplateDeductionResult::InstantiationDepth;
-
-  if (Trap.hasErrorOccurred())
-    return TemplateDeductionResult::SubstitutionFailure;
-
-  TemplateDeductionResult Result;
-  runWithSufficientStackSpace(Info.getLocation(), [&] {
-    Result = ::FinishTemplateArgumentDeduction(*this, Partial,
-                                               /*IsPartialOrdering=*/false,
-                                               TemplateArgs, Deduced, Info);
-  });
-  return Result;
+  return ::DeduceTemplateArguments(*this, Partial, TemplateArgs, Info);
 }
 
 /// Determine whether the given type T is a simple-template-id type.
@@ -5514,9 +5478,9 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   QualType Obj2Ty;
   if (TPOC == TPOC_Call) {
     const FunctionProtoType *Proto1 =
-        FD1->getType()->getAs<FunctionProtoType>();
+        FD1->getType()->castAs<FunctionProtoType>();
     const FunctionProtoType *Proto2 =
-        FD2->getType()->getAs<FunctionProtoType>();
+        FD2->getType()->castAs<FunctionProtoType>();
 
     //   - In the context of a function call, the function parameter types are
     //     used.
@@ -6355,11 +6319,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::ConstantArray:
   case Type::IncompleteArray:
+  case Type::ArrayParameter:
     MarkUsedTemplateParameters(Ctx,
                                cast<ArrayType>(T)->getElementType(),
                                OnlyDeduced, Depth, Used);
     break;
-
   case Type::Vector:
   case Type::ExtVector:
     MarkUsedTemplateParameters(Ctx,
