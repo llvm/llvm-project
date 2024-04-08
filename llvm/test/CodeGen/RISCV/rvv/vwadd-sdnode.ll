@@ -1484,12 +1484,9 @@ define <vscale x 8 x i64> @vwadd_vx_splat_zext(<vscale x 8 x i32> %va, i32 %b) {
 ;
 ; RV64-LABEL: vwadd_vx_splat_zext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64-NEXT:    vwaddu.wv v16, v16, v8
+; RV64-NEXT:    andi a0, a0, -1
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwaddu.vx v16, v8, a0
 ; RV64-NEXT:    vmv8r.v v8, v16
 ; RV64-NEXT:    ret
   %zb = zext i32 %b to i64
@@ -1566,11 +1563,8 @@ define <vscale x 8 x i64> @vwadd_vx_splat_sext(<vscale x 8 x i32> %va, i32 %b) {
 ;
 ; RV64-LABEL: vwadd_vx_splat_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64-NEXT:    vwadd.wv v16, v16, v8
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwadd.vx v16, v8, a0
 ; RV64-NEXT:    vmv8r.v v8, v16
 ; RV64-NEXT:    ret
   %sb = sext i32 %b to i64
