@@ -81,7 +81,7 @@ namespace dr603 { // dr603: yes
 }
 
 // dr604: na
-// dr605 needs IRGen test
+// dr605 is in dr605.cpp
 
 namespace dr606 { // dr606: 3.0
 #if __cplusplus >= 201103L
@@ -253,7 +253,7 @@ namespace dr621 { // dr621: yes
 // dr623: na
 // FIXME: Add documentation saying we allow invalid pointer values.
 
-// dr624 needs an IRGen check.
+// dr624 needs a libc++abi test.
 
 namespace dr625 { // dr625: yes
   template<typename T> struct A {};
@@ -650,7 +650,7 @@ struct Y {
 }
 #endif
 
-// dr650 FIXME: add codegen test
+// dr650 is in dr650.cpp
 
 #if __cplusplus >= 201103L
 namespace dr651 { // dr651: yes
@@ -672,7 +672,7 @@ namespace dr652 { // dr652: yes
 }
 #endif
 
-// dr653 FIXME: add codegen test
+// dr653 is in dr653.cpp
 
 #if __cplusplus >= 201103L
 namespace dr654 { // dr654: sup 1423
@@ -798,7 +798,7 @@ namespace dr657 { // dr657: partial
   Cnvt2<Abs>::type err;
 }
 
-// dr658 FIXME: add codegen test
+// dr658 is in dr658.cpp
 
 #if __cplusplus >= 201103L
 namespace dr659 { // dr659: 3.0
@@ -829,7 +829,7 @@ namespace dr660 { // dr660: 3.0
 }
 #endif
 
-// dr661 FIXME: add codegen test
+// dr661 is in dr661.cpp
 
 namespace dr662 { // dr662: yes
   template <typename T> void f(T t) {
@@ -931,7 +931,7 @@ namespace dr667 { // dr667: 8
 }
 #endif
 
-// dr668 FIXME: add codegen test
+// dr668 needs an libc++abi test
 
 #if __cplusplus >= 201103L
 namespace dr669 { // dr669: yes
@@ -971,7 +971,7 @@ namespace dr671 { // dr671: 2.9
   int m = static_cast<int>(e);
 }
 
-// dr672 FIXME: add codegen test
+// dr672 is in dr672.cpp
 
 namespace dr673 { // dr673: yes
   template<typename> struct X { static const int n = 0; };
