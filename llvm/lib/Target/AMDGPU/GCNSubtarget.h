@@ -1495,7 +1495,8 @@ public:
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
-                             SDep &Dep) const override;
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   // \returns true if it's beneficial on this subtarget for the scheduler to
   // cluster stores as well as loads.

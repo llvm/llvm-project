@@ -74,12 +74,12 @@ define <vscale x 8 x i32> @test_signed_v8f32_v8i32(<vscale x 8 x float> %f) {
 ; CHECK-NEXT:    mov w8, #1325400063 // =0x4effffff
 ; CHECK-NEXT:    mov z6.s, #0x7fffffff
 ; CHECK-NEXT:    mov z4.s, w8
-; CHECK-NEXT:    movprfx z5, z1
-; CHECK-NEXT:    fcvtzs z5.s, p0/m, z1.s
 ; CHECK-NEXT:    fcmge p1.s, p0/z, z0.s, z2.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z0.s
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    fcvtzs z5.s, p0/m, z1.s
 ; CHECK-NEXT:    fcmgt p3.s, p0/z, z0.s, z4.s
 ; CHECK-NEXT:    fcmgt p4.s, p0/z, z1.s, z4.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -134,17 +134,17 @@ define <vscale x 8 x i16> @test_signed_v8f32_v8i16(<vscale x 8 x float> %f) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #-956301312 // =0xc7000000
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    fcvtzs z4.s, p0/m, z0.s
+; CHECK-NEXT:    mov z5.s, #32767 // =0x7fff
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    mov w8, #65024 // =0xfe00
-; CHECK-NEXT:    mov z5.s, #32767 // =0x7fff
 ; CHECK-NEXT:    movk w8, #18175, lsl #16
 ; CHECK-NEXT:    mov z3.s, w8
 ; CHECK-NEXT:    fcmge p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z2.s
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z1.s
+; CHECK-NEXT:    movprfx z4, z0
+; CHECK-NEXT:    fcvtzs z4.s, p0/m, z0.s
 ; CHECK-NEXT:    fcmgt p3.s, p0/z, z1.s, z3.s
 ; CHECK-NEXT:    fcmgt p4.s, p0/z, z0.s, z3.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -206,13 +206,13 @@ define <vscale x 4 x i64> @test_signed_v4f32_v4i64(<vscale x 4 x float> %f) {
 ; CHECK-NEXT:    mov w8, #1593835519 // =0x5effffff
 ; CHECK-NEXT:    mov z3.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z4.s, w8
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.s
 ; CHECK-NEXT:    mov z6.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    fcmge p1.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, z2.s
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z1.s
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.s
 ; CHECK-NEXT:    fcmgt p3.s, p0/z, z1.s, z4.s
 ; CHECK-NEXT:    fcmgt p4.s, p0/z, z0.s, z4.s
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -283,13 +283,13 @@ define <vscale x 4 x i32> @test_signed_v4f64_v4i32(<vscale x 4 x double> %f) {
 ; CHECK-NEXT:    mov x8, #281474972516352 // =0xffffffc00000
 ; CHECK-NEXT:    mov z6.d, #0x7fffffff
 ; CHECK-NEXT:    movk x8, #16863, lsl #48
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.d
 ; CHECK-NEXT:    mov z4.d, x8
 ; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, z2.d
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.d
 ; CHECK-NEXT:    fcmgt p3.d, p0/z, z1.d, z4.d
 ; CHECK-NEXT:    fcmgt p4.d, p0/z, z0.d, z4.d
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -324,24 +324,24 @@ define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #-4476578029606273024 // =0xc1e0000000000000
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z1.d
+; CHECK-NEXT:    mov z26.d, #0x7fffffff
 ; CHECK-NEXT:    mov z4.d, x8
 ; CHECK-NEXT:    mov x8, #281474972516352 // =0xffffffc00000
-; CHECK-NEXT:    movprfx z7, z0
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z0.d
 ; CHECK-NEXT:    movk x8, #16863, lsl #48
-; CHECK-NEXT:    mov z26.d, #0x7fffffff
-; CHECK-NEXT:    movprfx z24, z3
-; CHECK-NEXT:    fcvtzs z24.d, p0/m, z3.d
 ; CHECK-NEXT:    mov z5.d, x8
-; CHECK-NEXT:    movprfx z25, z2
-; CHECK-NEXT:    fcvtzs z25.d, p0/m, z2.d
 ; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, z4.d
 ; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, z4.d
 ; CHECK-NEXT:    fcmge p3.d, p0/z, z3.d, z4.d
 ; CHECK-NEXT:    fcmge p4.d, p0/z, z2.d, z4.d
 ; CHECK-NEXT:    mov z4.d, #0xffffffff80000000
+; CHECK-NEXT:    movprfx z6, z1
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z7, z0
+; CHECK-NEXT:    fcvtzs z7.d, p0/m, z0.d
+; CHECK-NEXT:    movprfx z24, z3
+; CHECK-NEXT:    fcvtzs z24.d, p0/m, z3.d
+; CHECK-NEXT:    movprfx z25, z2
+; CHECK-NEXT:    fcvtzs z25.d, p0/m, z2.d
 ; CHECK-NEXT:    fcmgt p5.d, p0/z, z1.d, z5.d
 ; CHECK-NEXT:    fcmgt p6.d, p0/z, z0.d, z5.d
 ; CHECK-NEXT:    fcmgt p7.d, p0/z, z3.d, z5.d
@@ -389,17 +389,17 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #-4548635623644200960 // =0xc0e0000000000000
-; CHECK-NEXT:    movprfx z4, z0
-; CHECK-NEXT:    fcvtzs z4.d, p0/m, z0.d
+; CHECK-NEXT:    mov z5.d, #32767 // =0x7fff
 ; CHECK-NEXT:    mov z2.d, x8
 ; CHECK-NEXT:    mov x8, #281200098803712 // =0xffc000000000
-; CHECK-NEXT:    mov z5.d, #32767 // =0x7fff
 ; CHECK-NEXT:    movk x8, #16607, lsl #48
 ; CHECK-NEXT:    mov z3.d, x8
 ; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, z2.d
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z4, z0
+; CHECK-NEXT:    fcvtzs z4.d, p0/m, z0.d
 ; CHECK-NEXT:    fcmgt p3.d, p0/z, z1.d, z3.d
 ; CHECK-NEXT:    fcmgt p4.d, p0/z, z0.d, z3.d
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -434,23 +434,23 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #-4548635623644200960 // =0xc0e0000000000000
-; CHECK-NEXT:    movprfx z5, z3
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z3.d
+; CHECK-NEXT:    mov z25.d, #32767 // =0x7fff
 ; CHECK-NEXT:    mov z4.d, x8
 ; CHECK-NEXT:    mov x8, #281200098803712 // =0xffc000000000
-; CHECK-NEXT:    movprfx z6, z2
-; CHECK-NEXT:    fcvtzs z6.d, p0/m, z2.d
 ; CHECK-NEXT:    movk x8, #16607, lsl #48
-; CHECK-NEXT:    movprfx z7, z1
-; CHECK-NEXT:    fcvtzs z7.d, p0/m, z1.d
-; CHECK-NEXT:    movprfx z24, z0
-; CHECK-NEXT:    fcvtzs z24.d, p0/m, z0.d
-; CHECK-NEXT:    mov z25.d, #32767 // =0x7fff
 ; CHECK-NEXT:    fcmge p1.d, p0/z, z3.d, z4.d
 ; CHECK-NEXT:    fcmge p2.d, p0/z, z2.d, z4.d
 ; CHECK-NEXT:    fcmge p3.d, p0/z, z1.d, z4.d
 ; CHECK-NEXT:    fcmge p4.d, p0/z, z0.d, z4.d
+; CHECK-NEXT:    movprfx z5, z3
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z3.d
 ; CHECK-NEXT:    mov z4.d, x8
+; CHECK-NEXT:    movprfx z6, z2
+; CHECK-NEXT:    fcvtzs z6.d, p0/m, z2.d
+; CHECK-NEXT:    movprfx z7, z1
+; CHECK-NEXT:    fcvtzs z7.d, p0/m, z1.d
+; CHECK-NEXT:    movprfx z24, z0
+; CHECK-NEXT:    fcvtzs z24.d, p0/m, z0.d
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
 ; CHECK-NEXT:    fcmgt p5.d, p0/z, z3.d, z4.d
 ; CHECK-NEXT:    fcmgt p6.d, p0/z, z2.d, z4.d
@@ -528,12 +528,12 @@ define <vscale x 4 x i64> @test_signed_v4f64_v4i64(<vscale x 4 x double> %f) {
 ; CHECK-NEXT:    mov x8, #4890909195324358655 // =0x43dfffffffffffff
 ; CHECK-NEXT:    mov z6.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    mov z4.d, x8
-; CHECK-NEXT:    movprfx z5, z1
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z1.d
 ; CHECK-NEXT:    fcmge p1.d, p0/z, z0.d, z2.d
 ; CHECK-NEXT:    fcmge p2.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z0.d
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z1.d
 ; CHECK-NEXT:    fcmgt p3.d, p0/z, z0.d, z4.d
 ; CHECK-NEXT:    fcmgt p4.d, p0/z, z1.d, z4.d
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -629,13 +629,13 @@ define <vscale x 8 x i32> @test_signed_v8f16_v8i32(<vscale x 8 x half> %f) {
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
 ; CHECK-NEXT:    mov z3.s, #0x80000000
 ; CHECK-NEXT:    mov z4.h, w8
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    fcvtzs z5.s, p0/m, z0.h
 ; CHECK-NEXT:    mov z6.s, #0x7fffffff
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z2.h
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z1.h
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    fcvtzs z5.s, p0/m, z0.h
 ; CHECK-NEXT:    fcmgt p3.h, p0/z, z1.h, z4.h
 ; CHECK-NEXT:    fcmgt p4.h, p0/z, z0.h, z4.h
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
@@ -742,13 +742,13 @@ define <vscale x 4 x i64> @test_signed_v4f16_v4i64(<vscale x 4 x half> %f) {
 ; CHECK-NEXT:    mov w8, #31743 // =0x7bff
 ; CHECK-NEXT:    mov z3.d, #0x8000000000000000
 ; CHECK-NEXT:    mov z4.h, w8
-; CHECK-NEXT:    movprfx z5, z0
-; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.h
 ; CHECK-NEXT:    mov z6.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    fcmge p1.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    fcmge p2.h, p0/z, z0.h, z2.h
 ; CHECK-NEXT:    movprfx z2, z1
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z1.h
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    fcvtzs z5.d, p0/m, z0.h
 ; CHECK-NEXT:    fcmgt p3.h, p0/z, z1.h, z4.h
 ; CHECK-NEXT:    fcmgt p4.h, p0/z, z0.h, z4.h
 ; CHECK-NEXT:    not p1.b, p0/z, p1.b
