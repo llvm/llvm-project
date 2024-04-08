@@ -276,9 +276,9 @@ private:
         ec.u);
   }
   template <typename SEEK, typename A>
-  static const auto *GetIOControl(const A &stmt) {
+  static const SEEK *GetIOControl(const A &stmt) {
     for (const auto &spec : stmt.controls) {
-      if (const auto *result = std::get_if<SEEK>(&spec.u)) {
+      if (const auto *result{std::get_if<SEEK>(&spec.u)}) {
         return result;
       }
     }
@@ -288,7 +288,7 @@ private:
     if (stmt.iounit.has_value()) {
       return std::holds_alternative<Fortran::parser::Variable>(stmt.iounit->u);
     }
-    if (auto *unit = GetIOControl<Fortran::parser::IoUnit>(stmt)) {
+    if (auto *unit{GetIOControl<Fortran::parser::IoUnit>(stmt)}) {
       return std::holds_alternative<Fortran::parser::Variable>(unit->u);
     }
     return false;
@@ -317,7 +317,6 @@ private:
                       return;
                     }
                   }
-                  return;
                 }
               }
               WarnIfNotInternal(x.value(), source);
