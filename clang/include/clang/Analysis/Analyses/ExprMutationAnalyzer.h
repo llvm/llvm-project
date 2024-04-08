@@ -8,11 +8,10 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H
 
-#include <type_traits>
-
 #include "clang/AST/AST.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/DenseMap.h"
+#include <variant>
 
 namespace clang {
 
@@ -22,8 +21,15 @@ class FunctionParmMutationAnalyzer;
 /// a given statement.
 class ExprMutationAnalyzer {
 public:
+  friend class FunctionParmMutationAnalyzer;
+  struct Cache {
+    llvm::DenseMap<const FunctionDecl *,
+                   std::unique_ptr<FunctionParmMutationAnalyzer>>
+        FuncParmAnalyzer;
+  };
+
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
-      : Stm(Stm), Context(Context) {}
+      : ExprMutationAnalyzer(Stm, Context, nullptr) {}
 
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
   bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
@@ -44,6 +50,19 @@ public:
 private:
   using MutationFinder = const Stmt *(ExprMutationAnalyzer::*)(const Expr *);
   using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
+
+  ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context, Cache *ParentCache)
+      : Stm(Stm), Context(Context) {
+    if (ParentCache != nullptr) {
+      CrossAnalysisCache = ParentCache;
+    } else {
+      CrossAnalysisCache = std::make_unique<Cache>();
+    }
+  }
+  ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context,
+                       std::unique_ptr<Cache> CrossAnalysisCache)
+      : Stm(Stm), Context(Context),
+        CrossAnalysisCache(std::move(CrossAnalysisCache)) {}
 
   const Stmt *findMutationMemoized(const Expr *Exp,
                                    llvm::ArrayRef<MutationFinder> Finders,
@@ -67,11 +86,15 @@ private:
   const Stmt *findReferenceMutation(const Expr *Exp);
   const Stmt *findFunctionArgMutation(const Expr *Exp);
 
+  Cache *getCache() {
+    return std::holds_alternative<Cache *>(CrossAnalysisCache)
+               ? std::get<Cache *>(CrossAnalysisCache)
+               : std::get<std::unique_ptr<Cache>>(CrossAnalysisCache).get();
+  }
+
   const Stmt &Stm;
   ASTContext &Context;
-  llvm::DenseMap<const FunctionDecl *,
-                 std::unique_ptr<FunctionParmMutationAnalyzer>>
-      FuncParmAnalyzer;
+  std::variant<Cache *, std::unique_ptr<Cache>> CrossAnalysisCache;
   ResultMap Results;
   ResultMap PointeeResults;
 };
@@ -80,7 +103,10 @@ private:
 // params.
 class FunctionParmMutationAnalyzer {
 public:
-  FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context);
+  FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context)
+      : FunctionParmMutationAnalyzer(Func, Context, nullptr) {}
+  FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,
+                               ExprMutationAnalyzer::Cache *CrossAnalysisCache);
 
   bool isMutated(const ParmVarDecl *Parm) {
     return findMutation(Parm) != nullptr;
