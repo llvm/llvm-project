@@ -1294,13 +1294,12 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
   }
 
   // This file is a system header or C++ unfriendly if the old file is.
-  //
-  // Note that the temporary 'DirInfo' is required here, as either call to
-  // getExistingFileInfo could resize the vector and we don't want to rely on
-  // order of evaluation.
   const HeaderFileInfo *ContextHFI = getExistingFileInfo(ContextFileEnt);
   assert(ContextHFI && "context file without file info");
-  getFileInfo(*File).DirInfo = ContextHFI->DirInfo;
+  // Note that the temporary 'DirInfo' is required here, as the call to
+  // getFileInfo could resize the vector and might invalidate 'ContextHFI'.
+  unsigned DirInfo = ContextHFI->DirInfo;
+  getFileInfo(*File).DirInfo = DirInfo;
 
   FrameworkName.pop_back(); // remove the trailing '/'
   if (!findUsableModuleForFrameworkHeader(*File, FrameworkName,
