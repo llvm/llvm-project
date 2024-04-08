@@ -2197,13 +2197,13 @@ public:
   }
 
   /// \brief Return a type with the given __ptrauth qualifier.
-  QualType getPointerAuthType(QualType type, PointerAuthQualifier pointerAuth) {
-    assert(!type.getPointerAuth());
-    assert(pointerAuth);
+  QualType getPointerAuthType(QualType Ty, PointerAuthQualifier PointerAuth) {
+    assert(!Ty.getPointerAuth());
+    assert(PointerAuth);
 
     Qualifiers qs;
-    qs.setPointerAuth(pointerAuth);
-    return getQualifiedType(type, qs);
+    qs.setPointerAuth(PointerAuth);
+    return getQualifiedType(Ty, qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

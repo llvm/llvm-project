@@ -16,7 +16,7 @@
 
 namespace clang {
 
-constexpr int PointerAuthKeyNone = -1;
+constexpr unsigned PointerAuthKeyNone = -1;
 
 } // end namespace clang
 

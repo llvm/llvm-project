@@ -176,6 +176,8 @@ class PointerAuthQualifier {
   //           |AuthenticatesNull|Key  |Discriminator|
   uint32_t Data;
 
+  // The following static assertions check that each of the 32 bits is present
+  // exactly in one of the constants.
   static_assert((EnabledBits + AddressDiscriminatedBits +
                  AuthenticationModeBits + IsaPointerBits +
                  AuthenticatesNullValuesBits + KeyBits + DiscriminatorBits) ==
@@ -192,21 +194,22 @@ class PointerAuthQualifier {
                     0xFFFFFFFF,
                 "All masks should cover the entire bits");
 
-  PointerAuthQualifier(unsigned key, bool isAddressDiscriminated,
-                       unsigned extraDiscriminator,
-                       PointerAuthenticationMode authenticationMode,
-                       bool isIsaPointer, bool authenticatesNullValues)
+  PointerAuthQualifier(unsigned Key, bool IsAddressDiscriminated,
+                       unsigned ExtraDiscriminator,
+                       PointerAuthenticationMode AuthenticationMode,
+                       bool IsIsaPointer, bool AuthenticatesNullValues)
       : Data(EnabledMask |
-             (isAddressDiscriminated
-                  ? static_cast<uint32_t>(AddressDiscriminatedMask)
+             (IsAddressDiscriminated
+                  ? llvm::to_underlying(AddressDiscriminatedMask)
                   : 0) |
-             (key << KeyShift) |
-             (unsigned(authenticationMode) << AuthenticationModeShift) |
-             (extraDiscriminator << DiscriminatorShift) |
-             (isIsaPointer << IsaPointerShift) |
-             (authenticatesNullValues << AuthenticatesNullValuesShift)) {
-    assert(key <= KeyNoneInternal);
-    assert(extraDiscriminator <= MaxDiscriminator);
+             (Key << KeyShift) |
+             (llvm::to_underlying(AuthenticationMode)
+              << AuthenticationModeShift) |
+             (ExtraDiscriminator << DiscriminatorShift) |
+             (IsIsaPointer << IsaPointerShift) |
+             (AuthenticatesNullValues << AuthenticatesNullValuesShift)) {
+    assert(Key <= KeyNoneInternal);
+    assert(ExtraDiscriminator <= MaxDiscriminator);
   }
 
 public:
@@ -224,15 +227,15 @@ public:
   PointerAuthQualifier() : Data(0) {}
 
   static PointerAuthQualifier
-  Create(int key, bool isAddressDiscriminated, unsigned extraDiscriminator,
-         PointerAuthenticationMode authenticationMode, bool isIsaPointer,
-         bool authenticatesNullValues) {
-    if (key == PointerAuthKeyNone)
-      key = KeyNoneInternal;
-    assert((key >= 0 && key <= KeyNoneInternal) && "out-of-range key value");
-    return PointerAuthQualifier(key, isAddressDiscriminated, extraDiscriminator,
-                                authenticationMode, isIsaPointer,
-                                authenticatesNullValues);
+  Create(unsigned Key, bool IsAddressDiscriminated, unsigned ExtraDiscriminator,
+         PointerAuthenticationMode AuthenticationMode, bool IsIsaPointer,
+         bool AuthenticatesNullValues) {
+    if (Key == PointerAuthKeyNone)
+      Key = KeyNoneInternal;
+    assert(Key <= KeyNoneInternal && "out-of-range key value");
+    return PointerAuthQualifier(Key, IsAddressDiscriminated, ExtraDiscriminator,
+                                AuthenticationMode, IsIsaPointer,
+                                AuthenticatesNullValues);
   }
 
   bool isPresent() const {
@@ -291,9 +294,9 @@ public:
   uint32_t getAsOpaqueValue() const { return Data; }
 
   // Deserialize pointer-auth qualifiers from an opaque representation.
-  static PointerAuthQualifier fromOpaqueValue(uint32_t opaque) {
+  static PointerAuthQualifier fromOpaqueValue(uint32_t Opaque) {
     PointerAuthQualifier result;
-    result.Data = opaque;
+    result.Data = Opaque;
     return result;
   }
 
@@ -420,10 +423,10 @@ public:
   }
 
   // Deserialize qualifiers from an opaque representation.
-  static Qualifiers fromOpaqueValue(uint64_t opaque) {
+  static Qualifiers fromOpaqueValue(uint64_t Opaque) {
     Qualifiers Qs;
-    Qs.Mask = uint32_t(opaque);
-    Qs.PtrAuth = PointerAuthQualifier::fromOpaqueValue(uint32_t(opaque >> 32));
+    Qs.Mask = uint32_t(Opaque);
+    Qs.PtrAuth = PointerAuthQualifier::fromOpaqueValue(uint32_t(Opaque >> 32));
     return Qs;
   }
 
