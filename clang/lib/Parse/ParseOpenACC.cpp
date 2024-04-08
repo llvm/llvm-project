@@ -1245,7 +1245,7 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
          "Didn't parse all OpenACC Clauses");
   ParseInfo.EndLoc = ConsumeAnnotationToken();
-  assert(ParseInfo.EndLoc.isValid(),
+  assert(ParseInfo.EndLoc.isValid() &&
          "Terminating annotation token not present");
 
   return ParseInfo;
