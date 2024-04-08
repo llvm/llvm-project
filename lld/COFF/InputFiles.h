@@ -112,7 +112,7 @@ class ArchiveFile : public InputFile {
 public:
   explicit ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
-  void parse() override{};
+  void parse() override {};
   void parseLazy();
 
   // Enqueues an archive member load for the given symbol. If we've already
