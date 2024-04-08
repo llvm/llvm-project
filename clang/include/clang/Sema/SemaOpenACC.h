@@ -21,7 +21,7 @@
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
-  class OpenACCClause;
+class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 public:
