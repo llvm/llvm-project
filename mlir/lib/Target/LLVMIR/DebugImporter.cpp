@@ -374,7 +374,7 @@ DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
 
   // Insert the result into our internal cache if it's not self-contained.
   if (!state.unboundSelfRefs.empty()) {
-    auto [_, inserted] = dependentCache.try_emplace(
+    [[maybe_unused]] auto [_, inserted] = dependentCache.try_emplace(
         node, DependentTranslation{result, state.unboundSelfRefs});
     assert(inserted && "invalid state: caching the same DINode twice");
     return {result, false};
