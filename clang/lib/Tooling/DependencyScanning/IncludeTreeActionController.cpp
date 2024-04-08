@@ -381,6 +381,10 @@ Error IncludeTreeActionController::finalizeModuleBuild(
     CompilerInstance &ModuleScanInstance) {
   // FIXME: the scan invocation is incorrect here; we need the `NewInvocation`
   // from `finalizeModuleInvocation` to finish the tree.
+  resetBenignCodeGenOptions(
+      frontend::GenerateModule,
+      ModuleScanInstance.getInvocation().getLangOpts(),
+      ModuleScanInstance.getInvocation().getCodeGenOpts());
   auto Builder = BuilderStack.pop_back_val();
   auto Tree = Builder->finishIncludeTree(ModuleScanInstance,
                                          ModuleScanInstance.getInvocation());
@@ -594,6 +598,8 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
 
   auto addFile = [&](StringRef FilePath,
                      bool IgnoreFileError = false) -> Error {
+    if (FilePath.empty())
+      return Error::success();
     llvm::Expected<FileEntryRef> FE = FM.getFileRef(FilePath);
     if (!FE) {
       auto Err = FE.takeError();

@@ -1553,9 +1553,8 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   auto ExpectedFS = IsIncludeTreeFS ? makeIncludeTreeFS(std::move(CAS), *RootID)
                                     : makeCASFS(std::move(CAS), *RootID);
   if (!ExpectedFS) {
-    llvm::consumeError(ExpectedFS.takeError());
     Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
-        << RootIDString;
+        << RootIDString << llvm::toString(ExpectedFS.takeError());
     return makeEmptyCASFS();
   }
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = std::move(*ExpectedFS);
