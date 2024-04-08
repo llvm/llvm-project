@@ -43,7 +43,6 @@ enum OpCode {
   Br,
   CondBr,
   ICmp,
-  BinaryOperator,
   Ret,
   InsertValue,
   PtrAdd,
