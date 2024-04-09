@@ -2583,6 +2583,27 @@ let Predicates = [HasSVEorSME] in {
                                sub_32)>;
   }
 
+  // Add NoUseScalarIncVL to avoid affecting for patterns with UseScalarIncVL
+  let Predicates = [NoUseScalarIncVL] in {
+    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+              (ADDXrs GPR64:$op, (RDVLI_XI $imm), 0)>;
+    def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTH_XPiI 31, $imm), 0)>;
+    def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTW_XPiI 31, $imm), 0)>;
+    def : Pat<(add GPR64:$op, (vscale (sve_cntd_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTD_XPiI 31, $imm), 0)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
+              (ADDSWrr GPR32:$op, (EXTRACT_SUBREG (RDVLI_XI $imm), sub_32))>;
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTH_XPiI 31, $imm), sub_32))>;
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTW_XPiI 31, $imm), sub_32))>;
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntd_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTD_XPiI 31, $imm), sub_32))>;
+  }
+
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
   // type, and reloaded as another type.
