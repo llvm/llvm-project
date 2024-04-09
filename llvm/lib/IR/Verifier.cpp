@@ -6224,6 +6224,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::threadlocal_address: {
+    const Value &Arg0 = *Call.getArgOperand(0);
+    Check(isa<GlobalVariable>(Arg0),
+          "llvm.threadlocal.address first argument must be a GlobalVariable");
+    Check(cast<GlobalVariable>(Arg0).isThreadLocal(),
+          "llvm.threadlocal.address operand isThreadLocal() must no be false");
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
