@@ -23,9 +23,9 @@ CHECK: Binary Function "foo.org.0/1(*2)" after disassembly {
 RUN: llvm-nm --print-size %t.out > %t.foo
 RUN: llvm-objdump %t.out --dwarf=frames >> %t.foo
 RUN: FileCheck %s --input-file %t.foo --check-prefix=CHECK-FOO
-CHECK-FOO: [[#FOO:]] {{.*}} foo
-CHECK-FOO: [[#ORG:]] {{.*}} foo.org.0
+CHECK-FOO: 0000000000[[#%x,FOO:]] [[#%x,OPTSIZE:]] t foo
+CHECK-FOO: 0000000000[[#%x,ORG:]] [[#%x,ORGSIZE:]] t foo.org.0
 # patched FDE comes first
-CHECK-FOO: FDE {{.*}} pc=00[[#ORG]]...00[[#ORG+5]]
+CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+ORGSIZE]]
 # original FDE comes second
-CHECK-FOO: FDE {{.*}} pc=00[[#ORG]]
+CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+OPTSIZE]]
