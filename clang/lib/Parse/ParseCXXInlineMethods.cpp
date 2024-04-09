@@ -42,6 +42,22 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
   return Message;
 }
 
+/// If we've encountered '= delete' in a context where it is ill-formed, such
+/// as in the declaration of a non-function, also skip the ("message") part if
+/// it is present to avoid issuing further diagnostics.
+void Parser::SkipDeletedFunctionBody() {
+  if (!Tok.is(tok::l_paren))
+    return;
+
+  BalancedDelimiterTracker BT{*this, tok::l_paren};
+  BT.consumeOpen();
+
+  // Just skip to the end of the current declaration.
+  SkipUntil(tok::r_paren, tok::comma, StopAtSemi | StopBeforeMatch);
+  if (Tok.is(tok::r_paren))
+    BT.consumeClose();
+}
+
 /// ParseCXXInlineMethodDef - We parsed and verified that the specified
 /// Declarator is a well formed C++ inline method definition. Now lex its body
 /// and store its tokens for parsing after the C++ class is complete.
