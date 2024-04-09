@@ -11178,8 +11178,8 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   }
 
   if (!getDerived().AlwaysRebuild() &&
-      QualifierLoc == E->getQualifierLoc() &&
-      ND == E->getDecl() &&
+      !E->isCapturedByCopyInLambdaWithExplicitObjectParameter() &&
+      QualifierLoc == E->getQualifierLoc() && ND == E->getDecl() &&
       Found == E->getFoundDecl() &&
       NameInfo.getName() == E->getDecl()->getDeclName() &&
       !E->hasExplicitTemplateArgs()) {
@@ -12642,9 +12642,17 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   //
   // In other contexts, the type of `this` may be overrided
   // for type deduction, so we need to recompute it.
-  QualType T = getSema().getCurLambda() ?
-                   getDerived().TransformType(E->getType())
-                 : getSema().getCurrentThisType();
+  //
+  // Always recompute the type if we're in the body of a lambda, and
+  // 'this' is dependent on a lambda's explicit object parameter.
+  QualType T = [&]() {
+    auto &S = getSema();
+    if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+      return S.getCurrentThisType();
+    if (S.getCurLambda())
+      return getDerived().TransformType(E->getType());
+    return S.getCurrentThisType();
+  }();
 
   if (!getDerived().AlwaysRebuild() && T == E->getType()) {
     // Mark it referenced in the new context regardless.

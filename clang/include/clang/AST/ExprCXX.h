@@ -1149,6 +1149,7 @@ class CXXThisExpr : public Expr {
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
     CXXThisExprBits.Loc = L;
     setDependence(computeDependence(this));
   }
@@ -1169,6 +1170,15 @@ public:
 
   bool isImplicit() const { return CXXThisExprBits.IsImplicit; }
   void setImplicit(bool I) { CXXThisExprBits.IsImplicit = I; }
+
+  bool isCapturedByCopyInLambdaWithExplicitObjectParameter() const {
+    return CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter;
+  }
+
+  void setCapturedByCopyInLambdaWithExplicitObjectParameter(bool Set) {
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = Set;
+    setDependence(computeDependence(this));
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXThisExprClass;
