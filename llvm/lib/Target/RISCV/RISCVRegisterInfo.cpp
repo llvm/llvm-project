@@ -204,10 +204,21 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     uint32_t NumOfVReg = ScalableValue / 8;
     BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
         .setMIFlag(Flag);
-    TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
-    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-      .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
-      .setMIFlag(Flag);
+
+    if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
+        (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
+      unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
+        (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
+      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+          .addReg(ScratchReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .setMIFlag(Flag);
+    } else {
+      TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+          .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
+          .setMIFlag(Flag);
+    }
     SrcReg = DestReg;
     KillSrcReg = true;
   }
