@@ -21,6 +21,7 @@ namespace installapi {
 struct FrontendAttrs {
   const AvailabilityInfo Avail;
   const Decl *D;
+  const SourceLocation Loc;
   const HeaderType Access;
 };
 
