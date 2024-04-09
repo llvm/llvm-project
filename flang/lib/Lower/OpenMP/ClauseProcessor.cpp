@@ -751,20 +751,6 @@ bool ClauseProcessor::processDepend(
       });
 }
 
-bool ClauseProcessor::processHasDeviceAddr(
-    llvm::SmallVectorImpl<mlir::Value> &operands,
-    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
-    const {
-  return findRepeatableClause<omp::clause::HasDeviceAddr>(
-      [&](const omp::clause::HasDeviceAddr &devAddrClause,
-          const Fortran::parser::CharBlock &) {
-        addUseDeviceClause(converter, devAddrClause.v, operands, isDeviceTypes,
-                           isDeviceLocs, isDeviceSymbols);
-      });
-}
-
 bool ClauseProcessor::processIf(
     omp::clause::If::DirectiveNameModifier directiveName,
     mlir::Value &result) const {
@@ -783,20 +769,6 @@ bool ClauseProcessor::processIf(
         }
       });
   return found;
-}
-
-bool ClauseProcessor::processIsDevicePtr(
-    llvm::SmallVectorImpl<mlir::Value> &operands,
-    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
-    const {
-  return findRepeatableClause<omp::clause::IsDevicePtr>(
-      [&](const omp::clause::IsDevicePtr &devPtrClause,
-          const Fortran::parser::CharBlock &) {
-        addUseDeviceClause(converter, devPtrClause.v, operands, isDeviceTypes,
-                           isDeviceLocs, isDeviceSymbols);
-      });
 }
 
 bool ClauseProcessor::processLink(
@@ -1021,7 +993,6 @@ bool ClauseProcessor::processUseDevicePtr(
                            useDeviceLocs, useDeviceSymbols);
       });
 }
-
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
