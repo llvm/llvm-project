@@ -14430,6 +14430,8 @@ bool BoUpSLP::collectValuesToDemote(
   return FinalAnalysis();
 }
 
+static RecurKind getRdxKind(Value *V);
+
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
@@ -14480,7 +14482,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](ArrayRef<Value *> TreeRoot, unsigned VF,
                                 bool IsTopRoot, bool IsProfitableToDemoteRoot,
                                 unsigned Opcode, unsigned Limit,
-                                bool IsTruncRoot) {
+                                bool IsTruncRoot, bool IsSignedCmp) {
     ToDemote.clear();
     auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
     if (!TreeRootIT || !Opcode)
@@ -14503,7 +14505,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // True.
     // Determine if the sign bit of all the roots is known to be zero. If not,
     // IsKnownPositive is set to False.
-    bool IsKnownPositive = all_of(TreeRoot, [&](Value *R) {
+    bool IsKnownPositive = !IsSignedCmp && all_of(TreeRoot, [&](Value *R) {
       KnownBits Known = computeKnownBits(R, *DL);
       return Known.isNonNegative();
     });
@@ -14590,8 +14592,11 @@ void BoUpSLP::computeMinimumValueSizes() {
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
       if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
         ++BitWidth1;
-      auto Mask = DB->getDemandedBits(cast<Instruction>(V));
-      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      unsigned BitWidth2 = BitWidth1;
+      if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(::getRdxKind(V))) {
+        auto Mask = DB->getDemandedBits(cast<Instruction>(V));
+        BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      }
       ReductionBitWidth =
           std::max(std::min(BitWidth1, BitWidth2), ReductionBitWidth);
     }
@@ -14608,6 +14613,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
     IsTruncRoot = true;
   }
+  bool IsSignedCmp = false;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
@@ -14619,7 +14625,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
-        IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+        IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot, IsSignedCmp);
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
@@ -14656,6 +14662,16 @@ void BoUpSLP::computeMinimumValueSizes() {
                    return EI.EdgeIdx == 0 &&
                           EI.UserTE->getOpcode() == Instruction::Trunc &&
                           !EI.UserTE->isAltShuffle();
+                 });
+      IsSignedCmp =
+          NodeIdx < VectorizableTree.size() &&
+          any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
+                 [](const EdgeInfo &EI) {
+                   return EI.UserTE->getOpcode() == Instruction::ICmp &&
+                          any_of(EI.UserTE->Scalars, [](Value *V) {
+                            auto *IC = dyn_cast<ICmpInst>(V);
+                            return IC && IC->isSigned();
+                          });
                  });
     }
 
@@ -16697,6 +16713,10 @@ private:
 };
 } // end anonymous namespace
 
+/// Gets recurrence kind from the specified value.
+static RecurKind getRdxKind(Value *V) {
+  return HorizontalReduction::getRdxKind(V);
+}
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
     return cast<FixedVectorType>(IE->getType())->getNumElements();
