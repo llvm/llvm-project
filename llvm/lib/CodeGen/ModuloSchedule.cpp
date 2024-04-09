@@ -2395,7 +2395,7 @@ void ModuloScheduleExpanderMVE::generatePhi(
   // Stage  2+ 1a 0b           Kernel Unroll#0
 
   for (MachineOperand &DefMO : OrigMI->defs()) {
-    if (!DefMO.isReg())
+    if (!DefMO.isReg() || DefMO.isDead())
       continue;
     Register OrigReg = DefMO.getReg();
     auto NewReg = KernelVRMap[UnrollNum].find(OrigReg);
