@@ -182,25 +182,27 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
     ConstantSubscript &maskDimAt{maskAt[*dim - 1]};
     ConstantSubscript maskDimLbound{maskDimAt};
     for (auto n{GetSize(resultShape)}; n-- > 0;
-         IncrementSubscripts(at, array.shape()),
-         IncrementSubscripts(maskAt, mask.shape())) {
-      dimAt = dimLbound;
-      maskDimAt = maskDimLbound;
+         array.IncrementSubscripts(at), mask.IncrementSubscripts(maskAt)) {
       elements.push_back(identity);
-      bool firstUnmasked{true};
-      for (ConstantSubscript j{0}; j < dimExtent; ++j, ++dimAt, ++maskDimAt) {
-        if (mask.At(maskAt).IsTrue()) {
-          accumulator(elements.back(), at, firstUnmasked);
-          firstUnmasked = false;
+      if (dimExtent > 0) {
+        dimAt = dimLbound;
+        maskDimAt = maskDimLbound;
+        bool firstUnmasked{true};
+        for (ConstantSubscript j{0}; j < dimExtent; ++j, ++dimAt, ++maskDimAt) {
+          if (mask.At(maskAt).IsTrue()) {
+            accumulator(elements.back(), at, firstUnmasked);
+            firstUnmasked = false;
+          }
         }
+        --dimAt, --maskDimAt;
       }
       accumulator.Done(elements.back());
     }
   } else { // no DIM=, result is scalar
     elements.push_back(identity);
     bool firstUnmasked{true};
-    for (auto n{array.size()}; n-- > 0; IncrementSubscripts(at, array.shape()),
-         IncrementSubscripts(maskAt, mask.shape())) {
+    for (auto n{array.size()}; n-- > 0;
+         array.IncrementSubscripts(at), mask.IncrementSubscripts(maskAt)) {
       if (mask.At(maskAt).IsTrue()) {
         accumulator(elements.back(), at, firstUnmasked);
         firstUnmasked = false;

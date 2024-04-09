@@ -573,10 +573,6 @@ public:
   /// Fix the non-induction PHIs in \p Plan.
   void fixNonInductionPHIs(VPlan &Plan, VPTransformState &State);
 
-  /// Returns true if the reordering of FP operations is not allowed, but we are
-  /// able to vectorize with strict in-order reductions for the given RdxDesc.
-  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc);
-
   /// Create a new phi node for the induction variable \p OrigPhi to resume
   /// iteration count in the scalar epilogue, from where the vectorized loop
   /// left off. \p Step is the SCEV-expanded induction step to use. In cases
@@ -3712,11 +3708,6 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPlan &Plan,
       }
     }
   }
-}
-
-bool InnerLoopVectorizer::useOrderedReductions(
-    const RecurrenceDescriptor &RdxDesc) {
-  return Cost->useOrderedReductions(RdxDesc);
 }
 
 void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
@@ -8235,7 +8226,7 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   for (unsigned In = 0; In < NumIncoming; In++) {
     OperandsWithMask.push_back(Operands[In]);
     VPValue *EdgeMask =
-        createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent());
+        getEdgeMask(Phi->getIncomingBlock(In), Phi->getParent());
     if (!EdgeMask) {
       assert(In == 0 && "Both null and non-null edge masks found");
       assert(all_equal(Operands) &&
@@ -9056,8 +9047,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
-      VPReductionRecipe *RedRecipe = new VPReductionRecipe(
-          RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp);
+      VPReductionRecipe *RedRecipe =
+          new VPReductionRecipe(RdxDesc, CurrentLinkI, PreviousLink, VecOp,
+                                CondOp, CM.useOrderedReductions(RdxDesc));
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Note that this transformation may leave over dead recipes (including
@@ -9305,57 +9297,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   State.ILV->vectorizeInterleaveGroup(IG, definedValues(), State, getAddr(),
                                       getStoredValues(), getMask(),
                                       NeedsMaskForGaps);
-}
-
-void VPReductionRecipe::execute(VPTransformState &State) {
-  assert(!State.Instance && "Reduction being replicated.");
-  Value *PrevInChain = State.get(getChainOp(), 0, /*IsScalar*/ true);
-  RecurKind Kind = RdxDesc.getRecurrenceKind();
-  bool IsOrdered = State.ILV->useOrderedReductions(RdxDesc);
-  // Propagate the fast-math flags carried by the underlying instruction.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *NewVecOp = State.get(getVecOp(), Part);
-    if (VPValue *Cond = getCondOp()) {
-      Value *NewCond = State.get(Cond, Part, State.VF.isScalar());
-      VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
-      Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
-      Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
-                                                  RdxDesc.getFastMathFlags());
-      if (State.VF.isVector()) {
-        Iden =
-            State.Builder.CreateVectorSplat(VecTy->getElementCount(), Iden);
-      }
-
-      Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Iden);
-      NewVecOp = Select;
-    }
-    Value *NewRed;
-    Value *NextInChain;
-    if (IsOrdered) {
-      if (State.VF.isVector())
-        NewRed = createOrderedReduction(State.Builder, RdxDesc, NewVecOp,
-                                        PrevInChain);
-      else
-        NewRed = State.Builder.CreateBinOp(
-            (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
-            NewVecOp);
-      PrevInChain = NewRed;
-    } else {
-      PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
-      NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
-    }
-    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
-      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
-                                   NewRed, PrevInChain);
-    } else if (IsOrdered)
-      NextInChain = NewRed;
-    else
-      NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
-    State.set(this, NextInChain, Part, /*IsScalar*/ true);
-  }
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
