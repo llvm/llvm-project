@@ -32,7 +32,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -1186,6 +1185,9 @@ private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
 
+  /// An optional name that can be used for the generated IR instruction.
+  const std::string Name;
+
   /// Returns true if this VPInstruction generates scalar values for all lanes.
   /// Most VPInstructions generate a single value per part, either vector or
   /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
@@ -1216,37 +1218,39 @@ private:
 #endif
 
 public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL)
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
+                const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
-        Opcode(Opcode) {}
+        Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DebugLoc DL = {})
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL) {}
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
 
   VPInstruction(unsigned Opcode, CmpInst::Predicate Pred, VPValue *A,
-                VPValue *B, DebugLoc DL = {});
+                VPValue *B, DebugLoc DL = {}, const Twine &Name = "");
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                WrapFlagsTy WrapFlags, DebugLoc DL = {})
+                WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
-        Opcode(Opcode) {}
+        Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DisjointFlagsTy DisjointFlag, DebugLoc DL = {})
+                DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
+                const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
-        Opcode(Opcode) {
+        Opcode(Opcode), Name(Name.str()) {
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                FastMathFlags FMFs, DebugLoc DL = {});
+                FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPRecipeBase *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, getDebugLoc());
+    auto *New = new VPInstruction(Opcode, Operands, getDebugLoc(), Name);
     New->transferFlags(*this);
     return New;
   }
@@ -2741,7 +2745,12 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPBasicBlockSC;
   }
 
-  void insert(VPRecipeBase *Recipe, iterator InsertPt);
+  void insert(VPRecipeBase *Recipe, iterator InsertPt) {
+    assert(Recipe && "No recipe to append.");
+    assert(!Recipe->Parent && "Recipe already in VPlan");
+    Recipe->Parent = this;
+    Recipes.insert(InsertPt, Recipe);
+  }
 
   /// Augment the existing recipes of a VPBasicBlock with an additional
   /// \p Recipe as the last recipe.
@@ -2964,11 +2973,6 @@ class VPlan {
   /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  DenseMap<const VPValue *, std::string> VPValue2Name;
-  StringSet<> UsedNames;
-#endif
-
 public:
   /// Construct a VPlan with original preheader \p Preheader, trip count \p TC
   /// and \p Entry to the plan. At the moment, \p Preheader and \p Entry need to
@@ -3098,50 +3102,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// Set the name for \p V to \p Name if it is not empty. \p V must not have a
-  /// name assigned already.
-  void setName(const VPValue *V, const Twine &Name);
-
-  /// Remove the assigned name for \p V, if there is one.
-  void removeName(const VPValue *V) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    if (VPValue2Name.contains(V)) {
-      UsedNames.erase(VPValue2Name[V]);
-      VPValue2Name.erase(V);
-    }
-#endif
-  }
-
-  /// Take the name for \p Src and move it to \p Dst. The name of \p Src will be
-  /// empty afterwards.
-  void takeName(const VPValue *Src, const VPValue *Dst) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    std::string N = VPValue2Name.lookup(Src);
-    if (N.empty())
-      return;
-    VPValue2Name[Dst] = N;
-    VPValue2Name.erase(Src);
-#endif
-  }
-
-  /// Return the name assigned to \p V or an empty string if no name has been
-  /// assigned.
-  std::string getName(const VPValue *V) const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    return VPValue2Name.lookup(V);
-#else
-    return "";
-#endif
-  }
-
-  bool hasName(const VPValue *V) const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    return VPValue2Name.contains(V);
-#else
-    return false;
-#endif
-  }
 
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {

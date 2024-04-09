@@ -320,8 +320,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
-      NewVPV = cast<VPInstruction>(VPIRBuilder.createNaryOp(
-          Inst->getOpcode(), VPOperands, Inst, Inst->getName()));
+      NewVPV = cast<VPInstruction>(
+          VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
     }
 
     IRDef2VPValue[Inst] = NewVPV;

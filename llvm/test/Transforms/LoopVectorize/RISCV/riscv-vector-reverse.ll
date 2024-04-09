@@ -64,15 +64,15 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:    vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE vp<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:    CLONE vp<%idxprom> = zext vp<%i.0>
-; CHECK-NEXT:    CLONE vp<%arrayidx> = getelementptr inbounds ir<%B>, vp<%idxprom>
-; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) vp<%arrayidx>
-; CHECK-NEXT:    WIDEN vp<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:    WIDEN vp<%add9> = add vp<[[L]]>, ir<1>
-; CHECK-NEXT:    CLONE vp<%arrayidx3> = getelementptr inbounds ir<%A>, vp<%idxprom>
-; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) vp<%arrayidx3>
-; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, vp<%add9>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:    WIDEN ir<%1> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%1>, ir<1>
+; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors
@@ -205,15 +205,15 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:    vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    vp<[[STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>
-; CHECK-NEXT:    CLONE vp<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
-; CHECK-NEXT:    CLONE vp<%idxprom> = zext vp<%i.0>
-; CHECK-NEXT:    CLONE vp<%arrayidx> = getelementptr inbounds ir<%B>, vp<%idxprom>
-; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) vp<%arrayidx>
-; CHECK-NEXT:    WIDEN vp<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:    WIDEN vp<%conv1> = fadd vp<[[L]]>, ir<1.000000e+00>
-; CHECK-NEXT:    CLONE vp<%arrayidx3> = getelementptr inbounds ir<%A>, vp<%idxprom>
-; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) vp<%arrayidx3>
-; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, vp<%conv1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[STEPS]]>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%arrayidx>
+; CHECK-NEXT:    WIDEN ir<%1> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
+; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer (reverse) ir<%arrayidx3>
+; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:    EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    No successors

@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 
@@ -186,21 +187,6 @@ public:
   /// is a live-in value.
   /// TODO: Also handle recipes defined in pre-header blocks.
   bool isDefinedOutsideVectorRegions() const { return !hasDefiningRecipe(); }
-
-  /// Returns the name associated with the VPValue. In case the VPValue has a
-  /// defining recipe, look up the name in the containing VPlan. In case it is a
-  /// live-in with an underlying IR value, return the name of the underlying
-  /// value. Calling getName() in other cases is invalid.
-  std::string getName();
-
-  /// Sets the name for this VPValue to \p Name. The VPValue must have a
-  /// defining recipe inserted in a VPlan.
-  void setName(const Twine &Name);
-
-  /// Take the name for \p Src and move it to this VPValue. The name of \p Src
-  /// will be empty afterwards. The VPValue must have a defining recipe inserted
-  /// in a VPlan.
-  void takeName(const VPValue *Src);
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
@@ -458,22 +444,32 @@ public:
 class VPlan;
 class VPBasicBlock;
 
-/// This class can be used to assign consecutive numbers to all VPValues in a
-/// VPlan and allows querying the numbering for printing, similar to the
-/// ModuleSlotTracker for IR values.
+/// This class can be used to assign consecutive numbers to VPValues in a
+/// VPlan without underlying values and deduplicated names to VPValues with
+/// underlying values. Allows querying the numbering and deduplicated names for
+/// printing, similar to the ModuleSlotTracker for IR values.
 class VPSlotTracker {
-  const VPlan *Plan;
+  /// Keep track of de-duplicated names assigned to VPValues with underlying IR
+  /// values
+  DenseMap<const VPValue *, std::string> AssignedNames;
+  /// Keep track of the next number to use to deduplicate the base name.
+  StringMap<unsigned> NameUseCount;
+
   DenseMap<const VPValue *, unsigned> Slots;
   unsigned NextSlot = 0;
 
-  void assignSlot(const VPValue *V);
-  void assignSlots(const VPlan &Plan);
-  void assignSlots(const VPBasicBlock *VPBB);
+  void assignSlotOrName(const VPValue *V);
+  void assignSlotsOrNames(const VPlan &Plan);
+  void assignSlotsOrNames(const VPBasicBlock *VPBB);
+
+  /// Create a deduplicated version of \p Name for \p V by appending ".Number"
+  /// to \p Name if there are multiple uses of that name.
+  void deduplicateName(const VPValue *V, StringRef Name);
 
 public:
-  VPSlotTracker(const VPlan *Plan = nullptr) : Plan(Plan) {
+  VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan)
-      assignSlots(*Plan);
+      assignSlotsOrNames(*Plan);
   }
 
   unsigned getSlot(const VPValue *V) const {
@@ -483,7 +479,7 @@ public:
     return I->second;
   }
 
-  std::string getName(const VPValue *V) const;
+  std::string getName(const VPValue *) const;
 };
 
 } // namespace llvm

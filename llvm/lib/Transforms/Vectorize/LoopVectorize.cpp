@@ -7226,7 +7226,7 @@ VPValue *VPBuilder::createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
   assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
          Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
   return tryInsertInstruction(
-      new VPInstruction(Instruction::ICmp, Pred, A, B, DL), Name);
+      new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
 }
 
 // This function will select a scalable VF if the target supports scalable
@@ -8797,7 +8797,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         if (!Member->getType()->isVoidTy()) {
           VPValue *OriginalV = MemberR->getVPSingleValue();
           OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
-          VPIG->getVPValue(J)->takeName(MemberR->getVPSingleValue());
           J++;
         }
         MemberR->eraseFromParent();

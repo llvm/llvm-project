@@ -21,9 +21,9 @@
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
-; DBG-NEXT:     CLONE vp<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
-; DBG-NEXT:     CLONE vp<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
-; DBG-NEXT:     CLONE store vp<%min>, vp<%arrayidx>
+; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
+; DBG-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%dst>, vp<[[IV_STEPS]]>
+; DBG-NEXT:     CLONE store ir<%min>, ir<%arrayidx>
 ; DBG-NEXT:     EMIT vp<[[INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[INC]]>, vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
@@ -89,14 +89,14 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
 ; DBG-NEXT:       vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; DBG-NEXT:       CLONE vp<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS2]]>
-; DBG-NEXT:       CLONE vp<%l> = load vp<%gep.src>
-; DBG-NEXT:       CLONE vp<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS2]]>
-; DBG-NEXT:       CLONE store vp<%l>, vp<%gep.dst>
+; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
+; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS2]]>
+; DBG-NEXT:       CLONE store ir<%l>, ir<%gep.dst>
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.continue:
-; DBG-NEXT:       PHI-PREDICATED-INSTRUCTION vp<{{.+}}> = vp<%l>
+; DBG-NEXT:       PHI-PREDICATED-INSTRUCTION vp<{{.+}}> = ir<%l>
 ; DBG-NEXT:     No successors
 ; DBG-NEXT:   }
 ; DBG-NEXT:   Successor(s): cond.false.1
@@ -190,10 +190,10 @@ exit:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
+; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
 ; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
-; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice vp<%for>, vp<[[SCALAR_STEPS]]>
+; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; DBG-NEXT:     EMIT branch-on-count vp<[[IV_INC]]>, vp<[[VTC]]>

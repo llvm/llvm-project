@@ -15,17 +15,17 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for.1> = phi ir<22>, vp<%for.1.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE vp<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer vp<%gep.ptr>
-; CHECK-NEXT:     WIDEN vp<%for.1.next> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice vp<%for.1>, vp<%for.1.next>
-; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE:%.+]]> = first-order splice vp<%for.2>, vp<[[FOR1_SPLICE]]>
-; CHECK-NEXT:     WIDEN vp<%add> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%gep.ptr>
-; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, vp<%add>
+; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE:%.+]]> = first-order splice ir<%for.2>, vp<[[FOR1_SPLICE]]>
+; CHECK-NEXT:     WIDEN ir<%add> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
@@ -68,20 +68,20 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for.1> = phi ir<22>, vp<%for.1.next>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
-; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI vp<%for.3> = phi ir<33>, vp<[[FOR2_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
+; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<[[FOR2_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE vp<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer vp<%gep.ptr>
-; CHECK-NEXT:     WIDEN vp<%for.1.next> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice vp<%for.1>, vp<%for.1.next>
-; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE]]> = first-order splice vp<%for.2>, vp<[[FOR1_SPLICE]]>
-; CHECK-NEXT:     EMIT vp<[[FOR3_SPLICE:%.+]]> = first-order splice vp<%for.3>, vp<[[FOR2_SPLICE]]>
-; CHECK-NEXT:     WIDEN vp<%add.1> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
-; CHECK-NEXT:     WIDEN vp<%add.2> = add vp<%add.1>, vp<[[FOR3_SPLICE]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%gep.ptr>
-; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, vp<%add.2>
+; CHECK-NEXT:     CLONE ir<%gep.ptr> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN ir<%for.1.next> = load vp<[[VEC_PTR]]>
+; CHECK-NEXT:     EMIT vp<[[FOR1_SPLICE]]> = first-order splice ir<%for.1>, ir<%for.1.next>
+; CHECK-NEXT:     EMIT vp<[[FOR2_SPLICE]]> = first-order splice ir<%for.2>, vp<[[FOR1_SPLICE]]>
+; CHECK-NEXT:     EMIT vp<[[FOR3_SPLICE:%.+]]> = first-order splice ir<%for.3>, vp<[[FOR2_SPLICE]]>
+; CHECK-NEXT:     WIDEN ir<%add.1> = add vp<[[FOR1_SPLICE]]>, vp<[[FOR2_SPLICE]]>
+; CHECK-NEXT:     WIDEN ir<%add.2> = add ir<%add.1>, vp<[[FOR3_SPLICE]]>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%gep.ptr>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%add.2>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors

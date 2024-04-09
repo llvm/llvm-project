@@ -19,9 +19,9 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:   CLONE vp<%tmp2> = getelementptr ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:   CLONE vp<%tmp3> = load vp<%tmp2>
-; CHECK-NEXT:   CLONE store ir<0>, vp<%tmp2>
+; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:   CLONE ir<%tmp3> = load ir<%tmp2>
+; CHECK-NEXT:   CLONE store ir<0>, ir<%tmp2>
 ; CHECK-NEXT: Successor(s): pred.store
 
 ; CHECK:      <xVFxUF> pred.store: {
@@ -30,7 +30,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 
 ; CHECK:      pred.store.if:
-; CHECK-NEXT:   CLONE store vp<%tmp3>, vp<%tmp2>
+; CHECK-NEXT:   CLONE store ir<%tmp3>, ir<%tmp2>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:

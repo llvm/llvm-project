@@ -224,8 +224,6 @@ void VPRecipeBase::removeFromParent() {
 
 iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
   assert(getParent() && "Recipe not in any VPBasicBlock");
-  for (auto *V : definedValues())
-    getParent()->getPlan()->removeName(V);
   return getParent()->getRecipeList().erase(getIterator());
 }
 
@@ -255,19 +253,20 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
-                             VPValue *A, VPValue *B, DebugLoc DL)
+                             VPValue *A, VPValue *B, DebugLoc DL,
+                             const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, ArrayRef<VPValue *>({A, B}),
                           Pred, DL),
-      Opcode(Opcode) {
+      Opcode(Opcode), Name(Name.str()) {
   assert(Opcode == Instruction::ICmp &&
          "only ICmp predicates supported at the moment");
 }
 
 VPInstruction::VPInstruction(unsigned Opcode,
                              std::initializer_list<VPValue *> Operands,
-                             FastMathFlags FMFs, DebugLoc DL)
+                             FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, FMFs, DL),
-      Opcode(Opcode) {
+      Opcode(Opcode), Name(Name.str()) {
   // Make sure the VPInstruction is a floating-point operation.
   assert(isFPMathOp() && "this op can't take fast-math flags");
 }
@@ -297,17 +296,15 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
 Value *VPInstruction::generatePerLane(VPTransformState &State,
                                       const VPIteration &Lane) {
   IRBuilderBase &Builder = State.Builder;
+
   assert(getOpcode() == VPInstruction::PtrAdd &&
          "only PtrAdd opcodes are supported for now");
-
-  std::string Name = getName();
   return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
                               State.get(getOperand(1), Lane), Name);
 }
 
 Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   IRBuilderBase &Builder = State.Builder;
-  std::string Name = getName();
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
