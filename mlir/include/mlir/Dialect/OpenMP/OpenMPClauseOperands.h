@@ -189,6 +189,10 @@ struct SimdlenClauseOps {
   IntegerAttr simdlenAttr;
 };
 
+struct TargetDeviceClauseOps {
+  llvm::SmallVector<Value> isDevicePtrVars, hasDeviceAddrVars;
+};
+
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
   llvm::SmallVector<Attribute> taskReductionDeclSymbols;
@@ -257,7 +261,7 @@ using TargetClauseOps =
     detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
                     IfClauseOps, InReductionClauseOps, MapClauseOps,
                     NowaitClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    ThreadLimitClauseOps>;
+                    TargetDeviceClauseOps, ThreadLimitClauseOps>;
 
 using TargetDataClauseOps = detail::Clauses<DeviceClauseOps, IfClauseOps,
                                             MapClauseOps, UseDeviceClauseOps>;
