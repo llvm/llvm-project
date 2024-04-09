@@ -3362,25 +3362,18 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   return LowerGlobalTLSAddressLinux(Op, DAG);
 }
 
-SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
-
-  if (DAG.getTarget().useEmulatedTLS())
-    report_fatal_error("Emulated TLS is not yet supported on AIX");
-
-  SDLoc dl(GA);
-  const GlobalValue *GV = GA->getGlobal();
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  bool Is64Bit = Subtarget.isPPC64();
-  TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+/// updateForAIXShLibTLSModelOpt - Helper to initialize TLS model opt settings,
+/// and then apply the update.
+static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
+                                         SelectionDAG &DAG,
+                                         const TargetMachine &TM) {
   // Initialize TLS model opt setting lazily:
   // (1) Use initial-exec for single TLS var references within current function.
   // (2) Use local-dynamic for multiple TLS var references within current
   // function.
   PPCFunctionInfo *FuncInfo =
       DAG.getMachineFunction().getInfo<PPCFunctionInfo>();
-  if (Subtarget.hasAIXShLibTLSModelOpt() && !FuncInfo->isAIXFuncUseInitDone()) {
+  if (!FuncInfo->isAIXFuncUseInitDone()) {
     SmallPtrSet<const GlobalValue *, 8> TLSGV;
     // Iterate over all instructions within current function, collect all TLS
     // global variables (global variables taken as the first parameter to
@@ -3397,9 +3390,9 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
                   CF->getIntrinsicID() == Intrinsic::threadlocal_address)
                 if (const GlobalValue *GV =
                         dyn_cast<GlobalValue>(II->getOperand(0))) {
-                  TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
-                  if (Model == TLSModel::InitialExec ||
-                      Model == TLSModel::LocalDynamic)
+                  TLSModel::Model GVModel = TM.getTLSModel(GV);
+                  if (GVModel == TLSModel::InitialExec ||
+                      GVModel == TLSModel::LocalDynamic)
                     TLSGV.insert(GV);
                 }
 
@@ -3426,6 +3419,24 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
         << " function is using the TLS-IE model for TLS IE/LD accesses.\n");
     Model = TLSModel::InitialExec;
   }
+}
+
+SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+
+  if (DAG.getTarget().useEmulatedTLS())
+    report_fatal_error("Emulated TLS is not yet supported on AIX");
+
+  SDLoc dl(GA);
+  const GlobalValue *GV = GA->getGlobal();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  bool Is64Bit = Subtarget.isPPC64();
+  TLSModel::Model Model = getTargetMachine().getTLSModel(GV);
+
+  // Apply update to the TLS model.
+  if (Subtarget.hasAIXShLibTLSModelOpt())
+    updateForAIXShLibTLSModelOpt(Model, DAG, getTargetMachine());
 
   bool IsTLSLocalExecModel = Model == TLSModel::LocalExec;
 
