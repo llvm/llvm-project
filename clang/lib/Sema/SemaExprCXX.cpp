@@ -5843,7 +5843,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
         return false;
 
       if (Self.RequireCompleteType(
-              Rhs->getTypeLoc().getBeginLoc(), RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+              Rhs->getTypeLoc().getBeginLoc(), RhsT,
+              diag::err_incomplete_type_used_in_type_trait_expr))
         return false;
 
       return BaseInterface->isSuperClassOf(DerivedInterface);
@@ -5866,8 +5867,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   If Base and Derived are class types and are different types
     //   (ignoring possible cv-qualifiers) then Derived shall be a
     //   complete type.
-    if (Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
+    if (Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
@@ -5919,7 +5921,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       return LhsT->isVoidType();
 
     // A function definition requires a complete, non-abstract return type.
-    if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) || Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
+    if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) ||
+        Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
       return false;
 
     // Compute the result of add_rvalue_reference.
@@ -5969,12 +5972,14 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   For both, T and U shall be complete types, (possibly cv-qualified)
     //   void, or arrays of unknown bound.
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Lhs->getTypeLoc().getBeginLoc(), LhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     // cv void is never assignable.
@@ -6029,9 +6034,11 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   }
   case BTT_IsLayoutCompatible: {
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                               diag::err_incomplete_type);
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                               diag::err_incomplete_type);
 
     if (LhsT->isVariableArrayType())
       Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
