@@ -1406,7 +1406,7 @@ define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <v
 ; CHECK-NEXT:    vwaddu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %x.i16 = zext <vscale x 2 x i8> %x.i8 to <vscale x 2 x i16>
-  %x.shl = shl <vscale x 2 x i16> %x.i16, shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 8, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+  %x.shl = shl <vscale x 2 x i16> %x.i16, splat (i16 8)
   %x.i32 = zext <vscale x 2 x i16> %x.shl to <vscale x 2 x i32>
   %y.i32 = zext <vscale x 2 x i8> %y.i8 to <vscale x 2 x i32>
   %add = add <vscale x 2 x i32> %x.i32, %y.i32
