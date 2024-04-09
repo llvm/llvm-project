@@ -33,6 +33,15 @@ define <vscale x 8 x bfloat> @bfadd_u(<vscale x 8 x i1> %pg, <vscale x 8 x bfloa
   ret <vscale x 8 x bfloat> %res
 }
 
+define <vscale x 8 x bfloat> @bfadd_u_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) strictfp {
+; CHECK-LABEL: bfadd_u_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bfadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fadd.u.nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %res
+}
+
 define <vscale x 8 x bfloat> @bfadd_u_ptrue(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b){
 ; CHECK-LABEL: bfadd_u_ptrue:
 ; CHECK:       // %bb.0:

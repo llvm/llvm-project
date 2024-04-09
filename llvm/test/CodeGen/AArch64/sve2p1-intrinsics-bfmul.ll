@@ -33,6 +33,15 @@ define <vscale x 8 x bfloat> @bfmul_u_pred(<vscale x 8 x i1> %pg, <vscale x 8 x 
   ret <vscale x 8 x bfloat> %res
 }
 
+define <vscale x 8 x bfloat> @bfmul_u_pred_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) strictfp {
+; CHECK-LABEL: bfmul_u_pred_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bfmul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.fmul.u.nxv8bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b)
+  ret <vscale x 8 x bfloat> %res
+}
+
 define <vscale x 8 x bfloat> @bfmul_u(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b){
 ; CHECK-LABEL: bfmul_u:
 ; CHECK:       // %bb.0:
