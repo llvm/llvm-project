@@ -199,7 +199,7 @@ PPC_AIX_FEATURE("arch_3_00","CPU supports ISA 30 (eg, POWER9)", USE_SYS_CONF,AIX
 PPC_AIX_FEATURE("arch_3_1","CPU supports ISA 31 (eg, POWER10)", USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC10_VALUE)
 PPC_AIX_FEATURE("booke","CPU supports the Embedded ISA category",AIX_BUILTIN_PPC_FALSE,0,0,CmpInst::Predicate(),0)
 PPC_AIX_FEATURE("cellbe","CPU has a CELL broadband engine",AIX_BUILTIN_PPC_FALSE,0,0,CmpInst::Predicate(),0)
-PPC_AIX_FEATURE("darn","CPU supports the darn (deliver a random number) instruction",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC10_VALUE)
+PPC_AIX_FEATURE("darn","CPU supports the darn (deliver a random number) instruction",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC9_VALUE)
 PPC_AIX_FEATURE("dfp","CPU has a decimal floating point unit",USE_SYS_CONF,AIX_SYSCON_DFP_IDX,0,ICmpInst::ICMP_NE,0)
 PPC_AIX_FEATURE("dscr","CPU supports the data stream control register",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC8_VALUE)
 PPC_AIX_FEATURE("ebb","CPU supports event base branching",USE_SYS_CONF,AIX_SYSCON_IMPL_IDX,0,ICmpInst::ICMP_UGE,AIX_PPC8_VALUE)

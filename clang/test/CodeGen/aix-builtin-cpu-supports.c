@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=0 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"darn\");}" > %t.c
-// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=262144 \
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=uge -DBIT=i32 -DVALUE=131072 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCONF
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"dscr\");}" > %t.c
