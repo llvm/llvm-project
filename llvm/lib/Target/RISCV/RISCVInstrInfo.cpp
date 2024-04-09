@@ -2001,7 +2001,9 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DelInstrs.push_back(&Root);
 }
 
-// Combine (sh3add Z, (add X, (slli Y, 5))) to (sh3add (sh2add Y, Z), X).
+// Combine patterns like (sh3add Z, (add X, (slli Y, 5))) to
+// (sh3add (sh2add Y, Z), X) if the shift amount can be split across two
+// shXadd instructions. The outer shXadd keeps its original opcode.
 static void
 genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
                   SmallVectorImpl<MachineInstr *> &InsInstrs,
