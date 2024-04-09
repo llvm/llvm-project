@@ -1084,6 +1084,9 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   if (const auto *Ref = T->getAs<ReferenceType>())
     T = Ref->getPointeeType();
 
+  if (T.getQualifiers().hasUnaligned())
+    return CharUnits::One();
+
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
   // _Alignof as well.
