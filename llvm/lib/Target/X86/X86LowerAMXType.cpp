@@ -102,7 +102,7 @@ static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
   auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   AllocaInst *AllocaRes =
-      new AllocaInst(Ty, AllocaAS, "", &F.getEntryBlock().front());
+      new AllocaInst(Ty, AllocaAS, "", F.getEntryBlock().begin());
   AllocaRes->setAlignment(AllocaAlignment);
   return AllocaRes;
 }
@@ -453,7 +453,7 @@ static Value *getAllocaPos(BasicBlock *BB) {
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
   AllocaInst *AllocaRes =
-      new AllocaInst(V256I32Ty, AllocaAS, "", &F->getEntryBlock().front());
+      new AllocaInst(V256I32Ty, AllocaAS, "", F->getEntryBlock().begin());
   BasicBlock::iterator Iter = AllocaRes->getIterator();
   ++Iter;
   Builder.SetInsertPoint(&*Iter);

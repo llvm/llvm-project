@@ -138,6 +138,8 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
   SmallString<4096> Contents;
   raw_svector_ostream OS(Contents);
   for (const HeaderFile &H : Ctx.InputHeaders) {
+    if (H.isExcluded())
+      continue;
     if (H.getType() != Ctx.Type)
       continue;
     if (Ctx.LangMode == Language::C || Ctx.LangMode == Language::CXX)
@@ -158,6 +160,60 @@ std::unique_ptr<MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx) {
       {"installapi-includes-", Ctx.Slice->getTriple().str(), "-",
        getName(Ctx.Type), getFileExtension(Ctx.LangMode)});
   return llvm::MemoryBuffer::getMemBufferCopy(Contents, BufferName);
+}
+
+std::string findLibrary(StringRef InstallName, FileManager &FM,
+                        ArrayRef<std::string> FrameworkSearchPaths,
+                        ArrayRef<std::string> LibrarySearchPaths,
+                        ArrayRef<std::string> SearchPaths) {
+  auto getLibrary =
+      [&](const StringRef FullPath) -> std::optional<std::string> {
+    // Prefer TextAPI files when possible.
+    SmallString<PATH_MAX> TextAPIFilePath = FullPath;
+    replace_extension(TextAPIFilePath, ".tbd");
+
+    if (FM.getOptionalFileRef(TextAPIFilePath))
+      return std::string(TextAPIFilePath);
+
+    if (FM.getOptionalFileRef(FullPath))
+      return std::string(FullPath);
+
+    return std::nullopt;
+  };
+
+  const StringRef Filename = sys::path::filename(InstallName);
+  const bool IsFramework = sys::path::parent_path(InstallName)
+                               .ends_with((Filename + ".framework").str());
+  if (IsFramework) {
+    for (const StringRef Path : FrameworkSearchPaths) {
+      SmallString<PATH_MAX> FullPath(Path);
+      sys::path::append(FullPath, Filename + StringRef(".framework"), Filename);
+      if (auto LibOrNull = getLibrary(FullPath))
+        return *LibOrNull;
+    }
+  } else {
+    // Copy Apple's linker behavior: If this is a .dylib inside a framework, do
+    // not search -L paths.
+    bool IsEmbeddedDylib = (sys::path::extension(InstallName) == ".dylib") &&
+                           InstallName.contains(".framework/");
+    if (!IsEmbeddedDylib) {
+      for (const StringRef Path : LibrarySearchPaths) {
+        SmallString<PATH_MAX> FullPath(Path);
+        sys::path::append(FullPath, Filename);
+        if (auto LibOrNull = getLibrary(FullPath))
+          return *LibOrNull;
+      }
+    }
+  }
+
+  for (const StringRef Path : SearchPaths) {
+    SmallString<PATH_MAX> FullPath(Path);
+    sys::path::append(FullPath, InstallName);
+    if (auto LibOrNull = getLibrary(FullPath))
+      return *LibOrNull;
+  }
+
+  return {};
 }
 
 } // namespace clang::installapi

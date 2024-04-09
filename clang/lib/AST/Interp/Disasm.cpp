@@ -16,6 +16,7 @@
 #include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
+#include "InterpFrame.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -205,4 +206,61 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+}
+
+LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
+                                        unsigned Indent) const {
+  unsigned Spaces = Indent * 2;
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS.indent(Spaces);
+    if (getCallee())
+      describe(OS);
+    else
+      OS << "Frame (Depth: " << getDepth() << ")";
+    OS << "\n";
+  }
+  OS.indent(Spaces) << "Function: " << getFunction();
+  if (const Function *F = getFunction()) {
+    OS << " (" << F->getName() << ")";
+  }
+  OS << "\n";
+  OS.indent(Spaces) << "This: " << getThis() << "\n";
+  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+
+  while (const InterpFrame *F = this->Caller) {
+    F->dump(OS, Indent + 1);
+    F = F->Caller;
+  }
+}
+
+LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
+                                   unsigned Offset) const {
+  unsigned Indent = Indentation * 2;
+  OS.indent(Indent);
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << getName() << "\n";
+  }
+
+  unsigned I = 0;
+  for (const Record::Base &B : bases()) {
+    OS.indent(Indent) << "- Base " << I << ". Offset " << (Offset + B.Offset)
+                      << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
+    ++I;
+  }
+
+  // FIXME: Virtual bases.
+
+  I = 0;
+  for (const Record::Field &F : fields()) {
+    OS.indent(Indent) << "- Field " << I << ": ";
+    {
+      ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+      OS << F.Decl->getName();
+    }
+    OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
 }

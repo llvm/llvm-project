@@ -566,3 +566,7 @@ char melchizedek[2200000000];
 typedef decltype(melchizedek[1] - melchizedek[0]) ptrdiff_t;
 constexpr ptrdiff_t d1 = &melchizedek[0x7fffffff] - &melchizedek[0]; // ok
 constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[0x80000000u]; // ok
+
+/// GH#88018
+const int SZA[] = {};
+void testZeroSizedArrayAccess() { unsigned c = SZA[4]; }

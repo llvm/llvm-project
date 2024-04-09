@@ -209,7 +209,7 @@ namespace {
         IsArray = true;
 
         if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-          ArraySize = CAT->getSize().getZExtValue();
+          ArraySize = CAT->getZExtSize();
         } else {
           assert(I == 0 && "unexpected unsized array designator");
           FirstEntryIsUnsizedArray = true;
@@ -401,7 +401,7 @@ namespace {
       // This is a most-derived object.
       MostDerivedType = CAT->getElementType();
       MostDerivedIsArrayElement = true;
-      MostDerivedArraySize = CAT->getSize().getZExtValue();
+      MostDerivedArraySize = CAT->getZExtSize();
       MostDerivedPathLength = Entries.size();
     }
     /// Update this designator to refer to the first element within the array of
@@ -3476,7 +3476,7 @@ static void expandStringLiteral(EvalInfo &Info, const StringLiteral *S,
   QualType CharType = CAT->getElementType();
   assert(CharType->isIntegerType() && "unexpected character type");
 
-  unsigned Elts = CAT->getSize().getZExtValue();
+  unsigned Elts = CAT->getZExtSize();
   Result = APValue(APValue::UninitArray(),
                    std::min(S->getLength(), Elts), Elts);
   APSInt Value(Info.Ctx.getTypeSize(CharType),
@@ -3619,7 +3619,7 @@ static bool CheckArraySize(EvalInfo &Info, const ConstantArrayType *CAT,
                            SourceLocation CallLoc = {}) {
   return Info.CheckArraySize(
       CAT->getSizeExpr() ? CAT->getSizeExpr()->getBeginLoc() : CallLoc,
-      CAT->getNumAddressingBits(Info.Ctx), CAT->getSize().getZExtValue(),
+      CAT->getNumAddressingBits(Info.Ctx), CAT->getZExtSize(),
       /*Diag=*/true);
 }
 
@@ -4908,7 +4908,7 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
 
   if (auto *AT =
           dyn_cast_or_null<ConstantArrayType>(T->getAsArrayTypeUnsafe())) {
-    Result = APValue(APValue::UninitArray(), 0, AT->getSize().getZExtValue());
+    Result = APValue(APValue::UninitArray(), 0, AT->getZExtSize());
     if (Result.hasArrayFiller())
       Success &=
           handleDefaultInitValue(AT->getElementType(), Result.getArrayFiller());
@@ -6456,7 +6456,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       // Non-virtual base classes are initialized in the order in the class
       // definition. We have already checked for virtual base classes.
       assert(!BaseIt->isVirtual() && "virtual base for literal type");
-      assert(Info.Ctx.hasSameType(BaseIt->getType(), BaseType) &&
+      assert(Info.Ctx.hasSameUnqualifiedType(BaseIt->getType(), BaseType) &&
              "base class initializers not in expected order");
       ++BaseIt;
 #endif
@@ -6595,7 +6595,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
 
   // For arrays, destroy elements right-to-left.
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(T)) {
-    uint64_t Size = CAT->getSize().getZExtValue();
+    uint64_t Size = CAT->getZExtSize();
     QualType ElemT = CAT->getElementType();
 
     if (!CheckArraySize(Info, CAT, CallRange.getBegin()))
@@ -7396,7 +7396,7 @@ class BufferToAPValueConverter {
   }
 
   std::optional<APValue> visit(const ConstantArrayType *Ty, CharUnits Offset) {
-    size_t Size = Ty->getSize().getLimitedValue();
+    size_t Size = Ty->getLimitedSize();
     CharUnits ElementWidth = Info.Ctx.getTypeSizeInChars(Ty->getElementType());
 
     APValue ArrayValue(APValue::UninitArray(), Size, Size);
@@ -9951,7 +9951,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       assert(CAT && "unexpected type for array initializer");
 
       unsigned Bits =
-          std::max(CAT->getSize().getBitWidth(), ArrayBound.getBitWidth());
+          std::max(CAT->getSizeBitWidth(), ArrayBound.getBitWidth());
       llvm::APInt InitBound = CAT->getSize().zext(Bits);
       llvm::APInt AllocBound = ArrayBound.zext(Bits);
       if (InitBound.ugt(AllocBound)) {
@@ -10410,7 +10410,7 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
 
     if (Field->getType()->isIncompleteArrayType()) {
       if (auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType())) {
-        if (!CAT->getSize().isZero()) {
+        if (!CAT->isZeroSize()) {
           // Bail out for now. This might sort of "work", but the rest of the
           // code isn't really prepared to handle it.
           Info.FFDiag(Init, diag::note_constexpr_unsupported_flexible_array);
@@ -10554,7 +10554,7 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
     // End pointer.
     if (!HandleLValueArrayAdjustment(Info, E, Array,
                                      ArrayType->getElementType(),
-                                     ArrayType->getSize().getZExtValue()))
+                                     ArrayType->getZExtSize()))
       return false;
     Array.moveInto(Result.getStructField(1));
   } else if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType()))
@@ -10996,8 +10996,7 @@ namespace {
         return Error(E);
       }
 
-      Result = APValue(APValue::UninitArray(), 0,
-                       CAT->getSize().getZExtValue());
+      Result = APValue(APValue::UninitArray(), 0, CAT->getZExtSize());
       if (!Result.hasArrayFiller())
         return true;
 
@@ -11122,7 +11121,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     Filler = Result.getArrayFiller();
 
   unsigned NumEltsToInit = Args.size();
-  unsigned NumElts = CAT->getSize().getZExtValue();
+  unsigned NumElts = CAT->getZExtSize();
 
   // If the initializer might depend on the array index, run it for each
   // array element.
@@ -11180,7 +11179,7 @@ bool ArrayExprEvaluator::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
 
   auto *CAT = cast<ConstantArrayType>(E->getType()->castAsArrayTypeUnsafe());
 
-  uint64_t Elements = CAT->getSize().getZExtValue();
+  uint64_t Elements = CAT->getZExtSize();
   Result = APValue(APValue::UninitArray(), Elements, Elements);
 
   LValue Subobject = This;
@@ -11225,7 +11224,7 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   bool HadZeroInit = Value->hasValue();
 
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(Type)) {
-    unsigned FinalSize = CAT->getSize().getZExtValue();
+    unsigned FinalSize = CAT->getZExtSize();
 
     // Preserve the array filler if we had prior zero-initialization.
     APValue Filler =
@@ -11700,6 +11699,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::IncompleteArray:
   case Type::FunctionNoProto:
   case Type::FunctionProto:
+  case Type::ArrayParameter:
     return GCCTypeClass::Pointer;
 
   case Type::MemberPointer:
@@ -11940,7 +11940,7 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
         return true;
       const auto *CAT = cast<ConstantArrayType>(Ctx.getAsArrayType(BaseType));
       uint64_t Index = Entry.getAsArrayIndex();
-      if (Index + 1 != CAT->getSize())
+      if (Index + 1 != CAT->getZExtSize())
         return false;
       BaseType = CAT->getElementType();
     } else if (BaseType->isAnyComplexType()) {
@@ -12354,6 +12354,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64: {
@@ -12361,14 +12362,28 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
 
-    // When the argument is 0, the result of GCC builtins is undefined, whereas
-    // for Microsoft intrinsics, the result is the bit-width of the argument.
-    bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
-                           BuiltinOp != Builtin::BI__lzcnt &&
-                           BuiltinOp != Builtin::BI__lzcnt64;
+    std::optional<APSInt> Fallback;
+    if (BuiltinOp == Builtin::BI__builtin_clzg && E->getNumArgs() > 1) {
+      APSInt FallbackTemp;
+      if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
+        return false;
+      Fallback = FallbackTemp;
+    }
 
-    if (ZeroIsUndefined && !Val)
-      return Error(E);
+    if (!Val) {
+      if (Fallback)
+        return Success(*Fallback, E);
+
+      // When the argument is 0, the result of GCC builtins is undefined,
+      // whereas for Microsoft intrinsics, the result is the bit-width of the
+      // argument.
+      bool ZeroIsUndefined = BuiltinOp != Builtin::BI__lzcnt16 &&
+                             BuiltinOp != Builtin::BI__lzcnt &&
+                             BuiltinOp != Builtin::BI__lzcnt64;
+
+      if (ZeroIsUndefined)
+        return Error(E);
+    }
 
     return Success(Val.countl_zero(), E);
   }
@@ -12410,12 +12425,26 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzs: {
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctzg: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (!Val)
+
+    std::optional<APSInt> Fallback;
+    if (BuiltinOp == Builtin::BI__builtin_ctzg && E->getNumArgs() > 1) {
+      APSInt FallbackTemp;
+      if (!EvaluateInteger(E->getArg(1), FallbackTemp, Info))
+        return false;
+      Fallback = FallbackTemp;
+    }
+
+    if (!Val) {
+      if (Fallback)
+        return Success(*Fallback, E);
+
       return Error(E);
+    }
 
     return Success(Val.countr_zero(), E);
   }
@@ -14057,6 +14086,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
+  case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_MemberPointerToBoolean:
@@ -14885,6 +14915,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
+  case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_Dependent:

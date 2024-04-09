@@ -297,6 +297,9 @@ public:
   /// If true, evaluate special testing stream functions.
   bool TestMode = false;
 
+  /// If true, generate failure branches for cases that are often not checked.
+  bool PedanticMode = false;
+
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
       {{{"fopen"}, 2}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
@@ -945,6 +948,10 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   }
 
   // Add transition for the failed state.
+  // At write, add failure case only if "pedantic mode" is on.
+  if (!IsFread && !PedanticMode)
+    return;
+
   NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
   ProgramStateRef StateFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
@@ -1057,6 +1064,9 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     C.addTransition(StateNotFailed);
   }
 
+  if (!PedanticMode)
+    return;
+
   // Add transition for the failed state. The resulting value of the file
   // position indicator for the stream is indeterminate.
   ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
@@ -1091,6 +1101,9 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
   StateNotFailed =
       E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
+
+  if (!PedanticMode)
+    return;
 
   // Add transition for the failed state. The resulting value of the file
   // position indicator for the stream is indeterminate.
@@ -1200,10 +1213,25 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
 
     // Add transition for the successful state.
     NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
-    ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+    ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+
+    // On success, a buffer is allocated.
+    auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State);
+    if (NewLinePtr && isa<DefinedOrUnknownSVal>(*NewLinePtr))
+      StateNotFailed = StateNotFailed->assume(
+          NewLinePtr->castAs<DefinedOrUnknownSVal>(), true);
+
+    // The buffer size `*n` must be enough to hold the whole line, and
+    // greater than the return value, since it has to account for '\0'.
+    SVal SizePtrSval = Call.getArgSVal(1);
+    auto NVal = getPointeeVal(SizePtrSval, State);
+    if (NVal && isa<NonLoc>(*NVal)) {
+      StateNotFailed = E.assumeBinOpNN(StateNotFailed, BO_GT,
+                                       NVal->castAs<NonLoc>(), RetVal);
+      StateNotFailed = E.bindReturnValue(StateNotFailed, C, RetVal);
+    }
     if (!StateNotFailed)
       return;
     C.addTransition(StateNotFailed);
@@ -1217,6 +1245,10 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
       E.isStreamEof() ? ErrorFEof : ErrorFEof | ErrorFError;
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
+  // On failure, the content of the buffer is undefined.
+  if (auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State))
+    StateFailed = StateFailed->bindLoc(*NewLinePtr, UndefinedVal(),
+                                       C.getLocationContext());
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
@@ -1245,30 +1277,25 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  const llvm::APSInt *PosV =
-      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(1));
-  const llvm::APSInt *WhenceV =
-      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(2));
-
-  // Bifurcate the state into failed and non-failed.
-  // Return zero on success, nonzero on error.
-  ProgramStateRef StateNotFailed, StateFailed;
-  std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
-
+  // Add success state.
+  ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, 0);
   // No failure: Reset the state to opened with no error.
   StateNotFailed =
       E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
   C.addTransition(StateNotFailed);
 
+  if (!PedanticMode)
+    return;
+
+  // Add failure state.
   // At error it is possible that fseek fails but sets none of the error flags.
   // If fseek failed, assume that the file position becomes indeterminate in any
   // case.
-  StreamErrorState NewErrS = ErrorNone | ErrorFError;
-  // Setting the position to start of file never produces EOF error.
-  if (!(PosV && *PosV == 0 && WhenceV && *WhenceV == SeekSetVal))
-    NewErrS = NewErrS | ErrorFEof;
-  StateFailed = E.setStreamState(StateFailed,
-                                 StreamState::getOpened(Desc, NewErrS, true));
+  // It is allowed to set the position beyond the end of the file. EOF error
+  // should not occur.
+  ProgramStateRef StateFailed = E.bindReturnValue(State, C, -1);
+  StateFailed = E.setStreamState(
+      StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
@@ -1304,6 +1331,10 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
 
   StateNotFailed = E.setStreamState(
       StateNotFailed, StreamState::getOpened(Desc, ErrorNone, false));
+  C.addTransition(StateNotFailed);
+
+  if (!PedanticMode)
+    return;
 
   // At failure ferror could be set.
   // The standards do not tell what happens with the file position at failure.
@@ -1312,7 +1343,6 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
   StateFailed = E.setStreamState(
       StateFailed, StreamState::getOpened(Desc, ErrorNone | ErrorFError, true));
 
-  C.addTransition(StateNotFailed);
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
@@ -1782,7 +1812,9 @@ ProgramStateRef StreamChecker::checkPointerEscape(
 //===----------------------------------------------------------------------===//
 
 void ento::registerStreamChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<StreamChecker>();
+  auto *Checker = Mgr.registerChecker<StreamChecker>();
+  Checker->PedanticMode =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(Checker, "Pedantic");
 }
 
 bool ento::shouldRegisterStreamChecker(const CheckerManager &Mgr) {

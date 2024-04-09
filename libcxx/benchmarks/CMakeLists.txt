@@ -182,7 +182,9 @@ set(BENCHMARK_TESTS
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min.bench.cpp
+    algorithms/minmax.bench.cpp
     algorithms/min_max_element.bench.cpp
+    algorithms/mismatch.bench.cpp
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp

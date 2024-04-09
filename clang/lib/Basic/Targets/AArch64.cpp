@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -187,6 +188,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  HasUnalignedAccess = true;
+
   // AArch64 targets default to using the ARM C++ ABI.
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
@@ -200,10 +203,20 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
 
 bool AArch64TargetInfo::setABI(const std::string &Name) {
-  if (Name != "aapcs" && Name != "darwinpcs")
+  if (Name != "aapcs" && Name != "aapcs-soft" && Name != "darwinpcs")
     return false;
 
   ABI = Name;
+  return true;
+}
+
+bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
+  if (hasFeature("fp") && ABI == "aapcs-soft") {
+    // aapcs-soft is not allowed for targets with an FPU, to avoid there being
+    // two incomatible ABIs.
+    Diags.Report(diag::err_target_unsupported_abi_with_fpu) << ABI;
+    return false;
+  }
   return true;
 }
 
@@ -485,7 +498,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuthLR)
     Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
-  if (HasUnaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -681,7 +694,8 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Cases("aarch64", "arm64", "arm", true)
       .Case("fmv", HasFMV)
-      .Cases("neon", "fp", "simd", FPU & NeonMode)
+      .Case("fp", FPU & FPUMode)
+      .Cases("neon", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
       .Case("rng", HasRandGen)
@@ -909,7 +923,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     }
     if (Feature == "+strict-align")
-      HasUnaligned = false;
+      HasUnalignedAccess = false;
+
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;

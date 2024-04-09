@@ -180,21 +180,21 @@ private:
     }
   }
 
-  void Write(DPValue::LocationType Type) {
+  void Write(DbgVariableRecord::LocationType Type) {
     switch (Type) {
-    case DPValue::LocationType::Value:
+    case DbgVariableRecord::LocationType::Value:
       *OS << "value";
       break;
-    case DPValue::LocationType::Declare:
+    case DbgVariableRecord::LocationType::Declare:
       *OS << "declare";
       break;
-    case DPValue::LocationType::Assign:
+    case DbgVariableRecord::LocationType::Assign:
       *OS << "assign";
       break;
-    case DPValue::LocationType::End:
+    case DbgVariableRecord::LocationType::End:
       *OS << "end";
       break;
-    case DPValue::LocationType::Any:
+    case DbgVariableRecord::LocationType::Any:
       *OS << "any";
       break;
     };
@@ -544,8 +544,8 @@ private:
 
   void visitTemplateParams(const MDNode &N, const Metadata &RawParams);
 
-  void visit(DPLabel &DPL);
-  void visit(DPValue &DPV);
+  void visit(DbgLabelRecord &DLR);
+  void visit(DbgVariableRecord &DVR);
   // InstVisitor overrides...
   using InstVisitor<Verifier>::visit;
   void visitDbgRecords(Instruction &I);
@@ -632,15 +632,15 @@ private:
   void verifySiblingFuncletUnwinds();
 
   void verifyFragmentExpression(const DbgVariableIntrinsic &I);
-  void verifyFragmentExpression(const DPValue &I);
+  void verifyFragmentExpression(const DbgVariableRecord &I);
   template <typename ValueOrMetadata>
   void verifyFragmentExpression(const DIVariable &V,
                                 DIExpression::FragmentInfo Fragment,
                                 ValueOrMetadata *Desc);
   void verifyFnArgs(const DbgVariableIntrinsic &I);
-  void verifyFnArgs(const DPValue &DPV);
+  void verifyFnArgs(const DbgVariableRecord &DVR);
   void verifyNotEntryValue(const DbgVariableIntrinsic &I);
-  void verifyNotEntryValue(const DPValue &I);
+  void verifyNotEntryValue(const DbgVariableRecord &I);
 
   /// Module-level debug info verification...
   void verifyCompileUnits();
@@ -678,26 +678,26 @@ private:
   } while (false)
 
 void Verifier::visitDbgRecords(Instruction &I) {
-  if (!I.DbgMarker)
+  if (!I.DebugMarker)
     return;
-  CheckDI(I.DbgMarker->MarkedInstr == &I, "Instruction has invalid DbgMarker",
-          &I);
+  CheckDI(I.DebugMarker->MarkedInstr == &I,
+          "Instruction has invalid DebugMarker", &I);
   CheckDI(!isa<PHINode>(&I) || !I.hasDbgRecords(),
           "PHI Node must not have any attached DbgRecords", &I);
   for (DbgRecord &DR : I.getDbgRecordRange()) {
-    CheckDI(DR.getMarker() == I.DbgMarker, "DbgRecord had invalid DbgMarker",
-            &I, &DR);
+    CheckDI(DR.getMarker() == I.DebugMarker,
+            "DbgRecord had invalid DebugMarker", &I, &DR);
     if (auto *Loc =
             dyn_cast_or_null<DILocation>(DR.getDebugLoc().getAsMDNode()))
       visitMDNode(*Loc, AreDebugLocsAllowed::Yes);
-    if (auto *DPV = dyn_cast<DPValue>(&DR)) {
-      visit(*DPV);
+    if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
+      visit(*DVR);
       // These have to appear after `visit` for consistency with existing
       // intrinsic behaviour.
-      verifyFragmentExpression(*DPV);
-      verifyNotEntryValue(*DPV);
-    } else if (auto *DPL = dyn_cast<DPLabel>(&DR)) {
-      visit(*DPL);
+      verifyFragmentExpression(*DVR);
+      verifyNotEntryValue(*DVR);
+    } else if (auto *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      visit(*DLR);
     }
   }
 }
@@ -1235,6 +1235,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               N.getTag() == dwarf::DW_TAG_volatile_type ||
               N.getTag() == dwarf::DW_TAG_restrict_type ||
               N.getTag() == dwarf::DW_TAG_atomic_type ||
+              N.getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ||
               N.getTag() == dwarf::DW_TAG_member ||
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
@@ -1733,8 +1734,28 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
-  for (const MDNode *MDN : Flags->operands())
+  uint64_t PAuthABIPlatform = -1;
+  uint64_t PAuthABIVersion = -1;
+  for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
+    if (MDN->getNumOperands() != 3)
+      continue;
+    if (const auto *FlagName = dyn_cast_or_null<MDString>(MDN->getOperand(1))) {
+      if (FlagName->getString() == "aarch64-elf-pauthabi-platform") {
+        if (const auto *PAP =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIPlatform = PAP->getZExtValue();
+      } else if (FlagName->getString() == "aarch64-elf-pauthabi-version") {
+        if (const auto *PAV =
+                mdconst::dyn_extract_or_null<ConstantInt>(MDN->getOperand(2)))
+          PAuthABIVersion = PAV->getZExtValue();
+      }
+    }
+  }
+
+  if ((PAuthABIPlatform == uint64_t(-1)) != (PAuthABIVersion == uint64_t(-1)))
+    CheckFailed("either both or no 'aarch64-elf-pauthabi-platform' and "
+                "'aarch64-elf-pauthabi-version' module flags must be present");
 
   // Validate that the requirements in the module are valid.
   for (const MDNode *Requirement : Requirements) {
@@ -4247,9 +4268,10 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFloatingPointTy(),
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have floating point type!",
+              " operand must have floating-point or fixed vector of floating-point "
+              "type!",
           &RMWI, ElTy);
   } else {
     Check(ElTy->isIntegerTy(),
@@ -4342,6 +4364,11 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       Check(II->getUnwindDest() == BB && II->getNormalDest() != BB,
             "EH pad must be jumped to via an unwind edge", ToPad, II);
+      auto *CalledFn =
+          dyn_cast<Function>(II->getCalledOperand()->stripPointerCasts());
+      if (CalledFn && CalledFn->isIntrinsic() && II->doesNotThrow() &&
+          !IntrinsicInst::mayLowerToFunctionCall(CalledFn->getIntrinsicID()))
+        continue;
       if (auto Bundle = II->getOperandBundle(LLVMContext::OB_funclet))
         FromPad = Bundle->Inputs[0];
       else
@@ -4807,11 +4834,12 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
                 "dbg.assign not in same function as inst", DAI, &I);
     }
   }
-  for (DPValue *DPV : cast<DIAssignID>(MD)->getAllDPValueUsers()) {
-    CheckDI(DPV->isDbgAssign(),
-            "!DIAssignID should only be used by Assign DPVs.", MD, DPV);
-    CheckDI(DPV->getFunction() == I.getFunction(),
-            "DPVAssign not in same function as inst", DPV, &I);
+  for (DbgVariableRecord *DVR :
+       cast<DIAssignID>(MD)->getAllDbgVariableRecordUsers()) {
+    CheckDI(DVR->isDbgAssign(),
+            "!DIAssignID should only be used by Assign DVRs.", MD, DVR);
+    CheckDI(DVR->getFunction() == I.getFunction(),
+            "DVRAssign not in same function as inst", DVR, &I);
   }
 }
 
@@ -5014,7 +5042,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::coro_await_suspend_handle ||
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
-                F->getIntrinsicID() == Intrinsic::experimental_patchpoint_i64 ||
+                F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5659,6 +5687,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
     break;
   }
+  case Intrinsic::experimental_patchpoint: {
+    if (Call.getCallingConv() == CallingConv::AnyReg) {
+      Check(Call.getType()->isSingleValueType(),
+            "patchpoint: invalid return type used with anyregcc", Call);
+    }
+    break;
+  }
   case Intrinsic::eh_exceptioncode:
   case Intrinsic::eh_exceptionpointer: {
     Check(isa<CatchPadInst>(Call.getArgOperand(0)),
@@ -6189,6 +6224,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::threadlocal_address: {
+    const Value &Arg0 = *Call.getArgOperand(0);
+    Check(isa<GlobalVariable>(Arg0),
+          "llvm.threadlocal.address first argument must be a GlobalVariable");
+    Check(cast<GlobalVariable>(Arg0).isThreadLocal(),
+          "llvm.threadlocal.address operand isThreadLocal() must no be false");
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
@@ -6242,22 +6285,22 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
   return nullptr;
 }
 
-void Verifier::visit(DPLabel &DPL) {
-  CheckDI(isa<DILabel>(DPL.getRawLabel()),
-          "invalid #dbg_label intrinsic variable", &DPL, DPL.getRawLabel());
+void Verifier::visit(DbgLabelRecord &DLR) {
+  CheckDI(isa<DILabel>(DLR.getRawLabel()),
+          "invalid #dbg_label intrinsic variable", &DLR, DLR.getRawLabel());
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
-  if (MDNode *N = DPL.getDebugLoc().getAsMDNode())
+  if (MDNode *N = DLR.getDebugLoc().getAsMDNode())
     if (!isa<DILocation>(N))
       return;
 
-  BasicBlock *BB = DPL.getParent();
+  BasicBlock *BB = DLR.getParent();
   Function *F = BB ? BB->getParent() : nullptr;
 
   // The scopes for variables and !dbg attachments must agree.
-  DILabel *Label = DPL.getLabel();
-  DILocation *Loc = DPL.getDebugLoc();
-  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DPL, BB, F);
+  DILabel *Label = DLR.getLabel();
+  DILocation *Loc = DLR.getDebugLoc();
+  CheckDI(Loc, "#dbg_label record requires a !dbg attachment", &DLR, BB, F);
 
   DISubprogram *LabelSP = getSubprogram(Label->getRawScope());
   DISubprogram *LocSP = getSubprogram(Loc->getRawScope());
@@ -6266,75 +6309,76 @@ void Verifier::visit(DPLabel &DPL) {
 
   CheckDI(LabelSP == LocSP,
           "mismatched subprogram between #dbg_label label and !dbg attachment",
-          &DPL, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
+          &DLR, BB, F, Label, Label->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
 }
 
-void Verifier::visit(DPValue &DPV) {
-  BasicBlock *BB = DPV.getParent();
+void Verifier::visit(DbgVariableRecord &DVR) {
+  BasicBlock *BB = DVR.getParent();
   Function *F = BB->getParent();
 
-  CheckDI(DPV.getType() == DPValue::LocationType::Value ||
-              DPV.getType() == DPValue::LocationType::Declare ||
-              DPV.getType() == DPValue::LocationType::Assign,
-          "invalid #dbg record type", &DPV, DPV.getType());
+  CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
+              DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+              DVR.getType() == DbgVariableRecord::LocationType::Assign,
+          "invalid #dbg record type", &DVR, DVR.getType());
 
-  // The location for a DPValue must be either a ValueAsMetadata, DIArgList, or
-  // an empty MDNode (which is a legacy representation for an "undef" location).
-  auto *MD = DPV.getRawLocation();
+  // The location for a DbgVariableRecord must be either a ValueAsMetadata,
+  // DIArgList, or an empty MDNode (which is a legacy representation for an
+  // "undef" location).
+  auto *MD = DVR.getRawLocation();
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
-          "invalid #dbg record address/value", &DPV, MD);
+          "invalid #dbg record address/value", &DVR, MD);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD))
     visitValueAsMetadata(*VAM, F);
   else if (auto *AL = dyn_cast<DIArgList>(MD))
     visitDIArgList(*AL, F);
 
-  CheckDI(isa_and_nonnull<DILocalVariable>(DPV.getRawVariable()),
-          "invalid #dbg record variable", &DPV, DPV.getRawVariable());
-  visitMDNode(*DPV.getRawVariable(), AreDebugLocsAllowed::No);
+  CheckDI(isa_and_nonnull<DILocalVariable>(DVR.getRawVariable()),
+          "invalid #dbg record variable", &DVR, DVR.getRawVariable());
+  visitMDNode(*DVR.getRawVariable(), AreDebugLocsAllowed::No);
 
-  CheckDI(isa_and_nonnull<DIExpression>(DPV.getRawExpression()),
-          "invalid #dbg record expression", &DPV, DPV.getRawExpression());
-  visitMDNode(*DPV.getExpression(), AreDebugLocsAllowed::No);
+  CheckDI(isa_and_nonnull<DIExpression>(DVR.getRawExpression()),
+          "invalid #dbg record expression", &DVR, DVR.getRawExpression());
+  visitMDNode(*DVR.getExpression(), AreDebugLocsAllowed::No);
 
-  if (DPV.isDbgAssign()) {
-    CheckDI(isa_and_nonnull<DIAssignID>(DPV.getRawAssignID()),
-            "invalid #dbg_assign DIAssignID", &DPV, DPV.getRawAssignID());
-    visitMDNode(*cast<DIAssignID>(DPV.getRawAssignID()),
+  if (DVR.isDbgAssign()) {
+    CheckDI(isa_and_nonnull<DIAssignID>(DVR.getRawAssignID()),
+            "invalid #dbg_assign DIAssignID", &DVR, DVR.getRawAssignID());
+    visitMDNode(*cast<DIAssignID>(DVR.getRawAssignID()),
                 AreDebugLocsAllowed::No);
 
-    const auto *RawAddr = DPV.getRawAddress();
-    // Similarly to the location above, the address for an assign DPValue must
-    // be a ValueAsMetadata or an empty MDNode, which represents an undef
-    // address.
+    const auto *RawAddr = DVR.getRawAddress();
+    // Similarly to the location above, the address for an assign
+    // DbgVariableRecord must be a ValueAsMetadata or an empty MDNode, which
+    // represents an undef address.
     CheckDI(
         isa<ValueAsMetadata>(RawAddr) ||
             (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
-        "invalid #dbg_assign address", &DPV, DPV.getRawAddress());
+        "invalid #dbg_assign address", &DVR, DVR.getRawAddress());
     if (auto *VAM = dyn_cast<ValueAsMetadata>(RawAddr))
       visitValueAsMetadata(*VAM, F);
 
-    CheckDI(isa_and_nonnull<DIExpression>(DPV.getRawAddressExpression()),
-            "invalid #dbg_assign address expression", &DPV,
-            DPV.getRawAddressExpression());
-    visitMDNode(*DPV.getAddressExpression(), AreDebugLocsAllowed::No);
+    CheckDI(isa_and_nonnull<DIExpression>(DVR.getRawAddressExpression()),
+            "invalid #dbg_assign address expression", &DVR,
+            DVR.getRawAddressExpression());
+    visitMDNode(*DVR.getAddressExpression(), AreDebugLocsAllowed::No);
 
-    // All of the linked instructions should be in the same function as DPV.
-    for (Instruction *I : at::getAssignmentInsts(&DPV))
-      CheckDI(DPV.getFunction() == I->getFunction(),
-              "inst not in same function as #dbg_assign", I, &DPV);
+    // All of the linked instructions should be in the same function as DVR.
+    for (Instruction *I : at::getAssignmentInsts(&DVR))
+      CheckDI(DVR.getFunction() == I->getFunction(),
+              "inst not in same function as #dbg_assign", I, &DVR);
   }
 
   // This check is redundant with one in visitLocalVariable().
-  DILocalVariable *Var = DPV.getVariable();
+  DILocalVariable *Var = DVR.getVariable();
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
 
-  auto *DLNode = DPV.getDebugLoc().getAsMDNode();
+  auto *DLNode = DVR.getDebugLoc().getAsMDNode();
   CheckDI(isa_and_nonnull<DILocation>(DLNode), "invalid #dbg record DILocation",
-          &DPV, DLNode);
-  DILocation *Loc = DPV.getDebugLoc();
+          &DVR, DLNode);
+  DILocation *Loc = DVR.getDebugLoc();
 
   // The scopes for variables and !dbg attachments must agree.
   DISubprogram *VarSP = getSubprogram(Var->getRawScope());
@@ -6344,10 +6388,10 @@ void Verifier::visit(DPValue &DPV) {
 
   CheckDI(VarSP == LocSP,
           "mismatched subprogram between #dbg record variable and DILocation",
-          &DPV, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+          &DVR, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
           Loc->getScope()->getSubprogram());
 
-  verifyFnArgs(DPV);
+  verifyFnArgs(DVR);
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
@@ -6708,9 +6752,9 @@ void Verifier::verifyFragmentExpression(const DbgVariableIntrinsic &I) {
 
   verifyFragmentExpression(*V, *Fragment, &I);
 }
-void Verifier::verifyFragmentExpression(const DPValue &DPV) {
-  DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(DPV.getRawVariable());
-  DIExpression *E = dyn_cast_or_null<DIExpression>(DPV.getRawExpression());
+void Verifier::verifyFragmentExpression(const DbgVariableRecord &DVR) {
+  DILocalVariable *V = dyn_cast_or_null<DILocalVariable>(DVR.getRawVariable());
+  DIExpression *E = dyn_cast_or_null<DIExpression>(DVR.getRawExpression());
 
   // We don't know whether this intrinsic verified correctly.
   if (!V || !E || !E->isValid())
@@ -6730,7 +6774,7 @@ void Verifier::verifyFragmentExpression(const DPValue &DPV) {
   if (V->isArtificial())
     return;
 
-  verifyFragmentExpression(*V, *Fragment, &DPV);
+  verifyFragmentExpression(*V, *Fragment, &DVR);
 }
 
 template <typename ValueOrMetadata>
@@ -6778,7 +6822,7 @@ void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
   CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &I,
           Prev, Var);
 }
-void Verifier::verifyFnArgs(const DPValue &DPV) {
+void Verifier::verifyFnArgs(const DbgVariableRecord &DVR) {
   // This function does not take the scope of noninlined function arguments into
   // account. Don't run it if current function is nodebug, because it may
   // contain inlined debug intrinsics.
@@ -6786,10 +6830,10 @@ void Verifier::verifyFnArgs(const DPValue &DPV) {
     return;
 
   // For performance reasons only check non-inlined ones.
-  if (DPV.getDebugLoc()->getInlinedAt())
+  if (DVR.getDebugLoc()->getInlinedAt())
     return;
 
-  DILocalVariable *Var = DPV.getVariable();
+  DILocalVariable *Var = DVR.getVariable();
   CheckDI(Var, "#dbg record without variable");
 
   unsigned ArgNo = Var->getArg();
@@ -6803,7 +6847,7 @@ void Verifier::verifyFnArgs(const DPValue &DPV) {
 
   auto *Prev = DebugFnArgs[ArgNo - 1];
   DebugFnArgs[ArgNo - 1] = Var;
-  CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &DPV,
+  CheckDI(!Prev || (Prev == Var), "conflicting debug info for argument", &DVR,
           Prev, Var);
 }
 
@@ -6830,15 +6874,15 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
           "swiftasync Argument",
           &I);
 }
-void Verifier::verifyNotEntryValue(const DPValue &DPV) {
-  DIExpression *E = dyn_cast_or_null<DIExpression>(DPV.getRawExpression());
+void Verifier::verifyNotEntryValue(const DbgVariableRecord &DVR) {
+  DIExpression *E = dyn_cast_or_null<DIExpression>(DVR.getRawExpression());
 
   // We don't know whether this intrinsic verified correctly.
   if (!E || !E->isValid())
     return;
 
-  if (isa<ValueAsMetadata>(DPV.getRawLocation())) {
-    Value *VarValue = DPV.getVariableLocationOp(0);
+  if (isa<ValueAsMetadata>(DVR.getRawLocation())) {
+    Value *VarValue = DVR.getVariableLocationOp(0);
     if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
       return;
     // We allow EntryValues for swift async arguments, as they have an
@@ -6851,7 +6895,7 @@ void Verifier::verifyNotEntryValue(const DPValue &DPV) {
   CheckDI(!E->isEntryValue(),
           "Entry values are only allowed in MIR unless they target a "
           "swiftasync Argument",
-          &DPV);
+          &DVR);
 }
 
 void Verifier::verifyCompileUnits() {

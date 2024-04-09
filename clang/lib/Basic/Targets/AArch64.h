@@ -38,7 +38,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSHA2 = false;
   bool HasSHA3 = false;
   bool HasSM4 = false;
-  bool HasUnaligned = true;
   bool HasFullFP16 = false;
   bool HasDotProd = false;
   bool HasFP16FML = false;
@@ -201,6 +200,8 @@ public:
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool validateTarget(DiagnosticsEngine &Diags) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

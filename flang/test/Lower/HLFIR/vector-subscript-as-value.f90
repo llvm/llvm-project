@@ -1,6 +1,6 @@
 ! Test lowering of vector subscript designators outside of the
 ! assignment left-and side and input IO context.
-! RUN: bbc -emit-hlfir -o - -I nw %s --polymorphic-type 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nw %s 2>&1 | FileCheck %s
 
 subroutine foo(x, y)
   integer :: x(100)

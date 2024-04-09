@@ -165,7 +165,7 @@ def ext_vla_folded_to_constant : ExtWarn<
   "variable length array folded to constant array as an extension">,
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
-  "variable length arrays are not supported for %select{the current target|'%1'}0">;
+  "variable length arrays are not supported %select{for the current target|in '%1'}0">;
 def err_vla_in_coroutine_unsupported : Error<
   "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
@@ -1748,8 +1748,8 @@ def err_type_defined_in_condition : Error<
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
 def ext_type_defined_in_offsetof : Extension<
-  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
-  "extension">, InGroup<GNUOffsetofExtensions>;
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a C23 "
+  "extension">, InGroup<C23>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -6464,9 +6464,6 @@ def ext_c99_flexible_array_member : Extension<
 def err_flexible_array_virtual_base : Error<
   "flexible array member %0 not allowed in "
   "%select{struct|interface|union|class|enum}1 which has a virtual base class">;
-def err_flexible_array_empty_aggregate : Error<
-  "flexible array member %0 not allowed in otherwise empty "
-  "%select{struct|interface|union|class|enum}1">;
 def err_flexible_array_has_nontrivial_dtor : Error<
   "flexible array member %0 of type %1 with non-trivial destruction">;
 def ext_flexible_array_in_struct : Extension<
@@ -6481,8 +6478,6 @@ def ext_flexible_array_empty_aggregate_ms : Extension<
   "flexible array member %0 in otherwise empty "
   "%select{struct|interface|union|class|enum}1 is a Microsoft extension">,
   InGroup<MicrosoftFlexibleArray>;
-def err_flexible_array_union : Error<
-  "flexible array member %0 in a union is not allowed">;
 def ext_flexible_array_union_ms : Extension<
   "flexible array member %0 in a union is a Microsoft extension">,
   InGroup<MicrosoftFlexibleArray>;
@@ -6519,12 +6514,18 @@ def err_flexible_array_count_not_in_same_struct : Error<
   "'counted_by' field %0 isn't within the same struct as the flexible array">;
 def err_counted_by_attr_not_on_flexible_array_member : Error<
   "'counted_by' only applies to C99 flexible array members">;
-def err_counted_by_attr_refers_to_flexible_array : Error<
-  "'counted_by' cannot refer to the flexible array %0">;
+def err_counted_by_attr_refer_to_itself : Error<
+  "'counted_by' cannot refer to the flexible array member %0">;
 def err_counted_by_must_be_in_structure : Error<
   "field %0 in 'counted_by' not inside structure">;
-def err_flexible_array_counted_by_attr_field_not_integer : Error<
-  "field %0 in 'counted_by' must be a non-boolean integer type">;
+def err_counted_by_attr_argument_not_integer : Error<
+  "'counted_by' requires a non-boolean integer type argument">;
+def err_counted_by_attr_only_support_simple_decl_reference : Error<
+  "'counted_by' argument must be a simple declaration reference">;
+def err_counted_by_attr_in_union : Error<
+  "'counted_by' cannot be applied to a union member">;
+def err_counted_by_attr_refer_to_union : Error<
+  "'counted_by' argument cannot refer to a union member">;
 def note_flexible_array_counted_by_attr_field : Note<
   "field %0 declared here">;
 
@@ -9052,7 +9053,7 @@ def warn_bad_function_cast : Warning<
   InGroup<BadFunctionCast>, DefaultIgnore;
 def warn_cast_function_type : Warning<
   "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
-  InGroup<CastFunctionType>, DefaultIgnore;
+  InGroup<CastFunctionTypeMismatch>, DefaultIgnore;
 def warn_cast_function_type_strict : Warning<warn_cast_function_type.Summary>,
   InGroup<CastFunctionTypeStrict>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
@@ -9820,6 +9821,9 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
+def warn_format_conversion_argument_type_mismatch_signedness : Warning<
+  warn_format_conversion_argument_type_mismatch.Summary>,
+  InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;
@@ -12014,13 +12018,14 @@ def err_builtin_launder_invalid_arg : Error<
   "'__builtin_launder' is not allowed">;
 
 def err_builtin_invalid_arg_type: Error <
-  "%ordinal0 argument must be a "
-  "%select{vector, integer or floating point type|matrix|"
-  "pointer to a valid matrix element type|"
-  "signed integer or floating point type|vector type|"
-  "floating point type|"
-  "vector of integers|"
-  "type of unsigned integer}1 (was %2)">;
+  "%ordinal0 argument must be "
+  "%select{a vector, integer or floating point type|a matrix|"
+  "a pointer to a valid matrix element type|"
+  "a signed integer or floating point type|a vector type|"
+  "a floating point type|"
+  "a vector of integers|"
+  "an unsigned integer|"
+  "an 'int'}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
@@ -12247,6 +12252,8 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
+def err_acc_clause_appertainment
+    : Error<"OpenACC '%1' clause is not valid on '%0' directive">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;

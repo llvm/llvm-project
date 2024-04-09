@@ -9,17 +9,38 @@
 #ifndef FORTRAN_RUNTIME_TOOLS_H_
 #define FORTRAN_RUNTIME_TOOLS_H_
 
-#include "freestanding-tools.h"
 #include "stat.h"
 #include "terminator.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/memory.h"
 #include <cstring>
 #include <functional>
 #include <map>
 #include <type_traits>
+
+/// \macro RT_PRETTY_FUNCTION
+/// Gets a user-friendly looking function signature for the current scope
+/// using the best available method on each platform.  The exact format of the
+/// resulting string is implementation specific and non-portable, so this should
+/// only be used, for example, for logging or diagnostics.
+/// Copy of LLVM_PRETTY_FUNCTION
+#if defined(_MSC_VER)
+#define RT_PRETTY_FUNCTION __FUNCSIG__
+#elif defined(__GNUC__) || defined(__clang__)
+#define RT_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else
+#define RT_PRETTY_FUNCTION __func__
+#endif
+
+#if defined(RT_DEVICE_COMPILATION)
+// Use the pseudo lock and pseudo file unit implementations
+// for the device.
+#define RT_USE_PSEUDO_LOCK 1
+#define RT_USE_PSEUDO_FILE_UNIT 1
+#endif
 
 namespace Fortran::runtime {
 
@@ -41,11 +62,21 @@ RT_API_ATTRS int IdentifyValue(
 RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from);
 
-// Utility for dealing with elemental LOGICAL arguments
+// Utilities for dealing with elemental LOGICAL arguments
 inline RT_API_ATTRS bool IsLogicalElementTrue(
     const Descriptor &logical, const SubscriptValue at[]) {
   // A LOGICAL value is false if and only if all of its bytes are zero.
   const char *p{logical.Element<char>(at)};
+  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
+    if (*p) {
+      return true;
+    }
+  }
+  return false;
+}
+inline RT_API_ATTRS bool IsLogicalScalarTrue(const Descriptor &logical) {
+  // A LOGICAL value is false if and only if all of its bytes are zero.
+  const char *p{logical.OffsetElement<char>()};
   for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
     if (*p) {
       return true;
@@ -430,7 +461,7 @@ template <>
 inline RT_API_ATTRS const char *FindCharacter(
     const char *data, char ch, std::size_t chars) {
   return reinterpret_cast<const char *>(
-      std::memchr(data, static_cast<int>(ch), chars));
+      runtime::memchr(data, static_cast<int>(ch), chars));
 }
 
 // Copy payload data from one allocated descriptor to another.
@@ -489,6 +520,10 @@ RT_API_ATTRS void CopyAndPad(
     }
   }
 }
+
+RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
+    const Descriptor &x, std::size_t resultElementSize, int dim, Terminator &,
+    const char *intrinsic, TypeCode);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

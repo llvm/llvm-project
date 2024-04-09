@@ -155,8 +155,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto valueTy = adaptor.getValue().getType();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     auto predTy = IntegerType::get(rewriter.getContext(), 1);
-    auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
-                                                     {valueTy, predTy});
 
     Value one = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 1);
     Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
@@ -176,14 +174,25 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
           rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.getWidth(), one);
     }
 
-    auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
+    bool predIsUsed = !op->getResult(1).use_empty();
+    UnitAttr returnValueAndIsValidAttr = nullptr;
+    Type resultTy = valueTy;
+    if (predIsUsed) {
+      returnValueAndIsValidAttr = rewriter.getUnitAttr();
+      resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                  {valueTy, predTy});
+    }
     Value shfl = rewriter.create<NVVM::ShflOp>(
         loc, resultTy, activeMask, adaptor.getValue(), adaptor.getOffset(),
         maskAndClamp, convertShflKind(op.getMode()), returnValueAndIsValidAttr);
-    Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
-    Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
-
-    rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    if (predIsUsed) {
+      Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
+      Value isActiveSrcLane =
+          rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
+      rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    } else {
+      rewriter.replaceOp(op, {shfl, nullptr});
+    }
     return success();
   }
 };

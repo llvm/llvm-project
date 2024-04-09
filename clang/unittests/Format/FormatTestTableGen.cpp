@@ -290,6 +290,16 @@ TEST_F(FormatTestTableGen, MultiClass) {
                "}\n");
 }
 
+TEST_F(FormatTestTableGen, MultiClassesWithPasteOperator) {
+  // This is a sensitive example for the handling of the paste operators in
+  // brace type calculation.
+  verifyFormat("multiclass MultiClass1<int i> {\n"
+               "  def : Def#x<i>;\n"
+               "  def : Def#y<i>;\n"
+               "}\n"
+               "multiclass MultiClass2<int i> { def : Def#x<i>; }\n");
+}
+
 TEST_F(FormatTestTableGen, Defm) {
   verifyFormat("defm : Multiclass<0>;\n");
 
@@ -407,6 +417,38 @@ TEST_F(FormatTestTableGen, DAGArgBreakAll) {
                Style);
   verifyFormat("def Def : Parent {\n"
                "  let dagarg = (other a:$src1, aa:$src2, aaa:$src3);\n"
+               "}\n",
+               Style);
+}
+
+TEST_F(FormatTestTableGen, DAGArgAlignment) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_TableGen);
+  Style.ColumnLimit = 60;
+  Style.TableGenBreakInsideDAGArg = FormatStyle::DAS_BreakAll;
+  Style.TableGenBreakingDAGArgOperators = {"ins", "outs"};
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins\n"
+               "      a:$src1,\n"
+               "      aa:$src2,\n"
+               "      aaa:$src3\n"
+               "  )\n"
+               "}\n",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (not a:$src1, aa:$src2, aaa:$src2)\n"
+               "}\n",
+               Style);
+  Style.AlignConsecutiveTableGenBreakingDAGArgColons.Enabled = true;
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (ins\n"
+               "      a  :$src1,\n"
+               "      aa :$src2,\n"
+               "      aaa:$src3\n"
+               "  )\n"
+               "}\n",
+               Style);
+  verifyFormat("def Def : Parent {\n"
+               "  let dagarg = (not a:$src1, aa:$src2, aaa:$src2)\n"
                "}\n",
                Style);
 }

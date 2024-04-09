@@ -165,12 +165,12 @@ void test_impl() {
 
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
-      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst)) {
       }
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
-      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst)) {
       }
       return val;
     };

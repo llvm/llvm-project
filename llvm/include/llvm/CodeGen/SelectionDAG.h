@@ -279,7 +279,6 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
-  using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
@@ -883,7 +882,7 @@ public:
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, Step, Step * 2, Step * 3, ...>
-  SDValue getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal);
+  SDValue getStepVector(const SDLoc &DL, EVT ResVT, const APInt &StepVal);
 
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, 1, 2, 3, ...>
@@ -2259,7 +2258,7 @@ public:
   }
 
   /// Set CallSiteInfo to be associated with Node.
-  void addCallSiteInfo(const SDNode *Node, CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
     SDEI[Node].CSInfo = std::move(CallInfo);
   }
   /// Return CallSiteInfo associated with Node, or a default if none exists.

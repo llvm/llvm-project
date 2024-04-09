@@ -15,3 +15,15 @@ cm.popretz {ra, s0-s10}, 112
 
 # CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.popretz {ra, s0-s1}, 112
+
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+cm.push {ra}, 16
+
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+cm.pop {ra, s0-s1}, -32
+
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+cm.push {ra}, -8
+
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
+cm.pop {ra, s0-s1}, -40

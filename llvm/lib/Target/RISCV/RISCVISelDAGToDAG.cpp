@@ -1007,7 +1007,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  case RISCVISD::BuildPairF64: {
+    if (!Subtarget->hasStdExtZdinx())
+      break;
+
+    assert(!Subtarget->is64Bit() && "Unexpected subtarget");
+
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        Node->getOperand(0),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        Node->getOperand(1),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+    SDNode *N =
+        CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::f64, Ops);
+    ReplaceNode(Node, N);
+    return;
+  }
   case RISCVISD::SplitF64: {
+    if (Subtarget->hasStdExtZdinx()) {
+      assert(!Subtarget->is64Bit() && "Unexpected subtarget");
+
+      if (!SDValue(Node, 0).use_empty()) {
+        SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL, VT,
+                                                    Node->getOperand(0));
+        ReplaceUses(SDValue(Node, 0), Lo);
+      }
+
+      if (!SDValue(Node, 1).use_empty()) {
+        SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, VT,
+                                                    Node->getOperand(0));
+        ReplaceUses(SDValue(Node, 1), Hi);
+      }
+
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+
     if (!Subtarget->hasStdExtZfa())
       break;
     assert(Subtarget->hasStdExtD() && !Subtarget->is64Bit() &&
@@ -3250,24 +3287,24 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
-  // Truncates are custom lowered during legalization.
-  auto IsTrunc = [this](SDValue N) {
-    if (N->getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL)
+  auto IsExtOrTrunc = [](SDValue N) {
+    switch (N->getOpcode()) {
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    // There's no passthru on these _VL nodes so any VL/mask is ok, since any
+    // inactive elements will be undef.
+    case RISCVISD::TRUNCATE_VECTOR_VL:
+    case RISCVISD::VSEXT_VL:
+    case RISCVISD::VZEXT_VL:
+      return true;
+    default:
       return false;
-    SDValue VL;
-    selectVLOp(N->getOperand(2), VL);
-    // Any vmset_vl is ok, since any bits past VL are undefined and we can
-    // assume they are set.
-    return N->getOperand(1).getOpcode() == RISCVISD::VMSET_VL &&
-           isa<ConstantSDNode>(VL) &&
-           cast<ConstantSDNode>(VL)->getSExtValue() == RISCV::VLMaxSentinel;
+    }
   };
 
-  // We can have multiple nested truncates, so unravel them all if needed.
-  while (N->getOpcode() == ISD::SIGN_EXTEND ||
-         N->getOpcode() == ISD::ZERO_EXTEND || IsTrunc(N)) {
-    if (!N.hasOneUse() ||
-        N.getValueType().getSizeInBits().getKnownMinValue() < 8)
+  // We can have multiple nested nodes, so unravel them all if needed.
+  while (IsExtOrTrunc(N)) {
+    if (!N.hasOneUse() || N.getScalarValueSizeInBits() < 8)
       return false;
     N = N->getOperand(0);
   }
