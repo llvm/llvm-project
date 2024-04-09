@@ -1,4 +1,4 @@
-//===- SparseTensorLevel.cpp - Tensor management class -------------------===//
+//===- SparseTensorIterator.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,7 +48,7 @@ namespace {
 
 template <bool hasPosBuffer>
 class SparseLevel : public SparseTensorLevel {
-  // It is either a array of size 2 or size 1 depending on whether the sparse
+  // It is either an array of size 2 or size 1 depending on whether the sparse
   // level requires a position array.
   using BufferT = std::conditional_t<hasPosBuffer, std::array<Value, 2>,
                                      std::array<Value, 1>>;
