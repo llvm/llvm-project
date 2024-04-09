@@ -953,17 +953,6 @@ class PNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
   let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
 
-let RenderMethod = "addPNRasPPRRegOperands" in {
-  def PNRasPPROpAny : PNRAsmOperand<"PNRasPPRPredicateAny", "PNR",  0>;
-  def PNRasPPROp8   : PNRAsmOperand<"PNRasPPRPredicateB",   "PNR",  8>;
-}
-
-class PNRasPPRRegOp<string Suffix, AsmOperandClass C, ElementSizeEnum Size,
-                RegisterClass RC> : SVERegOp<Suffix, C, Size, RC> {}
-
-def PNRasPPRAny : PNRasPPRRegOp<"",  PNRasPPROpAny, ElementSizeNone, PPR>;
-def PNRasPPR8   : PNRasPPRRegOp<"b", PNRasPPROp8,   ElementSizeB,    PPR>;
-
 def PNRAsmOpAny: PNRAsmOperand<"PNPredicateAny", "PNR", 0>;
 def PNRAsmOp8  : PNRAsmOperand<"PNPredicateB",   "PNR", 8>;
 def PNRAsmOp16 : PNRAsmOperand<"PNPredicateH",   "PNR", 16>;
@@ -1003,6 +992,29 @@ let Namespace = "AArch64" in {
   def psub0 : SubRegIndex<16, -1>;
   def psub1 : SubRegIndex<16, -1>;
 }
+
+class PPRorPNRClass : RegisterClass<
+                                  "AArch64",
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1, aarch64svcount ], 16,
+                                  (add PPR, PNR)> {
+  let Size = 16;
+}
+
+class PPRorPNRAsmOperand<string name, string RegClass, int Width>: AsmOperandClass {
+  let Name = "SVE" # name # "Reg";
+  let PredicateMethod = "isSVEPredicateOrPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let RenderMethod = "addPPRorPNRRegOperands";
+  let ParserMethod = "tryParseSVEPredicateOrPredicateAsCounterVector";
+}
+
+def PPRorPNR         : PPRorPNRClass;
+def PPRorPNRAsmOp8   : PPRorPNRAsmOperand<"PPRorPNRB", "PPRorPNR", 8>;
+def PPRorPNRAsmOpAny : PPRorPNRAsmOperand<"PPRorPNRAny", "PPRorPNR", 0>;
+def PPRorPNRAny      : PPRRegOp<"", PPRorPNRAsmOpAny, ElementSizeNone, PPRorPNR>;
+def PPRorPNR8        : PPRRegOp<"b", PPRorPNRAsmOp8, ElementSizeB, PPRorPNR>;
 
 // Pairs of SVE predicate vector registers.
 def PSeqPairs : RegisterTuples<[psub0, psub1], [(rotl PPR, 0), (rotl PPR, 1)]>;

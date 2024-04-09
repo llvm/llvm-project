@@ -87,13 +87,13 @@ FailedToMaterialize::FailedToMaterialize(
 
   // FIXME: Use a new dep-map type for FailedToMaterialize errors so that we
   // don't have to manually retain/release.
-  for (auto &KV : *this->Symbols)
-    KV.first->Retain();
+  for (auto &[JD, Syms] : *this->Symbols)
+    JD->Retain();
 }
 
 FailedToMaterialize::~FailedToMaterialize() {
-  for (auto &KV : *Symbols)
-    KV.first->Release();
+  for (auto &[JD, Syms] : *Symbols)
+    JD->Release();
 }
 
 std::error_code FailedToMaterialize::convertToErrorCode() const {

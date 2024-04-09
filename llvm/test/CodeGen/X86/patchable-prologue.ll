@@ -193,3 +193,20 @@ do.body:                                          ; preds = %do.body, %entry
 do.end:                                           ; preds = %do.body
   ret void
 }
+
+
+; Test that inline asm is properly hotpatched. We currently don't examine the
+; asm instruction when printing it, thus we always emit patching NOPs.
+
+; 64: inline_asm:
+; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw   %ax, %ax                        # encoding: [0x66,0x90]
+; 64-NEXT: #APP
+; 64-NEXT: int3                                    # encoding: [0xcc]
+; 64-NEXT: #NO_APP
+
+define dso_local void @inline_asm() "patchable-function"="prologue-short-redirect" {
+entry:
+  call void asm sideeffect "int3", "~{dirflag},~{fpsr},~{flags}"()
+  ret void
+}
