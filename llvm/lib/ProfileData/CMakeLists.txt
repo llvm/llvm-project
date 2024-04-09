@@ -6,8 +6,8 @@ add_llvm_component_library(LLVMProfileData
   InstrProfWriter.cpp
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
+  MemProfReader.cpp
   ProfileSummaryBuilder.cpp
-  RawMemProfReader.cpp
   SampleProf.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp

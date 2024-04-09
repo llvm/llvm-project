@@ -32,7 +32,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
-#include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
