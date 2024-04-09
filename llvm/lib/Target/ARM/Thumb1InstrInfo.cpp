@@ -75,8 +75,7 @@ static bool tryToSinkCSPRDef(MachineBasicBlock &MBB,
       !UsedRegs.available(SrcReg)) {
 
     // Ensure we are not inserting this instruction behind a def of the dest-reg
-    auto Next = std::next(InstUpToI);
-    for (const MachineOperand &MO : Next->operands()) {
+    for (const MachineOperand &MO : InstUpToI->operands()) {
       if ((MO.isReg() && MO.isDef() && MO.getReg() == DestReg) ||
           (MO.isRegMask() && MO.clobbersPhysReg(DestReg)))
         return false;
