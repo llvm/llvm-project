@@ -113,6 +113,11 @@ libc_support_library(
     hdrs = ["hdr/math_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_fenv_macros",
+    hdrs = ["hdr/fenv_macros.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -751,6 +756,7 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/rounding_mode.h"],
     deps = [
         ":__support_macros_attributes",
+	":hdr_fenv_macros",
     ],
 )
 
