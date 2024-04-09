@@ -27,7 +27,6 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP9]], %pred.load.continue ], [ [[TMP14]], %pred.load.if1 ]
 ; CHECK-VF2IC1-NEXT:    [[TMP16:%.*]] = icmp eq <2 x i32> [[TMP15]], <i32 2, i32 2>
 ; CHECK-VF2IC1-NEXT:    [[TMP17:%.*]] = or <2 x i1> [[VEC_PHI]], [[TMP16]]
-; CHECK-VF2IC1-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP4]], <i1 true, i1 true>
 ; CHECK-VF2IC1-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP4]], <2 x i1> [[TMP17]], <2 x i1> [[VEC_PHI]]
 ; CHECK-VF2IC1:         br i1 {{%.*}}, label %middle.block, label %vector.body
 ; CHECK-VF2IC1:       middle.block:
@@ -82,8 +81,6 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP11]], 2
 ; CHECK-VF1IC2-NEXT:    [[TMP14:%.*]] = or i1 [[VEC_PHI]], [[TMP12]]
 ; CHECK-VF1IC2-NEXT:    [[TMP15:%.*]] = or i1 [[VEC_PHI2]], [[TMP13]]
-; CHECK-VF1IC2-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP4]], true
-; CHECK-VF1IC2-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP5]], true
 ; CHECK-VF1IC2-NEXT:    [[PREDPHI]] = select i1 [[TMP4]], i1 [[TMP14]], i1 [[VEC_PHI]]
 ; CHECK-VF1IC2-NEXT:    [[PREDPHI5]] = select i1 [[TMP5]], i1 [[TMP15]], i1 [[VEC_PHI2]]
 ; CHECK-VF1IC2:         br i1 {{%.*}}, label %middle.block, label %vector.body
