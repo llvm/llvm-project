@@ -102,6 +102,7 @@ Improvements to clang-tidy
   similar fashion to what `-header-filter` does for header files.
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
+- Fixed an issue with `bugprone-forwarding-reference-overload` where it would incorrectly flag deleted constructors
 
 New checks
 ^^^^^^^^^^
