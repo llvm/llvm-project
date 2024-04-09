@@ -17,11 +17,11 @@
 #endif
 
 #include <arm_acle.h>
+#include <fenv.h>
 #include <stdint.h>
 
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include <fenv.h>
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
