@@ -3979,7 +3979,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
   if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
-    return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
+    if (TLI.isPreferVScaleConst(-IntVal))
+      return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
   // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))

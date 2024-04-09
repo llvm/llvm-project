@@ -10580,6 +10580,16 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
+bool AArch64TargetLowering::isPreferVScaleConst(const APInt Imm) const {
+  if (Subtarget->hasFeature(AArch64::FeatureUseScalarIncVL))
+    return true;
+
+  // Multi of 16 can use instruction rdvl.
+  if (!Imm.isNegatedPowerOf2() && Imm.getLoBits(3).isZero())
+    return false;
+  return true;
+}
+
 bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                          bool OptForSize) const {
   bool IsLegal = false;

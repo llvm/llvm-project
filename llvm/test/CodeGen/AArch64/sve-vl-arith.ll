@@ -204,8 +204,7 @@ define i64 @dech_scalar_i64(i64 %a) {
 ; NO_SCALAR_INC-LABEL: dech_scalar_i64:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cnth x8, all, mul #3
-; NO_SCALAR_INC-NEXT:    neg x8, x8
-; NO_SCALAR_INC-NEXT:    add x0, x0, x8
+; NO_SCALAR_INC-NEXT:    sub x0, x0, x8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: dech_scalar_i64:

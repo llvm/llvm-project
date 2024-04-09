@@ -606,6 +606,8 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool isPreferVScaleConst(const APInt Imm) const override;
+
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 

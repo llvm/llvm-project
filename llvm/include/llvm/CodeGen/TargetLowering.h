@@ -3847,6 +3847,8 @@ public:
   /// legal.  It is frequently not legal in PIC relocation models.
   virtual bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const;
 
+  virtual bool isPreferVScaleConst(const APInt Imm) const;
+
   /// On x86, return true if the operand with index OpNo is a CALL or JUMP
   /// instruction, which can use either a memory constraint or an address
   /// constraint. -fasm-blocks "__asm call foo" lowers to

@@ -502,6 +502,8 @@ TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   return true;
 }
 
+bool TargetLowering::isPreferVScaleConst(const APInt Imm) const { return true; }
+
 //===----------------------------------------------------------------------===//
 //  Optimization Methods
 //===----------------------------------------------------------------------===//
