@@ -20,6 +20,8 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 #include "ICFG.h"
@@ -160,5 +162,12 @@ void printSourceWithinRange(ASTContext &Context, SourceRange range);
  */
 bool allFieldsMatch(const json &x, const json &y,
                     const std::set<std::string> &fields);
+
+/**
+ * 判断路径是否对应存在的目录
+ *
+ * 来自 https://stackoverflow.com/q/18100097/11938767
+ */
+bool dirExists(const std::string &path);
 
 #endif
