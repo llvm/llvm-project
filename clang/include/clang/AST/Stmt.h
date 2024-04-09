@@ -784,6 +784,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImplicit : 1;
 
+    /// Whether there is a lambda with an explicit object parameter that
+    /// captures this "this" by copy.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
+
     /// The location of the "this".
     SourceLocation Loc;
   };
