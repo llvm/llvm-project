@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=HOT70
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=990000 | FileCheck %s --check-prefix=HOT99
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-skip-rate=0.0 | FileCheck %s --check-prefix=RANDOM0
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-skip-rate=1.0 | FileCheck %s --check-prefix=RANDOM1
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-rate=1.0 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-rate=0.0 | FileCheck %s --check-prefix=NONE
 
 ; HOT70: @sanitized
 ; HOT70-NEXT: @__hwasan_tls
@@ -9,11 +9,11 @@
 ; HOT99: @sanitized
 ; HOT99-NEXT: %x = alloca i8, i64 4
 
-; RANDOM0: @sanitized
-; RANDOM0-NEXT: @__hwasan_tls
+; ALL: @sanitized
+; ALL-NEXT: @__hwasan_tls
 
-; RANDOM1: @sanitized
-; RANDOM1-NEXT: %x = alloca i8, i64 4
+; NONE: @sanitized
+; NONE-NEXT: %x = alloca i8, i64 4
 
 declare void @use(ptr)
 

@@ -292,8 +292,11 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  for (const auto *Attr : Node->getAttrs()) {
+  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
+    if (Attr != Attrs.back())
+      OS << ' ';
   }
 
   PrintStmt(Node->getSubStmt(), 0);

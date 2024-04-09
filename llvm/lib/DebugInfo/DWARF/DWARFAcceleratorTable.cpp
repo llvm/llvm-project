@@ -555,8 +555,8 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
 DWARFDebugNames::DWARFDebugNamesOffsets
 dwarf::findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
                              const DWARFDebugNames::Header &Hdr) {
+  uint64_t DwarfSize = getDwarfOffsetByteSize(Hdr.Format);
   DWARFDebugNames::DWARFDebugNamesOffsets Ret;
-  uint32_t DwarfSize = Hdr.Format == dwarf::DwarfFormat::DWARF64 ? 8 : 4;
   Ret.CUsBase = EndOfHeaderOffset;
   Ret.BucketsBase = Ret.CUsBase + Hdr.CompUnitCount * DwarfSize +
                     Hdr.LocalTypeUnitCount * DwarfSize +
