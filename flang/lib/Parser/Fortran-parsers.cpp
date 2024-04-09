@@ -703,13 +703,15 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     extension<LanguageFeature::CUDA>(
         construct<AttrSpec>(Parser<common::CUDADataAttr>{})))
 
-// CUDA-data-attr -> CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
+// CUDA-data-attr ->
+//     CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
 TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "DEVICE" >> pure(common::CUDADataAttr::Device) ||
     "MANAGED" >> pure(common::CUDADataAttr::Managed) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
-    "TEXTURE" >> pure(common::CUDADataAttr::Texture))
+    "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
