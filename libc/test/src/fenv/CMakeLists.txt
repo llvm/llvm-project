@@ -118,7 +118,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
     SRCS
       feholdexcept_test.cpp
     DEPENDS
-      libc.include.fenv
+      libc.hdr.fenv_macros
       libc.src.fenv.feholdexcept
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES

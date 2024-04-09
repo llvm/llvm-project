@@ -110,6 +110,10 @@ C++20 Feature Support
   templates (`P1814R0 <https://wg21.link/p1814r0>`_).
   (#GH54051).
 
+- We have sufficient confidence and experience with the concepts implementation
+  to update the ``__cpp_concepts`` macro to `202002L`. This enables
+  ``<expected>`` from libstdc++ to work correctly with Clang.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -348,11 +352,20 @@ Improvements to Clang's diagnostics
   (with initializer) entirely consist the condition expression of a if/while/for construct
   but are not actually used in the body of the if/while/for construct. Fixes #GH41447
 
+- Clang emits a diagnostic when a tentative array definition is assumed to have
+  a single element, but that diagnostic was never given a diagnostic group.
+  Added the ``-Wtentative-definition-array`` warning group to cover this.
+  Fixes #GH87766
+
 Improvements to Clang's time-trace
 ----------------------------------
 
 Bug Fixes in This Version
 -------------------------
+- Clang's ``-Wundefined-func-template`` no longer warns on pure virtual
+  functions.
+  (`#74016 <https://github.com/llvm/llvm-project/issues/74016>`_)
+
 - Fixed missing warnings when comparing mismatched enumeration constants
   in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
 
@@ -507,10 +520,15 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
+- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
+  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
+- Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
+  object parameter.
+  Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -633,6 +651,7 @@ AST Matchers
 - Add ``isExplicitObjectMemberFunction``.
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
   not skip the explicit object parameter for operator calls.
+- Fixed captureVars assertion failure if not capturesVariables. (#GH76425)
 
 clang-format
 ------------

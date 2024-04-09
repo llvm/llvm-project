@@ -614,11 +614,11 @@ Error RawMemProfReader::readRawProfile(
     // Read in the MemInfoBlocks. Merge them based on stack id - we assume that
     // raw profiles in the same binary file are from the same process so the
     // stackdepot ids are the same.
-    for (const auto &Value : readMemInfoBlocks(Next + Header->MIBOffset)) {
-      if (CallstackProfileData.count(Value.first)) {
-        CallstackProfileData[Value.first].Merge(Value.second);
+    for (const auto &[Id, MIB] : readMemInfoBlocks(Next + Header->MIBOffset)) {
+      if (CallstackProfileData.count(Id)) {
+        CallstackProfileData[Id].Merge(MIB);
       } else {
-        CallstackProfileData[Value.first] = Value.second;
+        CallstackProfileData[Id] = MIB;
       }
     }
 

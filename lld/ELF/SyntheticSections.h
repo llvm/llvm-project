@@ -25,6 +25,7 @@
 #include "Symbols.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Compiler.h"
