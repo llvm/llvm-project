@@ -2811,7 +2811,12 @@ private:
                           SmallVectorImpl<Value *> *AltScalars = nullptr) const;
 
     /// Return true if this is a non-power-of-2 node.
-    bool isNonPowOf2Vec() const { return !isPowerOf2_32(Scalars.size()); }
+    bool isNonPowOf2Vec() const {
+      bool IsNonPowerOf2 = !isPowerOf2_32(Scalars.size());
+      assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
+             "Reshuffling not supported with non-power-of-2 vectors yet.");
+      return IsNonPowerOf2;
+    }
 
 #ifndef NDEBUG
     /// Debug printer.
