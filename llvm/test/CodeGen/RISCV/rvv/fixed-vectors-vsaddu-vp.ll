@@ -1358,16 +1358,16 @@ define <32 x i64> @vsaddu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %e
 ; RV32-LABEL: vsaddu_vx_v32i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v7, v0, 2
-; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    vmv.v.i v24, -1
+; RV32-NEXT:    vslidedown.vi v7, v0, 2
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    bltu a0, a2, .LBB108_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a1, 16
 ; RV32-NEXT:  .LBB108_2:
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v24, -1
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsaddu.vv v8, v8, v24, v0.t
 ; RV32-NEXT:    addi a1, a0, -16
@@ -1399,24 +1399,22 @@ define <32 x i64> @vsaddu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %e
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vsaddu.vi v16, v16, -1, v0.t
 ; RV64-NEXT:    ret
-  %elt.head = insertelement <32 x i64> poison, i64 -1, i32 0
-  %vb = shufflevector <32 x i64> %elt.head, <32 x i64> poison, <32 x i32> zeroinitializer
-  %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> %vb, <32 x i1> %m, i32 %evl)
+  %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
 
 define <32 x i64> @vsaddu_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV32-LABEL: vsaddu_vi_v32i64_unmasked:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    vmv.v.i v24, -1
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    bltu a0, a2, .LBB109_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a1, 16
 ; RV32-NEXT:  .LBB109_2:
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v24, -1
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsaddu.vv v8, v8, v24
 ; RV32-NEXT:    addi a1, a0, -16
@@ -1444,11 +1442,7 @@ define <32 x i64> @vsaddu_vi_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsaddu.vi v16, v16, -1
 ; RV64-NEXT:    ret
-  %elt.head = insertelement <32 x i64> poison, i64 -1, i32 0
-  %vb = shufflevector <32 x i64> %elt.head, <32 x i64> poison, <32 x i32> zeroinitializer
-  %head = insertelement <32 x i1> poison, i1 true, i32 0
-  %m = shufflevector <32 x i1> %head, <32 x i1> poison, <32 x i32> zeroinitializer
-  %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> %vb, <32 x i1> %m, i32 %evl)
+  %v = call <32 x i64> @llvm.vp.uadd.sat.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x i64> %v
 }
 
