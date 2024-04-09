@@ -29,16 +29,15 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
       "lea 8(%%rsp), %%rax\n\t"
       "mov %%rax, %c[rsp](%%rdi)\n\t"
 
-      "mov %[read_rip], %c[rip](%%rdi)\n\t"
+      "mov (%%rsp), %%rax\n\t"
+      "mov %%rax, %c[rip](%%rdi)\n\t"
 
       "xorl %%eax, %%eax\n\t"
-      "retq"
-      ::
-      [rbx] "i"(offsetof(__jmp_buf, rbx)), [r12] "i"(offsetof(__jmp_buf, r12)),
+      "retq" ::[rbx] "i"(offsetof(__jmp_buf, rbx)),
+      [rbp] "i"(offsetof(__jmp_buf, rbp)), [r12] "i"(offsetof(__jmp_buf, r12)),
       [r13] "i"(offsetof(__jmp_buf, r13)), [r14] "i"(offsetof(__jmp_buf, r14)),
-      [r15] "i"(offsetof(__jmp_buf, r15)), [rbp] "i"(offsetof(__jmp_buf, rbp)),
-      [rsp] "i"(offsetof(__jmp_buf, rsp)), [rip] "i"(offsetof(__jmp_buf, rip)),
-      [read_rip] "r" (reinterpret_cast<__UINTPTR_TYPE__>(__builtin_return_address(0)))
+      [r15] "i"(offsetof(__jmp_buf, r15)), [rsp] "i"(offsetof(__jmp_buf, rsp)),
+      [rip] "i"(offsetof(__jmp_buf, rip))
       : "rax");
 }
 
