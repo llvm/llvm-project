@@ -890,6 +890,12 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
+  // Exceptions that escape a compute construct are ill-formed.
+  if (getLangOpts().OpenACC && getCurScope() &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::TryScope))
+    Diag(OpLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*throw*/ 2 << /*out of*/ 0;
+
   if (Ex && !Ex->isTypeDependent()) {
     // Initialize the exception result.  This implicitly weeds out
     // abstract types or types with inaccessible copy constructors.
@@ -4416,6 +4422,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                .get();
     break;
 
+  case ICK_HLSL_Array_RValue:
+    FromType = Context.getArrayParameterType(FromType);
+    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
+    break;
+
   case ICK_Function_To_Pointer:
     FromType = Context.getPointerType(FromType);
     From = ImpCastExprToType(From, FromType, CK_FunctionToPointerDecay,
@@ -4793,6 +4806,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Num_Conversion_Kinds:
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
+  case ICK_HLSL_Array_RValue:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -6083,7 +6097,7 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
 
       if (Matched && T->isArrayType()) {
         if (const ConstantArrayType *CAT = Self.Context.getAsConstantArrayType(T))
-          return CAT->getSize().getLimitedValue();
+          return CAT->getLimitedSize();
       }
     }
     return 0;

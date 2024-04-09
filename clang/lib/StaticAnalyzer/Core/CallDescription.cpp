@@ -35,13 +35,13 @@ static MaybeCount readRequiredParams(MaybeCount RequiredArgs,
   return std::nullopt;
 }
 
-ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
+ento::CallDescription::CallDescription(Mode MatchAs,
                                        ArrayRef<StringRef> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
     : RequiredArgs(RequiredArgs),
       RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
-      Flags(Flags) {
+      MatchAs(MatchAs) {
   assert(!QualifiedName.empty());
   this->QualifiedName.reserve(QualifiedName.size());
   llvm::transform(QualifiedName, std::back_inserter(this->QualifiedName),
@@ -52,7 +52,8 @@ ento::CallDescription::CallDescription(CallDescriptionFlags Flags,
 ento::CallDescription::CallDescription(ArrayRef<StringRef> QualifiedName,
                                        MaybeCount RequiredArgs /*= None*/,
                                        MaybeCount RequiredParams /*= None*/)
-    : CallDescription(CDF_None, QualifiedName, RequiredArgs, RequiredParams) {}
+    : CallDescription(Mode::Unspecified, QualifiedName, RequiredArgs,
+                      RequiredParams) {}
 
 bool ento::CallDescription::matches(const CallEvent &Call) const {
   // FIXME: Add ObjC Message support.
@@ -74,14 +75,20 @@ bool ento::CallDescription::matchesAsWritten(const CallExpr &CE) const {
   return matchesImpl(FD, CE.getNumArgs(), FD->param_size());
 }
 
-bool ento::CallDescription::matchesImpl(const FunctionDecl *Callee,
-                                        size_t ArgCount,
+bool ento::CallDescription::matchesImpl(const FunctionDecl *FD, size_t ArgCount,
                                         size_t ParamCount) const {
-  const auto *FD = Callee;
   if (!FD)
     return false;
 
-  if (Flags & CDF_MaybeBuiltin) {
+  const bool isMethod = isa<CXXMethodDecl>(FD);
+
+  if (MatchAs == Mode::SimpleFunc && isMethod)
+    return false;
+
+  if (MatchAs == Mode::CXXMethod && !isMethod)
+    return false;
+
+  if (MatchAs == Mode::CLibrary) {
     return CheckerContext::isCLibraryFunction(FD, getFunctionName()) &&
            (!RequiredArgs || *RequiredArgs <= ArgCount) &&
            (!RequiredParams || *RequiredParams <= ParamCount);

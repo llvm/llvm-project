@@ -101,17 +101,6 @@
 
 /// ###########################################################################
 
-/// Check that the warning is thrown when the libomptarget bitcode library is not found.
-/// Libomptarget requires sm_52 or newer so an sm_52 bitcode library should never exist.
-// RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:   -fopenmp-relocatable-target -save-temps %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
-
-// CHK-BCLIB-WARN: no library 'libomptarget-nvptx-sm_52.bc' found in the default clang lib directory or in LIBRARY_PATH; use '--libomptarget-nvptx-bc-path' to specify nvptx bitcode library
-
-/// ###########################################################################
-
 /// Check that the error is thrown when the libomptarget bitcode library does not exist.
 // RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
@@ -244,7 +233,7 @@
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s
@@ -315,8 +304,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
 // CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
 
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
-// RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
+// RUN:   %clang -### -fopenmp=libomp --offload-arch=sm_89 \
 // RUN:          -nogpulib %s -o openmp-offload-gpu 2>&1 \
 // RUN:   | FileCheck -check-prefix=DRIVER_EMBEDDING %s
 

@@ -2883,6 +2883,16 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
   // previous program state we assuming the newly seen constraint information.
   // If we cannot evaluate the condition (and the constraints are the same)
   // the analyzer has no information about the value and just assuming it.
+  // FIXME: This logic is not entirely correct, because e.g. in code like
+  //   void f(unsigned arg) {
+  //     if (arg >= 0) {
+  //       // ...
+  //     }
+  //   }
+  // it will say that the "arg >= 0" check is _assuming_ something new because
+  // the constraint that "$arg >= 0" is 1 was added to the list of known
+  // constraints. However, the unsigned value is always >= 0 so semantically
+  // this is not a "real" assumption.
   bool IsAssuming =
       !BRC.getStateManager().haveEqualConstraints(CurrentState, PrevState) ||
       CurrentState->getSVal(Cond, LCtx).isUnknownOrUndef();

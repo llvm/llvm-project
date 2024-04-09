@@ -34,6 +34,11 @@
 // CHECK-NEXT:    store i32 3, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       if.end4:
+// CHECK-NEXT:    br i1 false, label [[IF_THEN5:%.*]], label [[IF_END6:%.*]]
+// CHECK:       if.then5:
+// CHECK-NEXT:    store i32 4, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    br label [[RETURN]]
+// CHECK:       if.end6:
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       return:
@@ -49,6 +54,9 @@ int main(void) {
 
   if (__builtin_cpu_supports("sme2+ls64_v+wfxt"))
     return 3;
+
+  if (__builtin_cpu_supports("avx2"))
+    return 4;
 
   return 0;
 }

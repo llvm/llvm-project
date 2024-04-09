@@ -2367,7 +2367,7 @@ define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 undef>
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 44, i8 44>, [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 44, i8 44>, [[AND]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x

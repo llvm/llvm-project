@@ -210,6 +210,7 @@ class MIMG <dag outs, string dns = "">
   : MIMG_Base <outs, dns> {
 
   let hasPostISelHook = 1;
+  let usesCustomInserter = 1;
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
@@ -966,7 +967,7 @@ class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string opcode, string renamed,
                                   RegisterClass DataRC, int num_addrs,
                                   bit enableDisasm = 0>
    : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>,
-     MnemonicAlias<opcode, renamed>, Requires<[isGFX12Plus]>;
+     MnemonicAlias<opcode, renamed>, Requires<[isGFX12Plus, HasImageInsts]>;
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
@@ -1560,7 +1561,7 @@ defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic <mimgopc<0x84, MIMG.NOP, MIMG.NOP,
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic <mimgopc<0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", 0, 1, "image_atomic_max_flt">;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample>;
-let OtherPredicates = [HasExtendedImageInsts] in {
+let OtherPredicates = [HasImageInsts, HasExtendedImageInsts] in {
 defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x40, 0x21>, AMDGPUSample_cl>;
 defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
 defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x41, 0x23>, AMDGPUSample_d_cl>;
@@ -1617,7 +1618,7 @@ defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0
 defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
 defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x37, 0x5f>, AMDGPUSample_c_lz_o>;
 
-let SubtargetPredicate = isGFX9Plus in
+let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, isGFX9Plus] in
 defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 
 defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
@@ -1630,9 +1631,9 @@ defm IMAGE_SAMPLE_CD_O          : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6c
 defm IMAGE_SAMPLE_CD_CL_O       : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6d>, AMDGPUSample_cd_cl_o>;
 defm IMAGE_SAMPLE_C_CD_O        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6e>, AMDGPUSample_c_cd_o>;
 defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6f>, AMDGPUSample_c_cd_cl_o>;
-} // End OtherPredicates = [HasExtendedImageInsts]
+} // End OtherPredicates = [HasImageInsts, HasExtendedImageInsts]
 
-let OtherPredicates = [HasExtendedImageInsts,HasG16] in {
+let OtherPredicates = [HasImageInsts, HasExtendedImageInsts, HasG16] in {
 defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
 defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
 defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
@@ -1649,23 +1650,22 @@ defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xec
 defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 1>;
 defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 1>;
-} // End OtherPredicates = [HasExtendedImageInsts,HasG16]
+} // End OtherPredicates = [HasImageInsts, HasExtendedImageInsts, HasG16]
 
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_AEncoding] in
+let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding, isGFX10Only] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-let OtherPredicates = [HasGFX10_AEncoding] in
+let OtherPredicates = [HasImageInsts, HasGFX10_AEncoding] in {
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 
-let OtherPredicates = [HasGFX10_AEncoding] in {
 defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
 defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
 defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
-} // End OtherPredicates = [HasGFX10_AEncoding]
+} // End OtherPredicates = [HasImageInsts, HasGFX10_AEncoding]
 
 } // End let OtherPredicates = [HasImageInsts]
 

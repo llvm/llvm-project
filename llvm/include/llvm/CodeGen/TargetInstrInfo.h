@@ -204,6 +204,7 @@ public:
   /// if they exist (-1 otherwise).  Some targets use pseudo instructions in
   /// order to abstract away the difference between operating with a frame
   /// pointer and operating without, through the use of these two instructions.
+  /// A FrameSetup MI in MF implies MFI::AdjustsStack.
   ///
   unsigned getCallFrameSetupOpcode() const { return CallFrameSetupOpcode; }
   unsigned getCallFrameDestroyOpcode() const { return CallFrameDestroyOpcode; }
@@ -1446,7 +1447,7 @@ public:
   /// abstraction that supports negative offsets.
   virtual bool getMemOperandsWithOffsetWidth(
       const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
-      int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+      int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const {
     return false;
   }

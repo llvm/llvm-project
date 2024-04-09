@@ -138,7 +138,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
-  case ParsedAttr::AT_PreserveNone
+  case ParsedAttr::AT_PreserveNone:                                            \
+  case ParsedAttr::AT_RISCVVectorCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -1018,6 +1019,11 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
       return type;
     }
 
+    // Types that have __attribute__((NSObject)) are permitted.
+    if (typeArg->isObjCNSObjectType()) {
+      continue;
+    }
+
     // Dependent types will be checked at instantiation time.
     if (typeArg->isDependentType()) {
       continue;
@@ -1561,7 +1567,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
-        !S.getLangOpts().SYCLIsDevice &&
+        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
         !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
@@ -3499,7 +3505,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       if (!Invalid) {
         S.AttachTypeConstraint(
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
-            AutoLoc.getNamedConcept(),
+            AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -3525,11 +3531,17 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
         }
       }
       if (!Invalid) {
+        UsingShadowDecl *USD =
+            TemplateId->Template.get().getAsUsingShadowDecl();
+        auto *CD =
+            cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl());
         S.AttachTypeConstraint(
             D.getDeclSpec().getTypeSpecScope().getWithLocInContext(S.Context),
             DeclarationNameInfo(DeclarationName(TemplateId->Name),
                                 TemplateId->TemplateNameLoc),
-            cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl()),
+            CD,
+            /*FoundDecl=*/
+            USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -4705,6 +4717,18 @@ static bool DiagnoseMultipleAddrSpaceAttributes(Sema &S, LangAS ASOld,
   return false;
 }
 
+// Whether this is a type broadly expected to have nullability attached.
+// These types are affected by `#pragma assume_nonnull`, and missing nullability
+// will be diagnosed with -Wnullability-completeness.
+static bool shouldHaveNullability(QualType T) {
+  return T->canHaveNullability(/*ResultIfUnknown=*/false) &&
+         // For now, do not infer/require nullability on C++ smart pointers.
+         // It's unclear whether the pragma's behavior is useful for C++.
+         // e.g. treating type-aliases and template-type-parameters differently
+         // from types of declarations can be surprising.
+         !isa<RecordType>(T->getCanonicalTypeInternal());
+}
+
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -4823,8 +4847,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // inner pointers.
     complainAboutMissingNullability = CAMN_InnerPointers;
 
-    if (T->canHaveNullability(/*ResultIfUnknown*/ false) &&
-        !T->getNullability()) {
+    if (shouldHaveNullability(T) && !T->getNullability()) {
       // Note that we allow but don't require nullability on dependent types.
       ++NumPointersRemaining;
     }
@@ -5047,8 +5070,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
   if (S.CodeSynthesisContexts.empty()) {
-    if (T->canHaveNullability(/*ResultIfUnknown*/ false) &&
-        !T->getNullability()) {
+    if (shouldHaveNullability(T) && !T->getNullability()) {
       if (isVaList(T)) {
         // Record that we've seen a pointer, but do nothing else.
         if (NumPointersRemaining > 0)
@@ -6423,9 +6445,12 @@ namespace {
       DeclarationNameInfo DNI = DeclarationNameInfo(
           TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
           TemplateId->TemplateNameLoc);
+      auto TN = TemplateId->Template.get();
       auto *CR = ConceptReference::Create(
           Context, NNS, TemplateId->TemplateKWLoc, DNI,
-          /*FoundDecl=*/nullptr,
+          /*FoundDecl=*/TN.getKind() == TemplateName::NameKind::UsingTemplate
+              ? cast<NamedDecl>(TN.getAsUsingShadowDecl())
+              : cast_if_present<NamedDecl>(TN.getAsTemplateDecl()),
           /*NamedDecl=*/TL.getTypePtr()->getTypeConstraintConcept(),
           ASTTemplateArgumentListInfo::Create(Context, TemplateArgsInfo));
       TL.setConceptReference(CR);
@@ -6490,9 +6515,15 @@ namespace {
     void VisitDecayedTypeLoc(DecayedTypeLoc TL) {
       llvm_unreachable("decayed type locs not expected here!");
     }
+    void VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
+      llvm_unreachable("array parameter type locs not expected here!");
+    }
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
       fillAttributedTypeLoc(TL, State);
+    }
+    void VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+      // nothing
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
@@ -7922,6 +7953,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveNone:
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVectorCC:
+    return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -9743,6 +9776,26 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
       DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
+}
+
+static void
+BuildTypeCoupledDecls(Expr *E,
+                      llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
+  // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
+  auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
+  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+}
+
+QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
+                                             Expr *CountExpr) {
+  assert(WrappedTy->isIncompleteArrayType());
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(CountExpr, Decls);
+  /// When the resulting expression is invalid, we still create the AST using
+  /// the original count expression for the sake of AST dump.
+  return Context.getCountAttributedType(
+      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false, Decls);
 }
 
 /// getDecltypeForExpr - Given an expr, will return the decltype for

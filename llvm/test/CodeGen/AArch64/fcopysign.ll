@@ -162,8 +162,6 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI-NEXT:    mov v3.s[1], w8
 ; CHECK-GI-NEXT:    mov v2.s[2], w9
 ; CHECK-GI-NEXT:    mov v3.s[2], w8
-; CHECK-GI-NEXT:    mov v2.s[3], w8
-; CHECK-GI-NEXT:    mov v3.s[3], w8
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -199,63 +197,8 @@ entry:
 define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-SD-LABEL: copysign_v7f16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NEXT:    mov h4, v0.h[1]
-; CHECK-SD-NEXT:    fcvt s5, h1
-; CHECK-SD-NEXT:    fcvt s6, h0
-; CHECK-SD-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-SD-NEXT:    mov h7, v1.h[2]
-; CHECK-SD-NEXT:    mov h16, v0.h[2]
-; CHECK-SD-NEXT:    mov h17, v1.h[3]
-; CHECK-SD-NEXT:    fcvt s2, h2
-; CHECK-SD-NEXT:    fcvt s4, h4
-; CHECK-SD-NEXT:    bit v5.16b, v6.16b, v3.16b
-; CHECK-SD-NEXT:    mov h6, v0.h[3]
-; CHECK-SD-NEXT:    fcvt s7, h7
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    fcvt s17, h17
-; CHECK-SD-NEXT:    bif v4.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h2, s5
-; CHECK-SD-NEXT:    mov v5.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt s6, h6
-; CHECK-SD-NEXT:    bsl v5.16b, v16.16b, v7.16b
-; CHECK-SD-NEXT:    fcvt h4, s4
-; CHECK-SD-NEXT:    mov h7, v1.h[4]
-; CHECK-SD-NEXT:    mov h16, v0.h[4]
-; CHECK-SD-NEXT:    bif v6.16b, v17.16b, v3.16b
-; CHECK-SD-NEXT:    mov h17, v0.h[5]
-; CHECK-SD-NEXT:    fcvt h5, s5
-; CHECK-SD-NEXT:    mov v2.h[1], v4.h[0]
-; CHECK-SD-NEXT:    fcvt s4, h7
-; CHECK-SD-NEXT:    fcvt s7, h16
-; CHECK-SD-NEXT:    mov h16, v1.h[5]
-; CHECK-SD-NEXT:    fcvt h6, s6
-; CHECK-SD-NEXT:    fcvt s17, h17
-; CHECK-SD-NEXT:    mov v2.h[2], v5.h[0]
-; CHECK-SD-NEXT:    mov h5, v1.h[6]
-; CHECK-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NEXT:    bit v4.16b, v7.16b, v3.16b
-; CHECK-SD-NEXT:    mov h7, v0.h[6]
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NEXT:    mov v2.h[3], v6.h[0]
-; CHECK-SD-NEXT:    fcvt s5, h5
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    fcvt s6, h7
-; CHECK-SD-NEXT:    mov v7.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h4, s4
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    bsl v7.16b, v17.16b, v16.16b
-; CHECK-SD-NEXT:    bit v5.16b, v6.16b, v3.16b
-; CHECK-SD-NEXT:    mov v2.h[4], v4.h[0]
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h4, s7
-; CHECK-SD-NEXT:    fcvt h0, s0
-; CHECK-SD-NEXT:    mov v2.h[5], v4.h[0]
-; CHECK-SD-NEXT:    fcvt h4, s5
-; CHECK-SD-NEXT:    mov v2.h[6], v4.h[0]
-; CHECK-SD-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: copysign_v7f16:
@@ -278,8 +221,6 @@ define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NEXT:    mov v5.h[5], v3.h[0]
 ; CHECK-GI-NEXT:    mov v4.h[6], v2.h[0]
 ; CHECK-GI-NEXT:    mov v5.h[6], v3.h[0]
-; CHECK-GI-NEXT:    mov v4.h[7], v0.h[0]
-; CHECK-GI-NEXT:    mov v5.h[7], v0.h[0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v4.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v5.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
@@ -290,246 +231,34 @@ entry:
 }
 
 define <4 x half> @copysign_v4f16(<4 x half> %a, <4 x half> %b) {
-; CHECK-SD-LABEL: copysign_v4f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov h3, v1.h[1]
-; CHECK-SD-NEXT:    mov h4, v0.h[1]
-; CHECK-SD-NEXT:    mov h5, v1.h[2]
-; CHECK-SD-NEXT:    mov h6, v0.h[2]
-; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
-; CHECK-SD-NEXT:    fcvt s7, h1
-; CHECK-SD-NEXT:    fcvt s16, h0
-; CHECK-SD-NEXT:    mov h1, v1.h[3]
-; CHECK-SD-NEXT:    fcvt s3, h3
-; CHECK-SD-NEXT:    fcvt s4, h4
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    bit v3.16b, v4.16b, v2.16b
-; CHECK-SD-NEXT:    fcvt s4, h5
-; CHECK-SD-NEXT:    fcvt s5, h6
-; CHECK-SD-NEXT:    mov v6.16b, v2.16b
-; CHECK-SD-NEXT:    bsl v6.16b, v16.16b, v7.16b
-; CHECK-SD-NEXT:    mov h7, v0.h[3]
-; CHECK-SD-NEXT:    bit v4.16b, v5.16b, v2.16b
-; CHECK-SD-NEXT:    fcvt h3, s3
-; CHECK-SD-NEXT:    fcvt h0, s6
-; CHECK-SD-NEXT:    fcvt s5, h7
-; CHECK-SD-NEXT:    mov v0.h[1], v3.h[0]
-; CHECK-SD-NEXT:    fcvt h3, s4
-; CHECK-SD-NEXT:    bit v1.16b, v5.16b, v2.16b
-; CHECK-SD-NEXT:    mov v0.h[2], v3.h[0]
-; CHECK-SD-NEXT:    fcvt h1, s1
-; CHECK-SD-NEXT:    mov v0.h[3], v1.h[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: copysign_v4f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v2.4h, #128, lsl #8
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: copysign_v4f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    ret
 entry:
   %c = call <4 x half> @llvm.copysign.v4f16(<4 x half> %a, <4 x half> %b)
   ret <4 x half> %c
 }
 
 define <8 x half> @copysign_v8f16(<8 x half> %a, <8 x half> %b) {
-; CHECK-SD-LABEL: copysign_v8f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov h2, v1.h[1]
-; CHECK-SD-NEXT:    mov h4, v0.h[1]
-; CHECK-SD-NEXT:    fcvt s5, h1
-; CHECK-SD-NEXT:    fcvt s6, h0
-; CHECK-SD-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-SD-NEXT:    mov h7, v1.h[2]
-; CHECK-SD-NEXT:    mov h16, v0.h[2]
-; CHECK-SD-NEXT:    mov h17, v1.h[3]
-; CHECK-SD-NEXT:    fcvt s2, h2
-; CHECK-SD-NEXT:    fcvt s4, h4
-; CHECK-SD-NEXT:    bit v5.16b, v6.16b, v3.16b
-; CHECK-SD-NEXT:    mov h6, v0.h[3]
-; CHECK-SD-NEXT:    fcvt s7, h7
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    fcvt s17, h17
-; CHECK-SD-NEXT:    bif v4.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h2, s5
-; CHECK-SD-NEXT:    mov v5.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt s6, h6
-; CHECK-SD-NEXT:    bsl v5.16b, v16.16b, v7.16b
-; CHECK-SD-NEXT:    fcvt h4, s4
-; CHECK-SD-NEXT:    mov h7, v1.h[4]
-; CHECK-SD-NEXT:    mov h16, v0.h[4]
-; CHECK-SD-NEXT:    bif v6.16b, v17.16b, v3.16b
-; CHECK-SD-NEXT:    mov h17, v0.h[5]
-; CHECK-SD-NEXT:    fcvt h5, s5
-; CHECK-SD-NEXT:    mov v2.h[1], v4.h[0]
-; CHECK-SD-NEXT:    fcvt s4, h7
-; CHECK-SD-NEXT:    fcvt s7, h16
-; CHECK-SD-NEXT:    mov h16, v1.h[5]
-; CHECK-SD-NEXT:    fcvt h6, s6
-; CHECK-SD-NEXT:    fcvt s17, h17
-; CHECK-SD-NEXT:    mov v2.h[2], v5.h[0]
-; CHECK-SD-NEXT:    mov h5, v1.h[6]
-; CHECK-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NEXT:    bit v4.16b, v7.16b, v3.16b
-; CHECK-SD-NEXT:    mov h7, v0.h[6]
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NEXT:    mov v2.h[3], v6.h[0]
-; CHECK-SD-NEXT:    fcvt s5, h5
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    fcvt s6, h7
-; CHECK-SD-NEXT:    mov v7.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h4, s4
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    bsl v7.16b, v17.16b, v16.16b
-; CHECK-SD-NEXT:    bit v5.16b, v6.16b, v3.16b
-; CHECK-SD-NEXT:    mov v2.h[4], v4.h[0]
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v3.16b
-; CHECK-SD-NEXT:    fcvt h4, s7
-; CHECK-SD-NEXT:    fcvt h0, s0
-; CHECK-SD-NEXT:    mov v2.h[5], v4.h[0]
-; CHECK-SD-NEXT:    fcvt h4, s5
-; CHECK-SD-NEXT:    mov v2.h[6], v4.h[0]
-; CHECK-SD-NEXT:    mov v2.h[7], v0.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: copysign_v8f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v2.8h, #128, lsl #8
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: copysign_v8f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
 entry:
   %c = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a, <8 x half> %b)
   ret <8 x half> %c
 }
 
 define <16 x half> @copysign_v16f16(<16 x half> %a, <16 x half> %b) {
-; CHECK-SD-LABEL: copysign_v16f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov h4, v2.h[1]
-; CHECK-SD-NEXT:    mov h5, v0.h[1]
-; CHECK-SD-NEXT:    mvni v6.4s, #128, lsl #24
-; CHECK-SD-NEXT:    mov h7, v3.h[1]
-; CHECK-SD-NEXT:    mov h16, v1.h[1]
-; CHECK-SD-NEXT:    fcvt s17, h2
-; CHECK-SD-NEXT:    fcvt s18, h0
-; CHECK-SD-NEXT:    mov h19, v2.h[2]
-; CHECK-SD-NEXT:    mov h20, v0.h[2]
-; CHECK-SD-NEXT:    fcvt s21, h3
-; CHECK-SD-NEXT:    fcvt s22, h1
-; CHECK-SD-NEXT:    mov h23, v3.h[2]
-; CHECK-SD-NEXT:    fcvt s4, h4
-; CHECK-SD-NEXT:    fcvt s5, h5
-; CHECK-SD-NEXT:    mov h24, v1.h[2]
-; CHECK-SD-NEXT:    fcvt s7, h7
-; CHECK-SD-NEXT:    fcvt s16, h16
-; CHECK-SD-NEXT:    mov h25, v1.h[3]
-; CHECK-SD-NEXT:    mov h26, v1.h[6]
-; CHECK-SD-NEXT:    bit v21.16b, v22.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt s22, h23
-; CHECK-SD-NEXT:    bit v4.16b, v5.16b, v6.16b
-; CHECK-SD-NEXT:    mov v5.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt s23, h24
-; CHECK-SD-NEXT:    bit v7.16b, v16.16b, v6.16b
-; CHECK-SD-NEXT:    mov h24, v3.h[3]
-; CHECK-SD-NEXT:    bsl v5.16b, v18.16b, v17.16b
-; CHECK-SD-NEXT:    fcvt s18, h19
-; CHECK-SD-NEXT:    fcvt s19, h20
-; CHECK-SD-NEXT:    mov h20, v0.h[3]
-; CHECK-SD-NEXT:    mov h17, v2.h[3]
-; CHECK-SD-NEXT:    fcvt h16, s4
-; CHECK-SD-NEXT:    fcvt h7, s7
-; CHECK-SD-NEXT:    fcvt h4, s5
-; CHECK-SD-NEXT:    bit v18.16b, v19.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt h5, s21
-; CHECK-SD-NEXT:    fcvt s19, h20
-; CHECK-SD-NEXT:    mov v20.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt s17, h17
-; CHECK-SD-NEXT:    fcvt s21, h25
-; CHECK-SD-NEXT:    mov h25, v0.h[6]
-; CHECK-SD-NEXT:    bsl v20.16b, v23.16b, v22.16b
-; CHECK-SD-NEXT:    mov v4.h[1], v16.h[0]
-; CHECK-SD-NEXT:    fcvt s16, h24
-; CHECK-SD-NEXT:    fcvt h18, s18
-; CHECK-SD-NEXT:    mov h22, v2.h[4]
-; CHECK-SD-NEXT:    mov h23, v0.h[4]
-; CHECK-SD-NEXT:    bit v17.16b, v19.16b, v6.16b
-; CHECK-SD-NEXT:    mov h19, v3.h[4]
-; CHECK-SD-NEXT:    mov h24, v1.h[4]
-; CHECK-SD-NEXT:    mov v5.h[1], v7.h[0]
-; CHECK-SD-NEXT:    fcvt h7, s20
-; CHECK-SD-NEXT:    bit v16.16b, v21.16b, v6.16b
-; CHECK-SD-NEXT:    mov v4.h[2], v18.h[0]
-; CHECK-SD-NEXT:    fcvt s18, h22
-; CHECK-SD-NEXT:    fcvt s20, h23
-; CHECK-SD-NEXT:    fcvt h17, s17
-; CHECK-SD-NEXT:    fcvt s19, h19
-; CHECK-SD-NEXT:    fcvt s21, h24
-; CHECK-SD-NEXT:    mov h22, v2.h[5]
-; CHECK-SD-NEXT:    mov h23, v0.h[5]
-; CHECK-SD-NEXT:    mov h24, v1.h[5]
-; CHECK-SD-NEXT:    mov v5.h[2], v7.h[0]
-; CHECK-SD-NEXT:    fcvt h7, s16
-; CHECK-SD-NEXT:    mov h16, v3.h[5]
-; CHECK-SD-NEXT:    bit v18.16b, v20.16b, v6.16b
-; CHECK-SD-NEXT:    mov h20, v2.h[6]
-; CHECK-SD-NEXT:    mov h2, v2.h[7]
-; CHECK-SD-NEXT:    bit v19.16b, v21.16b, v6.16b
-; CHECK-SD-NEXT:    mov h21, v3.h[6]
-; CHECK-SD-NEXT:    mov v4.h[3], v17.h[0]
-; CHECK-SD-NEXT:    fcvt s17, h22
-; CHECK-SD-NEXT:    fcvt s22, h23
-; CHECK-SD-NEXT:    fcvt s23, h25
-; CHECK-SD-NEXT:    mov v5.h[3], v7.h[0]
-; CHECK-SD-NEXT:    fcvt s7, h16
-; CHECK-SD-NEXT:    fcvt s16, h24
-; CHECK-SD-NEXT:    fcvt h18, s18
-; CHECK-SD-NEXT:    fcvt s20, h20
-; CHECK-SD-NEXT:    fcvt s24, h26
-; CHECK-SD-NEXT:    fcvt h19, s19
-; CHECK-SD-NEXT:    fcvt s21, h21
-; CHECK-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-SD-NEXT:    bit v17.16b, v22.16b, v6.16b
-; CHECK-SD-NEXT:    mov h3, v3.h[7]
-; CHECK-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-SD-NEXT:    bit v7.16b, v16.16b, v6.16b
-; CHECK-SD-NEXT:    mov v16.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt s2, h2
-; CHECK-SD-NEXT:    mov v4.h[4], v18.h[0]
-; CHECK-SD-NEXT:    mov v18.16b, v6.16b
-; CHECK-SD-NEXT:    mov v5.h[4], v19.h[0]
-; CHECK-SD-NEXT:    fcvt s0, h0
-; CHECK-SD-NEXT:    bsl v16.16b, v23.16b, v20.16b
-; CHECK-SD-NEXT:    fcvt h17, s17
-; CHECK-SD-NEXT:    fcvt s3, h3
-; CHECK-SD-NEXT:    bsl v18.16b, v24.16b, v21.16b
-; CHECK-SD-NEXT:    fcvt h7, s7
-; CHECK-SD-NEXT:    fcvt s1, h1
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v6.16b
-; CHECK-SD-NEXT:    mov v4.h[5], v17.h[0]
-; CHECK-SD-NEXT:    fcvt h2, s16
-; CHECK-SD-NEXT:    mov v5.h[5], v7.h[0]
-; CHECK-SD-NEXT:    fcvt h7, s18
-; CHECK-SD-NEXT:    bif v1.16b, v3.16b, v6.16b
-; CHECK-SD-NEXT:    fcvt h0, s0
-; CHECK-SD-NEXT:    mov v4.h[6], v2.h[0]
-; CHECK-SD-NEXT:    mov v5.h[6], v7.h[0]
-; CHECK-SD-NEXT:    fcvt h1, s1
-; CHECK-SD-NEXT:    mov v4.h[7], v0.h[0]
-; CHECK-SD-NEXT:    mov v5.h[7], v1.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v4.16b
-; CHECK-SD-NEXT:    mov v1.16b, v5.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: copysign_v16f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mvni v4.8h, #128, lsl #8
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: copysign_v16f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mvni v4.8h, #128, lsl #8
+; CHECK-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-NEXT:    bif v1.16b, v3.16b, v4.16b
+; CHECK-NEXT:    ret
 entry:
   %c = call <16 x half> @llvm.copysign.v16f16(<16 x half> %a, <16 x half> %b)
   ret <16 x half> %c

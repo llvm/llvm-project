@@ -1,10 +1,13 @@
 set(LLVM_LINK_COMPONENTS
   Support
   TextAPI
+  TextAPIBinaryReader
+  Demangle
   Core
   )
 
 add_clang_library(clangInstallAPI
+  DylibVerifier.cpp
   FileList.cpp
   Frontend.cpp
   HeaderFile.cpp
@@ -13,4 +16,5 @@ add_clang_library(clangInstallAPI
   LINK_LIBS
   clangAST
   clangBasic
+  clangLex
   )

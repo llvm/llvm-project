@@ -28,6 +28,7 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -119,8 +120,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
                                    RegionBuilderFn regionBuilder) {
-  assert(llvm::all_of(outputTypes,
-                      [](Type t) { return llvm::isa<ShapedType>(t); }));
+  assert(llvm::all_of(outputTypes, llvm::IsaPred<ShapedType>));
 
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
@@ -162,7 +162,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
       resultTensorTypes.value_or(TypeRange());
   if (!resultTensorTypes)
     copy_if(outputs.getTypes(), std::back_inserter(derivedResultTypes),
-            [](Type type) { return llvm::isa<RankedTensorType>(type); });
+            llvm::IsaPred<RankedTensorType>);
 
   state.addOperands(inputs);
   state.addOperands(outputs);
@@ -815,6 +815,22 @@ struct FoldFillWithCopy : OpRewritePattern<linalg::CopyOp> {
   }
 };
 
+/// Fold fill with transpose.
+struct FoldFillWithTranspose : OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    if (auto fillOp = transposeOp.getInput().getDefiningOp<FillOp>()) {
+      rewriter.replaceOpWithNewOp<FillOp>(
+          transposeOp, transposeOp.getResultTypes(), fillOp.getInputs(),
+          transposeOp.getDpsInitOperand(0)->get());
+      return success();
+    }
+    return failure();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -823,7 +839,7 @@ void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add<FoldFillWithCopy, FoldFillWithTensorExtract, FoldFillWithPack,
            FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill>(context);
+           FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -298,6 +298,6 @@ def test_apply_native_constraint():
     pattern = PatternOp(1)
     with InsertionPoint(pattern.body):
         resultType = TypeOp()
-        ApplyNativeConstraintOp("typeConstraint", args=[resultType])
+        ApplyNativeConstraintOp([], "typeConstraint", args=[resultType])
         root = OperationOp(types=[resultType])
         RewriteOp(root, name="rewrite")

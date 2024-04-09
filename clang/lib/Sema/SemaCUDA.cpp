@@ -895,7 +895,10 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
     // For -fgpu-rdc, keep track of external kernels used by host functions.
     if (LangOpts.CUDAIsDevice && LangOpts.GPURelocatableDeviceCode &&
-        Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined())
+        Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined() &&
+        (!Caller || (!Caller->getDescribedFunctionTemplate() &&
+                     getASTContext().GetGVALinkageForFunction(Caller) ==
+                         GVA_StrongExternal)))
       getASTContext().CUDAExternalDeviceDeclODRUsedByHost.insert(Callee);
     return true;
   }

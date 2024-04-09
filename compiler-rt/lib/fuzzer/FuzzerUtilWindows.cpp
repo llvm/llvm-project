@@ -18,15 +18,18 @@
 #include <errno.h>
 #include <io.h>
 #include <iomanip>
-#include <libloaderapi.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stringapiset.h>
 #include <sys/types.h>
+// clang-format off
 #include <windows.h>
-
-// This must be included after windows.h.
+// These must be included after windows.h.
+// archicture need to be set before including
+// libloaderapi
+#include <libloaderapi.h>
+#include <stringapiset.h>
 #include <psapi.h>
+// clang-format on
 
 namespace fuzzer {
 
@@ -239,13 +242,13 @@ void SetThreadName(std::thread &thread, const std::string &name) {
   typedef HRESULT(WINAPI * proc)(HANDLE, PCWSTR);
   HMODULE kbase = GetModuleHandleA("KernelBase.dll");
   proc ThreadNameProc =
-      reinterpret_cast<proc>(GetProcAddress, "SetThreadDescription");
-  if (proc) {
+      reinterpret_cast<proc>(GetProcAddress(kbase, "SetThreadDescription"));
+  if (ThreadNameProc) {
     std::wstring buf;
     auto sz = MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, nullptr, 0);
     if (sz > 0) {
       buf.resize(sz);
-      if (MultyByteToWideChar(CP_UTF8, 0, name.data(), -1, &buf[0], sz) > 0) {
+      if (MultiByteToWideChar(CP_UTF8, 0, name.data(), -1, &buf[0], sz) > 0) {
         (void)ThreadNameProc(thread.native_handle(), buf.c_str());
       }
     }

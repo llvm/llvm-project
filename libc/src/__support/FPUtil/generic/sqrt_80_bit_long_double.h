@@ -34,7 +34,7 @@ LIBC_INLINE long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
@@ -130,7 +130,7 @@ LIBC_INLINE long double sqrt(long double x) {
     return out.get_val();
   }
 }
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace x86
 } // namespace fputil

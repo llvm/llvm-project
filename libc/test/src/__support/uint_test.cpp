@@ -8,25 +8,26 @@
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
+#include "include/llvm-libc-macros/math-macros.h" // HUGE_VALF, HUGE_VALF
 #include "test/UnitTest/Test.h"
-#include <math.h> // HUGE_VALF, HUGE_VALF
 
 namespace LIBC_NAMESPACE {
 
-using LL_UInt64 = cpp::UInt<64>;
-// We want to test cpp::UInt<128> explicitly. So, for
+using LL_UInt64 = UInt<64>;
+// We want to test UInt<128> explicitly. So, for
 // convenience, we use a sugar which does not conflict with the UInt128 type
 // which can resolve to __uint128_t if the platform has it.
-using LL_UInt128 = cpp::UInt<128>;
-using LL_UInt192 = cpp::UInt<192>;
-using LL_UInt256 = cpp::UInt<256>;
-using LL_UInt320 = cpp::UInt<320>;
-using LL_UInt512 = cpp::UInt<512>;
-using LL_UInt1024 = cpp::UInt<1024>;
+using LL_UInt128 = UInt<128>;
+using LL_UInt192 = UInt<192>;
+using LL_UInt256 = UInt<256>;
+using LL_UInt320 = UInt<320>;
+using LL_UInt512 = UInt<512>;
+using LL_UInt1024 = UInt<1024>;
 
-using LL_Int128 = cpp::Int<128>;
-using LL_Int192 = cpp::Int<192>;
+using LL_Int128 = Int<128>;
+using LL_Int192 = Int<192>;
 
 TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
   static_assert(cpp::is_trivially_copyable<LL_UInt64>::value);
@@ -41,7 +42,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromDouble) {
   }
 }
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
   static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
   static_assert(sizeof(LL_UInt128) == sizeof(__uint128_t));
@@ -52,7 +53,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
     EXPECT_TRUE(value == forth);
   }
 }
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
@@ -652,7 +653,7 @@ TEST(LlvmLibcUIntClassTest, BasicArithmeticInt128Tests) {
   ASSERT_EQ(c * b, b);
 }
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 
 TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
   __uint128_t a = (__uint128_t(123) << 64) + 1;
@@ -677,8 +678,8 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
 }
 
 TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
-  using LL_UInt256_128 = cpp::BigInt<256, false, __uint128_t>;
-  using LL_UInt128_128 = cpp::BigInt<128, false, __uint128_t>;
+  using LL_UInt256_128 = BigInt<256, false, __uint128_t>;
+  using LL_UInt128_128 = BigInt<128, false, __uint128_t>;
 
   LL_UInt256_128 a(1);
 
@@ -707,10 +708,10 @@ TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {
   EXPECT_TRUE(f == r);
 }
 
-#endif // __SIZEOF_INT128__
+#endif // LIBC_TYPES_HAS_INT128
 
 TEST(LlvmLibcUIntClassTest, OtherWordTypeTests) {
-  using LL_UInt96 = cpp::BigInt<96, false, uint32_t>;
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
 
   LL_UInt96 a(1);
 

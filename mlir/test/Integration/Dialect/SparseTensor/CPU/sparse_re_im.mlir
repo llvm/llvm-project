@@ -91,6 +91,8 @@ module {
     //
     // CHECK:    ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
     // CHECK-NEXT: pos[0] : ( 0, 3,
     // CHECK-NEXT: crd[0] : ( 0, 20, 31,
     // CHECK-NEXT: values : ( 5.13, 3, 5,
@@ -98,6 +100,8 @@ module {
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 3
+    // CHECK-NEXT: dim = ( 32 )
+    // CHECK-NEXT: lvl = ( 32 )
     // CHECK-NEXT: pos[0] : ( 0, 3,
     // CHECK-NEXT: crd[0] : ( 0, 20, 31,
     // CHECK-NEXT: values : ( 2, 4, 6,

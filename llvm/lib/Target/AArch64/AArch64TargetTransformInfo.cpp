@@ -479,7 +479,7 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -498,6 +498,11 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
     return TTI::PSK_FastHardware;
   // TODO: AArch64TargetLowering::LowerCTPOP() supports 128bit popcount.
   return TTI::PSK_Software;
+}
+
+static bool isUnpackedVectorVT(EVT VecVT) {
+  return VecVT.isScalableVector() &&
+         VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
 InstructionCost
@@ -567,6 +572,39 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       Cost += AddCost * (LT.first - 1);
     }
     return Cost;
+  }
+  case Intrinsic::vector_extract:
+  case Intrinsic::vector_insert: {
+    // If both the vector and subvector types are legal types and the index
+    // is 0, then this should be a no-op or simple operation; return a
+    // relatively low cost.
+
+    // If arguments aren't actually supplied, then we cannot determine the
+    // value of the index. We also want to skip predicate types.
+    if (ICA.getArgs().size() != ICA.getArgTypes().size() ||
+        ICA.getReturnType()->getScalarType()->isIntegerTy(1))
+      break;
+
+    LLVMContext &C = RetTy->getContext();
+    EVT VecVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    bool IsExtract = ICA.getID() == Intrinsic::vector_extract;
+    EVT SubVecVT = IsExtract ? getTLI()->getValueType(DL, RetTy)
+                             : getTLI()->getValueType(DL, ICA.getArgTypes()[1]);
+    // Skip this if either the vector or subvector types are unpacked
+    // SVE types; they may get lowered to stack stores and loads.
+    if (isUnpackedVectorVT(VecVT) || isUnpackedVectorVT(SubVecVT))
+      break;
+
+    TargetLoweringBase::LegalizeKind SubVecLK =
+        getTLI()->getTypeConversion(C, SubVecVT);
+    TargetLoweringBase::LegalizeKind VecLK =
+        getTLI()->getTypeConversion(C, VecVT);
+    const Value *Idx = IsExtract ? ICA.getArgs()[1] : ICA.getArgs()[2];
+    const ConstantInt *CIdx = cast<ConstantInt>(Idx);
+    if (SubVecLK.first == TargetLoweringBase::TypeLegal &&
+        VecLK.first == TargetLoweringBase::TypeLegal && CIdx->isZero())
+      return TTI::TCC_Free;
+    break;
   }
   case Intrinsic::bitreverse: {
     static const CostTblEntry BitreverseTbl[] = {
@@ -1091,7 +1129,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
       auto *NewRHS =
           IC.Builder.CreateIntrinsic(IntrinsicID, {Vec->getType()}, {Pg, RHS});
       auto *NewBinOp = BinaryOperator::CreateWithCopiedFlags(
-          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), &II);
+          OpC, NewLHS, NewRHS, OldBinOp, OldBinOp->getName(), II.getIterator());
       return IC.replaceInstUsesWith(II, NewBinOp);
     }
   }

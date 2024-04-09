@@ -14,7 +14,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 
-#include <cmath>
+#include "include/llvm-libc-macros/math-macros.h"
 #include <fenv.h>
 #include <memory>
 #include <stdint.h>
@@ -178,6 +178,12 @@ public:
   MPFRNumber atan() const {
     MPFRNumber result(*this);
     mpfr_atan(result.value, value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber atan2(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_atan2(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
@@ -623,6 +629,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Atan2:
+    return inputX.atan2(inputY);
   case Operation::Fmod:
     return inputX.fmod(inputY);
   case Operation::Hypot:

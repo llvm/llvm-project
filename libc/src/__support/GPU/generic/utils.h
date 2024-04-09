@@ -67,6 +67,8 @@ LIBC_INLINE void sync_threads() {}
 
 LIBC_INLINE void sync_lane(uint64_t) {}
 
+LIBC_INLINE uint32_t shuffle(uint64_t, uint32_t, uint32_t x) { return x; }
+
 LIBC_INLINE uint64_t processor_clock() { return 0; }
 
 LIBC_INLINE uint64_t fixed_frequency_clock() { return 0; }

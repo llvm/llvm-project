@@ -1480,6 +1480,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // Recognize a basic concat_vector shuffle.
+  if (Kind == TTI::SK_PermuteTwoSrc &&
+      Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
+      ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+    return getShuffleCost(TTI::SK_InsertSubvector,
+                          VectorType::getDoubleElementsVectorType(BaseTp), Mask,
+                          CostKind, Mask.size() / 2, BaseTp);
+
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
@@ -5651,7 +5659,7 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
@@ -5938,7 +5946,7 @@ bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
          ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
-bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) {
   if (!isa<VectorType>(DataTy))
     return false;
 
@@ -5962,8 +5970,8 @@ bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasVBMI2());
 }
 
-bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy) {
-  return isLegalMaskedExpandLoad(DataTy);
+bool X86TTIImpl::isLegalMaskedCompressStore(Type *DataTy, Align Alignment) {
+  return isLegalMaskedExpandLoad(DataTy, Alignment);
 }
 
 bool X86TTIImpl::supportsGather() const {
@@ -6087,6 +6095,10 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      // Having more target features is fine for inline ASM.
+      if (CB->isInlineAsm())
+        continue;
+
       SmallVector<Type *, 8> Types;
       for (Value *Arg : CB->args())
         Types.push_back(Arg->getType());

@@ -19,6 +19,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -393,6 +394,13 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
   if (const Function *F = getCalledFunction())
     Mask |= F->getAttributes().getParamNoFPClass(i);
   return Mask;
+}
+
+std::optional<ConstantRange> CallBase::getRange() const {
+  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 bool CallBase::isReturnNonNull() const {
@@ -825,15 +833,6 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
 // of S/T. The meaning of "branch_weights" meta data for call instruction is
 // transfered to represent call count.
 void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
-  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
-  if (ProfileData == nullptr)
-    return;
-
-  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
-  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
-                        !ProfDataName->getString().equals("VP")))
-    return;
-
   if (T == 0) {
     LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
                          "div by 0. Ignoring. Likely the function "
@@ -842,42 +841,7 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
                          "with non-zero prof info.");
     return;
   }
-
-  MDBuilder MDB(getContext());
-  SmallVector<Metadata *, 3> Vals;
-  Vals.push_back(ProfileData->getOperand(0));
-  APInt APS(128, S), APT(128, T);
-  if (ProfDataName->getString().equals("branch_weights") &&
-      ProfileData->getNumOperands() > 0) {
-    // Using APInt::div may be expensive, but most cases should fit 64 bits.
-    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
-                       ->getValue()
-                       .getZExtValue());
-    Val *= APS;
-    Vals.push_back(MDB.createConstant(
-        ConstantInt::get(Type::getInt32Ty(getContext()),
-                         Val.udiv(APT).getLimitedValue(UINT32_MAX))));
-  } else if (ProfDataName->getString().equals("VP"))
-    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
-      // The first value is the key of the value profile, which will not change.
-      Vals.push_back(ProfileData->getOperand(i));
-      uint64_t Count =
-          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
-              ->getValue()
-              .getZExtValue();
-      // Don't scale the magic number.
-      if (Count == NOMORE_ICP_MAGICNUM) {
-        Vals.push_back(ProfileData->getOperand(i + 1));
-        continue;
-      }
-      // Using APInt::div may be expensive, but most cases should fit 64 bits.
-      APInt Val(128, Count);
-      Val *= APS;
-      Vals.push_back(MDB.createConstant(
-          ConstantInt::get(Type::getInt64Ty(getContext()),
-                           Val.udiv(APT).getLimitedValue())));
-    }
-  setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
+  scaleProfData(*this, S, T);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3364,18 +3328,6 @@ BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
   return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertAtEnd);
 }
 
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             Instruction *InsertBefore) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertBefore);
-}
-
-BinaryOperator *BinaryOperator::CreateNUWNeg(Value *Op, const Twine &Name,
-                                             BasicBlock *InsertAtEnd) {
-  Value *Zero = ConstantInt::get(Op->getType(), 0);
-  return BinaryOperator::CreateNUWSub(Zero, Op, Name, InsertAtEnd);
-}
-
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
                                           BasicBlock::iterator InsertBefore) {
   Constant *C = Constant::getAllOnesValue(Op->getType());
@@ -4608,11 +4560,21 @@ CmpInst *
 CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
                 const Twine &Name, BasicBlock *InsertAtEnd) {
   if (Op == Instruction::ICmp) {
-    return new ICmpInst(*InsertAtEnd, CmpInst::Predicate(predicate),
+    return new ICmpInst(InsertAtEnd, CmpInst::Predicate(predicate),
                         S1, S2, Name);
   }
-  return new FCmpInst(*InsertAtEnd, CmpInst::Predicate(predicate),
+  return new FCmpInst(InsertAtEnd, CmpInst::Predicate(predicate),
                       S1, S2, Name);
+}
+
+CmpInst *CmpInst::CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name,
+                                        Instruction *InsertBefore) {
+  CmpInst *Inst = Create(Op, Pred, S1, S2, Name, InsertBefore);
+  Inst->copyIRFlags(FlagsSource);
+  return Inst;
 }
 
 void CmpInst::swapOperands() {

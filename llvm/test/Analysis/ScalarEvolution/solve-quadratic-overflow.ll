@@ -23,11 +23,9 @@ define signext i32 @f0() {
 ; CHECK-NEXT:    %v7 = sext i16 %v5 to i32
 ; CHECK-NEXT:    --> {-1,+,-1}<nsw><%b1> U: [-256,0) S: [-256,0) --> -256 U: [-256,-255) S: [-256,-255)
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
-; CHECK-NEXT:  Loop %b1: backedge-taken count is 255
-; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 255
-; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 255
-; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 255
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %b1: backedge-taken count is i16 255
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i16 255
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i16 255
 ; CHECK-NEXT:  Loop %b1: Trip multiple is 256
 ;
 b0:

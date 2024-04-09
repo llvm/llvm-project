@@ -1298,14 +1298,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   ICmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::ICmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1481,14 +1481,14 @@ public:
 
   /// Constructor with insert-at-end semantics.
   FCmpInst(
-    BasicBlock &InsertAtEnd, ///< Block to insert into.
+    BasicBlock *InsertAtEnd, ///< Block to insert into.
     Predicate pred,  ///< The predicate to use for the comparison
     Value *LHS,      ///< The left-hand-side of the expression
     Value *RHS,      ///< The right-hand-side of the expression
     const Twine &NameStr = ""  ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr,
-              &InsertAtEnd) {
+              InsertAtEnd) {
     AssertOK();
   }
 
@@ -5345,6 +5345,8 @@ protected:
   TruncInst *cloneImpl() const;
 
 public:
+  enum { AnyWrap = 0, NoUnsignedWrap = (1 << 0), NoSignedWrap = (1 << 1) };
+
   /// Constructor with insert-before-instruction semantics
   TruncInst(
     Value *S,                           ///< The value to be truncated
@@ -5375,6 +5377,39 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+
+  void setHasNoUnsignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
+  }
+  void setHasNoSignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo unsigned overflow, aka the nuw property.
+  bool hasNoUnsignedWrap() const {
+    return SubclassOptionalData & NoUnsignedWrap;
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo signed overflow, aka the nsw property.
+  bool hasNoSignedWrap() const {
+    return (SubclassOptionalData & NoSignedWrap) != 0;
+  }
+
+  /// Returns the no-wrap kind of the operation.
+  unsigned getNoWrapKind() const {
+    unsigned NoWrapKind = 0;
+    if (hasNoUnsignedWrap())
+      NoWrapKind |= NoUnsignedWrap;
+
+    if (hasNoSignedWrap())
+      NoWrapKind |= NoSignedWrap;
+
+    return NoWrapKind;
   }
 };
 

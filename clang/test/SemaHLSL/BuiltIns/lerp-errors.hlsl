@@ -27,7 +27,7 @@ float2 test_lerp_vector_size_mismatch(float3 p0, float2 p1) {
 
 float2 test_lerp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
   return __builtin_hlsl_lerp(p0, p1, p1);
-  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have vectors of the same type}}
+  // expected-error@-1 {{all arguments to '__builtin_hlsl_lerp' must have the same type}}
 }
 
 float test_lerp_scalar_mismatch(float p0, half p1) {
@@ -92,5 +92,18 @@ float builtin_lerp_int_to_float_promotion(float p0, int p1) {
 
 float4 test_lerp_int4(int4 p0, int4 p1, int4 p2) {
   return __builtin_hlsl_lerp(p0, p1, p2);
-   // expected-error@-1 {{1st argument must be a floating point type (was 'int4' (aka 'vector<int, 4>'))}}
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int4' (aka 'vector<int, 4>'))}}
+}
+
+// note: DefaultVariadicArgumentPromotion --> DefaultArgumentPromotion has already promoted to double
+// we don't know anymore that the input was half when __builtin_hlsl_lerp is called so we default to float
+// for expected type
+half builtin_lerp_half_scalar (half p0) {
+  return __builtin_hlsl_lerp ( p0, p0, p0 );
+  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
+}
+
+float builtin_lerp_float_scalar ( float p0) {
+  return __builtin_hlsl_lerp ( p0, p0, p0 );
+  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
 }

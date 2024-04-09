@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-ref-type-mem2local -S | FileCheck %s
+; RUN: llc < %s -mattr=+reference-types -stop-after=wasm-ref-type-mem2local | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

@@ -1875,6 +1875,17 @@ public:
     llvm_unreachable("Unsupported character width!");
   }
 
+  // Get code unit but preserve sign info.
+  int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
+    int64_t V = getCodeUnit(I);
+    if (isOrdinary() || isWide()) {
+      unsigned Width = getCharByteWidth() * BitWidth;
+      llvm::APInt AInt(Width, (uint64_t)V);
+      V = AInt.getSExtValue();
+    }
+    return V;
+  }
+
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
@@ -2034,7 +2045,8 @@ public:
   }
 
   static std::string ComputeName(PredefinedIdentKind IK,
-                                 const Decl *CurrentDecl);
+                                 const Decl *CurrentDecl,
+                                 bool ForceElaboratedPrinting = false);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
@@ -3151,23 +3163,12 @@ public:
   }
 };
 
-/// Extra data stored in some MemberExpr objects.
-struct MemberExprNameQualifier {
-  /// The nested-name-specifier that qualifies the name, including
-  /// source-location information.
-  NestedNameSpecifierLoc QualifierLoc;
-
-  /// The DeclAccessPair through which the MemberDecl was found due to
-  /// name qualifiers.
-  DeclAccessPair FoundDecl;
-};
-
 /// MemberExpr - [C99 6.5.2.3] Structure and Union Members.  X->F and X.F.
 ///
 class MemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<MemberExpr, MemberExprNameQualifier,
-                                    ASTTemplateKWAndArgsInfo,
+      private llvm::TrailingObjects<MemberExpr, NestedNameSpecifierLoc,
+                                    DeclAccessPair, ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
   friend class ASTReader;
   friend class ASTStmtReader;
@@ -3189,26 +3190,30 @@ class MemberExpr final
   /// MemberLoc - This is the location of the member name.
   SourceLocation MemberLoc;
 
-  size_t numTrailingObjects(OverloadToken<MemberExprNameQualifier>) const {
-    return hasQualifierOrFoundDecl();
+  size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasQualifier();
+  }
+
+  size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return hasFoundDecl();
   }
 
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
     return hasTemplateKWAndArgsInfo();
   }
 
-  bool hasQualifierOrFoundDecl() const {
-    return MemberExprBits.HasQualifierOrFoundDecl;
-  }
+  bool hasFoundDecl() const { return MemberExprBits.HasFoundDecl; }
 
   bool hasTemplateKWAndArgsInfo() const {
     return MemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
   MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
-             ValueDecl *MemberDecl, const DeclarationNameInfo &NameInfo,
-             QualType T, ExprValueKind VK, ExprObjectKind OK,
-             NonOdrUseReason NOUR);
+             NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
+             ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
+             const DeclarationNameInfo &NameInfo,
+             const TemplateArgumentListInfo *TemplateArgs, QualType T,
+             ExprValueKind VK, ExprObjectKind OK, NonOdrUseReason NOUR);
   MemberExpr(EmptyShell Empty)
       : Expr(MemberExprClass, Empty), Base(), MemberDecl() {}
 
@@ -3252,24 +3257,24 @@ public:
 
   /// Retrieves the declaration found by lookup.
   DeclAccessPair getFoundDecl() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasFoundDecl())
       return DeclAccessPair::make(getMemberDecl(),
                                   getMemberDecl()->getAccess());
-    return getTrailingObjects<MemberExprNameQualifier>()->FoundDecl;
+    return *getTrailingObjects<DeclAccessPair>();
   }
 
   /// Determines whether this member expression actually had
   /// a C++ nested-name-specifier prior to the name of the member, e.g.,
   /// x->Base::foo.
-  bool hasQualifier() const { return getQualifier() != nullptr; }
+  bool hasQualifier() const { return MemberExprBits.HasQualifier; }
 
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name, with source-location
   /// information.
   NestedNameSpecifierLoc getQualifierLoc() const {
-    if (!hasQualifierOrFoundDecl())
+    if (!hasQualifier())
       return NestedNameSpecifierLoc();
-    return getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc;
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
   }
 
   /// If the member name was qualified, retrieves the
@@ -3550,6 +3555,18 @@ public:
   path_const_iterator path_begin() const { return path_buffer(); }
   path_const_iterator path_end() const { return path_buffer() + path_size(); }
 
+  /// Path through the class hierarchy taken by casts between base and derived
+  /// classes (see implementation of `CastConsistency()` for a full list of
+  /// cast kinds that have a path).
+  ///
+  /// For each derived-to-base edge in the path, the path contains a
+  /// `CXXBaseSpecifier` for the base class of that edge; the entries are
+  /// ordered from derived class to base class.
+  ///
+  /// For example, given classes `Base`, `Intermediate : public Base` and
+  /// `Derived : public Intermediate`, the path for a cast from `Derived *` to
+  /// `Base *` contains two entries: One for `Intermediate`, and one for `Base`,
+  /// in that order.
   llvm::iterator_range<path_iterator> path() {
     return llvm::make_range(path_begin(), path_end());
   }
@@ -5832,7 +5849,7 @@ class GenericSelectionExpr final
         std::conditional_t<Const, const Stmt *const *, Stmt **>;
     using TSIPtrPtrTy = std::conditional_t<Const, const TypeSourceInfo *const *,
                                            TypeSourceInfo **>;
-    StmtPtrPtrTy E; // = nullptr; FIXME: Once support for gcc 4.8 is dropped.
+    StmtPtrPtrTy E = nullptr;
     TSIPtrPtrTy TSI; // Kept in sync with E.
     unsigned Offset = 0, SelectedOffset = 0;
     AssociationIteratorTy(StmtPtrPtrTy E, TSIPtrPtrTy TSI, unsigned Offset,

@@ -223,8 +223,6 @@ def MSRpstatesvcrImm1
   let Inst{8} = imm;
   let Inst{7-5} = 0b011; // op2
   let hasPostISelHook = 1;
-  let Uses = [VG];
-  let Defs = [VG];
 }
 
 def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;

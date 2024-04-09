@@ -167,6 +167,16 @@ void AllSources::AppendSearchPathDirectory(std::string directory) {
   searchPath_.push_back(directory);
 }
 
+const SourceFile *AllSources::OpenPath(
+    std::string path, llvm::raw_ostream &error) {
+  std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
+  if (source->Open(path, error)) {
+    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  } else {
+    return nullptr;
+  }
+}
+
 const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
     std::optional<std::string> &&prependPath) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
@@ -180,12 +190,10 @@ const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error,
   if (prependPath) {
     searchPath_.pop_front();
   }
-  if (!found) {
-    error << "Source file '" << path << "' was not found";
-    return nullptr;
-  } else if (source->Open(*found, error)) {
-    return ownedSourceFiles_.emplace_back(std::move(source)).get();
+  if (found) {
+    return OpenPath(*found, error);
   } else {
+    error << "Source file '" << path << "' was not found";
     return nullptr;
   }
 }

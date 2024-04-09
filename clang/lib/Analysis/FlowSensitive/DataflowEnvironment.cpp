@@ -48,6 +48,24 @@ static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
   return Result;
 }
 
+// Performs a join on either `ExprToLoc` or `ExprToVal`.
+// The maps must be consistent in the sense that any entries for the same
+// expression must map to the same location / value. This is the case if we are
+// performing a join for control flow within a full-expression (which is the
+// only case when this function should be used).
+template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+  MapT Result = Map1;
+
+  for (const auto &Entry : Map2) {
+    [[maybe_unused]] auto [It, Inserted] = Result.insert(Entry);
+    // If there was an existing entry, its value should be the same as for the
+    // entry we were trying to insert.
+    assert(It->second == Entry.second);
+  }
+
+  return Result;
+}
+
 // Whether to consider equivalent two values with an unknown relation.
 //
 // FIXME: this function is a hack enabling unsoundness to support
@@ -361,8 +379,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
-    if (RecordDecl *RD = InitList->getType()->getAsRecordDecl())
-      for (const auto *FD : getFieldsForInitListExpr(RD))
+    if (InitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(InitList))
         Fields.insert(FD);
   }
 }
@@ -398,7 +416,7 @@ void Environment::initialize() {
     assert(Parent != nullptr);
 
     if (Parent->isLambda()) {
-      for (auto Capture : Parent->captures()) {
+      for (const auto &Capture : Parent->captures()) {
         if (Capture.capturesVariable()) {
           const auto *VarDecl = Capture.getCapturedVar();
           assert(VarDecl != nullptr);
@@ -414,8 +432,15 @@ void Environment::initialize() {
       }
     } else if (MethodDecl->isImplicitObjectMemberFunction()) {
       QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      setThisPointeeStorageLocation(
-          cast<RecordStorageLocation>(createObject(ThisPointeeType)));
+      auto &ThisLoc =
+          cast<RecordStorageLocation>(createStorageLocation(ThisPointeeType));
+      setThisPointeeStorageLocation(ThisLoc);
+      refreshRecordValue(ThisLoc, *this);
+      // Initialize fields of `*this` with values, but only if we're not
+      // analyzing a constructor; after all, it's the constructor's job to do
+      // this (and we want to be able to test that).
+      if (!isa<CXXConstructorDecl>(MethodDecl))
+        initializeFieldsWithValues(ThisLoc);
     }
   }
 }
@@ -627,7 +652,8 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 }
 
 Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
-                              Environment::ValueModel &Model) {
+                              Environment::ValueModel &Model,
+                              ExprJoinBehavior ExprBehavior) {
   assert(EnvA.DACtx == EnvB.DACtx);
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
   assert(EnvA.CallStack == EnvB.CallStack);
@@ -675,9 +701,10 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.LocToVal =
       joinLocToVal(EnvA.LocToVal, EnvB.LocToVal, EnvA, EnvB, JoinedEnv, Model);
 
-  // We intentionally leave `JoinedEnv.ExprToLoc` and `JoinedEnv.ExprToVal`
-  // empty, as we never need to access entries in these maps outside of the
-  // basic block that sets them.
+  if (ExprBehavior == KeepExprState) {
+    JoinedEnv.ExprToVal = joinExprMaps(EnvA.ExprToVal, EnvB.ExprToVal);
+    JoinedEnv.ExprToLoc = joinExprMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
+  }
 
   return JoinedEnv;
 }
@@ -744,6 +771,7 @@ static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
     return !Init->isSemanticForm() || !Init->isTransparent();
   return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
          isa<LambdaExpr>(RecordPRValue) ||
+         isa<CXXDefaultArgExpr>(RecordPRValue) ||
          isa<CXXDefaultInitExpr>(RecordPRValue) ||
          // The framework currently does not propagate the objects created in
          // the two branches of a `ConditionalOperator` because there is no way
@@ -797,6 +825,16 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
   return DACtx->getOrCreateNullPointerValue(PointeeType);
+}
+
+void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc) {
+  llvm::DenseSet<QualType> Visited;
+  int CreatedValuesCount = 0;
+  initializeFieldsWithValues(Loc, Visited, 0, CreatedValuesCount);
+  if (CreatedValuesCount > MaxCompositeValueSize) {
+    llvm::errs() << "Attempting to initialize a huge value of type: "
+                 << Loc.getType() << '\n';
+  }
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
@@ -983,7 +1021,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   }
 
   Value *Val = nullptr;
-  if (InitExpr)
+  if (InitExpr) {
     // In the (few) cases where an expression is intentionally
     // "uninterpreted", `InitExpr` is not associated with a value.  There are
     // two ways to handle this situation: propagate the status, so that
@@ -998,6 +1036,11 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // default value (assuming we don't update the environment API to return
     // references).
     Val = getValue(*InitExpr);
+
+    if (!Val && isa<ImplicitValueInitExpr>(InitExpr) &&
+        InitExpr->getType()->isPointerType())
+      Val = &getOrCreateNullPointerValue(InitExpr->getType()->getPointeeType());
+  }
   if (!Val)
     Val = createValue(Ty);
 
@@ -1104,16 +1147,62 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   return Env.get<RecordStorageLocation>(*Base);
 }
 
-std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList) {
+  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields;
+
+  if (InitList->getType()->isUnionType()) {
+    Fields.push_back(InitList->getInitializedFieldInUnion());
+    return Fields;
+  }
+
   // Unnamed bitfields are only used for padding and do not appear in
   // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
   // field list, and we thus need to remove them before mapping inits to
   // fields to avoid mapping inits to the wrongs fields.
-  std::vector<FieldDecl *> Fields;
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
       [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
   return Fields;
+}
+
+RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
+  auto *RD = InitList->getType()->getAsCXXRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
+  ArrayRef<Expr *> Inits = InitList->inits();
+
+  // Unions initialized with an empty initializer list need special treatment.
+  // For structs/classes initialized with an empty initializer list, Clang
+  // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
+  // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
+  SmallVector<Expr *> InitsForUnion;
+  if (InitList->getType()->isUnionType() && Inits.empty()) {
+    assert(Fields.size() == 1);
+    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
+    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+    Inits = InitsForUnion;
+  }
+
+  size_t InitIdx = 0;
+
+  assert(Fields.size() + RD->getNumBases() == Inits.size());
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    BaseInits.emplace_back(&Base, Init);
+  }
+
+  assert(Fields.size() == Inits.size() - InitIdx);
+  for (const FieldDecl *Field : Fields) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    FieldInits.emplace_back(Field, Init);
+  }
 }
 
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {

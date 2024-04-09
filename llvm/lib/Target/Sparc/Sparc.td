@@ -99,7 +99,8 @@ include "SparcInstrInfo.td"
 def SparcInstrInfo : InstrInfo;
 
 def SparcAsmParser : AsmParser {
-  bit ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltName = true;
+  let AllowDuplicateRegisterNames = true;
 }
 
 def SparcAsmParserVariant : AsmParserVariant {

@@ -270,9 +270,10 @@ void DependencyGraph::getCriticalSequence(
   // To obtain the sequence of critical edges, we simply follow the chain of
   // critical predecessors starting from node N (field
   // DGNode::CriticalPredecessor).
-  const auto It = std::max_element(
-      Nodes.begin(), Nodes.end(),
-      [](const DGNode &Lhs, const DGNode &Rhs) { return Lhs.Cost < Rhs.Cost; });
+  const auto It =
+      llvm::max_element(Nodes, [](const DGNode &Lhs, const DGNode &Rhs) {
+        return Lhs.Cost < Rhs.Cost;
+      });
   unsigned IID = std::distance(Nodes.begin(), It);
   Seq.resize(Nodes[IID].Depth);
   for (const DependencyEdge *&DE : llvm::reverse(Seq)) {

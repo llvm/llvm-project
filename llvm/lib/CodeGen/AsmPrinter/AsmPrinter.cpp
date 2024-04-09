@@ -538,8 +538,10 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    emitInlineAsm(M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
-                  TM.Options.MCOptions);
+    emitInlineAsm(
+        M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
+        TM.Options.MCOptions, nullptr,
+        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
@@ -2925,7 +2927,7 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable");
+  report_fatal_error("unknown special variable with appending linkage");
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each

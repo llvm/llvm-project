@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -374,7 +375,7 @@ Level SparseTensorEncodingAttr::getLvlRank() const {
 
 LevelType SparseTensorEncodingAttr::getLvlType(Level l) const {
   if (!getImpl())
-    return LevelFormat::Dense;
+    return LevelFormat::Batch;
   assert(l < getLvlRank() && "Level is out of bounds");
   return getLvlTypes()[l];
 }
@@ -413,8 +414,8 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 }
 
 SmallVector<int64_t>
-SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
-                                        CrdTransDirectionKind dir) const {
+SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
+                                         CrdTransDirectionKind dir) const {
   if (isIdentity())
     return SmallVector<int64_t>(srcShape);
 
@@ -646,28 +647,16 @@ void SparseTensorEncodingAttr::printDimensions(
   }
 }
 
-std::string getNOutOfMString(LevelType lt) {
-  if (isNOutOfMLT(lt)) {
-    unsigned n = getN(lt);
-    unsigned m = getM(lt);
-    auto output = "[" + std::to_string(n) + ", " + std::to_string(m) + "]";
-    return output;
-  }
-  return "";
-}
-
 void SparseTensorEncodingAttr::printLevels(AffineMap &map, AsmPrinter &printer,
                                            ArrayRef<LevelType> lvlTypes) const {
   for (unsigned i = 0, n = map.getNumResults() - 1; i < n; i++) {
     map.getResult(i).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[i])
-            << getNOutOfMString(lvlTypes[i]) << ", ";
+    printer << " : " << toMLIRString(lvlTypes[i]) << ", ";
   }
   if (map.getNumResults() >= 1) {
     auto lastIndex = map.getNumResults() - 1;
     map.getResult(lastIndex).print(printer.getStream());
-    printer << " : " << toMLIRString(lvlTypes[lastIndex])
-            << getNOutOfMString(lvlTypes[lastIndex]);
+    printer << " : " << toMLIRString(lvlTypes[lastIndex]);
   }
 }
 
@@ -1392,7 +1381,7 @@ void ReinterpretMapOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   auto srcStt = getSparseTensorType(source);
   SmallVector<int64_t> srcLvlShape = srcStt.getLvlShape();
   SmallVector<int64_t> dstDimShape =
-      dstEnc.tranlateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
+      dstEnc.translateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
   auto dstTp =
       RankedTensorType::get(dstDimShape, srcStt.getElementType(), dstEnc);
   return build(odsBuilder, odsState, dstTp, source);
@@ -1602,7 +1591,8 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
   if (!yield)
     return op->emitError() << regionName
                            << " region must end with sparse_tensor.yield";
-  if (!yield.getResult() || yield.getResult().getType() != outputType)
+  if (!yield.hasSingleResult() ||
+      yield.getSingleResult().getType() != outputType)
     return op->emitError() << regionName << " region yield type mismatch";
 
   return success();
@@ -1665,7 +1655,8 @@ LogicalResult UnaryOp::verify() {
     // Absent branch can only yield invariant values.
     Block *absentBlock = &absent.front();
     Block *parent = getOperation()->getBlock();
-    Value absentVal = cast<YieldOp>(absentBlock->getTerminator()).getResult();
+    Value absentVal =
+        cast<YieldOp>(absentBlock->getTerminator()).getSingleResult();
     if (auto arg = dyn_cast<BlockArgument>(absentVal)) {
       if (arg.getOwner() == parent)
         return emitError("absent region cannot yield linalg argument");
@@ -1750,13 +1741,6 @@ LogicalResult ConcatenateOp::verify() {
     }
   }
 
-  return success();
-}
-
-LogicalResult InsertOp::verify() {
-  const auto stt = getSparseTensorType(getTensor());
-  if (stt.getLvlRank() != static_cast<Level>(getLvlCoords().size()))
-    return emitOpError("incorrect number of coordinates");
   return success();
 }
 
@@ -1925,18 +1909,6 @@ LogicalResult SortOp::verify() {
   return success();
 }
 
-LogicalResult YieldOp::verify() {
-  // Check for compatible parent.
-  auto *parentOp = (*this)->getParentOp();
-  if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
-      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp) ||
-      isa<ForeachOp>(parentOp))
-    return success();
-
-  return emitOpError("expected parent op to be sparse_tensor unary, binary, "
-                     "reduce, select or foreach");
-}
-
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *SparseTensorDialect::materializeConstant(OpBuilder &builder,
@@ -1975,6 +1947,10 @@ void SparseTensorDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
       >();
+  declarePromisedInterfaces<
+      bufferization::BufferizableOpInterface, ConcatenateOp, ConvertOp, LoadOp,
+      NewOp, NumberOfEntriesOp, AssembleOp, DisassembleOp,
+      ToCoordinatesBufferOp, ToCoordinatesOp, ToPositionsOp, ToValuesOp>();
 }
 
 #define GET_OP_CLASSES

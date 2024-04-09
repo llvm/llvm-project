@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/a.cppm -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -fsyntax-only -verify
+
 //--- foo.h
 
 namespace std

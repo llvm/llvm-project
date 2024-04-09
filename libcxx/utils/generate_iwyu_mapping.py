@@ -34,8 +34,6 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["atomic", "mutex", "semaphore", "thread"]
     elif header == "__tree":
         return ["map", "set"]
-    elif header == "__fwd/hash.h":
-        return ["functional"]
     elif header == "__fwd/pair.h":
         return ["utility"]
     elif header == "__fwd/subrange.h":

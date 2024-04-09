@@ -77,6 +77,7 @@ DEFINE_FALLBACK_F128(Erf)
 DEFINE_FALLBACK_F128(Erfc)
 DEFINE_FALLBACK_F128(Exp)
 DEFINE_FALLBACK_F128(Floor)
+DEFINE_FALLBACK_F128(Fma)
 DEFINE_FALLBACK_F128(Frexp)
 DEFINE_FALLBACK_F128(Hypot)
 DEFINE_FALLBACK_I32(Ilogb)
@@ -106,11 +107,60 @@ DEFINE_FALLBACK_F128(Y0)
 DEFINE_FALLBACK_F128(Y1)
 DEFINE_FALLBACK_F128(Yn)
 
-#if HAS_LIBM
+#if HAS_QUADMATHLIB
+// Define wrapper callers for libquadmath.
+#include "quadmath.h"
+DEFINE_SIMPLE_ALIAS(Abs, fabsq)
+DEFINE_SIMPLE_ALIAS(Acos, acosq)
+DEFINE_SIMPLE_ALIAS(Acosh, acoshq)
+DEFINE_SIMPLE_ALIAS(Asin, asinq)
+DEFINE_SIMPLE_ALIAS(Asinh, asinhq)
+DEFINE_SIMPLE_ALIAS(Atan, atanq)
+DEFINE_SIMPLE_ALIAS(Atan2, atan2q)
+DEFINE_SIMPLE_ALIAS(Atanh, atanhq)
+DEFINE_SIMPLE_ALIAS(Ceil, ceilq)
+DEFINE_SIMPLE_ALIAS(Cos, cosq)
+DEFINE_SIMPLE_ALIAS(Cosh, coshq)
+DEFINE_SIMPLE_ALIAS(Erf, erfq)
+DEFINE_SIMPLE_ALIAS(Erfc, erfcq)
+DEFINE_SIMPLE_ALIAS(Exp, expq)
+DEFINE_SIMPLE_ALIAS(Floor, floorq)
+DEFINE_SIMPLE_ALIAS(Fma, fmaq)
+DEFINE_SIMPLE_ALIAS(Frexp, frexpq)
+DEFINE_SIMPLE_ALIAS(Hypot, hypotq)
+DEFINE_SIMPLE_ALIAS(Ilogb, ilogbq)
+DEFINE_SIMPLE_ALIAS(Isinf, isinfq)
+DEFINE_SIMPLE_ALIAS(Isnan, isnanq)
+DEFINE_SIMPLE_ALIAS(J0, j0q)
+DEFINE_SIMPLE_ALIAS(J1, j1q)
+DEFINE_SIMPLE_ALIAS(Jn, jnq)
+DEFINE_SIMPLE_ALIAS(Ldexp, ldexpq)
+DEFINE_SIMPLE_ALIAS(Lgamma, lgammaq)
+DEFINE_SIMPLE_ALIAS(Llround, llroundq)
+DEFINE_SIMPLE_ALIAS(Log, logq)
+DEFINE_SIMPLE_ALIAS(Log10, log10q)
+DEFINE_SIMPLE_ALIAS(Lround, lroundq)
+DEFINE_SIMPLE_ALIAS(Nextafter, nextafterq)
+DEFINE_SIMPLE_ALIAS(Pow, powq)
+DEFINE_SIMPLE_ALIAS(Round, roundq)
+DEFINE_SIMPLE_ALIAS(Sin, sinq)
+DEFINE_SIMPLE_ALIAS(Sinh, sinhq)
+DEFINE_SIMPLE_ALIAS(Sqrt, sqrtq)
+DEFINE_SIMPLE_ALIAS(Tan, tanq)
+DEFINE_SIMPLE_ALIAS(Tanh, tanhq)
+DEFINE_SIMPLE_ALIAS(Tgamma, tgammaq)
+DEFINE_SIMPLE_ALIAS(Trunc, truncq)
+DEFINE_SIMPLE_ALIAS(Y0, y0q)
+DEFINE_SIMPLE_ALIAS(Y1, y1q)
+DEFINE_SIMPLE_ALIAS(Yn, ynq)
+
+// Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
+#define F128_RT_INFINITY (INFINITY)
+#define F128_RT_QNAN (NAN)
+#elif LDBL_MANT_DIG == 113
+// Define wrapper callers for libm.
 #include <limits>
 
-// Define wrapper callers for libm.
-#if LDBL_MANT_DIG == 113
 // Use STD math functions. They provide IEEE-754 128-bit float
 // support either via 'long double' or __float128.
 // The Bessel's functions are not present in STD namespace.
@@ -122,9 +172,6 @@ DEFINE_SIMPLE_ALIAS(Asinh, std::asinh)
 DEFINE_SIMPLE_ALIAS(Atan, std::atan)
 DEFINE_SIMPLE_ALIAS(Atan2, std::atan2)
 DEFINE_SIMPLE_ALIAS(Atanh, std::atanh)
-// TODO: enable complex abs, when ABI adjustment for complex
-// data type is resolved.
-// DEFINE_SIMPLE_ALIAS(CAbs, std::abs)
 DEFINE_SIMPLE_ALIAS(Ceil, std::ceil)
 DEFINE_SIMPLE_ALIAS(Cos, std::cos)
 DEFINE_SIMPLE_ALIAS(Cosh, std::cosh)
@@ -132,6 +179,7 @@ DEFINE_SIMPLE_ALIAS(Erf, std::erf)
 DEFINE_SIMPLE_ALIAS(Erfc, std::erfc)
 DEFINE_SIMPLE_ALIAS(Exp, std::exp)
 DEFINE_SIMPLE_ALIAS(Floor, std::floor)
+DEFINE_SIMPLE_ALIAS(Fma, std::fma)
 DEFINE_SIMPLE_ALIAS(Frexp, std::frexp)
 DEFINE_SIMPLE_ALIAS(Hypot, std::hypot)
 DEFINE_SIMPLE_ALIAS(Ilogb, std::ilogb)
@@ -165,70 +213,11 @@ DEFINE_SIMPLE_ALIAS(Yn, ynl)
   (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::infinity())
 #define F128_RT_QNAN \
   (std::numeric_limits<CppTypeFor<TypeCategory::Real, 16>>::quiet_NaN())
-#else // LDBL_MANT_DIG != 113
-#if !HAS_LIBMF128
-// glibc >=2.26 seems to have complete support for __float128
-// versions of the math functions.
-#error "FLANG_RUNTIME_F128_MATH_LIB=libm build requires libm >=2.26"
-#endif
-
+#elif HAS_LIBMF128
 // We can use __float128 versions of libm functions.
 // __STDC_WANT_IEC_60559_TYPES_EXT__ needs to be defined
 // before including cmath to enable the *f128 prototypes.
-// TODO: this needs to be enabled separately, especially
-// for complex data types that require C++ complex to C complex
-// adjustment to match the ABIs.
-#error "Unsupported FLANG_RUNTIME_F128_MATH_LIB=libm build"
-#endif // LDBL_MANT_DIG != 113
-#elif HAS_QUADMATHLIB
-// Define wrapper callers for libquadmath.
-#include "quadmath.h"
-DEFINE_SIMPLE_ALIAS(Abs, fabsq)
-DEFINE_SIMPLE_ALIAS(Acos, acosq)
-DEFINE_SIMPLE_ALIAS(Acosh, acoshq)
-DEFINE_SIMPLE_ALIAS(Asin, asinq)
-DEFINE_SIMPLE_ALIAS(Asinh, asinhq)
-DEFINE_SIMPLE_ALIAS(Atan, atanq)
-DEFINE_SIMPLE_ALIAS(Atan2, atan2q)
-DEFINE_SIMPLE_ALIAS(Atanh, atanhq)
-DEFINE_SIMPLE_ALIAS(Ceil, ceilq)
-DEFINE_SIMPLE_ALIAS(Cos, cosq)
-DEFINE_SIMPLE_ALIAS(Cosh, coshq)
-DEFINE_SIMPLE_ALIAS(Erf, erfq)
-DEFINE_SIMPLE_ALIAS(Erfc, erfcq)
-DEFINE_SIMPLE_ALIAS(Exp, expq)
-DEFINE_SIMPLE_ALIAS(Floor, floorq)
-DEFINE_SIMPLE_ALIAS(Frexp, frexpq)
-DEFINE_SIMPLE_ALIAS(Hypot, hypotq)
-DEFINE_SIMPLE_ALIAS(Ilogb, ilogbq)
-DEFINE_SIMPLE_ALIAS(Isinf, isinfq)
-DEFINE_SIMPLE_ALIAS(Isnan, isnanq)
-DEFINE_SIMPLE_ALIAS(J0, j0q)
-DEFINE_SIMPLE_ALIAS(J1, j1q)
-DEFINE_SIMPLE_ALIAS(Jn, jnq)
-DEFINE_SIMPLE_ALIAS(Ldexp, ldexpq)
-DEFINE_SIMPLE_ALIAS(Lgamma, lgammaq)
-DEFINE_SIMPLE_ALIAS(Llround, llroundq)
-DEFINE_SIMPLE_ALIAS(Log, logq)
-DEFINE_SIMPLE_ALIAS(Log10, log10q)
-DEFINE_SIMPLE_ALIAS(Lround, lroundq)
-DEFINE_SIMPLE_ALIAS(Nextafter, nextafterq)
-DEFINE_SIMPLE_ALIAS(Pow, powq)
-DEFINE_SIMPLE_ALIAS(Round, roundq)
-DEFINE_SIMPLE_ALIAS(Sin, sinq)
-DEFINE_SIMPLE_ALIAS(Sinh, sinhq)
-DEFINE_SIMPLE_ALIAS(Sqrt, sqrtq)
-DEFINE_SIMPLE_ALIAS(Tan, tanq)
-DEFINE_SIMPLE_ALIAS(Tanh, tanhq)
-DEFINE_SIMPLE_ALIAS(Tgamma, tgammaq)
-DEFINE_SIMPLE_ALIAS(Trunc, truncq)
-DEFINE_SIMPLE_ALIAS(Y0, y0q)
-DEFINE_SIMPLE_ALIAS(Y1, y1q)
-DEFINE_SIMPLE_ALIAS(Yn, ynq)
-
-// Use cmath INFINITY/NAN definition. Rely on C implicit conversions.
-#define F128_RT_INFINITY (INFINITY)
-#define F128_RT_QNAN (NAN)
+#error "Float128Math build with glibc>=2.26 is unsupported yet"
 #endif
 
 } // namespace Fortran::runtime

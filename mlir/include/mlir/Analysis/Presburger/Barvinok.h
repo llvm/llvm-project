@@ -74,7 +74,7 @@ inline PolyhedronH defineHRep(int numVars, int numSymbols = 0) {
 /// Barvinok, A., and J. E. Pommersheim. "An algorithmic theory of lattice
 /// points in polyhedra." p. 107 If it has more rays than the dimension, return
 /// 0.
-MPInt getIndex(ConeV cone);
+MPInt getIndex(const ConeV &cone);
 
 /// Given a cone in H-representation, return its dual. The dual cone is in
 /// V-representation.
@@ -91,7 +91,7 @@ ConeH getDual(ConeV cone);
 /// The input cone must be unimodular; it assert-fails otherwise.
 GeneratingFunction computeUnimodularConeGeneratingFunction(ParamPoint vertex,
                                                            int sign,
-                                                           ConeH cone);
+                                                           const ConeH &cone);
 
 /// Find the solution of a set of equations that express affine constraints
 /// between a set of variables and a set of parameters. The solution expresses

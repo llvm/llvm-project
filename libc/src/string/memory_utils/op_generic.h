@@ -28,6 +28,7 @@
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -36,10 +37,6 @@
 static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
-
-#if defined(UINT64_MAX)
-#define LLVM_LIBC_HAS_UINT64
-#endif
 
 namespace LIBC_NAMESPACE {
 // Compiler types using the vector attributes.
@@ -60,31 +57,44 @@ template <typename T> struct is_scalar : cpp::false_type {};
 template <> struct is_scalar<uint8_t> : cpp::true_type {};
 template <> struct is_scalar<uint16_t> : cpp::true_type {};
 template <> struct is_scalar<uint32_t> : cpp::true_type {};
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
 template <> struct is_scalar<uint64_t> : cpp::true_type {};
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_scalar_v = is_scalar<T>::value;
 
 template <typename T> struct is_vector : cpp::false_type {};
 template <> struct is_vector<generic_v128> : cpp::true_type {};
 template <> struct is_vector<generic_v256> : cpp::true_type {};
 template <> struct is_vector<generic_v512> : cpp::true_type {};
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_vector_v = is_vector<T>::value;
 
 template <class T> struct is_array : cpp::false_type {};
 template <class T, size_t N> struct is_array<cpp::array<T, N>> {
+  // Meant to match std::numeric_limits interface.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   static constexpr bool value = is_scalar_v<T> || is_vector_v<T>;
 };
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr bool is_array_v = is_array<T>::value;
 
+// Meant to match std::numeric_limits interface.
+// NOLINTBEGIN(readability-identifier-naming)
 template <typename T>
 constexpr bool is_element_type_v =
     is_scalar_v<T> || is_vector_v<T> || is_array_v<T>;
+// NOLINTEND(readability-identifier-naming)
 
 // Helper struct to retrieve the number of elements of an array.
 template <class T> struct array_size {};
 template <class T, size_t N>
 struct array_size<cpp::array<T, N>> : cpp::integral_constant<size_t, N> {};
+// Meant to match std::numeric_limits interface.
+// NOLINTNEXTLINE(readability-identifier-naming)
 template <typename T> constexpr size_t array_size_v = array_size<T>::value;
 
 // Generic operations for the above type categories.
@@ -95,10 +105,10 @@ template <typename T> T load(CPtr src) {
     return ::LIBC_NAMESPACE::load<T>(src);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
-    T Value;
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      Value[I] = load<value_type>(src + (I * sizeof(value_type)));
-    return Value;
+    T value;
+    for (size_t i = 0; i < array_size_v<T>; ++i)
+      value[i] = load<value_type>(src + (i * sizeof(value_type)));
+    return value;
   }
 }
 
@@ -108,8 +118,8 @@ template <typename T> void store(Ptr dst, T value) {
     ::LIBC_NAMESPACE::store<T>(dst, value);
   } else if constexpr (is_array_v<T>) {
     using value_type = typename T::value_type;
-    for (size_t I = 0; I < array_size_v<T>; ++I)
-      store<value_type>(dst + (I * sizeof(value_type)), value[I]);
+    for (size_t i = 0; i < array_size_v<T>; ++i)
+      store<value_type>(dst + (i * sizeof(value_type)), value[i]);
   }
 }
 
@@ -118,11 +128,11 @@ template <typename T> T splat(uint8_t value) {
   if constexpr (is_scalar_v<T>)
     return T(~0) / T(0xFF) * T(value);
   else if constexpr (is_vector_v<T>) {
-    T Out;
+    T out;
     // This for loop is optimized out for vector types.
     for (size_t i = 0; i < sizeof(T); ++i)
-      Out[i] = value;
-    return Out;
+      out[i] = value;
+    return out;
   }
 }
 
@@ -140,8 +150,8 @@ template <typename T> struct Memset {
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
       const auto Splat = splat<value_type>(value);
-      for (size_t I = 0; I < array_size_v<T>; ++I)
-        store<value_type>(dst + (I * sizeof(value_type)), Splat);
+      for (size_t i = 0; i < array_size_v<T>; ++i)
+        store<value_type>(dst + (i * sizeof(value_type)), Splat);
     }
   }
 
@@ -453,7 +463,7 @@ public:
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }
@@ -533,7 +543,7 @@ template <typename T> struct Bcmp {
     if (LIBC_UNLIKELY(count >= threshold) && helper.not_aligned()) {
       if (auto value = block(p1, p2))
         return value;
-      adjust(helper.offset(), p1, p2, count);
+      adjust(helper.offset, p1, p2, count);
     }
     return loop_and_tail(p1, p2, count);
   }

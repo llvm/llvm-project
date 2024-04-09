@@ -396,15 +396,15 @@ defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort5],  1, [1], 1, 5>; // Vector v
 defm : ICXWriteResPair<WriteVarShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteVarShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarShuffleZ, [ICXPort5],  1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteBlend, [ICXPort5], 1, [1], 1, 6>; // Vector blends.
-defm : ICXWriteResPair<WriteBlendY,[ICXPort5], 1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteBlendZ,[ICXPort5], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WriteBlend, [ICXPort15], 1, [1], 1, 6>; // Vector blends.
+defm : ICXWriteResPair<WriteBlendY,[ICXPort15], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WriteBlendZ,[ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarBlend, [ICXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : ICXWriteResPair<WriteVarBlendY,[ICXPort015], 2, [2], 2, 6>;
 defm : ICXWriteResPair<WriteVarBlendZ,[ICXPort05],  2, [1], 1, 6>;
-defm : ICXWriteResPair<WriteMPSAD,   [ICXPort5], 4, [2], 2, 6>; // Vector MPSAD.
-defm : ICXWriteResPair<WriteMPSADY,  [ICXPort5], 4, [2], 2, 7>;
-defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort5], 4, [2], 2, 7>;
+defm : ICXWriteResPair<WriteMPSAD,   [ICXPort15,ICXPort5], 4, [1,1], 2, 6>; // Vector MPSAD.
+defm : ICXWriteResPair<WriteMPSADY,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
+defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
 defm : ICXWriteResPair<WritePSADBW,  [ICXPort5], 3, [1], 1, 5>; // Vector PSADBW.
 defm : ICXWriteResPair<WritePSADBWX, [ICXPort5], 3, [1], 1, 6>;
 defm : ICXWriteResPair<WritePSADBWY, [ICXPort5], 3, [1], 1, 7>;
@@ -413,9 +413,9 @@ defm : ICXWriteResPair<WritePHMINPOS, [ICXPort0], 4, [1], 1, 6>; // Vector PHMIN
 
 // Vector integer shifts.
 defm : ICXWriteResPair<WriteVecShift, [ICXPort0], 1, [1], 1, 5>;
-defm : X86WriteRes<WriteVecShiftX,    [ICXPort5,ICXPort01],  2, [1,1], 2>;
-defm : X86WriteRes<WriteVecShiftY,    [ICXPort5,ICXPort01],  4, [1,1], 2>;
-defm : X86WriteRes<WriteVecShiftZ,    [ICXPort5,ICXPort0],   4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftX,    [ICXPort01,ICXPort15], 2, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftY,    [ICXPort01,ICXPort5],  4, [1,1], 2>;
+defm : X86WriteRes<WriteVecShiftZ,    [ICXPort0,ICXPort5],   4, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftXLd,  [ICXPort01,ICXPort23], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftYLd,  [ICXPort01,ICXPort23], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecShiftZLd,  [ICXPort0,ICXPort23],  8, [1,1], 2>;

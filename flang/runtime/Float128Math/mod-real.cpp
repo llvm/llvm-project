@@ -12,7 +12,7 @@
 namespace Fortran::runtime {
 extern "C" {
 
-#if LDBL_MANT_DIG != 113 && HAS_FLOAT128
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 // MOD (16.9.135)
 F128Type RTDEF(ModReal16)(
     F128Type x, F128Type p, const char *sourceFile, int sourceLine) {

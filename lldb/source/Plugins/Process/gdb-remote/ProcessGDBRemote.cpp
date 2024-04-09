@@ -263,10 +263,9 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_continue_C_tids(), m_continue_s_tids(), m_continue_S_tids(),
       m_max_memory_size(0), m_remote_stub_max_memory_size(0),
       m_addr_to_mmap_size(), m_thread_create_bp_sp(),
-      m_waiting_for_attach(false),
-      m_command_sp(), m_breakpoint_pc_offset(0),
+      m_waiting_for_attach(false), m_command_sp(), m_breakpoint_pc_offset(0),
       m_initial_tid(LLDB_INVALID_THREAD_ID), m_allow_flash_writes(false),
-      m_erased_flash_ranges(), m_vfork_in_progress(false) {
+      m_erased_flash_ranges(), m_vfork_in_progress_count(0) {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,
                                    "async thread should exit");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
@@ -901,7 +900,7 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
   }
 
   AddressableBits addressable_bits = m_gdb_comm.GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
@@ -2338,7 +2337,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       }
     }
 
-    addressable_bits.SetProcessMasks(*this);
+    SetAddressableBitMasks(addressable_bits);
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -5293,8 +5292,10 @@ public:
           (ProcessGDBRemote *)m_interpreter.GetExecutionContext()
               .GetProcessPtr();
       if (process) {
-        StreamSP output_stream_sp(
-            m_interpreter.GetDebugger().GetAsyncOutputStream());
+        StreamSP output_stream_sp = result.GetImmediateOutputStream();
+        if (!output_stream_sp)
+          output_stream_sp =
+              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =
@@ -5634,8 +5635,11 @@ void ProcessGDBRemote::DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
   Log *log = GetLog(GDBRLog::Process);
 
-  assert(!m_vfork_in_progress);
-  m_vfork_in_progress = true;
+  LLDB_LOG(
+      log,
+      "ProcessGDBRemote::DidFork() called for child_pid: {0}, child_tid {1}",
+      child_pid, child_tid);
+  ++m_vfork_in_progress_count;
 
   // Disable all software breakpoints for the duration of vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5689,8 +5693,8 @@ void ProcessGDBRemote::DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) {
 }
 
 void ProcessGDBRemote::DidVForkDone() {
-  assert(m_vfork_in_progress);
-  m_vfork_in_progress = false;
+  assert(m_vfork_in_progress_count > 0);
+  --m_vfork_in_progress_count;
 
   // Reenable all software breakpoints that were enabled before vfork.
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
@@ -5700,7 +5704,9 @@ void ProcessGDBRemote::DidVForkDone() {
 void ProcessGDBRemote::DidExec() {
   // If we are following children, vfork is finished by exec (rather than
   // vforkdone that is submitted for parent).
-  if (GetFollowForkMode() == eFollowChild)
-    m_vfork_in_progress = false;
+  if (GetFollowForkMode() == eFollowChild) {
+    if (m_vfork_in_progress_count > 0)
+      --m_vfork_in_progress_count;
+  }
   Process::DidExec();
 }

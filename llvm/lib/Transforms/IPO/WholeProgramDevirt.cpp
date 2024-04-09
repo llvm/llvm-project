@@ -434,7 +434,7 @@ struct VirtualCallSite {
       emitRemark(OptName, TargetName, OREGetter);
     CB.replaceAllUsesWith(New);
     if (auto *II = dyn_cast<InvokeInst>(&CB)) {
-      BranchInst::Create(II->getNormalDest(), &CB);
+      BranchInst::Create(II->getNormalDest(), CB.getIterator());
       II->getUnwindDest()->removePredecessor(II->getParent());
     }
     CB.eraseFromParent();
@@ -861,7 +861,7 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
           TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)},
-          std::nullopt, "", CI);
+          std::nullopt, "", CI->getIterator());
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
@@ -1225,8 +1225,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         CB.setMetadata(LLVMContext::MD_callees, nullptr);
         if (CB.getCalledOperand() &&
             CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
-          auto *NewCS =
-              CallBase::removeOperandBundle(&CB, LLVMContext::OB_ptrauth, &CB);
+          auto *NewCS = CallBase::removeOperandBundle(
+              &CB, LLVMContext::OB_ptrauth, CB.getIterator());
           CB.replaceAllUsesWith(NewCS);
           // Schedule for deletion at the end of pass run.
           CallsWithPtrAuthBundleRemoved.push_back(&CB);

@@ -116,11 +116,6 @@ static uint32_t getIntInlineImmEncoding(IntTy Imm) {
   return 0;
 }
 
-static uint32_t getLit16IntEncoding(uint16_t Val, const MCSubtargetInfo &STI) {
-  uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
-  return IntImm == 0 ? 255 : IntImm;
-}
-
 static uint32_t getLit16Encoding(uint16_t Val, const MCSubtargetInfo &STI) {
   uint16_t IntImm = getIntInlineImmEncoding(static_cast<int16_t>(Val));
   if (IntImm != 0)
@@ -214,6 +209,10 @@ static uint32_t getLit32Encoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return 255;
 }
 
+static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
+  return getLit32Encoding(Val, STI);
+}
+
 static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
@@ -296,7 +295,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
-    return getLit16IntEncoding(static_cast<uint16_t>(Imm), STI);
+    return getLit16IntEncoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:

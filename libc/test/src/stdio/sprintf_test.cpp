@@ -121,8 +121,8 @@ TEST(LlvmLibcSPrintfTest, StringConv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   written = LIBC_NAMESPACE::sprintf(buff, "%s", nullptr);
-  EXPECT_EQ(written, 4);
-  ASSERT_STREQ(buff, "null");
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "(null)");
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 
@@ -168,6 +168,93 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%lld", -9223372036854775807ll - 1ll);
   EXPECT_EQ(written, 20);
   ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w3d", 5807);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "7");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w3d", 1);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w64d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w-1d", 5807);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "%w-1d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w0d", 5807);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "%w0d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w999d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%winvalid%w1d", 5807, 5807);
+  EXPECT_EQ(written, 10);
+  ASSERT_STREQ(buff, "%winvalid1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w-1d%w1d", 5807, 5807);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "%w-1d1");
+
+  char format[64];
+  char uintmax[128];
+  LIBC_NAMESPACE::sprintf(format, "%%w%du", sizeof(uintmax_t) * CHAR_BIT);
+  const int uintmax_len =
+      LIBC_NAMESPACE::sprintf(uintmax, "%ju", sizeof(uintmax_t) * CHAR_BIT);
+  written = LIBC_NAMESPACE::sprintf(buff, format, sizeof(uintmax_t) * CHAR_BIT);
+  EXPECT_EQ(written, uintmax_len);
+  ASSERT_STREQ(buff, uintmax);
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%w64u", 18446744073709551615ull);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "18446744073709551615"); // ull max
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%w64d", -9223372036854775807ll - 1ll);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf3d", 5807);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "7");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf3d", 1);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf64u", 18446744073709551615ull);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "18446744073709551615"); // ull max
+
+  written =
+      LIBC_NAMESPACE::sprintf(buff, "%wf64d", -9223372036854775807ll - 1ll);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "-9223372036854775808"); // ll min
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf0d", 5807);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "%wf0d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf-1d", 5807);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "%wf-1d");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wfinvalid%wf1d", 5807, 5807);
+  EXPECT_EQ(written, 11);
+  ASSERT_STREQ(buff, "%wfinvalid1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf-1d%wf1d", 5807, 5807);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "%wf-1d1");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%wf999d", 9223372036854775807ll);
+  EXPECT_EQ(written, 19);
+  ASSERT_STREQ(buff, "9223372036854775807");
 
   // Min Width Tests.
 
@@ -775,29 +862,29 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   // Length Modifier Tests.
 
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 0.1L);
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0xc.ccccccccccccccdp-7");
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
-#else // 128 bit long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
 #endif
 
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e1000L);
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   ASSERT_STREQ_LEN(written, buff, "inf");
-#else // 128 bit long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
 #endif
 
   written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e-1000L);
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   ASSERT_STREQ_LEN(written, buff, "0x0p+0");
-#else // 128 bit long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
 #endif
 
@@ -899,20 +986,20 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ASSERT_STREQ_LEN(written, buff, "0x0p+0");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
-#else // 128 bit long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
 #endif
 
   written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0xf.fffffffffffffffp16380L);
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   ASSERT_STREQ_LEN(written, buff, "inf");
-#else // 128 bit long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
   ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
 #endif
 
@@ -1158,8 +1245,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // Some float128 systems (specifically the ones used for aarch64 buildbots)
 // don't respect signs for long double NaNs.
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80) ||                                \
-    defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ||                          \
+    defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_nan);
   ASSERT_STREQ_LEN(written, buff, "-NAN");
 #endif
@@ -1354,20 +1441,20 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   /*
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
   #endif
   */
@@ -1603,8 +1690,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 
   // Length Modifier Tests.
 
-  // TODO(michaelrj): Add tests for LIBC_LONG_DOUBLE_IS_FLOAT64 and 128 bit long
-  // double systems.
+  // TODO(michaelrj): Add tests for LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 and 128
+  // bit long double systems.
   // TODO(michaelrj): Fix the tests to only depend on the digits the long double
   // is accurate for.
 
@@ -1614,7 +1701,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%.Lf", -2.5L);
   ASSERT_STREQ_LEN(written, buff, "-2");
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Lf", 1e100L);
   ASSERT_STREQ_LEN(written, buff,
@@ -1930,7 +2017,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
       "570449525088342437216896462077260223998756027453411520977536701491759878"
       "422771447006016890777855573925295187921971811871399320142563330377888532"
       "179817332113");
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
@@ -2171,20 +2258,20 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 
   /*
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
   #endif
   */
@@ -2423,7 +2510,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   // Length Modifier Tests.
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   written = LIBC_NAMESPACE::sprintf(buff, "%.9Le", 1000000000500000000.1L);
   ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
 
@@ -2783,34 +2870,34 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%.10g", 0x1.0p-1074);
   ASSERT_STREQ_LEN(written, buff, "4.940656458e-324");
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
   written = LIBC_NAMESPACE::sprintf(buff, "%.60Lg", 0xa.aaaaaaaaaaaaaabp-7L);
   ASSERT_STREQ_LEN(
       written, buff,
       "0.0833333333333333333355920878593448009041821933351457118988037");
 
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
   // Long double precision tests.
   // These are currently commented out because they require long double support
   // that isn't ready yet.
   /*
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La", 0.1L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0xc.dp-7");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.ap-4");
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%.1La",
-  0xf.fffffffffffffffp16380L); #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
-    ASSERT_STREQ_LEN(written, buff, "0x1.0p+16384");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  0xf.fffffffffffffffp16380L); #if
+  defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80) ASSERT_STREQ_LEN(written, buff,
+  "0x1.0p+16384"); #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x2.0p+16383");
   #endif
   */
@@ -3053,7 +3140,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 
   // Length Modifier Tests.
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 0xf.fffffffffffffffp+16380L);
   ASSERT_STREQ_LEN(written, buff, "1.18973e+4932");
@@ -3064,7 +3151,7 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%Lg", 9.99999999999e-100L);
   ASSERT_STREQ_LEN(written, buff, "1e-99");
 
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
   // TODO: Uncomment the below tests after long double support is added
   /*
@@ -3171,29 +3258,29 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 */
   /*
     written = LIBC_NAMESPACE::sprintf(buff, "%La", 0.1L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0xc.ccccccccccccccdp-7");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "0x1.999999999999ap-4");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.999999999999999999999999999ap-4");
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e1000L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0xf.38db1f9dd3dac05p+3318");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "inf");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.e71b63f3ba7b580af1a52d2a7379p+3321");
   #endif
 
     written = LIBC_NAMESPACE::sprintf(buff, "%La", 1.0e-1000L);
-  #if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+  #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
     ASSERT_STREQ_LEN(written, buff, "0x8.68a9188a89e1467p-3325");
-  #elif defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
     ASSERT_STREQ_LEN(written, buff, "0x0p+0");
-  #else // 128 bit long double
+  #elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
     ASSERT_STREQ_LEN(written, buff, "0x1.0d152311513c28ce202627c06ec2p-3322");
   #endif
   */

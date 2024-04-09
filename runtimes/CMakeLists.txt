@@ -6,6 +6,8 @@ set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
+
 project(Runtimes C CXX ASM)
 
 list(INSERT CMAKE_MODULE_PATH 0
@@ -150,6 +152,12 @@ endif()
 
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
+
+# This can be used to detect whether we're targeting a GPU architecture.
+if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+  set(LLVM_RUNTIMES_GPU_BUILD ON)
+endif()
 
 # Handle common options used by all runtimes.
 include(AddLLVM)

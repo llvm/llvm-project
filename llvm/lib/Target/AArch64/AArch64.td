@@ -873,6 +873,12 @@ def TuneA520    : SubtargetFeature<"a520", "ARMProcFamily", "CortexA520",
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler]>;
 
+def TuneA520AE  : SubtargetFeature<"a520ae", "ARMProcFamily", "CortexA520",
+                                   "Cortex-A520AE ARM processors", [
+                                   FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
+                                   FeaturePostRAScheduler]>;
+
 def TuneA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    "Cortex-A57 ARM processors", [
                                    FeatureFuseAES,
@@ -944,6 +950,18 @@ def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
                                FeatureEnableSelectOptimize,
                                FeaturePredictableSelectIsExpensive]>;
 
+def TuneA78AE : SubtargetFeature<"a78ae", "ARMProcFamily",
+                                 "CortexA78AE",
+                                 "Cortex-A78AE ARM processors", [
+                                 FeatureCmpBccFusion,
+                                 FeatureFuseAES,
+                                 FeatureFuseAdrpAdd,
+                                 FeatureAddrLSLFast,
+                                 FeatureALULSLFast,
+                                 FeaturePostRAScheduler,
+                                 FeatureEnableSelectOptimize,
+                                 FeaturePredictableSelectIsExpensive]>;
+
 def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
                                 "CortexA78C",
                                 "Cortex-A78C ARM processors", [
@@ -980,6 +998,17 @@ def TuneA715 : SubtargetFeature<"a715", "ARMProcFamily", "CortexA715",
 
 def TuneA720 : SubtargetFeature<"a720", "ARMProcFamily", "CortexA720",
                                 "Cortex-A720 ARM processors", [
+                                 FeatureFuseAES,
+                                 FeaturePostRAScheduler,
+                                 FeatureCmpBccFusion,
+                                 FeatureAddrLSLFast,
+                                 FeatureALULSLFast,
+                                 FeatureFuseAdrpAdd,
+                                 FeatureEnableSelectOptimize,
+                                 FeaturePredictableSelectIsExpensive]>;
+
+def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720",
+                                "Cortex-A720AE ARM processors", [
                                  FeatureFuseAES,
                                  FeaturePostRAScheduler,
                                  FeatureCmpBccFusion,
@@ -1411,6 +1440,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
                                  FeatureFP16FML];
+  list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
+                                 FeatureMTE, FeatureETE, FeatureSVE2BitPerm,
+                                 FeatureFP16FML];
   list<SubtargetFeature> A65  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeatureSSBS, FeatureRAS,
@@ -1425,6 +1457,10 @@ def ProcessorFeatures {
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureRCPC, FeaturePerfMon, FeatureSPE,
                                  FeatureSSBS];
+  list<SubtargetFeature> A78AE = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
+                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
+                                  FeatureRCPC, FeaturePerfMon, FeatureSPE,
+                                  FeatureSSBS];
   list<SubtargetFeature> A78C = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureFullFP16, FeatureDotProd,
                                  FeatureFlagM, FeaturePAuth,
@@ -1438,6 +1474,9 @@ def ProcessorFeatures {
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureETE,
                                  FeaturePerfMon, FeatureMatMulInt8, FeatureSPE];
   list<SubtargetFeature> A720 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
+                                 FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
+                                 FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
+  list<SubtargetFeature> A720AE = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
                                  FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
@@ -1582,6 +1621,8 @@ def : ProcessorModel<"cortex-a510", CortexA510Model, ProcessorFeatures.A510,
                      [TuneA510]>;
 def : ProcessorModel<"cortex-a520", CortexA510Model, ProcessorFeatures.A520,
                      [TuneA520]>;
+def : ProcessorModel<"cortex-a520ae", CortexA510Model, ProcessorFeatures.A520AE,
+                     [TuneA520AE]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
 def : ProcessorModel<"cortex-a65", CortexA53Model, ProcessorFeatures.A65,
@@ -1602,6 +1643,8 @@ def : ProcessorModel<"cortex-a77", CortexA57Model, ProcessorFeatures.A77,
                      [TuneA77]>;
 def : ProcessorModel<"cortex-a78", CortexA57Model, ProcessorFeatures.A78,
                      [TuneA78]>;
+def : ProcessorModel<"cortex-a78ae", CortexA57Model, ProcessorFeatures.A78AE,
+                     [TuneA78AE]>;
 def : ProcessorModel<"cortex-a78c", CortexA57Model, ProcessorFeatures.A78C,
                      [TuneA78C]>;
 def : ProcessorModel<"cortex-a710", NeoverseN2Model, ProcessorFeatures.A710,
@@ -1610,6 +1653,8 @@ def : ProcessorModel<"cortex-a715", NeoverseN2Model, ProcessorFeatures.A715,
                      [TuneA715]>;
 def : ProcessorModel<"cortex-a720", NeoverseN2Model, ProcessorFeatures.A720,
                      [TuneA720]>;
+def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
+                     [TuneA720AE]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,

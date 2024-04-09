@@ -1,5 +1,5 @@
 ! Test lowering of component reference to HLFIR
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 module comp_ref
 type t1
   integer :: scalar_i

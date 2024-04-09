@@ -806,9 +806,8 @@ ExprResult Parser::ParseLambdaExpression() {
 ///
 /// If we are not looking at a lambda expression, returns ExprError().
 ExprResult Parser::TryParseLambdaExpression() {
-  assert(getLangOpts().CPlusPlus11
-         && Tok.is(tok::l_square)
-         && "Not at the start of a possible lambda expression.");
+  assert(getLangOpts().CPlusPlus && Tok.is(tok::l_square) &&
+         "Not at the start of a possible lambda expression.");
 
   const Token Next = NextToken();
   if (Next.is(tok::eof)) // Nothing else to lookup here...
@@ -1326,7 +1325,9 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, diag::warn_cxx98_compat_lambda);
+  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                           ? diag::warn_cxx98_compat_lambda
+                           : diag::ext_lambda);
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -3908,7 +3909,10 @@ ExprResult Parser::ParseTypeTrait() {
   SmallVector<ParsedType, 2> Args;
   do {
     // Parse the next type.
-    TypeResult Ty = ParseTypeName();
+    TypeResult Ty =
+        ParseTypeName(/*SourceRange=*/nullptr,
+                      getLangOpts().CPlusPlus ? DeclaratorContext::TemplateArg
+                                              : DeclaratorContext::TypeName);
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return ExprError();
@@ -3950,7 +3954,8 @@ ExprResult Parser::ParseArrayTypeTrait() {
   if (T.expectAndConsume())
     return ExprError();
 
-  TypeResult Ty = ParseTypeName();
+  TypeResult Ty =
+      ParseTypeName(/*SourceRange=*/nullptr, DeclaratorContext::TemplateArg);
   if (Ty.isInvalid()) {
     SkipUntil(tok::comma, StopAtSemi);
     SkipUntil(tok::r_paren, StopAtSemi);

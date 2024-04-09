@@ -4,8 +4,6 @@
 
 ; CHECK-GI:         warning: Instruction selection used fallback path for shufflevector_v2i1
 ; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v2i1_zeroes
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v3i8
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for shufflevector_v3i8_zeroes
 
 ; ===== Legal Vector Types =====
 
@@ -204,7 +202,7 @@ define i32 @shufflevector_v4i8(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-NEXT:    ext v0.8b, v1.8b, v0.8b, #6
 ; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v0.4h
 ; CHECK-SD-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
@@ -212,8 +210,8 @@ define i32 @shufflevector_v4i8(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-GI-LABEL: shufflevector_v4i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov h2, v0.h[1]
 ; CHECK-GI-NEXT:    mov h3, v1.h[1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-GI-NEXT:    mov h4, v0.h[2]
@@ -226,14 +224,6 @@ define i32 @shufflevector_v4i8(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-GI-NEXT:    mov v1.b[2], v2.b[0]
 ; CHECK-GI-NEXT:    mov v0.b[3], v5.b[0]
 ; CHECK-GI-NEXT:    mov v1.b[3], v6.b[0]
-; CHECK-GI-NEXT:    mov v0.b[4], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[4], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[5], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[5], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[6], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[6], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.b[7], v0.b[0]
-; CHECK-GI-NEXT:    mov v1.b[7], v0.b[0]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI15_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
@@ -289,16 +279,12 @@ define i32 @shufflevector_v2i16(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-GI-LABEL: shufflevector_v2i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NEXT:    mov s3, v1.s[1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI17_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
@@ -404,7 +390,7 @@ define i32 @shufflevector_v4i8_zeroes(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    add sp, sp, #16
 ; CHECK-SD-NEXT:    ret
@@ -497,12 +483,35 @@ define <4 x i64> @shufflevector_v4i64_zeroes(<4 x i64> %a, <4 x i64> %b) {
 ; ===== Vectors with Non-Pow 2 Widths =====
 
 define <3 x i8> @shufflevector_v3i8(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: shufflevector_v3i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, w1
-; CHECK-NEXT:    mov w1, w2
-; CHECK-NEXT:    mov w2, w4
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shufflevector_v3i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, w1
+; CHECK-SD-NEXT:    mov w1, w2
+; CHECK-SD-NEXT:    mov w2, w4
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflevector_v3i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov s0, w0
+; CHECK-GI-NEXT:    fmov s1, w1
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
+; CHECK-GI-NEXT:    fmov s2, w3
+; CHECK-GI-NEXT:    fmov s3, w4
+; CHECK-GI-NEXT:    mov v0.b[1], v1.b[0]
+; CHECK-GI-NEXT:    fmov s1, w2
+; CHECK-GI-NEXT:    mov v2.b[1], v3.b[0]
+; CHECK-GI-NEXT:    fmov s3, w5
+; CHECK-GI-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI30_0]
+; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    fmov w1, s1
+; CHECK-GI-NEXT:    fmov w2, s2
+; CHECK-GI-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 1, i32 2, i32 4>
     ret <3 x i8> %c
 }
@@ -597,11 +606,21 @@ define <3 x i32> @shufflevector_v3i32(<3 x i32> %a, <3 x i32> %b) {
 ; ===== Vectors with Non-Pow 2 Widths with Zero Masks =====
 
 define <3 x i8> @shufflevector_v3i8_zeroes(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: shufflevector_v3i8_zeroes:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w1, w0
-; CHECK-NEXT:    mov w2, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shufflevector_v3i8_zeroes:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w1, w0
+; CHECK-SD-NEXT:    mov w2, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflevector_v3i8_zeroes:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    dup v0.8b, w0
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    fmov w1, s1
+; CHECK-GI-NEXT:    fmov w2, s2
+; CHECK-GI-NEXT:    ret
     %c = shufflevector <3 x i8> %a, <3 x i8> %b, <3 x i32> <i32 0, i32 0, i32 0>
     ret <3 x i8> %c
 }

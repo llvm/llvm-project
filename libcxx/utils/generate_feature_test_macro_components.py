@@ -171,6 +171,12 @@ feature_test_macros = [
             "headers": ["atomic"],
         },
         {
+            "name": "__cpp_lib_atomic_min_max",
+            "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
+            "headers": ["atomic"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_atomic_ref",
             "values": {"c++20": 201806},
             "headers": ["atomic"],
@@ -387,6 +393,12 @@ feature_test_macros = [
             "headers": ["vector"],
         },
         {
+            "name": "__cpp_lib_constrained_equality",
+            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
+            "headers": ["optional", "tuple", "utility", "variant"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_copyable_function",
             "values": {"c++26": 202306},  # P2548R6 copyable_function
             "headers": ["functional"],
@@ -399,8 +411,17 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_debugging",
-            "values": {"c++26": 202311},  # P2546R5 Debugging Support
+            "values": {
+                "c++26": 202311, # P2546R5 Debugging Support
+                # "c++26": 202403, # P2810R4: is_debugger_present is_replaceable
+            },
             "headers": ["debugging"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_default_template_type_for_algorithm_values",
+            "values": {"c++26": 202403}, # P2248R8: Enabling list-initialization for algorithms
+            "headers": ["algorithm", "deque", "forward_list", "list", "ranges", "string", "vector"],
             "unimplemented": True,
         },
         {
@@ -474,6 +495,12 @@ feature_test_macros = [
             # 202305 P2757R3 Type-checking format args
             # 202306 P2637R3 Member Visit
             "headers": ["format"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_format_path",
+            "values": {"c++23": 202403}, # P2845R8: Formatting of std::filesystem::path
+            "headers": ["filesystem"],
             "unimplemented": True,
         },
         {
@@ -585,6 +612,12 @@ feature_test_macros = [
             "name": "__cpp_lib_gcd_lcm",
             "values": {"c++17": 201606},
             "headers": ["numeric"],
+        },
+        {
+            "name": "__cpp_lib_generate_random",
+            "values": {"c++26": 202403}, # P1068R11: Vector API for random number generation
+            "headers": ["random"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_generic_associative_lookup",
@@ -874,7 +907,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_print",
-            "values": {"c++23": 202207},
+            "values": {
+                "c++23": 202207,
+                # "c++26": 202403, # P3107R5: Permit an efficient implementation of std::print
+            },
             "headers": ["ostream", "print"],
         },
         {
@@ -913,6 +949,12 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_chunk_by",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
+        },
+        {
+            "name": "__cpp_lib_ranges_concat",
+            "values": {"c++26": 202403}, # P2542R8: views::concat
+            "headers": ["ranges"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_contains",
@@ -993,6 +1035,12 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_from_temporary",
             "values": {"c++23": 202202},
             "headers": ["type_traits"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_reference_wrapper",
+            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
+            "headers": ["functional"],
             "unimplemented": True,
         },
         {
@@ -1118,7 +1166,6 @@ feature_test_macros = [
                 "c++26": 202306  # P2495R3 Interfacing stringstreams with string_view
             },
             "headers": ["sstream"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_stacktrace",
@@ -1153,12 +1200,19 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_string_view",
-            "values": {"c++17": 201606, "c++20": 201803},
+            "values": {
+                "c++17": 201606,
+                "c++20": 201803,
+                # "c++26": 202403, # P2591R5: Concatenation of strings and string views
+            },
             "headers": ["string", "string_view"],
         },
         {
             "name": "__cpp_lib_submdspan",
-            "values": {"c++26": 202306},  # P2630R4 submdspan
+            "values": {
+                "c++26": 202306, # P2630R4: submdspan
+                # "c++26": 202403, # P2642R6: Padded mdspan layouts
+            },
             "headers": ["mdspan"],
             "unimplemented": True,
         },
@@ -1298,25 +1352,11 @@ feature_test_macros = [
 ]
 
 assert feature_test_macros == sorted(feature_test_macros, key=lambda tc: tc["name"])
-assert all(tc["headers"] == sorted(tc["headers"]) for tc in feature_test_macros)
-assert all(
-    ("libcxx_guard" in tc) == ("test_suite_guard" in tc) for tc in feature_test_macros
-)
-assert all(
-    all(
-        key
-        in [
-            "name",
-            "values",
-            "headers",
-            "libcxx_guard",
-            "test_suite_guard",
-            "unimplemented",
-        ]
-        for key in tc.keys()
-    )
-    for tc in feature_test_macros
-)
+for tc in feature_test_macros:
+    assert tc["headers"] == sorted(tc["headers"]), tc
+    assert ("libcxx_guard" in tc) == ("test_suite_guard" in tc), tc
+    valid_keys = ["name", "values", "headers", "libcxx_guard", "test_suite_guard", "unimplemented"]
+    assert all(key in valid_keys for key in tc.keys()), tc
 
 # Map from each header to the Lit annotations that should be used for
 # tests that include that header.

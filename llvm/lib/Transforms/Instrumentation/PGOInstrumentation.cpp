@@ -327,6 +327,9 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+// Command line option to enable vtable value profiling. Defined in
+// ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
+extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
@@ -581,6 +584,8 @@ public:
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.bbInfoSize();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
+      if (EnableVTableValueProfiling)
+        ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
@@ -920,7 +925,7 @@ static void instrumentOneFunc(
   // on the instrumentation call based on the funclet coloring.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   if (F.hasPersonalityFn() &&
-      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
   // For each VP Kind, walk the VP candidates and instrument each one.
@@ -961,21 +966,16 @@ namespace {
 struct PGOUseEdge : public PGOEdge {
   using PGOEdge::PGOEdge;
 
-  bool CountValid = false;
-  uint64_t CountValue = 0;
+  std::optional<uint64_t> Count;
 
   // Set edge count value
-  void setEdgeCount(uint64_t Value) {
-    CountValue = Value;
-    CountValid = true;
-  }
+  void setEdgeCount(uint64_t Value) { Count = Value; }
 
   // Return the information string for this object.
   std::string infoString() const {
-    if (!CountValid)
+    if (!Count)
       return PGOEdge::infoString();
-    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(CountValue))
-        .str();
+    return (Twine(PGOEdge::infoString()) + "  Count=" + Twine(*Count)).str();
   }
 };
 
@@ -1022,7 +1022,8 @@ static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   for (const auto &E : Edges) {
     if (E->Removed)
       continue;
-    Total += E->CountValue;
+    if (E->Count)
+      Total += *E->Count;
   }
   return Total;
 }
@@ -1221,7 +1222,7 @@ bool PGOUseFunc::setInstrumentedCounts(
       if (DestInfo.Count && DestInfo.InEdges.size() == 1)
         setEdgeCount(E.get(), *DestInfo.Count);
     }
-    if (E->CountValid)
+    if (E->Count)
       continue;
     // E's count should have been set from profile. If not, this meenas E skips
     // the instrumentation. We set the count to 0.
@@ -1234,7 +1235,7 @@ bool PGOUseFunc::setInstrumentedCounts(
 // unknown edge in Edges vector.
 void PGOUseFunc::setEdgeCount(DirectEdges &Edges, uint64_t Value) {
   for (auto &E : Edges) {
-    if (E->CountValid)
+    if (E->Count)
       continue;
     E->setEdgeCount(Value);
 
@@ -1574,7 +1575,7 @@ void PGOUseFunc::setBranchWeights() {
       if (DestBB == nullptr)
         continue;
       unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
-      uint64_t EdgeCount = E->CountValue;
+      uint64_t EdgeCount = *E->Count;
       if (EdgeCount > MaxCount)
         MaxCount = EdgeCount;
       EdgeCounts[SuccNum] = EdgeCount;
@@ -1779,6 +1780,15 @@ static bool InstrumentAllFunctions(
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
+
+  Triple TT(M.getTargetTriple());
+  LLVMContext &Ctx = M.getContext();
+  if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M.getName().data(),
+        Twine("VTable value profiling is presently not "
+              "supported for non-ELF object formats"),
+        DS_Warning));
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 
