@@ -342,6 +342,10 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
   }
+
+  // Check ROCm path if specified
+  const ToolChain &TC = getToolChain();
+  TC.getDeviceLibs(Args);
 }
 
 void Flang::addTargetOptions(const ArgList &Args,
