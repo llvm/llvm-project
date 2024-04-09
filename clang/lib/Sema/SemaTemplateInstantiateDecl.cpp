@@ -5081,7 +5081,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
 
-  // Propagate '__restrict' properly.
+  // Propagate '__restrict' (or lack thereof) properly.
+  //
+  // Since '__restrict'-ness is allowed to differ between the declaration and
+  // definition of a function, we need to propagate the '__restrict'-ness of
+  // the template declaration to the instantiated declaration, and that of the
+  // template definition to the instantiated definition. The former happens
+  // automatically during template instantiation, so we only need to handle
+  // the latter here.
   if (auto MD = dyn_cast<CXXMethodDecl>(Function)) {
     bool Restrict = cast<CXXMethodDecl>(PatternDecl)->isEffectivelyRestrict();
     if (Restrict != MD->getMethodQualifiers().hasRestrict()) {
