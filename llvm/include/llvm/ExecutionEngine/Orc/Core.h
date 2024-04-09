@@ -227,14 +227,14 @@ public:
   }
 
   /// Construct a SymbolLookupSet from DenseMap keys.
-  template <typename KeyT>
+  template <typename ValT>
   static SymbolLookupSet
-  fromMapKeys(const DenseMap<SymbolStringPtr, KeyT> &M,
+  fromMapKeys(const DenseMap<SymbolStringPtr, ValT> &M,
               SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     SymbolLookupSet Result;
     Result.Symbols.reserve(M.size());
-    for (const auto &KV : M)
-      Result.add(KV.first, Flags);
+    for (const auto &[Name, Val] : M)
+      Result.add(Name, Flags);
     return Result;
   }
 
