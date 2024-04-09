@@ -19,7 +19,6 @@
 // atomic_compare_exchange_strong(shared_ptr<T>* p, shared_ptr<T>* v,
 //                                shared_ptr<T> w);                     // Deprecated in C++20, removed in C++26
 
-
 #include <atomic>
 #include <memory>
 #include <tuple>
