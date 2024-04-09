@@ -80,7 +80,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
-  void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
@@ -180,12 +180,13 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   SM.recordStatepoint(*MILabel, MI);
 }
 
-void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = RISCVRVC::compress(CInst, Inst, *STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
+  return Res;
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real
