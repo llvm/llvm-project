@@ -13,4 +13,4 @@ def fibi(x)
   b;
 
 fibi(10);
-# CHECK: Evaluated to 55.000000
+# CHECK: Evaluated to 34.000000
