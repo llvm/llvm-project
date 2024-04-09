@@ -652,6 +652,14 @@ struct MatchableInfo {
         RHS.TheDef->getValueAsBit("HasPositionOrder"))
       return TheDef->getID() < RHS.TheDef->getID();
 
+    // Same rule for X86 Patterns.
+    if (getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        getResultInst()->TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        RHS.getResultInst()->TheDef->getValueAsBit("HasPositionOrder"))
+      return getResultInst()->TheDef->getID() <
+             RHS.getResultInst()->TheDef->getID();
+
     // Give matches that require more features higher precedence. This is useful
     // because we cannot define AssemblerPredicates with the negation of
     // processor features. For example, ARM v6 "nop" may be either a HINT or
