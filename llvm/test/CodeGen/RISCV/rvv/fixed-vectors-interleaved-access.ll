@@ -8,51 +8,21 @@
 
 ; FIXME: This should be widened to a vlseg2 of <4 x i32> with VL set to 3
 define {<3 x i32>, <3 x i32>} @load_factor2_v3(ptr %ptr) {
-; RV32-LABEL: load_factor2_v3:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; RV32-NEXT:    vle32.v v10, (a0)
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v9, v10, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vwaddu.vv v8, v10, v9
-; RV32-NEXT:    li a0, -1
-; RV32-NEXT:    vwmaccu.vx v8, a0, v9
-; RV32-NEXT:    vmv.v.i v0, 4
-; RV32-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v10, 4
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV32-NEXT:    vrgather.vi v8, v12, 0, v0.t
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vadd.vv v9, v9, v9
-; RV32-NEXT:    vadd.vi v11, v9, 1
-; RV32-NEXT:    vrgather.vv v9, v10, v11
-; RV32-NEXT:    vrgather.vi v9, v12, 1, v0.t
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: load_factor2_v3:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; RV64-NEXT:    vle32.v v10, (a0)
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vadd.vv v8, v8, v8
-; RV64-NEXT:    vadd.vi v8, v8, 1
-; RV64-NEXT:    vrgather.vv v9, v10, v8
-; RV64-NEXT:    vmv.v.i v0, 4
-; RV64-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v10, 4
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV64-NEXT:    vrgather.vi v9, v12, 1, v0.t
-; RV64-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v11, v10, 2
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vwaddu.vv v8, v10, v11
-; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    vwmaccu.vx v8, a0, v11
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; RV64-NEXT:    vrgather.vi v8, v12, 0, v0.t
-; RV64-NEXT:    ret
+; CHECK-LABEL: load_factor2_v3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vadd.vv v12, v8, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v8, v10, v12
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vadd.vi v9, v12, 1
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v12, v10, v9
+; CHECK-NEXT:    vmv1r.v v9, v12
+; CHECK-NEXT:    ret
   %interleaved.vec = load <6 x i32>, ptr %ptr
   %v0 = shufflevector <6 x i32> %interleaved.vec, <6 x i32> poison, <3 x i32> <i32 0, i32 2, i32 4>
   %v1 = shufflevector <6 x i32> %interleaved.vec, <6 x i32> poison, <3 x i32> <i32 1, i32 3, i32 5>
