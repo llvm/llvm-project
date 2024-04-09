@@ -30,11 +30,13 @@ define void @f(i32,i32,i32,i32,ptr %x4p, ptr %x5p, ptr %x6p) {
 ; CHECK-NEXT:    adcs r1, r5
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    movs r4, r5
 ; CHECK-NEXT:    adds r2, r0, r2
+; CHECK-NEXT:    mov r12, r5
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    adcs r4, r5
-; CHECK-NEXT:    movs r0, r3
 ; CHECK-NEXT:    adds r0, r2, r5
+; CHECK-NEXT:    mov r12, r3
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    adcs r0, r4
 ; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    str r0, [r6]

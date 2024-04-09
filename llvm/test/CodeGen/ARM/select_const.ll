@@ -664,8 +664,9 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    push {r4, r5, r6, r7, lr}
 ; THUMB-NEXT:    movs r7, #1
 ; THUMB-NEXT:    ands r0, r7
-; THUMB-NEXT:    movs r4, r0
 ; THUMB-NEXT:    subs r1, r0, #1
+; THUMB-NEXT:    mov r12, r0
+; THUMB-NEXT:    mov r4, r12
 ; THUMB-NEXT:    sbcs r4, r1
 ; THUMB-NEXT:    cmp r0, #0
 ; THUMB-NEXT:    bne .LBB24_2
@@ -679,8 +680,9 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; THUMB-NEXT:    ldr r0, .LCPI24_0
 ; THUMB-NEXT:    ands r5, r0
 ; THUMB-NEXT:    movs r6, #0
-; THUMB-NEXT:    movs r1, r4
 ; THUMB-NEXT:    subs r0, r5, #1
+; THUMB-NEXT:    mov r12, r4
+; THUMB-NEXT:    mov r1, r12
 ; THUMB-NEXT:    sbcs r1, r6
 ; THUMB-NEXT:    eors r3, r7
 ; THUMB-NEXT:    ldr r6, .LCPI24_0
@@ -783,8 +785,9 @@ define i64 @func(i64 %arg) {
 ; THUMB-NEXT:    .save {r4, lr}
 ; THUMB-NEXT:    push {r4, lr}
 ; THUMB-NEXT:    movs r2, #0
-; THUMB-NEXT:    movs r3, r1
 ; THUMB-NEXT:    adds r3, r0, #1
+; THUMB-NEXT:    mov r12, r1
+; THUMB-NEXT:    mov r3, r12
 ; THUMB-NEXT:    adcs r3, r2
 ; THUMB-NEXT:    mov r12, r2
 ; THUMB-NEXT:    mov r3, r12

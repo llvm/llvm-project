@@ -129,8 +129,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-T15TE-NEXT:    eors r4, r3
 ; CHECK-T15TE-NEXT:    bics r4, r1
 ; CHECK-T15TE-NEXT:    asrs r1, r3, #31
-; CHECK-T15TE-NEXT:    movs r0, r1
 ; CHECK-T15TE-NEXT:    cmp r4, #0
+; CHECK-T15TE-NEXT:    mov r12, r1
+; CHECK-T15TE-NEXT:    mov r0, r12
 ; CHECK-T15TE-NEXT:    bmi .LBB1_2
 ; CHECK-T15TE-NEXT:  @ %bb.1:
 ; CHECK-T15TE-NEXT:    movs r0, r2
