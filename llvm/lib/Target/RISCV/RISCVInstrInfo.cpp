@@ -2039,19 +2039,19 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
     break;
   }
 
-  Register X = AddMI->getOperand(3 - AddOpIdx).getReg();
-  Register Y = ShiftMI->getOperand(1).getReg();
-  Register Z = Root.getOperand(1).getReg();
+  const MachineOperand &X = AddMI->getOperand(3 - AddOpIdx);
+  const MachineOperand &Y = ShiftMI->getOperand(1);
+  const MachineOperand &Z = Root.getOperand(1);
 
   Register NewVR = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
   auto MIB1 = BuildMI(*MF, MIMetadata(Root), TII->get(InnerOpc), NewVR)
-                  .addReg(Y)
-                  .addReg(Z);
+                  .addReg(Y.getReg(), getKillRegState(Y.isKill()))
+                  .addReg(Z.getReg(), getKillRegState(Z.isKill()));
   auto MIB2 = BuildMI(*MF, MIMetadata(Root), TII->get(Root.getOpcode()),
                       Root.getOperand(0).getReg())
-                  .addReg(NewVR)
-                  .addReg(X);
+                  .addReg(NewVR, RegState::Kill)
+                  .addReg(X.getReg(), getKillRegState(X.isKill()));
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
   InsInstrs.push_back(MIB1);
