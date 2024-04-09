@@ -145,10 +145,10 @@ defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                <"__builtin_amdgcn_workgroup_id">;
 defm int_amdgcn_cluster_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                        <"__builtin_amdgcn_cluster_workgroup_id">;
-defm int_amdgcn_cluster_num_workgroups : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
-                                         <"__builtin_amdgcn_cluster_num_workgroups">;
-def int_amdgcn_cluster_flat_num_workgroups:
-  ClangBuiltin<"__builtin_amdgcn_cluster_flat_num_workgroups">,
+defm int_amdgcn_cluster_workgroup_max_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
+                                           <"__builtin_amdgcn_cluster_workgroup_max_id">;
+def int_amdgcn_cluster_workgroup_max_flat_id:
+  ClangBuiltin<"__builtin_amdgcn_cluster_workgroup_max_flat_id">,
   Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_dispatch_ptr :

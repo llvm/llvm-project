@@ -4298,13 +4298,13 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
   const ArgDescriptor ClusterWorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
-  const ArgDescriptor ClusterNumWorkGroupsX =
+  const ArgDescriptor ClusterWorkGroupMaxIDX =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
-  const ArgDescriptor ClusterNumWorkGroupsY =
+  const ArgDescriptor ClusterWorkGroupMaxIDY =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
-  const ArgDescriptor ClusterNumWorkGroupsZ =
+  const ArgDescriptor ClusterWorkGroupMaxIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
-  const ArgDescriptor ClusterFlatNumWorkGroups =
+  const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
   if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (ArgType) {
@@ -4338,23 +4338,23 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X:
-      Arg = &ClusterNumWorkGroupsX;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      Arg = &ClusterWorkGroupMaxIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y:
-      Arg = &ClusterNumWorkGroupsY;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      Arg = &ClusterWorkGroupMaxIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
-      Arg = &ClusterNumWorkGroupsZ;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      Arg = &ClusterWorkGroupMaxIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS:
-      Arg = &ClusterFlatNumWorkGroups;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      Arg = &ClusterWorkGroupMaxFlatID;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
@@ -7287,22 +7287,23 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
                MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
-  case Intrinsic::amdgcn_cluster_num_workgroups_x:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
-               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X);
-  case Intrinsic::amdgcn_cluster_num_workgroups_y:
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
-               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y);
-  case Intrinsic::amdgcn_cluster_num_workgroups_z:
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
-               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z);
-  case Intrinsic::amdgcn_cluster_flat_num_workgroups:
+               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
     return ST.hasGFX12_10Insts() &&
            legalizePreloadedArgIntrin(
-               MI, MRI, B, AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS);
+               MI, MRI, B,
+               AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);
   case Intrinsic::amdgcn_wave_id:
     return legalizeWaveID(MI, B);
   case Intrinsic::amdgcn_lds_kernel_id:

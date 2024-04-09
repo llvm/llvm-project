@@ -2305,13 +2305,13 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000000F0u);
   const ArgDescriptor ClusterWorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00000F00u);
-  const ArgDescriptor ClusterNumWorkGroupsX =
+  const ArgDescriptor ClusterWorkGroupMaxIDX =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0000F000u);
-  const ArgDescriptor ClusterNumWorkGroupsY =
+  const ArgDescriptor ClusterWorkGroupMaxIDY =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x000F0000u);
-  const ArgDescriptor ClusterNumWorkGroupsZ =
+  const ArgDescriptor ClusterWorkGroupMaxIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
-  const ArgDescriptor ClusterFlatNumWorkGroups =
+  const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
   if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
     switch (PVID) {
@@ -2345,23 +2345,23 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X:
-      Reg = &ClusterNumWorkGroupsX;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      Reg = &ClusterWorkGroupMaxIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y:
-      Reg = &ClusterNumWorkGroupsY;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      Reg = &ClusterWorkGroupMaxIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z:
-      Reg = &ClusterNumWorkGroupsZ;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      Reg = &ClusterWorkGroupMaxIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
-    case AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS:
-      Reg = &ClusterFlatNumWorkGroups;
+    case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      Reg = &ClusterWorkGroupMaxFlatID;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
@@ -8543,29 +8543,29 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
-  case Intrinsic::amdgcn_cluster_num_workgroups_x:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return Subtarget->hasGFX12_10Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_X)
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
                : DAG.getUNDEF(VT);
-  case Intrinsic::amdgcn_cluster_num_workgroups_y:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
     return Subtarget->hasGFX12_10Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Y)
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
                : DAG.getUNDEF(VT);
-  case Intrinsic::amdgcn_cluster_num_workgroups_z:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
     return Subtarget->hasGFX12_10Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_NUM_WORKGROUPS_Z)
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
                : DAG.getUNDEF(VT);
-  case Intrinsic::amdgcn_cluster_flat_num_workgroups:
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
     return Subtarget->hasGFX12_10Insts()
                ? getPreloadedValue(
                      DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_FLAT_NUM_WORKGROUPS)
+                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
                : DAG.getUNDEF(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);

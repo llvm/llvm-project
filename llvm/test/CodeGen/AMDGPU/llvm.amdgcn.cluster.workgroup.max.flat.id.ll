@@ -4,10 +4,10 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs %s -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1210 -verify-machineinstrs %s -o - | FileCheck -check-prefixes=CHECK-G-MESA3D %s
 
-declare i32 @llvm.amdgcn.cluster.flat.num.workgroups() #0
+declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id() #0
 
-define amdgpu_kernel void @test_flat_num_workgroups(ptr addrspace(1) %out) #1 {
-; CHECK-UNKNOWN-LABEL: test_flat_num_workgroups:
+define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 {
+; CHECK-UNKNOWN-LABEL: test_workgroup_max_flat_id:
 ; CHECK-UNKNOWN:       ; %bb.0:
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_flat_num_workgroups(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-UNKNOWN-NEXT:    s_endpgm
 ;
-; CHECK-MESA3D-LABEL: test_flat_num_workgroups:
+; CHECK-MESA3D-LABEL: test_workgroup_max_flat_id:
 ; CHECK-MESA3D:         .amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:     amd_code_version_major = 1
 ; CHECK-MESA3D-NEXT:     amd_code_version_minor = 2
@@ -97,7 +97,7 @@ define amdgpu_kernel void @test_flat_num_workgroups(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-MESA3D-NEXT:    s_endpgm
 ;
-; CHECK-G-UNKNOWN-LABEL: test_flat_num_workgroups:
+; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_flat_id:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-G-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
@@ -108,7 +108,7 @@ define amdgpu_kernel void @test_flat_num_workgroups(ptr addrspace(1) %out) #1 {
 ; CHECK-G-UNKNOWN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-G-UNKNOWN-NEXT:    s_endpgm
 ;
-; CHECK-G-MESA3D-LABEL: test_flat_num_workgroups:
+; CHECK-G-MESA3D-LABEL: test_workgroup_max_flat_id:
 ; CHECK-G-MESA3D:         .amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:     amd_code_version_major = 1
 ; CHECK-G-MESA3D-NEXT:     amd_code_version_minor = 2
@@ -186,7 +186,7 @@ define amdgpu_kernel void @test_flat_num_workgroups(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; CHECK-G-MESA3D-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-G-MESA3D-NEXT:    s_endpgm
-  %id = call i32 @llvm.amdgcn.cluster.flat.num.workgroups()
+  %id = call i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
   store i32 %id, ptr addrspace(1) %out
   ret void
 }
