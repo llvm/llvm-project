@@ -2049,10 +2049,10 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
       Check(Current.getLower().slt(Current.getUpper()),
             "Attribute 'initializes' requires interval lower less than upper",
             V);
-      Check(Current.getLower().sge(Previous.getLower()),
+      Check(Current.getLower().sgt(Previous.getLower()),
             "Attribute 'initializes' requires intervals in ascending order!",
             V);
-      Check(Current.getLower().sge(Previous.getUpper()),
+      Check(Current.getLower().sgt(Previous.getUpper()),
             "Attribute 'initializes' requires intervals merged!", V);
     }
   }

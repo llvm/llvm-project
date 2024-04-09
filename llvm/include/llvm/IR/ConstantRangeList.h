@@ -14,6 +14,9 @@
 // {[0, 0)}     = Empty set
 // {[255, 255)} = Full Set
 //
+// For EmptySet or FullSet, the list size is 1 but it's not allowed to access
+// the range.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_CONSTANTRANGELIST_H
@@ -40,16 +43,21 @@ public:
 
   ConstantRangeList(int64_t Lower, int64_t Upper);
 
-  SmallVectorImpl<ConstantRange>::iterator begin() { return Ranges.begin(); }
+  /// It's not allowed to access EmptySet's or FullSet's range.
+  SmallVectorImpl<ConstantRange>::iterator begin() {
+    assert(!isEmptySet() && !isFullSet());
+    return Ranges.begin();
+  }
   SmallVectorImpl<ConstantRange>::iterator end() { return Ranges.end(); }
   SmallVectorImpl<ConstantRange>::const_iterator begin() const {
+    assert(!isEmptySet() && !isFullSet());
     return Ranges.begin();
   }
   SmallVectorImpl<ConstantRange>::const_iterator end() const {
     return Ranges.end();
   }
   ConstantRange getRange(unsigned i) const {
-    assert(i < Ranges.size());
+    assert(!isEmptySet() && !isFullSet() && i < Ranges.size());
     return Ranges[i];
   }
 
@@ -65,10 +73,12 @@ public:
   /// Get the bit width of this ConstantRangeList.
   uint32_t getBitWidth() const { return Ranges[0].getBitWidth(); }
 
+  /// For EmptySet or FullSet, the CRL size is 1 not 0.
   size_t size() const { return Ranges.size(); }
 
   void append(const ConstantRange &Range) {
     assert(Range.getLower().slt(Range.getUpper()));
+    assert(getBitWidth() == Range.getBitWidth());
     if (isFullSet())
       return;
     if (isEmptySet()) {
@@ -81,8 +91,8 @@ public:
   }
 
   void append(int64_t Lower, int64_t Upper) {
-    append(ConstantRange(APInt(64, StringRef(std::to_string(Lower)), 10),
-                         APInt(64, StringRef(std::to_string(Upper)), 10)));
+    append(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
+                         APInt(64, Upper, /*isSigned=*/true)));
   }
 
   /// Return true if this range is equal to another range.
@@ -99,7 +109,7 @@ public:
     return !operator==(CRL);
   }
 
-  /// Print out the bounds to a stream.
+  /// Print out the ranges to a stream.
   void print(raw_ostream &OS) const;
 };
 
