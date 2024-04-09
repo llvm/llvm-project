@@ -203,7 +203,6 @@
 ! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"
 
 ! RUN:   rm -rf %t/Inputs
-
 ! RUN:   not %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx900 \
 ! RUN:      --rocm-path=%t/Inputs/rocm %s 2>&1 \
