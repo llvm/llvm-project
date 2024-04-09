@@ -137,7 +137,7 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   auto Locations = location_ops();
   auto OldIt = find(Locations, OldValue);
   if (OldIt == Locations.end()) {
-    if (AllowEmpty)
+    if (AllowEmpty || DbgAssignAddrReplaced)
       return;
     assert(DbgAssignAddrReplaced &&
            "OldValue must be dbg.assign addr if unused in DIArgList");
