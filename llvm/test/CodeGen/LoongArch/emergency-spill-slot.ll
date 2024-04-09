@@ -6,9 +6,9 @@
 define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -2048
-; CHECK-NEXT:    addi.d $sp, $sp, -2048
-; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    lu12i.w $a0, 1
+; CHECK-NEXT:    ori $a0, $a0, 16
+; CHECK-NEXT:    sub.d $sp, $sp, $a0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4112
 ; CHECK-NEXT:    pcalau12i $a0, %got_pc_hi20(var)
 ; CHECK-NEXT:    ld.d $a1, $a0, %got_pc_lo12(var)
