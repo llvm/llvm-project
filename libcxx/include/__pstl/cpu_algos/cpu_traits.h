@@ -36,7 +36,8 @@ namespace __pstl {
 //    - __func must take a subrange of [__first, __last) that should be executed in serial
 //
 //  template <class _Iterator, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduction>
-//  optional<_Tp> __parallel_transform_reduce(_Iterator __first, _Iterator __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduction);
+//  optional<_Tp> __parallel_transform_reduce(_Iterator __first, _Iterator __last, _UnaryOp, _Tp __init, _BinaryOp,
+//  _Reduction);
 //
 //  template <class _RandomAccessIterator1,
 //            class _RandomAccessIterator2,
@@ -69,9 +70,10 @@ namespace __pstl {
 // ==================
 //
 // CPU backends are expected to report errors (i.e. failure to allocate) by returning a disengaged `optional` from their
-// implementation. Exceptions shouldn't be used to report an internal failure-to-allocate, since all exceptions are turned
-// into a program termination at the front-end level. When a backend returns a disengaged `optional` to the frontend, the
-// frontend will turn that into a call to `std::__throw_bad_alloc();` to report the internal failure to the user.
+// implementation. Exceptions shouldn't be used to report an internal failure-to-allocate, since all exceptions are
+// turned into a program termination at the front-end level. When a backend returns a disengaged `optional` to the
+// frontend, the frontend will turn that into a call to `std::__throw_bad_alloc();` to report the internal failure to
+// the user.
 
 template <class _Backend>
 struct __cpu_traits;

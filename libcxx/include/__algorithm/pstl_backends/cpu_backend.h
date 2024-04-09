@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H
 #define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H
 
-#include <__config>
 #include <__algorithm/pstl_backends/cpu_backends/any_of.h>
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__algorithm/pstl_backends/cpu_backends/fill.h>
@@ -19,5 +18,6 @@
 #include <__algorithm/pstl_backends/cpu_backends/stable_sort.h>
 #include <__algorithm/pstl_backends/cpu_backends/transform.h>
 #include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h>
+#include <__config>
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H
