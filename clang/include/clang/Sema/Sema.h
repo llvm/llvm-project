@@ -10077,7 +10077,7 @@ public:
 
     /// Note that we are instantiating a type alias template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          TypeAliasTemplateDecl *Template,
+                          TypeAliasTemplateDecl *Entity,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 

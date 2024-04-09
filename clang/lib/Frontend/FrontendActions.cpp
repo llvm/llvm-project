@@ -453,7 +453,7 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
-    case Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation:
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
     }
     return "";
