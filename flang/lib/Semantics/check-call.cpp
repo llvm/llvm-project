@@ -1477,10 +1477,15 @@ static void CheckMaxMin(const characteristics::Procedure &proc,
         if (arguments[j]) {
           if (const auto *expr{arguments[j]->UnwrapExpr()};
               expr && evaluate::MayBePassedAsAbsentOptional(*expr)) {
-            if (auto thisType{expr->GetType()};
-                thisType && *thisType != typeAndShape->type()) {
-              messages.Say(arguments[j]->sourceLocation(),
-                  "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+            if (auto thisType{expr->GetType()}) {
+              if (thisType->category() == TypeCategory::Character &&
+                  typeAndShape->type().category() == TypeCategory::Character &&
+                  thisType->kind() == typeAndShape->type().kind()) {
+                // don't care about lengths
+              } else if (*thisType != typeAndShape->type()) {
+                messages.Say(arguments[j]->sourceLocation(),
+                    "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+              }
             }
           }
         }
