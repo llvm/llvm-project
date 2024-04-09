@@ -432,6 +432,16 @@ public:
   /// Sububclass discriminator (for dyn_cast<> et al.)
   enum SummaryKind : unsigned { AliasKind, FunctionKind, GlobalVarKind };
 
+  enum ImportKind : unsigned {
+    // The global value definition corresponding to the summary should be
+    // imported from source module
+    Definition = 0,
+    // The global value declaration corresponding to the summary should be
+    // imported when its definition doesn't exist in the destination module
+    // and not imported (e.g., function is large to be inlined).
+    Declaration = 1,
+  };
+
   /// Group flags (Linkage, NotEligibleToImport, etc.) as a bitfield.
   struct GVFlags {
     /// The linkage type of the associated global value.
@@ -472,20 +482,19 @@ public:
     /// means the symbol was externally visible.
     unsigned CanAutoHide : 1;
 
-    /// This field is written by the ThinLTO indexing step to postlink
-    /// per-module summary. It indicates whether a global value (function or
-    /// function alias, etc) should be imported as a definition or declaration.
-    unsigned ImportAsDec : 1;
+    /// This field is written by the ThinLTO indexing step to postlink combined
+    /// summary. The value is interpreted as 'ImportKind' enum defined above.
+    unsigned ImportType : 2;
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide, bool ImportAsDec)
+                     bool CanAutoHide, ImportKind ImportType)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
-          ImportAsDec(ImportAsDec) {}
+          ImportType(static_cast<unsigned>(ImportType)) {}
   };
 
 private:
@@ -570,7 +579,11 @@ public:
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
 
-  bool shouldImportAsDec() const { return Flags.ImportAsDec; }
+  bool shouldImportAsDec() const {
+    return Flags.ImportType == GlobalValueSummary::ImportKind::Declaration;
+  }
+
+  void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
 
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;
@@ -821,7 +834,8 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false, /*ImportAsDec=*/false),
+            /*CanAutoHide=*/false,
+            /*ImportKind=*/GlobalValueSummary::ImportKind::Definition),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),

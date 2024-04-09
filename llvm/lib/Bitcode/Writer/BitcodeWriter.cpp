@@ -1202,8 +1202,7 @@ static uint64_t getEncodedFFlags(FunctionSummary::FFlags Flags) {
 
 // Decode the flags for GlobalValue in the summary. See getDecodedGVSummaryFlags
 // in BitcodeReader.cpp.
-static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags,
-                                         bool ImportAsDec = false) {
+static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   uint64_t RawFlags = 0;
 
   RawFlags |= Flags.NotEligibleToImport; // bool
@@ -1218,7 +1217,7 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags,
 
   RawFlags |= (Flags.Visibility << 8); // 2 bits
 
-  RawFlags |= ((ImportAsDec) & (1 << 10)); // 1 bit
+  RawFlags |= (Flags.ImportType << 10); // 2 bits
 
   return RawFlags;
 }

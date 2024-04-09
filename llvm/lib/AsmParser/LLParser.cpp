@@ -2072,6 +2072,23 @@ void LLParser::parseOptionalVisibility(unsigned &Res) {
   Lex.Lex();
 }
 
+static GlobalValueSummary::ImportKind
+parseOptionalImportType(lltok::Kind Kind) {
+  GlobalValueSummary::ImportKind Res;
+  switch (Kind) {
+  default:
+    Res = GlobalValueSummary::Definition;
+    break;
+  case lltok::kw_definition:
+    Res = GlobalValueSummary::Definition;
+    break;
+  case lltok::kw_declaration:
+    Res = GlobalValueSummary::Declaration;
+    break;
+  }
+  return Res;
+}
+
 /// parseOptionalDLLStorageClass
 ///   ::= /*empty*/
 ///   ::= 'dllimport'
@@ -9216,7 +9233,7 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      /*ImportAsDec=*/false);
+      GlobalValueSummary::Definition);
   unsigned InstCount;
   std::vector<FunctionSummary::EdgeTy> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
@@ -9304,7 +9321,7 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      /*ImportAsDec*/ false);
+      GlobalValueSummary::Definition);
   GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false,
                                         /* WriteOnly */ false,
                                         /* Constant */ false,
@@ -9363,7 +9380,7 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
-      /*ImportAsDec=*/false);
+      GlobalValueSummary::Definition);
   if (parseToken(lltok::colon, "expected ':' here") ||
       parseToken(lltok::lparen, "expected '(' here") ||
       parseModuleReference(ModulePath) ||
@@ -10149,11 +10166,12 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
         return true;
       GVFlags.CanAutoHide = Flag;
       break;
-    case lltok::kw_importAsDec:
+    case lltok::kw_importType:
       Lex.Lex();
-      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Flag))
+      if (parseToken(lltok::colon, "expected ':'"))
         return true;
-      GVFlags.ImportAsDec = Flag;
+      GVFlags.ImportType = parseOptionalImportType(Lex.getKind());
+      Lex.Lex();
       break;
     default:
       return error(Lex.getLoc(), "expected gv flag type");
