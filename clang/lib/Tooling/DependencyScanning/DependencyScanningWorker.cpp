@@ -497,33 +497,24 @@ public:
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
-    auto AdjustCI = [&](CompilerInstance &CI) {
-      // Set up the dependency scanning file system callback if requested.
-      if (DepFS) {
-        auto GetDependencyDirectives = [LocalDepFS = DepFS](FileEntryRef File)
-            -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-          if (llvm::ErrorOr<EntryRef> Entry =
-                  LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-            if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-              return Entry->getDirectiveTokens();
-          return std::nullopt;
-        };
+    // Use the dependency scanning optimized file system if requested to do so.
+    if (DepFS)
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = DepFS](FileEntryRef File)
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
+        return std::nullopt;
+      };
 
-        CI.getPreprocessor().setDependencyDirectivesFn(
-            std::move(GetDependencyDirectives));
-      }
-
-      // CAS Implementation.
-      if (DepCASFS) {
-        auto GetDependencyDirectives = [LocalDepCASFS =
-                                            DepCASFS](FileEntryRef File) {
-          return LocalDepCASFS->getDirectiveTokens(File.getName());
-        };
-
-        CI.getPreprocessor().setDependencyDirectivesFn(
-            std::move(GetDependencyDirectives));
-      }
-    };
+    // CAS Implementation.
+    if (DepCASFS)
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepCASFS = DepCASFS](FileEntryRef File) {
+            return LocalDepCASFS->getDirectiveTokens(File.getName());
+          };
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -611,11 +602,9 @@ public:
     std::unique_ptr<FrontendAction> Action;
 
     if (ModuleName)
-      Action = std::make_unique<GetDependenciesByModuleNameAction>(
-          *ModuleName, std::move(AdjustCI));
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
-      Action =
-          std::make_unique<ReadPCHAndPreprocessAction>(std::move(AdjustCI));
+      Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     // Normally this would be handled by GeneratePCHAction
     if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
