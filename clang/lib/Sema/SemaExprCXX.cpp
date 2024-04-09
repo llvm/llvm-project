@@ -5566,8 +5566,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   }
 }
 
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
-                                    QualType RhsT, SourceLocation KeyLoc);
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc);
 
 static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
                                      SourceLocation KWLoc,
@@ -5583,8 +5583,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
   // alongside the IsConstructible traits to avoid duplication.
   if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary && Kind != BTT_ReferenceConstructsFromTemporary)
-    return EvaluateBinaryTypeTrait(S, Kind, Args[0]->getType(),
-                                   Args[1]->getType(), RParenLoc);
+    return EvaluateBinaryTypeTrait(S, Kind, Args[0],
+                                   Args[1], RParenLoc);
 
   switch (Kind) {
   case clang::BTT_ReferenceBindsToTemporary:
@@ -5679,8 +5679,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
       if (U->isReferenceType())
         return false;
 
-      QualType TPtr = S.Context.getPointerType(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {}));
-      QualType UPtr = S.Context.getPointerType(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {}));
+      TypeSourceInfo *TPtr = S.Context.CreateTypeSourceInfo(S.Context.getPointerType(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {})));
+      TypeSourceInfo *UPtr = S.Context.CreateTypeSourceInfo(S.Context.getPointerType(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {})));
       return EvaluateBinaryTypeTrait(S, TypeTrait::BTT_IsConvertibleTo, UPtr, TPtr, RParenLoc);
     }
 
@@ -5814,8 +5814,11 @@ ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   return BuildTypeTrait(Kind, KWLoc, ConvertedArgs, RParenLoc);
 }
 
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
-                                    QualType RhsT, SourceLocation KeyLoc) {
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc) {
+  QualType LhsT = Lhs->getType();
+  QualType RhsT = Rhs->getType();
+
   assert(!LhsT->isDependentType() && !RhsT->isDependentType() &&
          "Cannot evaluate traits of dependent types");
 
