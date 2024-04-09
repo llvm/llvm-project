@@ -23,7 +23,8 @@ std::pair<GlobalRecord *, FrontendAttrs *> FrontendRecordsSlice::addGlobal(
 
   GlobalRecord *GR =
       llvm::MachO::RecordsSlice::addGlobal(Name, Linkage, GV, Flags, Inlined);
-  auto Result = FrontendRecords.insert({GR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {GR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {GR, &(Result.first->second)};
 }
 
@@ -39,8 +40,8 @@ FrontendRecordsSlice::addObjCInterface(StringRef Name, RecordLinkage Linkage,
 
   ObjCInterfaceRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCInterface(Name, Linkage, SymType);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -51,8 +52,8 @@ FrontendRecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                       const Decl *D, HeaderType Access) {
   ObjCCategoryRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCCategory(ClassToExtend, CategoryName);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
   return {ObjCR, &(Result.first->second)};
 }
 
@@ -67,8 +68,8 @@ std::pair<ObjCIVarRecord *, FrontendAttrs *> FrontendRecordsSlice::addObjCIVar(
     Linkage = RecordLinkage::Internal;
   ObjCIVarRecord *ObjCR =
       llvm::MachO::RecordsSlice::addObjCIVar(Container, IvarName, Linkage);
-  auto Result =
-      FrontendRecords.insert({ObjCR, FrontendAttrs{Avail, D, Access}});
+  auto Result = FrontendRecords.insert(
+      {ObjCR, FrontendAttrs{Avail, D, D->getLocation(), Access}});
 
   return {ObjCR, &(Result.first->second)};
 }
