@@ -3307,12 +3307,13 @@ public:
 
   /// Build a new C++ "this" expression.
   ///
-  /// By default, builds a new "this" expression without performing any
-  /// semantic analysis. Subclasses may override this routine to provide
-  /// different behavior.
+  /// By default, performs semantic analysis to build a new "this" expression.
+  /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCXXThisExpr(SourceLocation ThisLoc,
                                 QualType ThisType,
                                 bool isImplicit) {
+    if (getSema().CheckCXXThisType(ThisLoc, ThisType))
+      return ExprError();
     return getSema().BuildCXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 

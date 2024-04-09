@@ -1,7 +1,6 @@
-// RUN: %clang_cc1 -fms-extensions -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fms-extensions -fdelayed-template-parsing -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fms-extensions -fsyntax-only -Wno-unused-value -verify %s
+// RUN: %clang_cc1 -fms-extensions -fdelayed-template-parsing -fsyntax-only -Wno-unused-value -verify %s
 
-// expected-no-diagnostics
 class A {
 public:
   template<class U> A(U p) {}
@@ -75,4 +74,43 @@ struct S {
   template <>
   int f<0>(int);
 };
+}
+
+namespace UsesThis {
+  template<typename T>
+  struct A {
+    int x;
+
+    template<typename U>
+    static void f();
+
+    template<>
+    void f<int>() {
+      this->x; // expected-error {{invalid use of 'this' outside of a non-static member function}}
+      x; // expected-error {{invalid use of member 'x' in static member function}}
+      A::x; // expected-error {{invalid use of member 'x' in static member function}}
+      +x; // expected-error {{invalid use of member 'x' in static member function}}
+      +A::x; // expected-error {{invalid use of member 'x' in static member function}}
+    }
+
+    template<typename U>
+    void g();
+
+    template<>
+    void g<int>() {
+      this->x;
+      x;
+      A::x;
+      +x;
+      +A::x;
+    }
+
+    template<typename U>
+    static auto h() -> A*;
+
+    template<>
+    auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
+  };
+
+  template struct A<int>; // expected-note 2{{in instantiation of}}
 }
