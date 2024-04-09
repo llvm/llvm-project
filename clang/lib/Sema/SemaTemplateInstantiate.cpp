@@ -737,11 +737,11 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
-    TypeAliasTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
+    TypeAliasTemplateDecl *Entity, ArrayRef<TemplateArgument> TemplateArgs,
     SourceRange InstantiationRange)
     : InstantiatingTemplate(
-          SemaRef, Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation,
-          PointOfInstantiation, InstantiationRange, /*Entity=*/Template,
+          SemaRef, CodeSynthesisContext::TypeAliasTemplateInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/Entity,
           /*Template=*/nullptr, TemplateArgs) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
@@ -983,11 +983,6 @@ void Sema::PrintInstantiationStack() {
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_template_class_instantiation_here)
             << CTD << Active->InstantiationRange;
-      } else {
-        Diags.Report(Active->PointOfInstantiation,
-                     diag::note_template_type_alias_instantiation_here)
-          << cast<TypeAliasTemplateDecl>(D)
-          << Active->InstantiationRange;
       }
       break;
     }
@@ -1262,6 +1257,10 @@ void Sema::PrintInstantiationStack() {
                    diag::note_building_deduction_guide_here);
       break;
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_template_type_alias_instantiation_here)
+          << cast<TypeAliasTemplateDecl>(Active->Entity)
+          << Active->InstantiationRange;
       break;
     }
   }
@@ -1278,12 +1277,13 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
        ++Active)
   {
     switch (Active->Kind) {
-    case CodeSynthesisContext::TemplateInstantiation:
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       // An instantiation of an alias template may or may not be a SFINAE
       // context, depending on what else is on the stack.
       if (isa<TypeAliasTemplateDecl>(Active->Entity))
         break;
       [[fallthrough]];
+    case CodeSynthesisContext::TemplateInstantiation:
     case CodeSynthesisContext::DefaultFunctionArgumentInstantiation:
     case CodeSynthesisContext::ExceptionSpecInstantiation:
     case CodeSynthesisContext::ConstraintsCheck:
@@ -1340,7 +1340,6 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       break;
 
     case CodeSynthesisContext::Memoization:
-    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       break;
     }
 
