@@ -51,7 +51,7 @@ public:
 
   TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &);
 
-  void Print(llvm::raw_ostream &out, llvm::StringRef macroName = "") const;
+  void Print(llvm::raw_ostream &out, const char *macroName = "") const;
 
 private:
   static TokenSequence Tokenize(const std::vector<std::string> &argNames,
@@ -59,7 +59,7 @@ private:
   // For a given token, return the index of the argument to which the token
   // corresponds, or `argumentCount` if the token does not correspond to any
   // argument.
-  std::size_t getArgumentIndex(const CharBlock &token) const;
+  std::size_t GetArgumentIndex(const CharBlock &token) const;
 
   bool isFunctionLike_{false};
   bool isVariadic_{false};

@@ -49,8 +49,7 @@ bool Definition::set_isDisabled(bool disable) {
   return was;
 }
 
-void Definition::Print(
-    llvm::raw_ostream &out, llvm::StringRef macroName) const {
+void Definition::Print(llvm::raw_ostream &out, const char *macroName) const {
   if (!isFunctionLike_) {
     // If it's not a function-like macro, then just print the replacement.
     out << ' ' << replacement_.ToString();
@@ -73,7 +72,7 @@ void Definition::Print(
 
   for (size_t i{0}, e{replacement_.SizeInTokens()}; i != e; ++i) {
     std::string tok{replacement_.TokenAt(i).ToString()};
-    if (size_t idx = getArgumentIndex(tok); idx < argCount) {
+    if (size_t idx{GetArgumentIndex(tok)}; idx < argCount) {
       out << argNames_[idx];
     } else {
       out << tok;
@@ -108,7 +107,7 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
   return result;
 }
 
-std::size_t Definition::getArgumentIndex(const CharBlock &token) const {
+std::size_t Definition::GetArgumentIndex(const CharBlock &token) const {
   if (token.size() >= 2 && token[0] == '~') {
     return static_cast<size_t>(token[1] - 'A');
   }
@@ -201,7 +200,7 @@ TokenSequence Definition::Apply(
       continue;
     }
     if (bytes == 2 && token[0] == '~') { // argument substitution
-      std::size_t index = getArgumentIndex(token);
+      std::size_t index{GetArgumentIndex(token)};
       if (index >= args.size()) {
         continue;
       }
@@ -765,7 +764,7 @@ void Preprocessor::PrintMacros(llvm::raw_ostream &out) const {
 
   for (const std::string &name : macroNames) {
     out << "#define " << name;
-    definitions_.at(name).Print(out, name);
+    definitions_.at(name).Print(out, name.c_str());
     out << '\n';
   }
 }
