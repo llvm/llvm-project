@@ -1887,9 +1887,12 @@ def int_amdgcn_s_setprio :
                                 IntrHasSideEffects]>;
 
 def int_amdgcn_s_ttracedata :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                         [IntrNoMem, IntrHasSideEffects]>;
+
 def int_amdgcn_s_ttracedata_imm :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata_imm">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty],
                         [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
