@@ -15,7 +15,7 @@
   define void @mul_wrong_pow_2(ptr %addr) { ret void }
   define void @more_than_one_use_shl_1(ptr %addr) { ret void }
   define void @more_than_one_use_shl_2(ptr %addr) { ret void }
-  define void @more_than_one_use_shl_lsl_fast(ptr %addr) #1 { ret void }
+  define void @more_than_one_use_shl_lsl_fast(ptr %addr) { ret void }
   define void @more_than_one_use_shl_lsl_slow(ptr %addr) { ret void }
   define void @more_than_one_use_shl_minsize(ptr %addr) #0 { ret void }
   define void @ldrwrox(ptr %addr) { ret void }
@@ -24,7 +24,6 @@
   define void @ldbbrox(ptr %addr) { ret void }
   define void @ldrqrox(ptr %addr) { ret void }
   attributes #0 = { optsize }
-  attributes #1 = { "target-features"="+addr-lsl-fast" }
 ...
 
 ---
@@ -478,11 +477,10 @@ body:             |
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY1]], [[COPY]], 3
-    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK-NEXT: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[LDRXui1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[LDRXroX1]]
     ; CHECK-NEXT: $x2 = COPY [[ADDXrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0

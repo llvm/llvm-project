@@ -16,6 +16,7 @@ libc_test(
     libc_function_deps = [
         "//libc:feclearexcept",
         "//libc:feraiseexcept",
+        "//libc:fesetexcept",
         "//libc:fetestexcept",
     ],
     deps = [

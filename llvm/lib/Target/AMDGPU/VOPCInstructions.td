@@ -75,8 +75,6 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let HasDst32 = 0;
   // VOPC disallows dst_sel and dst_unused as they have no effect on destination
   let EmitDstSel = 0;
-  // FIXME: work around AsmParser bug
-  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
   let Outs64 = (outs VOPDstS64orS32:$sdst);
   let OutsVOP3DPP = Outs64;
   let OutsVOP3DPP8 = Outs64;
@@ -114,8 +112,6 @@ class VOPC_NoSdst_Profile<list<SchedReadWrite> sched, ValueType vt0,
                                      "$src0, $src1");
   let AsmSDWA9 = "$src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let EmitDst = 0;
-  // FIXME: work around AsmParser bug
-  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> {
@@ -776,7 +772,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
-  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VRegSrc_32:$src1);
+  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VCSrc_b32:$src1);
   let InsVOP3Base = !con(InsPartVOP3DPP, !if(HasOpSel, (ins op_sel0:$op_sel),
                                                        (ins)));
   let AsmVOP3Base = "$sdst, $src0_modifiers, $src1";
@@ -789,8 +785,6 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   let HasSrc1Mods = 0;
   let HasClamp = 0;
   let HasOMod = 0;
-  // FIXME: work around AsmParser bug
-  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
@@ -818,8 +812,6 @@ class VOPC_Class_NoSdst_Profile<list<SchedReadWrite> sched, ValueType src0VT, Va
   let AsmVOP3Base = "$src0_modifiers, $src1";
   let AsmSDWA9 = "$src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let EmitDst = 0;
-  // FIXME: work around AsmParser bug
-  let Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
 }
 
 multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
@@ -1385,31 +1377,9 @@ multiclass VOPC_Real_Base<GFXGen Gen, bits<9> op> {
     }
     if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e64" #"_dpp");
-      defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP>,
                                 SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
-      def _e64_dpp_w32#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP> {
-        let AsmString = psDPP.OpName # " vcc_lo, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp_w64#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP> {
-        let AsmString = psDPP.OpName # " vcc, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-      defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
       def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64>;
-      def _e64_dpp8_w32#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64> {
-        let AsmString = ps32.OpName # " vcc_lo, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp8_w64#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64> {
-        let AsmString = ps32.OpName # " vcc, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
     }
   } // AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
 }
@@ -1480,35 +1450,9 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
 
     if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
-      defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       def _e64_dpp#Gen.Suffix : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name>,
                                 SIMCInstr<psDPP.PseudoInstr, Gen.Subtarget>;
-      def _e64_dpp_w32#Gen.Suffix
-          : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp_w64#Gen.Suffix
-          : VOPC64_DPP16_Dst<{0, op}, psDPP, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
-      defvar AsmDPP8 = ps64.Pfl.AsmVOP3DPP8;
       def _e64_dpp8#Gen.Suffix : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name>;
-      def _e64_dpp8_w32#Gen.Suffix
-          : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name> {
-        let AsmString = asm_name # " vcc_lo, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave32;
-      }
-      def _e64_dpp8_w64#Gen.Suffix
-          : VOPC64_DPP8_Dst<{0, op}, ps64, asm_name> {
-        let AsmString = asm_name # " vcc, " # AsmDPP8;
-        let isAsmParserOnly = 1;
-        let WaveSizePredicate = isWave64;
-      }
     }
   } // End AssemblerPredicate = Gen.AssemblerPredicate, DecoderNamespace = Gen.DecoderNamespace
 }

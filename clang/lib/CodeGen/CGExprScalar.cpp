@@ -1100,7 +1100,9 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   llvm::Constant *StaticArgs[] = {
       CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
       CGF.EmitCheckTypeDescriptor(DstType),
-      llvm::ConstantInt::get(Builder.getInt8Ty(), Check.first)};
+      llvm::ConstantInt::get(Builder.getInt8Ty(), Check.first),
+      llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
+
   CGF.EmitCheck(Check.second, SanitizerHandler::ImplicitConversion, StaticArgs,
                 {Src, Dst});
 }
@@ -1238,7 +1240,8 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
   llvm::Constant *StaticArgs[] = {
       CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
       CGF.EmitCheckTypeDescriptor(DstType),
-      llvm::ConstantInt::get(Builder.getInt8Ty(), CheckKind)};
+      llvm::ConstantInt::get(Builder.getInt8Ty(), CheckKind),
+      llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
   // EmitCheck() will 'and' all the checks together.
   CGF.EmitCheck(Checks, SanitizerHandler::ImplicitConversion, StaticArgs,
                 {Src, Dst});
@@ -4712,17 +4715,17 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 }
 
 llvm::Value *CodeGenFunction::EmitWithOriginalRHSBitfieldAssignment(
-    const BinaryOperator *E, Value *Previous, QualType *SrcType) {
+    const BinaryOperator *E, Value **Previous, QualType *SrcType) {
   // In case we have the integer or bitfield sanitizer checks enabled
   // we want to get the expression before scalar conversion.
   if (auto *ICE = dyn_cast<ImplicitCastExpr>(E->getRHS())) {
     CastKind Kind = ICE->getCastKind();
-    if (Kind == CK_IntegralCast) {
+    if (Kind == CK_IntegralCast || Kind == CK_LValueToRValue) {
       *SrcType = ICE->getSubExpr()->getType();
-      Previous = EmitScalarExpr(ICE->getSubExpr());
+      *Previous = EmitScalarExpr(ICE->getSubExpr());
       // Pass default ScalarConversionOpts to avoid emitting
       // integer sanitizer checks as E refers to bitfield.
-      return EmitScalarConversion(Previous, *SrcType, ICE->getType(),
+      return EmitScalarConversion(*Previous, *SrcType, ICE->getType(),
                                   ICE->getExprLoc());
     }
   }
@@ -4763,7 +4766,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     // we want to extract that value and potentially (if the bitfield sanitizer
     // is enabled) use it to check for an implicit conversion.
     if (E->getLHS()->refersToBitField())
-      RHS = CGF.EmitWithOriginalRHSBitfieldAssignment(E, Previous, &SrcType);
+      RHS = CGF.EmitWithOriginalRHSBitfieldAssignment(E, &Previous, &SrcType);
     else
       RHS = Visit(E->getRHS());
 

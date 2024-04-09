@@ -193,6 +193,9 @@ Non-comprehensive list of changes in this release
   with support for any unsigned integer type. Like the previous builtins, these
   new builtins are constexpr and may be used in constant expressions.
 
+- ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
+  like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -338,6 +341,13 @@ Improvements to Clang's diagnostics
 - Clang now emits ``unused argument`` warning when the -fmodule-output flag is used
   with an input that is not of type c++-module.
 
+- Clang emits a ``-Wreturn-stack-address`` warning if a function returns a pointer or
+  reference to a struct literal. Fixes #GH8678
+
+- Clang emits a ``-Wunused-but-set-variable`` warning on C++ variables whose declaration
+  (with initializer) entirely consist the condition expression of a if/while/for construct
+  but are not actually used in the body of the if/while/for construct. Fixes #GH41447
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -477,6 +487,8 @@ Bug Fixes to C++ Support
   when one of the function had more specialized templates.
   Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
   and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+- Clang now supports direct lambda calls inside of a type alias template declarations.
+  This addresses (#GH70601), (#GH76674), (#GH79555), (#GH81145) and (#GH82104).
 - Allow access to a public template alias declaration that refers to friend's
   private nested type. (#GH25708).
 - Fixed a crash in constant evaluation when trying to access a
@@ -498,6 +510,7 @@ Bug Fixes to C++ Support
 
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
+- Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
