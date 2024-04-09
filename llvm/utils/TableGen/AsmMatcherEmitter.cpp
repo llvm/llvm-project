@@ -645,14 +645,7 @@ struct MatchableInfo {
     // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
     // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
     // We use the ID to sort AVX instruction before AVX512 instruction in
-    // matching table.
-    if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder") &&
-        RHS.TheDef->isSubClassOf("Instruction") &&
-        RHS.TheDef->getValueAsBit("HasPositionOrder"))
-      return TheDef->getID() < RHS.TheDef->getID();
-
-    // Same rule for X86 Patterns.
+    // matching table. As well as InstAlias.
     if (getResultInst()->TheDef->isSubClassOf("Instruction") &&
         getResultInst()->TheDef->getValueAsBit("HasPositionOrder") &&
         RHS.getResultInst()->TheDef->isSubClassOf("Instruction") &&
