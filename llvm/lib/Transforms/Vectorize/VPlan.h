@@ -1936,7 +1936,8 @@ public:
   /// incoming value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert((Operands.size() + 1) % 2 == 0 &&"Expected an odd number of operands");
+    assert((Operands.size() + 1) % 2 == 0 &&
+           "Expected an odd number of operands");
   }
 
   VPRecipeBase *clone() override {
