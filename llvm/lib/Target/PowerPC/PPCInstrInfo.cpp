@@ -349,7 +349,7 @@ int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
 //  same hardware register due to TIE attribute of FMA instructions.
 //
 bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<int> &Patterns,
+                                  SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const {
   MachineBasicBlock *MBB = Root.getParent();
   const MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
@@ -524,7 +524,7 @@ bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
 }
 
 void PPCInstrInfo::finalizeInsInstrs(
-    MachineInstr &Root, int &Pattern,
+    MachineInstr &Root, unsigned &Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {
   assert(!InsInstrs.empty() && "Instructions set to be inserted is empty!");
 
@@ -737,7 +737,7 @@ PPCInstrInfo::getConstantFromConstantPool(MachineInstr *I) const {
   return nullptr;
 }
 
-CombinerObjective PPCInstrInfo::getCombinerObjective(int Pattern) const {
+CombinerObjective PPCInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case PPCMachineCombinerPattern::REASSOC_XY_AMM_BMM:
   case PPCMachineCombinerPattern::REASSOC_XMM_AMM_BMM:
@@ -750,9 +750,9 @@ CombinerObjective PPCInstrInfo::getCombinerObjective(int Pattern) const {
   }
 }
 
-bool PPCInstrInfo::getMachineCombinerPatterns(MachineInstr &Root,
-                                              SmallVectorImpl<int> &Patterns,
-                                              bool DoRegPressureReduce) const {
+bool PPCInstrInfo::getMachineCombinerPatterns(
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
+    bool DoRegPressureReduce) const {
   // Using the machine combiner in this way is potentially expensive, so
   // restrict to when aggressive optimizations are desired.
   if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOptLevel::Aggressive)
@@ -766,7 +766,8 @@ bool PPCInstrInfo::getMachineCombinerPatterns(MachineInstr &Root,
 }
 
 void PPCInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
@@ -785,7 +786,8 @@ void PPCInstrInfo::genAlternativeCodeSequence(
 }
 
 void PPCInstrInfo::reassociateFMA(
-    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineFunction *MF = Root.getMF();

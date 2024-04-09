@@ -6056,7 +6056,7 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
 
 /// Find instructions that can be turned into madd.
 static bool getMaddPatterns(MachineInstr &Root,
-                            SmallVectorImpl<int> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
@@ -6076,14 +6076,15 @@ static bool getMaddPatterns(MachineInstr &Root,
     Opc = NewOpc;
   }
 
-  auto setFound = [&](int Opcode, int Operand, unsigned ZeroReg, int Pattern) {
+  auto setFound = [&](int Opcode, int Operand, unsigned ZeroReg,
+                      unsigned Pattern) {
     if (canCombineWithMUL(MBB, Root.getOperand(Operand), Opcode, ZeroReg)) {
       Patterns.push_back(Pattern);
       Found = true;
     }
   };
 
-  auto setVFound = [&](int Opcode, int Operand, int Pattern) {
+  auto setVFound = [&](int Opcode, int Operand, unsigned Pattern) {
     if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
       Found = true;
@@ -6195,7 +6196,8 @@ static bool getMaddPatterns(MachineInstr &Root,
 /// Floating-Point Support
 
 /// Find instructions that can be turned into madd.
-static bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns) {
+static bool getFMAPatterns(MachineInstr &Root,
+                           SmallVectorImpl<unsigned> &Patterns) {
 
   if (!isCombineInstrCandidateFP(Root))
     return false;
@@ -6203,7 +6205,7 @@ static bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns) {
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
 
-  auto Match = [&](int Opcode, int Operand, int Pattern) -> bool {
+  auto Match = [&](int Opcode, int Operand, unsigned Pattern) -> bool {
     if (canCombineWithFMUL(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
       return true;
@@ -6337,11 +6339,11 @@ static bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns) {
 }
 
 static bool getFMULPatterns(MachineInstr &Root,
-                            SmallVectorImpl<int> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
 
-  auto Match = [&](unsigned Opcode, int Operand, int Pattern) -> bool {
+  auto Match = [&](unsigned Opcode, int Operand, unsigned Pattern) -> bool {
     MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
     MachineOperand &MO = Root.getOperand(Operand);
     MachineInstr *MI = nullptr;
@@ -6389,12 +6391,12 @@ static bool getFMULPatterns(MachineInstr &Root,
 }
 
 static bool getFNEGPatterns(MachineInstr &Root,
-                            SmallVectorImpl<int> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
-  auto Match = [&](unsigned Opcode, int Pattern) -> bool {
+  auto Match = [&](unsigned Opcode, unsigned Pattern) -> bool {
     MachineOperand &MO = Root.getOperand(1);
     MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
     if (MI != nullptr && (MI->getOpcode() == Opcode) &&
@@ -6424,7 +6426,7 @@ static bool getFNEGPatterns(MachineInstr &Root,
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
-bool AArch64InstrInfo::isThroughputPattern(int Pattern) const {
+bool AArch64InstrInfo::isThroughputPattern(unsigned Pattern) const {
   switch (Pattern) {
   default:
     break;
@@ -6540,7 +6542,7 @@ bool AArch64InstrInfo::isThroughputPattern(int Pattern) const {
 
 /// Find other MI combine patterns.
 static bool getMiscPatterns(MachineInstr &Root,
-                            SmallVectorImpl<int> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   // A - (B + C)  ==>   (A - B) - C  or  (A - C) - B
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
@@ -6572,7 +6574,8 @@ static bool getMiscPatterns(MachineInstr &Root,
   return false;
 }
 
-CombinerObjective AArch64InstrInfo::getCombinerObjective(int Pattern) const {
+CombinerObjective
+AArch64InstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case AArch64MachineCombinerPattern::SUBADD_OP1:
   case AArch64MachineCombinerPattern::SUBADD_OP2:
@@ -6588,7 +6591,7 @@ CombinerObjective AArch64InstrInfo::getCombinerObjective(int Pattern) const {
 /// pattern evaluator stops checking as soon as it finds a faster sequence.
 
 bool AArch64InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<int> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   // Integer patterns
   if (getMaddPatterns(Root, Patterns))
@@ -6947,7 +6950,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
 /// this function generates the instructions that could replace the
 /// original code sequence
 void AArch64InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineBasicBlock &MBB = *Root.getParent();

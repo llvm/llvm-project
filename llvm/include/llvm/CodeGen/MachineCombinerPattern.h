@@ -25,7 +25,7 @@ enum class CombinerObjective {
 };
 
 /// These are instruction patterns matched by the machine combiner pass.
-enum MachineCombinerPattern {
+enum MachineCombinerPattern : unsigned {
   // These are commutative variants for reassociating a computation chain. See
   // the comments before getMachineCombinerPatterns() in TargetInstrInfo.cpp.
   REASSOC_AX_BY,

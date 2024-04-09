@@ -34,7 +34,7 @@ static const MachineMemOperand::Flags MOStridedAccess =
 #define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
 
 // AArch64 MachineCombiner patterns
-enum AArch64MachineCombinerPattern {
+enum AArch64MachineCombinerPattern : unsigned {
   // These are patterns used to reduce the length of dependence chain.
   SUBADD_OP1 = MachineCombinerPattern::TARGET_PATTERN_START,
   SUBADD_OP2,
@@ -423,16 +423,16 @@ public:
                             const MachineRegisterInfo *MRI) const override;
   bool optimizeCondBranch(MachineInstr &MI) const override;
 
-  CombinerObjective getCombinerObjective(int Pattern) const override;
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  bool isThroughputPattern(int Pattern) const override;
+  bool isThroughputPattern(unsigned Pattern) const override;
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in ``Root``. All potential patterns are
   /// listed in the ``Patterns`` array.
   bool getMachineCombinerPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<int> &Patterns,
+                                  SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
   /// Return true when Inst is associative and commutative so that it can be
   /// reassociated. If Invert is true, then the inverse of Inst operation must
@@ -442,7 +442,7 @@ public:
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence
   void genAlternativeCodeSequence(
-      MachineInstr &Root, int Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;

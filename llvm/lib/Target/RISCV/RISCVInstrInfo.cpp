@@ -1557,7 +1557,7 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
 }
 
 void RISCVInstrInfo::finalizeInsInstrs(
-    MachineInstr &Root, int &Pattern,
+    MachineInstr &Root, unsigned &Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {
   int16_t FrmOpIdx =
       RISCV::getNamedOperandIdx(Root.getOpcode(), RISCV::OpName::frm);
@@ -1746,7 +1746,7 @@ static bool canCombineFPFusedMultiply(const MachineInstr &Root,
 }
 
 static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
-                                       SmallVectorImpl<int> &Patterns,
+                                       SmallVectorImpl<unsigned> &Patterns,
                                        bool DoRegPressureReduce) {
   unsigned Opc = Root.getOpcode();
   bool IsFAdd = isFADD(Opc);
@@ -1768,12 +1768,13 @@ static bool getFPFusedMultiplyPatterns(MachineInstr &Root,
   return Added;
 }
 
-static bool getFPPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns,
+static bool getFPPatterns(MachineInstr &Root,
+                          SmallVectorImpl<unsigned> &Patterns,
                           bool DoRegPressureReduce) {
   return getFPFusedMultiplyPatterns(Root, Patterns, DoRegPressureReduce);
 }
 
-CombinerObjective RISCVInstrInfo::getCombinerObjective(int Pattern) const {
+CombinerObjective RISCVInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case RISCVMachineCombinerPattern::FMADD_AX:
   case RISCVMachineCombinerPattern::FMADD_XA:
@@ -1786,7 +1787,7 @@ CombinerObjective RISCVInstrInfo::getCombinerObjective(int Pattern) const {
 }
 
 bool RISCVInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<int> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
 
   if (getFPPatterns(Root, Patterns, DoRegPressureReduce))
@@ -1796,7 +1797,7 @@ bool RISCVInstrInfo::getMachineCombinerPatterns(
                                                      DoRegPressureReduce);
 }
 
-static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc, int Pattern) {
+static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc, unsigned Pattern) {
   switch (RootOpc) {
   default:
     llvm_unreachable("Unexpected opcode");
@@ -1818,7 +1819,7 @@ static unsigned getFPFusedMultiplyOpcode(unsigned RootOpc, int Pattern) {
   }
 }
 
-static unsigned getAddendOperandIdx(int Pattern) {
+static unsigned getAddendOperandIdx(unsigned Pattern) {
   switch (Pattern) {
   default:
     llvm_unreachable("Unexpected pattern");
@@ -1832,7 +1833,7 @@ static unsigned getAddendOperandIdx(int Pattern) {
 }
 
 static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
-                                   int Pattern,
+                                   unsigned Pattern,
                                    SmallVectorImpl<MachineInstr *> &InsInstrs,
                                    SmallVectorImpl<MachineInstr *> &DelInstrs) {
   MachineFunction *MF = Root.getMF();
@@ -1874,7 +1875,8 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
 }
 
 void RISCVInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();

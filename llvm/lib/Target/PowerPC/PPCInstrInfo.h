@@ -86,7 +86,7 @@ enum SpillOpcodeKey {
 };
 
 // PPC MachineCombiner patterns
-enum PPCMachineCombinerPattern {
+enum PPCMachineCombinerPattern : unsigned {
   // These are patterns matched by the PowerPC to reassociate FMA chains.
   REASSOC_XY_AMM_BMM = MachineCombinerPattern::TARGET_PATTERN_START,
   REASSOC_XMM_AMM_BMM,
@@ -237,7 +237,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
   ArrayRef<unsigned> getLoadOpcodesForSpillArray() const;
   unsigned getSpillIndex(const TargetRegisterClass *RC) const;
   int16_t getFMAOpIdxInfo(unsigned Opcode) const;
-  void reassociateFMA(MachineInstr &Root, int Pattern,
+  void reassociateFMA(MachineInstr &Root, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
@@ -363,7 +363,7 @@ public:
   /// When getMachineCombinerPatterns() finds patterns, this function generates
   /// the instructions that could replace the original code sequence
   void genAlternativeCodeSequence(
-      MachineInstr &Root, int Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
@@ -371,16 +371,16 @@ public:
   /// Return true when there is potentially a faster code sequence for a fma
   /// chain ending in \p Root. All potential patterns are output in the \p
   /// P array.
-  bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<int> &Patterns,
+  bool getFMAPatterns(MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
                       bool DoRegPressureReduce) const;
 
-  CombinerObjective getCombinerObjective(int Pattern) const override;
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in <Root>. All potential patterns are
   /// output in the <Pattern> array.
   bool getMachineCombinerPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<int> &Patterns,
+                                  SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
 
   /// On PowerPC, we leverage machine combiner pass to reduce register pressure
@@ -394,7 +394,7 @@ public:
   /// Fixup the placeholders we put in genAlternativeCodeSequence() for
   /// MachineCombiner.
   void
-  finalizeInsInstrs(MachineInstr &Root, int &Pattern,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst,

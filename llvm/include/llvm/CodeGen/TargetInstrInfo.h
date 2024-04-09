@@ -1192,7 +1192,7 @@ public:
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Patterns - Vector of possible combination patterns
   virtual bool getMachineCombinerPatterns(MachineInstr &Root,
-                                          SmallVectorImpl<int> &Patterns,
+                                          SmallVectorImpl<unsigned> &Patterns,
                                           bool DoRegPressureReduce) const;
 
   /// Return true if target supports reassociation of instructions in machine
@@ -1205,17 +1205,17 @@ public:
 
   /// Fix up the placeholder we may add in genAlternativeCodeSequence().
   virtual void
-  finalizeInsInstrs(MachineInstr &Root, int &Pattern,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  virtual bool isThroughputPattern(int Pattern) const;
+  virtual bool isThroughputPattern(unsigned Pattern) const;
 
   /// Return the objective of a combiner pattern.
   /// \param Pattern - combiner pattern
-  virtual CombinerObjective getCombinerObjective(int Pattern) const;
+  virtual CombinerObjective getCombinerObjective(unsigned Pattern) const;
 
   /// Return true if the input \P Inst is part of a chain of dependent ops
   /// that are suitable for reassociation, otherwise return false.
@@ -1259,7 +1259,7 @@ public:
   /// \param InstIdxForVirtReg - map of virtual register to instruction in
   /// InsInstr that defines it
   virtual void genAlternativeCodeSequence(
-      MachineInstr &Root, int Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
@@ -1273,7 +1273,7 @@ public:
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
-  void reassociateOps(MachineInstr &Root, MachineInstr &Prev, int Pattern,
+  void reassociateOps(MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
@@ -1283,7 +1283,7 @@ public:
   /// (new root opcode, new prev opcode) that must be used to reassociate \P
   /// Root and \P Prev accoring to \P Pattern.
   std::pair<unsigned, unsigned>
-  getReassociationOpcodes(int Pattern, const MachineInstr &Root,
+  getReassociationOpcodes(unsigned Pattern, const MachineInstr &Root,
                           const MachineInstr &Prev) const;
 
   /// The limit on resource length extension we accept in MachineCombiner Pass.

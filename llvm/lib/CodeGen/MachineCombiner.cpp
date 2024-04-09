@@ -104,11 +104,11 @@ private:
                                SmallVectorImpl<MachineInstr *> &InsInstrs,
                                SmallVectorImpl<MachineInstr *> &DelInstrs,
                                DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
-                               int Pattern, bool SlackIsAccurate);
+                               unsigned Pattern, bool SlackIsAccurate);
   bool reduceRegisterPressure(MachineInstr &Root, MachineBasicBlock *MBB,
                               SmallVectorImpl<MachineInstr *> &InsInstrs,
                               SmallVectorImpl<MachineInstr *> &DelInstrs,
-                              int Pattern);
+                              unsigned Pattern);
   bool preservesResourceLen(MachineBasicBlock *MBB,
                             MachineTraceMetrics::Trace BlockTrace,
                             SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -122,8 +122,8 @@ private:
                                 MachineTraceMetrics::Trace BlockTrace);
 
   void verifyPatternOrder(MachineBasicBlock *MBB, MachineInstr &Root,
-                          SmallVector<int, 16> &Patterns);
-  CombinerObjective getCombinerObjective(int Pattern);
+                          SmallVector<unsigned, 16> &Patterns);
+  CombinerObjective getCombinerObjective(unsigned Pattern);
 };
 }
 
@@ -290,7 +290,7 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
   return NewRootLatency;
 }
 
-CombinerObjective MachineCombiner::getCombinerObjective(int Pattern) {
+CombinerObjective MachineCombiner::getCombinerObjective(unsigned Pattern) {
   // TODO: If C++ ever gets a real enum class, make this part of the
   // MachineCombinerPattern class.
   switch (Pattern) {
@@ -330,7 +330,7 @@ std::pair<unsigned, unsigned> MachineCombiner::getLatenciesForInstrSequences(
 bool MachineCombiner::reduceRegisterPressure(
     MachineInstr &Root, MachineBasicBlock *MBB,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
-    SmallVectorImpl<MachineInstr *> &DelInstrs, int Pattern) {
+    SmallVectorImpl<MachineInstr *> &DelInstrs, unsigned Pattern) {
   // FIXME: for now, we don't do any check for the register pressure patterns.
   // We treat them as always profitable. But we can do better if we make
   // RegPressureTracker class be aware of TIE attribute. Then we can get an
@@ -348,7 +348,7 @@ bool MachineCombiner::improvesCriticalPathLen(
     MachineTraceMetrics::Trace BlockTrace,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, int Pattern,
+    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned Pattern,
     bool SlackIsAccurate) {
   // Get depth and latency of NewRoot and Root.
   unsigned NewRootDepth =
@@ -478,7 +478,7 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
                          SmallVectorImpl<MachineInstr *> &DelInstrs,
                          MachineTraceMetrics::Ensemble *TraceEnsemble,
                          SparseSet<LiveRegUnit> &RegUnits,
-                         const TargetInstrInfo *TII, int Pattern,
+                         const TargetInstrInfo *TII, unsigned Pattern,
                          bool IncrementalUpdate) {
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
@@ -516,7 +516,7 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 // later patterns. This helps to discover sub-optimal pattern orderings.
 void MachineCombiner::verifyPatternOrder(MachineBasicBlock *MBB,
                                          MachineInstr &Root,
-                                         SmallVector<int, 16> &Patterns) {
+                                         SmallVector<unsigned, 16> &Patterns) {
   long PrevLatencyDiff = std::numeric_limits<long>::max();
   (void)PrevLatencyDiff; // Variable is used in assert only.
   for (auto P : Patterns) {
@@ -570,7 +570,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
   while (BlockIter != MBB->end()) {
     auto &MI = *BlockIter++;
-    SmallVector<int, 16> Patterns;
+    SmallVector<unsigned, 16> Patterns;
     // The motivating example is:
     //
     //     MUL  Other        MUL_op1 MUL_op2  Other

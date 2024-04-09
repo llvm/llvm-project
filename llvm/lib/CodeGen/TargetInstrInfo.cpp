@@ -919,7 +919,7 @@ bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
 //    instruction is known to not increase the critical path, then don't match
 //    that pattern.
 bool TargetInstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<int> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   bool Commute;
   if (isReassociationCandidate(Root, Commute)) {
@@ -941,14 +941,18 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
 }
 
 /// Return true when a code sequence can improve loop throughput.
-bool TargetInstrInfo::isThroughputPattern(int Pattern) const { return false; }
+bool TargetInstrInfo::isThroughputPattern(unsigned Pattern) const {
+  return false;
+}
 
-CombinerObjective TargetInstrInfo::getCombinerObjective(int Pattern) const {
+CombinerObjective
+TargetInstrInfo::getCombinerObjective(unsigned Pattern) const {
   return CombinerObjective::Default;
 }
 
 std::pair<unsigned, unsigned>
-TargetInstrInfo::getReassociationOpcodes(int Pattern, const MachineInstr &Root,
+TargetInstrInfo::getReassociationOpcodes(unsigned Pattern,
+                                         const MachineInstr &Root,
                                          const MachineInstr &Prev) const {
   bool AssocCommutRoot = isAssociativeAndCommutative(Root);
   bool AssocCommutPrev = isAssociativeAndCommutative(Prev);
@@ -1036,7 +1040,7 @@ TargetInstrInfo::getReassociationOpcodes(int Pattern, const MachineInstr &Root,
 // Return a pair of boolean flags showing if the new root and new prev operands
 // must be swapped. See visual example of the rule in
 // TargetInstrInfo::getReassociationOpcodes.
-static std::pair<bool, bool> mustSwapOperands(int Pattern) {
+static std::pair<bool, bool> mustSwapOperands(unsigned Pattern) {
   switch (Pattern) {
   default:
     llvm_unreachable("Unexpected pattern");
@@ -1054,7 +1058,7 @@ static std::pair<bool, bool> mustSwapOperands(int Pattern) {
 /// Attempt the reassociation transformation to reduce critical path length.
 /// See the above comments before getMachineCombinerPatterns().
 void TargetInstrInfo::reassociateOps(
-    MachineInstr &Root, MachineInstr &Prev, int Pattern,
+    MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
@@ -1176,7 +1180,8 @@ void TargetInstrInfo::reassociateOps(
 }
 
 void TargetInstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, int Pattern, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();

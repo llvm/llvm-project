@@ -27,7 +27,7 @@ namespace llvm {
 class X86Subtarget;
 
 // X86 MachineCombiner patterns
-enum X86MachineCombinerPattern {
+enum X86MachineCombinerPattern : unsigned {
   // X86 VNNI
   DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
 };
@@ -614,14 +614,14 @@ protected:
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
   bool getMachineCombinerPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<int> &Patterns,
+                                  SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
 
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the
   /// original code sequence.
   void genAlternativeCodeSequence(
-      MachineInstr &Root, int Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
