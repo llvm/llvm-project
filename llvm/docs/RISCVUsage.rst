@@ -131,6 +131,7 @@ on support follow.
      ``Zcb``           Supported
      ``Zcd``           Supported
      ``Zcf``           Supported
+     ``Zcmop``         Supported
      ``Zcmp``          Supported
      ``Zcmt``          Assembly Support
      ``Zdinx``         Supported
@@ -155,6 +156,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
      ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
