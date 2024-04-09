@@ -129,23 +129,18 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    bool NonExactDefinition = !F.isDefinitionExact();
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
     // Always check the function attribute to determine checksum mismatch for
-    // functions whose definition is not exact even if their desc are available.
-    // This is because the desc is computed based on the original internal
-    // definition, however, the definition may be replaced by a different
-    // optimized variant of the same source level function at link time and this
-    // could result in different checksums. So we should use the state from the
-    // new definition, which is saved in its attribute.
-    assert(
-        (LTOPhase != ThinOrFullLTOPhase::ThinLTOPostLink ||
-         NonExactDefinition || !Desc ||
-         profileIsHashMismatched(*Desc, Samples) ==
-             F.hasFnAttribute("profile-checksum-mismatch")) &&
-        "In post-link, profile checksum matching state doesn't match the exact "
-        "definition function's 'profile-checksum-mismatch' attribute.");
-    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink &&
-        (NonExactDefinition || !Desc))
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    if (IsAvailableExternallyLinkage || !Desc)
       return !F.hasFnAttribute("profile-checksum-mismatch");
 
     return Desc && !profileIsHashMismatched(*Desc, Samples);
