@@ -1415,26 +1415,42 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
 }
 
 ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
-  /// C++ 9.3.2: In the body of a non-static member function, the keyword this
-  /// is a non-lvalue expression whose value is the address of the object for
-  /// which the function is called.
+  // C++20 [expr.prim.this]p1:
+  //   The keyword this names a pointer to the object for which an
+  //   implicit object member function is invoked or a non-static
+  //   data member's initializer is evaluated.
   QualType ThisTy = getCurrentThisType();
 
-  if (ThisTy.isNull()) {
-    DeclContext *DC = getFunctionLevelDeclContext();
-
-    if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
-        Method && Method->isExplicitObjectMemberFunction()) {
-      return Diag(Loc, diag::err_invalid_this_use) << 1;
-    }
-
-    if (isLambdaCallWithExplicitObjectParameter(CurContext))
-      return Diag(Loc, diag::err_invalid_this_use) << 1;
-
-    return Diag(Loc, diag::err_invalid_this_use) << 0;
-  }
+  if (CheckCXXThisType(Loc, ThisTy))
+    return ExprError();
 
   return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false);
+}
+
+bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
+  if (!Type.isNull())
+    return false;
+
+  // C++20 [expr.prim.this]p3:
+  //   If a declaration declares a member function or member function template
+  //   of a class X, the expression this is a prvalue of type
+  //   "pointer to cv-qualifier-seq X" wherever X is the current class between
+  //   the optional cv-qualifier-seq and the end of the function-definition,
+  //   member-declarator, or declarator. It shall not appear within the
+  //   declaration of either a static member function or an explicit object
+  //   member function of the current class (although its type and value
+  //   category are defined within such member functions as they are within
+  //   an implicit object member function).
+  DeclContext *DC = getFunctionLevelDeclContext();
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
+      Method && Method->isExplicitObjectMemberFunction()) {
+    Diag(Loc, diag::err_invalid_this_use) << 1;
+  } else if (isLambdaCallWithExplicitObjectParameter(CurContext)) {
+    Diag(Loc, diag::err_invalid_this_use) << 1;
+  } else {
+    Diag(Loc, diag::err_invalid_this_use) << 0;
+  }
+  return true;
 }
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
@@ -1446,6 +1462,42 @@ Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
 
 void Sema::MarkThisReferenced(CXXThisExpr *This) {
   CheckCXXThisCapture(This->getExprLoc());
+  if (This->isTypeDependent())
+    return;
+
+  // Check if 'this' is captured by value in a lambda with a dependent explicit
+  // object parameter, and mark it as type-dependent as well if so.
+  auto IsDependent = [&]() {
+    for (auto *Scope : llvm::reverse(FunctionScopes)) {
+      auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Scope);
+      if (!LSI)
+        continue;
+
+      if (LSI->Lambda && !LSI->Lambda->Encloses(CurContext) &&
+          LSI->AfterParameterList)
+        return false;
+
+      // If this lambda captures 'this' by value, then 'this' is dependent iff
+      // this lambda has a dependent explicit object parameter. If we can't
+      // determine whether it does (e.g. because the CXXMethodDecl's type is
+      // null), assume it doesn't.
+      if (LSI->isCXXThisCaptured()) {
+        if (!LSI->getCXXThisCapture().isCopyCapture())
+          continue;
+
+        const auto *MD = LSI->CallOperator;
+        if (MD->getType().isNull())
+          return false;
+
+        const auto *Ty = cast<FunctionProtoType>(MD->getType());
+        return Ty && MD->isExplicitObjectMemberFunction() &&
+               Ty->getParamType(0)->isDependentType();
+      }
+    }
+    return false;
+  }();
+
+  This->setCapturedByCopyInLambdaWithExplicitObjectParameter(IsDependent);
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
@@ -5566,8 +5618,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   }
 }
 
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
-                                    QualType RhsT, SourceLocation KeyLoc);
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc);
 
 static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
                                      SourceLocation KWLoc,
@@ -5583,8 +5635,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
   // alongside the IsConstructible traits to avoid duplication.
   if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary && Kind != BTT_ReferenceConstructsFromTemporary)
-    return EvaluateBinaryTypeTrait(S, Kind, Args[0]->getType(),
-                                   Args[1]->getType(), RParenLoc);
+    return EvaluateBinaryTypeTrait(S, Kind, Args[0],
+                                   Args[1], RParenLoc);
 
   switch (Kind) {
   case clang::BTT_ReferenceBindsToTemporary:
@@ -5679,8 +5731,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
       if (U->isReferenceType())
         return false;
 
-      QualType TPtr = S.Context.getPointerType(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {}));
-      QualType UPtr = S.Context.getPointerType(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {}));
+      TypeSourceInfo *TPtr = S.Context.CreateTypeSourceInfo(S.Context.getPointerType(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {})));
+      TypeSourceInfo *UPtr = S.Context.CreateTypeSourceInfo(S.Context.getPointerType(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {})));
       return EvaluateBinaryTypeTrait(S, TypeTrait::BTT_IsConvertibleTo, UPtr, TPtr, RParenLoc);
     }
 
@@ -5814,8 +5866,11 @@ ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   return BuildTypeTrait(Kind, KWLoc, ConvertedArgs, RParenLoc);
 }
 
-static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
-                                    QualType RhsT, SourceLocation KeyLoc) {
+static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceInfo *Lhs,
+                                    const TypeSourceInfo *Rhs, SourceLocation KeyLoc) {
+  QualType LhsT = Lhs->getType();
+  QualType RhsT = Rhs->getType();
+
   assert(!LhsT->isDependentType() && !RhsT->isDependentType() &&
          "Cannot evaluate traits of dependent types");
 

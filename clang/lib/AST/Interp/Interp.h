@@ -801,6 +801,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  for (const auto &P : {LHS, RHS}) {
+    if (P.isZero())
+      continue;
+    if (const ValueDecl *VD = P.getDeclDesc()->asValueDecl();
+        VD && VD->isWeak()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
+          << P.toDiagnosticString(S.getCtx());
+      return false;
+    }
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
@@ -1333,6 +1345,11 @@ inline bool FinishInit(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool Dump(InterpState &S, CodePtr OpPC) {
+  S.Stk.dump();
+  return true;
+}
+
 inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   Pointer Base = Ptr;
@@ -1840,6 +1857,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   const Pointer &This = S.Current->getThis();
   if (!CheckThis(S, OpPC, This))
     return false;
+
+  // Ensure the This pointer has been cast to the correct base.
+  if (!This.isDummy()) {
+    assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
+    assert(This.getRecord());
+    assert(
+        This.getRecord()->getDecl() ==
+        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+  }
 
   S.Stk.push<Pointer>(This);
   return true;
