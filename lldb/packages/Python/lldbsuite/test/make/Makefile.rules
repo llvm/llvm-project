@@ -646,6 +646,9 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
 	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -Xfrontend -disable-objc-interop -runtime-compatibility-version none
+	ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -target $(ARCH)-apple-macos14
+	endif
 	SWIFT_WMO = 1
 endif
 	
