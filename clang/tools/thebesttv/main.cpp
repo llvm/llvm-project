@@ -30,31 +30,39 @@ class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
     }
 };
 
-void deduplicateCompilationDatabase(fs::path path) {
+void fixCompilationDatabase(fs::path path) {
     std::ifstream ifs(path);
     ordered_json input = ordered_json::parse(ifs);
     ifs.close();
 
-    bool hasDuplicate = false;
+    bool needsUpdate = false;
     std::set<std::string> visitedFiles;
     ordered_json output;
     for (auto &cmd : input) {
         std::string file = cmd["file"];
         if (visitedFiles.find(file) != visitedFiles.end()) {
             logger.warn("Duplicate entry for file: {}", file);
-            hasDuplicate = true;
+            needsUpdate = true;
             continue;
         }
+
+        std::string dir = cmd["directory"];
+        if (!dirExists(dir)) {
+            logger.warn("Directory does not exist: {}", dir);
+            needsUpdate = true;
+            continue;
+        }
+
         visitedFiles.insert(file);
         output.push_back(cmd);
     }
 
-    if (!hasDuplicate) {
-        logger.info("No duplicate entries found in compilation database");
+    if (!needsUpdate) {
+        logger.info("No entry need fixing in compilation database");
         return;
     }
 
-    logger.warn("Found duplicate entries in compilation database!");
+    logger.warn("Some entries need fixing in compilation database!");
     {
         fs::path backup = path.string() + ".bk";
         logger.warn("Original database is backed up to: {}", backup);
@@ -68,7 +76,7 @@ void deduplicateCompilationDatabase(fs::path path) {
         o << output.dump(4, ' ', false, json::error_handler_t::replace)
           << std::endl;
         o.close();
-        logger.warn("Deduplicated database is in: {}", path);
+        logger.warn("Fixsed database is in: {}", path);
     }
 }
 
@@ -639,7 +647,7 @@ int main(int argc, const char **argv) {
     fs::path compile_commands =
         fs::canonical(input["compile_commands"].template get<std::string>());
     logger.info("Compilation database: {}", compile_commands);
-    deduplicateCompilationDatabase(compile_commands);
+    fixCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabase(compile_commands);
 
     generateICFG(Global.cb->getAllFiles());
