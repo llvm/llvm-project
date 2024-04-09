@@ -1271,6 +1271,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fmaf
     libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.__support.FPUtil.fp_bits
   FLAGS
     FMA_OPT__ONLY
@@ -1286,6 +1287,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fma
     libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.__support.FPUtil.fp_bits
 )
 
