@@ -269,12 +269,12 @@ define ptr @call_noundef_ptr(ptr %ptr) {
 define ptr @invoke_noundef_ptr(ptr %ptr) personality i8 1 {
 ; CHECK-LABEL: @invoke_noundef_ptr(
 ; CHECK-NEXT:    invoke void @f3(ptr noundef [[PTR:%.*]])
-; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
+; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ; CHECK:       unwind:
 ; CHECK-NEXT:    [[TMP1:%.*]] = landingpad ptr
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    resume ptr [[PTR]]
 ;
   %q = freeze ptr %ptr
@@ -443,7 +443,7 @@ EXIT:
 define i32 @brcond_switch(i32 %x) {
 ; CHECK-LABEL: @brcond_switch(
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
+; CHECK-NEXT:      i32 0, label [[A:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 [[X]]
@@ -496,6 +496,39 @@ A:
 B:
   ret i1 1
 }
+
+define i8 @range_attr(i8 noundef range(i8 1, 0) %x) {
+; CHECK-LABEL: @range_attr(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %y = freeze i8 %x
+  ret i8 %y
+}
+
+declare noundef range(i8 1, 0) i8 @returns_range_helper()
+
+define i8 @range_return() {
+; CHECK-LABEL: @range_return(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @returns_range_helper()
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %x = call i8 @returns_range_helper()
+  %y = freeze i8 %x
+  ret i8 %y
+}
+
+declare noundef i8 @returns_i8_helper()
+
+define i8 @range_call() {
+; CHECK-LABEL: @range_call(
+; CHECK-NEXT:    [[X:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %x = call range(i8 1, 0) i8 @returns_i8_helper()
+  %y = freeze i8 %x
+  ret i8 %y
+}
+
 declare void @f1(i1)
 declare void @f2()
 declare void @f3(ptr)
