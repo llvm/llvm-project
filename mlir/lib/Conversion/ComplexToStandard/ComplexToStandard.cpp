@@ -946,9 +946,11 @@ struct TanOpConversion : public OpConversionPattern<complex::TanOp> {
   matchAndRewrite(complex::TanOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    Value cos = rewriter.create<complex::CosOp>(loc, adaptor.getComplex());
-    Value sin = rewriter.create<complex::SinOp>(loc, adaptor.getComplex());
-    rewriter.replaceOpWithNewOp<complex::DivOp>(op, sin, cos);
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+
+    Value cos = rewriter.create<complex::CosOp>(loc, adaptor.getComplex(), fmf);
+    Value sin = rewriter.create<complex::SinOp>(loc, adaptor.getComplex(), fmf);
+    rewriter.replaceOpWithNewOp<complex::DivOp>(op, sin, cos, fmf);
     return success();
   }
 };
