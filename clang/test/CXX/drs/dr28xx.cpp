@@ -72,8 +72,10 @@ struct A {
   friend void Ts...[0]::g();
 
   friend struct Ts...[0]::B;
+  // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
-  friend struct Ts...[0]::C; // expected-warning{{is not supported; ignoring this friend declaration}}
+  friend struct Ts...[0]::C;
+  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
 };
 
 #endif
