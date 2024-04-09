@@ -3585,8 +3585,7 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
   auto *GV = new llvm::GlobalVariable(
       getModule(), Init->getType(),
       /*isConstant=*/true, Linkage, Init, Name, nullptr,
-      llvm::GlobalValue::NotThreadLocal,
-      GlobalsInt8PtrTy->getAddressSpace());
+      llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
   setGVProperties(GV, TPO);
   if (supportsCOMDAT())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -5027,8 +5026,8 @@ llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
 
   // Create a new variable.
   GV = new llvm::GlobalVariable(
-    getModule(), Ty, /*isConstant=*/true, Linkage, nullptr, Name, nullptr,
-    llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
+      getModule(), Ty, /*isConstant=*/true, Linkage, nullptr, Name, nullptr,
+      llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
 
   if (OldGV) {
     // Replace occurrences of the old variable if needed.
