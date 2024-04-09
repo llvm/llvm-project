@@ -1119,6 +1119,8 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
           : (TemplateArgs.begin() + TemplateArgs.getNumLevels() - 1 -
              D->getTemplateDepth())
                 ->Args);
+  if (InstTemplate.isInvalid())
+    return nullptr;
 
   TypeAliasTemplateDecl *PrevAliasTemplate = nullptr;
   if (getPreviousDeclForInstantiation<TypedefNameDecl>(Pattern)) {
