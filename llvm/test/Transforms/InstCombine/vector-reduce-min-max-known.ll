@@ -130,10 +130,7 @@ define i1 @vec_reduce_smin_non_zero_fail(<4 x i8> %xx) {
 
 define i8 @vec_reduce_umax_known0(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reduce_umax_known0(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.umax.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %x = or <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.umax(<4 x i8> %x)
@@ -182,10 +179,7 @@ define i8 @vec_reduce_umax_known_fail1(<4 x i8> %xx) {
 
 define i8 @vec_reduce_umin_known0(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reduce_umin_known0(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.umin.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %x = or <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.umin(<4 x i8> %x)
@@ -235,10 +229,7 @@ define i8 @vec_reduce_umin_known_fail1(<4 x i8> %xx) {
 
 define i8 @vec_reduce_smax_known(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reduce_smax_known(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 4, i8 4, i8 4, i8 5>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.smax.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 4
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 4
 ;
   %x = or <4 x i8> %xx, <i8 4, i8 4, i8 4, i8 5>
   %v = call i8 @llvm.vector.reduce.smax(<4 x i8> %x)
@@ -261,10 +252,7 @@ define i8 @vec_reduce_smax_known_fail(<4 x i8> %xx) {
 
 define i8 @vec_reduce_smin_known(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reduce_smin_known(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 8, i8 24, i8 56, i8 9>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.smin.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 8
 ;
   %x = or <4 x i8> %xx, <i8 8, i8 24, i8 56, i8 9>
   %v = call i8 @llvm.vector.reduce.smin(<4 x i8> %x)

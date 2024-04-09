@@ -1621,6 +1621,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
         Known = KnownBits::ssub_sat(Known, Known2);
         break;
+        // for min/max reduce, any bit common to each element in the input vec
+        // is set in the output.
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        break;
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
