@@ -314,7 +314,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
       -I${PROJECT_SOURCE_DIR}/generic/include
-      # FIXME: Fix libclc to not require disabling this noisy warnings
+      # FIXME: Fix libclc to not require disabling this noisy warning
       -Wno-bitwise-conditional-parentheses
     )
 
