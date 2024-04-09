@@ -165,6 +165,8 @@ SPIRVGlobalRegistry::getOrCreateConstIntReg(uint64_t Val, SPIRVType *SpvType,
   Register Res = DT.find(CI, CurMF);
   if (!Res.isValid()) {
     unsigned BitWidth = SpvType ? getScalarOrVectorBitWidth(SpvType) : 32;
+    // TODO: handle cases where the type is not 32bit wide
+    // TODO: https://github.com/llvm/llvm-project/issues/88129
     LLT LLTy = LLT::scalar(32);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
     CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
@@ -200,7 +202,8 @@ SPIRVGlobalRegistry::getOrCreateConstFloatReg(APFloat Val, SPIRVType *SpvType,
   if (!Res.isValid()) {
     if (SpvType)
       BitWidth = getScalarOrVectorBitWidth(SpvType);
-
+    // TODO: handle cases where the type is not 32bit wide
+    // TODO: https://github.com/llvm/llvm-project/issues/88129
     LLT LLTy = LLT::scalar(32);
     Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
     CurMF->getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
@@ -395,7 +398,8 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     if (!IsNull)
       SpvScalConst = getOrCreateBaseRegister(Val, I, SpvType, TII, BitWidth);
 
-    // TODO: maybe use bitwidth of base type.
+    // TODO: handle cases where the type is not 32bit wide
+    // TODO: https://github.com/llvm/llvm-project/issues/88129
     LLT LLTy = LLT::scalar(32);
     Register SpvVecConst =
         CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
