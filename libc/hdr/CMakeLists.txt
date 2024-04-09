@@ -31,3 +31,12 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.math_macros
     libc.include.math
 )
+
+add_proxy_header_library(
+  fenv_macros
+  HDRS
+    fenv_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.fenv_macros
+    libc.incude.fenv
+)

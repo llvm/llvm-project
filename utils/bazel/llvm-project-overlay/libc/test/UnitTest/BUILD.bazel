@@ -86,6 +86,7 @@ libc_support_library(
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
         "//libc:hdr_math_macros",
+	"//libc:hdr_fenv_macros",
     ],
 )
 
