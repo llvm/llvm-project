@@ -436,9 +436,11 @@ public:
     // The global value definition corresponding to the summary should be
     // imported from source module
     Definition = 0,
-    // The global value declaration corresponding to the summary should be
-    // imported when its definition doesn't exist in the destination module
-    // and not imported (e.g., function is large to be inlined).
+
+    // When its definition doesn't exist in the destination module and not
+    // imported (e.g., function is large to be inlined), the global value
+    // declaration corresponding to the summary should be imported, or the
+    // attributes from summary should be annotated on the function declaration.
     Declaration = 1,
   };
 
