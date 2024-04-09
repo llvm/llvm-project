@@ -2791,7 +2791,7 @@ public:
   /// This is used for implicit bitfield conversion checks, which
   /// must compare with the value before potential truncation.
   llvm::Value *EmitWithOriginalRHSBitfieldAssignment(const BinaryOperator *E,
-                                                     llvm::Value *Previous,
+                                                     llvm::Value **Previous,
                                                      QualType *SrcType);
 
   /// Emit a check that an [implicit] conversion of a bitfield. It is not UB,

@@ -199,19 +199,16 @@ export namespace std {
     using std::chrono::tzdb_list;
 
     // [time.zone.db.access], time zone database access
-    // using std::chrono::current_zone;
+    using std::chrono::current_zone;
     using std::chrono::get_tzdb;
     using std::chrono::get_tzdb_list;
-    // using std::chrono::locate_zone;
+    using std::chrono::locate_zone;
 
     // [time.zone.db.remote], remote time zone database support
     using std::chrono::reload_tzdb;
     using std::chrono::remote_version;
 
-#  endif //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
-         //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-
-#  if 0
+#    if 0
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
@@ -221,11 +218,11 @@ export namespace std {
 
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
-#  endif
-#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
+#    endif // if 0
+
     using std::chrono::time_zone;
-#  endif
-#  if 0
+
+#    if 0
 
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
@@ -234,22 +231,23 @@ export namespace std {
     using std::chrono::zoned_time;
 
     using std::chrono::zoned_seconds;
+#    endif // if 0
 
     // [time.zone.leap], leap second support
     using std::chrono::leap_second;
-#  endif
 
-#  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     // [time.zone.link], class time_zone_link
     using std::chrono::time_zone_link;
-#  endif
 
-#  if 0
+#    if 0
     // [time.format], formatting
     using std::chrono::local_time_format;
-#  endif
-#endif // _LIBCPP_ENABLE_EXPERIMENTAL
-  }    // namespace chrono
+#    endif
+#  endif // _LIBCPP_ENABLE_EXPERIMENTAL
+#endif   //  !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&
+         //    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+
+  } // namespace chrono
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::formatter;

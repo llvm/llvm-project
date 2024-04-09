@@ -71,9 +71,7 @@ class VPBuilder {
 public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
-  VPBuilder(VPRecipeBase *InsertPt) {
-    setInsertPoint(InsertPt->getParent(), InsertPt->getIterator());
-  }
+  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.

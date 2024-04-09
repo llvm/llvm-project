@@ -245,6 +245,10 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+  return ST->hasVInstructions();
+}
+
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
@@ -861,9 +865,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
-    unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return Cost + (LT.first - 1);
+    // Legalisation of illegal types involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
+    if (ST->hasVInstructions())
+      return getRISCVInstructionCost(RISCV::VID_V, LT.second, CostKind) +
+             (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
+    return 1 + (LT.first - 1);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.

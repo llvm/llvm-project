@@ -5,15 +5,15 @@
 
 #import <SimpleKit/SimpleKit.h>
 
-// CHECK: void *getCFOwnedToUnowned(void) __attribute__((cf_returns_not_retained));
-// CHECK: void *getCFUnownedToOwned(void) __attribute__((cf_returns_retained));
-// CHECK: void *getCFOwnedToNone(void) __attribute__((cf_unknown_transfer));
-// CHECK: id getObjCOwnedToUnowned(void) __attribute__((ns_returns_not_retained));
-// CHECK: id getObjCUnownedToOwned(void) __attribute__((ns_returns_retained));
-// CHECK: int indirectGetCFOwnedToUnowned(void * _Nullable *out __attribute__((cf_returns_not_retained)));
-// CHECK: int indirectGetCFUnownedToOwned(void * _Nullable *out __attribute__((cf_returns_retained)));
+// CHECK: __attribute__((cf_returns_not_retained)) void *getCFOwnedToUnowned(void);
+// CHECK: __attribute__((cf_returns_retained)) void *getCFUnownedToOwned(void);
+// CHECK: __attribute__((cf_unknown_transfer)) void *getCFOwnedToNone(void);
+// CHECK: __attribute__((ns_returns_not_retained)) id getObjCOwnedToUnowned(void);
+// CHECK: __attribute__((ns_returns_retained)) id getObjCUnownedToOwned(void);
+// CHECK: int indirectGetCFOwnedToUnowned(__attribute__((cf_returns_not_retained)) void * _Nullable *out);
+// CHECK: int indirectGetCFUnownedToOwned(__attribute__((cf_returns_retained)) void * _Nullable *out);
 // CHECK: int indirectGetCFOwnedToNone(void * _Nullable *out);
-// CHECK: int indirectGetCFNoneToOwned(void **out __attribute__((cf_returns_not_retained)));
+// CHECK: int indirectGetCFNoneToOwned(__attribute__((cf_returns_not_retained)) void **out);
 
 // CHECK-LABEL: @interface MethodTest
 // CHECK: - (id)getOwnedToUnowned __attribute__((ns_returns_not_retained));

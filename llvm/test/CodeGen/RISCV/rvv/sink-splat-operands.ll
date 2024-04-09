@@ -1214,8 +1214,6 @@ vector.ph:                                        ; preds = %entry
   %3 = shl i64 %2, 2
   %n.mod.vf = urem i64 1024, %3
   %n.vec = sub nsw i64 1024, %n.mod.vf
-  %broadcast.splatinsert = insertelement <vscale x 4 x i32> poison, i32 2, i32 0
-  %broadcast.splat = shufflevector <vscale x 4 x i32> %broadcast.splatinsert, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %4 = call i64 @llvm.vscale.i64()
   %5 = shl i64 %4, 2
   br label %vector.body
@@ -1224,7 +1222,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %6 = getelementptr inbounds i32, ptr %a, i64 %index
   %wide.load = load <vscale x 4 x i32>, ptr %6, align 4
-  %7 = ashr <vscale x 4 x i32> %wide.load, %broadcast.splat
+  %7 = ashr <vscale x 4 x i32> %wide.load, splat (i32 2)
   store <vscale x 4 x i32> %7, ptr %6, align 4
   %index.next = add nuw i64 %index, %5
   %8 = icmp eq i64 %index.next, %n.vec

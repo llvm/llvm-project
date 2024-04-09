@@ -133,9 +133,20 @@ end subroutine
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<*:i32>>
 ! CHECK:           fir.call @_QPint_opt_assumed_rank(%[[VAL_11]]) fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()
 
-! TODO: set assumed size last extent to -1.
-!subroutine int_r2_assumed_size_to_assumed_rank(x)
-!  use ifaces, only : int_assumed_rank
-!  integer :: x(10, *)
-!  call int_assumed_rank(x)
-!end subroutine
+subroutine int_r2_assumed_size_to_assumed_rank(x)
+  use ifaces, only : int_assumed_rank
+  integer :: x(10, *)
+  call int_assumed_rank(x)
+end subroutine
+! CHECK-LABEL:   func.func @_QPint_r2_assumed_size_to_assumed_rank(
+! CHECK-SAME:                                                      %[[VAL_0:.*]]: !fir.ref<!fir.array<10x?xi32>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : i64
+! CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i64) -> index
+! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_4:.*]] = arith.cmpi sgt, %[[VAL_2]], %[[VAL_3]] : index
+! CHECK:           %[[VAL_5:.*]] = arith.select %[[VAL_4]], %[[VAL_2]], %[[VAL_3]] : index
+! CHECK:           %[[VAL_6:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_7]]) {uniq_name = "_QFint_r2_assumed_size_to_assumed_rankEx"} : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.box<!fir.array<10x?xi32>>) -> !fir.box<!fir.array<*:i32>>
+! CHECK:           fir.call @_QPint_assumed_rank(%[[VAL_9]]) fastmath<contract> : (!fir.box<!fir.array<*:i32>>) -> ()

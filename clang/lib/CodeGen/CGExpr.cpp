@@ -56,7 +56,13 @@ using namespace CodeGen;
 // Experiment to make sanitizers easier to debug
 static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
     "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"));
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
+
+// TODO: Introduce frontend options to enabled per sanitizers, similar to
+// `fsanitize-trap`.
+static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+    "ubsan-guard-checks", llvm::cl::Optional,
+    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -3522,6 +3528,17 @@ void CodeGenFunction::EmitCheck(
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
   }
 
+  if (ClSanitizeGuardChecks) {
+    llvm::Value *Allow =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
+
+    for (llvm::Value **Cond : {&FatalCond, &RecoverableCond, &TrapCond}) {
+      if (*Cond)
+        *Cond = Builder.CreateOr(*Cond, Builder.CreateNot(Allow));
+    }
+  }
+
   if (TrapCond)
     EmitTrapCheck(TrapCond, CheckHandler);
   if (!FatalCond && !RecoverableCond)
@@ -5590,7 +5607,7 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     // is enabled) use it to check for an implicit conversion.
     if (E->getLHS()->refersToBitField()) {
       llvm::Value *RHS =
-          EmitWithOriginalRHSBitfieldAssignment(E, Previous, &SrcType);
+          EmitWithOriginalRHSBitfieldAssignment(E, &Previous, &SrcType);
       RV = RValue::get(RHS);
     } else
       RV = EmitAnyExpr(E->getRHS());
@@ -5601,7 +5618,7 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());
 
     if (LV.isBitField()) {
-      llvm::Value *Result;
+      llvm::Value *Result = nullptr;
       // If bitfield sanitizers are enabled we want to use the result
       // to check whether a truncation or sign change has occurred.
       if (SanOpts.has(SanitizerKind::ImplicitBitfieldConversion))

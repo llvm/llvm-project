@@ -42725,6 +42725,8 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   switch (Op.getOpcode()) {
   case X86ISD::PSHUFD:
   case X86ISD::VPERMILPI:
+  case X86ISD::UNPCKH:
+  case X86ISD::UNPCKL:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -44705,6 +44707,17 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
         }
         return SDValue(N, 0);
       }
+    }
+  }
+
+  // Attempt to fold extract(trunc(x),c) -> trunc(extract(x,c)).
+  if (CIdx && InputVector.getOpcode() == ISD::TRUNCATE) {
+    SDValue TruncSrc = InputVector.getOperand(0);
+    EVT TruncSVT = TruncSrc.getValueType().getScalarType();
+    if (DCI.isBeforeLegalize() && TLI.isTypeLegal(TruncSVT)) {
+      SDValue NewExt =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TruncSVT, TruncSrc, EltIdx);
+      return DAG.getAnyExtOrTrunc(NewExt, dl, VT);
     }
   }
 
@@ -56144,6 +56157,13 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
           InVec.getOperand(0).getValueType() == MVT::v4f32) {
         return DAG.getNode(X86ISD::VFPEXT, DL, VT, InVec.getOperand(0));
       }
+    }
+    // v4i32 CVTPS2DQ(v4f32).
+    if (InOpcode == ISD::FP_TO_SINT && VT == MVT::v4i32) {
+      SDValue Src = InVec.getOperand(0);
+      if (Src.getValueType().getScalarType() == MVT::f32)
+        return DAG.getNode(InOpcode, DL, VT,
+                           extractSubVector(Src, IdxVal, DAG, DL, SizeInBits));
     }
     if (IdxVal == 0 &&
         (ISD::isExtOpcode(InOpcode) || ISD::isExtVecInRegOpcode(InOpcode)) &&
