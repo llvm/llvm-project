@@ -69,3 +69,14 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
 )
+
+add_libc_test(
+  setjmp_test
+  SUITE
+    libc_include_tests
+  SRCS
+    setjmp_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.offsetof_macro
+    libc.include.llvm-libc-types.jmp_buf
+  )
