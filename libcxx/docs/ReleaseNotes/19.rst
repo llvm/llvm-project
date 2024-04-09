@@ -101,7 +101,7 @@ TODO
 ABI Affecting Changes
 ---------------------
 
-- The optional POSIX macro ``ENODATA`` has been deprecated in C++. The
+- The optional POSIX macro ``ENODATA`` has been deprecated in C++ and POSIX 2017. The
   ``random_device`` could throw a ``system_error`` with this value. It now
   throws ``ENOMSG``.
 
