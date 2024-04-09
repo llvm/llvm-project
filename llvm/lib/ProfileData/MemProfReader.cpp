@@ -295,8 +295,8 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   // Check whether the profiled binary was built with position independent code
   // (PIC). Perform sanity checks for assumptions we rely on to simplify
   // symbolization.
-  auto* Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
-  const llvm::object::ELF64LEFile& ElfFile = Elf64LEObject->getELFFile();
+  auto *Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
+  const llvm::object::ELF64LEFile &ElfFile = Elf64LEObject->getELFFile();
   auto PHdrsOr = ElfFile.program_headers();
   if (!PHdrsOr)
     return report(
