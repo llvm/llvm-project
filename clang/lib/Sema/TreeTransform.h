@@ -794,6 +794,9 @@ public:
       ParenExpr *PE, DependentScopeDeclRefExpr *DRE, bool IsAddressOfOperand,
       TypeSourceInfo **RecoveryTSI);
 
+  ExprResult TransformUnresolvedLookupExpr(UnresolvedLookupExpr *E,
+                                           bool IsAddressOfOperand);
+
   StmtResult TransformOMPExecutableDirective(OMPExecutableDirective *S);
 
 // FIXME: We use LLVM_ATTRIBUTE_NOINLINE because inlining causes a ridiculous
@@ -3307,12 +3310,13 @@ public:
 
   /// Build a new C++ "this" expression.
   ///
-  /// By default, builds a new "this" expression without performing any
-  /// semantic analysis. Subclasses may override this routine to provide
-  /// different behavior.
+  /// By default, performs semantic analysis to build a new "this" expression.
+  /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCXXThisExpr(SourceLocation ThisLoc,
                                 QualType ThisType,
                                 bool isImplicit) {
+    if (getSema().CheckCXXThisType(ThisLoc, ThisType))
+      return ExprError();
     return getSema().BuildCXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 
@@ -11313,7 +11317,11 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformAddressOfOperand(Expr *E) {
   if (DependentScopeDeclRefExpr *DRE = dyn_cast<DependentScopeDeclRefExpr>(E))
-    return getDerived().TransformDependentScopeDeclRefExpr(DRE, true, nullptr);
+    return getDerived().TransformDependentScopeDeclRefExpr(
+        DRE, /*IsAddressOfOperand=*/true, nullptr);
+  else if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E))
+    return getDerived().TransformUnresolvedLookupExpr(
+        ULE, /*IsAddressOfOperand=*/true);
   else
     return getDerived().TransformExpr(E);
 }
@@ -13019,10 +13027,16 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
   return false;
 }
 
-template<typename Derived>
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformUnresolvedLookupExpr(
+    UnresolvedLookupExpr *Old) {
+  return TransformUnresolvedLookupExpr(Old, /*IsAddressOfOperand=*/false);
+}
+
+template <typename Derived>
 ExprResult
-TreeTransform<Derived>::TransformUnresolvedLookupExpr(
-                                                  UnresolvedLookupExpr *Old) {
+TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
+                                                      bool IsAddressOfOperand) {
   LookupResult R(SemaRef, Old->getName(), Old->getNameLoc(),
                  Sema::LookupOrdinaryName);
 
@@ -13056,6 +13070,7 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
 
   SourceLocation TemplateKWLoc = Old->getTemplateKeywordLoc();
 
+#if 0
   // If we have neither explicit template arguments, nor the template keyword,
   // it's a normal declaration name or member reference.
   if (!Old->hasExplicitTemplateArgs() && !TemplateKWLoc.isValid()) {
@@ -13071,6 +13086,20 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
 
     return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
   }
+#endif
+
+  bool PotentiallyImplicitAccess =
+      R.isClassLookup() &&
+      (!IsAddressOfOperand ||
+       (R.isSingleResult() &&
+        R.getAsSingle<NamedDecl>()->isCXXInstanceMember()));
+
+  // If we have neither explicit template arguments, nor the template keyword,
+  // it's a normal declaration name or member reference.
+  if (!PotentiallyImplicitAccess && !Old->hasExplicitTemplateArgs() &&
+      !TemplateKWLoc.isValid()) {
+    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
+  }
 
   // If we have template arguments, rebuild them, then rebuild the
   // templateid expression.
@@ -13081,6 +13110,16 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
                                               TransArgs)) {
     R.clear();
     return ExprError();
+  }
+
+  // In a C++11 unevaluated context, an UnresolvedLookupExpr might refer to an
+  // instance member. In other contexts, BuildPossibleImplicitMemberExpr will
+  // give a good diagnostic.
+  if (PotentiallyImplicitAccess) {
+    return SemaRef.BuildPossibleImplicitMemberExpr(
+        SS, TemplateKWLoc, R,
+        Old->hasExplicitTemplateArgs() ? &TransArgs : nullptr,
+        /*Scope=*/nullptr);
   }
 
   return getDerived().RebuildTemplateIdExpr(SS, TemplateKWLoc, R,
