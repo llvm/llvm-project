@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "SparseTensorLevel.h"
+#include "SparseTensorIterator.h"
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
