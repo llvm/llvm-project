@@ -11824,8 +11824,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
       !MST->isCompressingStore() && !MST->isTruncatingStore())
     return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
                         MST->getBasePtr(), MST->getPointerInfo(),
-                        MST->getOriginalAlign(), MachineMemOperand::MOStore,
-                        MST->getAAInfo());
+                        MST->getOriginalAlign(),
+                        MST->getMemOperand()->getFlags(), MST->getAAInfo());
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
@@ -11962,7 +11962,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
     SDValue NewLd = DAG.getLoad(
         N->getValueType(0), SDLoc(N), MLD->getChain(), MLD->getBasePtr(),
         MLD->getPointerInfo(), MLD->getOriginalAlign(),
-        MachineMemOperand::MOLoad, MLD->getAAInfo(), MLD->getRanges());
+        MLD->getMemOperand()->getFlags(), MLD->getAAInfo(), MLD->getRanges());
     return CombineTo(N, NewLd, NewLd.getValue(1));
   }
 

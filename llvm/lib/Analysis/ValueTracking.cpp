@@ -4501,9 +4501,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  if (auto *CFP = dyn_cast_or_null<ConstantFP>(V)) {
+  if (auto *CFP = dyn_cast<ConstantFP>(V)) {
     Known.KnownFPClasses = CFP->getValueAPF().classify();
     Known.SignBit = CFP->isNegative();
+    return;
+  }
+
+  if (isa<ConstantAggregateZero>(V)) {
+    Known.KnownFPClasses = fcPosZero;
+    Known.SignBit = false;
     return;
   }
 
@@ -4518,6 +4524,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
+      if (!DemandedElts[i])
+        continue;
+
       Constant *Elt = CV->getAggregateElement(i);
       if (!Elt) {
         Known = KnownFPClass();

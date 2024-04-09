@@ -193,7 +193,9 @@ end
   converted.  BOZ literals are interpreted as default INTEGER only
   when they appear as the first items of array constructors with no
   explicit type.  Otherwise, they generally cannot be used if the type would
-  not be known (e.g., `IAND(X'1',X'2')`).
+  not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
+  `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
+  the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
@@ -344,6 +346,10 @@ end
 * A `NAMELIST` input group may begin with either `&` or `$`.
 * A comma in a fixed-width numeric input field terminates the
   field rather than signaling an invalid character error.
+* Arguments to the intrinsic functions `MAX` and `MIN` are converted
+  when necessary to the type of the result.
+  An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
+  the first two cannot be converted, as it may not be present.
 
 ### Extensions supported when enabled by options
 
