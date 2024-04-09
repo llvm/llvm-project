@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2-FAST
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512VL
@@ -697,37 +697,21 @@ define <16 x i8> @evenelts_v32i16_shuffle_v16i16_to_v16i8(<32 x i16> %n2) nounwi
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: evenelts_v32i16_shuffle_v16i16_to_v16i8:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vmovd {{.*#+}} xmm3 = [0,4,8,12,0,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: evenelts_v32i16_shuffle_v16i16_to_v16i8:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX2-FAST-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm3 = [0,4,8,12,0,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: evenelts_v32i16_shuffle_v16i16_to_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
+; AVX2-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vmovd {{.*#+}} xmm3 = [0,4,8,12,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: evenelts_v32i16_shuffle_v16i16_to_v16i8:
 ; AVX512:       # %bb.0:
@@ -797,37 +781,21 @@ define <16 x i8> @oddelts_v32i16_shuffle_v16i16_to_v16i8(<32 x i16> %n2) nounwin
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: oddelts_v32i16_shuffle_v16i16_to_v16i8:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vmovd {{.*#+}} xmm3 = [2,6,10,14,0,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: oddelts_v32i16_shuffle_v16i16_to_v16i8:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX2-FAST-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm3 = [2,6,10,14,0,0,0,0,0,0,0,0,0,0,0,0]
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; AVX2-FAST-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: oddelts_v32i16_shuffle_v16i16_to_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
+; AVX2-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX2-NEXT:    vmovd {{.*#+}} xmm3 = [2,6,10,14,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX2-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: oddelts_v32i16_shuffle_v16i16_to_v16i8:
 ; AVX512F:       # %bb.0:
@@ -1021,81 +989,43 @@ define <16 x i8> @evenelts_v32i16_trunc_v16i16_to_v16i8(<32 x i16> %n2) nounwind
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    pushq %rbp
-; AVX2-SLOW-NEXT:    pushq %r14
-; AVX2-SLOW-NEXT:    pushq %rbx
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vpextrw $6, %xmm2, %eax
-; AVX2-SLOW-NEXT:    vpextrw $4, %xmm2, %ecx
-; AVX2-SLOW-NEXT:    vpextrw $2, %xmm2, %edx
-; AVX2-SLOW-NEXT:    vmovd %xmm2, %esi
-; AVX2-SLOW-NEXT:    vpextrw $6, %xmm1, %edi
-; AVX2-SLOW-NEXT:    vpextrw $4, %xmm1, %r8d
-; AVX2-SLOW-NEXT:    vpextrw $2, %xmm1, %r9d
-; AVX2-SLOW-NEXT:    vmovd %xmm1, %r10d
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-SLOW-NEXT:    vpextrw $6, %xmm1, %r11d
-; AVX2-SLOW-NEXT:    vpextrw $4, %xmm1, %ebx
-; AVX2-SLOW-NEXT:    vpextrw $2, %xmm1, %ebp
-; AVX2-SLOW-NEXT:    vmovd %xmm1, %r14d
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX2-SLOW-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    popq %rbx
-; AVX2-SLOW-NEXT:    popq %r14
-; AVX2-SLOW-NEXT:    popq %rbp
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    pushq %rbp
-; AVX2-FAST-NEXT:    pushq %r14
-; AVX2-FAST-NEXT:    pushq %rbx
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-FAST-NEXT:    vpextrw $6, %xmm2, %eax
-; AVX2-FAST-NEXT:    vpextrw $4, %xmm2, %ecx
-; AVX2-FAST-NEXT:    vpextrw $2, %xmm2, %edx
-; AVX2-FAST-NEXT:    vmovd %xmm2, %esi
-; AVX2-FAST-NEXT:    vpextrw $6, %xmm1, %edi
-; AVX2-FAST-NEXT:    vpextrw $4, %xmm1, %r8d
-; AVX2-FAST-NEXT:    vpextrw $2, %xmm1, %r9d
-; AVX2-FAST-NEXT:    vmovd %xmm1, %r10d
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-FAST-NEXT:    vpextrw $6, %xmm1, %r11d
-; AVX2-FAST-NEXT:    vpextrw $4, %xmm1, %ebx
-; AVX2-FAST-NEXT:    vpextrw $2, %xmm1, %ebp
-; AVX2-FAST-NEXT:    vmovd %xmm1, %r14d
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX2-FAST-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    popq %rbx
-; AVX2-FAST-NEXT:    popq %r14
-; AVX2-FAST-NEXT:    popq %rbp
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %rbp
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpextrw $6, %xmm2, %eax
+; AVX2-NEXT:    vpextrw $4, %xmm2, %ecx
+; AVX2-NEXT:    vpextrw $2, %xmm2, %edx
+; AVX2-NEXT:    vmovd %xmm2, %esi
+; AVX2-NEXT:    vpextrw $6, %xmm1, %edi
+; AVX2-NEXT:    vpextrw $4, %xmm1, %r8d
+; AVX2-NEXT:    vpextrw $2, %xmm1, %r9d
+; AVX2-NEXT:    vmovd %xmm1, %r10d
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpextrw $6, %xmm1, %r11d
+; AVX2-NEXT:    vpextrw $4, %xmm1, %ebx
+; AVX2-NEXT:    vpextrw $2, %xmm1, %ebp
+; AVX2-NEXT:    vmovd %xmm1, %r14d
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: evenelts_v32i16_trunc_v16i16_to_v16i8:
 ; AVX512F:       # %bb.0:
@@ -1400,81 +1330,43 @@ define <16 x i8> @oddelts_v32i16_trunc_v16i16_to_v16i8(<32 x i16> %n2) nounwind 
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: oddelts_v32i16_trunc_v16i16_to_v16i8:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    pushq %rbp
-; AVX2-SLOW-NEXT:    pushq %r14
-; AVX2-SLOW-NEXT:    pushq %rbx
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vpextrw $7, %xmm2, %eax
-; AVX2-SLOW-NEXT:    vpextrw $5, %xmm2, %ecx
-; AVX2-SLOW-NEXT:    vpextrw $3, %xmm2, %edx
-; AVX2-SLOW-NEXT:    vpextrw $1, %xmm2, %esi
-; AVX2-SLOW-NEXT:    vpextrw $7, %xmm1, %edi
-; AVX2-SLOW-NEXT:    vpextrw $5, %xmm1, %r8d
-; AVX2-SLOW-NEXT:    vpextrw $3, %xmm1, %r9d
-; AVX2-SLOW-NEXT:    vpextrw $1, %xmm1, %r10d
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-SLOW-NEXT:    vpextrw $7, %xmm1, %r11d
-; AVX2-SLOW-NEXT:    vpextrw $5, %xmm1, %ebx
-; AVX2-SLOW-NEXT:    vpextrw $3, %xmm1, %ebp
-; AVX2-SLOW-NEXT:    vpextrw $1, %xmm1, %r14d
-; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX2-SLOW-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX2-SLOW-NEXT:    popq %rbx
-; AVX2-SLOW-NEXT:    popq %r14
-; AVX2-SLOW-NEXT:    popq %rbp
-; AVX2-SLOW-NEXT:    vzeroupper
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: oddelts_v32i16_trunc_v16i16_to_v16i8:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    pushq %rbp
-; AVX2-FAST-NEXT:    pushq %r14
-; AVX2-FAST-NEXT:    pushq %rbx
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-FAST-NEXT:    vpextrw $7, %xmm2, %eax
-; AVX2-FAST-NEXT:    vpextrw $5, %xmm2, %ecx
-; AVX2-FAST-NEXT:    vpextrw $3, %xmm2, %edx
-; AVX2-FAST-NEXT:    vpextrw $1, %xmm2, %esi
-; AVX2-FAST-NEXT:    vpextrw $7, %xmm1, %edi
-; AVX2-FAST-NEXT:    vpextrw $5, %xmm1, %r8d
-; AVX2-FAST-NEXT:    vpextrw $3, %xmm1, %r9d
-; AVX2-FAST-NEXT:    vpextrw $1, %xmm1, %r10d
-; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-FAST-NEXT:    vpextrw $7, %xmm1, %r11d
-; AVX2-FAST-NEXT:    vpextrw $5, %xmm1, %ebx
-; AVX2-FAST-NEXT:    vpextrw $3, %xmm1, %ebp
-; AVX2-FAST-NEXT:    vpextrw $1, %xmm1, %r14d
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX2-FAST-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    popq %rbx
-; AVX2-FAST-NEXT:    popq %r14
-; AVX2-FAST-NEXT:    popq %rbp
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: oddelts_v32i16_trunc_v16i16_to_v16i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %rbp
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpextrw $7, %xmm2, %eax
+; AVX2-NEXT:    vpextrw $5, %xmm2, %ecx
+; AVX2-NEXT:    vpextrw $3, %xmm2, %edx
+; AVX2-NEXT:    vpextrw $1, %xmm2, %esi
+; AVX2-NEXT:    vpextrw $7, %xmm1, %edi
+; AVX2-NEXT:    vpextrw $5, %xmm1, %r8d
+; AVX2-NEXT:    vpextrw $3, %xmm1, %r9d
+; AVX2-NEXT:    vpextrw $1, %xmm1, %r10d
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpextrw $7, %xmm1, %r11d
+; AVX2-NEXT:    vpextrw $5, %xmm1, %ebx
+; AVX2-NEXT:    vpextrw $3, %xmm1, %ebp
+; AVX2-NEXT:    vpextrw $1, %xmm1, %r14d
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-NEXT:    vpinsrb $4, %r14d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $5, %ebp, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $6, %ebx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $7, %r11d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $8, %r10d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $9, %r9d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $10, %r8d, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $11, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $12, %esi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: oddelts_v32i16_trunc_v16i16_to_v16i8:
 ; AVX512F:       # %bb.0:
