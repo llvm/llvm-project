@@ -1806,7 +1806,11 @@ void AtomicInfo::EmitAtomicUpdateOp(
                                              /*NumReservedValues=*/2);
   PHI->addIncoming(OldVal, CurBB);
   Address NewAtomicAddr = CreateTempAlloca();
-  Address NewAtomicIntAddr = castToAtomicIntPointer(NewAtomicAddr);
+  Address NewAtomicIntAddr =
+      shouldCastToInt(NewAtomicAddr.getElementType(), /*CmpXchg=*/true)
+          ? castToAtomicIntPointer(NewAtomicAddr)
+          : NewAtomicAddr;
+
   if ((LVal.isBitField() && BFI.Size != ValueSizeInBits) ||
       requiresMemSetZero(getAtomicAddress().getElementType())) {
     CGF.Builder.CreateStore(PHI, NewAtomicIntAddr);
