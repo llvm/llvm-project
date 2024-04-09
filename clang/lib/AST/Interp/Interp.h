@@ -801,6 +801,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return true;
   }
 
+  for (const auto &P : {LHS, RHS}) {
+    if (P.isZero())
+      continue;
+    if (const ValueDecl *VD = P.getDeclDesc()->asValueDecl();
+        VD && VD->isWeak()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
+          << P.toDiagnosticString(S.getCtx());
+      return false;
+    }
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Unordered)));
     return true;
