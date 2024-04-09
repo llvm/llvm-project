@@ -23,4 +23,8 @@ module m
   !dir$ optimize : 1
   !dir$ loop count (10000)
   !dir$ loop count (1, 500, 5000, 10000)
+  type stuff
+     real(8), allocatable :: d(:)
+     !dir$  align : 1024 :: d
+  end type stuff
 end
