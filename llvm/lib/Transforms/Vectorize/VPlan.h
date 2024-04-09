@@ -1932,14 +1932,12 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, I1, M1, ...]. Note that the first incoming
-  /// value does not have a mask associated.
+  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
+  /// incoming value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert(Operands.size() > 0 &&
-           ((Operands.size() == 1) || ((Operands.size() + 1) % 2 == 0)) &&
-           "Expected either a single incoming value or a positive even number "
-           "of operands");
+    assert(Operands.size() > 0 && (Operands.size() + 1) % 2 == 0 &&
+           "Expected an odd number of operands");
   }
 
   VPRecipeBase *clone() override {
@@ -1949,9 +1947,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that a single
+  /// Return the number of incoming values, taking into account that the first
   /// incoming value has no mask.
-  unsigned getNumIncomingValues() const { return (getNumOperands() + 2) / 2; }
+  unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
 
   /// Return incoming value number \p Idx.
   VPValue *getIncomingValue(unsigned Idx) const {
@@ -1960,7 +1958,7 @@ public:
 
   /// Return mask number \p Idx.
   VPValue *getMask(unsigned Idx) const {
-    assert(Idx > 0);
+    assert(Idx > 0 && "First index has no mask associated.");
     return getOperand(Idx * 2);
   }
 
