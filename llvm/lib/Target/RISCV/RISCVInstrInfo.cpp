@@ -1866,27 +1866,29 @@ static bool canCombineShiftIntoShXAdd(const MachineBasicBlock &MBB,
   return true;
 }
 
+// Returns the shift amount from a SHXADD instruction. Returns 0 if the
+// instruction is not a SHXADD.
+static unsigned getSHXADDShiftAmount(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case RISCV::SH1ADD:
+    return 1;
+  case RISCV::SH2ADD:
+    return 2;
+  case RISCV::SH3ADD:
+    return 3;
+  }
+}
+
 // Look for opportunities to combine (sh3add Z, (add X, (slli Y, 5))) into
 // (sh3add (sh2add Y, Z), X).
 static bool
 getSHXADDPatterns(const MachineInstr &Root,
                   SmallVectorImpl<MachineCombinerPattern> &Patterns) {
-  unsigned Opc = Root.getOpcode();
-
-  unsigned ShiftAmt;
-  switch (Opc) {
-  default:
+  unsigned ShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
+  if (!ShiftAmt)
     return false;
-  case RISCV::SH1ADD:
-    ShiftAmt = 1;
-    break;
-  case RISCV::SH2ADD:
-    ShiftAmt = 2;
-    break;
-  case RISCV::SH3ADD:
-    ShiftAmt = 3;
-    break;
-  }
 
   const MachineBasicBlock &MBB = *Root.getParent();
 
@@ -2009,20 +2011,8 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
-  unsigned OuterShiftAmt;
-  switch (Root.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected opcode");
-  case RISCV::SH1ADD:
-    OuterShiftAmt = 1;
-    break;
-  case RISCV::SH2ADD:
-    OuterShiftAmt = 2;
-    break;
-  case RISCV::SH3ADD:
-    OuterShiftAmt = 3;
-    break;
-  }
+  unsigned OuterShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
+  assert(OuterShiftAmt != 0 && "Unexpected opcode");
 
   MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
   MachineInstr *ShiftMI =
