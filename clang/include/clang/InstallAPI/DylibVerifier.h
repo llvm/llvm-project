@@ -10,6 +10,7 @@
 #define LLVM_CLANG_INSTALLAPI_DYLIBVERIFIER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/InstallAPI/MachO.h"
 
 namespace clang {
@@ -99,11 +100,7 @@ public:
   Result getState() const { return Ctx.FrontendState; }
 
   /// Set different source managers to the same diagnostics engine.
-  void setSourceManager(SourceManager &SourceMgr) const {
-    if (!Ctx.Diag)
-      return;
-    Ctx.Diag->setSourceManager(&SourceMgr);
-  }
+  void setSourceManager(IntrusiveRefCntPtr<SourceManager> SourceMgr);
 
 private:
   /// Determine whether to compare declaration to symbol in binary.
@@ -190,6 +187,9 @@ private:
 
   // Track DWARF provided source location for dylibs.
   DWARFContext *DWARFCtx = nullptr;
+
+  // Source manager for each unique compiler instance.
+  llvm::SmallVector<IntrusiveRefCntPtr<SourceManager>, 12> SourceManagers;
 };
 
 } // namespace installapi
