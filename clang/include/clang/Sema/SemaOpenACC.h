@@ -58,7 +58,8 @@ public:
     SourceLocation getEndLoc() const { return ClauseRange.getEnd(); }
 
     OpenACCDefaultClauseKind getDefaultClauseKind() const {
-      assert(ClauseKind == OpenACCClauseKind::Default);
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
       return std::get<DefaultDetails>(Details).DefaultClauseKind;
     }
 
@@ -66,7 +67,8 @@ public:
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
     void setDefaultDetails(OpenACCDefaultClauseKind DefKind) {
-      assert(ClauseKind == OpenACCClauseKind::Default);
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
       Details = DefaultDetails{DefKind};
     }
   };

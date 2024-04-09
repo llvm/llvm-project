@@ -420,7 +420,7 @@ enum class OpenACCDefaultClauseKind {
 };
 
 template <typename StreamTy>
-inline StreamTy &PrintOpenACCDefaultClauseKind(StreamTy &Out,
+inline StreamTy &printOpenACCDefaultClauseKind(StreamTy &Out,
                                                OpenACCDefaultClauseKind K) {
   switch (K) {
   case OpenACCDefaultClauseKind::None:
@@ -434,12 +434,12 @@ inline StreamTy &PrintOpenACCDefaultClauseKind(StreamTy &Out,
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
                                              OpenACCDefaultClauseKind K) {
-  return PrintOpenACCDefaultClauseKind(Out, K);
+  return printOpenACCDefaultClauseKind(Out, K);
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCDefaultClauseKind K) {
-  return PrintOpenACCDefaultClauseKind(Out, K);
+  return printOpenACCDefaultClauseKind(Out, K);
 }
 
 enum class OpenACCReductionOperator {

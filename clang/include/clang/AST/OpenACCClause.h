@@ -51,7 +51,7 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
 };
 
-// A 'default' clause, has the optional 'none' or 'present' argument.
+/// A 'default' clause, has the optional 'none' or 'present' argument.
 class OpenACCDefaultClause : public OpenACCClauseWithParams {
   friend class ASTReaderStmt;
   friend class ASTWriterStmt;
@@ -96,7 +96,7 @@ public:
 
     switch (C->getClauseKind()) {
     case OpenACCClauseKind::Default:
-      VisitOpenACCDefaultClause(*static_cast<const OpenACCDefaultClause *>(C));
+      VisitOpenACCDefaultClause(*cast<OpenACCDefaultClause>(C));
       return;
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::IfPresent:
