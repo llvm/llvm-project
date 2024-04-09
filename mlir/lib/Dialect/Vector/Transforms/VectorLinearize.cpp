@@ -381,13 +381,6 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         return std::nullopt;
       });
 
-  // target.addDynamicallyLegalOp<mlir::vector::ShuffleOp>(
-  //     [=](mlir::Operation *op) {
-  //       return op->getResult(0).getType().cast<mlir::VectorType>().getRank()
-  //       ==
-  //              1;
-  //     });
-
   patterns.add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorShffle,
                LinearizeVectorExtract, LinearizeVectorExtractStridedSlice>(
       typeConverter, patterns.getContext(), targetBitWidth);
