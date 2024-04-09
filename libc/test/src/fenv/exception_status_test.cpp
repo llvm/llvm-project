@@ -15,7 +15,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 TEST(LlvmLibcExceptionStatusTest, RaiseAndTest) {
   // This test raises a set of exceptions and checks that the exception

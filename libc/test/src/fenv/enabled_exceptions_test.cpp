@@ -15,7 +15,7 @@
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 #include <signal.h>
 
 // This test enables an exception and verifies that raising that exception
