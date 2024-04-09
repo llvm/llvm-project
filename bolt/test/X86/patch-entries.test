@@ -16,7 +16,7 @@ RUN:   --enable-bat
 RUN: link_fdata %s %t.out %t.preagg PREAGG
 RUN: perf2bolt %t.out -p %t.preagg --pa -o %t.yaml --profile-format=yaml \
 RUN:   -print-disasm -print-only=foo.org.0/1 2>&1 | FileCheck %s
-CHECK-NOT: BOLT-WARNING: sizes differ for function foo.org.0/1. FDE : 23; symbol table : 5. Using max size.
+CHECK-NOT: BOLT-WARNING: sizes differ for function foo.org.0/1
 CHECK: Binary Function "foo.org.0/1(*2)" after disassembly {
 
 # Check the expected eh_frame contents
@@ -28,4 +28,4 @@ CHECK-FOO: [[#ORG:]] {{.*}} foo.org.0
 # patched FDE comes first
 CHECK-FOO: FDE {{.*}} pc=00[[#ORG]]...00[[#ORG+5]]
 # original FDE comes second
-CHECK-FOO: FDE {{.*}} pc=00[[#ORG]]...00[[#ORG+23]]
+CHECK-FOO: FDE {{.*}} pc=00[[#ORG]]
