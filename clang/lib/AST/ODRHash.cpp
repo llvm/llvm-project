@@ -696,6 +696,9 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
 
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
   AddDecl(Function);
 
   AddQualType(Function->getReturnType());
@@ -706,6 +709,11 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
 
   if (SkipBody) {
     AddBoolean(false);
+    return;
+  }
+
+  if (DeletedMessage) {
+    ID.AddString(DeletedMessage->getBytes());
     return;
   }
 
