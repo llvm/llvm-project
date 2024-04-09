@@ -257,11 +257,19 @@ enum MlirLLVMDIEmissionKind {
 };
 typedef enum MlirLLVMDIEmissionKind MlirLLVMDIEmissionKind;
 
+enum MlirLLVMDINameTableKind {
+  MlirLLVMDINameTableKindDefault = 0,
+  MlirLLVMDINameTableKindGNU = 1,
+  MlirLLVMDINameTableKindNone = 2,
+  MlirLLVMDINameTableKindApple = 3,
+};
+typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
+
 /// Creates a LLVM DICompileUnit attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind);
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind);
 
 /// Creates a LLVM DIFlags attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx,

@@ -104,7 +104,10 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
-          attr.getEmissionKind()));
+          attr.getEmissionKind()),
+      0, true, false,
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          attr.getNameTableKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on

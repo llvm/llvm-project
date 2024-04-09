@@ -65,7 +65,7 @@ void AddDebugFoundationPass::runOnOperation() {
   mlir::LLVM::DIFileAttr fileAttr = getFileAttr(inputFilePath);
   mlir::StringAttr producer = mlir::StringAttr::get(context, "Flang");
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
-      context, mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
+      mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       /*isOptimized=*/false, mlir::LLVM::DIEmissionKind::LineTablesOnly);
 

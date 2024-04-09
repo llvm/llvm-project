@@ -394,6 +394,26 @@ def DIFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// DINameTableKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINameTableDefault : I64EnumAttrCase<"Default", 0>;
+def LLVM_DINameTableGNU     : I64EnumAttrCase<"GNU", 1>;
+def LLVM_DINameTableNone    : I64EnumAttrCase<"None", 2>;
+def LLVM_DINameTableApple   : I64EnumAttrCase<"Apple", 3>;
+
+def LLVM_DINameTableKind : I64EnumAttr<
+    "DINameTableKind",
+    "LLVM debug name table kind", [
+      LLVM_DINameTableDefault,
+      LLVM_DINameTableGNU,
+      LLVM_DINameTableNone,
+      LLVM_DINameTableApple,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubprogramFlags
 //===----------------------------------------------------------------------===//
 
