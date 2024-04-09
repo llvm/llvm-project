@@ -237,7 +237,7 @@ define i16 @atmoicrmw_nand_i16(i16 %val, ptr %ptr) {
 ; ATOMIC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ATOMIC-NEXT:    move.w %d2, %d3
 ; ATOMIC-NEXT:    and.w %d0, %d3
-; ATOMIC-NEXT:    eori.w #-1, %d3
+; ATOMIC-NEXT:    not.w %d3
 ; ATOMIC-NEXT:    cas.w %d1, %d3, (%a0)
 ; ATOMIC-NEXT:    move.w %d1, %d3
 ; ATOMIC-NEXT:    sub.w %d2, %d3
