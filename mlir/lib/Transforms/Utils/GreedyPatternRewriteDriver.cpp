@@ -243,9 +243,8 @@ bool Worklist::empty() const {
 void Worklist::push(Operation *op) {
   assert(op && "cannot push nullptr to worklist");
   // Check to see if the worklist already contains this op.
-  if (map.count(op))
+  if (!map.insert({op, list.size()}).second)
     return;
-  map[op] = list.size();
   list.push_back(op);
 }
 
