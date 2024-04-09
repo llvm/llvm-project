@@ -1301,7 +1301,7 @@ multiclass sve2_clamp<string asm, bit U, SDPatternOperator op> {
 }
 
 class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
-    : I<(outs PPRAny:$Pd), (ins PPRAny:$Pn, ppr_ty:$Pm,
+    : I<(outs PPRorPNRAny:$Pd), (ins PPRorPNRAny:$Pn, ppr_ty:$Pm,
                             MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm),
         asm, "\t$Pd, $Pn, $Pm[$Rv, $imm]", "", []>,
       Sched<[]> {
@@ -1344,19 +1344,6 @@ multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
     let Inst{22}    = 0b1;
     let Inst{20-18} = 0b000;
   }
-
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _B) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR8:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _H) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR16:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_7:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _S) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR32:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_3:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _D) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR64:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_1:$imm), 0>;
 
   def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),

@@ -206,11 +206,13 @@ MlirAttribute
 mlirLLVMDICompileUnitAttrGet(MlirContext ctx, MlirAttribute id,
                              unsigned int sourceLanguage, MlirAttribute file,
                              MlirAttribute producer, bool isOptimized,
-                             MlirLLVMDIEmissionKind emissionKind) {
+                             MlirLLVMDIEmissionKind emissionKind,
+                             MlirLLVMDINameTableKind nameTableKind) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
-      isOptimized, DIEmissionKind(emissionKind)));
+      isOptimized, DIEmissionKind(emissionKind),
+      DINameTableKind(nameTableKind)));
 }
 
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {

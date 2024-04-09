@@ -76,7 +76,7 @@ macro(add_memprof_tests_for_arch arch)
     LINK_FLAGS ${MEMPROF_UNITTEST_LINK_FLAGS} ${MEMPROF_UNITTEST_LINK_LIBRARIES})
 endmacro()
 
-# Interception unit tests testsuite.
+# MemProf unit tests testsuite.
 add_custom_target(MemProfUnitTests)
 set_target_properties(MemProfUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST MEMPROF_SUPPORTED_ARCH)
