@@ -11,9 +11,8 @@ define i64 @test_sadd_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.sadd.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.sadd.sat(i64 %a, i64 %b)
@@ -27,9 +26,8 @@ define i64 @test_uadd_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.uadd.sat(i64 %a, i64 %b)
@@ -43,9 +41,8 @@ define i64 @test_ssub_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.ssub.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.ssub.sat(i64 %a, i64 %b)
@@ -59,9 +56,8 @@ define i64 @test_usub_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.usub.sat(i64 %a, i64 %b)
@@ -75,9 +71,8 @@ define i64 @test_sshl_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.sshl.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.sshl.sat(i64 %a, i64 %b)
@@ -91,9 +86,8 @@ define i64 @test_ushl_sat(i64 %a, i64 %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or i64 [[_MSPROP]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.ushl.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    store i64 [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.ushl.sat(i64 %a, i64 %b)
@@ -107,9 +101,8 @@ define <4 x i32> @test_sadd_sat_vec(<4 x i32> %a, <4 x i32> %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <4 x i32> [[_MSPROP]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[A]], <4 x i32> [[B]])
-; CHECK-NEXT:    store <4 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
