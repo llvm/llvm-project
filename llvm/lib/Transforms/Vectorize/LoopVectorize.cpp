@@ -8226,7 +8226,7 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   for (unsigned In = 0; In < NumIncoming; In++) {
     OperandsWithMask.push_back(Operands[In]);
     VPValue *EdgeMask =
-        createEdgeMask(Phi->getIncomingBlock(In), Phi->getParent());
+        getEdgeMask(Phi->getIncomingBlock(In), Phi->getParent());
     if (!EdgeMask) {
       assert(In == 0 && "Both null and non-null edge masks found");
       assert(all_equal(Operands) &&
