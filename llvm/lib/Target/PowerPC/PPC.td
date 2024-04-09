@@ -336,7 +336,7 @@ def FeatureAIXLocalExecTLS :
 def FeatureAIXLocalDynamicTLS :
   SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
                    "true", "Produce a faster local-dynamic TLS sequence for this "
-                   " function for 64-bit AIX">;
+                   "function for 64-bit AIX">;
 
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
