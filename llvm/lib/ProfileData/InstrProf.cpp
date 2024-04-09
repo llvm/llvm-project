@@ -1598,11 +1598,11 @@ uint64_t Header::formatVersion() const {
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
   static_assert(std::is_standard_layout_v<Header>,
-                "The header should be standard layout type since we use offset "
-                "of fields to read.");
-  Header H;
+                "Keep the header a standard-layout class for simplicity");
 
-  H.Magic = read(Buffer, offsetOf(&Header::Magic));
+  Header H;
+  size_t BufferOffset = 0;
+  H.Magic = read(Buffer, BufferOffset);
   // Check the magic number.
   uint64_t Magic =
       endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
@@ -1610,36 +1610,46 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.formatVersion()) >
-      IndexedInstrProf::ProfVersion::CurrentVersion)
+  H.Version = read(Buffer, BufferOffset + sizeof(uint64_t));
+  const uint64_t ProfVersion = GET_VERSION(H.formatVersion());
+  if (ProfVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.formatVersion())) {
+  size_t FieldByteOffset = H.size() - sizeof(uint64_t);
+
+  switch (ProfVersion) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 13ull:
+    FieldByteOffset -= sizeof(uint64_t);
+    [[fallthrough]];
   case 12ull:
-    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    H.VTableNamesOffset = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    H.TemporalProfTracesOffset =
-        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
+    H.TemporalProfTracesOffset = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 9ull:
-    H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
+    H.BinaryIdOffset = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 8ull:
-    H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
+    H.MemProfOffset = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
-    H.HashType = read(Buffer, offsetOf(&Header::HashType));
-    H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
+    H.HashOffset = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
+    H.HashType = read(Buffer, FieldByteOffset);
+    FieldByteOffset -= sizeof(uint64_t);
   }
 
   return H;
@@ -1650,10 +1660,12 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 13ull:
+    return sizeof(uint64_t) * 10;
   case 12ull:
     return offsetOf(&Header::VTableNamesOffset) +
            sizeof(Header::VTableNamesOffset);

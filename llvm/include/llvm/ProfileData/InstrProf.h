@@ -1146,7 +1146,9 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling,
   Version12 = 12,
-  // The current version is 12.
+  // Record the on-disk byte size of header.
+  Version13 = 13,
+  // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1174,6 +1176,8 @@ struct Header {
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
   uint64_t VTableNamesOffset;
+  // The byte size of on-disk header.
+  uint64_t Size;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.

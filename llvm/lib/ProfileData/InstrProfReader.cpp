@@ -1215,7 +1215,7 @@ Error IndexedInstrProfReader::readHeader() {
   if ((const unsigned char *)DataBuffer->getBufferEnd() - Cur < 24)
     return error(instrprof_error::truncated);
 
-  auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Start);
+  auto HeaderOr = IndexedInstrProf::Header::readFromBuffer(Cur);
   if (!HeaderOr)
     return HeaderOr.takeError();
 
