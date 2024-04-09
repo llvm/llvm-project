@@ -433,9 +433,9 @@ static uint64_t writeMemProfRecords(
   RecordWriter->Schema = Schema;
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
       RecordTableGenerator;
-  for (auto &I : MemProfRecordData) {
+  for (auto &[GUID, Record] : MemProfRecordData) {
     // Insert the key (func hash) and value (memprof record).
-    RecordTableGenerator.insert(I.first, I.second, *RecordWriter.get());
+    RecordTableGenerator.insert(GUID, Record, *RecordWriter.get());
   }
   // Release the memory of this MapVector as it is no longer needed.
   MemProfRecordData.clear();
@@ -453,9 +453,9 @@ static uint64_t writeMemProfFrames(
   auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
   OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
       FrameTableGenerator;
-  for (auto &I : MemProfFrameData) {
+  for (auto &[FrameId, Frame] : MemProfFrameData) {
     // Insert the key (frame id) and value (frame contents).
-    FrameTableGenerator.insert(I.first, I.second);
+    FrameTableGenerator.insert(FrameId, Frame);
   }
   // Release the memory of this MapVector as it is no longer needed.
   MemProfFrameData.clear();
