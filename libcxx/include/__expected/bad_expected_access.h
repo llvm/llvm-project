@@ -32,12 +32,12 @@ _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 template <>
 class bad_expected_access<void> : public exception {
 protected:
-  _LIBCPP_HIDE_FROM_ABI bad_expected_access() noexcept                             = default;
-  _LIBCPP_HIDE_FROM_ABI bad_expected_access(const bad_expected_access&)            = default;
-  _LIBCPP_HIDE_FROM_ABI bad_expected_access(bad_expected_access&&)                 = default;
-  _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(const bad_expected_access&) = default;
-  _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(bad_expected_access&&)      = default;
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_expected_access() override                    = default;
+  _LIBCPP_HIDE_FROM_ABI bad_expected_access() noexcept                                      = default;
+  _LIBCPP_HIDE_FROM_ABI bad_expected_access(const bad_expected_access&) noexcept            = default;
+  _LIBCPP_HIDE_FROM_ABI bad_expected_access(bad_expected_access&&) noexcept                 = default;
+  _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(const bad_expected_access&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI bad_expected_access& operator=(bad_expected_access&&) noexcept      = default;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_expected_access() override                             = default;
 
 public:
   // The way this has been designed (by using a class template below) means that we'll already

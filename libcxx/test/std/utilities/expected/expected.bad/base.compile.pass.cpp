@@ -7,19 +7,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// const char* what() const noexcept override;
+// Make sure std::bad_expected_access<E> inherits from std::bad_expected_access<void>.
 
 #include <expected>
-#include <utility>
+#include <type_traits>
 
-template <class T>
-concept WhatNoexcept =
-    requires(const T& t) {
-      { t.what() } noexcept;
-    };
+struct Foo {};
 
-struct foo{};
-
-static_assert(!WhatNoexcept<foo>);
-static_assert(WhatNoexcept<std::bad_expected_access<int>>);
-static_assert(WhatNoexcept<std::bad_expected_access<foo>>);
+static_assert(std::is_base_of_v<std::bad_expected_access<void>, std::bad_expected_access<int>>);
+static_assert(std::is_base_of_v<std::bad_expected_access<void>, std::bad_expected_access<Foo>>);
