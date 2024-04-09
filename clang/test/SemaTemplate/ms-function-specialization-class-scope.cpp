@@ -104,7 +104,13 @@ namespace UsesThis {
       +x;
       +A::x;
     }
+
+    template<typename U>
+    static auto h() -> A*;
+
+    template<>
+    auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
   };
 
-  template struct A<int>; // expected-note {{in instantiation of function template specialization}}
+  template struct A<int>; // expected-note 2{{in instantiation of}}
 }
