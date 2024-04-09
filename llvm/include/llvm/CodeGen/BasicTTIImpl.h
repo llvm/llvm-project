@@ -224,16 +224,16 @@ private:
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
         IsGatherScatter
-            ? getVectorInstrCost(
-                  Instruction::ExtractElement,
+            ? getScalarizationOverhead(
                   FixedVectorType::get(
                       PointerType::get(VT->getElementType(), 0), VF),
-                  CostKind, -1, nullptr, nullptr)
+                  /*Insert=*/false, /*Extract=*/true, CostKind)
             : 0;
-    InstructionCost LoadCost =
-        VF *
-        (AddrExtractCost + getMemoryOpCost(Opcode, VT->getElementType(),
-                                           Alignment, AddressSpace, CostKind));
+
+    // The cost of the scalar loads/stores.
+    InstructionCost MemoryOpCost =
+        VF * getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                             AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -249,16 +249,14 @@ private:
       // operations accurately is quite difficult and the current solution
       // provides a very rough estimate only.
       ConditionalCost =
-          VF *
-          (getVectorInstrCost(
-               Instruction::ExtractElement,
-               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
-               CostKind, -1, nullptr, nullptr) +
-           getCFInstrCost(Instruction::Br, CostKind) +
-           getCFInstrCost(Instruction::PHI, CostKind));
+          getScalarizationOverhead(
+              FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
+              /*Insert=*/false, /*Extract=*/true, CostKind) +
+          VF * (getCFInstrCost(Instruction::Br, CostKind) +
+                getCFInstrCost(Instruction::PHI, CostKind));
     }
 
-    return LoadCost + PackingCost + ConditionalCost;
+    return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
 protected:
