@@ -3924,6 +3924,14 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       all_of(Mask, [](int E) { return E < 8; }))
     return getPerfectShuffleCost(Mask);
 
+  // Check for identity masks, which we can treat as free.
+  if (!Mask.empty() && LT.second.isFixedLengthVector() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      all_of(enumerate(Mask), [](const auto &M) {
+        return M.value() < 0 || M.value() == (int)M.index();
+      }))
+    return 0;
+
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
