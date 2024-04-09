@@ -32,14 +32,13 @@
 using namespace llvm;
 
 void AccelTableBase::computeBucketCount() {
-  // First get the number of unique hashes.
   SmallVector<uint32_t, 0> Uniques;
   Uniques.reserve(Entries.size());
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
-
-  std::tie(BucketCount, UniqueHashCount) =
-      llvm::dwarf::getDebugNamesBucketAndHashCount(Uniques);
+  llvm::sort(Uniques);
+  UniqueHashCount = llvm::unique(Uniques) - Uniques.begin();
+  BucketCount = dwarf::getDebugNamesBucketCount(UniqueHashCount);
 }
 
 void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
