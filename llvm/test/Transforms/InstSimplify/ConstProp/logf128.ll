@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 ; REQUIRES: has_logf128
-; REQUIRES: aarch64-registered-target
 declare fp128 @llvm.log.f128(fp128)
 
 define fp128 @log_e_64(){
@@ -116,4 +115,12 @@ define fp128 @log_e_nan(){
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000007FFF000000000001)
   ret fp128 %A
+}
+
+define <2 x fp128> @log_e_negative_2_vector(){
+; CHECK-LABEL: define <2 x fp128> @log_e_negative_2_vector() {
+; CHECK-NEXT:    ret <2 x fp128> <fp128 0xL00000000000000007FFF800000000000, fp128 0xL00000000000000007FFF800000000000>
+;
+  %A = call <2 x fp128> @llvm.log.v2f128(<2 x fp128> <fp128 0xL0000000000000000C000000000000000, fp128 0xL0000000000000000C000000000000001>)
+  ret <2 x fp128> %A
 }
