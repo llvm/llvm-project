@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 // UNSUPPORTED: no-threads
 
 // <memory>
@@ -17,7 +18,7 @@
 // bool
 // atomic_compare_exchange_weak_explicit(shared_ptr<T>* p, shared_ptr<T>* v,
 //                                       shared_ptr<T> w, memory_order success,
-//                                       memory_order failure);                 // Removed in C++26
+//                                       memory_order failure);                 // Deprecated in C++20, removed in C++26
 
 // UNSUPPORTED: c++03
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 // UNSUPPORTED: no-threads
 
 // <memory>
@@ -15,7 +16,7 @@
 
 // template <class T>
 // shared_ptr<T>
-// atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r)   // Removed in C++26
+// atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r)   // Deprecated in C++20, removed in C++26
 
 // UNSUPPORTED: c++03
 

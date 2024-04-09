@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 // UNSUPPORTED: no-threads
 
 // <memory>
@@ -15,7 +16,7 @@
 
 // template<class T>
 // bool
-// atomic_is_lock_free(const shared_ptr<T>* p);    // Removed in C++26
+// atomic_is_lock_free(const shared_ptr<T>* p);    // Deprecated in C++20, removed in C++26
 
 // UNSUPPORTED: c++03
 
