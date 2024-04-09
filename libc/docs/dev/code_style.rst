@@ -220,11 +220,11 @@ defines. Code under ``libc/src/`` should ``#include`` a proxy header from
 our header from ``libc/include/`` (fullbuild) or the corresponding underlying
 system header (overlay).
 
-Policy on Assembler sources
-===========================
+Policy on Assembly sources
+==========================
 
 Coding in high level languages such as C++ provides benefits relative to low
-level languages like Assembler, such as:
+level languages like Assembly, such as:
 
 * Improved safety
 * Instrumentation
@@ -234,17 +234,17 @@ level languages like Assembler, such as:
 * Sanitization
 * Debug info
 
-While its not impossible to have Assembler code that correctly provides all of
-the above, we do not wish to maintain such Assembler sources in llvm-libc.
+While its not impossible to have Assembly code that correctly provides all of
+the above, we do not wish to maintain such Assembly sources in llvm-libc.
 
 That said, there a few functions provided by llvm-libc that are more difficult
-to implement or maintain in C++ than Assembler. We do use inline or out-of-line
-Assembler in an intentionally minimal set of places; typically places where the
+to implement or maintain in C++ than Assembly. We do use inline or out-of-line
+Assembly in an intentionally minimal set of places; typically places where the
 stack or individual register state must be manipulated very carefully for
 correctness.
 
-Contributions adding Assembler for performance are not welcome. Contributors
+Contributions adding Assembly for performance are not welcome. Contributors
 should strive to stick with C++ for as long as it remains reasonable to do so.
-llvm-libc maintainers reserve the right to reject Assembler contributions that
+llvm-libc maintainers reserve the right to reject Assembly contributions that
 they feel could be better maintained if rewritten in C++, and to revisit this
 policy in the future.
