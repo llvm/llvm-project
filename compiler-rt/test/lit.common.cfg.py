@@ -14,6 +14,27 @@ import lit.formats
 import lit.util
 
 
+def get_path_from_clang(args, allow_failure):
+    clang_cmd = [
+        config.clang.strip(),
+        f"--target={config.target_triple}",
+        *args,
+    ]
+    path = None
+    try:
+        result = subprocess.run(
+            clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+        path = result.stdout.decode().strip()
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+        if allow_failure:
+            lit_config.warning(msg)
+        else:
+            lit_config.fatal(msg)
+    return path, clang_cmd
+
+
 def find_compiler_libdir():
     """
     Returns the path to library resource directory used
@@ -25,26 +46,6 @@ def find_compiler_libdir():
         )
         # TODO: Support other compilers.
         return None
-
-    def get_path_from_clang(args, allow_failure):
-        clang_cmd = [
-            config.clang.strip(),
-            f"--target={config.target_triple}",
-        ]
-        clang_cmd.extend(args)
-        path = None
-        try:
-            result = subprocess.run(
-                clang_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
-            path = result.stdout.decode().strip()
-        except subprocess.CalledProcessError as e:
-            msg = f"Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
-            if allow_failure:
-                lit_config.warning(msg)
-            else:
-                lit_config.fatal(msg)
-        return path, clang_cmd
 
     # Try using `-print-runtime-dir`. This is only supported by very new versions of Clang.
     # so allow failure here.
@@ -130,6 +131,7 @@ if execute_external:
     config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
+target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
 
 compiler_id = getattr(config, "compiler_id", None)
 if compiler_id == "Clang":
@@ -168,10 +170,53 @@ if config.enable_per_target_runtime_dir:
             r"/i386(?=-[^/]+$)", "/x86_64", config.compiler_rt_libdir
         )
 
+
+# Check if the test compiler resource dir matches the local build directory
+# (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are
+# using an installed clang to test compiler-rt standalone. In the latter case
+# we may need to override the resource dir to match the path of the just-built
+# compiler-rt libraries.
+test_cc_resource_dir, _ = get_path_from_clang(
+    shlex.split(config.target_cflags) + ["-print-resource-dir"], allow_failure=True
+)
+# Normalize the path for comparison
+if test_cc_resource_dir is not None:
+    test_cc_resource_dir = os.path.realpath(test_cc_resource_dir)
+if lit_config.debug:
+    lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
+local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
+if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+    if config.compiler_id == "Clang":
+        if lit_config.debug:
+            lit_config.note(
+                f"Overriding test compiler resource dir to use "
+                f'libraries in "{config.compiler_rt_libdir}"'
+            )
+        # Ensure that we use the just-built static libraries when linking by
+        # overriding the Clang resource directory. Additionally, we want to use
+        # the builtin headers shipped with clang (e.g. stdint.h), so we
+        # explicitly add this as an include path (since the headers are not
+        # going to be in the current compiler-rt build directory).
+        # We also tell the linker to add an RPATH entry for the local library
+        # directory so that the just-built shared libraries are used.
+        config.target_cflags += f" -nobuiltininc"
+        config.target_cflags += f" -I{config.compiler_rt_src_root}/include"
+        config.target_cflags += f" -idirafter {test_cc_resource_dir}/include"
+        config.target_cflags += f" -resource-dir={config.compiler_rt_output_dir}"
+        if not target_is_windows:
+            # Avoid passing -rpath on Windows where it is not supported.
+            config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+    else:
+        lit_config.warning(
+            f"Cannot override compiler-rt library directory with non-Clang "
+            f"compiler: {config.compiler_id}"
+        )
+
+
 # Ask the compiler for the path to libraries it is going to use. If this
 # doesn't match config.compiler_rt_libdir then it means we might be testing the
 # compiler's own runtime libraries rather than the ones we just built.
-# Warn about about this and handle appropriately.
+# Warn about this and handle appropriately.
 compiler_libdir = find_compiler_libdir()
 if compiler_libdir:
     compiler_rt_libdir_real = os.path.realpath(config.compiler_rt_libdir)
@@ -182,7 +227,7 @@ if compiler_libdir:
             f'compiler-rt libdir:  "{compiler_rt_libdir_real}"'
         )
         if config.test_standalone_build_libs:
-            # Use just built runtime libraries, i.e. the the libraries this built just built.
+            # Use just built runtime libraries, i.e. the libraries this build just built.
             if not config.test_suite_supports_overriding_runtime_lib_path:
                 # Test suite doesn't support this configuration.
                 # TODO(dliew): This should be an error but it seems several bots are
