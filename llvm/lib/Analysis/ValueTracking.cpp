@@ -2816,6 +2816,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       case Intrinsic::bswap:
       case Intrinsic::ctpop:
         return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
+        // NB: We don't do usub_sat here as in any case we can prove its
+        // non-zero, we will fold it to `sub nuw` in InstCombine.
       case Intrinsic::ssub_sat:
         return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1));
