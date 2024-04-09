@@ -1673,7 +1673,7 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
 
   assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
   const GlobalValue *GValue = MO.getGlobal();
-  // TODO: handle aix-small-local-dynamic-tls none-zero offset case.
+  // TODO: Handle the aix-small-local-dynamic-tls non-zero offset case.
   TLSModel::Model Model = TM.getTLSModel(GValue);
   if (Model == TLSModel::LocalDynamic) {
     return nullptr;
