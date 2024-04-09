@@ -81,8 +81,9 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i64> [[TMP12]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i64> [[TMP16]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i64> [[TMP12]] to <4 x i32>
+; CHECK-NEXT:    [[TMP57:%.*]] = trunc <4 x i64> [[TMP15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = add <4 x i32> [[TMP16]], [[TMP57]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NUMBEROFBOOLS]], 127
 ; CHECK-NEXT:    [[CMP86284:%.*]] = icmp ugt i32 [[AND]], 31
 ; CHECK-NEXT:    br i1 [[CMP86284]], label [[WHILE_BODY88:%.*]], label [[WHILE_END122:%.*]]

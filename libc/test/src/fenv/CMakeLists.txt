@@ -20,6 +20,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fetestexcept
     libc.src.__support.FPUtil.fenv_impl
 )

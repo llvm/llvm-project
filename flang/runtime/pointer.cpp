@@ -185,7 +185,6 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-#if !defined(RT_DEVICE_COMPILATION)
   if (executionEnvironment.checkPointerDeallocation) {
     // Validate the footer.  This should fail if the pointer doesn't
     // span the entire object, or the object was not allocated as a
@@ -201,7 +200,6 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
           terminator, StatBadPointerDeallocation, errMsg, hasStat);
     }
   }
-#endif
   return ReturnError(terminator,
       pointer.Destroy(/*finalize=*/true, /*destroyPointers=*/true, &terminator),
       errMsg, hasStat);

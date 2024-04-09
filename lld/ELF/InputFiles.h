@@ -46,10 +46,9 @@ extern std::unique_ptr<llvm::TarWriter> tar;
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
-template <class ELFT> void doParseFile(InputFile *file);
 void parseFile(InputFile *file);
-
-void parseArmCMSEImportLib(InputFile *file);
+void parseFiles(const std::vector<InputFile *> &files,
+                InputFile *armCmseImpLib);
 
 // The root class of input files.
 class InputFile {
@@ -231,6 +230,7 @@ protected:
 public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.

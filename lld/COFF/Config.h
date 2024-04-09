@@ -54,6 +54,7 @@ enum class EmitKind { Obj, LLVM, ASM };
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
   StringRef extName;    // E in /export:E=N
+  StringRef exportAs;   // E in /export:N,EXPORTAS,E
   StringRef aliasTarget; // GNU specific: N in "alias == N"
   Symbol *sym = nullptr;
   uint16_t ordinal = 0;
@@ -73,10 +74,9 @@ struct Export {
   StringRef exportName; // Name in DLL
 
   bool operator==(const Export &e) const {
-    return (name == e.name && extName == e.extName &&
-            aliasTarget == e.aliasTarget &&
-            ordinal == e.ordinal && noname == e.noname &&
-            data == e.data && isPrivate == e.isPrivate);
+    return (name == e.name && extName == e.extName && exportAs == e.exportAs &&
+            aliasTarget == e.aliasTarget && ordinal == e.ordinal &&
+            noname == e.noname && data == e.data && isPrivate == e.isPrivate);
   }
 };
 
