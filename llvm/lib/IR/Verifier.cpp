@@ -4268,9 +4268,10 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFloatingPointTy(),
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have floating point type!",
+              " operand must have floating-point or fixed vector of floating-point "
+              "type!",
           &RMWI, ElTy);
   } else {
     Check(ElTy->isIntegerTy(),
@@ -6221,6 +6222,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.ptrmask intrinsic second argument bitwidth must match "
           "pointer index type size of first argument",
           &Call);
+    break;
+  }
+  case Intrinsic::threadlocal_address: {
+    const Value &Arg0 = *Call.getArgOperand(0);
+    Check(isa<GlobalVariable>(Arg0),
+          "llvm.threadlocal.address first argument must be a GlobalVariable");
+    Check(cast<GlobalVariable>(Arg0).isThreadLocal(),
+          "llvm.threadlocal.address operand isThreadLocal() must no be false");
     break;
   }
   };

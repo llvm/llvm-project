@@ -165,7 +165,7 @@ def ext_vla_folded_to_constant : ExtWarn<
   "variable length array folded to constant array as an extension">,
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
-  "variable length arrays are not supported for %select{the current target|'%1'}0">;
+  "variable length arrays are not supported %select{for the current target|in '%1'}0">;
 def err_vla_in_coroutine_unsupported : Error<
   "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
@@ -7142,7 +7142,8 @@ def ext_typecheck_decl_incomplete_type : ExtWarn<
 def err_tentative_def_incomplete_type : Error<
   "tentative definition has type %0 that is never completed">;
 def warn_tentative_incomplete_array : Warning<
-  "tentative array definition assumed to have one element">;
+  "tentative array definition assumed to have one element">,
+  InGroup<DiagGroup<"tentative-definition-array">>;
 def err_typecheck_incomplete_array_needs_initializer : Error<
   "definition of variable with array type needs an explicit size "
   "or an initializer">;
@@ -12252,6 +12253,8 @@ def warn_acc_clause_unimplemented
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
+def err_acc_clause_appertainment
+    : Error<"OpenACC '%1' clause is not valid on '%0' directive">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;

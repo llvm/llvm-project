@@ -72,6 +72,14 @@ has_single_bit(T value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_ctzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_zero(T value) {
+  return __builtin_ctzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countr_zero(T value) {
@@ -99,6 +107,7 @@ ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -106,6 +115,14 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_clzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_zero(T value) {
+  return __builtin_clzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_zero(T value) {
@@ -129,6 +146,7 @@ ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
 

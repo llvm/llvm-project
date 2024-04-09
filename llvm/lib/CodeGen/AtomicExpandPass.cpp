@@ -562,9 +562,9 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
                                  Value *&Success, Value *&NewLoaded) {
   Type *OrigTy = NewVal->getType();
 
-  // This code can go away when cmpxchg supports FP types.
+  // This code can go away when cmpxchg supports FP and vector types.
   assert(!OrigTy->isPointerTy());
-  bool NeedBitcast = OrigTy->isFloatingPointTy();
+  bool NeedBitcast = OrigTy->isFloatingPointTy() || OrigTy->isVectorTy();
   if (NeedBitcast) {
     IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
     NewVal = Builder.CreateBitCast(NewVal, IntTy);
@@ -731,7 +731,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   unsigned ValueSize = DL.getTypeStoreSize(ValueType);
 
   PMV.ValueType = PMV.IntValueType = ValueType;
-  if (PMV.ValueType->isFloatingPointTy())
+  if (PMV.ValueType->isFloatingPointTy() || PMV.ValueType->isVectorTy())
     PMV.IntValueType =
         Type::getIntNTy(Ctx, ValueType->getPrimitiveSizeInBits());
 

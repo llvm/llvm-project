@@ -477,12 +477,6 @@ class SVE_2_Op_Pred_All_Active_Pt<ValueType vtd, SDPatternOperator op,
 : Pat<(vtd (op (pt (SVEAllActive:$Op1)), vt1:$Op2, vt2:$Op3)),
       (inst $Op1, $Op2, $Op3)>;
 
-class SVE_2_Op_Pred_Any_Predicate<ValueType vtd, SDPatternOperator op,
-                                  ValueType pt, ValueType vt1, ValueType vt2,
-                                  Instruction inst>
-: Pat<(vtd (op (pt (SVEAnyPredicate)), vt1:$Op1, vt2:$Op2)),
-      (inst $Op1, $Op2)>;
-
 class SVE_3_Op_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                    ValueType vt2, ValueType vt3, Instruction inst>
 : Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3)),
@@ -549,11 +543,6 @@ class SVE_3_Op_Pat_Shift_Imm_SelZero<ValueType vtd, SDPatternOperator op,
 //
 // Common but less generic patterns.
 //
-
-class SVE_1_Op_AllActive_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
-                             Instruction inst, Instruction ptrue>
-: Pat<(vtd (op vt1:$Op1)),
-      (inst (IMPLICIT_DEF), (ptrue 31), $Op1)>;
 
 class SVE_2_Op_AllActive_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
                              ValueType vt2, Instruction inst, Instruction ptrue>
@@ -740,7 +729,7 @@ let hasNoSchedulingInfo = 1 in {
 //===----------------------------------------------------------------------===//
 
 class sve_int_pfalse<bits<6> opc, string asm>
-: I<(outs PPR8:$Pd), (ins),
+: I<(outs PPRorPNR8:$Pd), (ins),
   asm, "\t$Pd",
   "",
   []>, Sched<[]> {
@@ -1848,7 +1837,7 @@ multiclass sve_int_sel_vvv<string asm, SDPatternOperator op> {
 //===----------------------------------------------------------------------===//
 
 class sve_int_pred_log<bits<4> opc, string asm>
-: I<(outs PPR8:$Pd), (ins PPRAny:$Pg, PPR8:$Pn, PPR8:$Pm),
+: I<(outs PPRorPNR8:$Pd), (ins PPRorPNRAny:$Pg, PPRorPNR8:$Pn, PPRorPNR8:$Pm),
   asm, "\t$Pd, $Pg/z, $Pn, $Pm",
   "",
   []>, Sched<[]> {
@@ -2278,8 +2267,7 @@ class sve_fp_3op_u_zd<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
   let mayRaiseFPException = 1;
 }
 
-multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op,
-                           SDPatternOperator predicated_op = null_frag> {
+multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_3op_u_zd<0b01, opc, asm, ZPR16>;
   def _S : sve_fp_3op_u_zd<0b10, opc, asm, ZPR32>;
   def _D : sve_fp_3op_u_zd<0b11, opc, asm, ZPR64>;
@@ -2287,18 +2275,12 @@ multiclass sve_fp_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op,
   def : SVE_2_Op_Pat<nxv8f16, op, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
-
-  def : SVE_2_Op_Pred_All_Active<nxv8f16, predicated_op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_2_Op_Pred_All_Active<nxv4f32, predicated_op, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_2_Op_Pred_All_Active<nxv2f64, predicated_op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve2p1_bf_3op_u_zd<bits<3> opc1, string asm, SDPatternOperator op,
-                          SDPatternOperator predicated_op = null_frag> {
-  def NAME : sve_fp_3op_u_zd<0b00, opc1, asm, ZPR16>;
-  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
+multiclass sve2p1_bf_3op_u_zd<bits<3> opc, string asm, SDPatternOperator op> {
+  def NAME : sve_fp_3op_u_zd<0b00, opc, asm, ZPR16>;
 
-  def : SVE_2_Op_Pred_All_Active<nxv8bf16, predicated_op, nxv8i1, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
+  def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME)>;
 }
 
 multiclass sve_fp_3op_u_zd_ftsmul<bits<3> opc, string asm, SDPatternOperator op> {
@@ -3684,8 +3666,7 @@ class sve2_int_mul<bits<2> sz, bits<3> opc, string asm, ZPRRegOp zprty>
   let hasSideEffects = 0;
 }
 
-multiclass sve2_int_mul<bits<3> opc, string asm, SDPatternOperator op,
-                        SDPatternOperator op_pred = null_frag> {
+multiclass sve2_int_mul<bits<3> opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_mul<0b00, opc, asm, ZPR8>;
   def _H : sve2_int_mul<0b01, opc, asm, ZPR16>;
   def _S : sve2_int_mul<0b10, opc, asm, ZPR32>;
@@ -3695,11 +3676,6 @@ multiclass sve2_int_mul<bits<3> opc, string asm, SDPatternOperator op,
   def : SVE_2_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
-
-  def : SVE_2_Op_Pred_Any_Predicate<nxv16i8, op_pred, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
-  def : SVE_2_Op_Pred_Any_Predicate<nxv8i16, op_pred, nxv8i1, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
-  def : SVE_2_Op_Pred_Any_Predicate<nxv4i32, op_pred, nxv4i1, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
-  def : SVE_2_Op_Pred_Any_Predicate<nxv2i64, op_pred, nxv2i1, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_int_mul_single<bits<3> opc, string asm, SDPatternOperator op> {
@@ -4933,7 +4909,6 @@ multiclass sve2_int_bitwise_ternary_op<bits<3> opc, string asm, SDPatternOperato
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME)>;
-
 
   def : SVE_3_Op_BSP_Pat<nxv16i8, ir_op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_BSP_Pat<nxv8i16, ir_op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
@@ -6689,7 +6664,7 @@ multiclass sve_mem_z_spill<string asm> {
 }
 
 class sve_mem_p_spill<string asm>
-: I<(outs), (ins PPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9),
+: I<(outs), (ins PPRorPNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9),
   asm, "\t$Pt, [$Rn, $imm9, mul vl]",
   "",
   []>, Sched<[]> {
@@ -6712,7 +6687,7 @@ multiclass sve_mem_p_spill<string asm> {
   def NAME : sve_mem_p_spill<asm>;
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
-                  (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+                  (!cast<Instruction>(NAME) PPRorPNRAny:$Pt, GPR64sp:$Rn, 0), 1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7858,7 +7833,7 @@ multiclass sve_mem_z_fill<string asm> {
 }
 
 class sve_mem_p_fill<string asm>
-: I<(outs PPRAny:$Pt), (ins GPR64sp:$Rn, simm9:$imm9),
+: I<(outs PPRorPNRAny:$Pt), (ins GPR64sp:$Rn, simm9:$imm9),
   asm, "\t$Pt, [$Rn, $imm9, mul vl]",
   "",
   []>, Sched<[]> {
@@ -7881,7 +7856,7 @@ multiclass sve_mem_p_fill<string asm> {
   def NAME : sve_mem_p_fill<asm>;
 
   def : InstAlias<asm # "\t$Pt, [$Rn]",
-                  (!cast<Instruction>(NAME) PPRAny:$Pt, GPR64sp:$Rn, 0), 1>;
+                  (!cast<Instruction>(NAME) PPRorPNRAny:$Pt, GPR64sp:$Rn, 0), 1>;
 }
 
 class sve2_mem_gldnt_vs_base<bits<5> opc, dag iops, string asm,

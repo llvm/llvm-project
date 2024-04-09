@@ -9849,11 +9849,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
       unsigned OriginalSz = DL->getTypeSizeInBits(DstTy);
-      if (OriginalSz != BWIt->second.first) {
+      unsigned SrcSz =
+          ReductionBitWidth == 0 ? BWIt->second.first : ReductionBitWidth;
+      if (OriginalSz != SrcSz) {
         unsigned Opcode = Instruction::Trunc;
-        if (OriginalSz < BWIt->second.first)
+        if (OriginalSz > SrcSz)
           Opcode = BWIt->second.second ? Instruction::SExt : Instruction::ZExt;
-        Type *SrcTy = IntegerType::get(DstTy->getContext(), BWIt->second.first);
+        Type *SrcTy = IntegerType::get(DstTy->getContext(), SrcSz);
         Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
                                       TTI::CastContextHint::None,
                                       TTI::TCK_RecipThroughput);
@@ -11167,7 +11169,7 @@ public:
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.
-        for (auto [I, Idx] : enumerate(SubMask))
+        for (int &Idx : SubMask)
           if (Idx != PoisonMaskElem)
             Idx += VF;
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
@@ -11753,8 +11755,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
               VecOp = TE->VectorizedValue;
           if (!Vec1) {
             Vec1 = VecOp;
-          } else if (Vec1 != EI->getVectorOperand()) {
-            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+          } else if (Vec1 != VecOp) {
+            assert((!Vec2 || Vec2 == VecOp) &&
                    "Expected only 1 or 2 vectors shuffle.");
             Vec2 = VecOp;
           }
@@ -11794,8 +11796,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &=
-              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
+          IsUsedInExpr &= FindReusedSplat(
+              VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
           ShuffleBuilder.add(*TEs.front(), VecMask);
           if (TEs.front()->VectorizedValue)
             IsNonPoisoned &=
@@ -14158,6 +14160,11 @@ bool BoUpSLP::collectValuesToDemote(
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
     if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      APInt Mask = DB->getDemandedBits(I);
+      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      BitWidth1 = std::min(BitWidth1, BitWidth2);
+    }
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
@@ -14368,10 +14375,27 @@ bool BoUpSLP::collectValuesToDemote(
         ID != Intrinsic::smax && ID != Intrinsic::umin && ID != Intrinsic::umax)
       break;
     SmallVector<Value *> Operands(1, I->getOperand(0));
+    function_ref<bool(unsigned, unsigned)> CallChecker;
+    auto CompChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+      if (ID == Intrinsic::umin || ID == Intrinsic::umax) {
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
+               MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+      }
+      assert((ID == Intrinsic::smin || ID == Intrinsic::smax) &&
+             "Expected min/max intrinsics only.");
+      unsigned SignBits = OrigBitWidth - BitWidth;
+      return SignBits <= ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
+                                            nullptr, DT) &&
+             SignBits <=
+                 ComputeNumSignBits(I->getOperand(1), *DL, 0, AC, nullptr, DT);
+    };
     End = 1;
     if (ID != Intrinsic::abs) {
       Operands.push_back(I->getOperand(1));
       End = 2;
+      CallChecker = CompChecker;
     }
     InstructionCost BestCost =
         std::numeric_limits<InstructionCost::CostType>::max();
@@ -14395,7 +14419,7 @@ bool BoUpSLP::collectValuesToDemote(
     [[maybe_unused]] bool NeedToExit;
     (void)AttemptCheckBitwidth(Checker, NeedToExit);
     BitWidth = BestBitWidth;
-    return TryProcessInstruction(I, *ITE, BitWidth, Operands);
+    return TryProcessInstruction(I, *ITE, BitWidth, Operands, CallChecker);
   }
 
   // Otherwise, conservatively give up.
@@ -14405,6 +14429,8 @@ bool BoUpSLP::collectValuesToDemote(
   MaxDepthLevel = 1;
   return FinalAnalysis();
 }
+
+static RecurKind getRdxKind(Value *V);
 
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
@@ -14456,7 +14482,7 @@ void BoUpSLP::computeMinimumValueSizes() {
   auto ComputeMaxBitWidth = [&](ArrayRef<Value *> TreeRoot, unsigned VF,
                                 bool IsTopRoot, bool IsProfitableToDemoteRoot,
                                 unsigned Opcode, unsigned Limit,
-                                bool IsTruncRoot) {
+                                bool IsTruncRoot, bool IsSignedCmp) {
     ToDemote.clear();
     auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
     if (!TreeRootIT || !Opcode)
@@ -14479,7 +14505,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     // True.
     // Determine if the sign bit of all the roots is known to be zero. If not,
     // IsKnownPositive is set to False.
-    bool IsKnownPositive = all_of(TreeRoot, [&](Value *R) {
+    bool IsKnownPositive = !IsSignedCmp && all_of(TreeRoot, [&](Value *R) {
       KnownBits Known = computeKnownBits(R, *DL);
       return Known.isNonNegative();
     });
@@ -14566,8 +14592,11 @@ void BoUpSLP::computeMinimumValueSizes() {
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
       if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
         ++BitWidth1;
-      auto Mask = DB->getDemandedBits(cast<Instruction>(V));
-      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      unsigned BitWidth2 = BitWidth1;
+      if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(::getRdxKind(V))) {
+        auto Mask = DB->getDemandedBits(cast<Instruction>(V));
+        BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      }
       ReductionBitWidth =
           std::max(std::min(BitWidth1, BitWidth2), ReductionBitWidth);
     }
@@ -14584,6 +14613,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
     IsTruncRoot = true;
   }
+  bool IsSignedCmp = false;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
@@ -14595,7 +14625,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
         TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
-        IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+        IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot, IsSignedCmp);
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
@@ -14632,6 +14662,16 @@ void BoUpSLP::computeMinimumValueSizes() {
                    return EI.EdgeIdx == 0 &&
                           EI.UserTE->getOpcode() == Instruction::Trunc &&
                           !EI.UserTE->isAltShuffle();
+                 });
+      IsSignedCmp =
+          NodeIdx < VectorizableTree.size() &&
+          any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
+                 [](const EdgeInfo &EI) {
+                   return EI.UserTE->getOpcode() == Instruction::ICmp &&
+                          any_of(EI.UserTE->Scalars, [](Value *V) {
+                            auto *IC = dyn_cast<ICmpInst>(V);
+                            return IC && IC->isSigned();
+                          });
                  });
     }
 
@@ -16673,6 +16713,10 @@ private:
 };
 } // end anonymous namespace
 
+/// Gets recurrence kind from the specified value.
+static RecurKind getRdxKind(Value *V) {
+  return HorizontalReduction::getRdxKind(V);
+}
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
     return cast<FixedVectorType>(IE->getType())->getNumElements();

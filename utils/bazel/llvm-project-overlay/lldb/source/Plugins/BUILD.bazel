@@ -232,6 +232,7 @@ cc_library(
     name = "PluginPlatformMacOSXObjCXXHeaders",
     hdrs = glob(["Platform/MacOSX/objcxx/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -243,6 +244,7 @@ objc_library(
     name = "PluginPlatformMacOSXObjCXX",
     srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     copts = OBJCPP_COPTS,
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -1750,6 +1752,7 @@ cc_library(
     srcs = glob(["SymbolLocator/DebugSymbols/*.cpp"]),
     hdrs = glob(["SymbolLocator/DebugSymbols/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
@@ -2178,6 +2181,7 @@ cc_library(
     srcs = glob(["Process/MacOSX-Kernel/*.cpp"]),
     hdrs = glob(["Process/MacOSX-Kernel/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

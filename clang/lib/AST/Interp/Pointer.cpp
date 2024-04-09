@@ -177,6 +177,10 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
+    // Nothing to do for these.
+    if (Desc->getNumElems() == 0)
+      return;
+
     InitMapPtr &IM = getInitMap();
     if (!IM)
       IM =

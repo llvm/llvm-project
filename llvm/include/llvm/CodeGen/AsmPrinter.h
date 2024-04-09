@@ -868,6 +868,9 @@ private:
   /// This method emits a comment next to header for the current function.
   virtual void emitFunctionHeaderComment();
 
+  /// This method emits prefix-like data before the current function.
+  void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
+
   /// Emit a blob of inline asm to the output streamer.
   void
   emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
