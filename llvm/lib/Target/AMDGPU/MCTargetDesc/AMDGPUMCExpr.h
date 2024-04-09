@@ -14,6 +14,9 @@
 
 namespace llvm {
 
+class Function;
+class GCNSubtarget;
+
 /// AMDGPU target specific variadic MCExpr operations.
 ///
 /// Takes in a minimum of 1 argument to be used with an operation. The supported
@@ -26,7 +29,16 @@ namespace llvm {
 ///
 class AMDGPUVariadicMCExpr : public MCTargetExpr {
 public:
-  enum VariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
+  enum VariadicKind {
+    AGVK_None,
+    AGVK_Or,
+    AGVK_Max,
+    AGVK_ExtraSGPRs,
+    AGVK_TotalNumVGPRs,
+    AGVK_TotalNumVGPRs90A,
+    AGVK_AlignTo,
+    AGVK_Occupancy
+  };
 
 private:
   VariadicKind Kind;
@@ -51,6 +63,27 @@ public:
                                                MCContext &Ctx) {
     return create(VariadicKind::AGVK_Max, Args, Ctx);
   }
+
+  static const AMDGPUVariadicMCExpr *
+  createExtraSGPRs(const MCExpr *VCCUsed, const MCExpr *FlatScrUsed,
+                   unsigned MajorVersion, bool hasArchitectedFlatScratch,
+                   bool XNACKUsed, MCContext &Ctx);
+
+  static const AMDGPUVariadicMCExpr *createTotalNumVGPR(bool has90AInsts,
+                                                        const MCExpr *NumAGPR,
+                                                        const MCExpr *NumVGPR,
+                                                        MCContext &Ctx);
+
+  static const AMDGPUVariadicMCExpr *
+  createAlignTo(const MCExpr *Value, const MCExpr *Align, MCContext &Ctx) {
+    return create(VariadicKind::AGVK_AlignTo, {Value, Align}, Ctx);
+  }
+
+  static const AMDGPUVariadicMCExpr *createOccupancy(unsigned InitOcc,
+                                                     const MCExpr *NumSGPRs,
+                                                     const MCExpr *NumVGPRs,
+                                                     const GCNSubtarget &STM,
+                                                     MCContext &Ctx);
 
   VariadicKind getKind() const { return Kind; }
   const MCExpr *getSubExpr(size_t Index) const;

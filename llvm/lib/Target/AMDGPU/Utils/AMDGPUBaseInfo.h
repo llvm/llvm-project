@@ -311,6 +311,12 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs);
 
+/// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
+/// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs);
+
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used. We actually return the number of blocks -1, since
 /// that's what we encode.

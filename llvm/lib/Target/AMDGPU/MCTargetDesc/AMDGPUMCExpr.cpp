@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCExpr.h"
+#include "GCNSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -16,6 +19,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 AMDGPUVariadicMCExpr::AMDGPUVariadicMCExpr(VariadicKind Kind,
                                            ArrayRef<const MCExpr *> Args,
@@ -61,6 +65,21 @@ void AMDGPUVariadicMCExpr::printImpl(raw_ostream &OS,
   case AGVK_Max:
     OS << "max(";
     break;
+  case AGVK_ExtraSGPRs:
+    OS << "extrasgprs(";
+    break;
+  case AGVK_TotalNumVGPRs:
+    OS << "totalnumvgprs(";
+    break;
+  case AGVK_TotalNumVGPRs90A:
+    OS << "totalnumvgprs90a(";
+    break;
+  case AGVK_AlignTo:
+    OS << "alignto(";
+    break;
+  case AGVK_Occupancy:
+    OS << "occupancy(";
+    break;
   }
   for (auto It = Args.begin(); It != Args.end(); ++It) {
     (*It)->print(OS, MAI, /*InParens=*/false);
@@ -85,6 +104,158 @@ static int64_t op(AMDGPUVariadicMCExpr::VariadicKind Kind, int64_t Arg1,
 bool AMDGPUVariadicMCExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAsmLayout *Layout, const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
+
+  auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
+    MCValue MCVal;
+    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
+        !MCVal.isAbsolute())
+      return false;
+
+    ConstantValue = MCVal.getConstant();
+    return true;
+  };
+
+  if (Kind == AGVK_ExtraSGPRs) {
+    assert(Args.size() == 5 &&
+           "AMDGPUVariadic Argument count incorrect for ExtraSGPRs");
+    uint64_t VCCUsed, FlatScrUsed, MajorVersion, XNACKUsed,
+        hasArchitectedFlatScr, ExtraSGPRs = 0;
+
+    bool Success = true;
+    Success &= TryGetMCExprValue(Args[0], MajorVersion);
+    Success &= TryGetMCExprValue(Args[3], XNACKUsed);
+    Success &= TryGetMCExprValue(Args[4], hasArchitectedFlatScr);
+
+    assert(Success &&
+           "Arguments 1, 4, and 5 for ExtraSGPRs should be known constants");
+    if (!Success || !TryGetMCExprValue(Args[1], VCCUsed) ||
+        !TryGetMCExprValue(Args[2], FlatScrUsed))
+      return false;
+
+    if (VCCUsed)
+      ExtraSGPRs = 2;
+    if (MajorVersion >= 10) {
+      Res = MCValue::get(ExtraSGPRs);
+      return true;
+    }
+    if (MajorVersion < 8) {
+      if (FlatScrUsed)
+        ExtraSGPRs = 4;
+    } else {
+      if (XNACKUsed)
+        ExtraSGPRs = 4;
+      if (FlatScrUsed || hasArchitectedFlatScr)
+        ExtraSGPRs = 6;
+    }
+
+    Res = MCValue::get(ExtraSGPRs);
+    return true;
+  }
+
+  if (Kind == AGVK_AlignTo) {
+    assert(Args.size() == 2 &&
+           "AMDGPUVariadic Argument count incorrect for AlignTo");
+    uint64_t Value, Align;
+    if (!TryGetMCExprValue(Args[0], Value) ||
+        !TryGetMCExprValue(Args[1], Align))
+      return false;
+
+    Res = MCValue::get(alignTo(Value, Align));
+    return true;
+  }
+
+  if (Kind == AGVK_TotalNumVGPRs90A) {
+    assert(Args.size() == 2 &&
+           "AMDGPUVariadic Argument count incorrect for TotalNumVGPRs90A");
+    uint64_t NumAGPR, NumVGPR, Total;
+    if (!TryGetMCExprValue(Args[0], NumAGPR) ||
+        !TryGetMCExprValue(Args[1], NumVGPR))
+      return false;
+
+    if (NumAGPR) {
+      Total = alignTo(NumVGPR, 4) + NumAGPR;
+    } else {
+      Total = std::max(NumVGPR, NumAGPR);
+    }
+
+    Res = MCValue::get(Total);
+    return true;
+  }
+
+  if (Kind == AGVK_TotalNumVGPRs) {
+    assert(Args.size() == 2 &&
+           "AMDGPUVariadic Argument count incorrect for TotalNumVGPRs");
+    uint64_t NumAGPR, NumVGPR;
+    if (!TryGetMCExprValue(Args[0], NumAGPR) ||
+        !TryGetMCExprValue(Args[1], NumVGPR))
+      return false;
+
+    Res = MCValue::get(std::max(NumVGPR, NumAGPR));
+    return true;
+  }
+
+  if (Kind == AGVK_Occupancy) {
+    assert(Args.size() == 7 &&
+           "AMDGPUVariadic Argument count incorrect for Occupancy");
+    uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
+        NumSGPRs, NumVGPRs;
+
+    bool Success = true;
+    Success &= TryGetMCExprValue(Args[0], MaxWaves);
+    Success &= TryGetMCExprValue(Args[1], Granule);
+    Success &= TryGetMCExprValue(Args[2], TargetTotalNumVGPRs);
+    Success &= TryGetMCExprValue(Args[3], Generation);
+    Success &= TryGetMCExprValue(Args[4], InitOccupancy);
+
+    assert(Success &&
+           "Arguments 1 to 5 for Occupancy should be known constants");
+
+    if (!Success || !TryGetMCExprValue(Args[5], NumSGPRs) ||
+        !TryGetMCExprValue(Args[6], NumVGPRs))
+      return false;
+
+    auto OccWithNumVGPRs = [&](uint64_t NumVGPRs) -> uint64_t {
+      return IsaInfo::getNumWavesPerEUWithNumVGPRs(NumVGPRs, Granule, MaxWaves,
+                                                   TargetTotalNumVGPRs);
+    };
+
+    // Mirrors GCNSubtarget::getOccupancyWithNumSGPRs without dependency on
+    // subtarget.
+    auto OccWithNumSGPRs = [&](uint64_t NumSGPRs) -> uint64_t {
+      if (Generation >= AMDGPUSubtarget::GFX10)
+        return MaxWaves;
+
+      if (Generation >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+        if (NumSGPRs <= 80)
+          return 10;
+        if (NumSGPRs <= 88)
+          return 9;
+        if (NumSGPRs <= 100)
+          return 8;
+        return 7;
+      }
+      if (NumSGPRs <= 48)
+        return 10;
+      if (NumSGPRs <= 56)
+        return 9;
+      if (NumSGPRs <= 64)
+        return 8;
+      if (NumSGPRs <= 72)
+        return 7;
+      if (NumSGPRs <= 80)
+        return 6;
+      return 5;
+    };
+
+    uint64_t Occupancy = InitOccupancy;
+    if (NumSGPRs)
+      Occupancy = std::min(Occupancy, OccWithNumSGPRs(NumSGPRs));
+    if (NumVGPRs)
+      Occupancy = std::min(Occupancy, OccWithNumVGPRs(NumVGPRs));
+
+    Res = MCValue::get(Occupancy);
+    return true;
+  }
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
@@ -112,4 +283,54 @@ MCFragment *AMDGPUVariadicMCExpr::findAssociatedFragment() const {
       return Arg->findAssociatedFragment();
   }
   return nullptr;
+}
+
+/// Allow delayed MCExpr resolve of ExtraSGPRs (in case VCCUsed or FlatScrUsed
+/// are unresolvable but needed for further MCExprs). Derived from
+/// implementation of IsaInfo::getNumExtraSGPRs in AMDGPUBaseInfo.cpp.
+///
+const AMDGPUVariadicMCExpr *AMDGPUVariadicMCExpr::createExtraSGPRs(
+    const MCExpr *VCCUsed, const MCExpr *FlatScrUsed, unsigned MajorVersion,
+    bool hasArchitectedFlatScratch, bool XNACKUsed, MCContext &Ctx) {
+  auto GetConstantExpr = [&Ctx](int64_t Value) {
+    return MCConstantExpr::create(Value, Ctx);
+  };
+
+  return create(AGVK_ExtraSGPRs,
+                {GetConstantExpr(MajorVersion), VCCUsed, FlatScrUsed,
+                 GetConstantExpr(XNACKUsed),
+                 GetConstantExpr(hasArchitectedFlatScratch)},
+                Ctx);
+}
+
+const AMDGPUVariadicMCExpr *AMDGPUVariadicMCExpr::createTotalNumVGPR(
+    bool has90AInsts, const MCExpr *NumAGPR, const MCExpr *NumVGPR,
+    MCContext &Ctx) {
+  return create(has90AInsts ? AGVK_TotalNumVGPRs90A : AGVK_TotalNumVGPRs,
+                {NumAGPR, NumVGPR}, Ctx);
+}
+
+/// Mimics GCNSubtarget::computeOccupancy for MCExpr.
+///
+/// Remove dependency on GCNSubtarget and depend only only the necessary values
+/// for said occupancy computation. Should match computeOccupancy implementation
+/// without passing \p STM on.
+const AMDGPUVariadicMCExpr *
+AMDGPUVariadicMCExpr::createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                                      const MCExpr *NumVGPRs,
+                                      const GCNSubtarget &STM, MCContext &Ctx) {
+  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM);
+  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
+  unsigned Generation = STM.getGeneration();
+
+  auto CreateExpr = [&Ctx](unsigned Value) {
+    return MCConstantExpr::create(Value, Ctx);
+  };
+
+  return create(AGVK_Occupancy,
+                {CreateExpr(MaxWaves), CreateExpr(Granule),
+                 CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
+                 CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
+                Ctx);
 }

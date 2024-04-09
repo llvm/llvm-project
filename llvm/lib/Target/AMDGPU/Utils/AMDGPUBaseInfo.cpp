@@ -1129,12 +1129,18 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs) {
-  unsigned MaxWaves = getMaxWavesPerEU(STI);
-  unsigned Granule = getVGPRAllocGranule(STI);
+  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI),
+                                      getMaxWavesPerEU(STI),
+                                      getTotalNumVGPRs(STI));
+}
+
+unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
+                                      unsigned MaxWaves,
+                                      unsigned TotalNumVGPRs) {
   if (NumVGPRs < Granule)
     return MaxWaves;
   unsigned RoundedRegs = alignTo(NumVGPRs, Granule);
-  return std::min(std::max(getTotalNumVGPRs(STI) / RoundedRegs, 1u), MaxWaves);
+  return std::min(std::max(TotalNumVGPRs / RoundedRegs, 1u), MaxWaves);
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
