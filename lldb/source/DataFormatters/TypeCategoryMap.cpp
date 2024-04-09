@@ -29,7 +29,10 @@ void TypeCategoryMap::Add(KeyType name, const TypeCategoryImplSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     m_map[name] = entry;
   }
-  // The lock is now released for the eventual call to Changed.
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
 }
@@ -43,7 +46,10 @@ bool TypeCategoryMap::Delete(KeyType name) {
     m_map.erase(name);
     Disable(name);
   }
-  // The lock is now released for the eventual call to Changed.
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
   return true;
@@ -134,7 +140,10 @@ void TypeCategoryMap::Clear() {
     m_map.clear();
     m_active_categories.clear();
   }
-  // The lock is now released for the eventual call to Changed.
+  // Release the mutex to avoid a potential deadlock between
+  // TypeCategoryMap::m_map_mutex and
+  // FormatManager::m_language_categories_mutex which can be acquired in
+  // reverse order when calling FormatManager::Changed.
   if (listener)
     listener->Changed();
 }
