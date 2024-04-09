@@ -80,6 +80,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  // Returns whether Inst is compressed.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
