@@ -175,7 +175,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_TypeNullableResult:                                      \
   case ParsedAttr::AT_TypeNullUnspecified
 
-enum class BoolAttrState : uint8_t { Unseen, False, True };
+enum class BoolAttrState : uint8_t { Unseen, False, True, Dependent };
 
 namespace {
   /// An object which stores processing state for the entire
@@ -7987,10 +7987,6 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
   if (!unwrapped.isFunctionType())
     return false;
 
-  const bool isNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
-                             PAttr.getKind() == ParsedAttr::AT_Blocking;
-  Sema &S = state.getSema();
-
   // Require FunctionProtoType
   auto *FPT = unwrapped.get()->getAs<FunctionProtoType>();
   if (FPT == nullptr) {
@@ -7998,68 +7994,115 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
     return false;
   }
 
-  bool Cond = true; // default
+  // Parse the new  attribute.
+  // non/blocking or non/allocating? Or dependent?
+  const bool isNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
+                             PAttr.getKind() == ParsedAttr::AT_Blocking;
+  Sema &S = state.getSema();
+
+  BoolAttrState NewState = BoolAttrState::Unseen;
+  Expr *CondExpr = nullptr; // only valid if dependent
 
   if (PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
       PAttr.getKind() == ParsedAttr::AT_NonAllocating) {
     // Parse the conditional expression, if any
-    // TODO: There's a better way to do this. See PR feedback.
-    // TODO: Handle a type-dependent expression.
     if (PAttr.getNumArgs() > 0) {
-      if (!S.checkBoolExprArgumentAttr(PAttr, 0, Cond)) {
-        PAttr.setInvalid();
-        return false;
+      // see checkFunctionConditionAttr, Sema::CheckCXXBooleanCondition
+      CondExpr = PAttr.getArgAsExpr(0);
+      if (!CondExpr->isTypeDependent()) {
+        ExprResult E = S.PerformContextuallyConvertToBool(CondExpr);
+        if (E.isInvalid())
+          return false;
+        CondExpr = E.get();
+        if (!CondExpr->isValueDependent()) {
+          llvm::APSInt CondInt;
+          E = S.VerifyIntegerConstantExpression(
+            E.get(), &CondInt,
+            // TODO: have our own diagnostic
+            diag::err_constexpr_if_condition_expression_is_not_constant);
+          if (E.isInvalid()) {
+            return false;
+          }
+          NewState = (CondInt != 0) ? BoolAttrState::True : BoolAttrState::False;
+        } else {
+          NewState = BoolAttrState::Dependent;
+        }
+      } else {
+        NewState = BoolAttrState::Dependent;
       }
+    } else {
+      NewState = BoolAttrState::True;
     }
   } else {
-    Cond = false;
+    // This is the `blocking` or `allocating` attribute.
+    NewState = BoolAttrState::False;
   }
 
-  FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+  auto attrName = [](bool NB, BoolAttrState value) {
+    switch (value) {
+    case BoolAttrState::False:
+      return NB ? "blocking" : "allocating";
+    case BoolAttrState::True:
+      return NB ? "nonblocking" : "nonallocating";
+    case BoolAttrState::Dependent:
+      return NB ? "nonblocking(expr)" : "nonallocating(expr)";
+    default:
+      llvm_unreachable("'unseen' shouldn't happen");
+    }
+  };
 
-  auto incompatible = [&](StringRef attrTrue, StringRef attrFalse) {
+  // Diagnose the newly provided attribute as incompatible with a previous one.
+  auto incompatible = [&](bool prevNB, BoolAttrState prevValue) {
     Sema &S = state.getSema();
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
-        << attrTrue << attrFalse << false;
+        << attrName(isNonBlocking, NewState) << attrName(prevNB, prevValue) << false;
     // we don't necessarily have the location of the previous attribute,
     // so no note.
     PAttr.setInvalid();
     return true;
   };
 
-  // check nonblocking(true) against blocking, and same for
-  // nonallocating
-  const BoolAttrState newState =
-      Cond ? BoolAttrState::True : BoolAttrState::False;
-  const BoolAttrState oppositeNewState =
-      Cond ? BoolAttrState::False : BoolAttrState::True;
+  const BoolAttrState PrevState = isNonBlocking ? state.getParsedNonBlocking() : 
+    state.getParsedNonAllocating();
+  if (PrevState != BoolAttrState::Unseen) {
+    // Only one attribute per constraint is allowed.
+    return incompatible(isNonBlocking, PrevState);
+  }
+
   if (isNonBlocking) {
-    if (state.getParsedNonBlocking() == oppositeNewState) {
-      return incompatible("nonblocking(true)", "blocking");
-    }
     // also check nonblocking(true) against allocating
-    if (Cond && state.getParsedNonAllocating() == BoolAttrState::False) {
-      return incompatible("nonblocking(true)", "allocating");
+    if (NewState == BoolAttrState::True && state.getParsedNonAllocating() == BoolAttrState::False) {
+      return incompatible(false, BoolAttrState::False);
     }
-    state.setParsedNonBlocking(newState);
+    state.setParsedNonBlocking(NewState);
   } else {
-    if (state.getParsedNonAllocating() == oppositeNewState) {
-      return incompatible("nonallocating(true)", "allocating");
-    }
     // also check nonblocking(true) against allocating
     if (state.getParsedNonBlocking() == BoolAttrState::True) {
-      if (!Cond) {
-        return incompatible("nonblocking(true)", "allocating");
+      if (NewState == BoolAttrState::False) {
+        return incompatible(true, BoolAttrState::True);
       }
       // Ignore nonallocating(true) since we already have nonblocking(true).
       return true;
     }
-    state.setParsedNonAllocating(newState);
+    state.setParsedNonAllocating(NewState);
   }
 
-  if (!Cond) {
-    // blocking and allocating are represented as sugar,
-    // with AttributedType
+  if (NewState == BoolAttrState::Dependent) {
+    // nonblocking(expr)/nonallocating(expr) are represented as AttributedType sugar,
+    // using those attributes. TODO: Currently no one else tries to find it there,
+    // and this may turn out to be the wrong place.
+    Attr *A = nullptr;
+    if (isNonBlocking) {
+      A = NonBlockingAttr::Create(S.Context, CondExpr);
+    } else {
+      A = NonAllocatingAttr::Create(S.Context, CondExpr);
+    }
+    type = state.getAttributedType(A, type, type);
+    return true;
+  }
+  if (NewState == BoolAttrState::False) {
+    // blocking and allocating are represented as AttributedType sugar,
+    // using those attributes.
     Attr *A = nullptr;
     if (isNonBlocking) {
       A = BlockingAttr::Create(S.Context);
@@ -8077,6 +8120,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
                                      : FunctionEffect::Type::NonAllocating);
 
   MutableFunctionEffectSet NewFX(NewEffect);
+  FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+
   if (EPI.FunctionEffects) {
     // Preserve any previous effects - except nonallocating, when we are adding
     // nonblocking

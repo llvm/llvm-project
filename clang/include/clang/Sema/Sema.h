@@ -3764,9 +3764,6 @@ public:
                                       StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);
 
-  bool checkBoolExprArgumentAttr(const ParsedAttr &Attr, unsigned ArgNum,
-                                 bool &Value);
-
   /// Determine if type T is a valid subject for a nonnull and similar
   /// attributes. By default, we look through references (the behavior used by
   /// nonnull), but if the second parameter is true, then we treat a reference

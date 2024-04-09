@@ -395,33 +395,6 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
   return checkStringLiteralArgumentAttr(AL, ArgExpr, Str, ArgLocation);
 }
 
-/// Check if the argument \p ArgNum of \p Attr is a compile-time constant
-/// integer (boolean) expression. If not, emit an error and return false.
-bool Sema::checkBoolExprArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
-                                     bool &Value) {
-  if (AL.isInvalid()) {
-    return false;
-  }
-  Expr *ArgExpr = AL.getArgAsExpr(ArgNum);
-  SourceLocation ErrorLoc(AL.getLoc());
-
-  if (AL.isArgIdent(ArgNum)) {
-    IdentifierLoc *IL = AL.getArgAsIdent(ArgNum);
-    ErrorLoc = IL->Loc;
-  } else if (ArgExpr != nullptr) {
-    if (const std::optional<llvm::APSInt> MaybeVal =
-            ArgExpr->getIntegerConstantExpr(Context, &ErrorLoc)) {
-      Value = MaybeVal->getBoolValue();
-      return true;
-    }
-  }
-
-  AL.setInvalid();
-  Diag(ErrorLoc, diag::err_attribute_argument_n_type)
-      << AL << ArgNum << AANT_ArgumentConstantExpr;
-  return false;
-}
-
 /// Applies the given attribute to the Decl without performing any
 /// additional semantic checking.
 template <typename AttrType>

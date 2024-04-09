@@ -1407,7 +1407,7 @@ def NonBlocking : TypeAttr {
                    C23<"clang", "nonblocking">,
                    GNU<"clang_nonblocking">];
 
-  let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
   let Documentation = [NonBlockingNonAllocatingDocs];
 }
 
@@ -1415,7 +1415,7 @@ def NonAllocating : TypeAttr {
   let Spellings = [CXX11<"clang", "nonallocating">,
                    C23<"clang", "nonallocating">,
                    GNU<"clang_nonallocating">];
-  let Args = [DefaultBoolArgument<"Cond", /*default*/1>];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
   let Documentation = [NonBlockingNonAllocatingDocs];
 }
 

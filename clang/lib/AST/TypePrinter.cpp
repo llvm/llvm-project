@@ -1877,6 +1877,15 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  if (T->getAttrKind() == attr::NonBlocking) {
+    OS << " [[clang::nonblocking(...)]]";
+    return;
+  }
+  if (T->getAttrKind() == attr::NonAllocating) {
+    OS << " [[clang::nonallocating(...)]]";
+    return;
+  }
+
   if (T->getAttrKind() == attr::ArmStreaming) {
     OS << "__arm_streaming";
     return;
