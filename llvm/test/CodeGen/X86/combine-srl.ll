@@ -771,10 +771,19 @@ define <4 x i32> @combine_vec_lshr_commuted_clamped(<4 x i32> %sh, <4 x i32> %am
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm5[2,3],xmm0[4,5],xmm5[6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_lshr_commuted_clamped:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: combine_vec_lshr_commuted_clamped:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
+; AVX2-NEXT:    vpminud %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: combine_vec_lshr_commuted_clamped:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cmp.i = icmp uge <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
   %1 = select <4 x i1> %cmp.i, <4 x i32> zeroinitializer, <4 x i32> %sh
   %shr = lshr <4 x i32> %1, %amt
@@ -961,10 +970,19 @@ define <4 x i32> @combine_vec_shl_commuted_clamped(<4 x i32> %sh, <4 x i32> %amt
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_shl_commuted_clamped:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: combine_vec_shl_commuted_clamped:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
+; AVX2-NEXT:    vpminud %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: combine_vec_shl_commuted_clamped:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
   %cmp.i = icmp uge <4 x i32> %amt, <i32 32, i32 32, i32 32, i32 32>
   %1 = select <4 x i1> %cmp.i, <4 x i32> zeroinitializer, <4 x i32> %sh
   %shr = shl <4 x i32> %1, %amt

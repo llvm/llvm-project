@@ -47725,7 +47725,8 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ExtOpc, DL, VT, Mulh);
 }
 
-static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
@@ -47734,7 +47735,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
   // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
   // with out-of-bounds clamping.
   if (N0.getOpcode() == ISD::VSELECT &&
-      supportedVectorVarShift(VT, DAG.getSubtarget<X86Subtarget>(), ISD::SHL)) {
+      supportedVectorVarShift(VT, Subtarget, ISD::SHL)) {
     SDValue Cond = N0.getOperand(0);
     SDValue N00 = N0.getOperand(1);
     SDValue N01 = N0.getOperand(2);
@@ -57372,7 +57373,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
-  case ISD::SHL:            return combineShiftLeft(N, DAG);
+  case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
