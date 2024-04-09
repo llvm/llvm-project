@@ -142,12 +142,12 @@ function(get_libclc_device_info)
   # Some libclc targets are not real clang triples: return their canonical
   # triples.
   if( ARCH STREQUAL spirv OR ARCH STREQUAL clspv )
-    set( t "spir--" )
+    set( ARG_TRIPLE "spir--" )
   elseif( ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64 )
-    set( t "spir64--" )
+    set( ARG_TRIPLE "spir64--" )
   endif()
 
   if( ARG_CLANG_TRIPLE )
-    set( ${ARG_CLANG_TRIPLE} ${t} PARENT_SCOPE )
+    set( ${ARG_CLANG_TRIPLE} ${ARG_TRIPLE} PARENT_SCOPE )
   endif()
 endfunction()
