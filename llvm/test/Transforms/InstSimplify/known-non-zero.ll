@@ -169,11 +169,7 @@ B:
 
 define i1 @smax_non_zero(i8 %xx, i8 %y) {
 ; CHECK-LABEL: @smax_non_zero(
-; CHECK-NEXT:    [[X0:%.*]] = and i8 [[XX:%.*]], 63
-; CHECK-NEXT:    [[X:%.*]] = add i8 [[X0]], 1
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x0 = and i8 %xx, 63
   %x = add i8 %x0, 1
