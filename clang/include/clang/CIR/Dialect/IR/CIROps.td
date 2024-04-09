@@ -272,6 +272,25 @@ def ConstantOp : CIR_Op<"const",
 }
 
 //===----------------------------------------------------------------------===//
+// C/C++ memory order definitions
+//===----------------------------------------------------------------------===//
+
+def MemOrderRelaxed : I32EnumAttrCase<"Relaxed", 0, "relaxed">;
+def MemOrderConsume : I32EnumAttrCase<"Consume", 1, "consume">;
+def MemOrderAcquire : I32EnumAttrCase<"Acquire", 2, "acquire">;
+def MemOrderRelease : I32EnumAttrCase<"Release", 3, "release">;
+def MemOrderAcqRel : I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">;
+def MemOrderSeqCst : I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">;
+
+def MemOrder : I32EnumAttr<
+    "MemOrder",
+    "Memory order according to C++11 memory model",
+    [MemOrderRelaxed, MemOrderConsume, MemOrderAcquire,
+     MemOrderRelease, MemOrderAcqRel, MemOrderSeqCst]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+//===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
@@ -403,13 +422,16 @@ def LoadOp : CIR_Op<"load", [
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
                            [MemRead]>:$addr, UnitAttr:$isDeref,
-                       UnitAttr:$is_volatile);
+                       UnitAttr:$is_volatile,
+                       OptionalAttr<MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
   let assemblyFormat = [{
-    (`deref` $isDeref^)? (`volatile` $is_volatile^)?
+    (`deref` $isDeref^)?
+    (`volatile` $is_volatile^)?
+    (`atomic` `(` $mem_order^ `)`)?
     $addr `:` `cir.ptr` type($addr) `,` type($result) attr-dict
   }];
 
@@ -3455,22 +3477,6 @@ def IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 //===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
-
-// Memory order related definitions.
-def MemOrderRelaxed : I32EnumAttrCase<"Relaxed", 0, "relaxed">;
-def MemOrderConsume : I32EnumAttrCase<"Consume", 1, "consume">;
-def MemOrderAcquire : I32EnumAttrCase<"Acquire", 2, "acquire">;
-def MemOrderRelease : I32EnumAttrCase<"Release", 3, "release">;
-def MemOrderAcqRel : I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">;
-def MemOrderSeqCst : I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">;
-
-def MemOrder : I32EnumAttr<
-    "MemOrder",
-    "Memory order according to C++11 memory model",
-    [MemOrderRelaxed, MemOrderConsume, MemOrderAcquire,
-     MemOrderRelease, MemOrderAcqRel, MemOrderSeqCst]> {
-  let cppNamespace = "::mlir::cir";
-}
 
 // Binary opcodes for atomic fetch.
 def Atomic_Add  : I32EnumAttrCase<"Add",  0, "add">;
