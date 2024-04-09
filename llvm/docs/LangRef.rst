@@ -28174,7 +28174,7 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer, which refers to a thread local global.
+The first argument is a thread local :ref:`global variable <globalvars>`.
 
 Semantics:
 """"""""""
