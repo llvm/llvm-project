@@ -646,8 +646,7 @@ expression).
 
 .. code-block:: c++
 
-      // Make new basic blocks for pre-loop, loop condition, loop body and end-loop
-      // code. 
+      // Make new basic blocks for loop condition, loop body and end-loop code.
       Function *TheFunction = Builder->GetInsertBlock()->getParent();
       BasicBlock *PreLoopBB = Builder->GetInsertBlock();
       BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
@@ -664,7 +663,7 @@ into the loop condition check. Once we have that, we create the actual block
 that determines if control should enter the loop and attach it directly to the
 end of our parent function. The other two blocks (``LoopBB`` and ``EndLoopBB``)
 are created, but aren't inserted into the function, similarly to our previous
-work on if/then/else.
+work on if/then/else. These will be used to complete our loop IR later on.
 
 We also create an unconditional branch into the loop condition block from the
 pre-loop code.

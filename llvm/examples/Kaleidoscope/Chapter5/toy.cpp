@@ -685,8 +685,8 @@ Value *IfExprAST::codegen() {
 // preloop:
 //   ...
 //   start = startexpr
-//   goto loopcondition
-// loopcondition:
+//   goto loopcond
+// loopcond:
 //   variable = phi [start, loopheader], [nextvariable, loop]
 //   endcond = endexpr
 //   br endcond, loop, endloop
@@ -696,7 +696,7 @@ Value *IfExprAST::codegen() {
 //   ...
 //   step = stepexpr
 //   nextvariable = variable + step
-//   goto loopcondition
+//   goto loopcond
 // endloop:
 //   ...
 Value *ForExprAST::codegen() {
@@ -705,8 +705,7 @@ Value *ForExprAST::codegen() {
   if (!StartVal)
     return nullptr;
 
-  // Make new basic blocks for pre-loop, loop condition, loop body and end-loop
-  // code. 
+  // Make new basic blocks for loop condition, loop body and end-loop code. 
   Function *TheFunction = Builder->GetInsertBlock()->getParent();
   BasicBlock *PreLoopBB = Builder->GetInsertBlock();
   BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
