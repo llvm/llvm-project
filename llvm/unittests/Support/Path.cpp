@@ -1296,21 +1296,34 @@ TEST_F(FileSystemTest, UTF8ToUTF16DirectoryIteration) {
 }
 #endif
 
-TEST_F(FileSystemTest, OpenDirectoryAsFile) {
+TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
   ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
             errc::file_exists);
 
+  std::string Buf(5, '?');
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
+  ASSERT_NO_ERROR(errorToErrorCode(FD.takeError()));
+  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  Expected<size_t> BytesRead = fs::readNativeFile(
+          *FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
+  ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), 
+          errc::is_a_directory);
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
+  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory))); 
+  ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
+            errc::file_exists); 
+   
   int FD;
-  std::error_code EC;
-  EC = fs::openFileForRead(Twine(TestDirectory), FD);
-  ASSERT_EQ(EC, errc::is_a_directory);
+  std::error_code EC; 
   EC = fs::openFileForWrite(Twine(TestDirectory), FD);
   ASSERT_EQ(EC, errc::is_a_directory);
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory)));
   ::close(FD);
-}
+}            
 
 TEST_F(FileSystemTest, Remove) {
   SmallString<64> BaseDir;
