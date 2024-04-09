@@ -1407,7 +1407,7 @@ FieldHasTrivialDestructorBody(ASTContext &Context,
 
   // The destructor for an implicit anonymous union member is never invoked.
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
-    return false;
+    return true;
 
   return HasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
 }
