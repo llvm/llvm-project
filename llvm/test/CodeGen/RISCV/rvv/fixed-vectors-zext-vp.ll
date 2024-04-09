@@ -22,7 +22,7 @@ define <4 x i16> @vzext_v4i16_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf2 v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <4 x i16> @llvm.vp.zext.v4i16.v4i8(<4 x i8> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i16> @llvm.vp.zext.v4i16.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -46,7 +46,7 @@ define <4 x i32> @vzext_v4i32_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf4 v9, v8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.zext.v4i32.v4i8(<4 x i8> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i32> @llvm.vp.zext.v4i32.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -70,7 +70,7 @@ define <4 x i64> @vzext_v4i64_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i8(<4 x i8> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -94,7 +94,7 @@ define <4 x i32> @vzext_v4i32_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf2 v9, v8
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <4 x i32> @llvm.vp.zext.v4i32.v4i16(<4 x i16> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i32> @llvm.vp.zext.v4i32.v4i16(<4 x i16> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -118,7 +118,7 @@ define <4 x i64> @vzext_v4i64_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf4 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i16(<4 x i16> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i16(<4 x i16> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -142,7 +142,7 @@ define <4 x i64> @vzext_v4i64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i32(<4 x i32> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
+  %v = call <4 x i64> @llvm.vp.zext.v4i64.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -197,7 +197,7 @@ define <32 x i64> @vzext_v32i64_v32i32_unmasked(<32 x i32> %va, i32 zeroext %evl
 ; CHECK-NEXT:    vzext.vf2 v16, v8
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    ret
-  %v = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> %va, <32 x i1> shufflevector (<32 x i1> insertelement (<32 x i1> undef, i1 true, i32 0), <32 x i1> undef, <32 x i32> zeroinitializer), i32 %evl)
+  %v = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> %va, <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x i64> %v
 }
 

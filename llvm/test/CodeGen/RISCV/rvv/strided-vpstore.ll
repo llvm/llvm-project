@@ -460,9 +460,7 @@ define void @strided_vpstore_nxv1i8_allones_mask(<vscale x 1 x i8> %val, ptr %pt
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv1i8.p0.i32(<vscale x 1 x i8> %val, ptr %ptr, i32 %strided, <vscale x 1 x i1> %b, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv1i8.p0.i32(<vscale x 1 x i8> %val, ptr %ptr, i32 %strided, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -483,9 +481,7 @@ define void @strided_vpstore_nxv3f32_allones_mask(<vscale x 3 x float> %v, ptr %
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 3 x i1> %one, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv3f32.p0.i32(<vscale x 3 x float> %v, ptr %ptr, i32 %stride, <vscale x 3 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv3f32.p0.i32(<vscale x 3 x float> %v, ptr %ptr, i32 %stride, <vscale x 3 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -539,9 +535,7 @@ define void @strided_store_nxv16f64_allones_mask(<vscale x 16 x double> %v, ptr 
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %one, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv16f64.p0.i32(<vscale x 16 x double> %v, ptr %ptr, i32 %stride, <vscale x 16 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv16f64.p0.i32(<vscale x 16 x double> %v, ptr %ptr, i32 %stride, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
