@@ -213,8 +213,8 @@ inline bool IsCUDADeviceContext(const Scope *scope) {
 }
 
 inline bool HasCUDAAttr(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
     if (details->cudaDataAttr()) {
       return true;
     }
