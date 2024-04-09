@@ -4,7 +4,6 @@ add_header_library(
     sqrt.h
     sqrt_80_bit_long_double.h
   DEPENDS
-    libc.include.fenv
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
