@@ -234,7 +234,7 @@ level languages like Assembly, such as:
 * Sanitization
 * Debug info
 
-While its not impossible to have Assembly code that correctly provides all of
+While it's not impossible to have Assembly code that correctly provides all of
 the above, we do not wish to maintain such Assembly sources in llvm-libc.
 
 That said, there a few functions provided by llvm-libc that are more difficult
