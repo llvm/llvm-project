@@ -6689,6 +6689,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR_4b32:
   case Match_InvalidZPR_4b64:
   case Match_InvalidSVEPPRorPNRAnyReg:
+  case Match_InvalidSVEPPRorPNRBReg:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEVecLenSpecifier:
@@ -6750,7 +6751,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorListStrided4x16:
   case Match_InvalidSVEVectorListStrided4x32:
   case Match_InvalidSVEVectorListStrided4x64:
-  case Match_InvalidSVEPPRorPNRBReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())
