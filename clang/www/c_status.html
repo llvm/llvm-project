@@ -554,7 +554,7 @@ does not support <code>_Imaginary</code> type specifiers. Support for
     <tr>
       <td>Conditional normative status for Annex G</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1514.pdf">N1514</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes <a href="#annex-g">(1)</a></td>
     </tr>
     <tr>
       <td>Creation of complex value</td>
@@ -592,6 +592,9 @@ does not support <code>_Imaginary</code> type specifiers. Support for
       <td class="unknown" align="center">Unknown</td>
     </tr>
 </table>
+<span id="annex-g">(1): Clang does not implement Annex G, so our conditional support
+conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
+</span>
 </details>
 
 <h2 id="c17">C17 implementation status</h2>
