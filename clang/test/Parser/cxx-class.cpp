@@ -281,7 +281,7 @@ struct A {} ::PR41192::a; // ok, no missing ';' here  expected-warning {{extra q
 #if __cplusplus >= 201103L
 struct C;
 struct D { static C c; };
-struct C {} decltype(D())::c; // expected-error {{'decltype' cannot be used in a declarative nested name specifier}}
+struct C {} decltype(D())::c; // expected-error {{a 'decltype' specifier cannot be used in a declarative nested name specifier}}
 #endif
 }
 

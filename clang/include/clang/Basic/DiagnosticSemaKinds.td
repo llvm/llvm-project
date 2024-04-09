@@ -8299,7 +8299,7 @@ def ext_alias_template_in_declarative_nns : ExtWarn<
   "a declarative nested name specifier cannot name an alias template">,
   InGroup<DiagGroup<"alias-template-in-declaration-name">>;
 def err_computed_type_in_declarative_nns  : Error<
-  "%select{a pack indexing type|'decltype'}0 cannot be used in "
+  "a %select{pack indexing|'decltype'}0 specifier cannot be used in "
   "a declarative nested name specifier">;
 
 def err_no_typeid_with_fno_rtti : Error<
