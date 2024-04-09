@@ -39,14 +39,11 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
 
 bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
                                 OpenACCClauseKind ClauseKind) {
-  switch (ClauseKind) {
-    // FIXME: For each clause as we implement them, we can add the
-    // 'legalization' list here.
-  default:
-    // Do nothing so we can go to the 'unimplemented' diagnostic instead.
-    return true;
-  }
-  llvm_unreachable("Invalid clause kind");
+  // FIXME: For each clause as we implement them, we can add the
+  // 'legalization' list here.
+
+  // Do nothing so we can go to the 'unimplemented' diagnostic instead.
+  return true;
 }
 } // namespace
 
