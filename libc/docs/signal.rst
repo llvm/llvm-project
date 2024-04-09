@@ -1,3 +1,5 @@
+.. include:: check.rst
+
 signal.h Functions
 ==================
 
