@@ -379,6 +379,9 @@ private:
   }
 
   void lowerAllocation(const Allocation &alloc) {
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+      TODO(loc, "Allocation of variable with CUDA attributes");
+
     fir::MutableBoxValue boxAddr =
         genMutableBoxValue(converter, loc, alloc.getAllocObj());
 
