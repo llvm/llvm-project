@@ -58,7 +58,7 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     Arguments<(ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
                    TensorOf<[AnyType]>:$values)>,
     Results<(outs AnySparseTensor: $result)> {
-  let summary = "Returns a sparse tensor assembled from the given values and levels";
+  let summary = "Returns a sparse tensor assembled from the given levels and values";
 
   let description = [{
     Assembles the per-level position and coordinate arrays together with
@@ -108,7 +108,7 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
                   TensorOf<[AnyType]>:$ret_values,
                   Variadic<AnyIndexingScalarLike>:$lvl_lens,
                   AnyIndexingScalarLike:$val_len)> {
-  let summary = "Copies the values and levels of the given sparse tensor";
+  let summary = "Copies the levels and values of the given sparse tensor";
 
   let description = [{
     The disassemble operation is the inverse of `sparse_tensor::assemble`.
