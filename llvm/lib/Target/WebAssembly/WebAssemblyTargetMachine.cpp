@@ -289,6 +289,19 @@ private:
 
   bool stripThreadLocals(Module &M) {
     bool Stripped = false;
+    for (auto &F : M) {
+      for (auto &B : F) {
+        for (auto &I : make_early_inc_range(B)) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address) {
+              II->replaceAllUsesWith(II->getArgOperand(0));
+              II->eraseFromParent();
+              Stripped = true;
+            }
+          }
+        }
+      }
+    }
     for (auto &GV : M.globals()) {
       if (GV.isThreadLocal()) {
         Stripped = true;
