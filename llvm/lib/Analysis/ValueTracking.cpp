@@ -7008,6 +7008,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
     return false;
 
   if (const auto *A = dyn_cast<Argument>(V)) {
+    if (includesPoison(Kind) && A->hasAttribute(Attribute::Range))
+      return false;
     if (A->hasAttribute(Attribute::NoUndef) ||
         A->hasAttribute(Attribute::Dereferenceable) ||
         A->hasAttribute(Attribute::DereferenceableOrNull))
@@ -7055,6 +7057,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       return true;
 
     if (const auto *CB = dyn_cast<CallBase>(V)) {
+      if (includesPoison(Kind) && CB->hasRetAttr(Attribute::Range))
+        return false;
       if (CB->hasRetAttr(Attribute::NoUndef) ||
           CB->hasRetAttr(Attribute::Dereferenceable) ||
           CB->hasRetAttr(Attribute::DereferenceableOrNull))

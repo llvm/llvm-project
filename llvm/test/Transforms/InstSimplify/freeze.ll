@@ -499,7 +499,8 @@ B:
 
 define i8 @range_attr(i8 noundef range(i8 1, 0) %x) {
 ; CHECK-LABEL: @range_attr(
-; CHECK-NEXT:    ret i8 [[X:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = freeze i8 [[X1:%.*]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %y = freeze i8 %x
   ret i8 %y
@@ -510,7 +511,8 @@ declare noundef range(i8 1, 0) i8 @returns_range_helper()
 define i8 @range_return() {
 ; CHECK-LABEL: @range_return(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @returns_range_helper()
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %x = call i8 @returns_range_helper()
   %y = freeze i8 %x
@@ -522,7 +524,8 @@ declare noundef i8 @returns_i8_helper()
 define i8 @range_call() {
 ; CHECK-LABEL: @range_call(
 ; CHECK-NEXT:    [[X:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i8 [[X]]
+; CHECK-NEXT:    ret i8 [[Y]]
 ;
   %x = call range(i8 1, 0) i8 @returns_i8_helper()
   %y = freeze i8 %x
