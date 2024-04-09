@@ -1249,7 +1249,7 @@ APInt APInt::multiplicativeInverse() const {
   APInt Factor = *this;
   APInt T;
   while (!(T = *this * Factor).isOne())
-    Factor *= 2 - T;
+    Factor *= 2 - std::move(T);
   return Factor;
 }
 
