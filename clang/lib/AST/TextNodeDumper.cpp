@@ -390,14 +390,6 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
   {
     ColorScope Color(OS, ShowColors, AttrColor);
     OS << C->getClauseKind();
-
-    // Handle clauses with parens for types that have no children, likely
-    // because there is no sub expression.
-    switch (C->getClauseKind()) {
-    default:
-      // Nothing to do here.
-      break;
-    }
   }
   dumpPointer(C);
   dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
@@ -1202,8 +1194,11 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   case NOUR_Constant: OS << " non_odr_use_constant"; break;
   case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
   }
-  if (Node->refersToEnclosingVariableOrCapture())
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
+  else if (Node->refersToEnclosingVariableOrCapture())
     OS << " refers_to_enclosing_variable_or_capture";
+
   if (Node->isImmediateEscalating())
     OS << " immediate-escalating";
 }
@@ -1359,6 +1354,8 @@ void TextNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node) {
 void TextNodeDumper::VisitCXXThisExpr(const CXXThisExpr *Node) {
   if (Node->isImplicit())
     OS << " implicit";
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
   OS << " this";
 }
 

@@ -179,8 +179,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions and fix false negative when some
-  parameters are forwarded, but other aren't.
+  giving false positives for deleted functions, by fixing false negatives when only
+  a few parameters are forwarded and by ignoring parameters without a name (unused
+  arguments).
 
 - Improved :doc:`cppcoreguidelines-owning-memory
   <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
@@ -266,7 +267,8 @@ Changes in existing checks
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
-  Prefix when configured to `LowerCase`.
+  Prefix when configured to `LowerCase`. Added support for renaming designated
+  initializers.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
