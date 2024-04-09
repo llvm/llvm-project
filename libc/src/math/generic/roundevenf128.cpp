@@ -1,4 +1,4 @@
-//===-- RandUtils.cpp -----------------------------------------------------===//
+//===-- Implementation of roundevenf128 function --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RandUtils.h"
-
-#include <cstdlib>
+#include "src/math/roundevenf128.h"
+#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
-namespace testutils {
 
-int rand() { return std::rand(); }
+LLVM_LIBC_FUNCTION(float128, roundevenf128, (float128 x)) {
+  return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+}
 
-} // namespace testutils
 } // namespace LIBC_NAMESPACE

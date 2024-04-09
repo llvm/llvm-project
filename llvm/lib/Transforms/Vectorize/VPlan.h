@@ -2080,13 +2080,15 @@ public:
 class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp)
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
+                    bool IsOrdered)
       : VPSingleDefRecipe(VPDef::VPReductionSC,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R) {
+        RdxDesc(R), IsOrdered(IsOrdered) {
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2095,7 +2097,7 @@ public:
 
   VPRecipeBase *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionSC)

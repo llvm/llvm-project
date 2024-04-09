@@ -1,4 +1,4 @@
-//===-- runtime/freestanding-tools.h ----------------------------*- C++ -*-===//
+//===-- include/flang/Runtime/freestanding-tools.h --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 
 // The file defines a set of utilities/classes that might be
@@ -50,6 +51,16 @@
 #if !defined(STD_STRCPY_UNSUPPORTED) && \
     (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
 #define STD_STRCPY_UNSUPPORTED 1
+#endif
+
+#if !defined(STD_STRCMP_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_STRCMP_UNSUPPORTED 1
+#endif
+
+#if !defined(STD_TOUPPER_UNSUPPORTED) && \
+    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define STD_TOUPPER_UNSUPPORTED 1
 #endif
 
 namespace Fortran::runtime {
@@ -175,6 +186,33 @@ static inline RT_API_ATTRS char *strcpy(char *dest, const char *src) {
 #else // !STD_STRCPY_UNSUPPORTED
 using std::strcpy;
 #endif // !STD_STRCPY_UNSUPPORTED
+
+#if STD_STRCMP_UNSUPPORTED
+// Provides alternative implementation for std::strcmp(), if
+// it is not supported.
+static inline RT_API_ATTRS int strcmp(const char *lhs, const char *rhs) {
+  while (*lhs != '\0' && *lhs == *rhs) {
+    ++lhs;
+    ++rhs;
+  }
+  return static_cast<unsigned char>(*lhs) - static_cast<unsigned char>(*rhs);
+}
+#else // !STD_STRCMP_UNSUPPORTED
+using std::strcmp;
+#endif // !STD_STRCMP_UNSUPPORTED
+
+#if STD_TOUPPER_UNSUPPORTED
+// Provides alternative implementation for std::toupper(), if
+// it is not supported.
+static inline RT_API_ATTRS int toupper(int ch) {
+  if (ch >= 'a' && ch <= 'z') {
+    return ch - 'a' + 'A';
+  }
+  return ch;
+}
+#else // !STD_TOUPPER_UNSUPPORTED
+using std::toupper;
+#endif // !STD_TOUPPER_UNSUPPORTED
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_

@@ -478,6 +478,14 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           return {std::move(folded)};
         }
       } else if (IsNamedConstant(symbol)) {
+        if (symbol.name() == "numeric_storage_size" &&
+            symbol.owner().IsModule() &&
+            DEREF(symbol.owner().symbol()).name() == "iso_fortran_env") {
+          // Very special case: numeric_storage_size is not folded until
+          // it read from the iso_fortran_env module file, as its value
+          // depends on compilation options.
+          return {std::move(folded)};
+        }
         context.messages().Say(
             "Value of named constant '%s' (%s) cannot be computed as a constant value"_err_en_US,
             symbol.name(), folded.AsFortran());
