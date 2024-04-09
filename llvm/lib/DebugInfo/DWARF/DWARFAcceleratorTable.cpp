@@ -555,30 +555,19 @@ DWARFDebugNames::NameIndex::extractAbbrev(uint64_t *Offset) {
 DWARFDebugNames::DWARFDebugNamesOffsets
 dwarf::findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
                              const DWARFDebugNames::Header &Hdr) {
-  DWARFDebugNames::DWARFDebugNamesOffsets Offsets;
+  DWARFDebugNames::DWARFDebugNamesOffsets Ret;
   uint32_t DwarfSize = Hdr.Format == dwarf::DwarfFormat::DWARF64 ? 8 : 4;
-  uint64_t Offset = EndOfHeaderOffset;
-  Offsets.CUsBase = Offset;
-  Offset += Hdr.CompUnitCount * DwarfSize;
-  Offset += Hdr.LocalTypeUnitCount * DwarfSize;
-  Offset += Hdr.ForeignTypeUnitCount * 8;
-
-  Offsets.BucketsBase = Offset;
-  Offset += Hdr.BucketCount * 4;
-
-  Offsets.HashesBase = Offset;
-  if (Hdr.BucketCount > 0)
-    Offset += Hdr.NameCount * 4;
-
-  Offsets.StringOffsetsBase = Offset;
-  Offset += Hdr.NameCount * DwarfSize;
-
-  Offsets.EntryOffsetsBase = Offset;
-  Offset += Hdr.NameCount * DwarfSize;
-
-  Offset += Hdr.AbbrevTableSize;
-  Offsets.EntriesBase = Offset;
-  return Offsets;
+  Ret.CUsBase = EndOfHeaderOffset;
+  Ret.BucketsBase = Ret.CUsBase + Hdr.CompUnitCount * DwarfSize +
+                    Hdr.LocalTypeUnitCount * DwarfSize +
+                    Hdr.ForeignTypeUnitCount * 8;
+  Ret.HashesBase = Ret.BucketsBase + Hdr.BucketCount * 4;
+  Ret.StringOffsetsBase =
+      Ret.HashesBase + (Hdr.BucketCount > 0 ? Hdr.NameCount * 4 : 0);
+  Ret.EntryOffsetsBase = Ret.StringOffsetsBase + Hdr.NameCount * DwarfSize;
+  Ret.EntriesBase =
+      Ret.EntryOffsetsBase + Hdr.NameCount * DwarfSize + Hdr.AbbrevTableSize;
+  return Ret;
 }
 
 Error DWARFDebugNames::NameIndex::extract() {
