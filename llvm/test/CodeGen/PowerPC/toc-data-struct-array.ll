@@ -74,7 +74,7 @@ attributes #1 = { noinline }
 
 ; OBJ64:  Symbol {
 ; OBJ64:    Name: a
-; OBJ64-NEXT:    Value (RelocatableAddress): 0x48
+; OBJ64-NEXT:    Value (RelocatableAddress): 0x40
 ; OBJ64-NEXT:    Section: .data
 ; OBJ64-NEXT:    Type: 0x0
 ; OBJ64-NEXT:    StorageClass: C_EXT (0x2)
@@ -92,7 +92,7 @@ attributes #1 = { noinline }
 ; OBJ64-NEXT:  }
 ; OBJ64-NEXT:  Symbol {
 ; OBJ64:    Name: b
-; OBJ64-NEXT:    Value (RelocatableAddress): 0x4C
+; OBJ64-NEXT:    Value (RelocatableAddress): 0x44
 ; OBJ64-NEXT:    Section: .data
 ; OBJ64-NEXT:    Type: 0x0
 ; OBJ64-NEXT:    StorageClass: C_EXT (0x2)

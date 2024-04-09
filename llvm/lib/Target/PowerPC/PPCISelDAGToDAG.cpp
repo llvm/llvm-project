@@ -7662,8 +7662,7 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
     DAG->RemoveDeadNode(InitialADDI.getNode());
 }
 
-static bool isValidOffsetMemOp(SDNode *N, bool &IsLoad,
-                               MaybeAlign &ExtraAlign) {
+static bool isValidMemOp(SDNode *N, bool &IsLoad, MaybeAlign &ExtraAlign) {
   switch (N->getMachineOpcode()) {
   default:
     return false;
@@ -7685,7 +7684,7 @@ static bool isValidOffsetMemOp(SDNode *N, bool &IsLoad,
   case PPC::LWZ:
   case PPC::LWZ8:
     IsLoad = true;
-    break;
+    return true;
   case PPC::STD:
   case PPC::DFSTOREf64:
   case PPC::DFSTOREf32:
@@ -7699,9 +7698,11 @@ static bool isValidOffsetMemOp(SDNode *N, bool &IsLoad,
   case PPC::STH8:
   case PPC::STW:
   case PPC::STW8:
-    break;
+    return true;
   }
-  SDValue Base = N->getOperand(IsLoad ? 1 : 2);
+}
+
+static bool isMemBaseCombinable(SDValue Base) {
   if (!Base.isMachineOpcode())
     return false;
   switch (Base.getMachineOpcode()) {
@@ -7714,9 +7715,8 @@ static bool isValidOffsetMemOp(SDNode *N, bool &IsLoad,
   case PPC::ADDItocL8:
   case PPC::ADDItoc:
   case PPC::ADDItoc8:
-    break;
+    return true;
   }
-  return true;
 }
 
 static void peepholeMemOffset(SDNode *N, SelectionDAG *DAG,
@@ -7727,19 +7727,22 @@ static void peepholeMemOffset(SDNode *N, SelectionDAG *DAG,
 
   bool IsLoad = false;
   MaybeAlign ExtraAlign;
-  if (!isValidOffsetMemOp(N, IsLoad, ExtraAlign))
+  if (!isValidMemOp(N, IsLoad, ExtraAlign))
     return;
 
   SDValue MemBase = N->getOperand(IsLoad ? 1 : 2);
-  unsigned BaseOpc = MemBase.getMachineOpcode();
-  auto *MemOffset = dyn_cast<ConstantSDNode>(N->getOperand(IsLoad ? 0 : 1));
+  if (!isMemBaseCombinable(MemBase))
+    return;
 
   // Only additions with constant offsets will be folded.
+  auto *MemOffset = dyn_cast<ConstantSDNode>(N->getOperand(IsLoad ? 0 : 1));
   if (!MemOffset)
     return;
-  assert(MemBase.getNumOperands() == 2 && "Invalid base of memop with offset!");
 
   SDValue ImmOp, RegOp;
+  unsigned BaseOpc = MemBase.getMachineOpcode();
+  assert(MemBase.getNumOperands() == 2 && "Invalid base of memop with offset!");
+
   // ADDItoc and ADDItoc8 ('la') puts the register at the second operand.
   if (BaseOpc == PPC::ADDItoc || BaseOpc == PPC::ADDItoc8) {
     ImmOp = MemBase.getOperand(0);
