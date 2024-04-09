@@ -8,6 +8,7 @@
 // This implements Semantic Analysis for SYCL constructs.
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -18,30 +19,32 @@ using namespace clang;
 // SYCL device specific diagnostics implementation
 // -----------------------------------------------------------------------------
 
-Sema::SemaDiagnosticBuilder Sema::SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                                       unsigned DiagID) {
+SemaSYCL::SemaSYCL(Sema &S) : SemaBase(S) {}
+
+Sema::SemaDiagnosticBuilder SemaSYCL::SYCLDiagIfDeviceCode(SourceLocation Loc,
+                                                           unsigned DiagID) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL compilation");
-  FunctionDecl *FD = dyn_cast<FunctionDecl>(getCurLexicalContext());
+  FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.getCurLexicalContext());
   SemaDiagnosticBuilder::Kind DiagKind = [this, FD] {
     if (!FD)
       return SemaDiagnosticBuilder::K_Nop;
-    if (getEmissionStatus(FD) == Sema::FunctionEmissionStatus::Emitted)
+    if (SemaRef.getEmissionStatus(FD) == Sema::FunctionEmissionStatus::Emitted)
       return SemaDiagnosticBuilder::K_ImmediateWithCallStack;
     return SemaDiagnosticBuilder::K_Deferred;
   }();
-  return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, *this);
+  return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, SemaRef);
 }
 
-static bool isZeroSizedArray(Sema &SemaRef, QualType Ty) {
-  if (const auto *CAT = SemaRef.getASTContext().getAsConstantArrayType(Ty))
+static bool isZeroSizedArray(SemaSYCL &S, QualType Ty) {
+  if (const auto *CAT = S.getASTContext().getAsConstantArrayType(Ty))
     return CAT->isZeroSize();
   return false;
 }
 
-void Sema::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                      llvm::DenseSet<QualType> Visited,
-                                      ValueDecl *DeclToCheck) {
+void SemaSYCL::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
+                                          llvm::DenseSet<QualType> Visited,
+                                          ValueDecl *DeclToCheck) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL compilation");
   // Emit notes only for the first discovered declaration of unsupported type
@@ -129,4 +132,27 @@ void Sema::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
       llvm::copy(RecDecl->fields(), std::back_inserter(StackForRecursion));
     }
   } while (!StackForRecursion.empty());
+}
+
+ExprResult SemaSYCL::BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
+                                                   SourceLocation LParen,
+                                                   SourceLocation RParen,
+                                                   TypeSourceInfo *TSI) {
+  return SYCLUniqueStableNameExpr::Create(getASTContext(), OpLoc, LParen,
+                                          RParen, TSI);
+}
+
+ExprResult SemaSYCL::ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
+                                                   SourceLocation LParen,
+                                                   SourceLocation RParen,
+                                                   ParsedType ParsedTy) {
+  TypeSourceInfo *TSI = nullptr;
+  QualType Ty = SemaRef.GetTypeFromParser(ParsedTy, &TSI);
+
+  if (Ty.isNull())
+    return ExprError();
+  if (!TSI)
+    TSI = getASTContext().getTrivialTypeSourceInfo(Ty, LParen);
+
+  return BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
 }
