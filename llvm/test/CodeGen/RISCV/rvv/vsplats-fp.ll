@@ -25,9 +25,7 @@ define <vscale x 8 x half> @vsplat_zero_nxv8f16() {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x half> poison, half zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x half> %head, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x half> %splat
+  ret <vscale x 8 x half> splat (half zeroinitializer)
 }
 
 define <vscale x 8 x float> @vsplat_nxv8f32(float %f) {
@@ -47,9 +45,7 @@ define <vscale x 8 x float> @vsplat_zero_nxv8f32() {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x float> poison, float zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x float> %splat
+  ret <vscale x 8 x float> splat (float zeroinitializer)
 }
 
 define <vscale x 8 x double> @vsplat_nxv8f64(double %f) {
@@ -69,9 +65,7 @@ define <vscale x 8 x double> @vsplat_zero_nxv8f64() {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x double> poison, double zeroinitializer, i32 0
-  %splat = shufflevector <vscale x 8 x double> %head, <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer
-  ret <vscale x 8 x double> %splat
+  ret <vscale x 8 x double> splat (double zeroinitializer)
 }
 
 ; Test that we fold this to a vlse with 0 stride.
