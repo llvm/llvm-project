@@ -8,6 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2m1f.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -23,17 +24,17 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 TEST_F(LlvmLibcExp2m1fTest, TrickyInputs) {
   constexpr LIBC_NAMESPACE::cpp::array<float, 10> INPUTS = {
       // EXP2M1F_EXCEPTS_LO
-      0x1.36dc8ep-36f,
-      0x1.224936p-19f,
-      0x1.d16d2p-20f,
-      0x1.17949ep-14f,
-      -0x1.9c3e1ep-38f,
-      -0x1.4d89b4p-32f,
-      -0x1.a6eac4p-10f,
-      -0x1.e7526ep-6f,
+      0x1.36dc8ep-36,
+      0x1.224936p-19,
+      0x1.d16d2p-20,
+      0x1.17949ep-14,
+      -0x1.9c3e1ep-38,
+      -0x1.4d89b4p-32,
+      -0x1.a6eac4p-10,
+      -0x1.e7526ep-6,
       // EXP2M1F_EXCEPTS_HI
-      0x1.16a972p-1f,
-      -0x1.9f12acp-5f,
+      0x1.16a972p-1,
+      -0x1.9f12acp-5,
   };
 
   for (float x : INPUTS) {

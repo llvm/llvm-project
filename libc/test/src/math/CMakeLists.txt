@@ -1019,7 +1019,6 @@ add_fp_unittest(
   SRCS
     exp2m1f_test.cpp
   DEPENDS
-    libc.hdr.math_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f
     libc.src.__support.CPP.array
