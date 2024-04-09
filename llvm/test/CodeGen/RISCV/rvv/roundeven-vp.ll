@@ -86,9 +86,7 @@ define <vscale x 1 x half> @vp_roundeven_nxv1f16_unmasked(<vscale x 1 x half> %v
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x half> @llvm.vp.roundeven.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x half> @llvm.vp.roundeven.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x half> %v
 }
 
@@ -170,9 +168,7 @@ define <vscale x 2 x half> @vp_roundeven_nxv2f16_unmasked(<vscale x 2 x half> %v
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x half> @llvm.vp.roundeven.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x half> @llvm.vp.roundeven.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x half> %v
 }
 
@@ -256,9 +252,7 @@ define <vscale x 4 x half> @vp_roundeven_nxv4f16_unmasked(<vscale x 4 x half> %v
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x half> @llvm.vp.roundeven.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x half> @llvm.vp.roundeven.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x half> %v
 }
 
@@ -344,9 +338,7 @@ define <vscale x 8 x half> @vp_roundeven_nxv8f16_unmasked(<vscale x 8 x half> %v
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x half> @llvm.vp.roundeven.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x half> @llvm.vp.roundeven.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x half> %v
 }
 
@@ -432,9 +424,7 @@ define <vscale x 16 x half> @vp_roundeven_nxv16f16_unmasked(<vscale x 16 x half>
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x half> @llvm.vp.roundeven.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x half> @llvm.vp.roundeven.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x half> %v
 }
 
@@ -654,9 +644,7 @@ define <vscale x 1 x float> @vp_roundeven_nxv1f32_unmasked(<vscale x 1 x float> 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x float> @llvm.vp.roundeven.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.roundeven.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x float> %v
 }
 
@@ -698,9 +686,7 @@ define <vscale x 2 x float> @vp_roundeven_nxv2f32_unmasked(<vscale x 2 x float> 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x float> @llvm.vp.roundeven.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x float> @llvm.vp.roundeven.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %v
 }
 
@@ -744,9 +730,7 @@ define <vscale x 4 x float> @vp_roundeven_nxv4f32_unmasked(<vscale x 4 x float> 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x float> @llvm.vp.roundeven.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x float> @llvm.vp.roundeven.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x float> %v
 }
 
@@ -790,9 +774,7 @@ define <vscale x 8 x float> @vp_roundeven_nxv8f32_unmasked(<vscale x 8 x float> 
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x float> @llvm.vp.roundeven.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x float> @llvm.vp.roundeven.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x float> %v
 }
 
@@ -836,9 +818,7 @@ define <vscale x 16 x float> @vp_roundeven_nxv16f32_unmasked(<vscale x 16 x floa
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x float> @llvm.vp.roundeven.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x float> @llvm.vp.roundeven.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x float> %v
 }
 
@@ -880,9 +860,7 @@ define <vscale x 1 x double> @vp_roundeven_nxv1f64_unmasked(<vscale x 1 x double
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %v = call <vscale x 1 x double> @llvm.vp.roundeven.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x double> @llvm.vp.roundeven.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x double> %v
 }
 
@@ -926,9 +904,7 @@ define <vscale x 2 x double> @vp_roundeven_nxv2f64_unmasked(<vscale x 2 x double
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %v = call <vscale x 2 x double> @llvm.vp.roundeven.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x double> @llvm.vp.roundeven.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x double> %v
 }
 
@@ -972,9 +948,7 @@ define <vscale x 4 x double> @vp_roundeven_nxv4f64_unmasked(<vscale x 4 x double
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x double> @llvm.vp.roundeven.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x double> @llvm.vp.roundeven.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x double> %v
 }
 
@@ -1018,9 +992,7 @@ define <vscale x 7 x double> @vp_roundeven_nxv7f64_unmasked(<vscale x 7 x double
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 7 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> poison, <vscale x 7 x i32> zeroinitializer
-  %v = call <vscale x 7 x double> @llvm.vp.roundeven.nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x i1> %m, i32 %evl)
+  %v = call <vscale x 7 x double> @llvm.vp.roundeven.nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 7 x double> %v
 }
 
@@ -1064,9 +1036,7 @@ define <vscale x 8 x double> @vp_roundeven_nxv8f64_unmasked(<vscale x 8 x double
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %v = call <vscale x 8 x double> @llvm.vp.roundeven.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x double> @llvm.vp.roundeven.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x double> %v
 }
 
@@ -1179,8 +1149,6 @@ define <vscale x 16 x double> @vp_roundeven_nxv16f64_unmasked(<vscale x 16 x dou
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v24, v8, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x double> @llvm.vp.roundeven.nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x double> @llvm.vp.roundeven.nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x double> %v
 }
