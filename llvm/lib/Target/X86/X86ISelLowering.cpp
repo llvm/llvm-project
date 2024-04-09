@@ -29346,7 +29346,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (SDValue V = LowerShiftByScalarImmediate(Op, DAG, Subtarget))
     return V;
 
-  if (!supportedVectorVarShift(VT, Subtarget, Opc) &&
+  if (!supportedVectorVarShift(VT, Subtarget, Opc) ||
       !Subtarget.preferPerEltVectorShift())
     if (SDValue V = LowerShiftByScalarVariable(Op, DAG, Subtarget))
       return V;

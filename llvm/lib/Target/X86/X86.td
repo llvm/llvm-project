@@ -601,7 +601,7 @@ def TuningPreferShiftShuffle : SubtargetFeature<"faster-shift-than-shuffle",
 
 def TuningPreferPerEltVectorShift : SubtargetFeature<"tuning-fast-per-element-vector-shift",
                                         "PreferPerEltVectorShift", "true",
-                                        "Vector per element shifts are faster (1/cycle latency)">;
+                                        "Vector per element shifts are faster">;
 
 def TuningFastImmVectorShift : SubtargetFeature<"tuning-fast-imm-vector-shift",
                                    "FastImmVectorShift", "true",
