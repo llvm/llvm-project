@@ -200,6 +200,47 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::GetProcessInfo;
 
 %feature("docstring", "
+    Get the current address mask in this Process of a given type.
+    There are lldb.eAddressMaskTypeCode and lldb.eAddressMaskTypeData address
+    masks, and on most Targets, the the Data address mask is more general
+    because there are no alignment restrictions, as there can be with Code
+    addresses.
+    lldb.eAddressMaskTypeAny may be used to get the most general mask.
+    The bits which are not used for addressing are set to 1 in the returned
+    mask.
+    In an unusual environment with different address masks for high and low
+    memory, this may also be specified.  This is uncommon, default is
+    lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::GetAddressMask;
+
+%feature("docstring", "
+    Set the current address mask in this Process for a given type,
+    lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.  Bits that are not
+    used for addressing should be set to 1 in the mask.
+    When setting all masks, lldb.eAddressMaskTypeAll may be specified.
+    In an unusual environment with different address masks for high and low
+    memory, this may also be specified.  This is uncommon, default is
+    lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::SetAddressMask;
+
+%feature("docstring", "
+    Set the number of low bits relevant for addressing in this Process 
+    for a given type, lldb.eAddressMaskTypeCode or lldb.eAddressMaskTypeData.
+    When setting all masks, lldb.eAddressMaskTypeAll may be specified.
+    In an unusual environment with different address masks for high and low
+    memory, the address range  may also be specified.  This is uncommon, 
+    default is lldb.eAddressMaskRangeLow."
+) lldb::SBProcess::SetAddressableBits;
+
+%feature("docstring", "
+    Given a virtual address, clear the bits that are not used for addressing
+    (and may be used for metadata, memory tagging, point authentication, etc).
+    By default the most general mask, lldb.eAddressMaskTypeAny is used to 
+    process the address, but lldb.eAddressMaskTypeData and 
+    lldb.eAddressMaskTypeCode may be specified if the type of address is known."
+) lldb::SBProcess::FixAddress;
+
+%feature("docstring", "
     Allocates a block of memory within the process, with size and
     access permissions specified in the arguments. The permissions
     argument is an or-combination of zero or more of
