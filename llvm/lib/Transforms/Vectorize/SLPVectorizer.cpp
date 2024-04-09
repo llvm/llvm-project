@@ -11755,8 +11755,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
               VecOp = TE->VectorizedValue;
           if (!Vec1) {
             Vec1 = VecOp;
-          } else if (Vec1 != EI->getVectorOperand()) {
-            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+          } else if (Vec1 != VecOp) {
+            assert((!Vec2 || Vec2 == VecOp) &&
                    "Expected only 1 or 2 vectors shuffle.");
             Vec2 = VecOp;
           }
@@ -11796,8 +11796,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &=
-              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
+          IsUsedInExpr &= FindReusedSplat(
+              VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
           ShuffleBuilder.add(*TEs.front(), VecMask);
           if (TEs.front()->VectorizedValue)
             IsNonPoisoned &=
