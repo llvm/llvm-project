@@ -1842,6 +1842,7 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   E->setLocation(readSourceLocation());
   E->setImplicit(Record.readInt());
+  E->setCapturedByCopyInLambdaWithExplicitObjectParameter(Record.readInt());
 }
 
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
