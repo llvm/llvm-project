@@ -3680,12 +3680,11 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
       llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
       // FIXME: External StdLib VTables should be constant as well, but changing
       //        it *might* constitute a very subtle ABI break.
-      VTable = new llvm::GlobalVariable(CGM.getModule(), Ty,
-                                        /*isConstant=*/false,
-                                        llvm::GlobalVariable::ExternalLinkage,
-                                        nullptr, VTableName, nullptr,
-                                        llvm::GlobalValue::NotThreadLocal,
-                                        CGM.GlobalsInt8PtrTy->getAddressSpace());
+      VTable = new llvm::GlobalVariable(
+        CGM.getModule(), Ty,
+        /*isConstant=*/false, llvm::GlobalVariable::ExternalLinkage, nullptr,
+        VTableName, nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.GlobalsInt8PtrTy->getAddressSpace());
     }
   }
 

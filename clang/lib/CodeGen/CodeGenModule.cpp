@@ -3582,10 +3582,11 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
       isExternallyVisible(TPO->getLinkageAndVisibility().getLinkage())
           ? llvm::GlobalValue::LinkOnceODRLinkage
           : llvm::GlobalValue::InternalLinkage;
-  auto *GV = new llvm::GlobalVariable(getModule(), Init->getType(),
-                                      /*isConstant=*/true, Linkage, Init, Name,
-                                      nullptr, llvm::GlobalValue::NotThreadLocal,
-                                      GlobalsInt8PtrTy->getAddressSpace());
+  auto *GV = new llvm::GlobalVariable(
+      getModule(), Init->getType(),
+      /*isConstant=*/true, Linkage, Init, Name, nullptr,
+      llvm::GlobalValue::NotThreadLocal,
+      GlobalsInt8PtrTy->getAddressSpace());
   setGVProperties(GV, TPO);
   if (supportsCOMDAT())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -4552,10 +4553,10 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     IsIncompleteFunction = true;
   }
 
-  llvm::Function *F = llvm::Function::Create(
-      FTy, llvm::Function::ExternalLinkage,
-      getDataLayout().getProgramAddressSpace(),
-      Entry ? StringRef() : MangledName, &getModule());
+  llvm::Function *F =
+      llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
+                             getDataLayout().getProgramAddressSpace(),
+                             Entry ? StringRef() : MangledName, &getModule());
 
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
@@ -5025,10 +5026,9 @@ llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  GV = new llvm::GlobalVariable(getModule(), Ty, /*isConstant=*/true,
-                                Linkage, nullptr, Name, nullptr,
-                                llvm::GlobalValue::NotThreadLocal,
-                                GlobalsInt8PtrTy->getAddressSpace());
+  GV = new llvm::GlobalVariable(
+    getModule(), Ty, /*isConstant=*/true, Linkage, nullptr, Name, nullptr,
+    llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
 
   if (OldGV) {
     // Replace occurrences of the old variable if needed.
