@@ -12850,10 +12850,8 @@ define <4 x i32> @mgather_broadcast_load_unmasked(ptr %base) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), zero
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
   %ptrs = getelementptr inbounds i8, ptr %base, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %allones, <4 x i32> poison)
+  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
   ret <4 x i32> %v
 }
 
@@ -12864,11 +12862,9 @@ define <4 x i32> @mgather_broadcast_load_unmasked2(ptr %base) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), zero
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
   %ptrhead = insertelement <4 x ptr> poison, ptr %base, i32 0
   %ptrs = shufflevector <4 x ptr> %ptrhead, <4 x ptr> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %allones, <4 x i32> poison)
+  %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
   ret <4 x i32> %v
 }
 
@@ -12878,8 +12874,6 @@ define <4 x i32> @mgather_broadcast_load_masked(ptr %base, <4 x i1> %m) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
   %ptrs = getelementptr inbounds i8, ptr %base, <4 x i32> zeroinitializer
   %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> %m, <4 x i32> poison)
   ret <4 x i32> %v
