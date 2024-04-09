@@ -255,8 +255,7 @@ using SimdLoopClauseOps =
 using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                         NowaitClauseOps, PrivateClauseOps>;
 
-// TODO `defaultmap`, `has_device_addr`, `is_device_ptr`, `uses_allocators`
-// clauses.
+// TODO `defaultmap`, `uses_allocators` clauses.
 using TargetClauseOps =
     detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
                     IfClauseOps, InReductionClauseOps, MapClauseOps,
