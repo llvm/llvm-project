@@ -4961,6 +4961,8 @@ AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
 /// capturesVar(hasName("x")) matches `x` and `x = 1`.
 AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
               InnerMatcher) {
+  if (!Node.capturesVariable())
+    return false;
   auto *capturedVar = Node.getCapturedVar();
   return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
 }
