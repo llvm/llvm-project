@@ -1508,9 +1508,7 @@ public:
     return iter;
   }
 
-  friend Derived operator+(difference_type i, Derived iter) {
-    return iter + i;
-  }
+  friend Derived operator+(difference_type i, Derived iter) { return iter + i; }
 
   friend bool operator==(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ == rhs.iter_; }
   friend bool operator!=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ != rhs.iter_; }
