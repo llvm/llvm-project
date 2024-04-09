@@ -30,7 +30,7 @@ static cl::opt<int>
 static cl::opt<float>
     RandomRate("lower-allow-check-random-rate",
                cl::desc("Probability value in the range [0.0, 1.0] of "
-                        "unconditional pseudo-random checks removal."));
+                        "unconditional pseudo-random checks."));
 
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
@@ -48,7 +48,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     if (!Rng)
       Rng = F.getParent()->createRNG(F.getName());
     std::bernoulli_distribution D(RandomRate);
-    return D(*Rng);
+    return !D(*Rng);
   };
 
   for (BasicBlock &BB : F) {

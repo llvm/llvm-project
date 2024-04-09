@@ -186,9 +186,9 @@ static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate",
+    ClRandomSkipRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to skip instrumentation of a function."));
+                              "to keep instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -1496,7 +1496,7 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
   if (ClRandomSkipRate.getNumOccurrences()) {
     std::bernoulli_distribution D(ClRandomSkipRate);
-    return (D(*Rng));
+    return !D(*Rng);
   }
   if (!ClHotPercentileCutoff.getNumOccurrences())
     return false;
