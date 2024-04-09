@@ -2529,7 +2529,7 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
 
   mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
       Loc, Addr.getElementType(), Addr.getPointer(), /* deref */ false,
-      Volatile);
+      Volatile, ::mlir::cir::MemOrderAttr{});
 
   if (isNontemporal) {
     llvm_unreachable("NYI");

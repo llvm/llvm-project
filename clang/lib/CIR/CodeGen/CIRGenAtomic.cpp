@@ -325,6 +325,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
+  auto orderAttr = mlir::cir::MemOrderAttr::get(builder.getContext(), Order);
   mlir::cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
 
@@ -357,7 +358,13 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load_n:
   case AtomicExpr::AO__scoped_atomic_load: {
-    llvm_unreachable("NYI");
+    auto *load = builder.createLoad(loc, Ptr).getDefiningOp();
+    // FIXME(cir): add scope information.
+    assert(!UnimplementedFeature::syncScopeID());
+    load->setAttr("mem_order", orderAttr);
+    if (E->isVolatile())
+      load->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
+    builder.createStore(loc, load->getResult(0), Dest);
     return;
   }
 
@@ -499,7 +506,6 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   SmallVector<mlir::Value> atomicOperands = {Ptr.getPointer(), LoadVal1};
   SmallVector<mlir::Type> atomicResTys = {
       Ptr.getPointer().getType().cast<mlir::cir::PointerType>().getPointee()};
-  auto orderAttr = mlir::cir::MemOrderAttr::get(builder.getContext(), Order);
   auto RMWI = builder.create(loc, builder.getStringAttr(Op), atomicOperands,
                              atomicResTys, {});
 
@@ -601,7 +607,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__scoped_atomic_load:
-    llvm_unreachable("NYI");
+    Dest = buildPointerWithAlignment(E->getVal1());
     break;
 
   case AtomicExpr::AO__atomic_store:
@@ -716,7 +722,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       Val2 = Atomics.convertToAtomicIntPointer(Val2);
   }
   if (Dest.isValid()) {
-    llvm_unreachable("NYI");
+    if (ShouldCastToIntPtrTy)
+      Dest = Atomics.castToAtomicIntPointer(Dest);
   } else if (E->isCmpXChg())
     llvm_unreachable("NYI");
   else if (!RValTy->isVoidType()) {
@@ -1087,9 +1094,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
         break;
       }
     }
-    if (RValTy->isVoidType()) {
-      llvm_unreachable("NYI");
-    }
+    if (RValTy->isVoidType())
+      return RValue::get(nullptr);
 
     return convertTempToRValue(Dest.withElementType(convertTypeForMem(RValTy)),
                                RValTy, E->getExprLoc());

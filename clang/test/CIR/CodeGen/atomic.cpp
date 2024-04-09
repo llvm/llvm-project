@@ -3,6 +3,9 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
+// Available on resource dir.
+#include <stdatomic.h>
+
 typedef struct _a {
   _Atomic(int) d;
 } at;
@@ -10,11 +13,6 @@ typedef struct _a {
 void m() { at y; }
 
 // CHECK: ![[A:.*]] = !cir.struct<struct "_a" {!cir.int<s, 32>}>
-
-enum memory_order {
-  memory_order_relaxed, memory_order_consume, memory_order_acquire,
-  memory_order_release, memory_order_acq_rel, memory_order_seq_cst
-};
 
 int basic_binop_fetch(int *i) {
   return __atomic_add_fetch(i, 1, memory_order_seq_cst);
@@ -139,3 +137,45 @@ void min_max_fetch(int *i) {
 // LLVM: %[[MIN:.*]] = atomicrmw min ptr
 // LLVM: %[[ICMP_MIN:.*]] = icmp slt i32 %[[MIN]]
 // LLVM: select i1 %[[ICMP_MIN]], i32 %[[MIN]]
+
+int fi1(_Atomic(int) *i) {
+  return __c11_atomic_load(i, memory_order_seq_cst);
+}
+
+// CHECK: cir.func @_Z3fi1PU7_Atomici
+// CHECK: cir.load atomic(seq_cst)
+
+// LLVM-LABEL: @_Z3fi1PU7_Atomici
+// LLVM: load atomic i32, ptr {{.*}} seq_cst, align 4
+
+int fi1a(int *i) {
+  int v;
+  __atomic_load(i, &v, memory_order_seq_cst);
+  return v;
+}
+
+// CHECK-LABEL: @_Z4fi1aPi
+// CHECK: cir.load atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi1aPi
+// LLVM: load atomic i32, ptr {{.*}} seq_cst, align 4
+
+int fi1b(int *i) {
+  return __atomic_load_n(i, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z4fi1bPi
+// CHECK: cir.load atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi1bPi
+// LLVM: load atomic i32, ptr {{.*}} seq_cst, align 4
+
+int fi1c(atomic_int *i) {
+  return atomic_load(i);
+}
+
+// CHECK-LABEL: @_Z4fi1cPU7_Atomici
+// CHECK: cir.load atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi1cPU7_Atomici
+// LLVM: load atomic i32, ptr {{.*}} seq_cst, align 4

@@ -393,7 +393,8 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       loc,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
+        auto currentElement =
+            b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr.getResult());
         mlir::Type boolTy = mlir::cir::BoolType::get(b.getContext());
         auto cmp = builder.create<mlir::cir::CmpOp>(
             loc, boolTy, mlir::cir::CmpOpKind::eq, currentElement, end);
@@ -401,7 +402,8 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       },
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
+        auto currentElement =
+            b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr.getResult());
 
         CallOp ctorCall;
         op->walk([&](CallOp c) { ctorCall = c; });
