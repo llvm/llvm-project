@@ -143,6 +143,9 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder);
 static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
@@ -738,6 +741,18 @@ static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
     return Fail;
   Inst.addOperand(
       MCOperand::createReg(MatrixZATileDecoderTable[NumBitsForTile][RegNo]));
+  return Success;
+}
+
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPRorPNRRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }
 

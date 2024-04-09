@@ -112,6 +112,7 @@ private:
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
+  bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldTruncFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
@@ -134,6 +135,14 @@ private:
   }
 };
 } // namespace
+
+/// Return the source operand of a potentially bitcasted value. If there is no
+/// bitcast, return the input value itself.
+static Value *peekThroughBitcasts(Value *V) {
+  while (auto *BitCast = dyn_cast<BitCastInst>(V))
+    V = BitCast->getOperand(0);
+  return V;
+}
 
 static bool canWidenLoad(LoadInst *Load, const TargetTransformInfo &TTI) {
   // Do not widen load if atomic/volatile or under asan/hwasan/memtag/tsan.
@@ -751,8 +760,8 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
 
   // bitcast (shuf V0, V1, MaskC) --> shuf (bitcast V0), (bitcast V1), MaskC'
   ++NumShufOfBitcast;
-  Value *CastV0 = Builder.CreateBitCast(V0, NewShuffleTy);
-  Value *CastV1 = Builder.CreateBitCast(V1, NewShuffleTy);
+  Value *CastV0 = Builder.CreateBitCast(peekThroughBitcasts(V0), NewShuffleTy);
+  Value *CastV1 = Builder.CreateBitCast(peekThroughBitcasts(V1), NewShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
   replaceValue(I, *Shuf);
   return true;
@@ -1424,6 +1433,80 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   return true;
 }
 
+/// Try to convert "shuffle (castop), (castop)" with a shared castop operand
+/// into "castop (shuffle)".
+bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
+  Value *V0, *V1;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
+                           m_Mask(Mask))))
+    return false;
+
+  auto *C0 = dyn_cast<CastInst>(V0);
+  auto *C1 = dyn_cast<CastInst>(V1);
+  if (!C0 || !C1)
+    return false;
+
+  Instruction::CastOps Opcode = C0->getOpcode();
+  if (Opcode == Instruction::BitCast || C0->getSrcTy() != C1->getSrcTy())
+    return false;
+
+  // Handle shuffle(zext_nneg(x), sext(y)) -> sext(shuffle(x,y)) folds.
+  if (Opcode != C1->getOpcode()) {
+    if (match(C0, m_SExtLike(m_Value())) && match(C1, m_SExtLike(m_Value())))
+      Opcode = Instruction::SExt;
+    else
+      return false;
+  }
+
+  auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *CastDstTy = dyn_cast<FixedVectorType>(C0->getDestTy());
+  auto *CastSrcTy = dyn_cast<FixedVectorType>(C0->getSrcTy());
+  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy)
+    return false;
+  assert(CastDstTy->getElementCount() == CastSrcTy->getElementCount() &&
+         "Unexpected src/dst element counts");
+
+  auto *NewShuffleDstTy =
+      FixedVectorType::get(CastSrcTy->getScalarType(), Mask.size());
+
+  // Try to replace a castop with a shuffle if the shuffle is not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  InstructionCost OldCost =
+      TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
+                           TTI::CastContextHint::None, CostKind) +
+      TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
+                           TTI::CastContextHint::None, CostKind);
+  OldCost +=
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy, Mask,
+                         CostKind, 0, nullptr, std::nullopt, &I);
+
+  InstructionCost NewCost = TTI.getShuffleCost(
+      TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, Mask, CostKind);
+  NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
+                                  TTI::CastContextHint::None, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found a shuffle feeding two casts: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost > OldCost)
+    return false;
+
+  Value *Shuf =
+      Builder.CreateShuffleVector(C0->getOperand(0), C1->getOperand(0), Mask);
+  Value *Cast = Builder.CreateCast(Opcode, Shuf, ShuffleDstTy);
+
+  // Intersect flags from the old casts.
+  if (auto *NewInst = dyn_cast<Instruction>(Cast)) {
+    NewInst->copyIRFlags(C0);
+    NewInst->andIRFlags(C1);
+  }
+
+  replaceValue(I, *Cast);
+  return true;
+}
+
 /// Given a commutative reduction, the order of the input lanes does not alter
 /// the results. We can use this to remove certain shuffles feeding the
 /// reduction, removing the need to shuffle at all.
@@ -1978,6 +2061,7 @@ bool VectorCombine::run() {
         break;
       case Instruction::ShuffleVector:
         MadeChange |= foldShuffleOfBinops(I);
+        MadeChange |= foldShuffleOfCastops(I);
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:

@@ -23,6 +23,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -2049,6 +2050,16 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
   }
 
   Value *OrOp0 = Or->getOperand(0), *OrOp1 = Or->getOperand(1);
+
+  // (icmp eq/ne (or disjoint x, C0), C1)
+  //    -> (icmp eq/ne x, C0^C1)
+  if (Cmp.isEquality() && match(OrOp1, m_ImmConstant()) &&
+      cast<PossiblyDisjointInst>(Or)->isDisjoint()) {
+    Value *NewC =
+        Builder.CreateXor(OrOp1, ConstantInt::get(OrOp1->getType(), C));
+    return new ICmpInst(Pred, OrOp0, NewC);
+  }
+
   const APInt *MaskC;
   if (match(OrOp1, m_APInt(MaskC)) && Cmp.isEquality()) {
     if (*MaskC == C && (C + 1).isPowerOf2()) {
@@ -3453,6 +3464,11 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
       if (Value *NegVal = dyn_castNegVal(BOp0))
         return new ICmpInst(Pred, NegVal, BOp1);
       if (BO->hasOneUse()) {
+        // (add nuw A, B) != 0 -> (or A, B) != 0
+        if (match(BO, m_NUWAdd(m_Value(), m_Value()))) {
+          Value *Or = Builder.CreateOr(BOp0, BOp1);
+          return new ICmpInst(Pred, Or, Constant::getNullValue(BO->getType()));
+        }
         Value *Neg = Builder.CreateNeg(BOp1);
         Neg->takeName(BO);
         return new ICmpInst(Pred, BOp0, Neg);

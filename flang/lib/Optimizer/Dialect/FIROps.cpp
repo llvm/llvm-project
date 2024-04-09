@@ -3677,10 +3677,19 @@ fir::parseSelector(mlir::OpAsmParser &parser, mlir::OperationState &result,
   return mlir::success();
 }
 
-mlir::func::FuncOp
-fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
-                  llvm::StringRef name, mlir::FunctionType type,
-                  llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
+                                     llvm::StringRef name,
+                                     mlir::FunctionType type,
+                                     llvm::ArrayRef<mlir::NamedAttribute> attrs,
+                                     const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
+      return f;
+    }
   if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name))
     return f;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -3692,7 +3701,16 @@ fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
 
 fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::Type type,
-                                  llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+                                  llvm::ArrayRef<mlir::NamedAttribute> attrs,
+                                  const mlir::SymbolTable *symbolTable) {
+  if (symbolTable)
+    if (auto g = symbolTable->lookup<fir::GlobalOp>(name)) {
+#ifdef EXPENSIVE_CHECKS
+      assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
+             "symbolTable and module out of sync");
+#endif
+      return g;
+    }
   if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
     return g;
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -3814,6 +3832,18 @@ bool fir::anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr) {
     if (func.getArgAttr(i, attr))
       return true;
   return false;
+}
+
+std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
+  if (auto *definingOp = value.getDefiningOp()) {
+    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
+      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
+        return intAttr.getInt();
+    if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(definingOp))
+      if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
+        return attr.getValue().getSExtValue();
+  }
+  return {};
 }
 
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {

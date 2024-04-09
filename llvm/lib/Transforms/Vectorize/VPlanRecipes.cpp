@@ -286,6 +286,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
+  case VPInstruction::ExplicitVectorLength:
     return true;
   default:
     return false;
@@ -386,6 +387,33 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
+  case VPInstruction::ExplicitVectorLength: {
+    // Compute EVL
+    auto GetEVL = [=](VPTransformState &State, Value *AVL) {
+      assert(AVL->getType()->isIntegerTy() &&
+             "Requested vector length should be an integer.");
+
+      // TODO: Add support for MaxSafeDist for correct loop emission.
+      assert(State.VF.isScalable() && "Expected scalable vector factor.");
+      Value *VFArg = State.Builder.getInt32(State.VF.getKnownMinValue());
+
+      Value *EVL = State.Builder.CreateIntrinsic(
+          State.Builder.getInt32Ty(), Intrinsic::experimental_get_vector_length,
+          {AVL, VFArg, State.Builder.getTrue()});
+      return EVL;
+    };
+    // TODO: Restructure this code with an explicit remainder loop, vsetvli can
+    // be outside of the main loop.
+    assert(Part == 0 && "No unrolling expected for predicated vectorization.");
+    // Compute VTC - IV as the AVL (requested vector length).
+    Value *Index = State.get(getOperand(0), VPIteration(0, 0));
+    Value *TripCount = State.get(getOperand(1), VPIteration(0, 0));
+    Value *AVL = State.Builder.CreateSub(TripCount, Index);
+    Value *EVL = GetEVL(State, AVL);
+    assert(!State.EVL && "multiple EVL recipes");
+    State.EVL = this;
+    return EVL;
+  }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
@@ -455,8 +483,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
 
-    State.setDebugLocFrom(getDebugLoc());
-
     VPValue *LoopExitingDef = getOperand(1);
     Type *PhiTy = OrigPhi->getType();
     VectorParts RdxParts(State.UF);
@@ -475,6 +501,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     unsigned Op = RecurrenceDescriptor::getOpcode(RK);
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+      Op = Instruction::Or;
 
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[State.UF - 1];
@@ -487,19 +515,16 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-          TrackingVH<Value> ReductionStartValue =
-              RdxDesc.getRecurrenceStartValue();
-          ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
-                                         ReducedPartRdx, RdxPart);
-        } else
+        else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
     }
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if (State.VF.isVector() && !PhiR->isInLoop()) {
+    if ((State.VF.isVector() ||
+         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
+        !PhiR->isInLoop()) {
       ReducedPartRdx =
           createTargetReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
       // If the reduction can be performed in a smaller type, we need to extend
@@ -551,7 +576,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
-  State.Builder.SetCurrentDebugLocation(getDebugLoc());
+  State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) ||
@@ -594,6 +619,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
@@ -629,6 +655,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ExplicitVectorLength:
+    O << "EXPLICIT-VECTOR-LENGTH";
     break;
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
@@ -1186,7 +1215,7 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "= DERIVED-IV ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
-  getCanonicalIV()->printAsOperand(O, SlotTracker);
+  getOperand(1)->printAsOperand(O, SlotTracker);
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 }
@@ -1484,12 +1513,65 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
     for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
       O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
+      if (I == 0)
+        continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
     }
   }
 }
+#endif
 
+void VPReductionRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Reduction being replicated.");
+  Value *PrevInChain = State.get(getChainOp(), 0, /*IsScalar*/ true);
+  RecurKind Kind = RdxDesc.getRecurrenceKind();
+  // Propagate the fast-math flags carried by the underlying instruction.
+  IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
+  State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *NewVecOp = State.get(getVecOp(), Part);
+    if (VPValue *Cond = getCondOp()) {
+      Value *NewCond = State.get(Cond, Part, State.VF.isScalar());
+      VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
+      Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
+      Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
+                                                  RdxDesc.getFastMathFlags());
+      if (State.VF.isVector()) {
+        Iden = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Iden);
+      }
+
+      Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Iden);
+      NewVecOp = Select;
+    }
+    Value *NewRed;
+    Value *NextInChain;
+    if (IsOrdered) {
+      if (State.VF.isVector())
+        NewRed = createOrderedReduction(State.Builder, RdxDesc, NewVecOp,
+                                        PrevInChain);
+      else
+        NewRed = State.Builder.CreateBinOp(
+            (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
+            NewVecOp);
+      PrevInChain = NewRed;
+    } else {
+      PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
+      NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
+    }
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
+                                   NewRed, PrevInChain);
+    } else if (IsOrdered)
+      NextInChain = NewRed;
+    else
+      NextInChain = State.Builder.CreateBinOp(
+          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
+    State.set(this, NextInChain, Part, /*IsScalar*/ true);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "REDUCE ";
@@ -1970,6 +2052,28 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
 void VPActiveLaneMaskPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "ACTIVE-LANE-MASK-PHI ";
+
+  printAsOperand(O, SlotTracker);
+  O << " = phi ";
+  printOperands(O, SlotTracker);
+}
+#endif
+
+void VPEVLBasedIVPHIRecipe::execute(VPTransformState &State) {
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  assert(State.UF == 1 && "Expected unroll factor 1 for VP vectorization.");
+  Value *Start = State.get(getOperand(0), VPIteration(0, 0));
+  PHINode *EntryPart =
+      State.Builder.CreatePHI(Start->getType(), 2, "evl.based.iv");
+  EntryPart->addIncoming(Start, VectorPH);
+  EntryPart->setDebugLoc(getDebugLoc());
+  State.set(this, EntryPart, 0, /*IsScalar=*/true);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

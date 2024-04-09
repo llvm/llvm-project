@@ -4624,7 +4624,13 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   SDValue Passthru = DAG.getUNDEF(WideContainerVT);
 
   SDValue Interleaved;
-  if (Subtarget.hasStdExtZvbb()) {
+  if (OddV.isUndef()) {
+    // If OddV is undef, this is a zero extend.
+    // FIXME: Not only does this optimize the code, it fixes some correctness
+    // issues because MIR does not have freeze.
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV, Mask, VL);
+  } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
         DAG.getSplatVector(VecContainerVT, DL,
@@ -4635,6 +4641,9 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
     Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
                               Interleaved, EvenV, Passthru, Mask, VL);
   } else {
+    // FIXME: We should freeze the odd vector here. We already handled the case
+    // of provably undef/poison above.
+
     // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
     // vwaddu.vv
     Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT, EvenV,
@@ -13534,6 +13543,7 @@ enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
+/// shl | shl_vl -> vwsll
 /// fadd -> vfwadd | vfwadd_w
 /// fsub -> vfwsub | vfwsub_w
 /// fmul -> vfwmul
@@ -13543,7 +13553,7 @@ enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// NodeExtensionHelper for `a` and one for `b`.
 ///
 /// This class abstracts away how the extension is materialized and
-/// how its Mask, VL, number of users affect the combines.
+/// how its number of users affect the combines.
 ///
 /// In particular:
 /// - VWADD_W is conceptually == add(op0, sext(op1))
@@ -13567,15 +13577,6 @@ struct NodeExtensionHelper {
   /// This boolean captures whether we care if this operand would still be
   /// around after the folding happens.
   bool EnforceOneUse;
-  /// Records if this operand's mask needs to match the mask of the operation
-  /// that it will fold into.
-  bool CheckMask;
-  /// Value of the Mask for this operand.
-  /// It may be SDValue().
-  SDValue Mask;
-  /// Value of the vector length operand.
-  /// It may be SDValue().
-  SDValue VL;
   /// Original value that this NodeExtensionHelper represents.
   SDValue OrigOperand;
 
@@ -13712,6 +13713,9 @@ struct NodeExtensionHelper {
     case ISD::MUL:
     case RISCVISD::MUL_VL:
       return RISCVISD::VWMULU_VL;
+    case ISD::SHL:
+    case RISCVISD::SHL_VL:
+      return RISCVISD::VWSLL_VL;
     default:
       llvm_unreachable("Unexpected opcode");
     }
@@ -13780,8 +13784,10 @@ struct NodeExtensionHelper {
     SupportsSExt = false;
     SupportsFPExt = false;
     EnforceOneUse = true;
-    CheckMask = true;
     unsigned Opc = OrigOperand.getOpcode();
+    // For the nodes we handle below, we end up using their inputs directly: see
+    // getSource(). However since they either don't have a passthru or we check
+    // that their passthru is undef, we can safely ignore their mask and VL.
     switch (Opc) {
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND: {
@@ -13797,32 +13803,21 @@ struct NodeExtensionHelper {
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
       SupportsSExt = Opc == ISD::SIGN_EXTEND;
-
-      SDLoc DL(Root);
-      std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
       break;
     }
     case RISCVISD::VZEXT_VL:
       SupportsZExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::VSEXT_VL:
       SupportsSExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::FP_EXTEND_VL:
       SupportsFPExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::VMV_V_X_VL: {
       // Historically, we didn't care about splat values not disappearing during
       // combines.
       EnforceOneUse = false;
-      CheckMask = false;
-      VL = OrigOperand.getOperand(2);
 
       // The operand is a splat of a scalar.
 
@@ -13862,7 +13857,8 @@ struct NodeExtensionHelper {
   }
 
   /// Check if \p Root supports any extension folding combines.
-  static bool isSupportedRoot(const SDNode *Root) {
+  static bool isSupportedRoot(const SDNode *Root,
+                              const RISCVSubtarget &Subtarget) {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
@@ -13888,6 +13884,11 @@ struct NodeExtensionHelper {
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
       return true;
+    case ISD::SHL:
+      return Root->getValueType(0).isScalableVector() &&
+             Subtarget.hasStdExtZvbb();
+    case RISCVISD::SHL_VL:
+      return Subtarget.hasStdExtZvbb();
     default:
       return false;
     }
@@ -13896,8 +13897,9 @@ struct NodeExtensionHelper {
   /// Build a NodeExtensionHelper for \p Root.getOperand(\p OperandIdx).
   NodeExtensionHelper(SDNode *Root, unsigned OperandIdx, SelectionDAG &DAG,
                       const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Trying to build an helper with an "
-                                    "unsupported root");
+    assert(isSupportedRoot(Root, Subtarget) &&
+           "Trying to build an helper with an "
+           "unsupported root");
     assert(OperandIdx < 2 && "Requesting something else than LHS or RHS");
     assert(DAG.getTargetLoweringInfo().isTypeLegal(Root->getValueType(0)));
     OrigOperand = Root->getOperand(OperandIdx);
@@ -13921,8 +13923,6 @@ struct NodeExtensionHelper {
             Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWSUB_W_VL;
         SupportsFPExt =
             Opc == RISCVISD::VFWADD_W_VL || Opc == RISCVISD::VFWSUB_W_VL;
-        std::tie(Mask, VL) = getMaskAndVL(Root, DAG, Subtarget);
-        CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
         EnforceOneUse = false;
@@ -13935,26 +13935,17 @@ struct NodeExtensionHelper {
     }
   }
 
-  /// Check if this operand is compatible with the given vector length \p VL.
-  bool isVLCompatible(SDValue VL) const {
-    return this->VL != SDValue() && this->VL == VL;
-  }
-
-  /// Check if this operand is compatible with the given \p Mask.
-  bool isMaskCompatible(SDValue Mask) const {
-    return !CheckMask || (this->Mask != SDValue() && this->Mask == Mask);
-  }
-
   /// Helper function to get the Mask and VL from \p Root.
   static std::pair<SDValue, SDValue>
   getMaskAndVL(const SDNode *Root, SelectionDAG &DAG,
                const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Unexpected root");
+    assert(isSupportedRoot(Root, Subtarget) && "Unexpected root");
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
-    case ISD::OR: {
+    case ISD::OR:
+    case ISD::SHL: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
       return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -13962,13 +13953,6 @@ struct NodeExtensionHelper {
     default:
       return std::make_pair(Root->getOperand(3), Root->getOperand(4));
     }
-  }
-
-  /// Check if the Mask and VL of this operand are compatible with \p Root.
-  bool areVLAndMaskCompatible(SDNode *Root, SelectionDAG &DAG,
-                              const RISCVSubtarget &Subtarget) const {
-    auto [Mask, VL] = getMaskAndVL(Root, DAG, Subtarget);
-    return isMaskCompatible(Mask) && isVLCompatible(VL);
   }
 
   /// Helper function to check if \p N is commutative with respect to the
@@ -13992,6 +13976,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VWSUBU_W_VL:
     case RISCVISD::FSUB_VL:
     case RISCVISD::VFWSUB_W_VL:
+    case ISD::SHL:
+    case RISCVISD::SHL_VL:
       return false;
     default:
       llvm_unreachable("Unexpected opcode");
@@ -14045,6 +14031,7 @@ struct CombineResult {
     case ISD::SUB:
     case ISD::MUL:
     case ISD::OR:
+    case ISD::SHL:
       Merge = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
@@ -14070,9 +14057,6 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                                  const NodeExtensionHelper &RHS,
                                  uint8_t AllowExtMask, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
-  if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
-      !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
   if ((AllowExtMask & ExtKind::ZExt) && LHS.SupportsZExt && RHS.SupportsZExt)
     return CombineResult(NodeExtensionHelper::getZExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::ZExt}, RHS,
@@ -14081,7 +14065,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
     return CombineResult(NodeExtensionHelper::getSExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                          /*RHSExt=*/{ExtKind::SExt});
-  if ((AllowExtMask & ExtKind::FPExt) && RHS.SupportsFPExt)
+  if ((AllowExtMask & ExtKind::FPExt) && LHS.SupportsFPExt && RHS.SupportsFPExt)
     return CombineResult(NodeExtensionHelper::getFPExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::FPExt}, RHS,
                          /*RHSExt=*/{ExtKind::FPExt});
@@ -14111,9 +14095,6 @@ static std::optional<CombineResult>
 canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
               const NodeExtensionHelper &RHS, SelectionDAG &DAG,
               const RISCVSubtarget &Subtarget) {
-  if (!RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
-
   if (RHS.SupportsFPExt)
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::FPExt),
@@ -14181,9 +14162,6 @@ canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
 
   if (!LHS.SupportsSExt || !RHS.SupportsZExt)
     return std::nullopt;
-  if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
-      !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
   return CombineResult(NodeExtensionHelper::getSUOpcode(Root->getOpcode()),
                        Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                        /*RHSExt=*/{ExtKind::ZExt});
@@ -14215,6 +14193,11 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
     // mul -> vwmulsu
     Strategies.push_back(canFoldToVW_SU);
     break;
+  case ISD::SHL:
+  case RISCVISD::SHL_VL:
+    // shl -> vwsll
+    Strategies.push_back(canFoldToVWWithZEXT);
+    break;
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWSUB_W_VL:
     // vwadd_w|vwsub_w -> vwadd|vwsub
@@ -14242,6 +14225,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 /// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
+/// shl | shl_vl -> vwsll
 /// fadd_vl ->  vfwadd | vfwadd_w
 /// fsub_vl ->  vfwsub | vfwsub_w
 /// fmul_vl ->  vfwmul
@@ -14256,7 +14240,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
   if (DCI.isBeforeLegalize())
     return SDValue();
 
-  if (!NodeExtensionHelper::isSupportedRoot(N))
+  if (!NodeExtensionHelper::isSupportedRoot(N, Subtarget))
     return SDValue();
 
   SmallVector<SDNode *> Worklist;
@@ -14267,7 +14251,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
 
   while (!Worklist.empty()) {
     SDNode *Root = Worklist.pop_back_val();
-    if (!NodeExtensionHelper::isSupportedRoot(Root))
+    if (!NodeExtensionHelper::isSupportedRoot(Root, Subtarget))
       return SDValue();
 
     NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
@@ -16362,9 +16346,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                               VPSN->getMemOperand(), IndexType);
     break;
   }
+  case RISCVISD::SHL_VL:
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
   case RISCVISD::SRA_VL:
-  case RISCVISD::SRL_VL:
-  case RISCVISD::SHL_VL: {
+  case RISCVISD::SRL_VL: {
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
@@ -16384,6 +16371,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   case ISD::SRL:
   case ISD::SHL: {
+    if (N->getOpcode() == ISD::SHL) {
+      if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+        return V;
+    }
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
@@ -21106,12 +21097,10 @@ void RVVArgDispatcher::constructArgInfos(ArrayRef<Type *> TypeList) {
             RegisterVT.getVectorElementType() == MVT::i1) {
           RVVArgInfos.push_back({1, RegisterVT, true});
           FirstVMaskAssigned = true;
-        } else {
-          RVVArgInfos.push_back({1, RegisterVT, false});
+          --NumRegs;
         }
 
-        RVVArgInfos.insert(RVVArgInfos.end(), --NumRegs,
-                           {1, RegisterVT, false});
+        RVVArgInfos.insert(RVVArgInfos.end(), NumRegs, {1, RegisterVT, false});
       }
     }
   }

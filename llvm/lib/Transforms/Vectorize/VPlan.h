@@ -242,6 +242,15 @@ struct VPTransformState {
   ElementCount VF;
   unsigned UF;
 
+  /// If EVL (Explicit Vector Length) is not nullptr, then EVL must be a valid
+  /// value set during plan transformation, possibly a default value = whole
+  /// vector register length. EVL is created only if TTI prefers predicated
+  /// vectorization, thus if EVL is not nullptr it also implies preference for
+  /// predicated vectorization.
+  /// TODO: this is a temporarily solution, the EVL must be explicitly used by
+  /// the recipes and must be removed here.
+  VPValue *EVL = nullptr;
+
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
@@ -346,11 +355,7 @@ struct VPTransformState {
   /// This includes both the original MDs from \p From and additional ones (\see
   /// addNewMetadata).  Use this for *newly created* instructions in the vector
   /// loop.
-  void addMetadata(Instruction *To, Instruction *From);
-
-  /// Similar to the previous function but it adds the metadata to a
-  /// vector of instructions.
-  void addMetadata(ArrayRef<Value *> To, Instruction *From);
+  void addMetadata(Value *To, Instruction *From);
 
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
@@ -913,6 +918,11 @@ public:
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
 
+  struct DisjointFlagsTy {
+    char IsDisjoint : 1;
+    DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
+  };
+
 protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
@@ -920,9 +930,6 @@ protected:
   };
 
 private:
-  struct DisjointFlagsTy {
-    char IsDisjoint : 1;
-  };
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -1015,6 +1022,12 @@ public:
                       FastMathFlags FMFs, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::FPMathOp),
         FMFs(FMFs) {}
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
+        DisjointFlags(DisjointFlags) {}
 
 protected:
   template <typename IterT>
@@ -1155,6 +1168,7 @@ public:
     SLPLoad,
     SLPStore,
     ActiveLaneMask,
+    ExplicitVectorLength,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1220,6 +1234,14 @@ public:
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags, DL),
         Opcode(Opcode), Name(Name.str()) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DisjointFlagsTy DisjointFlag, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DisjointFlag, DL),
+        Opcode(Opcode), Name(Name.str()) {
+    assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
+  }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
@@ -1910,14 +1932,12 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// might be incoming with a full mask for which there is no VPValue.
+  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
+  /// incoming value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert(Operands.size() > 0 &&
-           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
-           "Expected either a single incoming value or a positive even number "
-           "of operands");
+    assert((Operands.size() + 1) % 2 == 0 &&
+           "Expected an odd number of operands");
   }
 
   VPRecipeBase *clone() override {
@@ -1927,15 +1947,20 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that a single
+  /// Return the number of incoming values, taking into account that the first
   /// incoming value has no mask.
   unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+  }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
+  VPValue *getMask(unsigned Idx) const {
+    assert(Idx > 0 && "First index has no mask associated.");
+    return getOperand(Idx * 2);
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2053,13 +2078,15 @@ public:
 class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp)
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
+                    bool IsOrdered)
       : VPSingleDefRecipe(VPDef::VPReductionSC,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R) {
+        RdxDesc(R), IsOrdered(IsOrdered) {
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2068,7 +2095,7 @@ public:
 
   VPRecipeBase *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionSC)
@@ -2278,8 +2305,8 @@ class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
 
 public:
   VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}, DL),
         Ingredient(Load), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     new VPValue(this, &Load);
@@ -2288,8 +2315,9 @@ public:
 
   VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
                                  VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue}),
+                                 bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue},
+                     DL),
         Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
@@ -2299,10 +2327,11 @@ public:
     if (isStore())
       return new VPWidenMemoryInstructionRecipe(
           cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-          Consecutive, Reverse);
+          Consecutive, Reverse, getDebugLoc());
 
-    return new VPWidenMemoryInstructionRecipe(
-        cast<LoadInst>(Ingredient), getAddr(), getMask(), Consecutive, Reverse);
+    return new VPWidenMemoryInstructionRecipe(cast<LoadInst>(Ingredient),
+                                              getAddr(), getMask(), Consecutive,
+                                              Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenMemoryInstructionSC)
@@ -2475,6 +2504,45 @@ public:
 #endif
 };
 
+/// A recipe for generating the phi node for the current index of elements,
+/// adjusted in accordance with EVL value. It starts at the start value of the
+/// canonical induction and gets incremented by EVL in each iteration of the
+/// vector loop.
+class VPEVLBasedIVPHIRecipe : public VPHeaderPHIRecipe {
+public:
+  VPEVLBasedIVPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPEVLBasedIVPHISC, nullptr, StartIV, DL) {}
+
+  ~VPEVLBasedIVPHIRecipe() override = default;
+
+  VPEVLBasedIVPHIRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *D) {
+    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
+  }
+
+  /// Generate phi for handling IV based on EVL over iterations correctly.
+  /// TODO: investigate if it can share the code with VPCanonicalIVPHIRecipe.
+  void execute(VPTransformState &State) override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A Recipe for widening the canonical induction variable of the vector loop.
 class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
 public:
@@ -2508,8 +2576,8 @@ public:
   }
 };
 
-/// A recipe for converting the canonical IV value to the corresponding value of
-/// an IV with different start and step values, using Start + CanonicalIV *
+/// A recipe for converting the input value \p IV value to the corresponding
+/// value of an IV with different start and step values, using Start + IV *
 /// Step.
 class VPDerivedIVRecipe : public VPSingleDefRecipe {
   /// Kind of the induction.
@@ -2527,16 +2595,16 @@ public:
             Start, CanonicalIV, Step) {}
 
   VPDerivedIVRecipe(InductionDescriptor::InductionKind Kind,
-                    const FPMathOperator *FPBinOp, VPValue *Start,
-                    VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step)
-      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        Kind(Kind), FPBinOp(FPBinOp) {}
+                    const FPMathOperator *FPBinOp, VPValue *Start, VPValue *IV,
+                    VPValue *Step)
+      : VPSingleDefRecipe(VPDef::VPDerivedIVSC, {Start, IV, Step}), Kind(Kind),
+        FPBinOp(FPBinOp) {}
 
   ~VPDerivedIVRecipe() override = default;
 
   VPRecipeBase *clone() override {
-    return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(),
-                                 getCanonicalIV(), getStepValue());
+    return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
+                                 getStepValue());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPDerivedIVSC)
@@ -2556,9 +2624,6 @@ public:
   }
 
   VPValue *getStartValue() const { return getOperand(0); }
-  VPCanonicalIVPHIRecipe *getCanonicalIV() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(1));
-  }
   VPValue *getStepValue() const { return getOperand(2); }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
@@ -3006,13 +3071,6 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  void addVPValue(Value *V, VPValue *VPV) {
-    assert(VPV->isLiveIn() && "VPV must be a live-in.");
-    assert(V && "Trying to add a null Value to VPlan");
-    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    Value2VPValue[V] = VPV;
-  }
-
   /// Gets the live-in VPValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPValue *getOrAddLiveIn(Value *V) {
@@ -3020,7 +3078,9 @@ public:
     if (!Value2VPValue.count(V)) {
       VPValue *VPV = new VPValue(V);
       VPLiveInsToFree.push_back(VPV);
-      addVPValue(V, VPV);
+      assert(VPV->isLiveIn() && "VPV must be a live-in.");
+      assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
+      Value2VPValue[V] = VPV;
     }
 
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");

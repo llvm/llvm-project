@@ -282,6 +282,7 @@ set(files
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/leap_second.h
   __chrono/literals.h
   __chrono/month.h
   __chrono/month_weekday.h
@@ -394,6 +395,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/formatter_tuple.h
+  __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/range_formatter.h
@@ -737,6 +739,7 @@ set(files
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
+  __type_traits/desugars_to.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -821,7 +824,6 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
-  __type_traits/operation_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h

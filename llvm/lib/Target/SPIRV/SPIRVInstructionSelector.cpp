@@ -432,10 +432,10 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMINIMUM:
-    return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::FMin);
+    return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::NMin);
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXIMUM:
-    return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::FMax);
+    return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
     return selectExtInst(ResVReg, ResType, I, CL::copysign);
@@ -1825,7 +1825,24 @@ bool SPIRVInstructionSelector::selectAllocaArray(Register ResVReg,
 bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+  // Change order of instructions if needed: all OpVariable instructions in a
+  // function must be the first instructions in the first block
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineBasicBlock *MBB = &MF->front();
+  auto It = MBB->SkipPHIsAndLabels(MBB->begin()), E = MBB->end();
+  bool IsHeader = false;
+  unsigned Opcode;
+  for (; It != E && It != I; ++It) {
+    Opcode = It->getOpcode();
+    if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
+      IsHeader = true;
+    } else if (IsHeader &&
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+      ++It;
+      break;
+    }
+  }
+  return BuildMI(*MBB, It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))

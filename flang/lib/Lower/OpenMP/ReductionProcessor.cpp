@@ -13,6 +13,9 @@
 #include "ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertType.h"
+#include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -130,7 +133,7 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
                                           fir::FirOpBuilder &builder) {
   type = fir::unwrapRefType(type);
   if (!fir::isa_integer(type) && !fir::isa_real(type) &&
-      !mlir::isa<fir::LogicalType>(type))
+      !fir::isa_complex(type) && !mlir::isa<fir::LogicalType>(type))
     TODO(loc, "Reduction of some types is not supported");
   switch (redId) {
   case ReductionIdentifier::MAX: {
@@ -174,6 +177,16 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
   case ReductionIdentifier::OR:
   case ReductionIdentifier::EQV:
   case ReductionIdentifier::NEQV:
+    if (auto cplxTy = mlir::dyn_cast<fir::ComplexType>(type)) {
+      mlir::Type realTy =
+          Fortran::lower::convertReal(builder.getContext(), cplxTy.getFKind());
+      mlir::Value initRe = builder.createRealConstant(
+          loc, realTy, getOperationIdentity(redId, loc));
+      mlir::Value initIm = builder.createRealConstant(loc, realTy, 0);
+
+      return fir::factory::Complex{builder, loc}.createComplex(type, initRe,
+                                                               initIm);
+    }
     if (type.isa<mlir::FloatType>())
       return builder.create<mlir::arith::ConstantOp>(
           loc, type,
@@ -228,13 +241,13 @@ mlir::Value ReductionProcessor::createScalarCombiner(
     break;
   case ReductionIdentifier::ADD:
     reductionOp =
-        getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp>(
-            builder, type, loc, op1, op2);
+        getReductionOperation<mlir::arith::AddFOp, mlir::arith::AddIOp,
+                              fir::AddcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::MULTIPLY:
     reductionOp =
-        getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp>(
-            builder, type, loc, op1, op2);
+        getReductionOperation<mlir::arith::MulFOp, mlir::arith::MulIOp,
+                              fir::MulcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::AND: {
     mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
@@ -522,12 +535,20 @@ void ReductionProcessor::addDeclareReduction(
     if (reductionSymbols)
       reductionSymbols->push_back(symbol);
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
-    auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    mlir::Type eleType;
+    auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
+    if (refType)
+      eleType = refType.getEleTy();
+    else
+      eleType = symVal.getType();
 
     // all arrays must be boxed so that we have convenient access to all the
     // information needed to iterate over the array
-    if (mlir::isa<fir::SequenceType>(redType.getEleTy())) {
-      hlfir::Entity entity{symVal};
+    if (mlir::isa<fir::SequenceType>(eleType)) {
+      // For Host associated symbols, use `SymbolBox` instead
+      Fortran::lower::SymbolBox symBox =
+          converter.lookupOneLevelUpSymbol(*symbol);
+      hlfir::Entity entity{symBox.getAddr()};
       entity = genVariableBox(currentLocation, builder, entity);
       mlir::Value box = entity.getBase();
 
@@ -538,10 +559,24 @@ void ReductionProcessor::addDeclareReduction(
       builder.create<fir::StoreOp>(currentLocation, box, alloca);
 
       symVal = alloca;
-      redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+    } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
+      // boxed arrays are passed as values not by reference. Unfortunately,
+      // we can't pass a box by value to omp.redution_declare, so turn it
+      // into a reference
+
+      auto alloca =
+          builder.create<fir::AllocaOp>(currentLocation, symVal.getType());
+      builder.create<fir::StoreOp>(currentLocation, symVal, alloca);
+      symVal = alloca;
     } else if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>()) {
       symVal = declOp.getBase();
     }
+
+    // this isn't the same as the by-val and by-ref passing later in the
+    // pipeline. Both styles assume that the variable is a reference at
+    // this point
+    assert(mlir::isa<fir::ReferenceType>(symVal.getType()) &&
+           "reduction input var is a reference");
 
     reductionVars.push_back(symVal);
   }

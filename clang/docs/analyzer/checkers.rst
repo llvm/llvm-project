@@ -3138,10 +3138,16 @@ are detected:
   allowed in this state.
 * Invalid 3rd ("``whence``") argument to ``fseek``.
 
-The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
+The stream operations are by this checker usually split into two cases, a success
+and a failure case. However, in the case of write operations (like ``fwrite``,
+``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
+unwanted reports on projects that don't have error checks around the write
+operations, so by default the checker assumes that write operations always succeed.
+This behavior can be controlled by the ``Pedantic`` flag: With
+``-analyzer-config alpha.unix.Stream:Pedantic=true`` the checker will model the
+cases where a write operation fails and report situations where this leads to
+erroneous behavior. (The default is ``Pedantic=false``, where write operations
+are assumed to succeed.)
 
 .. code-block:: c
 
@@ -3195,6 +3201,13 @@ are usually not opened explicitly by the program, and are global variables).
 
    fclose(p);
  }
+
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
 
 .. _alpha-unix-cstring-BufferOverlap:
 
