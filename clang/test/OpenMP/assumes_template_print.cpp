@@ -17,7 +17,7 @@ template <typename T>
 struct S {
   int a;
 // CHECK: template <typename T> struct S {
-// CHECK:     void foo() __attribute__((assume("ompx_global_assumption")))     {
+// CHECK:     __attribute__((assume("ompx_global_assumption"))) void foo()     {
   void foo() {
     #pragma omp parallel
     {}
@@ -25,15 +25,15 @@ struct S {
 };
 
 // CHECK: template<> struct S<int> {
-// CHECK:     void foo() __attribute__((assume("ompx_global_assumption")))     {
+// CHECK:     __attribute__((assume("ompx_global_assumption"))) void foo()     {
 
 #pragma omp begin assumes no_openmp
-// CHECK: __attribute__((assume("omp_no_openmp"))) void S_with_assumes_no_call() __attribute__((assume("ompx_global_assumption"))) {
+// CHECK: __attribute__((assume("omp_no_openmp"))) __attribute__((assume("ompx_global_assumption"))) void S_with_assumes_no_call() {
 void S_with_assumes_no_call() {
   S<int> s;
   s.a = 0;
 }
-// CHECK: __attribute__((assume("omp_no_openmp"))) void S_with_assumes_call() __attribute__((assume("ompx_global_assumption"))) {
+// CHECK: __attribute__((assume("omp_no_openmp"))) __attribute__((assume("ompx_global_assumption"))) void S_with_assumes_call() {
 void S_with_assumes_call() {
   S<int> s;
   s.a = 0;
@@ -42,7 +42,7 @@ void S_with_assumes_call() {
 }
 #pragma omp end assumes
 
-// CHECK: void S_without_assumes() __attribute__((assume("ompx_global_assumption"))) {
+// CHECK: __attribute__((assume("ompx_global_assumption"))) void S_without_assumes() {
 void S_without_assumes() {
   S<int> s;
   s.foo();
