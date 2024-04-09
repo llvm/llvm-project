@@ -308,9 +308,10 @@ end
   enforce it and the constraint is not necessary for a correct
   implementation.
 * A label may follow a semicolon in fixed form source.
-* A scalar logical dummy argument to a `BIND(C)` procedure does
-  not have to have `KIND=C_BOOL` since it can be converted to/from
-  `_Bool` without loss of information.
+* A logical dummy argument to a `BIND(C)` procedure, or a logical
+  component to a `BIND(C)` derived type does not have to have
+  `KIND=C_BOOL` since it can be converted to/from `_Bool` without
+  loss of information.
 * The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
   may be distinct from the constant character length, if any,
   of an allocated object.
