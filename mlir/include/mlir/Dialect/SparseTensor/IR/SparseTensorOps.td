@@ -112,9 +112,9 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
 
   let description = [{
     The disassemble operation is the inverse of `sparse_tensor::assemble`.
-    It copies the values and per-level position and coordinate arrays of
-    the given sparse tensor into the user-supplied buffers along with the
-    actual length of the memory used in each returned tensor.
+    It copies the per-level position and coordinate arrays together with
+    the values array of the given sparse tensor into the user-supplied buffers
+    along with the actual length of the memory used in each returned tensor.
 
     This operation can be used for returning a disassembled MLIR sparse tensor;
     e.g., copying the sparse tensor contents into pre-allocated numpy arrays
