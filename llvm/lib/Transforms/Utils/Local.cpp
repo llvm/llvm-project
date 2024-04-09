@@ -1441,6 +1441,8 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
     }
 
     static unsigned getHashValueImpl(PHINode *PN) {
+      // Must be indifferent to the order of incoming blocks and values as
+      // matchPhiStructures() is.
       unsigned Result = 0;
       for (int i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
         auto *Incoming = PN->getIncomingValue(i);
