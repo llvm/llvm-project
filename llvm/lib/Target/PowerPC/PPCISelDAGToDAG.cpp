@@ -6158,7 +6158,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // [32-bit AIX]
     //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
     // [64-bit AIX]
-    //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+    //   Currently not supported.
 
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
