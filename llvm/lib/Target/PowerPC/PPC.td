@@ -331,7 +331,7 @@ def FeatureAIXLocalExecTLS :
 
 // Specifies that local-dynamic TLS accesses in any function with this target
 // attribute should use the optimized sequence (where the offset is an immediate
-// off module-hlandle for which the linker might add fix-up code if the
+// off the module-handle for which the linker might add fix-up code for if the
 // immediate is too large).
 def FeatureAIXLocalDynamicTLS :
   SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
