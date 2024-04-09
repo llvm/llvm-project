@@ -45,7 +45,7 @@
 "`P1413R3 <https://wg21.link/P1413R3>`__","LWG","Deprecate ``std::aligned_storage`` and ``std::aligned_union``","February 2022","|Complete| [#note-P1413R3]_",""
 "`P2255R2 <https://wg21.link/P2255R2>`__","LWG","A type trait to detect reference binding to temporary","February 2022","",""
 "`P2273R3 <https://wg21.link/P2273R3>`__","LWG","Making ``std::unique_ptr`` constexpr","February 2022","|Complete|","16.0"
-"`P2387R3 <https://wg21.link/P2387R3>`__","LWG","Pipe support for user-defined range adaptors","February 2022","","","|ranges|"
+"`P2387R3 <https://wg21.link/P2387R3>`__","LWG","Pipe support for user-defined range adaptors","February 2022","|Partial| [#note-P2387R3]_","","|ranges|"
 "`P2440R1 <https://wg21.link/P2440R1>`__","LWG","``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right``","February 2022","","","|ranges|"
 "`P2441R2 <https://wg21.link/P2441R2>`__","LWG","``views::join_with``","February 2022","|In Progress|","","|ranges|"
 "`P2442R1 <https://wg21.link/P2442R1>`__","LWG","Windowing range adaptors: ``views::chunk`` and ``views::slide``","February 2022","","","|ranges|"
