@@ -4554,7 +4554,6 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
   llvm::Function *F =
       llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
-                             getDataLayout().getProgramAddressSpace(),
                              Entry ? StringRef() : MangledName, &getModule());
 
   // Store the declaration associated with this function so it is potentially
