@@ -41,8 +41,9 @@ namespace {
 // When a non-replaceable use is encountered, the value is wrapped in a
 // cast back to the original type after inference.
 bool canBeRefined(Operation *user) {
-  Dialect *tosaDialect = user->getContext()->getLoadedDialect<TosaDialect>();
-  return user->getDialect() == tosaDialect ||
+  if (!user->getDialect())
+    return false;
+  return user->getDialect()->getTypeID() == TypeID::get<TosaDialect>() ||
          isa<InferTypeOpInterface, InferShapedTypeOpInterface>(user);
 }
 
