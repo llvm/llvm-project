@@ -458,6 +458,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     D = MD;
   }
 
+  assert((FD || MD) && "Expecting Function or ObjCMethod");
+
   // Nullability of return type.
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
