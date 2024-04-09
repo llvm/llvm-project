@@ -144,8 +144,8 @@ public:
              F.hasFnAttribute("profile-checksum-mismatch")) &&
         "In post-link, profile checksum matching state doesn't match the exact "
         "definition function's 'profile-checksum-mismatch' attribute.");
-    (void)LTOPhase;
-    if (NonExactDefinition || !Desc)
+    if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink &&
+        (NonExactDefinition || !Desc))
       return !F.hasFnAttribute("profile-checksum-mismatch");
 
     return Desc && !profileIsHashMismatched(*Desc, Samples);
