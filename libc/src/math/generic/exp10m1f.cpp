@@ -134,7 +134,7 @@ LLVM_LIBC_FUNCTION(float, exp10m1f, (float x)) {
   }
 
   // When x <= log10(2^-25), or x is nan
-  if (LIBC_UNLIKELY(x <= -0x1.e1a5e2p+2f)) {
+  if (LIBC_UNLIKELY(x_u >= 0xc0f0d2f1)) {
     // exp10m1(-inf) = -1
     if (xbits.is_inf())
       return -1.0f;
@@ -144,7 +144,7 @@ LLVM_LIBC_FUNCTION(float, exp10m1f, (float x)) {
 
     int rounding = fputil::quick_get_round();
     if (rounding == FE_UPWARD || rounding == FE_TOWARDZERO ||
-        (rounding == FE_TONEAREST && x == -0x1.e1a5e2p+2f))
+        (rounding == FE_TONEAREST && x_u == 0xc0f0d2f1))
       return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
 
     fputil::set_errno_if_required(ERANGE);

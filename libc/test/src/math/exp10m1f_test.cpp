@@ -21,7 +21,7 @@ using LlvmLibcExp10m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExp10m1fTest, TrickyInputs) {
-  constexpr LIBC_NAMESPACE::cpp::array<float, 30> INPUTS = {
+  constexpr LIBC_NAMESPACE::cpp::array<float, 39> INPUTS = {
       // EXP10M1F_EXCEPTS_LO
       0x1.0fe54ep-11f,
       0x1.80e6eap-11f,
@@ -54,6 +54,18 @@ TEST_F(LlvmLibcExp10m1fTest, TrickyInputs) {
       -0x1.08e42p-6f,
       -0x1.0cdc44p-5f,
       -0x1.ca4322p-5f,
+      // Exceptional integers.
+      8.0f,
+      9.0f,
+      10.0f,
+      // Overflow boundaries.
+      0x1.344134p+5f,
+      0x1.344136p+5f,
+      0x1.344138p+5f,
+      // Underflow boundaries.
+      -0x1.e1a5e0p+2f,
+      -0x1.e1a5e2p+2f,
+      -0x1.e1a5e4p+2f,
   };
 
   for (float x : INPUTS) {
