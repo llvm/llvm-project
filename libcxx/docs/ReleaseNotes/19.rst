@@ -56,6 +56,7 @@ Improvements and New Features
   resulting in a performance increase of up to 1400x.
 - The ``std::mismatch`` algorithm has been optimized for integral types, which can lead up to 40x performance
   improvements.
+
 - The ``std::ranges::minmax`` algorithm has been optimized for integral types, resulting in a performance increase of
   up to 100x.
 
@@ -63,6 +64,8 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
   available.
+
+- The formatting library is updated to Unicode 15.1.0.
 
 Deprecations and Removals
 -------------------------
