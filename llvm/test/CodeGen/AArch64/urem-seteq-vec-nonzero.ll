@@ -46,17 +46,17 @@ define <4 x i1> @t32_6_part0(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t32_6_part0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    movi v2.16b, #170
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    shl v1.4s, v0.4s, #31
-; CHECK-NEXT:    usra v1.4s, v0.4s, #1
-; CHECK-NEXT:    fneg v0.4s, v2.4s
-; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    movi v1.16b, #170
+; CHECK-NEXT:    shl v2.4s, v0.4s, #31
+; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    usra v2.4s, v0.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 6, i32 6, i32 6, i32 6>

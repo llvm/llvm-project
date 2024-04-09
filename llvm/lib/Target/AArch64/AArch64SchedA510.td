@@ -440,7 +440,7 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "(AND|EOR|NOT|
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
 // SIMD max/min, reduce
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "MULv(2i32|4i16|4i32|8i16)_indexed$",
   "SQR?DMULHv(1i16|1i32|2i32|4i16|4i32|8i16)_indexed$")>;
@@ -469,8 +469,8 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instrs PMULLv8i8, PMULLv
 // ASIMD pairwise add and accumulate
 def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]ADALPv")>;
 // ASIMD shift accumulate
-def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
-def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]SRA(d|v2i32|v4i16|v8i8)")>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "[SU]SRAv(16i8|2i64|4i32|8i16)")>;
 // ASIMD shift accumulate #2
 def : InstRW<[CortexA510MCWrite<7, 2, CortexA510UnitVALU>], (instregex "[SU]RSRA[vd]")>;
 // ASIMD shift by immed

@@ -3534,21 +3534,21 @@ entry:
 define i64 @add_pair_v4i8_v4i64_sext(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-SD-LABEL: add_pair_v4i8_v4i64_sext:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v3.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v2.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v3.2d, v0.2s, #0
 ; CHECK-SD-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-SD-NEXT:    shl v2.2d, v2.2d, #56
 ; CHECK-SD-NEXT:    shl v3.2d, v3.2d, #56
+; CHECK-SD-NEXT:    shl v2.2d, v2.2d, #56
 ; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    shl v1.2d, v1.2d, #56
-; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #56
 ; CHECK-SD-NEXT:    sshr v3.2d, v3.2d, #56
-; CHECK-SD-NEXT:    ssra v2.2d, v0.2d, #56
-; CHECK-SD-NEXT:    ssra v3.2d, v1.2d, #56
-; CHECK-SD-NEXT:    add v0.2d, v2.2d, v3.2d
+; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #56
+; CHECK-SD-NEXT:    ssra v3.2d, v0.2d, #56
+; CHECK-SD-NEXT:    ssra v2.2d, v1.2d, #56
+; CHECK-SD-NEXT:    add v0.2d, v3.2d, v2.2d
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret

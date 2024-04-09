@@ -1800,14 +1800,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      3     0.50                        sshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  1      3     0.50                        sshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  1      3     0.50                        sshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	d18, d12, #21
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  1      7     1.00                        ssra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	d18, d12, #21
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  1      3     0.50                        ssubl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        ssubl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        ssubl	v0.8h, v0.8b, v0.8b
@@ -2075,14 +2075,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        usqadd	v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        usqadd	v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        usqadd	v0.8h, v0.8h
-# CHECK-NEXT:  1      7     1.00                        usra	d20, d13, #61
-# CHECK-NEXT:  1      7     1.00                        usra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  1      7     1.00                        usra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  1      3     0.50                        usra	d20, d13, #61
+# CHECK-NEXT:  1      3     0.50                        usra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  1      3     0.50                        usra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  1      3     0.50                        usubl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      3     0.50                        usubl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.50                        usubl	v0.8h, v0.8b, v0.8b
@@ -2148,7 +2148,7 @@ zip2	v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]
-# CHECK-NEXT:  -      -      -      -      -     39.00  91.00   -      -     509.00 509.00 3.00   3.00   197.00
+# CHECK-NEXT:  -      -      -      -      -     39.00  91.00   -      -     501.00 501.00 3.00   3.00   197.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]   Instructions:
@@ -2882,14 +2882,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshr	v0.4s, v0.4s, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshr	v0.8b, v0.8b, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sshr	v0.8h, v0.8h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	d18, d12, #21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     ssra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	d18, d12, #21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssubl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssubl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     ssubl	v0.8h, v0.8b, v0.8b
@@ -3157,14 +3157,14 @@ zip2	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usqadd	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usqadd	v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usqadd	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	d20, d13, #61
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.16b, v0.16b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.2d, v0.2d, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.2s, v0.2s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.4h, v0.4h, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.4s, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.8b, v0.8b, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     usra	v0.8h, v0.8h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	d20, d13, #61
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.16b, v0.16b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.2d, v0.2d, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.2s, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.4h, v0.4h, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.4s, v0.4s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.8b, v0.8b, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usra	v0.8h, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usubl	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usubl	v0.4s, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     usubl	v0.8h, v0.8b, v0.8b
