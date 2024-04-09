@@ -246,5 +246,5 @@ correctness.
 Contributions adding Assembler for performance are not welcome. Contributors
 should strive to stick with C++ for as long as it remains reasonable to do so.
 llvm-libc maintainers reserve the right to reject Assembler contributions that
-could they feel could be better maintained if rewritten in C++, and to revisit
-this policy in the future.
+they feel could be better maintained if rewritten in C++, and to revisit this
+policy in the future.
