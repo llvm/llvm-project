@@ -184,7 +184,7 @@ template <> struct MappingTraits<FunctionSummaryYaml> {
     io.mapOptional("Live", summary.Live);
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
-    io.mapOptional("importType", summary.ImportType);
+    io.mapOptional("ImportType", summary.ImportType);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
     io.mapOptional("TypeTestAssumeVCalls", summary.TypeTestAssumeVCalls);
@@ -230,7 +230,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<GlobalValue::VisibilityTypes>(FSum.Visibility),
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
               FSum.CanAutoHide,
-              static_cast<GlobalValueSummary::ImportType>(FSum.ImportType)),
+              static_cast<GlobalValueSummary::ImportKind>(FSum.ImportType)),
           /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
           ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),

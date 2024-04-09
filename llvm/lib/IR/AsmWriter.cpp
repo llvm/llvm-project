@@ -3556,8 +3556,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
   Out << ", importType: "
-      << getImportTypeName(
-             static_cast<GlobalValueSummary::ImportKind>(GVFlags.ImportType));
+      << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)

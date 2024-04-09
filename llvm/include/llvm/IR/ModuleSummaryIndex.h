@@ -484,7 +484,7 @@ public:
 
     /// This field is written by the ThinLTO indexing step to postlink combined
     /// summary. The value is interpreted as 'ImportKind' enum defined above.
-    unsigned ImportType : 2;
+    unsigned ImportType : 1;
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
