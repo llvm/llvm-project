@@ -4,6 +4,7 @@ add_header_library(
     FEnvImpl.h
   DEPENDS
     libc.include.fenv
+    libc.hdr.fenv_macros
     libc.hdr.math_macros
     libc.src.__support.macros.attributes
     libc.src.errno.errno
@@ -14,7 +15,7 @@ add_header_library(
   HDRS
     rounding_mode.h
   DEPENDS
-    libc.include.fenv
+    libc.hdr.fenv_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.sanitizer

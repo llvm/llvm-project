@@ -41,5 +41,6 @@ libc_test(
         "//libc:__support_fputil_rounding_mode",
         "//libc:__support_uint128",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
+	"//libc:hdr_fenv_macros",
     ],
 )
