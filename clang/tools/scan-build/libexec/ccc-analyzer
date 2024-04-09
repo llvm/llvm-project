@@ -361,6 +361,7 @@ sub Analyze {
 
 my %CompileOptionMap = (
   '-nostdinc' => 0,
+  '-nostdlibinc' => 0,
   '-include' => 1,
   '-idirafter' => 1,
   '-imacros' => 1,
