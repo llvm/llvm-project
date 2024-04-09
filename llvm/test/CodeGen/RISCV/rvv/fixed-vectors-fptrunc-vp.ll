@@ -25,7 +25,7 @@ define <2 x half> @vfptrunc_v2f16_v2f32_unmasked(<2 x float> %a, i32 zeroext %vl
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float> %a, <2 x i1> splat (i1 true), i32 %vl)
   ret <2 x half> %v
 }
 
@@ -51,7 +51,7 @@ define <2 x half> @vfptrunc_v2f16_v2f64_unmasked(<2 x double> %a, i32 zeroext %v
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> splat (i1 true), i32 %vl)
   ret <2 x half> %v
 }
 
@@ -75,7 +75,7 @@ define <2 x float> @vfptrunc_v2f32_v2f64_unmasked(<2 x double> %a, i32 zeroext %
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double> %a, <2 x i1> splat (i1 true), i32 %vl)
   ret <2 x float> %v
 }
 

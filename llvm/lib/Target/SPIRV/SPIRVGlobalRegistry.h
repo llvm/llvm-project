@@ -284,7 +284,12 @@ public:
   // Return the VReg holding the result of the given OpTypeXXX instruction.
   Register getSPIRVTypeID(const SPIRVType *SpirvType) const;
 
-  void setCurrentFunc(MachineFunction &MF) { CurMF = &MF; }
+  // Return previous value of the current machine function
+  MachineFunction *setCurrentFunc(MachineFunction &MF) {
+    MachineFunction *Ret = CurMF;
+    CurMF = &MF;
+    return Ret;
+  }
 
   // Whether the given VReg has an OpTypeXXX instruction mapped to it with the
   // given opcode (e.g. OpTypeFloat).
