@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -51,6 +52,40 @@ Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
+}
+
+bool mlir::emitc::isSupportedIntegerType(Type type) {
+  if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
+    switch (intType.getWidth()) {
+    case 1:
+    case 8:
+    case 16:
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
+  return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
+         isSupportedIntegerType(type);
+}
+
+bool mlir::emitc::isSupportedFloatType(Type type) {
+  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+    switch (floatType.getWidth()) {
+    case 32:
+    case 64:
+      return true;
+    default:
+      return false;
+    }
+  }
+  return false;
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -131,15 +166,18 @@ LogicalResult ApplyOp::verify() {
 LogicalResult emitc::AssignOp::verify() {
   Value variable = getVar();
   Operation *variableDef = variable.getDefiningOp();
-  if (!variableDef || !llvm::isa<emitc::VariableOp>(variableDef))
+  if (!variableDef ||
+      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
     return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable";
+                         << ") to be a Variable or subscript";
 
   Value value = getValue();
   if (variable.getType() != value.getType())
     return emitOpError() << "requires value's type (" << value.getType()
                          << ") to match variable's type (" << variable.getType()
                          << ")";
+  if (isa<ArrayType>(variable.getType()))
+    return emitOpError() << "cannot assign to array type";
   return success();
 }
 
@@ -189,6 +227,10 @@ LogicalResult emitc::CallOpaqueOp::verify() {
       if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
         return emitOpError("template argument has invalid type");
     }
+  }
+
+  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
+    return emitOpError() << "cannot return array type";
   }
 
   return success();
@@ -244,7 +286,7 @@ LogicalResult ExpressionOp::verify() {
     return emitOpError("requires yielded type to match return type");
 
   for (Operation &op : region.front().without_terminator()) {
-    if (!isCExpression(op))
+    if (!op.hasTrait<OpTrait::emitc::CExpression>())
       return emitOpError("contains an unsupported operation");
     if (op.getNumResults() != 1)
       return emitOpError("requires exactly one result for each operation");
@@ -454,6 +496,9 @@ LogicalResult FuncOp::verify() {
   if (getNumResults() > 1)
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
+
+  if (getNumResults() == 1 && isa<ArrayType>(getResultTypes()[0]))
+    return emitOpError("cannot return array type");
 
   return success();
 }
@@ -736,6 +781,69 @@ LogicalResult emitc::YieldOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SubscriptOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult emitc::SubscriptOp::verify() {
+  // Checks for array operand.
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != (size_t)arrayType.getRank()) {
+      return emitOpError() << "on array operand requires number of indices ("
+                           << getIndices().size()
+                           << ") to match the rank of the array type ("
+                           << arrayType.getRank() << ")";
+    }
+    // Check types of index operands.
+    for (unsigned i = 0, e = getIndices().size(); i != e; ++i) {
+      Type type = getIndices()[i].getType();
+      if (!isIntegerIndexOrOpaqueType(type)) {
+        return emitOpError() << "on array operand requires index operand " << i
+                             << " to be integer-like, but got " << type;
+      }
+    }
+    // Check element type.
+    Type elementType = arrayType.getElementType();
+    if (elementType != getType()) {
+      return emitOpError() << "on array operand requires element type ("
+                           << elementType << ") and result type (" << getType()
+                           << ") to match";
+    }
+    return success();
+  }
+
+  // Checks for pointer operand.
+  if (auto pointerType =
+          llvm::dyn_cast<emitc::PointerType>(getValue().getType())) {
+    // Check number of indices.
+    if (getIndices().size() != 1) {
+      return emitOpError()
+             << "on pointer operand requires one index operand, but got "
+             << getIndices().size();
+    }
+    // Check types of index operand.
+    Type type = getIndices()[0].getType();
+    if (!isIntegerIndexOrOpaqueType(type)) {
+      return emitOpError() << "on pointer operand requires index operand to be "
+                              "integer-like, but got "
+                           << type;
+    }
+    // Check pointee type.
+    Type pointeeType = pointerType.getPointee();
+    if (pointeeType != getType()) {
+      return emitOpError() << "on pointer operand requires pointee type ("
+                           << pointeeType << ") and result type (" << getType()
+                           << ") to match";
+    }
+    return success();
+  }
+
+  // The operand has opaque type, so we can't assume anything about the number
+  // or types of index operands.
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
@@ -761,6 +869,69 @@ LogicalResult emitc::YieldOp::verify() {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitCTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+Type emitc::ArrayType::parse(AsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 4> dimensions;
+  if (parser.parseDimensionList(dimensions, /*allowDynamic=*/false,
+                                /*withTrailingX=*/true))
+    return Type();
+  // Parse the element type.
+  auto typeLoc = parser.getCurrentLocation();
+  Type elementType;
+  if (parser.parseType(elementType))
+    return Type();
+
+  // Check that array is formed from allowed types.
+  if (!isValidElementType(elementType))
+    return parser.emitError(typeLoc, "invalid array element type"), Type();
+  if (parser.parseGreater())
+    return Type();
+  return parser.getChecked<ArrayType>(dimensions, elementType);
+}
+
+void emitc::ArrayType::print(AsmPrinter &printer) const {
+  printer << "<";
+  for (int64_t dim : getShape()) {
+    printer << dim << 'x';
+  }
+  printer.printType(getElementType());
+  printer << ">";
+}
+
+LogicalResult emitc::ArrayType::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::llvm::ArrayRef<int64_t> shape, Type elementType) {
+  if (shape.empty())
+    return emitError() << "shape must not be empty";
+
+  for (int64_t dim : shape) {
+    if (dim <= 0)
+      return emitError() << "dimensions must have positive size";
+  }
+
+  if (!elementType)
+    return emitError() << "element type must not be none";
+
+  if (!isValidElementType(elementType))
+    return emitError() << "invalid array element type";
+
+  return success();
+}
+
+emitc::ArrayType
+emitc::ArrayType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                            Type elementType) const {
+  if (!shape)
+    return emitc::ArrayType::get(getShape(), elementType);
+  return emitc::ArrayType::get(*shape, elementType);
+}
 
 //===----------------------------------------------------------------------===//
 // OpaqueType

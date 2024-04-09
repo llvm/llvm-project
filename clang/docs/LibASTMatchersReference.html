@@ -3546,6 +3546,21 @@ cxxMethodDecl(isConst()) matches A::foo() but not A::bar()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicitObjectMemberFunction0')"><a name="isExplicitObjectMemberFunction0Anchor">isExplicitObjectMemberFunction</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isExplicitObjectMemberFunction0"><pre>Matches if the given method declaration declares a member function with an explicit object parameter.
+
+Given
+struct A {
+  int operator-(this A, int);
+  void fun(this A &&self);
+  static int operator()(int);
+  int operator+(int);
+};
+
+cxxMethodDecl(isExplicitObjectMemberFunction()) matches the first two methods but not the last two.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isCopyAssignmentOperator0')"><a name="isCopyAssignmentOperator0Anchor">isCopyAssignmentOperator</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isCopyAssignmentOperator0"><pre>Matches if the given method declaration declares a copy assignment
 operator.

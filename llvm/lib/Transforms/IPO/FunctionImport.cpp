@@ -163,6 +163,10 @@ static cl::opt<std::string> WorkloadDefinitions(
              "}"),
     cl::Hidden);
 
+namespace llvm {
+extern cl::opt<bool> EnableMemProfContextDisambiguation;
+}
+
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
                                         LLVMContext &Context) {
@@ -1643,7 +1647,9 @@ Expected<bool> FunctionImporter::importFunctions(
       if (Import) {
         if (Error Err = F.materialize())
           return std::move(Err);
-        if (EnableImportMetadata) {
+        // MemProf should match function's definition and summary,
+        // 'thinlto_src_module' is needed.
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
           // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
           // statistics and debugging.
           F.setMetadata(
@@ -1693,7 +1699,7 @@ Expected<bool> FunctionImporter::importFunctions(
         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (EnableImportMetadata) {
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
           // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
           // statistics and debugging.
           Fn->setMetadata(

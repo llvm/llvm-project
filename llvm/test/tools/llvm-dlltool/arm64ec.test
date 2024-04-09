@@ -12,9 +12,12 @@ ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
 ARMAP-EMPTY:
 ARMAP-NEXT: Archive EC map
 ARMAP-NEXT: #func in test.dll
+ARMAP-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
 ARMAP-NEXT: __imp_aux_func in test.dll
 ARMAP-NEXT: __imp_func in test.dll
 ARMAP-NEXT: func in test.dll
+ARMAP-NEXT: test_NULL_THUNK_DATA in test.dll
 
 RUN: llvm-dlltool -m arm64ec -d test.def -N test2.def -l test2.lib
 RUN: llvm-nm --print-armap test2.lib | FileCheck --check-prefix=ARMAP2 %s
@@ -28,9 +31,12 @@ ARMAP2-NEXT: test_NULL_THUNK_DATA in test.dll
 ARMAP2-EMPTY:
 ARMAP2-NEXT: Archive EC map
 ARMAP2-NEXT: #func in test.dll
+ARMAP2-NEXT: __IMPORT_DESCRIPTOR_test in test.dll
+ARMAP2-NEXT: __NULL_IMPORT_DESCRIPTOR in test.dll
 ARMAP2-NEXT: __imp_aux_func in test.dll
 ARMAP2-NEXT: __imp_func in test.dll
 ARMAP2-NEXT: func in test.dll
+ARMAP2-NEXT: test_NULL_THUNK_DATA in test.dll
 
 RUN: llvm-dlltool -m arm64ec -d test.def --input-native-def test2.def -l test3.lib
 RUN: llvm-nm --print-armap test3.lib | FileCheck --check-prefix=ARMAP2 %s

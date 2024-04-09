@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX12 %s
 
 v_bfrev_b32_e64_dpp v5, v1 quad_perm:[3,2,1,0]
 // GFX12: [0x05,0x00,0xb8,0xd5,0xfa,0x00,0x00,0x00,0x01,0x1b,0x00,0xff]

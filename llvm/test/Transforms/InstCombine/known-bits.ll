@@ -124,7 +124,6 @@ exit:
   ret i8 %or2
 }
 
-
 define i8 @test_cond_and_bothways(i8 %x) {
 ; CHECK-LABEL: @test_cond_and_bothways(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 91
@@ -180,8 +179,6 @@ exit:
   %or2 = or i8 %x, -4
   ret i8 %or2
 }
-
-
 
 define i8 @test_cond_and_commuted(i8 %x, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test_cond_and_commuted(
@@ -341,6 +338,296 @@ if:
 exit:
   %or2 = or i8 %x, -4
   ret i8 %or2
+}
+
+define i32 @test_icmp_trunc1(i32 %x) {
+; CHECK-LABEL: @test_icmp_trunc1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[Y]], 7
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i32 7
+; CHECK:       else:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %y = trunc i32 %x to i16
+  %cmp = icmp eq i16 %y, 7
+  br i1 %cmp, label %then, label %else
+then:
+  %z = and i32 %x, 15
+  ret i32 %z
+else:
+  ret i32 0
+}
+
+define i32 @test_icmp_trunc_assume(i32 %x) {
+; CHECK-LABEL: @test_icmp_trunc_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Y:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[Y]], 7
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i32 7
+;
+entry:
+  %y = trunc i32 %x to i16
+  %cmp = icmp eq i16 %y, 7
+  call void @llvm.assume(i1 %cmp)
+  %z = and i32 %x, 15
+  ret i32 %z
+}
+
+define i64 @test_icmp_trunc2(i64 %x) {
+; CHECK-LABEL: @test_icmp_trunc2(
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CONV]], 12
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SEXT:%.*]] = and i64 [[X]], 2147483647
+; CHECK-NEXT:    ret i64 [[SEXT]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+  %conv = trunc i64 %x to i32
+  %cmp = icmp sgt i32 %conv, 12
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %sext = shl i64 %x, 32
+  %ret = ashr exact i64 %sext, 32
+  ret i64 %ret
+if.else:
+  ret i64 0
+}
+
+define i64 @test_icmp_trunc3(i64 %n) {
+; CHECK-LABEL: @test_icmp_trunc3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], 96
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[RET:%.*]] = and i64 [[N]], 127
+; CHECK-NEXT:    ret i64 [[RET]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %conv = trunc i64 %n to i32
+  %cmp = icmp ult i32 %conv, 96
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %ret = and i64 %n, 4294967295
+  ret i64 %ret
+
+if.else:
+  ret i64 0
+}
+
+define i8 @test_icmp_trunc4(i64 %n) {
+; CHECK-LABEL: @test_icmp_trunc4(
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[N:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CONV2:%.*]] = trunc i64 [[N]] to i8
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i8 [[CONV2]], 48
+; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 0
+;
+  %conv = trunc i64 %n to i32
+  %cmp = icmp ult i32 %conv, 10
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %conv2 = trunc i64 %n to i8
+  %add = add i8 %conv2, 48
+  ret i8 %add
+
+if.else:
+  ret i8 0
+}
+
+define i64 @test_icmp_trunc5(i64 %n) {
+; CHECK-LABEL: @test_icmp_trunc5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[N:%.*]], 47
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CONV1]], -13
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[SHR]], 15
+; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[TMP0]], 15
+; CHECK-NEXT:    ret i64 [[NOT]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i64 13
+;
+entry:
+  %shr = ashr i64 %n, 47
+  %conv1 = trunc i64 %shr to i32
+  %cmp = icmp ugt i32 %conv1, -13
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %and = and i64 %shr, 4294967295
+  %not = xor i64 %and, 4294967295
+  ret i64 %not
+
+if.else:
+  ret i64 13
+}
+
+define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_distjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or disjoint i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or disjoint i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+define i1 @test_icmp_or_fail_missing_disjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_missing_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[N]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+define i8 @and_eq_bits_must_be_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 1
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 1
+  ret i8 %r
+}
+
+define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set2(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 11
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 11
+  ret i8 %r
+}
+
+define i8 @and_eq_bits_must_be_set2_partial_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set2_partial_fail(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 111
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 111
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 0
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 3
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset2(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset2(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 0
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 1
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset2_partial_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset2_partial_fail(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 7
+  ret i8 %r
+}
+
+define i8 @or_ne_bits_must_be_unset2_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_ne_bits_must_be_unset2_fail(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp ne i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 3
+  ret i8 %r
 }
 
 declare void @use(i1)

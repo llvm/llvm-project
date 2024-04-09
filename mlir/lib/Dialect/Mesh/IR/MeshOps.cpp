@@ -647,6 +647,13 @@ void AllReduceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<EmptyMeshAxesCanonicalizationPattern<AllReduceOp>>(context);
 }
 
+void AllReduceOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                        Value input, StringRef mesh,
+                        ArrayRef<MeshAxis> meshAxes, ReductionKind reduction) {
+  build(odsBuilder, odsState, input.getType(), mesh, meshAxes, input,
+        reduction);
+}
+
 void AllReduceOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "all_reduce");

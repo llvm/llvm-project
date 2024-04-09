@@ -94,6 +94,8 @@ The above ``ninja`` command will build the libc static archives ``libc.a`` and
 ``libm.a`` for the target specified with ``-DLIBC_TARGET_TRIPLE`` in the CMake
 configure step.
 
+.. _runtimes_cross_build:
+
 Runtimes cross build
 ====================
 
@@ -230,3 +232,12 @@ component of the target triple as ``none``. For example, to build for a
 32-bit arm target on bare metal, one can use a target triple like
 ``arm-none-eabi``. Other than that, the libc for a bare metal target can be
 built using any of the three recipes described above.
+
+Building for the GPU
+====================
+
+To build for a GPU architecture, it should only be necessary to specify the 
+target triple as one of the supported GPU targets. Currently, this is either 
+``nvptx64-nvidia-cuda`` for NVIDIA GPUs or ``amdgcn-amd-amdhsa`` for AMD GPUs. 
+More detailed information is provided in the :ref:`GPU 
+documentation<libc_gpu_building>`.

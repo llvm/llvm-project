@@ -13,6 +13,7 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/Target.h"
@@ -26,6 +27,35 @@ using namespace lldb_private::formatters;
 
 typedef std::unique_ptr<Language> LanguageUP;
 typedef std::map<lldb::LanguageType, LanguageUP> LanguagesMap;
+
+#define LLDB_PROPERTIES_language
+#include "TargetProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_language
+#include "TargetPropertiesEnum.inc"
+};
+
+LanguageProperties &Language::GetGlobalLanguageProperties() {
+  static LanguageProperties g_settings;
+  return g_settings;
+}
+
+llvm::StringRef LanguageProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("language");
+  return g_setting_name;
+}
+
+LanguageProperties::LanguageProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+  m_collection_sp->Initialize(g_language_properties);
+}
+
+bool LanguageProperties::GetEnableFilterForLineBreakpoints() const {
+  const uint32_t idx = ePropertyEnableFilterForLineBreakpoints;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_language_properties[idx].default_uint_value != 0);
+}
 
 static LanguagesMap &GetLanguagesMap() {
   static LanguagesMap *g_map = nullptr;

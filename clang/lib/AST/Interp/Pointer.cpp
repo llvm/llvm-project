@@ -177,6 +177,10 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
+    // Nothing to do for these.
+    if (Desc->getNumElems() == 0)
+      return;
+
     InitMapPtr &IM = getInitMap();
     if (!IM)
       IM =
@@ -320,10 +324,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElemTy = CT->getElementType();
-      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
-      assert(ElemT);
 
       if (ElemTy->isIntegerType()) {
+        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
           auto V1 = Ptr.atIndex(0).deref<T>();
           auto V2 = Ptr.atIndex(1).deref<T>();

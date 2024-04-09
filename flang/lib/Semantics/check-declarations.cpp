@@ -632,6 +632,11 @@ void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
   CheckSymbolType(symbol);
   CheckArraySpec(symbol, details.shape());
+  CheckConflicting(symbol, Attr::ALLOCATABLE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::ASYNCHRONOUS, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::SAVE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::TARGET, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
   if (details.shape().Rank() > common::maxRank) {
@@ -941,6 +946,11 @@ void CheckHelper::CheckObjectEntity(
       if (isComponent && !IsAllocatable(symbol)) {
         messages_.Say(
             "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable"_err_en_US,
+            symbol.name());
+      }
+      if (IsAssumedSizeArray(symbol)) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(DEVICE) may not be assumed size"_err_en_US,
             symbol.name());
       }
       break;
@@ -2341,7 +2351,14 @@ void CheckHelper::CheckProcBinding(
         "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
         binding.symbol().name(), symbol.name());
   }
-  if (const Symbol *overridden{FindOverriddenBinding(symbol)}) {
+  bool isInaccessibleDeferred{false};
+  if (const Symbol *
+      overridden{FindOverriddenBinding(symbol, isInaccessibleDeferred)}) {
+    if (isInaccessibleDeferred) {
+      SayWithDeclaration(*overridden,
+          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
+          symbol.name());
+    }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,
           "Override of NON_OVERRIDABLE '%s' is not permitted"_err_en_US,

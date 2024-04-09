@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! Simple test for lowering of OpenMP Threadprivate Directive with HLFIR.
 
 !RUN: %flang_fc1  -emit-hlfir -fopenmp %s -o - | FileCheck %s

@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/dummy-shared.s -o %t1.o
 # RUN: ld.lld %t1.o -shared -o %t1.so
-# RUN: llvm-mc -filetype=obj -relax-relocations=false -triple=x86_64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -x86-relax-relocations=false -triple=x86_64 %s -o %t.o
 
 # RUN: ld.lld -pie %t.o %t1.so -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOCS %s

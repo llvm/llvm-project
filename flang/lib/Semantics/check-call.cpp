@@ -332,7 +332,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
   int dummyRank{dummy.type.Rank()};
-  if (!typesCompatible && dummyRank == 0 && allowActualArgumentConversions) {
+  if (typesCompatible) {
+    if (const auto *constantChar{
+            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+        constantChar && constantChar->wasHollerith() &&
+        dummy.type.type().IsUnlimitedPolymorphic()) {
+      messages.Say(
+          "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
+    }
+  } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
     if (auto converted{evaluate::HollerithToBOZ(
             foldingContext, actual, dummy.type.type())}) {
@@ -1458,6 +1466,29 @@ static void CheckImage_Index(evaluate::ActualArguments &arguments,
   }
 }
 
+// Ensure that any optional argument that might be absent at run time
+// does not require data conversion.
+static void CheckMaxMin(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (proc.functionResult) {
+    if (const auto *typeAndShape{proc.functionResult->GetTypeAndShape()}) {
+      for (std::size_t j{2}; j < arguments.size(); ++j) {
+        if (arguments[j]) {
+          if (const auto *expr{arguments[j]->UnwrapExpr()};
+              expr && evaluate::MayBePassedAsAbsentOptional(*expr)) {
+            if (auto thisType{expr->GetType()};
+                thisType && *thisType != typeAndShape->type()) {
+              messages.Say(arguments[j]->sourceLocation(),
+                  "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1580,6 +1611,9 @@ static void CheckReduce(
       procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a pure function of two data arguments"_err_en_US);
+  } else if (procChars->attrs.test(characteristics::Procedure::Attr::BindC)) {
+    messages.Say(
+        "A BIND(C) OPERATION= argument of REDUCE() is not supported"_err_en_US);
   } else if (!result || result->Rank() != 0) {
     messages.Say(
         "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
@@ -1722,13 +1756,15 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
   }
 }
 
-static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
-    SemanticsContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic &intrinsic) {
+static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &arguments, SemanticsContext &context,
+    const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
   } else if (intrinsic.name == "image_index") {
     CheckImage_Index(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "max" || intrinsic.name == "min") {
+    CheckMaxMin(proc, arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "move_alloc") {
     CheckMove_Alloc(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "present") {
@@ -1779,7 +1815,7 @@ static parser::Messages CheckExplicitInterface(
     CheckElementalConformance(messages, proc, actuals, foldingContext);
   }
   if (intrinsic) {
-    CheckSpecificIntrinsic(actuals, context, scope, *intrinsic);
+    CheckSpecificIntrinsic(proc, actuals, context, scope, *intrinsic);
   }
   return buffer;
 }

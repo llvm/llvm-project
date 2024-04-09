@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/lldb-types.h"
+
 #include "ABIAArch64.h"
 #include "ABIMacOSX_arm64.h"
 #include "ABISysV_arm64.h"
@@ -15,6 +17,8 @@
 
 #include <bitset>
 #include <optional>
+
+using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 
@@ -29,14 +33,35 @@ void ABIAArch64::Terminate() {
 }
 
 lldb::addr_t ABIAArch64::FixCodeAddress(lldb::addr_t pc) {
-  if (lldb::ProcessSP process_sp = GetProcessSP())
-    return FixAddress(pc, process_sp->GetCodeAddressMask());
+  if (lldb::ProcessSP process_sp = GetProcessSP()) {
+    // b55 is the highest bit outside TBI (if it's enabled), use
+    // it to determine if the high bits are set to 0 or 1.
+    const addr_t pac_sign_extension = 0x0080000000000000ULL;
+    addr_t mask = process_sp->GetCodeAddressMask();
+    // Test if the high memory mask has been overriden separately
+    if (pc & pac_sign_extension &&
+        process_sp->GetHighmemCodeAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+      mask = process_sp->GetHighmemCodeAddressMask();
+
+    if (mask != LLDB_INVALID_ADDRESS_MASK)
+      return FixAddress(pc, mask);
+  }
   return pc;
 }
 
 lldb::addr_t ABIAArch64::FixDataAddress(lldb::addr_t pc) {
-  if (lldb::ProcessSP process_sp = GetProcessSP())
-    return FixAddress(pc, process_sp->GetDataAddressMask());
+  if (lldb::ProcessSP process_sp = GetProcessSP()) {
+    // b55 is the highest bit outside TBI (if it's enabled), use
+    // it to determine if the high bits are set to 0 or 1.
+    const addr_t pac_sign_extension = 0x0080000000000000ULL;
+    addr_t mask = process_sp->GetDataAddressMask();
+    // Test if the high memory mask has been overriden separately
+    if (pc & pac_sign_extension &&
+        process_sp->GetHighmemDataAddressMask() != LLDB_INVALID_ADDRESS_MASK)
+      mask = process_sp->GetHighmemDataAddressMask();
+    if (mask != LLDB_INVALID_ADDRESS_MASK)
+      return FixAddress(pc, mask);
+  }
   return pc;
 }
 

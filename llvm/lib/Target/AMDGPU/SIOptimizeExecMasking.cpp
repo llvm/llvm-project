@@ -396,7 +396,7 @@ bool SIOptimizeExecMasking::isRegisterInUseBetween(MachineInstr &Stop,
     LR.stepBackward(*A);
   }
 
-  return !LR.available(Reg);
+  return !LR.available(Reg) || MRI->isReserved(Reg);
 }
 
 // Determine if a register Reg is not re-defined and still in use

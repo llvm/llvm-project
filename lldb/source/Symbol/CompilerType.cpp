@@ -770,13 +770,15 @@ lldb::Format CompilerType::GetFormat() const {
   return lldb::eFormatDefault;
 }
 
-uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes,
-                                      const ExecutionContext *exe_ctx) const {
+llvm::Expected<uint32_t>
+CompilerType::GetNumChildren(bool omit_empty_base_classes,
+                             const ExecutionContext *exe_ctx) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetNumChildren(m_type, omit_empty_base_classes,
                                        exe_ctx);
-  return 0;
+  return llvm::make_error<llvm::StringError>("invalid type",
+                                             llvm::inconvertibleErrorCode());
 }
 
 lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {

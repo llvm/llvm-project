@@ -172,10 +172,11 @@ static HANDLE RedirectIO(std::optional<StringRef> Path, int fd,
 } // namespace llvm
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<StringRef> Args,
+                    std::optional<ArrayRef<StringRef>> Env,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask) {
+                    BitVector *AffinityMask, bool DetachProcess) {
   if (!sys::fs::can_execute(Program)) {
     if (ErrMsg)
       *ErrMsg = "program not executable";
@@ -284,6 +285,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   unsigned CreateFlags = CREATE_UNICODE_ENVIRONMENT;
   if (AffinityMask)
     CreateFlags |= CREATE_SUSPENDED;
+  if (DetachProcess)
+    CreateFlags |= DETACHED_PROCESS;
 
   std::vector<wchar_t> CommandUtf16(Command.size() + 1, 0);
   std::copy(Command.begin(), Command.end(), CommandUtf16.begin());
@@ -503,14 +506,14 @@ std::error_code llvm::sys::ChangeStdoutMode(sys::fs::OpenFlags Flags) {
 std::error_code sys::ChangeStdinToBinary() {
   int result = _setmode(_fileno(stdin), _O_BINARY);
   if (result == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
 std::error_code sys::ChangeStdoutToBinary() {
   int result = _setmode(_fileno(stdout), _O_BINARY);
   if (result == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 

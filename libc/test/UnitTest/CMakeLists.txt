@@ -68,11 +68,13 @@ add_unittest_framework_library(
     Test.h
     TestLogger.h
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
 )
@@ -101,6 +103,7 @@ add_header_library(
   HDRS
     StringUtils.h
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.CPP.string
     libc.src.__support.CPP.type_traits
 )
@@ -115,6 +118,7 @@ add_unittest_framework_library(
   DEPENDS
     LibcTest
     libc.test.UnitTest.string_utils
+    libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.FPUtil.fenv_impl

@@ -538,8 +538,10 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    emitInlineAsm(M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
-                  TM.Options.MCOptions);
+    emitInlineAsm(
+        M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
+        TM.Options.MCOptions, nullptr,
+        InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }
@@ -925,6 +927,27 @@ void AsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
 
 void AsmPrinter::emitFunctionHeaderComment() {}
 
+void AsmPrinter::emitFunctionPrefix(ArrayRef<const Constant *> Prefix) {
+  const Function &F = MF->getFunction();
+  if (!MAI->hasSubsectionsViaSymbols()) {
+    for (auto &C : Prefix)
+      emitGlobalConstant(F.getParent()->getDataLayout(), C);
+    return;
+  }
+  // Preserving prefix-like data on platforms which use subsections-via-symbols
+  // is a bit tricky. Here we introduce a symbol for the prefix-like data
+  // and use the .alt_entry attribute to mark the function's real entry point
+  // as an alternative entry point to the symbol that precedes the function..
+  OutStreamer->emitLabel(OutContext.createLinkerPrivateTempSymbol());
+
+  for (auto &C : Prefix) {
+    emitGlobalConstant(F.getParent()->getDataLayout(), C);
+  }
+
+  // Emit an .alt_entry directive for the actual function symbol.
+  OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
+}
+
 /// EmitFunctionHeader - This method emits the header for the current
 /// function.
 void AsmPrinter::emitFunctionHeader() {
@@ -964,23 +987,8 @@ void AsmPrinter::emitFunctionHeader() {
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
   // Emit the prefix data.
-  if (F.hasPrefixData()) {
-    if (MAI->hasSubsectionsViaSymbols()) {
-      // Preserving prefix data on platforms which use subsections-via-symbols
-      // is a bit tricky. Here we introduce a symbol for the prefix data
-      // and use the .alt_entry attribute to mark the function's real entry point
-      // as an alternative entry point to the prefix-data symbol.
-      MCSymbol *PrefixSym = OutContext.createLinkerPrivateTempSymbol();
-      OutStreamer->emitLabel(PrefixSym);
-
-      emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
-
-      // Emit an .alt_entry directive for the actual function symbol.
-      OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_AltEntry);
-    } else {
-      emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrefixData());
-    }
-  }
+  if (F.hasPrefixData())
+    emitFunctionPrefix({F.getPrefixData()});
 
   // Emit KCFI type information before patchable-function-prefix nops.
   emitKCFITypeId(*MF);
@@ -1012,8 +1020,7 @@ void AsmPrinter::emitFunctionHeader() {
 
     auto *PrologueSig = mdconst::extract<Constant>(MD->getOperand(0));
     auto *TypeHash = mdconst::extract<Constant>(MD->getOperand(1));
-    emitGlobalConstant(F.getParent()->getDataLayout(), PrologueSig);
-    emitGlobalConstant(F.getParent()->getDataLayout(), TypeHash);
+    emitFunctionPrefix({PrologueSig, TypeHash});
   }
 
   if (isVerbose()) {
@@ -2925,7 +2932,7 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable");
+  report_fatal_error("unknown special variable with appending linkage");
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
