@@ -71,8 +71,9 @@ public:
                            const Environment &Env1, const Value &Val2,
                            const Environment &Env2) override;
 
-  std::optional<WidenResult> widen(QualType Type, Value &Prev, const Environment &PrevEnv,
-               Value &Current, Environment &CurrentEnv) override;
+  std::optional<WidenResult> widen(QualType Type, Value &Prev,
+                                   const Environment &PrevEnv, Value &Current,
+                                   Environment &CurrentEnv) override;
 };
 
 class NullCheckAfterDereferenceDiagnoser {
