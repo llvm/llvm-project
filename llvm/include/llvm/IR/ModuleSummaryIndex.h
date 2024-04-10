@@ -438,7 +438,7 @@ public:
     Definition = 0,
 
     // When its definition doesn't exist in the destination module and not
-    // imported (e.g., function is large to be inlined), the global value
+    // imported (e.g., function is too large to be inlined), the global value
     // declaration corresponding to the summary should be imported, or the
     // attributes from summary should be annotated on the function declaration.
     Declaration = 1,
@@ -581,7 +581,7 @@ public:
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
 
-  bool shouldImportAsDec() const {
+  bool shouldImportAsDecl() const {
     return Flags.ImportType == GlobalValueSummary::ImportKind::Declaration;
   }
 
@@ -836,8 +836,7 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false,
-            /*ImportKind=*/GlobalValueSummary::ImportKind::Definition),
+            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),

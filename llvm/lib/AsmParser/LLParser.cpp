@@ -2072,21 +2072,18 @@ void LLParser::parseOptionalVisibility(unsigned &Res) {
   Lex.Lex();
 }
 
-static GlobalValueSummary::ImportKind
-parseOptionalImportType(lltok::Kind Kind) {
-  GlobalValueSummary::ImportKind Res;
+bool LLParser::parseOptionalImportType(lltok::Kind Kind,
+                                       GlobalValueSummary::ImportKind &Res) {
   switch (Kind) {
   default:
-    Res = GlobalValueSummary::Definition;
-    break;
+    return tokError("unknown import kind. Expect definition or declaration.");
   case lltok::kw_definition:
     Res = GlobalValueSummary::Definition;
-    break;
+    return false;
   case lltok::kw_declaration:
     Res = GlobalValueSummary::Declaration;
-    break;
+    return false;
   }
-  return Res;
 }
 
 /// parseOptionalDLLStorageClass
@@ -10170,7 +10167,10 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
       Lex.Lex();
       if (parseToken(lltok::colon, "expected ':'"))
         return true;
-      GVFlags.ImportType = parseOptionalImportType(Lex.getKind());
+      GlobalValueSummary::ImportKind IK;
+      if (parseOptionalImportType(Lex.getKind(), IK))
+        return true;
+      GVFlags.ImportType = static_cast<unsigned>(IK);
       Lex.Lex();
       break;
     default:

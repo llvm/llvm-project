@@ -636,7 +636,7 @@ static void computeFunctionSummary(
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
-      /*ImportType=*/GlobalValueSummary::ImportKind::Definition);
+      GlobalValueSummary::ImportKind::Definition);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
