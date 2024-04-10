@@ -202,10 +202,9 @@
 ! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-AMDGPU %s
 ! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"
 
-! RUN:   rm -rf %t/Inputs
 ! RUN:   not %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx900 \
-! RUN:      --rocm-path=%t/Inputs/rocm %s 2>&1 \
+! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH-NOT-FOUND %s
 ! ROCM-PATH-NOT-FOUND: error: cannot find ROCm device library;
 
@@ -214,7 +213,7 @@
 ! RUN:   cp -r %S/../../../clang/test/Driver/Inputs/rocm %t/Inputs
 ! RUN:   mkdir -p %t/Inputs/rocm/share/hip
 ! RUN:   mkdir -p %t/Inputs/rocm/hip
-! RUN: mv %t/Inputs/rocm/bin/.hipVersion %t/Inputs/rocm/share/hip/version
+! RUN:   mv %t/Inputs/rocm/bin/.hipVersion %t/Inputs/rocm/share/hip/version
 
 ! RUN:   %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx900 \
