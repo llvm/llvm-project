@@ -40,6 +40,7 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
 
   DependencyScanningFilesystemSharedCache SharedCache;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+  DependencyScanningWorkerFilesystem DepFS2(SharedCache, InstrumentingFS);
 
   {
     llvm::SmallString<128> Result;
@@ -60,5 +61,12 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
     DepFS.getRealPath("/bar", Result);
     EXPECT_EQ(Result, "/bar");
     EXPECT_EQ(InstrumentingFS->NumGetRealPathCalls, 2u);
+  }
+
+  {
+    llvm::SmallString<128> Result;
+    DepFS2.getRealPath("/foo", Result);
+    EXPECT_EQ(Result, "/foo");
+    EXPECT_EQ(InstrumentingFS->NumGetRealPathCalls, 2u); // Shared cache.
   }
 }

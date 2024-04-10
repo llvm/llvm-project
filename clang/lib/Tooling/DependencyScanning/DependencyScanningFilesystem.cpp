@@ -177,7 +177,7 @@ const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
                                     llvm::ErrorOr<llvm::StringRef> RealPath) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
 
-  const CachedRealPath *StoredRealPath = CacheByFilename[Filename].second;
+  const CachedRealPath *&StoredRealPath = CacheByFilename[Filename].second;
   if (!StoredRealPath) {
     auto OwnedRealPath = [&]() -> CachedRealPath {
       if (!RealPath)
