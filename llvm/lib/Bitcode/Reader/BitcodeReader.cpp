@@ -5041,7 +5041,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       }
 
       if (OpNum < Record.size()) {
-        if (Opc == Instruction::ZExt) {
+        if (Opc == Instruction::ZExt || Opc == Instruction::UIToFP) {
           if (Record[OpNum] & (1 << bitc::PNNI_NON_NEG))
             cast<PossiblyNonNegInst>(I)->setNonNeg(true);
         } else if (Opc == Instruction::Trunc) {
