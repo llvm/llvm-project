@@ -2809,6 +2809,19 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_FunctionLBrace);
   EXPECT_BRACE_KIND(Tokens[13], BK_Block);
   EXPECT_BRACE_KIND(Tokens[14], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "  char *a[] = {\n"
+                    "      /* abc */ \"abc\",\n"
+                    "#if FOO\n"
+                    "      /* xyz */ \"xyz\",\n"
+                    "#endif\n"
+                    "      /* last */ \"last\"};\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 25u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[21], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, StreamOperator) {

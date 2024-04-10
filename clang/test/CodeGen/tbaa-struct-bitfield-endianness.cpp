@@ -1,13 +1,10 @@
 // RUN: %clang_cc1 -triple aarch64_be-apple-darwin -emit-llvm -o - -O1 %s | \
-// RUN:     FileCheck -check-prefixes=CHECK,CHECK-BE %s
+// RUN:     FileCheck -check-prefixes=CHECK %s
 // RUN: %clang_cc1 -triple aarch64-apple-darwin -emit-llvm -o - -O1 %s | \
-// RUN:     FileCheck -check-prefixes=CHECK,CHECK-LE %s
+// RUN:     FileCheck -check-prefixes=CHECK %s
 //
 // Check that TBAA metadata for structs containing bitfields is
 // consistent between big and little endian layouts.
-//
-// FIXME: The metadata below is invalid for the big endian layout: the
-// start offset of 2 is incorrect.
 
 struct NamedBitfields {
   int f1 : 8;
@@ -28,8 +25,7 @@ void copy(NamedBitfields *a1, NamedBitfields *a2) {
   *a1 = *a2;
 }
 
-// CHECK-BE: [[TBAA_STRUCT2]] = !{i64 2, i64 4, [[META3:![0-9]+]], i64 4, i64 4, [[META6:![0-9]+]], i64 8, i64 8, [[META8:![0-9]+]]}
-// CHECK-LE: [[TBAA_STRUCT2]] = !{i64 0, i64 4, [[META3:![0-9]+]], i64 4, i64 4, [[META6:![0-9]+]], i64 8, i64 8, [[META8:![0-9]+]]}
+// CHECK: [[TBAA_STRUCT2]] = !{i64 0, i64 4, [[META3:![0-9]+]], i64 4, i64 4, [[META6:![0-9]+]], i64 8, i64 8, [[META8:![0-9]+]]}
 // CHECK: [[META3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C++ TBAA"}

@@ -67,7 +67,7 @@ enum class OpenACCDirectiveKind {
 };
 
 template <typename StreamTy>
-inline StreamTy &PrintOpenACCDirectiveKind(StreamTy &Out,
+inline StreamTy &printOpenACCDirectiveKind(StreamTy &Out,
                                            OpenACCDirectiveKind K) {
   switch (K) {
   case OpenACCDirectiveKind::Parallel:
@@ -138,12 +138,12 @@ inline StreamTy &PrintOpenACCDirectiveKind(StreamTy &Out,
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
                                              OpenACCDirectiveKind K) {
-  return PrintOpenACCDirectiveKind(Out, K);
+  return printOpenACCDirectiveKind(Out, K);
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCDirectiveKind K) {
-  return PrintOpenACCDirectiveKind(Out, K);
+  return printOpenACCDirectiveKind(Out, K);
 }
 
 enum class OpenACCAtomicKind {
@@ -266,7 +266,7 @@ enum class OpenACCClauseKind {
 };
 
 template <typename StreamTy>
-inline StreamTy &PrintOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
+inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   switch (K) {
   case OpenACCClauseKind::Finalize:
     return Out << "finalize";
@@ -402,12 +402,12 @@ inline StreamTy &PrintOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
                                              OpenACCClauseKind K) {
-  return PrintOpenACCClauseKind(Out, K);
+  return printOpenACCClauseKind(Out, K);
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
                                      OpenACCClauseKind K) {
-  return PrintOpenACCClauseKind(Out, K);
+  return printOpenACCClauseKind(Out, K);
 }
 
 enum class OpenACCDefaultClauseKind {

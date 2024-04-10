@@ -641,10 +641,12 @@ define void @expect_with_probability(i16 %0) {
   ret void
 }
 
+@tls_var = dso_local thread_local global i32 0, align 4
+
 ; CHECK-LABEL: llvm.func @threadlocal_test
-define void @threadlocal_test(ptr %0) {
+define void @threadlocal_test() {
   ; CHECK: "llvm.intr.threadlocal.address"(%{{.*}}) : (!llvm.ptr) -> !llvm.ptr
-  %local = call ptr @llvm.threadlocal.address.p0(ptr %0)
+  %local = call ptr @llvm.threadlocal.address.p0(ptr @tls_var)
   ret void
 }
 

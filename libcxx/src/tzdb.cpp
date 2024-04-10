@@ -717,8 +717,12 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
     std::__throw_runtime_error("tzdb: the path '/etc/localtime' is not a symlink");
 
   filesystem::path __tz = filesystem::read_symlink(__path);
-  string __name         = filesystem::relative(__tz, "/usr/share/zoneinfo/");
+  // The path may be a relative path, in that case convert it to an absolute
+  // path based on the proper initial directory.
+  if (__tz.is_relative())
+    __tz = filesystem::canonical("/etc" / __tz);
 
+  string __name = filesystem::relative(__tz, "/usr/share/zoneinfo/");
   if (const time_zone* __result = tzdb.__locate_zone(__name))
     return __result;
 
