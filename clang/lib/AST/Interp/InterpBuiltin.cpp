@@ -16,6 +16,16 @@
 namespace clang {
 namespace interp {
 
+static unsigned callArgSize(const InterpState &S, const CallExpr *C) {
+  unsigned O = 0;
+
+  for (const Expr *E : C->arguments()) {
+    O += align(primSize(*S.getContext().classify(E)));
+  }
+
+  return O;
+}
+
 template <typename T>
 static T getParam(const InterpFrame *Frame, unsigned Index) {
   assert(Frame->getFunction()->getNumParams() > Index);
@@ -816,9 +826,10 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   unsigned BuiltinOp = Func->getBuiltinID();
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
   // When the argument is 0, the result of GCC builtins is undefined, whereas
   // for Microsoft intrinsics, the result is the bit-width of the argument.
@@ -826,8 +837,19 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                          BuiltinOp != Builtin::BI__lzcnt &&
                          BuiltinOp != Builtin::BI__lzcnt64;
 
-  if (ZeroIsUndefined && Val == 0)
-    return false;
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_clzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
+
+    if (ZeroIsUndefined)
+      return false;
+  }
 
   pushInteger(S, Val.countl_zero(), Call->getType());
   return true;
@@ -836,11 +858,21 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
                                 const InterpFrame *Frame, const Function *Func,
                                 const CallExpr *Call) {
+  unsigned CallSize = callArgSize(S, Call);
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
-  const APSInt &Val = peekToAPSInt(S.Stk, ValT);
+  const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
-  if (Val == 0)
+  if (Val == 0) {
+    if (Func->getBuiltinID() == Builtin::BI__builtin_ctzg &&
+        Call->getNumArgs() == 2) {
+      // We have a fallback parameter.
+      PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
+      const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
+      pushInteger(S, Fallback, Call->getType());
+      return true;
+    }
     return false;
+  }
 
   pushInteger(S, Val.countr_zero(), Call->getType());
   return true;
@@ -1223,6 +1255,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
   case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clzg:
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64:
@@ -1234,6 +1267,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctzg:
     if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
       return false;
     break;
