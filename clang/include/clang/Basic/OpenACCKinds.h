@@ -430,6 +430,7 @@ inline StreamTy &printOpenACCDefaultClauseKind(StreamTy &Out,
   case OpenACCDefaultClauseKind::Invalid:
     return Out << "<invalid>";
   }
+  llvm_unreachable("Unknown OpenACCDefaultClauseKind enum");
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
