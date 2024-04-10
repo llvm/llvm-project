@@ -1615,10 +1615,22 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
   constexpr size_t kOnDiskSizeOffset = 9 * sizeof(uint64_t);
+  // `FieldByteOffset` represents the end byte of the last known header field.
+  size_t FieldByteOffset = 0;
   if (ProfileVersion >= ProfVersion::Version13)
     H.Size = read(Buffer, kOnDiskSizeOffset);
 
-  size_t FieldByteOffset = H.size();
+  if (ProfileVersion < ProfVersion::Version13)
+    FieldByteOffset = H.size();
+  else {
+    assert(ProfileVersion == ProfVersion::Version13 &&
+           "The newest known version is version 13");
+    FieldByteOffset = kOnDiskSizeOffset + sizeof(Header::Size);
+  }
+
+  assert(FieldByteOffset != 0 &&
+         "FieldByteOffset specifies the byte offset of the last known field in "
+         "header and should not be zero");
 
   switch (ProfileVersion) {
     // When a new field is added in the header add a case statement here to
