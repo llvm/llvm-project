@@ -6626,8 +6626,6 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
              "Invalid data, missing pragma diagnostic states");
       FileID FID = ReadFileID(F, Record, Idx);
       assert(FID.isValid() && "invalid FileID for transition");
-      // FIXME: Remove this once we don't need the side-effects.
-      (void)SourceMgr.getSLocEntryOrNull(FID);
       unsigned Transitions = Record[Idx++];
 
       // Note that we don't need to set up Parent/ParentOffset here, because
