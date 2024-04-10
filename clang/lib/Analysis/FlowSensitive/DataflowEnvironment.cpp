@@ -989,28 +989,6 @@ StorageLocation *Environment::getStorageLocation(const Expr &E) const {
   return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
-// Returns whether a prvalue of record type is the one that originally
-// constructs the object (i.e. it doesn't propagate it from one of its
-// children).
-static bool isOriginalRecordConstructor(const Expr &RecordPRValue) {
-  if (auto *Init = dyn_cast<InitListExpr>(&RecordPRValue))
-    return !Init->isSemanticForm() || !Init->isTransparent();
-  return isa<CXXConstructExpr>(RecordPRValue) || isa<CallExpr>(RecordPRValue) ||
-         isa<LambdaExpr>(RecordPRValue) ||
-         isa<CXXDefaultArgExpr>(RecordPRValue) ||
-         isa<CXXDefaultInitExpr>(RecordPRValue) ||
-         // The framework currently does not propagate the objects created in
-         // the two branches of a `ConditionalOperator` because there is no way
-         // to reconcile their storage locations, which are different. We
-         // therefore claim that the `ConditionalOperator` is the expression
-         // that originally constructs the object.
-         // Ultimately, this will be fixed by propagating locations down from
-         // the result object, rather than up from the original constructor as
-         // we do now (see also the FIXME in the documentation for
-         // `getResultObjectLocation()`).
-         isa<ConditionalOperator>(RecordPRValue);
-}
-
 RecordStorageLocation &
 Environment::getResultObjectLocation(const Expr &RecordPRValue) const {
   assert(RecordPRValue.getType()->isRecordType());
