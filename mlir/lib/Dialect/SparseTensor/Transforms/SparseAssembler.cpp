@@ -108,6 +108,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
           retTypes.push_back(rtp);
           cntTypes.push_back(builder.getIndexType());
         }
+      }
       return true;
     });
 
