@@ -1610,13 +1610,17 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   // Read the version.
   H.Version = read(Buffer, sizeof(uint64_t));
-  const uint64_t ProfVersion = GET_VERSION(H.formatVersion());
-  if (ProfVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
+  const uint64_t ProfileVersion = GET_VERSION(H.formatVersion());
+  if (ProfileVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  size_t FieldByteOffset = H.size() - sizeof(uint64_t);
+  constexpr size_t kOnDiskSizeOffset = 9 * sizeof(uint64_t);
+  if (ProfileVersion >= ProfVersion::Version13)
+    H.Size = read(Buffer, kOnDiskSizeOffset);
 
-  switch (ProfVersion) {
+  size_t FieldByteOffset = H.size();
+
+  switch (ProfileVersion) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
@@ -1624,31 +1628,32 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
   case 13ull:
-    FieldByteOffset -= sizeof(uint64_t);
+    // Size field is already read.
+    FieldByteOffset -= sizeof(Header::Size);
     [[fallthrough]];
   case 12ull:
+    FieldByteOffset -= sizeof(Header::VTableNamesOffset);
     H.VTableNamesOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 11ull:
     [[fallthrough]];
   case 10ull:
+    FieldByteOffset -= sizeof(Header::TemporalProfTracesOffset);
     H.TemporalProfTracesOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 9ull:
+    FieldByteOffset -= sizeof(Header::BinaryIdOffset);
     H.BinaryIdOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   case 8ull:
+    FieldByteOffset -= sizeof(Header::MemProfOffset);
     H.MemProfOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
     [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
+    FieldByteOffset -= sizeof(Header::HashOffset);
     H.HashOffset = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
+    FieldByteOffset -= sizeof(Header::HashType);
     H.HashType = read(Buffer, FieldByteOffset);
-    FieldByteOffset -= sizeof(uint64_t);
   }
 
   return H;
@@ -1664,7 +1669,9 @@ size_t Header::size() const {
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
   case 13ull:
-    return sizeof(uint64_t) * kHeaderFieldSize;
+    assert(Size != 0 && "User can call Header::size() only after reading it "
+                        "from memory buffer");
+    return Size;
   case 12ull:
     return offsetOf(&Header::VTableNamesOffset) +
            sizeof(Header::VTableNamesOffset);

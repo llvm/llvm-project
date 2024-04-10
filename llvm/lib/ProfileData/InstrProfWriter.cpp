@@ -642,8 +642,15 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t VTableNamesOffset = OS.tell();
   OS.write(0);
 
+  // Record the offset of 'Header::Size' field and reserve the space to allow
+  // back patching later.
+  const uint64_t OnDiskHeaderSizeOffset = OS.tell();
   if (!WritePrevVersion)
-    OS.write(OS.tell() - StartOffset);
+    OS.write(0);
+
+  // Record the OnDiskHeader Size after each header field either gets written or
+  // gets its space reserved.
+  uint64_t OnDiskHeaderSize = OS.tell() - StartOffset;
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
@@ -784,6 +791,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
         // traces).
         {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
         {VTableNamesOffset, &VTableNamesSectionStart, 1},
+        {OnDiskHeaderSizeOffset, &OnDiskHeaderSize, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
          (int)(SummarySize / sizeof(uint64_t))},
