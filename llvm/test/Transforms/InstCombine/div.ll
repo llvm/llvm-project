@@ -1638,6 +1638,63 @@ define i32 @sdiv_mul_sub_nsw(i32 %x, i32 %y) {
   ret i32 %d
 }
 
+  define i32 @mul_by_150_udiv_by_100 (i32 %0) {
+; CHECK-LABEL: @mul_by_150_udiv_by_100(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP0:%.*]], 150
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP2]], 100
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = mul nuw i32 %0, 150
+  %3 = udiv i32 %2, 100
+  ret i32 %3
+}
+
+  define i32 @mul_by_150_sdiv_by_100(i32 %0) {
+; CHECK-LABEL: @mul_by_150_sdiv_by_100(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP0:%.*]], -150
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[TMP2]], -100
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = mul nuw i32 %0, -150
+  %3 = sdiv i32 %2, -100
+  ret i32 %3
+}
+
+  define i32 @mul_by_3_sdiv_by_2(i32 %0) {
+; CHECK-LABEL: @mul_by_3_sdiv_by_2(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP0:%.*]], -3
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[TMP2]], -2
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = mul nuw i32 %0, -3
+  %3 = sdiv i32 %2, -2
+  ret i32 %3
+}
+
+;negative case, no nsw
+
+  define i32 @mul_by_150_sdiv_by_100_neg (i32 %0) {
+; CHECK-LABEL: @mul_by_150_sdiv_by_100_neg(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0:%.*]], 150
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i32 [[TMP2]], 100
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = mul i32 %0, 150
+  %3 = sdiv i32 %2, 100
+  ret i32 %3
+}
+
+  define i32 @mul_by_150_sdiv_by_100_neg2 (i32 %0) {
+; CHECK-LABEL: @mul_by_150_sdiv_by_100_neg2(
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0:%.*]], 150
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP2]], 100
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %2 = mul i32 %0, 150
+  %3 = udiv i32 %2, 100
+  ret i32 %3
+}
+
 define i32 @sdiv_mul_nsw_sub_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_mul_nsw_sub_nsw(
 ; CHECK-NEXT:    ret i32 -1
