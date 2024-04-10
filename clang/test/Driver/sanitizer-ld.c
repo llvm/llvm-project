@@ -111,7 +111,7 @@
 // CHECK-ASAN-FREEBSD: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-NOT: "-lc"
 // CHECK-ASAN-FREEBSD-NOT: libclang_rt.asan_cxx
-// CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan.a"
+// CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan-i386.a"
 // CHECK-ASAN-FREEBSD-NOT: libclang_rt.asan_cxx
 // CHECK-ASAN-FREEBSD-NOT: "--dynamic-list"
 // CHECK-ASAN-FREEBSD: "--export-dynamic"
@@ -135,8 +135,8 @@
 //
 // CHECK-ASAN-LINUX-CXX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-LINUX-CXX-NOT: "-lc"
-// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
-// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan-i386.a" "--no-whole-archive"
+// CHECK-ASAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx-i386.a" "--no-whole-archive"
 // CHECK-ASAN-LINUX-CXX-NOT: "--dynamic-list"
 // CHECK-ASAN-LINUX-CXX: "--export-dynamic"
 // CHECK-ASAN-LINUX-CXX: stdc++
@@ -163,7 +163,7 @@
 //
 // CHECK-ASAN-ARM: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ARM-NOT: "-lc"
-// CHECK-ASAN-ARM: libclang_rt.asan.a"
+// CHECK-ASAN-ARM: libclang_rt.asan-arm.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=armv7l-linux-gnueabi -fuse-ld=ld -fsanitize=address \
@@ -172,7 +172,7 @@
 //
 // CHECK-ASAN-ARMv7: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ARMv7-NOT: "-lc"
-// CHECK-ASAN-ARMv7: libclang_rt.asan.a"
+// CHECK-ASAN-ARMv7: libclang_rt.asan-arm.a"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
@@ -184,7 +184,7 @@
 // CHECK-ASAN-ANDROID-NOT: "-lc"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-NOT: "-lresolv"
-// CHECK-ASAN-ANDROID: libclang_rt.asan.so"
+// CHECK-ASAN-ANDROID: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-NOT: "-lresolv"
 
@@ -195,7 +195,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN %s
 //
 // CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan.a"
+// CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan-arm-android.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
@@ -210,7 +210,7 @@
 // CHECK-UBSAN-ANDROID-NOT: "-lc"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-NOT: "-lresolv"
-// CHECK-UBSAN-ANDROID: libclang_rt.ubsan_standalone.so"
+// CHECK-UBSAN-ANDROID: libclang_rt.ubsan_standalone-arm-android.so"
 // CHECK-UBSAN-ANDROID-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-NOT: "-lresolv"
 
@@ -221,7 +221,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-ANDROID-STATICLIBASAN %s
 //
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
-// CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone.a"
+// CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone-arm-android.a"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lresolv"
@@ -237,7 +237,7 @@
 // CHECK-ASAN-ANDROID-X86-NOT: "-lc"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
-// CHECK-ASAN-ANDROID-X86: libclang_rt.asan.so"
+// CHECK-ASAN-ANDROID-X86: libclang_rt.asan-i686-android.so"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-X86-NOT: "-lresolv"
 //
@@ -257,7 +257,7 @@
 //
 // CHECK-ASAN-ANDROID-SHARED: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lc"
-// CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan.so"
+// CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lresolv"
 
@@ -347,7 +347,7 @@
 // CHECK-UBSAN-LINUX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.ubsan_standalone_cxx
-// CHECK-UBSAN-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
+// CHECK-UBSAN-LINUX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x32.a" "--no-whole-archive"
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.asan
 // CHECK-UBSAN-LINUX-NOT: libclang_rt.ubsan_standalone_cxx
 // CHECK-UBSAN-LINUX-NOT: "-lstdc++"
@@ -678,7 +678,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-CROSS-DSO-DIAG-ANDROID %s
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{.*}}ld{{(.exe)?}}"
-// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone.so"
+// CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "{{[^"]*}}libclang_rt.ubsan_standalone-aarch64-android.so"
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
 // RUN: %clangxx -fsanitize=address -### %s 2>&1 \
@@ -929,7 +929,7 @@
 // CHECK-SCUDO-ANDROID: "-pie"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-NOT: "-lresolv"
-// CHECK-SCUDO-ANDROID: libclang_rt.scudo_standalone.so"
+// CHECK-SCUDO-ANDROID: libclang_rt.scudo_standalone-arm-android.so"
 // CHECK-SCUDO-ANDROID-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-NOT: "-lresolv"
 
@@ -940,7 +940,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SCUDO-ANDROID-STATIC %s
 // CHECK-SCUDO-ANDROID-STATIC: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-SCUDO-ANDROID-STATIC: "-pie"
-// CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone.a" "--no-whole-archive"
+// CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo_standalone-arm-android.a" "--no-whole-archive"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lpthread"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lrt"
