@@ -39,11 +39,27 @@ bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
 
 bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
                                 OpenACCClauseKind ClauseKind) {
-  // FIXME: For each clause as we implement them, we can add the
-  // 'legalization' list here.
-
-  // Do nothing so we can go to the 'unimplemented' diagnostic instead.
-  return true;
+  switch (ClauseKind) {
+    // FIXME: For each clause as we implement them, we can add the
+    // 'legalization' list here.
+  case OpenACCClauseKind::Default:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Data:
+      return true;
+    default:
+      return false;
+    }
+  default:
+    // Do nothing so we can go to the 'unimplemented' diagnostic instead.
+    return true;
+  }
+  llvm_unreachable("Invalid clause kind");
 }
 } // namespace
 
@@ -63,8 +79,43 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return nullptr;
   }
 
-  // TODO OpenACC: Switch over the clauses we implement here and 'create'
-  // them.
+  switch (Clause.getClauseKind()) {
+  case OpenACCClauseKind::Default: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Parallel &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Serial &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Kernels)
+      break;
+
+    // Don't add an invalid clause to the AST.
+    if (Clause.getDefaultClauseKind() == OpenACCDefaultClauseKind::Invalid)
+      return nullptr;
+
+    // OpenACC 3.3, Section 2.5.4:
+    // At most one 'default' clause may appear, and it must have a value of
+    // either 'none' or 'present'.
+    // Second half of the sentence is diagnosed during parsing.
+    auto Itr = llvm::find_if(ExistingClauses, [](const OpenACCClause *C) {
+      return C->getClauseKind() == OpenACCClauseKind::Default;
+    });
+
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(),
+                   diag::err_acc_duplicate_clause_disallowed)
+          << Clause.getDirectiveKind() << Clause.getClauseKind();
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+      return nullptr;
+    }
+
+    return OpenACCDefaultClause::Create(
+        getASTContext(), Clause.getDefaultClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.getEndLoc());
+  }
+  default:
+    break;
+  }
 
   Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
       << Clause.getClauseKind();

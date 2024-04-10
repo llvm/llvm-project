@@ -11763,7 +11763,12 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   [[maybe_unused]] SourceLocation EndLoc = readSourceLocation();
 
   switch (ClauseKind) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCDefaultClauseKind DCK = readEnum<OpenACCDefaultClauseKind>();
+    return OpenACCDefaultClause::Create(getContext(), DCK, BeginLoc, LParenLoc,
+                                        EndLoc);
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:

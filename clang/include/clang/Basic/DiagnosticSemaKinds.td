@@ -12265,6 +12265,10 @@ def err_acc_construct_appertainment
             "be used in a statement context">;
 def err_acc_clause_appertainment
     : Error<"OpenACC '%1' clause is not valid on '%0' directive">;
+def err_acc_duplicate_clause_disallowed
+    : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
+            "directive">;
+def note_acc_previous_clause_here : Note<"previous clause is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;

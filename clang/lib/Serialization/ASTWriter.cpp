@@ -7406,7 +7406,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeSourceLocation(C->getEndLoc());
 
   switch (C->getClauseKind()) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    const auto *DC = cast<OpenACCDefaultClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeEnum(DC->getDefaultClauseKind());
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
