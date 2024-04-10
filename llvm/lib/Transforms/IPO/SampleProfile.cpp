@@ -2059,7 +2059,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   // Load pseudo probe descriptors for probe-based function samples.
   if (Reader->profileIsProbeBased()) {
-    ProbeManager = std::make_unique<PseudoProbeManager>(M, LTOPhase);
+    ProbeManager = std::make_unique<PseudoProbeManager>(M);
     if (!ProbeManager->moduleIsProbed(M)) {
       const char *Msg =
           "Pseudo-probe-based profile requires SampleProfileProbePass";

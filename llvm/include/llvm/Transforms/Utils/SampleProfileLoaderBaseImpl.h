@@ -86,12 +86,9 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
-  const ThinOrFullLTOPhase LTOPhase;
 
 public:
-  PseudoProbeManager(const Module &M,
-                     ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
-      : LTOPhase(LTOPhase) {
+  PseudoProbeManager(const Module &M) {
     if (NamedMDNode *FuncInfo =
             M.getNamedMetadata(PseudoProbeDescMetadataName)) {
       for (const auto *Operand : FuncInfo->operands()) {
