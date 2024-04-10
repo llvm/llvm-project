@@ -9768,8 +9768,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
       StringLiteral *Msg = Best->Function->getDeletedMessage();
       S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
-          << OnlyArg->getType() << DestType.getNonReferenceType() << (Msg != nullptr)
-          << (Msg ? Msg->getString() : StringRef())
+          << OnlyArg->getType() << DestType.getNonReferenceType()
+          << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
           << Args[0]->getSourceRange();
       if (Ovl == OR_Deleted) {
         S.NoteDeletedFunction(Best->Function);
@@ -10031,8 +10031,8 @@ bool InitializationSequence::Diagnose(Sema &S,
         else {
           StringLiteral *Msg = Best->Function->getDeletedMessage();
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
-              << DestType << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
-              << ArgsRange;
+              << DestType << (Msg != nullptr)
+              << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
         }
 
         S.NoteDeletedFunction(Best->Function);

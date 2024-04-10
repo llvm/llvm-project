@@ -15081,12 +15081,12 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
       StringLiteral *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
-              OpLoc, PDiag(diag::err_ovl_deleted_oper)
-                         << getOperatorSpelling(Best->Function->getDeclName()
-                                                    .getCXXOverloadedOperator())
-                         << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
-                         << Args[0]->getSourceRange()
-                         << Args[1]->getSourceRange()),
+              OpLoc,
+              PDiag(diag::err_ovl_deleted_oper)
+                  << getOperatorSpelling(Best->Function->getDeclName()
+                                             .getCXXOverloadedOperator())
+                  << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
+                  << Args[0]->getSourceRange() << Args[1]->getSourceRange()),
           *this, OCD_AllCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
           OpLoc);
       return ExprError();
