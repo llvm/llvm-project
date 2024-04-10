@@ -646,6 +646,9 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Fixes a long-standing performance issue in parent map generation for
+  ancestry-based matchers such as ``hasParent`` and ``hasAncestor``, making
+  them significantly faster.
 - ``isInStdNamespace`` now supports Decl declared with ``extern "C++"``.
 - Add ``isExplicitObjectMemberFunction``.
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
