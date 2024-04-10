@@ -18,7 +18,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LiveDebugVariables.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -30,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
