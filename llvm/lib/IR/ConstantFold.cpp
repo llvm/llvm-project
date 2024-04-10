@@ -590,30 +590,56 @@ Constant *llvm::ConstantFoldExtractValueInstruction(Constant *Agg,
 Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
                                                    Constant *Val,
                                                    ArrayRef<unsigned> Idxs) {
+
+  // FIXME: Although this non-recursive version of the algorithm still
+  // executes in O(n), it's very slow when compared to gfortran because
+  // the IR generated at constant folding is huge. See issue #77877.
+  // We should consider reviewing the entire constant folding code to
+  // improve performance.
+
   // Base case: no indices, so replace the entire value.
   if (Idxs.empty())
     return Val;
 
-  unsigned NumElts;
-  if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
-    NumElts = ST->getNumElements();
-  else
-    NumElts = cast<ArrayType>(Agg->getType())->getNumElements();
+  // At each level, we will keep track of: Agg, idx, NumElts and Elements.
+  // This avoids storing the entire aggregate and keeps memory usage at O(1).
+  std::vector<
+      std::tuple<Constant *, unsigned, unsigned, SmallVector<Constant *, 32>>>
+      vector;
 
-  SmallVector<Constant*, 32> Result;
-  for (unsigned i = 0; i != NumElts; ++i) {
-    Constant *C = Agg->getAggregateElement(i);
-    if (!C) return nullptr;
+  for (unsigned idx : Idxs) {
+    unsigned NumElts;
+    if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
+      NumElts = ST->getNumElements();
+    else
+      NumElts = cast<ArrayType>(Agg->getType())->getNumElements();
 
-    if (Idxs[0] == i)
-      C = ConstantFoldInsertValueInstruction(C, Val, Idxs.slice(1));
-
-    Result.push_back(C);
+    SmallVector<Constant *, 32> Elements(NumElts);
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *C = Agg->getAggregateElement(i);
+      if (!C)
+        return nullptr;
+      Elements[i] = C;
+    }
+    // Store the data we need.
+    vector.push_back({Agg, idx, NumElts, Elements});
+    Agg = Agg->getAggregateElement(idx);
+    if (!Agg)
+      return nullptr;
   }
 
-  if (StructType *ST = dyn_cast<StructType>(Agg->getType()))
-    return ConstantStruct::get(ST, Result);
-  return ConstantArray::get(cast<ArrayType>(Agg->getType()), Result);
+  // Build the result from the data we stored in the vector.
+  for (auto it = vector.rbegin(); it != vector.rend(); ++it) {
+    std::get<3>(*it)[std::get<1>(*it)] = (it == vector.rbegin()) ? Val : Agg;
+
+    if (StructType *ST = dyn_cast<StructType>(std::get<0>(*it)->getType()))
+      Agg = ConstantStruct::get(ST, std::get<3>(*it));
+    else
+      Agg = ConstantArray::get(cast<ArrayType>(std::get<0>(*it)->getType()),
+                               std::get<3>(*it));
+  }
+
+  return Agg;
 }
 
 Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
