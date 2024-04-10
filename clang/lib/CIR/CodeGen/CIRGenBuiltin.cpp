@@ -567,12 +567,14 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzg:
     return buildBuiltinBitOp<mlir::cir::BitCtzOp>(*this, E, BCK_CTZPassedZero);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzg:
     return buildBuiltinBitOp<mlir::cir::BitClzOp>(*this, E, BCK_CLZPassedZero);
 
   case Builtin::BI__builtin_ffs:
@@ -591,6 +593,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
     return buildBuiltinBitOp<mlir::cir::BitPopcountOp>(*this, E, std::nullopt);
 
   case Builtin::BI__builtin_bswap16:
