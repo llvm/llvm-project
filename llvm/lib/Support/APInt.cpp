@@ -2589,8 +2589,8 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
   for (unsigned i = 0; i < parts; i++) {
     // Don't accumulate on the first iteration so we don't need to initalize
     // dst to 0.
-    overflow |= tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts,
-                               parts - i, i != 0);
+    overflow |=
+        tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts, parts - i, i != 0);
   }
 
   return overflow;
