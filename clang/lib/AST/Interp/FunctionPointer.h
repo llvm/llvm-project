@@ -24,7 +24,7 @@ private:
 public:
   // FIXME: We might want to track the fact that the Function pointer
   // has been created from an integer and is most likely garbage anyway.
-  FunctionPointer(int IntVal = 0, const Descriptor *Desc = nullptr)
+  FunctionPointer(uintptr_t IntVal = 0, const Descriptor *Desc = nullptr)
       : Func(reinterpret_cast<const Function *>(IntVal)) {}
 
   FunctionPointer(const Function *Func) : Func(Func) { assert(Func); }
