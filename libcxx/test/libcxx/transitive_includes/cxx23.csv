@@ -80,7 +80,6 @@ chrono cstring
 chrono ctime
 chrono cwchar
 chrono forward_list
-chrono initializer_list
 chrono limits
 chrono new
 chrono optional

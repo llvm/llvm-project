@@ -16,6 +16,9 @@
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
 
+#  include <__chrono/duration.h>
+#  include <__chrono/sys_info.h>
+#  include <__chrono/system_clock.h>
 #  include <__compare/strong_order.h>
 #  include <__config>
 #  include <__memory/unique_ptr.h>
@@ -55,10 +58,18 @@ public:
 
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name(); }
 
+  template <class _Duration>
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI sys_info get_info(const sys_time<_Duration>& __time) const {
+    return __get_info(chrono::time_point_cast<seconds>(__time));
+  }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const __impl& __implementation() const noexcept { return *__impl_; }
 
 private:
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string_view __name() const noexcept;
+
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI sys_info __get_info(sys_seconds __time) const;
+
   unique_ptr<__impl> __impl_;
 };
 
