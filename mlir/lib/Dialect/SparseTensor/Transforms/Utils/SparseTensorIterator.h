@@ -15,6 +15,9 @@
 namespace mlir {
 namespace sparse_tensor {
 
+// Forward declaration.
+class SparseIterator;
+
 /// The base class for all types of sparse tensor levels. It provides interfaces
 /// to query the loop range (see `peekRangeAt`) and look up the coordinates (see
 /// `peekCrdAt`).
@@ -80,6 +83,53 @@ enum class IterKind : uint8_t {
   kFilter,
 };
 
+class SparseIterationSpace {
+public:
+  SparseIterationSpace() = default;
+
+  // Constructs a N-D iteration space.
+  SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
+                       std::pair<Level, Level> lvlRange,
+                       const SparseIterator *parentIt);
+
+  // Constructs a 1-D iteration space.
+  SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
+                       Level lvl, const SparseIterator *parentIt)
+      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentIt){};
+
+  bool isUnique() const { return lvls.back()->isUnique(); }
+
+  unsigned getSpaceDim() const { return lvls.size(); }
+
+  // Reconstructs a iteration space directly from the provided ValueRange.
+  static SparseIterationSpace fromValues(IterSpaceType dstTp, ValueRange values,
+                                         unsigned tid);
+
+  // The inverse operation of `fromValues`.
+  SmallVector<Value> toValues() const {
+    SmallVector<Value> vals;
+    for (auto &stl : lvls) {
+      llvm::append_range(vals, stl->getLvlBuffers());
+      vals.push_back(stl->getSize());
+    }
+    vals.append({bound.first, bound.second});
+    return vals;
+  }
+
+  const SparseTensorLevel &getLastLvl() const { return *lvls.back(); }
+
+  Value getBoundLo() const { return bound.first; }
+  Value getBoundHi() const { return bound.second; }
+
+  // Extract an iterator to iterate over the sparse iteration space.
+  std::unique_ptr<SparseIterator> extractIterator(OpBuilder &b,
+                                                  Location l) const;
+
+private:
+  SmallVector<std::unique_ptr<SparseTensorLevel>> lvls;
+  std::pair<Value, Value> bound;
+};
+
 /// Helper class that generates loop conditions, etc, to traverse a
 /// sparse tensor level.
 class SparseIterator {
@@ -134,6 +184,15 @@ public:
     // Now that the iterator is re-positioned, the coordinate becomes invalid.
     crd = nullptr;
   }
+
+  // Reconstructs a iteration space directly from the provided ValueRange.
+  static std::unique_ptr<SparseIterator>
+  fromValues(IteratorType dstTp, ValueRange values, unsigned tid) {
+    llvm_unreachable("Not implemented");
+  }
+
+  // The inverse operation of `fromValues`.
+  SmallVector<Value> toValues() const { llvm_unreachable("Not implemented"); }
 
   //
   // Iterator properties.
@@ -290,9 +349,12 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &builder,
 std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
                                                          ValueRange buffers,
                                                          unsigned tid, Level l);
+std::unique_ptr<SparseIterator>
+makeSimpleIterator(OpBuilder &b, Location l,
+                   const SparseIterationSpace &iterSpace);
 
-/// Helper function to create a simple SparseIterator object that iterate over
-/// the SparseTensorLevel.
+/// Helper function to create a simple SparseIterator object that iterate
+/// over the SparseTensorLevel.
 std::unique_ptr<SparseIterator> makeSimpleIterator(
     const SparseTensorLevel &stl,
     SparseEmitStrategy strategy = SparseEmitStrategy::kFunctional);

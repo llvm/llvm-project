@@ -149,9 +149,9 @@ std::unique_ptr<Pass> createLowerForeachToSCFPass();
 //===----------------------------------------------------------------------===//
 
 /// Type converter for iter_space and iterator.
-class SparseIterationTypeConverter : public OneToNTypeConverter {
-public:
+struct SparseIterationTypeConverter : public OneToNTypeConverter {
   SparseIterationTypeConverter();
+  bool isConvertingLoopBody = false;
 };
 
 void populateLowerSparseIterationToSCFPatterns(TypeConverter &converter,

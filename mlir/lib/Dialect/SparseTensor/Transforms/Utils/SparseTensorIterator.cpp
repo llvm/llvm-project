@@ -295,6 +295,13 @@ public:
   TrivialIterator(const SparseTensorLevel &stl)
       : ConcreteIterator(stl, IterKind::kTrivial, /*itValCnt=*/1) {}
 
+  TrivialIterator(OpBuilder &b, Location l, const SparseTensorLevel &stl,
+                  Value posLo, Value posHi)
+      : ConcreteIterator(stl, IterKind::kTrivial, /*itValCnt=*/1), posLo(posLo),
+        posHi(posHi) {
+    seek(posLo);
+  }
+
   std::string getDebugInterfacePrefix() const override {
     return std::string("trivial<") + stl.toString() + ">";
   }
@@ -400,6 +407,14 @@ public:
       : ConcreteIterator(stl, IterKind::kDedup, /*itValCnt=*/2) {
     assert(!stl.isUnique());
   }
+
+  DedupIterator(OpBuilder &b, Location l, const SparseTensorLevel &stl,
+                Value posLo, Value posHi)
+      : ConcreteIterator(stl, IterKind::kDedup, /*itValCnt=*/2), posHi(posHi) {
+    assert(!stl.isUnique());
+    seek({posLo, genSegmentHigh(b, l, posLo)});
+  }
+
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
     return from->kind == IterKind::kDedup;
@@ -1332,6 +1347,62 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
 }
 
 //===----------------------------------------------------------------------===//
+// SparseIterationSpace Implementation
+//===----------------------------------------------------------------------===//
+
+mlir::sparse_tensor::SparseIterationSpace::SparseIterationSpace(
+    Location l, OpBuilder &b, Value t, unsigned tid,
+    std::pair<Level, Level> lvlRange, const SparseIterator *parentIt)
+    : lvls() {
+  auto [lvlLo, lvlHi] = lvlRange;
+  assert(lvlHi - lvlLo == 1 && "Not implemented.");
+
+  // SparseTensorType stt = getSparseTensorType(t);
+  for (Level lvl = lvlLo; lvl < lvlHi; lvl++) {
+    lvls.emplace_back(makeSparseTensorLevel(b, l, t, tid, lvl));
+    if (parentIt) {
+      llvm_unreachable("Not implemented.");
+    }
+  }
+  // TODO: only works for the first level.
+  bound = lvls.back()->peekRangeAt(b, l, /*batchPrefix=*/{}, C_IDX(0));
+}
+
+SparseIterationSpace mlir::sparse_tensor::SparseIterationSpace::fromValues(
+    IterSpaceType dstTp, ValueRange values, unsigned int tid) {
+  // Reconstruct every sparse tensor level.
+  SparseIterationSpace space;
+  for (auto [i, lt] : llvm::enumerate(dstTp.getLvlTypes())) {
+    unsigned bufferCnt = 0;
+    if (lt.isWithPosLT())
+      bufferCnt++;
+    if (lt.isWithCrdLT())
+      bufferCnt++;
+    // Sparse tensor buffers.
+    ValueRange buffers = values.take_front(bufferCnt);
+    values = values.drop_front(bufferCnt);
+
+    // Level size.
+    Value sz = values.front();
+    values = values.drop_front();
+    space.lvls.push_back(
+        makeSparseTensorLevel(lt, sz, buffers, tid, i + dstTp.getLoLvl()));
+  }
+  // Two bounds.
+  space.bound = std::make_pair(values[0], values[1]);
+  values = values.drop_front(2);
+
+  // Must have consumed all values.
+  assert(values.empty());
+  return space;
+}
+
+std::unique_ptr<SparseIterator>
+SparseIterationSpace::extractIterator(OpBuilder &b, Location l) const {
+  return makeSimpleIterator(b, l, *this);
+}
+
+//===----------------------------------------------------------------------===//
 // SparseIterator factory functions.
 //===----------------------------------------------------------------------===//
 
@@ -1387,6 +1458,27 @@ sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
   auto it = std::make_unique<TrivialIterator>(*stl);
   it->setSparseEmitStrategy(strategy);
   return std::make_pair(std::move(stl), std::move(it));
+}
+
+std::unique_ptr<SparseIterator>
+sparse_tensor::makeSimpleIterator(OpBuilder &b, Location l,
+                                  const SparseIterationSpace &iterSpace) {
+  assert(iterSpace.getSpaceDim() == 1);
+
+  std::unique_ptr<SparseIterator> ret;
+  if (!iterSpace.isUnique()) {
+    // We always dedupliate the non-unique level, but we should optimize it away
+    // if possible.
+    ret = std::make_unique<DedupIterator>(b, l, iterSpace.getLastLvl(),
+                                          iterSpace.getBoundLo(),
+                                          iterSpace.getBoundHi());
+  } else {
+    ret = std::make_unique<TrivialIterator>(b, l, iterSpace.getLastLvl(),
+                                            iterSpace.getBoundLo(),
+                                            iterSpace.getBoundHi());
+  }
+  ret->setSparseEmitStrategy(SparseEmitStrategy::kFunctional);
+  return ret;
 }
 
 std::unique_ptr<SparseIterator>

@@ -96,6 +96,7 @@ def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
        // As long as the last level is unique, the entire iterator is unqiue.
        return !getLvlTypes().back().isa<LevelPropNonDefault::Nonunique>();
      }
+     ::mlir::sparse_tensor::IterSpaceType getIterSpaceType() const;
   }];
 
   let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";
@@ -118,9 +119,7 @@ def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
      ArrayRef<LevelType> getLvlTypes() const {
        return getEncoding().getLvlTypes().slice(getLoLvl(), getSpaceDim());
      }
-     ::mlir::sparse_tensor::IteratorType getIteratorType() const {
-        return IteratorType::get(getContext(), getEncoding(), getLoLvl(), getHiLvl());
-     }
+     ::mlir::sparse_tensor::IteratorType getIteratorType() const;
   }];
 
   let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";

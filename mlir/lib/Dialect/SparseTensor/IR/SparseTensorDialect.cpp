@@ -1965,6 +1965,16 @@ LogicalResult SortOp::verify() {
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Iteration Operations.
 //===----------------------------------------------------------------------===//
+
+IterSpaceType IteratorType::getIterSpaceType() const {
+  return IterSpaceType::get(getContext(), getEncoding(), getLoLvl(),
+                            getHiLvl());
+}
+
+IteratorType IterSpaceType::getIteratorType() const {
+  return IteratorType::get(getContext(), getEncoding(), getLoLvl(), getHiLvl());
+}
+
 static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
                                    Level &lvlHi) {
   if (parser.parseInteger(lvlLo))
