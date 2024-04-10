@@ -863,6 +863,7 @@ set(files
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h

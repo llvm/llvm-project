@@ -27,8 +27,6 @@
 #include <type_traits>
 #include <cassert>
 
-// Add the include path required by test_chrono_leap_second.h when using libc++.
-// ADDITIONAL_COMPILE_FLAGS(stdlib=libc++): -I %{libcxx-dir}/src/include
 #include "test_chrono_leap_second.h"
 
 constexpr bool test() {

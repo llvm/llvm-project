@@ -15,8 +15,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "include/tzdb/leap_second_private.h"
-#include "include/tzdb/time_zone_link_private.h"
 #include "include/tzdb/time_zone_private.h"
 #include "include/tzdb/types_private.h"
 #include "include/tzdb/tzdb_list_private.h"
@@ -582,7 +580,7 @@ static void __parse_link(tzdb& __tzdb, istream& __input) {
   string __name = chrono::__parse_string(__input);
   chrono::__skip_line(__input);
 
-  __tzdb.links.emplace_back(time_zone_link::__constructor_tag{}, std::move(__name), std::move(__target));
+  __tzdb.links.emplace_back(std::__private_constructor_tag{}, std::move(__name), std::move(__target));
 }
 
 static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istream& __input) {
@@ -649,7 +647,7 @@ static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, istream&& 
     seconds __value{chrono::__parse_integral(__input, false)};
     chrono::__skip_line(__input);
 
-    __leap_seconds.emplace_back(leap_second::__constructor_tag{}, __date, __value);
+    __leap_seconds.emplace_back(std::__private_constructor_tag{}, __date, __value);
   }
 }
 
