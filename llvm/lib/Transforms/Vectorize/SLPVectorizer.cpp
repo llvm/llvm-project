@@ -10736,9 +10736,13 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [](Value *V) {
-          return !isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V);
-        }))
+        all_of(E->Scalars,
+               [](Value *V) {
+                 return !isVectorLikeInstWithConstOps(V) &&
+                        isUsedOutsideBlock(V);
+               }) ||
+        (E->State == TreeEntry::NeedToGather && E->Idx == 0 &&
+         all_of(E->Scalars, IsaPred<ExtractElementInst, UndefValue>)))
       Res.second = FindLastInst();
     else
       Res.second = FindFirstInst();
