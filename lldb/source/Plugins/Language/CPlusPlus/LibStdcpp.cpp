@@ -254,13 +254,13 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
   } else
     addr_of_string =
         valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
-  if (addr_of_string != LLDB_INVALID_ADDRESS) {
+  if (addr_of_string != LLDB_INVALID_ADDRESS ||
+        addr_type == eAddressTypeHost) {
     switch (addr_type) {
     case eAddressTypeLoad: {
       ProcessSP process_sp(valobj.GetProcessSP());
       if (!process_sp)
         return false;
-
       StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
       Status error;
       lldb::addr_t addr_of_data =
@@ -287,8 +287,31 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
       } else
         return true;
     } break;
-    case eAddressTypeHost:
-      break;
+    case eAddressTypeHost: {
+      // We have the host address of our std::string
+      // But we need to read the pointee data from the debugged process.
+      ProcessSP process_sp(valobj.GetProcessSP());
+      DataExtractor data;
+      Status error;
+      valobj.GetData(data, error);
+      if (error.Fail())
+        return false;
+      // We want to read the address from std::string, which is the first 8 bytes.
+      lldb::offset_t offset = 0;
+      lldb::addr_t addr = data.GetAddress(&offset);
+      if (!addr)
+      {
+        stream.Printf("nullptr");
+        return true;
+      }
+
+      std::string contents;
+      process_sp->ReadCStringFromMemory(addr, contents, error);
+      if (error.Fail())
+        return false;
+      stream.Printf("%s", contents.c_str());
+      return true;
+    } break;
     case eAddressTypeInvalid:
     case eAddressTypeFile:
       break;

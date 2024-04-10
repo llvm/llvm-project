@@ -37,6 +37,8 @@ class StdStringDataFormatterTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
+        self.runCmd("command script import ./ConvertToDataFormatter.py", check=True)
+
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
@@ -60,6 +62,7 @@ class StdStringDataFormatterTestCase(TestBase):
         var_rQ = self.frame().FindVariable("rQ")
         var_pq = self.frame().FindVariable("pq")
         var_pQ = self.frame().FindVariable("pQ")
+        var_str_container = self.frame().FindVariable("sc")
 
         self.assertEqual(var_wempty.GetSummary(), 'L""', "wempty summary wrong")
         self.assertEqual(
@@ -88,6 +91,31 @@ class StdStringDataFormatterTestCase(TestBase):
             '"quite a long std::strin with lots of info inside it"',
             "pQ summary wrong",
         )
+
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(0).GetSummary(),
+            '"u22"',
+            "string container child wrong")
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(1).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong")
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(2).GetSummary(),
+            '"u22"',
+            "string container child wrong")
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(3).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong")
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(4).GetSummary(),
+            '"u22"',
+            "string container child wrong")
+        self.assertEqual(
+            var_str_container.GetChildAtIndex(5).GetSummary(),
+            '"quite a long std::string with lots of info inside it inside a struct"',
+            "string container child wrong")
 
         self.runCmd("next")
 
