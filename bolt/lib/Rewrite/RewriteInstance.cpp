@@ -815,13 +815,17 @@ void RewriteInstance::keepPrologueFunction() {
     ErrorOr<ArrayRef<uint8_t>> ErrorOrFunctionData = BF.getData();
     assert(ErrorOrFunctionData && "function data is not available");
     ArrayRef<uint8_t> IData = *ErrorOrFunctionData;
-      BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(IData[0]) << "\n";
-      // Check for common function prologue patterns
-      if ((char)IData[0] == '\x55' && (char)IData[1] == '\x48' && (char)IData[2] == '\x89' && (char)IData[3] == '\xe5') {
-          BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(BF.getAddress()) << "\n";
-      } else {
-        BF.setIgnored();
-      }
+    // BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(IData[0]) << "\n";
+    // Check for common function prologue patterns
+    // push %rbp
+    // mov %rsp %rbp
+    if (BF.getSize()>=4 && (char)IData[0] == '\x55' && (char)IData[1] == '\x48' && (char)IData[2] == '\x89' && (char)IData[3] == '\xe5') {
+        LLVM_DEBUG(dbgs() << "Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+    } else if (BF.getSize()>=4 && (char)IData[0] == '\xf3' && (char)IData[1] == '\x0f' && (char)IData[2] == '\x1e' && (char)IData[3] == '\xfa') {
+        LLVM_DEBUG(dbgs() <<  "Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+    } else {
+      BF.setIgnored();
+    }
 
   }
 }
