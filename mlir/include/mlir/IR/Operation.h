@@ -895,8 +895,7 @@ public:
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
     if (propertiesStorageSize)
-      return {
-          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+      return getPropertiesStorageUnsafe();
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
@@ -904,6 +903,12 @@ public:
       return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
           getTrailingObjects<detail::OpProperties>()))};
     return {nullptr};
+  }
+  /// Returns the properties storage without checking whether properties are
+  /// present.
+  OpaqueProperties getPropertiesStorageUnsafe() {
+    return {
+        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
   }
 
   /// Return the properties converted to an attribute.

@@ -1965,7 +1965,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorage()
+                ->getPropertiesStorageUnsafe()
                 .template as<InferredProperties<T> *>();
   }
 
