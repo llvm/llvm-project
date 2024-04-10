@@ -42,15 +42,6 @@ public:
 
 class LLDB_API SBDebugger {
 public:
-  // The enum values here need to match their corresponding values in
-  // Debugger.h.
-  FLAGS_ANONYMOUS_ENUM(){
-      eBroadcastBitProgress = (1 << 0),
-      eBroadcastBitWarning = (1 << 1),
-      eBroadcastBitError = (1 << 2),
-      eBroadcastBitProgressCategory = (1 << 4),
-  };
-
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);
