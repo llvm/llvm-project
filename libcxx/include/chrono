@@ -724,6 +724,15 @@ const time_zone* current_zone()                                                 
 const tzdb& reload_tzdb();                                                       // C++20
 string remote_version();                                                         // C++20
 
+// [time.zone.info], information classes
+struct sys_info {                                                                // C++20
+  sys_seconds   begin;
+  sys_seconds   end;
+  seconds       offset;
+  minutes       save;
+  string        abbrev;
+};
+
 // 25.10.5, class time_zone                                                      // C++20
 enum class choose {earliest, latest};
 class time_zone {
@@ -733,6 +742,9 @@ class time_zone {
   // unspecified additional constructors
 
   string_view name() const noexcept;
+
+  template<class Duration>
+  sys_info get_info(const sys_time<Duration>& st) const;
 };
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
@@ -881,6 +893,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
 #include <__chrono/steady_clock.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/weekday.h>
