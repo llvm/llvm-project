@@ -128,7 +128,19 @@ mlir::Value fir::FirOpBuilder::createNullConstant(mlir::Location loc,
 mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
                                                      mlir::Type ty,
                                                      std::int64_t cst) {
+  assert((cst >= 0 || mlir::isa<mlir::IndexType>(ty) ||
+          mlir::cast<mlir::IntegerType>(ty).getWidth() <= 64) &&
+         "must use APint");
   return create<mlir::arith::ConstantOp>(loc, ty, getIntegerAttr(ty, cst));
+}
+
+mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
+                                                    mlir::Type ty) {
+  if (mlir::isa<mlir::IndexType>(ty))
+    return createIntegerConstant(loc, ty, -1);
+  llvm::APInt allOnes =
+      llvm::APInt::getAllOnes(mlir::cast<mlir::IntegerType>(ty).getWidth());
+  return create<mlir::arith::ConstantOp>(loc, ty, getIntegerAttr(ty, allOnes));
 }
 
 mlir::Value
