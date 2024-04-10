@@ -216,8 +216,8 @@ __riscv_save_2:
 __riscv_save_1:
 __riscv_save_0:
   addi   sp, sp, -24
-  sd     s0, 0(sp)
-  sd     s1, 8(sp)
+  sd     s1, 0(sp)
+  sd     s0, 8(sp)
   sd     ra, 16(sp)
   jr     t0
 
