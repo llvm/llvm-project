@@ -5859,10 +5859,10 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
 }
 
 void Sema::CodeCompleteObjCClassPropertyRefExpr(Scope *S,
-                                                IdentifierInfo &ClassName,
+                                                const IdentifierInfo &ClassName,
                                                 SourceLocation ClassNameLoc,
                                                 bool IsBaseExprStatement) {
-  IdentifierInfo *ClassNamePtr = &ClassName;
+  const IdentifierInfo *ClassNamePtr = &ClassName;
   ObjCInterfaceDecl *IFace = getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
   if (!IFace)
     return;

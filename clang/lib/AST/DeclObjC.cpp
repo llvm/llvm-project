@@ -66,7 +66,8 @@ void ObjCProtocolList::set(ObjCProtocolDecl* const* InList, unsigned Elts,
 //===----------------------------------------------------------------------===//
 
 ObjCContainerDecl::ObjCContainerDecl(Kind DK, DeclContext *DC,
-                                     IdentifierInfo *Id, SourceLocation nameLoc,
+                                     const IdentifierInfo *Id,
+                                     SourceLocation nameLoc,
                                      SourceLocation atStartLoc)
     : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK) {
   setAtStartLoc(atStartLoc);
@@ -1537,14 +1538,10 @@ void ObjCTypeParamList::gatherDefaultTypeArgs(
 // ObjCInterfaceDecl
 //===----------------------------------------------------------------------===//
 
-ObjCInterfaceDecl *ObjCInterfaceDecl::Create(const ASTContext &C,
-                                             DeclContext *DC,
-                                             SourceLocation atLoc,
-                                             IdentifierInfo *Id,
-                                             ObjCTypeParamList *typeParamList,
-                                             ObjCInterfaceDecl *PrevDecl,
-                                             SourceLocation ClassLoc,
-                                             bool isInternal){
+ObjCInterfaceDecl *ObjCInterfaceDecl::Create(
+    const ASTContext &C, DeclContext *DC, SourceLocation atLoc,
+    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+    ObjCInterfaceDecl *PrevDecl, SourceLocation ClassLoc, bool isInternal) {
   auto *Result = new (C, DC)
       ObjCInterfaceDecl(C, DC, atLoc, Id, typeParamList, ClassLoc, PrevDecl,
                         isInternal);
@@ -1562,12 +1559,10 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::CreateDeserialized(const ASTContext &C,
   return Result;
 }
 
-ObjCInterfaceDecl::ObjCInterfaceDecl(const ASTContext &C, DeclContext *DC,
-                                     SourceLocation AtLoc, IdentifierInfo *Id,
-                                     ObjCTypeParamList *typeParamList,
-                                     SourceLocation CLoc,
-                                     ObjCInterfaceDecl *PrevDecl,
-                                     bool IsInternal)
+ObjCInterfaceDecl::ObjCInterfaceDecl(
+    const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+    SourceLocation CLoc, ObjCInterfaceDecl *PrevDecl, bool IsInternal)
     : ObjCContainerDecl(ObjCInterface, DC, Id, CLoc, AtLoc),
       redeclarable_base(C) {
   setPreviousDecl(PrevDecl);
@@ -1749,8 +1744,8 @@ ObjCIvarDecl *ObjCInterfaceDecl::all_declared_ivar_begin() {
 /// categories for this class and returns it. Name of the category is passed
 /// in 'CategoryId'. If category not found, return 0;
 ///
-ObjCCategoryDecl *
-ObjCInterfaceDecl::FindCategoryDeclaration(IdentifierInfo *CategoryId) const {
+ObjCCategoryDecl *ObjCInterfaceDecl::FindCategoryDeclaration(
+    const IdentifierInfo *CategoryId) const {
   // FIXME: Should make sure no callers ever do this.
   if (!hasDefinition())
     return nullptr;
@@ -2118,28 +2113,23 @@ void ObjCProtocolDecl::setHasODRHash(bool HasHash) {
 
 void ObjCCategoryDecl::anchor() {}
 
-ObjCCategoryDecl::ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
-                                   SourceLocation ClassNameLoc,
-                                   SourceLocation CategoryNameLoc,
-                                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
-                                   ObjCTypeParamList *typeParamList,
-                                   SourceLocation IvarLBraceLoc,
-                                   SourceLocation IvarRBraceLoc)
+ObjCCategoryDecl::ObjCCategoryDecl(
+    DeclContext *DC, SourceLocation AtLoc, SourceLocation ClassNameLoc,
+    SourceLocation CategoryNameLoc, const IdentifierInfo *Id,
+    ObjCInterfaceDecl *IDecl, ObjCTypeParamList *typeParamList,
+    SourceLocation IvarLBraceLoc, SourceLocation IvarRBraceLoc)
     : ObjCContainerDecl(ObjCCategory, DC, Id, ClassNameLoc, AtLoc),
       ClassInterface(IDecl), CategoryNameLoc(CategoryNameLoc),
       IvarLBraceLoc(IvarLBraceLoc), IvarRBraceLoc(IvarRBraceLoc) {
   setTypeParamList(typeParamList);
 }
 
-ObjCCategoryDecl *ObjCCategoryDecl::Create(ASTContext &C, DeclContext *DC,
-                                           SourceLocation AtLoc,
-                                           SourceLocation ClassNameLoc,
-                                           SourceLocation CategoryNameLoc,
-                                           IdentifierInfo *Id,
-                                           ObjCInterfaceDecl *IDecl,
-                                           ObjCTypeParamList *typeParamList,
-                                           SourceLocation IvarLBraceLoc,
-                                           SourceLocation IvarRBraceLoc) {
+ObjCCategoryDecl *ObjCCategoryDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+    const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+    ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
+    SourceLocation IvarRBraceLoc) {
   auto *CatDecl =
       new (C, DC) ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id,
                                    IDecl, typeParamList, IvarLBraceLoc,
@@ -2188,13 +2178,10 @@ void ObjCCategoryDecl::setTypeParamList(ObjCTypeParamList *TPL) {
 
 void ObjCCategoryImplDecl::anchor() {}
 
-ObjCCategoryImplDecl *
-ObjCCategoryImplDecl::Create(ASTContext &C, DeclContext *DC,
-                             IdentifierInfo *Id,
-                             ObjCInterfaceDecl *ClassInterface,
-                             SourceLocation nameLoc,
-                             SourceLocation atStartLoc,
-                             SourceLocation CategoryNameLoc) {
+ObjCCategoryImplDecl *ObjCCategoryImplDecl::Create(
+    ASTContext &C, DeclContext *DC, const IdentifierInfo *Id,
+    ObjCInterfaceDecl *ClassInterface, SourceLocation nameLoc,
+    SourceLocation atStartLoc, SourceLocation CategoryNameLoc) {
   if (ClassInterface && ClassInterface->hasDefinition())
     ClassInterface = ClassInterface->getDefinition();
   return new (C, DC) ObjCCategoryImplDecl(DC, Id, ClassInterface, nameLoc,

@@ -2318,7 +2318,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
 ///
 /// \returns The declaration of the named Objective-C class, or NULL if the
 /// class could not be found.
-ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(IdentifierInfo *&Id,
+ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                               SourceLocation IdLoc,
                                               bool DoTypoCorrection) {
   // The third "scope" argument is 0 since we aren't enabling lazy built-in

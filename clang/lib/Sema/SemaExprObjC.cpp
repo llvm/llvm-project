@@ -2153,13 +2153,12 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   return ExprError();
 }
 
-ExprResult Sema::
-ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
-                          IdentifierInfo &propertyName,
-                          SourceLocation receiverNameLoc,
-                          SourceLocation propertyNameLoc) {
+ExprResult Sema::ActOnClassPropertyRefExpr(const IdentifierInfo &receiverName,
+                                           const IdentifierInfo &propertyName,
+                                           SourceLocation receiverNameLoc,
+                                           SourceLocation propertyNameLoc) {
 
-  IdentifierInfo *receiverNamePtr = &receiverName;
+  const IdentifierInfo *receiverNamePtr = &receiverName;
   ObjCInterfaceDecl *IFace = getObjCInterfaceDecl(receiverNamePtr,
                                                   receiverNameLoc);
 

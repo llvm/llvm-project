@@ -11510,10 +11510,11 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   return (Decl*) nullptr;
 }
 
-TypeResult
-Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                        const CXXScopeSpec &SS, IdentifierInfo *Name,
-                        SourceLocation TagLoc, SourceLocation NameLoc) {
+TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
+                                   const CXXScopeSpec &SS,
+                                   const IdentifierInfo *Name,
+                                   SourceLocation TagLoc,
+                                   SourceLocation NameLoc) {
   // This has to hold, because SS is expected to be defined.
   assert(Name && "Expected a name in a dependent tag");
 

@@ -1818,9 +1818,9 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
 }
 
 ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
-    SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+    SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
     SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-    IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+    const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
     const ParsedAttributesView &AttrList) {
@@ -1916,9 +1916,9 @@ ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
 /// category implementation declaration and build an ObjCCategoryImplDecl
 /// object.
 ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
-    SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-    const ParsedAttributesView &Attrs) {
+    SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *CatName,
+    SourceLocation CatLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1982,8 +1982,8 @@ ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
 }
 
 ObjCImplementationDecl *Sema::ActOnStartClassImplementation(
-    SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+    SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
     SourceLocation SuperClassLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
@@ -5105,8 +5105,8 @@ bool Sema::CheckObjCDeclScope(Decl *D) {
 /// Called whenever \@defs(ClassName) is encountered in the source.  Inserts the
 /// instance variables of ClassName into Decls.
 void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                     IdentifierInfo *ClassName,
-                     SmallVectorImpl<Decl*> &Decls) {
+                     const IdentifierInfo *ClassName,
+                     SmallVectorImpl<Decl *> &Decls) {
   // Check that ClassName is a valid class
   ObjCInterfaceDecl *Class = getObjCInterfaceDecl(ClassName, DeclStart);
   if (!Class) {
