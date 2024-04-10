@@ -91,8 +91,151 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret i32 %9
 }
 
+%"class.std::__1::span" = type { ptr, i64 }
+%"class.std::__1::__wrap_iter" = type { ptr }
+
+define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1, i64 noundef %n) {
+; CHECK-LABEL: define dso_local noundef i32 @sum_prefix_with_sum(
+; CHECK-SAME: ptr nocapture readonly [[S_COERCE0:%.*]], i64 [[S_COERCE1:%.*]], i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5_NOT:%.*]] = icmp eq i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP5_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i64 [[TMP0]], [[S_COERCE1]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[SPAN_CHECKED_ACCESS_EXIT:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RET_0_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[RET_06:%.*]] = phi i32 [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[SPAN_CHECKED_ACCESS_EXIT]], label [[COND_FALSE_I:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       cond.false.i:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       span_checked_access.exit:
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[I_07]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP7]], [[RET_06]]
+; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
+;
+entry:
+  %s = alloca %"class.std::__1::span", align 8
+  %n.addr = alloca i64, align 8
+  %ret = alloca i32, align 4
+  %i = alloca i64, align 8
+  %0 = getelementptr inbounds { ptr, i64 }, ptr %s, i32 0, i32 0
+  store ptr %s.coerce0, ptr %0, align 8
+  %1 = getelementptr inbounds { ptr, i64 }, ptr %s, i32 0, i32 1
+  store i64 %s.coerce1, ptr %1, align 8
+  store i64 %n, ptr %n.addr, align 8
+  call void @llvm.lifetime.start.p0(i64 4, ptr %ret) #7
+  store i32 0, ptr %ret, align 4
+  call void @llvm.lifetime.start.p0(i64 8, ptr %i) #7
+  store i64 0, ptr %i, align 8
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %2 = load i64, ptr %i, align 8
+  %3 = load i64, ptr %n.addr, align 8
+  %cmp = icmp ult i64 %2, %3
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  call void @llvm.lifetime.end.p0(i64 8, ptr %i) #7
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  %4 = load i64, ptr %i, align 8
+  %call = call noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(ptr noundef nonnull align 8 dereferenceable(16) %s, i64 noundef %4) #7
+  %5 = load i32, ptr %call, align 4
+  %6 = load i32, ptr %ret, align 4
+  %add = add nsw i32 %6, %5
+  store i32 %add, ptr %ret, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  %7 = load i64, ptr %i, align 8
+  %inc = add i64 %7, 1
+  store i64 %inc, ptr %i, align 8
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  %8 = load i32, ptr %ret, align 4
+  call void @llvm.lifetime.end.p0(i64 4, ptr %ret)
+  ret i32 %8
+}
+
+define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(ptr noundef nonnull align 8 dereferenceable(16) %this, i64 noundef %__idx) {
+; CHECK-LABEL: define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_access(
+; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]], i64 noundef [[__IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], [[__IDX]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF0]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[THIS]], align 8
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[__IDX]]
+; CHECK-NEXT:    ret ptr [[ARRAYIDX]]
+;
+entry:
+  %this.addr = alloca ptr, align 8
+  %__idx.addr = alloca i64, align 8
+  store ptr %this, ptr %this.addr, align 8
+  store i64 %__idx, ptr %__idx.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = load i64, ptr %__idx.addr, align 8
+  %call = call noundef i64 @span_access(ptr noundef nonnull align 8 dereferenceable(16) %this1)
+  %cmp = icmp ult i64 %0, %call
+  %conv = zext i1 %cmp to i64
+  %expval = call i64 @llvm.expect.i64(i64 %conv, i64 1)
+  %tobool = icmp ne i64 %expval, 0
+  br i1 %tobool, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  br label %cond.end
+
+cond.false:                                       ; preds = %entry
+  call void @llvm.trap()
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.false, %cond.true
+  %__data_ = getelementptr inbounds %"class.std::__1::span", ptr %this1, i32 0, i32 0
+  %1 = load ptr, ptr %__data_, align 8
+  %2 = load i64, ptr %__idx.addr, align 8
+  %arrayidx = getelementptr inbounds i32, ptr %1, i64 %2
+  ret ptr %arrayidx
+}
+
+define hidden noundef i64 @span_access(ptr noundef nonnull align 8 dereferenceable(16) %this) {
+; CHECK-LABEL: define hidden noundef i64 @span_access(
+; CHECK-SAME: ptr nocapture noundef nonnull readonly align 8 dereferenceable(16) [[THIS:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[__SIZE_:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE_]], align 8
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
+  %__size_ = getelementptr inbounds %"class.std::__1::span", ptr %this1, i32 0, i32 1
+  %0 = load i64, ptr %__size_, align 8
+  ret i64 %0
+}
+
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 declare void @llvm.trap()
 
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 2000, i32 1}
+;.
