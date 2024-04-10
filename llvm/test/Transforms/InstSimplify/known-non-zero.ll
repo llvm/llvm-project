@@ -377,3 +377,120 @@ define <2 x i1> @insert_nonzero_any_idx_fail(<2 x i8> %xx, i8 %yy, i32 %idx) {
   %r = icmp eq <2 x i8> %ins, zeroinitializer
   ret <2 x i1> %r
 }
+
+define i1 @nonzero_reduce_add(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_add(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[X0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 3, i8 3>
+  %x = add <2 x i8> %x0, <i8 1, i8 1>
+  %v = call i8 @llvm.vector.reduce.add(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_add_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_add_fail(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[X0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 3, i8 3>
+  %x = add <2 x i8> %x0, <i8 1, i8 0>
+  %v = call i8 @llvm.vector.reduce.add(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_add_fail2(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_add_fail2(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add nuw <2 x i8> %xx, <i8 1, i8 1>
+  %v = call i8 @llvm.vector.reduce.add(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_add_fail3(<18 x i4> %xx) {
+; CHECK-LABEL: @nonzero_reduce_add_fail3(
+; CHECK-NEXT:    [[X0:%.*]] = and <18 x i4> [[XX:%.*]], <i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3>
+; CHECK-NEXT:    [[X:%.*]] = add <18 x i4> [[X0]], <i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1>
+; CHECK-NEXT:    [[V:%.*]] = call i4 @llvm.vector.reduce.add.v18i4(<18 x i4> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i4 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <18 x i4> %xx, <i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3, i4 3>
+  %x = add <18 x i4> %x0, <i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1, i4 1>
+  %v = call i4 @llvm.vector.reduce.add.v18i4(<18 x i4> %x)
+  %r = icmp eq i4 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_mul(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_mul(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[X0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 3, i8 3>
+  %x = add <2 x i8> %x0, <i8 1, i8 1>
+  %v = call i8 @llvm.vector.reduce.mul(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_mul2(<3 x i16> %xx) {
+; CHECK-LABEL: @nonzero_reduce_mul2(
+; CHECK-NEXT:    [[X0:%.*]] = and <3 x i16> [[XX:%.*]], <i16 3, i16 3, i16 3>
+; CHECK-NEXT:    [[X:%.*]] = add <3 x i16> [[X0]], <i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[V:%.*]] = call i16 @llvm.vector.reduce.mul.v3i16(<3 x i16> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <3 x i16> %xx, <i16 3, i16 3, i16 3>
+  %x = add <3 x i16> %x0, <i16 1, i16 1, i16 1>
+  %v = call i16 @llvm.vector.reduce.mul.v3i16(<3 x i16> %x)
+  %r = icmp eq i16 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_mul_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_mul_fail(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[X0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 15, i8 15>
+  %x = add <2 x i8> %x0, <i8 1, i8 1>
+  %v = call i8 @llvm.vector.reduce.mul(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @nonzero_reduce_mul_fail2(<2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_mul_fail2(
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add nuw <2 x i8> %xx, <i8 1, i8 1>
+  %v = call i8 @llvm.vector.reduce.mul(<2 x i8> %x)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
