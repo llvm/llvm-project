@@ -419,6 +419,7 @@ __m256h test_mm256_conj_pch(__m256h __A) {
 __m256h test_mm256_mask_conj_pch(__m256h __W, __mmask32 __U, __m256h __A) {
   // CHECK-LABEL: @test_mm256_mask_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i8
+  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK:  %{{.*}} = bitcast <16 x half> %{{.*}} to <8 x float>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <8 x i32>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <8 x i32>
@@ -426,7 +427,6 @@ __m256h test_mm256_mask_conj_pch(__m256h __W, __mmask32 __U, __m256h __A) {
   // CHECK:  %{{.*}} = bitcast <8 x i32> %{{.*}} to <8 x float>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <16 x half>
   // CHECK:  %{{.*}} = bitcast <16 x half> %{{.*}} to <8 x float>
-  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK:  %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <16 x half>
   return _mm256_mask_conj_pch(__W, __U, __A);
@@ -435,13 +435,13 @@ __m256h test_mm256_mask_conj_pch(__m256h __W, __mmask32 __U, __m256h __A) {
 __m256h test_mm256_maskz_conj_pch(__mmask32 __U, __m256h __A) {
   // CHECK-LABEL: @test_mm256_maskz_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i8
+  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK:  %{{.*}} = bitcast <16 x half> %{{.*}} to <8 x float>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <8 x i32>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <8 x i32>
   // CHECK:  %{{.*}} = xor <8 x i32> %{{.*}}, %{{.*}}
   // CHECK:  %{{.*}} = bitcast <8 x i32> %{{.*}} to <8 x float>
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <16 x half>
-  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK:  %{{.*}} = select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <8 x float> %{{.*}} to <16 x half>
   return _mm256_maskz_conj_pch(__U, __A);
@@ -461,6 +461,8 @@ __m128h test_mm_conj_pch(__m128h __A) {
 __m128h test_mm_mask_conj_pch(__m128h __W, __mmask32 __U, __m128h __A) {
   // CHECK-LABEL: @test_mm_mask_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i8
+  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = bitcast <8 x half> %{{.*}} to <4 x float>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <4 x i32>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <4 x i32>
@@ -468,8 +470,6 @@ __m128h test_mm_mask_conj_pch(__m128h __W, __mmask32 __U, __m128h __A) {
   // CHECK:  %{{.*}} = bitcast <4 x i32> %{{.*}} to <4 x float>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <8 x half>
   // CHECK:  %{{.*}} = bitcast <8 x half> %{{.*}} to <4 x float>
-  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <8 x half>
   return _mm_mask_conj_pch(__W, __U, __A);
@@ -478,14 +478,14 @@ __m128h test_mm_mask_conj_pch(__m128h __W, __mmask32 __U, __m128h __A) {
 __m128h test_mm_maskz_conj_pch(__mmask32 __U, __m128h __A) {
   // CHECK-LABEL: @test_mm_maskz_conj_pch
   // CHECK:  %{{.*}} = trunc i32 %{{.*}} to i8
+  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = bitcast <8 x half> %{{.*}} to <4 x float>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <4 x i32>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <4 x i32>
   // CHECK:  %{{.*}} = xor <4 x i32> %{{.*}}, %{{.*}}
   // CHECK:  %{{.*}} = bitcast <4 x i32> %{{.*}} to <4 x float>
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <8 x half>
-  // CHECK:  %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
-  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   // CHECK:  %{{.*}} = bitcast <4 x float> %{{.*}} to <8 x half>
   return _mm_maskz_conj_pch(__U, __A);
@@ -2844,8 +2844,8 @@ __m128h test_mm_fcmadd_pch(__m128h __A, __m128h __B, __m128h __C) {
 
 __m128h test_mm_mask_fcmadd_pch(__m128h __A, __mmask8 __U, __m128h __B, __m128h __C) {
   // CHECK-LABEL: @test_mm_mask_fcmadd_pch
+  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: @llvm.x86.avx512fp16.mask.vfcmadd.cph.128
-  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_fcmadd_pch(__A, __U, __B, __C);
 }
@@ -2933,8 +2933,8 @@ __m128h test_mm_fmadd_pch(__m128h __A, __m128h __B, __m128h __C) {
 
 __m128h test_mm_mask_fmadd_pch(__m128h __A, __mmask8 __U, __m128h __B, __m128h __C) {
   // CHECK-LABEL: @test_mm_mask_fmadd_pch
+  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: @llvm.x86.avx512fp16.mask.vfmadd.cph.128
-  // CHECK:  %{{.*}} = shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:  %{{.*}} = select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_fmadd_pch(__A, __U, __B, __C);
 }

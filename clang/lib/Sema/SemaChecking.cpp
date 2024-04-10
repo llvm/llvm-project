@@ -3013,6 +3013,62 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
+  case Builtin::BI__builtin_selectvector: {
+    if (checkArgCount(*this, TheCall, 3))
+      return ExprError();
+
+    ExprResult LHS = TheCall->getArg(0);
+    ExprResult RHS = TheCall->getArg(1);
+
+    QualType Result = UsualArithmeticConversions(
+        LHS, RHS, TheCall->getExprLoc(), ACK_Comparison);
+
+    ExprResult Mask = UsualUnaryConversions(TheCall->getArg(2));
+
+    if (LHS.isInvalid() || RHS.isInvalid() || Mask.isInvalid())
+      return ExprError();
+
+    QualType LHST = LHS.get()->getType();
+    QualType RHST = RHS.get()->getType();
+    QualType MaskT = Mask.get()->getType();
+
+    if (Result.isNull() || LHST.getCanonicalType() != RHST.getCanonicalType()) {
+      Diag(LHS.get()->getBeginLoc(),
+           diag::err_typecheck_call_different_arg_types)
+          << LHST << RHST;
+      return ExprError();
+    }
+
+    const auto *LHSVecT = LHST->getAs<VectorType>();
+    const auto *MaskVecT = MaskT->getAs<VectorType>();
+
+    if (!LHSVecT) {
+      Diag(LHS.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << 4 << LHST;
+      return ExprError();
+    }
+
+    if (!MaskVecT || !MaskVecT->isExtVectorBoolType()) {
+      Diag(Mask.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 3 << 9 << MaskT;
+      return ExprError();
+    }
+
+    if (LHSVecT->getNumElements() != MaskVecT->getNumElements()) {
+      Diag(LHS.get()->getBeginLoc(),
+           diag::err_typecheck_vector_lengths_not_equal)
+          << LHST << MaskT << LHS.get()->getSourceRange()
+          << Mask.get()->getSourceRange();
+      return ExprError();
+    }
+
+    TheCall->setType(Result);
+    TheCall->setArg(0, LHS.get());
+    TheCall->setArg(1, RHS.get());
+    TheCall->setArg(2, Mask.get());
+    break;
+  }
+
   // __builtin_elementwise_abs restricts the element type to signed integers or
   // floating point types only.
   case Builtin::BI__builtin_elementwise_abs: {

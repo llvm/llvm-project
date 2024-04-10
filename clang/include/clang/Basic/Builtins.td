@@ -1176,6 +1176,12 @@ def ConvertVector : Builtin {
   let Prototype = "void(...)";
 }
 
+def SelectVector : Builtin {
+  let Spellings = ["__builtin_selectvector"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def AllocaUninitialized : Builtin {
   let Spellings = ["__builtin_alloca_uninitialized"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow];

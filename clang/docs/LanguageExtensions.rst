@@ -3019,6 +3019,26 @@ C-style cast applied to each element of the first argument.
 
 Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 
+``__builtin_selectvector``
+--------------------------
+
+``__builtin_selectvector`` is used to express generic vector element selection.
+
+**Signature**:
+
+.. code-block:: c++
+
+  template <class T, size_t N>
+  simd_vec<T, N> __builtin_selectvector(simd_vec<T, N> lhs, simd_vec<T, N> rhs,
+                                        simd_vec<bool, N> cond)
+
+**Description**:
+
+The returned vector is equivalent to
+``simd_vec<T, N>{cond[0] ? rhs[0] : lhs[0], ..., cond[N - 1] ? rhs[N - 1] : lhs[N - 1]}``.
+
+Query for this feature with ``__has_builtin(__builtin_selectvector)``.
+
 ``__builtin_bitreverse``
 ------------------------
 

@@ -3744,6 +3744,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_selectvector: {
+    return RValue::get(Builder.CreateSelect(EmitScalarExpr(E->getArg(2)),
+                                            EmitScalarExpr(E->getArg(0)),
+                                            EmitScalarExpr(E->getArg(1))));
+  }
+
   case Builtin::BI__builtin_elementwise_abs: {
     Value *Result;
     QualType QT = E->getArg(0)->getType();
@@ -15513,31 +15519,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_prorvq256:
   case X86::BI__builtin_ia32_prorvq512:
     return EmitX86FunnelShift(*this, Ops[0], Ops[0], Ops[1], true);
-  case X86::BI__builtin_ia32_selectb_128:
-  case X86::BI__builtin_ia32_selectb_256:
-  case X86::BI__builtin_ia32_selectb_512:
-  case X86::BI__builtin_ia32_selectw_128:
-  case X86::BI__builtin_ia32_selectw_256:
-  case X86::BI__builtin_ia32_selectw_512:
-  case X86::BI__builtin_ia32_selectd_128:
-  case X86::BI__builtin_ia32_selectd_256:
-  case X86::BI__builtin_ia32_selectd_512:
-  case X86::BI__builtin_ia32_selectq_128:
-  case X86::BI__builtin_ia32_selectq_256:
-  case X86::BI__builtin_ia32_selectq_512:
-  case X86::BI__builtin_ia32_selectph_128:
-  case X86::BI__builtin_ia32_selectph_256:
-  case X86::BI__builtin_ia32_selectph_512:
-  case X86::BI__builtin_ia32_selectpbf_128:
-  case X86::BI__builtin_ia32_selectpbf_256:
-  case X86::BI__builtin_ia32_selectpbf_512:
-  case X86::BI__builtin_ia32_selectps_128:
-  case X86::BI__builtin_ia32_selectps_256:
-  case X86::BI__builtin_ia32_selectps_512:
-  case X86::BI__builtin_ia32_selectpd_128:
-  case X86::BI__builtin_ia32_selectpd_256:
-  case X86::BI__builtin_ia32_selectpd_512:
-    return EmitX86Select(*this, Ops[0], Ops[1], Ops[2]);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
