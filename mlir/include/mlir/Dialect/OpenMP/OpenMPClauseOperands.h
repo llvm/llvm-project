@@ -81,6 +81,9 @@ struct GrainsizeClauseOps {
   Value grainsizeVar;
 };
 
+struct HasDeviceAddrOps {
+  llvm::SmallVector<Value> hasDeviceAddrVars;
+};
 struct HintClauseOps {
   IntegerAttr hintAttr;
 };
@@ -92,6 +95,10 @@ struct IfClauseOps {
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
   llvm::SmallVector<Attribute> inReductionDeclSymbols;
+};
+
+struct IsDevicePtrOps {
+  llvm::SmallVector<Value> isDevicePtrVars;
 };
 
 struct LinearClauseOps {
@@ -189,10 +196,6 @@ struct SimdlenClauseOps {
   IntegerAttr simdlenAttr;
 };
 
-struct TargetDeviceClauseOps {
-  llvm::SmallVector<Value> isDevicePtrVars, hasDeviceAddrVars;
-};
-
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
   llvm::SmallVector<Attribute> taskReductionDeclSymbols;
@@ -258,9 +261,9 @@ using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
 // TODO `defaultmap`, `uses_allocators` clauses.
 using TargetClauseOps =
     detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
-                    IfClauseOps, InReductionClauseOps, MapClauseOps,
-                    NowaitClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    TargetDeviceClauseOps, ThreadLimitClauseOps>;
+                    HasDeviceAddrOps, IfClauseOps, InReductionClauseOps,
+                    IsDevicePtrOps, MapClauseOps, NowaitClauseOps,
+                    PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
 
 using TargetDataClauseOps = detail::Clauses<DeviceClauseOps, IfClauseOps,
                                             MapClauseOps, UseDeviceClauseOps>;
