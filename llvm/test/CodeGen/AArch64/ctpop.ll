@@ -398,9 +398,9 @@ define <3 x i128> @v3i128(<3 x i128> %d) {
 ; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    fmov d1, x2
 ; CHECK-SD-NEXT:    fmov d2, x4
-; CHECK-SD-NEXT:    mov v2.d[1], x5
-; CHECK-SD-NEXT:    mov v1.d[1], x3
 ; CHECK-SD-NEXT:    mov v0.d[1], x1
+; CHECK-SD-NEXT:    mov v1.d[1], x3
+; CHECK-SD-NEXT:    mov v2.d[1], x5
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
@@ -448,9 +448,9 @@ define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-SD-NEXT:    fmov d1, x2
 ; CHECK-SD-NEXT:    fmov d2, x4
 ; CHECK-SD-NEXT:    fmov d3, x6
-; CHECK-SD-NEXT:    mov v2.d[1], x5
-; CHECK-SD-NEXT:    mov v1.d[1], x3
 ; CHECK-SD-NEXT:    mov v0.d[1], x1
+; CHECK-SD-NEXT:    mov v1.d[1], x3
+; CHECK-SD-NEXT:    mov v2.d[1], x5
 ; CHECK-SD-NEXT:    mov v3.d[1], x7
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
