@@ -42,8 +42,8 @@ public:
   }
   TokenSequence(TokenSequence &&that)
       : start_{std::move(that.start_)}, nextStart_{that.nextStart_},
-        char_{std::move(that.char_)}, provenances_{
-                                          std::move(that.provenances_)} {}
+        char_{std::move(that.char_)},
+        provenances_{std::move(that.provenances_)} {}
   TokenSequence(const std::string &s, Provenance p) { Put(s, p); }
 
   TokenSequence &operator=(const TokenSequence &that) {

@@ -15,9 +15,10 @@
 // performed, so that special compiler command options &/or source file name
 // extensions for preprocessing will not be necessary.
 
-#include "token-sequence.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Parser/token-sequence.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <list>
 #include <stack>
@@ -39,7 +40,7 @@ public:
   Definition(const std::string &predefined, AllSources &);
 
   bool isFunctionLike() const { return isFunctionLike_; }
-  std::size_t argumentCount() const { return argumentCount_; }
+  std::size_t argumentCount() const { return argNames_.size(); }
   bool isVariadic() const { return isVariadic_; }
   bool isDisabled() const { return isDisabled_; }
   bool isPredefined() const { return isPredefined_; }
@@ -49,15 +50,21 @@ public:
 
   TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &);
 
+  void Print(llvm::raw_ostream &out, const char *macroName = "") const;
+
 private:
   static TokenSequence Tokenize(const std::vector<std::string> &argNames,
       const TokenSequence &token, std::size_t firstToken, std::size_t tokens);
+  // For a given token, return the index of the argument to which the token
+  // corresponds, or `argumentCount` if the token does not correspond to any
+  // argument.
+  std::size_t GetArgumentIndex(const CharBlock &token) const;
 
   bool isFunctionLike_{false};
-  std::size_t argumentCount_{0};
   bool isVariadic_{false};
   bool isDisabled_{false};
   bool isPredefined_{false};
+  std::vector<std::string> argNames_;
   TokenSequence replacement_;
 };
 
@@ -88,6 +95,8 @@ public:
 
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner &);
+
+  void PrintMacros(llvm::raw_ostream &out) const;
 
 private:
   enum class IsElseActive { No, Yes };

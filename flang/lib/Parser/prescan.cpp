@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "prescan.h"
-#include "preprocessor.h"
-#include "token-sequence.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/preprocessor.h"
 #include "flang/Parser/source.h"
+#include "flang/Parser/token-sequence.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstring>
