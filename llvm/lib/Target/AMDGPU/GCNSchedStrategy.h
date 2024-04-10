@@ -211,9 +211,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Temporary basic block live-in cache.
   DenseMap<const MachineBasicBlock *, GCNRPTracker::LiveRegSet> MBBLiveIns;
 
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> BBLiveInMap;
+  DenseMap<int, GCNRPTracker::LiveRegSet> BBLiveInMap;
 
-  DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
+  DenseMap<int, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;

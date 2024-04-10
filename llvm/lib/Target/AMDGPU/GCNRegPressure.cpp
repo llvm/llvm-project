@@ -343,6 +343,48 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
 }
 
+DenseMap<int, GCNRPTracker::LiveRegSet>
+llvm::getLiveRegMap(DenseMap<MachineInstr *, int> &R, bool After,
+                    LiveIntervals &LIS) {
+  std::vector<SlotIndex> Indexes;
+  // Indexes.reserve(R.size());
+  auto &SII = *LIS.getSlotIndexes();
+  for (std::pair<MachineInstr *, int> &Entry : R) {
+    auto SI = SII.getInstructionIndex(*Entry.first);
+    Indexes.push_back(After ? SI.getDeadSlot() : SI.getBaseIndex());
+  }
+  llvm::sort(Indexes);
+
+  auto &MRI = (*R.begin()).first->getParent()->getParent()->getRegInfo();
+  DenseMap<int, GCNRPTracker::LiveRegSet> LiveRegMap;
+  SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    auto Reg = Register::index2VirtReg(I);
+    if (!LIS.hasInterval(Reg))
+      continue;
+    auto &LI = LIS.getInterval(Reg);
+    LiveIdxs.clear();
+    if (!LI.findIndexesLiveAt(Indexes, std::back_inserter(LiveIdxs)))
+      continue;
+    if (!LI.hasSubRanges()) {
+      for (auto SI : LiveIdxs) {
+        auto Idx = R[SII.getInstructionFromIndex(SI)];
+        LiveRegMap[Idx][Reg] = MRI.getMaxLaneMaskForVReg(Reg);
+      }
+    } else
+      for (const auto &S : LI.subranges()) {
+        // constrain search for subranges by indexes live at main range
+        SRLiveIdxs.clear();
+        S.findIndexesLiveAt(LiveIdxs, std::back_inserter(SRLiveIdxs));
+        for (auto SI : SRLiveIdxs) {
+          auto Idx = R[SII.getInstructionFromIndex(SI)];
+          LiveRegMap[Idx][Reg] |= S.LaneMask;
+        }
+      }
+  }
+  return LiveRegMap;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
 

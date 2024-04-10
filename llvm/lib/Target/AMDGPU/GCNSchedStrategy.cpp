@@ -565,7 +565,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
     MBBLiveIns.erase(LiveInIt);
   } else {
     I = Rgn.first;
-    auto LRS = BBLiveInMap.lookup(NonDbgMI);
+    auto LRS = BBLiveInMap.lookup(CurRegion);
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
 #endif
@@ -599,20 +599,15 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   }
 }
 
-DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
+DenseMap<int, GCNRPTracker::LiveRegSet>
 GCNScheduleDAGMILive::getBBLiveInMap() const {
   assert(!Regions.empty());
-  std::vector<MachineInstr *> BBStarters;
-  BBStarters.reserve(Regions.size());
-  auto I = Regions.rbegin(), E = Regions.rend();
-  auto *BB = I->first->getParent();
-  do {
-    auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
-    BBStarters.push_back(MI);
-    do {
-      ++I;
-    } while (I != E && I->first->getParent() == BB);
-  } while (I != E);
+  DenseMap<MachineInstr *, int> BBStarters;
+  for (int I = Regions.size() - 1; I >= 0; I--) {
+    auto Rgn = Regions[I];
+    auto *MI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
+    BBStarters.insert({MI, I});
+  }
   return getLiveRegMap(BBStarters, false /*After*/, *LIS);
 }
 
@@ -1479,9 +1474,6 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
     MachineInstr *MI = Entry.first;
     MachineInstr *OldMI = Entry.second;
 
-    // Remove OldMI from BBLiveInMap since we are sinking it from its MBB.
-    DAG.BBLiveInMap.erase(OldMI);
-
     // Remove OldMI and update LIS
     Register Reg = MI->getOperand(0).getReg();
     LIS->RemoveMachineInstrFromMaps(*OldMI);
@@ -1493,6 +1485,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Update live-ins, register pressure, and regions caches.
   for (auto Idx : ImpactedRegions) {
     DAG.LiveIns[Idx] = NewLiveIns[Idx];
+    DAG.BBLiveInMap[Idx] = NewLiveIns[Idx];
     DAG.Pressure[Idx] = NewPressure[Idx];
     DAG.MBBLiveIns.erase(DAG.Regions[Idx].first->getParent());
   }
