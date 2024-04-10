@@ -31343,14 +31343,13 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
     assert((VT.getScalarType() == MVT::i32) ||
            (VT.getScalarType() == MVT::i64));
 
-    MVT SVT = VT.getScalarType();
-    MVT VecVT = MVT::getVectorVT(SVT, 128 / SVT.getSizeInBits());
+    MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
     SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
     Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
                       DAG.getBitcast(MVT::v16i8, Res));
-    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SVT,
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
                       DAG.getBitcast(VecVT, Res), DAG.getIntPtrConstant(0, DL));
-    return DAG.getNode(ISD::BSWAP, DL, SVT, Res);
+    return DAG.getNode(ISD::BSWAP, DL, VT, Res);
   }
 
   assert(VT.isVector() && VT.getSizeInBits() >= 128);
