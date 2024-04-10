@@ -214,16 +214,16 @@ bool DylibVerifier::compareObjCInterfaceSymbols(const Record *R,
                              StringRef SymName, bool PrintAsWarning = false) {
     if (SymLinkage == RecordLinkage::Unknown)
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         PrintAsWarning ? diag::warn_library_missing_symbol
-                                        : diag::err_library_missing_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, PrintAsWarning
+                                             ? diag::warn_library_missing_symbol
+                                             : diag::err_library_missing_symbol)
             << SymName;
       });
     else
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         PrintAsWarning ? diag::warn_library_hidden_symbol
-                                        : diag::err_library_hidden_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, PrintAsWarning
+                                             ? diag::warn_library_hidden_symbol
+                                             : diag::err_library_hidden_symbol)
             << SymName;
       });
   };
@@ -270,16 +270,14 @@ DylibVerifier::Result DylibVerifier::compareVisibility(const Record *R,
   if (R->isExported()) {
     if (!DR) {
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         diag::err_library_missing_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_library_missing_symbol)
             << getAnnotatedName(R, SymCtx);
       });
       return Result::Invalid;
     }
     if (DR->isInternal()) {
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         diag::err_library_hidden_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_library_hidden_symbol)
             << getAnnotatedName(R, SymCtx);
       });
       return Result::Invalid;
@@ -306,8 +304,7 @@ DylibVerifier::Result DylibVerifier::compareVisibility(const Record *R,
       Outcome = Result::Invalid;
     }
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(), ID)
-          << getAnnotatedName(R, SymCtx);
+      Ctx.Diag->Report(SymCtx.FA->Loc, ID) << getAnnotatedName(R, SymCtx);
     });
     return Outcome;
   }
@@ -329,15 +326,13 @@ DylibVerifier::Result DylibVerifier::compareAvailability(const Record *R,
   switch (Mode) {
   case VerificationMode::ErrorsAndWarnings:
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::warn_header_availability_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::warn_header_availability_mismatch)
           << getAnnotatedName(R, SymCtx) << IsDeclAvailable << IsDeclAvailable;
     });
     return Result::Ignore;
   case VerificationMode::Pedantic:
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_availability_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_availability_mismatch)
           << getAnnotatedName(R, SymCtx) << IsDeclAvailable << IsDeclAvailable;
     });
     return Result::Invalid;
@@ -353,16 +348,14 @@ bool DylibVerifier::compareSymbolFlags(const Record *R, SymbolContext &SymCtx,
                                        const Record *DR) {
   if (DR->isThreadLocalValue() && !R->isThreadLocalValue()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_dylib_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_dylib_symbol_flags_mismatch)
           << getAnnotatedName(DR, SymCtx) << DR->isThreadLocalValue();
     });
     return false;
   }
   if (!DR->isThreadLocalValue() && R->isThreadLocalValue()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_symbol_flags_mismatch)
           << getAnnotatedName(R, SymCtx) << R->isThreadLocalValue();
     });
     return false;
@@ -370,16 +363,14 @@ bool DylibVerifier::compareSymbolFlags(const Record *R, SymbolContext &SymCtx,
 
   if (DR->isWeakDefined() && !R->isWeakDefined()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_dylib_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_dylib_symbol_flags_mismatch)
           << getAnnotatedName(DR, SymCtx) << R->isWeakDefined();
     });
     return false;
   }
   if (!DR->isWeakDefined() && R->isWeakDefined()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_symbol_flags_mismatch)
           << getAnnotatedName(R, SymCtx) << R->isWeakDefined();
     });
     return false;
@@ -485,6 +476,14 @@ void DylibVerifier::setTarget(const Target &T) {
   }
   updateState(Result::Ignore);
   assignSlice(T);
+}
+
+void DylibVerifier::setSourceManager(
+    IntrusiveRefCntPtr<SourceManager> SourceMgr) {
+  if (!Ctx.Diag)
+    return;
+  SourceManagers.push_back(std::move(SourceMgr));
+  Ctx.Diag->setSourceManager(SourceManagers.back().get());
 }
 
 DylibVerifier::Result DylibVerifier::verify(ObjCIVarRecord *R,
