@@ -1885,8 +1885,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Get the frequency of the steady clock. If the attribute is missing
     // assume running on an older libhsa and default to 0, omp_get_wtime
     // will be inaccurate but otherwise programs can still run.
-    if (auto Err = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
-                                    ClockFrequency))
+    if (getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
+                         ClockFrequency) != HSA_STATUS_SUCCESS)
       ClockFrequency = 0;
 
     // Load the grid values dependending on the wavefront.
