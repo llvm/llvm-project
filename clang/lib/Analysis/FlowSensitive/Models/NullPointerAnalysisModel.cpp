@@ -59,7 +59,15 @@ enum class SatisfiabilityResult {
   Unknown
 };
 
+enum class CompareResult {
+  Same,
+  Different,
+  Top,
+  Unknown
+};
+
 using SR = SatisfiabilityResult;
+using CR = CompareResult;
 
 // FIXME: These AST matchers should also be exported via the
 // NullPointerAnalysisModel class, for tests
@@ -228,7 +236,12 @@ void matchDereferenceExpr(const Stmt *stmt,
 
   Value *RootValue = getValue(*Var, Env);
 
-  Env.assume(Env.arena().makeNot(getVal(kIsNull, *RootValue).formula()));
+  BoolValue &IsNull = getVal(kIsNull, *RootValue);
+
+  if (&IsNull == &Env.makeTopBoolValue())
+    return;
+
+  Env.assume(Env.arena().makeNot(IsNull.formula()));
 }
 
 void matchNullCheckExpr(const Expr *NullCheck,
@@ -249,6 +262,11 @@ void matchNullCheckExpr(const Expr *NullCheck,
   Arena &A = Env.arena();
   BoolValue &IsNonnull = getVal(kIsNonnull, *RootValue);
   BoolValue &IsNull = getVal(kIsNull, *RootValue);
+
+  if (&IsNonnull == &Env.makeTopBoolValue() ||
+      &IsNull == &Env.makeTopBoolValue())
+    return;
+
   BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*NullCheck));
   if (!CondValue) {
     CondValue = &A.makeAtomValue();
@@ -277,6 +295,17 @@ void matchEqualExpr(const BinaryOperator *EqualExpr,
   Value *LHSValue = getValue(*LHSVar, Env);
   Value *RHSValue = getValue(*RHSVar, Env);
 
+  BoolValue &LHSNonnull = getVal(kIsNonnull, *LHSValue);
+  BoolValue &LHSNull = getVal(kIsNull, *LHSValue);
+  BoolValue &RHSNonnull = getVal(kIsNonnull, *RHSValue);
+  BoolValue &RHSNull = getVal(kIsNull, *RHSValue);
+
+  if (&LHSNonnull == &Env.makeTopBoolValue() ||
+      &RHSNonnull == &Env.makeTopBoolValue() ||
+      &LHSNull == &Env.makeTopBoolValue() ||
+      &RHSNull == &Env.makeTopBoolValue())
+    return;
+
   BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*EqualExpr));
   if (!CondValue) {
     CondValue = &A.makeAtomValue();
@@ -286,17 +315,15 @@ void matchEqualExpr(const BinaryOperator *EqualExpr,
   const Formula &CondFormula = IsNotEqualsOp ? A.makeNot(CondValue->formula())
                                        : CondValue->formula();
 
+  // FIXME: Simplify formulas
   // If the pointers are equal, the nullability properties are the same.
   Env.assume(A.makeImplies(CondFormula, 
-      A.makeAnd(A.makeEquals(getVal(kIsNull, *LHSValue).formula(),
-                             getVal(kIsNull, *RHSValue).formula()),
-                A.makeEquals(getVal(kIsNonnull, *LHSValue).formula(),
-                             getVal(kIsNonnull, *RHSValue).formula()))));
+      A.makeAnd(A.makeEquals(LHSNull.formula(), RHSNull.formula()),
+                A.makeEquals(LHSNonnull.formula(), RHSNonnull.formula()))));
 
   // If the pointers are not equal, at most one of the pointers is null.
   Env.assume(A.makeImplies(A.makeNot(CondFormula),
-      A.makeNot(A.makeAnd(getVal(kIsNull, *LHSValue).formula(),
-                          getVal(kIsNull, *RHSValue).formula()))));
+      A.makeNot(A.makeAnd(LHSNull.formula(), RHSNull.formula()))));
 }
 
 void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
@@ -307,6 +334,7 @@ void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
   Value *RootValue = Env.getValue(*PrVar);
   if (!RootValue) {
     RootValue = Env.createValue(PrVar->getType());
+    assert(RootValue && "Failed to create nullptr value");
     Env.setValue(*PrVar, *RootValue);
   }
 
@@ -348,7 +376,7 @@ void matchAnyPointerExpr(const Expr *fncall,
 
   Value *RootValue = Env.createValue(Var->getType());
 
-  initializeRootValue(*RootValue, Env);
+  // initializeRootValue(*RootValue, Env);
   setUnknownValue(*Var, *RootValue, Env);
 }
 
@@ -539,7 +567,7 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
     if (LHSVar == RHSVar)
-      return *LHSVar;
+      return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
 
     SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
@@ -588,37 +616,40 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
     return ComparisonResult::Unknown;
 
   // Evaluate values, but different values compare to Unknown.
-  auto CompareValues = [&](llvm::StringRef Name) -> ComparisonResult {
+  auto CompareValues = [&](llvm::StringRef Name) -> CR {
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
     if (LHSVar == RHSVar)
-      return ComparisonResult::Same;
+      return (LHSVar == &Env1.makeTopBoolValue()) ? CR::Top : CR::Same;
 
     SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
 
     if (LHSResult == SR::Top || RHSResult == SR::Top)
-      return ComparisonResult::Same;
+      return CR::Top;
 
     if (LHSResult == SR::Unknown || RHSResult == SR::Unknown)
-      return ComparisonResult::Unknown;
+      return CR::Unknown;
 
     if (LHSResult == RHSResult)
-      return ComparisonResult::Same;
+      return CR::Same;
 
-    return ComparisonResult::Different;
+    return CR::Different;
   };
 
-  ComparisonResult NullComparison = CompareValues(kIsNull);
-  ComparisonResult NonnullComparison = CompareValues(kIsNonnull);
+  CR NullComparison = CompareValues(kIsNull);
+  CR NonnullComparison = CompareValues(kIsNonnull);
 
-  if (NullComparison == ComparisonResult::Different ||
-      NonnullComparison == ComparisonResult::Different)
+  if (NullComparison == CR::Top || NonnullComparison == CR::Top)
+    return ComparisonResult::Same;
+
+  if (NullComparison == CR::Different ||
+      NonnullComparison == CR::Different)
     return ComparisonResult::Different;
 
-  if (NullComparison == ComparisonResult::Unknown ||
-      NonnullComparison == ComparisonResult::Unknown)
+  if (NullComparison == CR::Unknown ||
+      NonnullComparison == CR::Unknown)
     return ComparisonResult::Unknown;
 
   return ComparisonResult::Same;
@@ -632,7 +663,7 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
   if (!Type->isAnyPointerType())
     return ComparisonResult::Unknown;
 
-  auto FastCompareValues = [&](llvm::StringRef Name) -> ComparisonResult {
+  auto FastCompareValues = [&](llvm::StringRef Name) -> CR {
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
@@ -641,28 +672,31 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
 
     if (LHSResult == SR::Top || RHSResult == SR::Top) {
       Val2.setProperty(Name, Env2.makeTopBoolValue());
-      return ComparisonResult::Same;
+      return CR::Top;
     }
 
     if (LHSResult == SR::Unknown || RHSResult == SR::Unknown)
-      return ComparisonResult::Unknown;
+      return CR::Unknown;
 
     if (LHSResult == RHSResult)
-      return ComparisonResult::Same;
+      return CR::Same;
 
     Val2.setProperty(Name, Env2.makeTopBoolValue());
-    return ComparisonResult::Different;
+    return CR::Different;
   };
 
-  ComparisonResult NullComparison = FastCompareValues(kIsNull);
-  ComparisonResult NonnullComparison = FastCompareValues(kIsNonnull);
+  CR NullComparison = FastCompareValues(kIsNull);
+  CR NonnullComparison = FastCompareValues(kIsNonnull);
 
-  if (NullComparison == ComparisonResult::Different ||
-      NonnullComparison == ComparisonResult::Different)
+  if (NullComparison == CR::Top || NonnullComparison == CR::Top)
+    return ComparisonResult::Same;
+
+  if (NullComparison == CR::Different ||
+      NonnullComparison == CR::Different)
     return ComparisonResult::Different;
 
-  if (NullComparison == ComparisonResult::Unknown ||
-      NonnullComparison == ComparisonResult::Unknown)
+  if (NullComparison == CR::Unknown ||
+      NonnullComparison == CR::Unknown)
     return ComparisonResult::Unknown;
 
   return ComparisonResult::Same;
