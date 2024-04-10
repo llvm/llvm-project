@@ -75,6 +75,7 @@ entry:
 ; MIR32-DAG:     STXVD2X killed $v28, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.3)
 ; MIR32-DAG:     STXVD2X killed $v29, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
 ; MIR32-DAG:     STXVD2X killed $v30, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
+; MIR32-DAG:     STXVD2X killed $v31, $r1, killed $r{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 
 ; MIR32:         INLINEASM
 
@@ -146,6 +147,7 @@ entry:
 ; MIR64-DAG:   STXVD2X killed $v28, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.3)
 ; MIR64-DAG:   STXVD2X killed $v29, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.2)
 ; MIR64-DAG:   STXVD2X killed $v30, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.1)
+; MIR64-DAG:   STXVD2X killed $v31, $x1, killed $x{{[0-9]+}} :: (store (s128) into %fixed-stack.0)
 
 ; MIR64:       INLINEASM
 

@@ -558,7 +558,6 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 ; MIR64:       INLINEASM
 ; MIR64-NEXT:  BL8_NOP
 
-
 ; MIR64-DAG:   $f31 = LFD 392, $x1 :: (load (s64) from %fixed-stack.0)
 ; MIR64-DAG:   $f30 = LFD 384, $x1 :: (load (s64) from %fixed-stack.1, align 16)
 ; MIR64-DAG:   $f29 = LFD 376, $x1 :: (load (s64) from %fixed-stack.2)

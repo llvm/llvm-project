@@ -2736,20 +2736,21 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
   // for which we actually use traceback tables. If another ABI needs to be
   // supported that also uses them, we can add a check such as
   // Subtarget.usesTraceBackTables().
-  assert(Subtarget.isAIXABI() && "function only called for AIX");
+  assert(Subtarget.isAIXABI() &&
+         "Function updateCalleeSaves should only be called for AIX.");
 
   // If there are no callee saves then there is nothing to do.
   if (SavedRegs.none())
     return;
 
-  const TargetRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs =
+      Subtarget.getRegisterInfo()->getCalleeSavedRegs(&MF);
   MCPhysReg LowestGPR = PPC::R31;
   MCPhysReg LowestG8R = PPC::X31;
   MCPhysReg LowestFPR = PPC::F31;
   MCPhysReg LowestVR = PPC::V31;
 
-  // Traverse the CSR's twice so as not to rely on ascending ordering of
+  // Traverse the CSRs twice so as not to rely on ascending ordering of
   // registers in the array. The first pass finds the lowest numbered
   // register and the second pass marks all higher numbered registers
   // for spilling.
@@ -2773,15 +2774,12 @@ void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
 
   for (int i = 0; CSRegs[i]; i++) {
     MCPhysReg Cand = CSRegs[i];
-    if (PPC::GPRCRegClass.contains(Cand) && Cand > LowestGPR)
-      SavedRegs.set(Cand);
-    else if (PPC::G8RCRegClass.contains(Cand) && Cand > LowestG8R)
-      SavedRegs.set(Cand);
-    else if ((PPC::F4RCRegClass.contains(Cand) ||
-              PPC::F8RCRegClass.contains(Cand)) &&
-             Cand > LowestFPR)
-      SavedRegs.set(Cand);
-    else if (PPC::VRRCRegClass.contains(Cand) && Cand > LowestVR)
+    if ((PPC::GPRCRegClass.contains(Cand) && Cand > LowestGPR) ||
+        (PPC::G8RCRegClass.contains(Cand) && Cand > LowestG8R) ||
+        ((PPC::F4RCRegClass.contains(Cand) ||
+          PPC::F8RCRegClass.contains(Cand)) &&
+         Cand > LowestFPR) ||
+        (PPC::VRRCRegClass.contains(Cand) && Cand > LowestVR))
       SavedRegs.set(Cand);
   }
 }
