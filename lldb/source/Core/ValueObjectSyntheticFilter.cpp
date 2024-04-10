@@ -379,6 +379,8 @@ bool ValueObjectSynthetic::CanProvideValue() {
 
 bool ValueObjectSynthetic::SetValueFromCString(const char *value_str,
                                                Status &error) {
+  if (m_synth_filter_up->SetValueFromCString(value_str, error))
+    return true;
   return m_parent->SetValueFromCString(value_str, error);
 }
 

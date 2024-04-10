@@ -80,6 +80,10 @@ public:
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
+  virtual bool SetValueFromCString(const char *value_str, Status &error) {
+    return false;
+  }
+
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> AutoPointer;
 
