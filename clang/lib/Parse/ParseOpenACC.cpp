@@ -843,8 +843,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     }
     case OpenACCClauseKind::If: {
       ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
-      // An invalid expression can be just about anything, so just give up on
-      // this clause list.
+
       if (CondExpr.isInvalid()) {
         Parens.skipToEnd();
         return OpenACCCanContinue();
@@ -966,8 +965,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       case OpenACCClauseKind::Self: {
         assert(DirKind != OpenACCDirectiveKind::Update);
         ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
-        // An invalid expression can be just about anything, so just give up on
-        // this clause list.
+
         if (CondExpr.isInvalid()) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
