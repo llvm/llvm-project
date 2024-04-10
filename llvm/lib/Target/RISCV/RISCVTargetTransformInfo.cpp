@@ -1335,8 +1335,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
 
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
     if (CondTy->isVectorTy()) {
       if (ValTy->getScalarSizeInBits() == 1) {
         // vmandn.mm v8, v8, v9
@@ -1375,14 +1375,47 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                           LT.second, CostKind);
   }
 
-  if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
-      ValTy->isVectorTy()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+  if ((Opcode == Instruction::ICmp) && ValTy->isVectorTy()) {
+    unsigned RVVOp;
+    switch (VecPred) {
+    case CmpInst::ICMP_EQ:
+      RVVOp = RISCV::VMSEQ_VV;
+      break;
+    case CmpInst::ICMP_NE:
+      RVVOp = RISCV::VMSNE_VV;
+      break;
+    case CmpInst::ICMP_UGT:
+      RVVOp = RISCV::VMSLTU_VV;
+      break;
+    case CmpInst::ICMP_ULT:
+      RVVOp = RISCV::VMSLTU_VV;
+      break;
+    case CmpInst::ICMP_ULE:
+      RVVOp = RISCV::VMSLEU_VV;
+      break;
+    case CmpInst::ICMP_SGT:
+      RVVOp = RISCV::VMSLT_VV;
+      break;
+    case CmpInst::ICMP_UGE:
+      RVVOp = RISCV::VMSLEU_VV;
+      break;
+    case CmpInst::ICMP_SGE:
+      RVVOp = RISCV::VMSLE_VV;
+      break;
+    case CmpInst::ICMP_SLT:
+      RVVOp = RISCV::VMSLT_VV;
+      break;
+    case CmpInst::ICMP_SLE:
+      RVVOp = RISCV::VMSLE_VV;
+      break;
+    default:
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       I);
+    }
+    return LT.first * getRISCVInstructionCost(RVVOp, LT.second, CostKind);
+  }
 
-    // Support natively.
-    if (CmpInst::isIntPredicate(VecPred))
-      return LT.first * 1;
-
+  if ((Opcode == Instruction::FCmp) && ValTy->isVectorTy()) {
     // If we do not support the input floating point vector type, use the base
     // one which will calculate as:
     // ScalarizeCost + Num * Cost for fixed vector,
