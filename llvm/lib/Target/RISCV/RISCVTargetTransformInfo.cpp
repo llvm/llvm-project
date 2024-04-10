@@ -1342,10 +1342,14 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // vmandn.mm v8, v8, v9
         // vmand.mm v9, v0, v9
         // vmor.mm v0, v9, v8
-        return LT.first * 3;
+        return LT.first *
+               getRISCVInstructionCost(
+                   {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
+                   LT.second, CostKind);
       }
       // vselect and max/min are supported natively.
-      return LT.first * 1;
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
     }
 
     if (ValTy->getScalarSizeInBits() == 1) {
@@ -1354,13 +1358,21 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       //  vmandn.mm v8, v8, v9
       //  vmand.mm v9, v0, v9
       //  vmor.mm v0, v9, v8
-      return LT.first * 5;
+      MVT InterimVT = LT.second.changeVectorElementType(MVT::i8);
+      return LT.first *
+                 getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                         InterimVT, CostKind) +
+             LT.first * getRISCVInstructionCost(
+                            {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
+                            LT.second, CostKind);
     }
 
     // vmv.v.x v10, a0
     // vmsne.vi v0, v10, 0
     // vmerge.vvm v8, v9, v8, v0
-    return LT.first * 3;
+    return LT.first * getRISCVInstructionCost(
+                          {RISCV::VMV_V_X, RISCV::VMSNE_VI, RISCV::VMERGE_VVM},
+                          LT.second, CostKind);
   }
 
   if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
