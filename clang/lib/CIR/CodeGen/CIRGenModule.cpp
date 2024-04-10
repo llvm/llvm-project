@@ -492,9 +492,40 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   // TODO: setNonAliasAttributes
   // TODO: SetLLVMFunctionAttributesForDeclaration
 
-  assert(!D->getAttr<ConstructorAttr>() && "NYI");
-  assert(!D->getAttr<DestructorAttr>() && "NYI");
+  if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
+    AddGlobalCtor(Fn, CA->getPriority());
+  if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
+    AddGlobalDtor(Fn, DA->getPriority(), true);
+
   assert(!D->getAttr<AnnotateAttr>() && "NYI");
+}
+
+/// Track functions to be called before main() runs.
+void CIRGenModule::AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority) {
+  // FIXME(cir): handle LexOrder and Associated data upon testcases.
+  //
+  // Traditional LLVM codegen directly adds the function to the list of global
+  // ctors. In CIR we just add a global_ctor attribute to the function. The
+  // global list is created in LoweringPrepare.
+  //
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  Ctor->setAttr(Ctor.getGlobalCtorAttrName(),
+                mlir::cir::GlobalCtorAttr::get(builder.getContext(),
+                                               Ctor.getName(), Priority));
+}
+
+/// Add a function to the list that will be called when the module is unloaded.
+void CIRGenModule::AddGlobalDtor(mlir::cir::FuncOp Dtor, int Priority,
+                                 bool IsDtorAttrFunc) {
+  assert(IsDtorAttrFunc && "NYI");
+  if (codeGenOpts.RegisterGlobalDtorsWithAtExit &&
+      (!getASTContext().getTargetInfo().getTriple().isOSAIX() ||
+       IsDtorAttrFunc)) {
+    llvm_unreachable("NYI");
+  }
+
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  llvm_unreachable("NYI");
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef Name) {

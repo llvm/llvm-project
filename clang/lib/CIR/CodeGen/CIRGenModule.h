@@ -227,6 +227,11 @@ public:
                                             mlir::Type t, bool isCst = false,
                                             mlir::Operation *insertPoint = nullptr);
 
+  // FIXME: Hardcoding priority here is gross.
+  void AddGlobalCtor(mlir::cir::FuncOp Ctor, int Priority = 65535);
+  void AddGlobalDtor(mlir::cir::FuncOp Dtor, int Priority = 65535,
+                     bool IsDtorAttrFunc = false);
+
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
