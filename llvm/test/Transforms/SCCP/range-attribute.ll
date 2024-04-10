@@ -6,12 +6,10 @@ declare i32 @get_i32()
 
 define void @range_attribute(i32 range(i32 0, 10) %v) {
 ; CHECK-LABEL: @range_attribute(
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[V:%.*]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V:%.*]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i32 [[V]], 9
-; CHECK-NEXT:    call void @use(i1 [[C3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
 ; CHECK-NEXT:    call void @use(i1 [[C4]])
 ; CHECK-NEXT:    ret void
@@ -29,7 +27,7 @@ define void @range_attribute(i32 range(i32 0, 10) %v) {
 
 define i32 @range_attribute_single(i32 range(i32 0, 1) %v) {
 ; CHECK-LABEL: @range_attribute_single(
-; CHECK-NEXT:    ret i32 [[V:%.*]]
+; CHECK-NEXT:    ret i32 0
 ;
   ret i32 %v
 }
@@ -37,12 +35,10 @@ define i32 @range_attribute_single(i32 range(i32 0, 1) %v) {
 define void @call_range_attribute() {
 ; CHECK-LABEL: @call_range_attribute(
 ; CHECK-NEXT:    [[V:%.*]] = call range(i32 0, 10) i32 @get_i32()
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[V]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i32 [[V]], 9
-; CHECK-NEXT:    call void @use(i1 [[C3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
 ; CHECK-NEXT:    call void @use(i1 [[C4]])
 ; CHECK-NEXT:    ret void
@@ -65,12 +61,10 @@ declare range(i32 0, 10) i32 @get_i32_in_range()
 define void @call_range_result() {
 ; CHECK-LABEL: @call_range_result(
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @get_i32_in_range()
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[V]], 10
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp ugt i32 [[V]], 9
-; CHECK-NEXT:    call void @use(i1 [[C3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C4:%.*]] = icmp ugt i32 [[V]], 8
 ; CHECK-NEXT:    call void @use(i1 [[C4]])
 ; CHECK-NEXT:    ret void
@@ -89,8 +83,7 @@ define void @call_range_result() {
 
 define internal i1 @ip_cmp_range_attribute(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_attribute(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[V:%.*]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 undef
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -99,7 +92,7 @@ define internal i1 @ip_cmp_range_attribute(i32 %v) {
 define i1 @ip_range_attribute(i32 range(i32 0, 10) %v) {
 ; CHECK-LABEL: @ip_range_attribute(
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @ip_cmp_range_attribute(i32 [[V:%.*]])
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c = call i1 @ip_cmp_range_attribute(i32 %v)
   ret i1 %c
@@ -107,8 +100,7 @@ define i1 @ip_range_attribute(i32 range(i32 0, 10) %v) {
 
 define internal i1 @ip_cmp_range_call(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_call(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[V:%.*]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 undef
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -118,7 +110,7 @@ define i1 @ip_range_call() {
 ; CHECK-LABEL: @ip_range_call(
 ; CHECK-NEXT:    [[V:%.*]] = call range(i32 0, 10) i32 @get_i32()
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @ip_cmp_range_call(i32 [[V]])
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %v = call range(i32 0, 10) i32 @get_i32()
   %c = call i1 @ip_cmp_range_call(i32 %v)
@@ -127,8 +119,7 @@ define i1 @ip_range_call() {
 
 define internal i1 @ip_cmp_range_result(i32 %v) {
 ; CHECK-LABEL: @ip_cmp_range_result(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[V:%.*]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 undef
 ;
   %c = icmp ult i32 %v, 10
   ret i1 %c
@@ -138,7 +129,7 @@ define i1 @ip_range_result() {
 ; CHECK-LABEL: @ip_range_result(
 ; CHECK-NEXT:    [[V:%.*]] = call range(i32 0, 10) i32 @get_i32()
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @ip_cmp_range_result(i32 [[V]])
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %v = call range(i32 0, 10) i32 @get_i32()
   %c = call i1 @ip_cmp_range_result(i32 %v)
