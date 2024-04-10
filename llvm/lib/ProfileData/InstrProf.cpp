@@ -1601,8 +1601,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
                 "Keep the header a standard-layout class for simplicity");
 
   Header H;
-  size_t BufferOffset = 0;
-  H.Magic = read(Buffer, BufferOffset);
+  H.Magic = read(Buffer, 0);
   // Check the magic number.
   uint64_t Magic =
       endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
@@ -1610,7 +1609,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, BufferOffset + sizeof(uint64_t));
+  H.Version = read(Buffer, sizeof(uint64_t));
   const uint64_t ProfVersion = GET_VERSION(H.formatVersion());
   if (ProfVersion > IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
@@ -1665,7 +1664,7 @@ size_t Header::size() const {
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
   case 13ull:
-    return sizeof(uint64_t) * 10;
+    return sizeof(uint64_t) * kHeaderFieldSize;
   case 12ull:
     return offsetOf(&Header::VTableNamesOffset) +
            sizeof(Header::VTableNamesOffset);

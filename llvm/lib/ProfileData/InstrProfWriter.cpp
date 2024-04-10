@@ -580,10 +580,12 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 13.
-  // FIXME: Starting from version 13, indexed profile header has forward
-  // compatibility. Older tools can parse header and finds the starting byte for
-  // payload when reading profiles of newer version. By then we can clean up
-  // WritePrevVersion.
+  // Starting from version 13, an indexed profile records the on-disk
+  // byte size of header at a fixed byte offset. Compilers or tools built
+  // starting from this version can read the on-disk byte size (as opposed to
+  // relying on struct definition of Header) to locate the start of payload
+  // sections.
+  // FIXME: Clean up WritePrevVersion later.
   assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
          IndexedInstrProf::ProfVersion::Version13);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))

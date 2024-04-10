@@ -1157,6 +1157,7 @@ const HashT HashType = HashT::MD5;
 
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
+constexpr unsigned kHeaderFieldSize = 10;
 // This structure defines the file header of the LLVM profile
 // data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
 // as appropriate when updating the indexed profile format.
@@ -1176,7 +1177,7 @@ struct Header {
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
   uint64_t VTableNamesOffset;
-  // The byte size of on-disk header.
+  // The on-disk byte size of the header.
   uint64_t Size;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
