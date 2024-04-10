@@ -1284,10 +1284,14 @@ private:
   SmallVector<const Symbol *, 0> symbols;
 };
 
+template <class ELFT> void createSyntheticSections();
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
 template <class ELFT> void splitSections();
 void combineEhSections();
+
+bool hasMemtag();
+bool canHaveMemtagGlobals();
 
 template <typename ELFT> void writeEhdr(uint8_t *buf, Partition &part);
 template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
