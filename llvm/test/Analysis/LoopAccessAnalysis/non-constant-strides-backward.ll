@@ -8,15 +8,21 @@ declare void @llvm.assume(i1)
 define void @different_non_constant_strides_known_backward(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_backward'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A, i64 %iv.mul.2
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:          (Low: %A High: (2044 + %A))
+; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: %A High: (1024 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -49,15 +55,15 @@ define void @different_non_constant_strides_known_backward_distance_larger_than_
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A.1024, i64 %iv.mul.2
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group [[GRP3]]:
 ; CHECK-NEXT:          (Low: (1024 + %A)<nuw> High: (3068 + %A))
 ; CHECK-NEXT:            Member: {(1024 + %A)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A)<nuw>)
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
@@ -93,15 +99,15 @@ define void @different_non_constant_strides_known_backward_min_distance_16(ptr %
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A.16, i64 %iv.mul.2
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group [[GRP5]]:
 ; CHECK-NEXT:          (Low: (16 + %A)<nuw> High: (2060 + %A))
 ; CHECK-NEXT:            Member: {(16 + %A)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group [[GRP6]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
@@ -137,15 +143,15 @@ define void @different_non_constant_strides_known_backward_min_distance_15(ptr %
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A.15, i64 %iv.mul.2
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group [[GRP7]]:
 ; CHECK-NEXT:          (Low: (15 + %A)<nuw> High: (2059 + %A))
 ; CHECK-NEXT:            Member: {(15 + %A)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group [[GRP8]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
@@ -181,15 +187,15 @@ define void @different_non_constant_strides_known_backward_min_distance_8(ptr %A
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A.8, i64 %iv.mul.2
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group [[GRP9]]:
 ; CHECK-NEXT:          (Low: (8 + %A)<nuw> High: (2052 + %A))
 ; CHECK-NEXT:            Member: {(8 + %A)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group [[GRP10]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
@@ -225,15 +231,15 @@ define void @different_non_constant_strides_known_backward_min_distance_3(ptr %A
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A.3, i64 %iv.mul.2
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group [[GRP11]]:
 ; CHECK-NEXT:          (Low: (3 + %A)<nuw> High: (2047 + %A))
 ; CHECK-NEXT:            Member: {(3 + %A)<nuw>,+,8}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group [[GRP12]]:
 ; CHECK-NEXT:          (Low: %A High: (1024 + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:

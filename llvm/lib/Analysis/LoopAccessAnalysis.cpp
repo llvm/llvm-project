@@ -1926,11 +1926,11 @@ struct DepDistanceStrideAndSizeInfo {
   bool AIsWrite;
   bool BIsWrite;
 
-  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA, uint64_t StrideB,
-                               uint64_t TypeByteSize, bool AIsWrite,
-                               bool BIsWrite)
-      : Dist(Dist), StrideA(StrideA), StrideB(StrideB), TypeByteSize(TypeByteSize),
-        AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
+                               uint64_t StrideB, uint64_t TypeByteSize,
+                               bool AIsWrite, bool BIsWrite)
+      : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+        TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
 };
 } // namespace
 
@@ -2009,9 +2009,9 @@ getDependenceDistanceStrideAndSize(
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
     TypeByteSize = 0;
-  uint64_t Stride = std::abs(StrideAPtr);
-  return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr), std::abs(StrideBPtr), TypeByteSize, AIsWrite,
-                                      BIsWrite);
+  return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr),
+                                      std::abs(StrideBPtr), TypeByteSize,
+                                      AIsWrite, BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
@@ -2060,16 +2060,16 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
-  }
 
   // Write to the same location with the same size.
-  if (SE.isKnownPredicate(CmpInst::ICMP_EQ, Dist,
-                          SE.getZero(Dist->getType()))) {
-    if (HasSameSize)
-      return Dependence::Forward;
-    LLVM_DEBUG(
-        dbgs() << "LAA: Zero dependence difference but different type sizes\n");
-    return Dependence::Unknown;
+    if (C->isZero()) {
+      if (HasSameSize)
+        return Dependence::Forward;
+      LLVM_DEBUG(
+          dbgs()
+          << "LAA: Zero dependence difference but different type sizes\n");
+      return Dependence::Unknown;
+    }
   }
 
   // Negative distances are not plausible dependencies.
