@@ -191,7 +191,7 @@ void ModuleBuildDaemonServer::handleConnection(
 
 void ModuleBuildDaemonServer::listenForClients() {
 
-  llvm::ThreadPool Pool;
+  llvm::DefaultThreadPool Pool;
   std::chrono::seconds DaemonTimeout(15);
 
   while (RunServiceLoop) {

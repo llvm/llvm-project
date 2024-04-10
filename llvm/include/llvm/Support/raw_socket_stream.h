@@ -111,13 +111,6 @@ public:
   static Expected<ListeningSocket> createUnix(
       StringRef SocketPath,
       int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
-
-  Expected<std::unique_ptr<raw_socket_stream>>
-  accept(std::optional<std::chrono::microseconds> Timeout = std::nullopt);
-
-  static Expected<ListeningSocket> createUnix(
-      StringRef SocketPath,
-      int MaxBacklog = llvm::hardware_concurrency().compute_thread_count());
 };
 
 //===----------------------------------------------------------------------===//
