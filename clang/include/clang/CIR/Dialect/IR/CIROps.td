@@ -402,7 +402,7 @@ def LoadOp : CIR_Op<"load", [
     backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
     mark the resulting value as used by another operation to dereference
     a pointer. A unit attribute `volatile` can be used to indicate a volatile
-    loading.
+    loading. Load can be marked atomic by using `atomic(<mem_order>)`.
 
     Example:
 
@@ -451,7 +451,8 @@ def StoreOp : CIR_Op<"store", [
   let description = [{
     `cir.store` stores a value (first operand) to the memory address specified
     in the second operand. A unit attribute `volatile` can be used to indicate
-    a volatile store.
+    a volatile store. Store's can be marked atomic by using
+    `atomic(<mem_order>)`.
 
     Example:
 
@@ -467,12 +468,14 @@ def StoreOp : CIR_Op<"store", [
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
-                       UnitAttr:$is_volatile);
+                       UnitAttr:$is_volatile,
+                       OptionalAttr<MemOrder>:$mem_order);
 
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
+    (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` `cir.ptr` type($addr)
   }];
 

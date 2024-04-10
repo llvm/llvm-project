@@ -375,7 +375,10 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n: {
-    llvm_unreachable("NYI");
+    auto loadVal1 = builder.createLoad(loc, Val1);
+    // FIXME(cir): add scope information.
+    assert(!UnimplementedFeature::syncScopeID());
+    builder.createStore(loc, loadVal1, Ptr, E->isVolatile(), orderAttr);
     return;
   }
 
@@ -612,7 +615,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
-    llvm_unreachable("NYI");
+    Val1 = buildPointerWithAlignment(E->getVal1());
     break;
 
   case AtomicExpr::AO__atomic_exchange:

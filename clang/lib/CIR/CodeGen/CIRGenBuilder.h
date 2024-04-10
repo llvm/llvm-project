@@ -769,14 +769,16 @@ public:
   }
 
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
-                                 Address dst) {
-    return create<mlir::cir::StoreOp>(loc, val, dst.getPointer());
+                                 Address dst, bool _volatile = false,
+                                 ::mlir::cir::MemOrderAttr order = {}) {
+    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), _volatile,
+                                         order);
   }
 
   mlir::cir::StoreOp createFlagStore(mlir::Location loc, bool val,
                                      mlir::Value dst) {
     auto flag = getBool(val, loc);
-    return create<mlir::cir::StoreOp>(loc, flag, dst);
+    return CIRBaseBuilderTy::createStore(loc, flag, dst);
   }
 
   // Convert byte offset to sequence of high-level indices suitable for

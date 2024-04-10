@@ -179,3 +179,44 @@ int fi1c(atomic_int *i) {
 
 // LLVM-LABEL: @_Z4fi1cPU7_Atomici
 // LLVM: load atomic i32, ptr {{.*}} seq_cst, align 4
+
+void fi2(_Atomic(int) *i) {
+  __c11_atomic_store(i, 1, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z3fi2PU7_Atomici
+// CHECK: cir.store atomic(seq_cst)
+
+// LLVM-LABEL: @_Z3fi2PU7_Atomici
+// LLVM: store atomic i32 {{.*}} seq_cst, align 4
+
+void fi2a(int *i) {
+  int v = 1;
+  __atomic_store(i, &v, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z4fi2aPi
+// CHECK: cir.store atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi2aPi
+// LLVM: store atomic i32 {{.*}} seq_cst, align 4
+
+void fi2b(int *i) {
+  __atomic_store_n(i, 1, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z4fi2bPi
+// CHECK: cir.store atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi2bPi
+// LLVM: store atomic i32 {{.*}} seq_cst, align 4
+
+void fi2c(atomic_int *i) {
+  atomic_store(i, 1);
+}
+
+// CHECK-LABEL: @_Z4fi2cPU7_Atomici
+// CHECK: cir.store atomic(seq_cst)
+
+// LLVM-LABEL: @_Z4fi2cPU7_Atomici
+// LLVM: store atomic i32 {{.*}} seq_cst, align 4

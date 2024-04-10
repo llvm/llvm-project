@@ -492,14 +492,13 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
       // If this function returns a reference, take the address of the
       // expression rather than the value.
       RValue Result = buildReferenceBindingToExpr(RV);
-      builder.create<mlir::cir::StoreOp>(loc, Result.getScalarVal(),
-                                         ReturnValue.getPointer());
+      builder.createStore(loc, Result.getScalarVal(), ReturnValue);
     } else {
       mlir::Value V = nullptr;
       switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
       case TEK_Scalar:
         V = buildScalarExpr(RV);
-        builder.create<mlir::cir::StoreOp>(loc, V, *FnRetAlloca);
+        builder.CIRBaseBuilderTy::createStore(loc, V, *FnRetAlloca);
         break;
       case TEK_Complex:
         llvm_unreachable("NYI");

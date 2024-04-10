@@ -387,7 +387,7 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       builder.getSizeFromCharUnits(builder.getContext(),
                                    clang::CharUnits::One()),
       nullptr);
-  builder.create<mlir::cir::StoreOp>(loc, begin, tmpAddr);
+  builder.createStore(loc, begin, tmpAddr);
 
   auto loop = builder.createDoWhile(
       loc,
@@ -418,7 +418,7 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
         // Advance pointer and store them to temporary variable
         auto nextElement = builder.create<mlir::cir::PtrStrideOp>(
             loc, eltTy, currentElement, one);
-        b.create<mlir::cir::StoreOp>(loc, nextElement, tmpAddr);
+        builder.createStore(loc, nextElement, tmpAddr);
         builder.createYield(loc);
       });
 
