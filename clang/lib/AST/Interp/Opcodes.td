@@ -59,6 +59,7 @@ def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
+def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 
 //===----------------------------------------------------------------------===//
@@ -272,6 +273,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
+  let Args = [ArgDesc];
   let HasGroup = 1;
 }
 
@@ -530,6 +532,11 @@ def GetFnPtr : Opcode {
   let Args = [ArgFunction];
 }
 
+def GetIntPtr : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgDesc];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Binary operators.
@@ -659,6 +666,11 @@ def CastFloatingIntegralAPS : Opcode {
 def CastPointerIntegral : Opcode {
   let Types = [AluTypeClass];
   let Args = [];
+  let HasGroup = 1;
+}
+
+def DecayPtr : Opcode {
+  let Types = [PtrTypeClass, PtrTypeClass];
   let HasGroup = 1;
 }
 
