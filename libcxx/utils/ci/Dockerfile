@@ -59,9 +59,9 @@ ENV LLVM_HEAD_VERSION=${LLVM_HEAD_VERSION}
 # HACK: The github actions runner image already has sudo and requires its use. The buildkite base image does not.
 # Reconcile this.
 RUN <<EOF
-  apt-get update || true
-  apt-get install -y sudo || true
-  echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
+apt-get update || true
+apt-get install -y sudo || true
+echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
 EOF
 
 # Installing tzdata before other packages avoids the time zone prompts.
@@ -105,19 +105,19 @@ RUN sudo apt-get update \
 #RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
 # TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
-  wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
-  gunzip /tmp/ninja.gz
-  chmod a+x /tmp/ninja
-  sudo mv /tmp/ninja /usr/local/bin/ninja
+wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
+gunzip /tmp/ninja.gz
+chmod a+x /tmp/ninja
+sudo mv /tmp/ninja /usr/local/bin/ninja
 EOF
 
 
 # These two locales are not enabled by default so generate them
 RUN <<EOF
-  printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /etc/locale.gen
-  sudo mkdir /usr/local/share/i1en/
-  printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /usr/local/share/i1en/SUPPORTED
-  sudo locale-gen
+printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /etc/locale.gen
+sudo mkdir /usr/local/share/i1en/
+printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /usr/local/share/i1en/SUPPORTED
+sudo locale-gen
 EOF
 
 # Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
@@ -128,34 +128,34 @@ EOF
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
 RUN <<EOF
-  sudo apt-get update
-  wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-  chmod +x /tmp/llvm.sh
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
-  sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
-  sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
-  sudo rm -rf /var/lib/apt/lists/*
+sudo apt-get update
+wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+chmod +x /tmp/llvm.sh
+sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
+sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
+sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
+sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
+sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
+sudo rm -rf /var/lib/apt/lists/*
 EOF
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 RUN <<EOF
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  sudo apt-get update
-  sudo apt-get install -y \
-    gcc-$((GCC_LATEST_VERSION - 1)) \
-    g++-$((GCC_LATEST_VERSION - 1)) \
-    gcc-$GCC_LATEST_VERSION \
-    g++-$GCC_LATEST_VERSION
-  sudo rm -rf /var/lib/apt/lists/*
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
+sudo apt-get install -y \
+gcc-$((GCC_LATEST_VERSION - 1)) \
+g++-$((GCC_LATEST_VERSION - 1)) \
+gcc-$GCC_LATEST_VERSION \
+g++-$GCC_LATEST_VERSION
+sudo rm -rf /var/lib/apt/lists/*
 EOF
 
 RUN <<EOF
-    # Install a recent CMake
-    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
+# Install a recent CMake
+wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
+rm /tmp/install-cmake.sh
 EOF
 
 # ===----------------------------------------------------------------------===##
@@ -172,11 +172,11 @@ RUN  apt-get update && apt-get install -y curl unzip git
 
 # Install the Android platform tools (e.g. adb) into /opt/android/sdk.
 RUN <<EOF
-  mkdir -p /opt/android/sdk
-  cd /opt/android/sdk
-  curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
-  unzip platform-tools-latest-linux.zip
-  rm platform-tools-latest-linux.zip
+mkdir -p /opt/android/sdk
+cd /opt/android/sdk
+curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+unzip platform-tools-latest-linux.zip
+rm platform-tools-latest-linux.zip
 EOF
 
 # Install the current Android compiler. Specify the prebuilts commit to retrieve
@@ -185,16 +185,16 @@ EOF
 ENV ANDROID_CLANG_VERSION=$ANDROID_CLANG_VERSION
 ENV ANDROID_CLANG_PREBUILTS_COMMIT=$ANDROID_CLANG_PREBUILTS_COMMIT
 RUN <<EOF
-    git clone --filter=blob:none --sparse \
-        https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
-        /opt/android/clang
-    git -C /opt/android/clang checkout ${ANDROID_CLANG_PREBUILTS_COMMIT}
-    git -C /opt/android/clang sparse-checkout add clang-${ANDROID_CLANG_VERSION}
-    rm -fr /opt/android/clang/.git
-    ln -sf /opt/android/clang/clang-${ANDROID_CLANG_VERSION} /opt/android/clang/clang-current
-    # The "git sparse-checkout" and "ln" commands succeed even if nothing was
-    # checked out, so use this "ls" command to fix that.
-    ls /opt/android/clang/clang-current/bin/clang
+git clone --filter=blob:none --sparse \
+https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
+/opt/android/clang
+git -C /opt/android/clang checkout ${ANDROID_CLANG_PREBUILTS_COMMIT}
+git -C /opt/android/clang sparse-checkout add clang-${ANDROID_CLANG_VERSION}
+rm -fr /opt/android/clang/.git
+ln -sf /opt/android/clang/clang-${ANDROID_CLANG_VERSION} /opt/android/clang/clang-current
+# The "git sparse-checkout" and "ln" commands succeed even if nothing was
+# checked out, so use this "ls" command to fix that.
+ls /opt/android/clang/clang-current/bin/clang
 EOF
 
 # Install an Android sysroot. New AOSP sysroots are available at
@@ -204,24 +204,24 @@ EOF
 
 ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
 RUN <<EOF
-  cd /opt/android
-  curl -L -o ndk_platform.tar.bz2 \
-      https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
-  tar xf ndk_platform.tar.bz2
-  rm ndk_platform.tar.bz2
+cd /opt/android
+curl -L -o ndk_platform.tar.bz2 \
+https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
+tar xf ndk_platform.tar.bz2
+rm ndk_platform.tar.bz2
 EOF
 
 # Install Docker
 RUN <<EOF
-  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  sh /tmp/get-docker.sh
-  rm /tmp/get-docker.sh
+curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+sh /tmp/get-docker.sh
+rm /tmp/get-docker.sh
 
-  # Install Docker. Mark the binary setuid so it can be run without prefixing it
-  # with sudo. Adding the container user to the docker group doesn't work because
-  # /var/run/docker.sock is owned by the host's docker GID, not the container's
-  # docker GID.
-  chmod u+s /usr/bin/docker
+# Install Docker. Mark the binary setuid so it can be run without prefixing it
+# with sudo. Adding the container user to the docker group doesn't work because
+# /var/run/docker.sock is owned by the host's docker GID, not the container's
+# docker GID.
+chmod u+s /usr/bin/docker
 EOF
 
 # ===----------------------------------------------------------------------===##
@@ -241,12 +241,12 @@ WORKDIR /home/libcxx-builder
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
 RUN <<EOF
-  cd /home/libcxx-builder
-  curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh -o /tmp/install-agent.sh
-  bash /tmp/install-agent.sh
-  rm /tmp/install-agent.sh
-  echo "tags=\"queue=libcxx-builders,arch=$(uname -m),os=linux\"" \
-    >> /home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg
+cd /home/libcxx-builder
+curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh -o /tmp/install-agent.sh
+bash /tmp/install-agent.sh
+rm /tmp/install-agent.sh
+echo "tags=\"queue=libcxx-builders,arch=$(uname -m),os=linux\"" \
+>> /home/libcxx-builder/.buildkite-agent/buildkite-agent.cfg
 EOF
 
 USER libcxx-builder
