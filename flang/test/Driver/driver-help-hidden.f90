@@ -21,6 +21,7 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
 ! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
