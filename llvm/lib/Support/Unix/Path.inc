@@ -1199,7 +1199,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
     return errorCodeToError(errnoAsErrorCode());
   if (S_ISDIR(Status.st_mode))
     return errorCodeToError(make_error_code(errc::is_a_directory));
-#endif    
+#endif
   return NumRead;
 }
 

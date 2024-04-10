@@ -1305,25 +1305,24 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
   ASSERT_NO_ERROR(errorToErrorCode(FD.takeError()));
   auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
-  Expected<size_t> BytesRead = fs::readNativeFile(
-          *FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
-  ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), 
-          errc::is_a_directory);
+  Expected<size_t> BytesRead =
+      fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
+  ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
 }
 
 TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
-  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory))); 
+  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
   ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
-            errc::file_exists); 
-   
+            errc::file_exists);
+
   int FD;
-  std::error_code EC; 
+  std::error_code EC;
   EC = fs::openFileForWrite(Twine(TestDirectory), FD);
   ASSERT_EQ(EC, errc::is_a_directory);
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory)));
   ::close(FD);
-}            
+}
 
 TEST_F(FileSystemTest, Remove) {
   SmallString<64> BaseDir;
