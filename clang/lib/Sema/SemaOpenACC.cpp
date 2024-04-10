@@ -103,7 +103,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 
     if (Itr != ExistingClauses.end()) {
       SemaRef.Diag(Clause.getBeginLoc(),
-                   diag::err_acc_duplicate_clause_diallowed)
+                   diag::err_acc_duplicate_clause_disallowed)
           << Clause.getDirectiveKind() << Clause.getClauseKind();
       SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
       return nullptr;

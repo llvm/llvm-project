@@ -32,5 +32,5 @@ OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
 //===----------------------------------------------------------------------===//
 void OpenACCClausePrinter::VisitOpenACCDefaultClause(
     const OpenACCDefaultClause &C) {
-  OS << "default(" << C.getDefaultClauseKind();
+  OS << "default(" << C.getDefaultClauseKind() << ")";
 }
