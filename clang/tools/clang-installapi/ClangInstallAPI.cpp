@@ -101,6 +101,16 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
 
+  if (!Opts.DriverOpts.DylibToVerify.empty()) {
+    TargetList Targets;
+    llvm::for_each(Opts.DriverOpts.Targets,
+                   [&](const auto &T) { Targets.push_back(T.first); });
+    if (!Ctx.Verifier->verifyBinaryAttrs(Targets, Ctx.BA, Ctx.Reexports,
+                                         Opts.LinkerOpts.AllowableClients,
+                                         Opts.LinkerOpts.RPaths, Ctx.FT))
+      return EXIT_FAILURE;
+  };
+
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
   CI->setFileManager(FM.get());
@@ -108,9 +118,10 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 
-  // Execute and gather AST results.
+  // Execute, verify and gather AST results.
   // An invocation is ran for each unique target triple and for each header
   // access level.
+  Records FrontendRecords;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
     Ctx.Verifier->setTarget(Targ);
     Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
@@ -121,6 +132,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
         return EXIT_FAILURE;
     }
+    FrontendRecords.emplace_back(std::move(Ctx.Slice));
   }
 
   if (Ctx.Verifier->verifyRemainingSymbols() == DylibVerifier::Result::Invalid)
@@ -136,10 +148,25 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Assign attributes for serialization.
   InterfaceFile IF(Ctx.Verifier->getExports());
+  // Assign attributes that are the same per slice first.
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);
     IF.setFromBinaryAttrs(Ctx.BA, TargetInfo.first);
   }
+  // Then assign potentially different attributes per slice after.
+  auto assignLibAttrs =
+      [&IF](
+          const auto &Attrs,
+          std::function<void(InterfaceFile *, StringRef, const Target &)> Add) {
+        for (const auto &Lib : Attrs)
+          for (const auto &T : IF.targets(Lib.getValue()))
+            Add(&IF, Lib.getKey(), T);
+      };
+
+  assignLibAttrs(Opts.LinkerOpts.AllowableClients,
+                 &InterfaceFile::addAllowableClient);
+  assignLibAttrs(Opts.LinkerOpts.RPaths, &InterfaceFile::addRPath);
+  assignLibAttrs(Ctx.Reexports, &InterfaceFile::addReexportedLibrary);
 
   // Write output file and perform CI cleanup.
   if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {

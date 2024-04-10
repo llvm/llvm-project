@@ -6816,6 +6816,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
+  case lltok::kw_uitofp:
   case lltok::kw_zext: {
     bool NonNeg = EatIfPresent(lltok::kw_nneg);
     bool Res = parseCast(Inst, PFS, KeywordVal);
@@ -6843,7 +6844,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fpext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
-  case lltok::kw_uitofp:
   case lltok::kw_sitofp:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
@@ -8240,6 +8240,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("atomicrmw cannot be unordered");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
+  if (Val->getType()->isScalableTy())
+    return error(ValLoc, "atomicrmw operand may not be scalable");
 
   if (Operation == AtomicRMWInst::Xchg) {
     if (!Val->getType()->isIntegerTy() &&
@@ -8251,7 +8253,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
               " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
-    if (!Val->getType()->isFloatingPointTy()) {
+    if (!Val->getType()->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point type");

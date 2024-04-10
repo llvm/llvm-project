@@ -972,11 +972,13 @@ TEST(VPRecipeTest, CastVPBlendRecipeToVPUser) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *Phi = PHINode::Create(Int32, 1);
-  VPValue Op1;
-  VPValue Op2;
+  VPValue I1;
+  VPValue I2;
+  VPValue M2;
   SmallVector<VPValue *, 4> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
+  Args.push_back(&I1);
+  Args.push_back(&I2);
+  Args.push_back(&M2);
   VPBlendRecipe Recipe(Phi, Args);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
@@ -1119,7 +1121,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue VecOp;
     VPValue CondOp;
     VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                             &VecOp);
+                             &VecOp, false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1287,7 +1289,7 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   VPValue VecOp;
   VPValue CondOp;
   VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                           &VecOp);
+                           &VecOp, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
