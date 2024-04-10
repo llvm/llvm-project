@@ -460,9 +460,11 @@ public:
     // So make sure we have a value if we didn't propagate one above.
     if (S->isPRValue() && S->getType()->isRecordType()) {
       if (Env.getValue(*S) == nullptr) {
-        auto &Loc = Env.getResultObjectLocation(*S);
-        Env.initializeFieldsWithValues(Loc);
-        refreshRecordValue(Loc, Env);
+        Value *Val = Env.createValue(S->getType());
+        // We're guaranteed to always be able to create a value for record
+        // types.
+        assert(Val != nullptr);
+        Env.setValue(*S, *Val);
       }
     }
   }
@@ -470,30 +472,12 @@ public:
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
-
-    // If this is a prvalue of record type, the handler for `*InitExpr` (if one
-    // exists) will initialize the result object; there is no value to propgate
-    // here.
-    if (S->getType()->isRecordType() && S->isPRValue())
-      return;
-
     propagateValueOrStorageLocation(*InitExpr, *S, Env);
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *S) {
     const CXXConstructorDecl *ConstructorDecl = S->getConstructor();
     assert(ConstructorDecl != nullptr);
-
-    // `CXXConstructExpr` can have array type if default-initializing an array
-    // of records. We don't handle this specifically beyond potentially inlining
-    // the call.
-    if (!S->getType()->isRecordType()) {
-      transferInlineCall(S, ConstructorDecl);
-      return;
-    }
-
-    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-    Env.setValue(*S, refreshRecordValue(Loc, Env));
 
     if (ConstructorDecl->isCopyOrMoveConstructor()) {
       // It is permissible for a copy/move constructor to have additional
@@ -507,14 +491,24 @@ public:
       if (ArgLoc == nullptr)
         return;
 
-      // Even if the copy/move constructor call is elidable, we choose to copy
-      // the record in all cases (which isn't wrong, just potentially not
-      // optimal).
-      copyRecord(*ArgLoc, Loc, Env);
+      if (S->isElidable()) {
+        if (Value *Val = Env.getValue(*ArgLoc))
+          Env.setValue(*S, *Val);
+      } else {
+        auto &Val = *cast<RecordValue>(Env.createValue(S->getType()));
+        Env.setValue(*S, Val);
+        copyRecord(*ArgLoc, Val.getLoc(), Env);
+      }
       return;
     }
 
-    Env.initializeFieldsWithValues(Loc, S->getType());
+    // `CXXConstructExpr` can have array type if default-initializing an array
+    // of records, and we currently can't create values for arrays. So check if
+    // we've got a record type.
+    if (S->getType()->isRecordType()) {
+      auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
+      Env.setValue(*S, InitialVal);
+    }
 
     transferInlineCall(S, ConstructorDecl);
   }
@@ -557,15 +551,19 @@ public:
       if (S->isGLValue()) {
         Env.setStorageLocation(*S, *LocDst);
       } else if (S->getType()->isRecordType()) {
-        // Assume that the assignment returns the assigned value.
-        copyRecord(*LocDst, Env.getResultObjectLocation(*S), Env);
+        // Make sure that we have a `RecordValue` for this expression so that
+        // `Environment::getResultObjectLocation()` is able to return a location
+        // for it.
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
       }
 
       return;
     }
 
-    // `CXXOperatorCallExpr` can be a prvalue. Call `VisitCallExpr`() to
-    // initialize the prvalue's fields with values.
+    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
+    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
+    // can return a value.
     VisitCallExpr(S);
   }
 
@@ -580,6 +578,11 @@ public:
 
       propagateValue(*SubExpr, *S, Env);
     }
+  }
+
+  void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(*S, *Val);
   }
 
   void VisitCallExpr(const CallExpr *S) {
@@ -609,14 +612,13 @@ public:
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
 
-      // If this call produces a prvalue of record type, initialize its fields
-      // with values.
+      // If this call produces a prvalue of record type, make sure that we have
+      // a `RecordValue` for it. This is required so that
+      // `Environment::getResultObjectLocation()` is able to return a location
+      // for this `CallExpr`.
       if (S->getType()->isRecordType() && S->isPRValue())
-        if (Env.getValue(*S) == nullptr) {
-          RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-          Env.initializeFieldsWithValues(Loc);
-          Env.setValue(*S, refreshRecordValue(Loc, Env));
-        }
+        if (Env.getValue(*S) == nullptr)
+          refreshRecordValue(*S, Env);
     }
   }
 
@@ -664,10 +666,8 @@ public:
     // `getLogicOperatorSubExprValue()`.
     if (S->isGLValue())
       Env.setStorageLocation(*S, Env.createObject(S->getType()));
-    else if (!S->getType()->isRecordType()) {
-      if (Value *Val = Env.createValue(S->getType()))
-        Env.setValue(*S, *Val);
-    }
+    else if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(*S, *Val);
   }
 
   void VisitInitListExpr(const InitListExpr *S) {
@@ -688,50 +688,70 @@ public:
       return;
     }
 
-    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-    Env.setValue(*S, refreshRecordValue(Loc, Env));
-
-    // Initialization of base classes and fields of record type happens when we
-    // visit the nested `CXXConstructExpr` or `InitListExpr` for that base class
-    // or field. We therefore only need to deal with fields of non-record type
-    // here.
-
+    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     RecordInitListHelper InitListHelper(S);
 
-    for (auto [Field, Init] : InitListHelper.field_inits()) {
-      if (Field->getType()->isRecordType())
-        continue;
-      if (Field->getType()->isReferenceType()) {
-        assert(Field->getType().getCanonicalType()->getPointeeType() ==
-               Init->getType().getCanonicalType());
-        Loc.setChild(*Field, &Env.createObject(Field->getType(), Init));
-        continue;
-      }
-      assert(Field->getType().getCanonicalType().getUnqualifiedType() ==
-             Init->getType().getCanonicalType().getUnqualifiedType());
-      StorageLocation *FieldLoc = Loc.getChild(*Field);
-      // Locations for non-reference fields must always be non-null.
-      assert(FieldLoc != nullptr);
-      Value *Val = Env.getValue(*Init);
-      if (Val == nullptr && isa<ImplicitValueInitExpr>(Init) &&
-          Init->getType()->isPointerType())
-        Val =
-            &Env.getOrCreateNullPointerValue(Init->getType()->getPointeeType());
-      if (Val == nullptr)
-        Val = Env.createValue(Field->getType());
-      if (Val != nullptr)
-        Env.setValue(*FieldLoc, *Val);
+    for (auto [Base, Init] : InitListHelper.base_inits()) {
+      assert(Base->getType().getCanonicalType() ==
+             Init->getType().getCanonicalType());
+      auto *BaseVal = Env.get<RecordValue>(*Init);
+      if (!BaseVal)
+        BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
+      // Take ownership of the fields of the `RecordValue` for the base class
+      // and incorporate them into the "flattened" set of fields for the
+      // derived class.
+      auto Children = BaseVal->getLoc().children();
+      FieldLocs.insert(Children.begin(), Children.end());
     }
 
-    for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
-      QualType FieldType = FieldLoc->getType();
-      if (FieldType->isRecordType()) {
-        Env.initializeFieldsWithValues(*cast<RecordStorageLocation>(FieldLoc));
-      } else {
-        if (Value *Val = Env.createValue(FieldType))
-          Env.setValue(*FieldLoc, *Val);
+    for (auto [Field, Init] : InitListHelper.field_inits()) {
+      assert(
+          // The types are same, or
+          Field->getType().getCanonicalType().getUnqualifiedType() ==
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
+          // The field's type is T&, and initializer is T
+          (Field->getType()->isReferenceType() &&
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
+      auto& Loc = Env.createObject(Field->getType(), Init);
+      FieldLocs.insert({Field, &Loc});
+    }
+
+    // In the case of a union, we don't in general have initializers for all
+    // of the fields. Create storage locations for the remaining fields (but
+    // don't associate them with values).
+    if (Type->isUnionType()) {
+      for (const FieldDecl *Field :
+           Env.getDataflowAnalysisContext().getModeledFields(Type)) {
+        if (auto [it, inserted] = FieldLocs.insert({Field, nullptr}); inserted)
+          it->second = &Env.createStorageLocation(Field->getType());
       }
     }
+
+    // Check that we satisfy the invariant that a `RecordStorageLoation`
+    // contains exactly the set of modeled fields for that type.
+    // `ModeledFields` includes fields from all the bases, but only the
+    // modeled ones. However, if a class type is initialized with an
+    // `InitListExpr`, all fields in the class, including those from base
+    // classes, are included in the set of modeled fields. The code above
+    // should therefore populate exactly the modeled fields.
+    assert(containsSameFields(
+        Env.getDataflowAnalysisContext().getModeledFields(Type), FieldLocs));
+
+    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
+    for (const auto &Entry :
+         Env.getDataflowAnalysisContext().getSyntheticFields(Type)) {
+      SyntheticFieldLocs.insert(
+          {Entry.getKey(), &Env.createObject(Entry.getValue())});
+    }
+
+    auto &Loc = Env.getDataflowAnalysisContext().createRecordStorageLocation(
+        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
+    RecordValue &RecordVal = Env.create<RecordValue>(Loc);
+
+    Env.setValue(Loc, RecordVal);
+
+    Env.setValue(*S, RecordVal);
 
     // FIXME: Implement array initialization.
   }
