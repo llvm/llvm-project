@@ -4,10 +4,7 @@
 define i1 @vector_reduce_maximum_signbit(<4 x double> nofpclass(nan nzero) %x) {
 ; CHECK-LABEL: define i1 @vector_reduce_maximum_signbit
 ; CHECK-SAME: (<4 x double> nofpclass(nan nzero) [[X:%.*]]) {
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> %x.abs)
@@ -33,10 +30,7 @@ define i1 @vector_reduce_maximum_signbit_fail_maybe_nan(<4 x double> nofpclass(n
 define i1 @vector_reduce_minimum_signbit(<4 x double> nofpclass(nan nzero) %x) {
 ; CHECK-LABEL: define i1 @vector_reduce_minimum_signbit
 ; CHECK-SAME: (<4 x double> nofpclass(nan nzero) [[X:%.*]]) {
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %x.abs)
@@ -61,10 +55,7 @@ define i1 @vector_reduce_minimum_signbit_fail_maybe_nan(<4 x double> nofpclass(n
 define i1 @vector_reduce_max_signbit(<4 x double> nofpclass(nan nzero) %x) {
 ; CHECK-LABEL: define i1 @vector_reduce_max_signbit
 ; CHECK-SAME: (<4 x double> nofpclass(nan nzero) [[X:%.*]]) {
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %x.abs)
@@ -90,10 +81,7 @@ define i1 @vector_reduce_max_signbit_fail_maybe_nan(<4 x double> nofpclass(nzero
 define i1 @vector_reduce_min_signbit(<4 x double> nofpclass(nan nzero) %x) {
 ; CHECK-LABEL: define i1 @vector_reduce_min_signbit
 ; CHECK-SAME: (<4 x double> nofpclass(nan nzero) [[X:%.*]]) {
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %x.abs)
@@ -120,10 +108,7 @@ define i1 @vector_reduce_min_signbit_fail_maybe_nan(<4 x double> nofpclass(nzero
 define i1 @vector_reduce_min_signbit_nnan_from_fmf(<4 x double> nofpclass(nzero) %x) {
 ; CHECK-LABEL: define i1 @vector_reduce_min_signbit_nnan_from_fmf
 ; CHECK-SAME: (<4 x double> nofpclass(nzero) [[X:%.*]]) {
-; CHECK-NEXT:    [[X_ABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
-; CHECK-NEXT:    [[OP:%.*]] = call nnan double @llvm.vector.reduce.fmin.v4f64(<4 x double> [[X_ABS]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x.abs = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
   %op = call nnan double @llvm.vector.reduce.fmin.v4f64(<4 x double> %x.abs)
