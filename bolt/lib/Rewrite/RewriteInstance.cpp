@@ -738,7 +738,7 @@ Error RewriteInstance::run() {
     return E;
   adjustCommandLineOptions();
   discoverFileObjects();
-  keepPrologueFunction();
+  // keepPrologueFunction();
 
   if (opts::Instrument && !BC->IsStaticExecutable)
     if (Error E = discoverRtFiniAddress())
@@ -765,6 +765,8 @@ Error RewriteInstance::run() {
   readDebugInfo();
 
   disassembleFunctions();
+
+  keepDCPFunction();
 
   processMetadataPreCFG();
 
@@ -808,6 +810,34 @@ Error RewriteInstance::run() {
   return Error::success();
 }
 
+void RewriteInstance::keepDCPFunction() {
+ BC->outs() << "keepDCPFunction!"<<"\n";
+  for(auto &BFI : BC->getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    bool hasPrologue =false;
+    ErrorOr<ArrayRef<uint8_t>> ErrorOrFunctionData = BF.getData();
+    assert(ErrorOrFunctionData && "function data is not available");
+    ArrayRef<uint8_t> IData = *ErrorOrFunctionData;
+    // BC->outs()  << "Potential Function Entry Point: 0x" << Twine::utohexstr(IData[0]) << "\n";
+    // Check for common function prologue patterns
+    // push %rbp
+    // mov %rsp %rbp
+    if (BF.getSize()>=4 && (char)IData[0] == '\x55' && (char)IData[1] == '\x48' && (char)IData[2] == '\x89' && (char)IData[3] == '\xe5') {
+        LLVM_DEBUG(dbgs() << "[keepDCPFunction] Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+        hasPrologue =true;
+    } else if (BF.getSize()>=4 && (char)IData[0] == '\xf3' && (char)IData[1] == '\x0f' && (char)IData[2] == '\x1e' && (char)IData[3] == '\xfa') {
+       LLVM_DEBUG(dbgs() <<  "[keepDCPFunction] Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+        hasPrologue= true;
+    } else {
+      hasPrologue = false;
+    }
+   LLVM_DEBUG(
+    if(BF.IsDirectCalled) dbgs() << "[keepDCPFunction] Find function which is directly called: 0x" << Twine::utohexstr(BF.getAddress()) << "\n"
+    );
+    if(!BF.IsDirectCalled && !hasPrologue )
+      BF.setIgnored();
+  }
+}
 void RewriteInstance::keepPrologueFunction() {
  BC->outs() << "keepPrologueFunction!"<<"\n";
   for(auto &BFI : BC->getBinaryFunctions()) {
@@ -820,9 +850,9 @@ void RewriteInstance::keepPrologueFunction() {
     // push %rbp
     // mov %rsp %rbp
     if (BF.getSize()>=4 && (char)IData[0] == '\x55' && (char)IData[1] == '\x48' && (char)IData[2] == '\x89' && (char)IData[3] == '\xe5') {
-        LLVM_DEBUG(dbgs() << "Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+        LLVM_DEBUG(dbgs() << "[keepPrologueFunction] Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
     } else if (BF.getSize()>=4 && (char)IData[0] == '\xf3' && (char)IData[1] == '\x0f' && (char)IData[2] == '\x1e' && (char)IData[3] == '\xfa') {
-        LLVM_DEBUG(dbgs() <<  "Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
+        LLVM_DEBUG(dbgs() <<  "[keepPrologueFunction] Find function with prologue in: 0x" << Twine::utohexstr(BF.getAddress()) << "\n");
     } else {
       BF.setIgnored();
     }

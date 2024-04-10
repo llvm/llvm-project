@@ -208,6 +208,8 @@ public:
   /// Mark injected functions
   bool IsInjected = false;
 
+  bool IsDirectCalled =false;
+
   using LSDATypeTableTy = SmallVector<uint64_t, 0>;
 
   /// List of DWARF CFI instructions. Original CFI from the binary must be
