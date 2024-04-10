@@ -289,21 +289,19 @@ private:
 
   bool stripThreadLocals(Module &M) {
     bool Stripped = false;
-    for (auto &F : M) {
-      for (auto &B : F) {
-        for (auto &I : make_early_inc_range(B)) {
-          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
-            if (II->getIntrinsicID() == Intrinsic::threadlocal_address) {
-              II->replaceAllUsesWith(II->getArgOperand(0));
+    for (auto &GV : M.globals()) {
+      if (GV.isThreadLocal()) {
+        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
+        for (Use &U : make_early_inc_range(GV.uses())) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+                II->getArgOperand(0) == &GV) {
+              II->replaceAllUsesWith(&GV);
               II->eraseFromParent();
-              Stripped = true;
             }
           }
         }
-      }
-    }
-    for (auto &GV : M.globals()) {
-      if (GV.isThreadLocal()) {
+
         Stripped = true;
         GV.setThreadLocal(false);
       }
