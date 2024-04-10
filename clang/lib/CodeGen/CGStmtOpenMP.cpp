@@ -7956,10 +7956,10 @@ void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
+#ifndef NDEBUG
 static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
                                              std::string StatusMsg,
                                              const OMPExecutableDirective &D) {
-#ifndef NDEBUG
   bool IsDevice = CGF.CGM.getLangOpts().OpenMPIsTargetDevice;
   if (IsDevice)
     StatusMsg += ": DEVICE";
@@ -7972,8 +7972,8 @@ static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
   unsigned LineNo =
       PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
   llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
-#endif
 }
+#endif
 
 static void emitTargetTeamsGenericLoopRegionAsParallel(
     CodeGenFunction &CGF, PrePostActionTy &Action,
