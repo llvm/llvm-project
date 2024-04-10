@@ -768,6 +768,12 @@ public:
   /// the body.
   StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
+  CXXRecordDecl::LambdaDependencyKind
+  ComputeLambdaDependency(LambdaScopeInfo *LSI) {
+    return static_cast<CXXRecordDecl::LambdaDependencyKind>(
+        LSI->Lambda->getLambdaDependencyKind());
+  }
+
   QualType TransformReferenceType(TypeLocBuilder &TLB, ReferenceTypeLoc TL);
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr);
@@ -3301,12 +3307,13 @@ public:
 
   /// Build a new C++ "this" expression.
   ///
-  /// By default, builds a new "this" expression without performing any
-  /// semantic analysis. Subclasses may override this routine to provide
-  /// different behavior.
+  /// By default, performs semantic analysis to build a new "this" expression.
+  /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCXXThisExpr(SourceLocation ThisLoc,
                                 QualType ThisType,
                                 bool isImplicit) {
+    if (getSema().CheckCXXThisType(ThisLoc, ThisType))
+      return ExprError();
     return getSema().BuildCXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 
@@ -3884,15 +3891,14 @@ public:
         FPOptionsOverride());
 
     // Type-check the __builtin_shufflevector expression.
-    return SemaRef.SemaBuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
+    return SemaRef.BuiltinShuffleVector(cast<CallExpr>(TheCall.get()));
   }
 
   /// Build a new convert vector expression.
   ExprResult RebuildConvertVectorExpr(SourceLocation BuiltinLoc,
                                       Expr *SrcExpr, TypeSourceInfo *DstTInfo,
                                       SourceLocation RParenLoc) {
-    return SemaRef.SemaConvertVectorExpr(SrcExpr, DstTInfo,
-                                         BuiltinLoc, RParenLoc);
+    return SemaRef.ConvertVectorExpr(SrcExpr, DstTInfo, BuiltinLoc, RParenLoc);
   }
 
   /// Build a new template argument pack expansion.
@@ -4000,17 +4006,10 @@ public:
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
+                                            ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    getSema().OpenACC().ActOnConstruct(K, BeginLoc);
-
-    // TODO OpenACC: Include clauses.
-    if (getSema().OpenACC().ActOnStartStmtDirective(K, BeginLoc))
-      return StmtError();
-
-    StrBlock = getSema().OpenACC().ActOnAssociatedStmt(K, StrBlock);
-
     return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                     StrBlock);
+                                                     Clauses, StrBlock);
   }
 
 private:
@@ -4031,6 +4030,10 @@ private:
   QualType TransformDependentNameType(TypeLocBuilder &TLB,
                                       DependentNameTypeLoc TL,
                                       bool DeducibleTSTContext);
+
+  llvm::SmallVector<OpenACCClause *>
+  TransformOpenACCClauseList(OpenACCDirectiveKind DirKind,
+                             ArrayRef<const OpenACCClause *> OldClauses);
 };
 
 template <typename Derived>
@@ -11072,15 +11075,37 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
 template <typename Derived>
+llvm::SmallVector<OpenACCClause *>
+TreeTransform<Derived>::TransformOpenACCClauseList(
+    OpenACCDirectiveKind DirKind, ArrayRef<const OpenACCClause *> OldClauses) {
+  // TODO OpenACC: Ensure we loop through the list and transform the individual
+  // clauses.
+  return {};
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
-  // TODO OpenACC: Transform clauses.
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+  // FIXME: When implementing this for constructs that can take arguments, we
+  // should do Sema for them here.
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
 
   // Transform Structured Block.
   StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock =
+      getSema().OpenACC().ActOnAssociatedStmt(C->getDirectiveKind(), StrBlock);
 
   return getDerived().RebuildOpenACCComputeConstruct(
-      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(), StrBlock);
+      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(),
+      TransformedClauses, StrBlock);
 }
 
 //===----------------------------------------------------------------------===//
@@ -11153,8 +11178,8 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   }
 
   if (!getDerived().AlwaysRebuild() &&
-      QualifierLoc == E->getQualifierLoc() &&
-      ND == E->getDecl() &&
+      !E->isCapturedByCopyInLambdaWithExplicitObjectParameter() &&
+      QualifierLoc == E->getQualifierLoc() && ND == E->getDecl() &&
       Found == E->getFoundDecl() &&
       NameInfo.getName() == E->getDecl()->getDeclName() &&
       !E->hasExplicitTemplateArgs()) {
@@ -12617,9 +12642,17 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   //
   // In other contexts, the type of `this` may be overrided
   // for type deduction, so we need to recompute it.
-  QualType T = getSema().getCurLambda() ?
-                   getDerived().TransformType(E->getType())
-                 : getSema().getCurrentThisType();
+  //
+  // Always recompute the type if we're in the body of a lambda, and
+  // 'this' is dependent on a lambda's explicit object parameter.
+  QualType T = [&]() {
+    auto &S = getSema();
+    if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+      return S.getCurrentThisType();
+    if (S.getCurLambda())
+      return getDerived().TransformType(E->getType());
+    return S.getCurrentThisType();
+  }();
 
   if (!getDerived().AlwaysRebuild() && T == E->getType()) {
     // Mark it referenced in the new context regardless.
@@ -13991,6 +14024,46 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   getSema().ActOnFinishFunctionBody(NewCallOperator, Body.get(),
                                     /*IsInstantiation*/ true);
   SavedContext.pop();
+
+  // Recompute the dependency of the lambda so that we can defer the lambda call
+  // construction until after we have all the necessary template arguments. For
+  // example, given
+  //
+  // template <class> struct S {
+  //   template <class U>
+  //   using Type = decltype([](U){}(42.0));
+  // };
+  // void foo() {
+  //   using T = S<int>::Type<float>;
+  //             ^~~~~~
+  // }
+  //
+  // We would end up here from instantiating S<int> when ensuring its
+  // completeness. That would transform the lambda call expression regardless of
+  // the absence of the corresponding argument for U.
+  //
+  // Going ahead with unsubstituted type U makes things worse: we would soon
+  // compare the argument type (which is float) against the parameter U
+  // somewhere in Sema::BuildCallExpr. Then we would quickly run into a bogus
+  // error suggesting unmatched types 'U' and 'float'!
+  //
+  // That said, everything will be fine if we defer that semantic checking.
+  // Fortunately, we have such a mechanism that bypasses it if the CallExpr is
+  // dependent. Since the CallExpr's dependency boils down to the lambda's
+  // dependency in this case, we can harness that by recomputing the dependency
+  // from the instantiation arguments.
+  //
+  // FIXME: Creating the type of a lambda requires us to have a dependency
+  // value, which happens before its substitution. We update its dependency
+  // *after* the substitution in case we can't decide the dependency
+  // so early, e.g. because we want to see if any of the *substituted*
+  // parameters are dependent.
+  DependencyKind = getDerived().ComputeLambdaDependency(&LSICopy);
+  Class->setLambdaDependencyKind(DependencyKind);
+  // Clean up the type cache created previously. Then, we re-create a type for
+  // such Decl with the new DependencyKind.
+  Class->setTypeForDecl(nullptr);
+  getSema().Context.getTypeDeclType(Class);
 
   return getSema().BuildLambdaExpr(E->getBeginLoc(), Body.get()->getEndLoc(),
                                    &LSICopy);

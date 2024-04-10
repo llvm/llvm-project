@@ -180,6 +180,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FExceptTPtr>, ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "fesetexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "fesetexceptflag",
               RetValSpec<IntType>,
               [ArgSpec<ConstFExceptTPtr>, ArgSpec<IntType>]

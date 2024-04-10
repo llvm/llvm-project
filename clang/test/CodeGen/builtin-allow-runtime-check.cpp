@@ -6,7 +6,7 @@ static_assert(__has_builtin(__builtin_allow_runtime_check), "");
 // CHECK-LABEL: define dso_local noundef zeroext i1 @_Z4testv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.allow.runtime.check(metadata [[META2:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.allow.runtime.check(metadata !"mycheck")
 // CHECK-NEXT:    ret i1 [[TMP0]]
 //
 bool test() {
@@ -16,9 +16,9 @@ bool test() {
 // CHECK-LABEL: define dso_local noundef zeroext i1 @_Z10test_twicev(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.allow.runtime.check(metadata [[META2]])
+// CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.allow.runtime.check(metadata !"mycheck")
 // CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.allow.runtime.check(metadata [[META2]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.allow.runtime.check(metadata !"mycheck")
 // CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    [[OR:%.*]] = or i32 [[CONV]], [[CONV1]]
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR]], 0
@@ -27,6 +27,3 @@ bool test() {
 bool test_twice() {
   return __builtin_allow_runtime_check("mycheck") | __builtin_allow_runtime_check("mycheck");
 }
-//.
-// CHECK: [[META2]] = !{!"mycheck"}
-//.

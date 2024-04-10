@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -3439,12 +3440,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     StringRef Kind =
         cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
     LLVMContext &Ctx = CGM.getLLVMContext();
-    llvm::Metadata *KindStr[] = {llvm::MDString::get(Ctx, Kind)};
-    llvm::MDNode *KindNode = llvm::MDNode::get(Ctx, KindStr);
-    llvm::Value *KindMD = llvm::MetadataAsValue::get(Ctx, KindNode);
     llvm::Value *Allow = Builder.CreateCall(
-        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check), KindMD);
-
+        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check),
+        llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
     return RValue::get(Allow);
   }
   case Builtin::BI__arithmetic_fence: {
@@ -17299,6 +17297,16 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
     Value *Op3 = EmitScalarExpr(E->getArg(3));
+    // rldimi is 64-bit instruction, expand the intrinsic before isel to
+    // leverage peephole and avoid legalization efforts.
+    if (BuiltinID == PPC::BI__builtin_ppc_rldimi &&
+        !getTarget().getTriple().isPPC64()) {
+      Function *F = CGM.getIntrinsic(Intrinsic::fshl, Op0->getType());
+      Op2 = Builder.CreateZExt(Op2, Int64Ty);
+      Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op2});
+      return Builder.CreateOr(Builder.CreateAnd(Shift, Op3),
+                              Builder.CreateAnd(Op1, Builder.CreateNot(Op3)));
+    }
     return Builder.CreateCall(
         CGM.getIntrinsic(BuiltinID == PPC::BI__builtin_ppc_rldimi
                              ? Intrinsic::ppc_rldimi
@@ -18184,6 +18192,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
+        CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.all");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
