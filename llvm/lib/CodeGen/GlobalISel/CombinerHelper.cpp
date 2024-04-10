@@ -332,7 +332,7 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
           return false;
       }
       Ops.push_back(0);
-    } else if (Mask[i] % (int)ConcatSrcNumElt == 0) {
+    } else if (Mask[i] % ConcatSrcNumElt == 0) {
       for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
         if (i + j >= Mask.size())
           return false;
@@ -341,11 +341,11 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
       }
       // Retrieve the source register from its respective G_CONCAT_VECTORS
       // instruction
-      if (Mask[i] < (int)ShuffleSrcTy1.getNumElements()) {
-        Ops.push_back(ConcatMI1->getSourceReg(Mask[i] / (int)ConcatSrcNumElt));
+      if (Mask[i] < ShuffleSrcTy1.getNumElements()) {
+        Ops.push_back(ConcatMI1->getSourceReg(Mask[i] / ConcatSrcNumElt));
       } else {
-        Ops.push_back(ConcatMI2->getSourceReg(Mask[i] / (int)ConcatSrcNumElt -
-                                              (int)ConcatMI1->getNumSources()));
+        Ops.push_back(ConcatMI2->getSourceReg(Mask[i] / ConcatSrcNumElt -
+                                              ConcatMI1->getNumSources()));
       }
     } else {
       return false;
@@ -358,11 +358,14 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
 void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
                                                SmallVector<Register> &Ops) {
   LLT SrcTy = MRI.getType(Ops[0]);
-  Register UndefReg = Builder.buildUndef(SrcTy).getReg(0);
+  Register UndefReg = 0;
 
   for (unsigned i = 0; i < Ops.size(); i++) {
-    if (Ops[i] == 0)
+    if (Ops[i] == 0) {
+      if (UndefReg == 0)
+        UndefReg = Builder.buildUndef(SrcTy).getReg(0);
       Ops[i] = UndefReg;
+    }
   }
 
   Builder.buildConcatVectors(MI.getOperand(0).getReg(), Ops);
