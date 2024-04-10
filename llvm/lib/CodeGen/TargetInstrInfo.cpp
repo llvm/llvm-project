@@ -1055,7 +1055,7 @@ static std::pair<bool, bool> mustSwapOperands(unsigned Pattern) {
   }
 }
 
-void TargetInstrInfo::getReassociateOperandIdx(
+void TargetInstrInfo::getReassociateOperandIndices(
     const MachineInstr &Root, unsigned Pattern,
     std::array<unsigned, 5> &OperandIndices) const {
   switch (Pattern) {
@@ -1252,15 +1252,16 @@ void TargetInstrInfo::genAlternativeCodeSequence(
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
 
   // Select the previous instruction in the sequence based on the input pattern.
-  std::array<unsigned, 5> OpIdx;
-  getReassociateOperandIdx(Root, Pattern, OpIdx);
-  MachineInstr *Prev = MRI.getUniqueVRegDef(Root.getOperand(OpIdx[0]).getReg());
+  std::array<unsigned, 5> OperandIndices;
+  getReassociateOperandIndices(Root, Pattern, OperandIndices);
+  MachineInstr *Prev =
+      MRI.getUniqueVRegDef(Root.getOperand(OperandIndices[0]).getReg());
 
   // Don't reassociate if Prev and Root are in different blocks.
   if (Prev->getParent() != Root.getParent())
     return;
 
-  reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, OpIdx,
+  reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, OperandIndices,
                  InstIdxForVirtReg);
 }
 

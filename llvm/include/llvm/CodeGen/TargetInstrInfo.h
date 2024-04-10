@@ -1277,8 +1277,8 @@ public:
   /// operations might also be target-specific. Each element specifies the index
   /// of {Prev, A, B, X, Y}.
   virtual void
-  getReassociateOperandIdx(const MachineInstr &Root, unsigned Pattern,
-                           std::array<unsigned, 5> &OperandIndices) const;
+  getReassociateOperandIndices(const MachineInstr &Root, unsigned Pattern,
+                               std::array<unsigned, 5> &OperandIndices) const;
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
