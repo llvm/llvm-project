@@ -1157,19 +1157,16 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
       continue;
     DenseMap<Value *, Type *> CollectedTys;
     deduceOperandElementType(&I, CollectedTys);
-    if (CollectedTys.size() == 0)
-      continue;
+    Instruction *User;
     for (const auto &Rec : CollectedTys) {
-      if (!Rec.first->use_empty()) {
-        Instruction *User = dyn_cast<Instruction>(Rec.first->use_begin()->get());
-        if (!User)
-          continue;
-        Type *OpTy = Rec.first->getType();
-        setInsertPointSkippingPhis(B, User->getNextNode());
-        buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy},
-                        UndefValue::get(Rec.second), Rec.first,
-                        {B.getInt32(getPointerAddressSpace(OpTy))}, B);
-      }
+      if (Rec.first->use_empty() ||
+          !(User = dyn_cast<Instruction>(Rec.first->use_begin()->get())))
+        continue;
+      Type *OpTy = Rec.first->getType();
+      setInsertPointSkippingPhis(B, User->getNextNode());
+      buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy},
+                      UndefValue::get(Rec.second), Rec.first,
+                      {B.getInt32(getPointerAddressSpace(OpTy))}, B);
     }
   }
 
