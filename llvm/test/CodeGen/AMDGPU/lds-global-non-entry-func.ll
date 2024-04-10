@@ -178,6 +178,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    s_trap 2
+; GFX8-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-SDAG-NEXT:  .LBB2_2: ; %Flow
 ; GFX8-SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GFX8-SDAG-NEXT:    s_and_b64 s[8:9], s[4:5], -1
@@ -219,6 +220,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_trap 2
 ; GFX8-GISEL-NEXT:    ds_write_b32 v0, v0
+; GFX8-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-GISEL-NEXT:  .LBB2_2: ; %Flow
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GFX8-GISEL-NEXT:    s_and_b64 s[8:9], s[4:5], -1
@@ -259,6 +261,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX9-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX9-SDAG-NEXT:    s_trap 2
+; GFX9-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-SDAG-NEXT:  .LBB2_2: ; %Flow
 ; GFX9-SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GFX9-SDAG-NEXT:    s_and_b64 s[8:9], s[4:5], -1
@@ -291,6 +294,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX9-GISEL-NEXT:    s_trap 2
 ; GFX9-GISEL-NEXT:    ds_write_b32 v0, v0
+; GFX9-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-GISEL-NEXT:  .LBB2_2: ; %Flow
 ; GFX9-GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GFX9-GISEL-NEXT:    s_and_b64 s[8:9], s[4:5], -1
@@ -318,30 +322,32 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; SDAG-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; SDAG-NEXT:    s_cmov_b64 exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_scc0 .LBB2_2
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_3
 ; SDAG-NEXT:  ; %bb.1: ; %bb1
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 1
 ; SDAG-NEXT:    ds_write_b32 v0, v0
-; SDAG-NEXT:    s_cbranch_execnz .LBB2_7
-; SDAG-NEXT:  .LBB2_2: ; %Flow
+; SDAG-NEXT:    s_cbranch_execnz .LBB2_8
+; SDAG-NEXT:  ; %bb.2: ; %bb1
+; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
+; SDAG-NEXT:  .LBB2_3: ; %Flow
 ; SDAG-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; SDAG-NEXT:    s_and_b64 s[8:9], s[4:5], -1
 ; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
-; SDAG-NEXT:    s_cbranch_scc0 .LBB2_5
-; SDAG-NEXT:  ; %bb.3: ; %bb0
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_6
+; SDAG-NEXT:  ; %bb.4: ; %bb0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    ds_write_b32 v0, v0
-; SDAG-NEXT:    s_cbranch_execnz .LBB2_7
-; SDAG-NEXT:  ; %bb.4: ; %bb0
+; SDAG-NEXT:    s_cbranch_execnz .LBB2_8
+; SDAG-NEXT:  ; %bb.5: ; %bb0
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
-; SDAG-NEXT:  .LBB2_5: ; %ret
+; SDAG-NEXT:  .LBB2_6: ; %ret
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 2
 ; SDAG-NEXT:    ds_write_b32 v0, v0
-; SDAG-NEXT:    s_cbranch_execnz .LBB2_7
-; SDAG-NEXT:  ; %bb.6: ; %ret
+; SDAG-NEXT:    s_cbranch_execnz .LBB2_8
+; SDAG-NEXT:  ; %bb.7: ; %ret
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
-; SDAG-NEXT:  .LBB2_7:
+; SDAG-NEXT:  .LBB2_8:
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: func_uses_lds_multi:
@@ -360,6 +366,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GISEL-NEXT:  ; %bb.2: ; %bb1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 1
 ; GISEL-NEXT:    ds_write_b32 v0, v0
+; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GISEL-NEXT:  .LBB2_3: ; %Flow
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GISEL-NEXT:    s_and_b64 s[8:9], s[4:5], -1

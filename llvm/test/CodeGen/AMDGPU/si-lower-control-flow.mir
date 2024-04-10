@@ -54,7 +54,7 @@ body:             |
 
 ...
 
-# We need to split the block for SI_END_CF, but
+# We need to split the block for SI_WAVE_RECONVERGE, but
 ---
 name: end_cf_split_block_end
 tracksRegLiveness: true
@@ -97,7 +97,7 @@ body:             |
     successors: %bb.2
 
     %6:sreg_64_xexec = COPY %5
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     S_ENDPGM 0
@@ -154,7 +154,7 @@ body:             |
     S_NOP 0
     S_SLEEP 3
     S_NOP 0, implicit $vgpr0, implicit $sgpr4_sgpr5
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     S_ENDPGM 0
@@ -211,7 +211,7 @@ body:             |
     %6:sreg_64_xexec = COPY %5
     S_SLEEP 3
     S_NOP 0
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11:0x00000003
@@ -267,7 +267,7 @@ body:             |
     %6:sreg_64_xexec = COPY %5
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $sgpr4_sgpr5 = S_MOV_B64 32
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     liveins: $vgpr3, $sgpr4_sgpr5
@@ -327,7 +327,7 @@ body:             |
     $sgpr4_sgpr5 = S_MOV_B64 32
     S_SLEEP 3, implicit $sgpr4_sgpr5
     S_NOP 0
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     liveins: $vgpr0, $sgpr4_sgpr5
@@ -381,7 +381,7 @@ body:             |
     %6:sreg_64_xexec = COPY %3
     %7:sreg_64_xexec = SI_IF %4, %bb.2, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %8:sreg_64_xexec = S_MOV_B64_term %7, implicit $exec
-    SI_END_CF killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %6, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     S_ENDPGM 0

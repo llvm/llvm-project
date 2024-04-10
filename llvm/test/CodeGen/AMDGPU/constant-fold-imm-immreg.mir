@@ -417,7 +417,7 @@ body:             |
 
   bb.3:
     liveins: $vcc
-    SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0, implicit $vcc
 
 ...

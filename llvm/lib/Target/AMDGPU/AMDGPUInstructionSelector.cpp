@@ -1557,7 +1557,7 @@ bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
   // FIXME: Manually selecting to avoid dealing with the SReg_1 trick
   // SelectionDAG uses for wave32 vs wave64.
   MachineBasicBlock *BB = MI.getParent();
-  BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_END_CF))
+  BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_WAVE_RECONVERGE))
       .add(MI.getOperand(1));
 
   Register Reg = MI.getOperand(1).getReg();
@@ -2083,7 +2083,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
-  case Intrinsic::amdgcn_end_cf:
+  case Intrinsic::amdgcn_wave_reconverge:
     return selectEndCfIntrinsic(I);
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:

@@ -32,7 +32,7 @@
 
 ; IR:  Flow2:
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 ; IR: %10 = extractvalue { i1, i64 } %9, 0
 ; IR: %11 = extractvalue { i1, i64 } %9, 1
@@ -45,7 +45,7 @@
 ; IR: Flow1:
 ; IR: %12 = phi i1 [ %SwitchLeaf, %LeafBlock ], [ %3, %Flow ]
 ; IR: %13 = phi i1 [ %SwitchLeaf.inv, %LeafBlock ], [ %4, %Flow ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %7)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %7)
 ; IR: %14 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %13)
 ; IR: %15 = extractvalue { i1, i64 } %14, 0
 ; IR: %16 = extractvalue { i1, i64 } %14, 1
@@ -56,7 +56,7 @@
 ; IR:  br label %Flow2
 
 ; IR: UnifiedReturnBlock:
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %11)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %11)
 ; IR: ret void
 
 
@@ -146,7 +146,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 ; IR: br i1 %10, label %exit0, label %UnifiedUnreachableBlock
 
@@ -216,7 +216,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; IR: Flow2:
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 ; IR: br i1 %10, label %exit0, label %UnifiedReturnBlock
 
@@ -227,7 +227,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: {{^}}Flow1:
 ; IR: %12 = phi i1 [ %divergent.cond1, %LeafBlock ], [ %3, %Flow ]
 ; IR: %13 = phi i1 [ %divergent.cond1.inv, %LeafBlock ], [ %4, %Flow ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %7)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %7)
 ; IR: %14 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %13)
 ; IR: %15 = extractvalue { i1, i64 } %14, 0
 ; IR: %16 = extractvalue { i1, i64 } %14, 1
@@ -238,7 +238,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: br label %Flow2
 
 ; IR: UnifiedReturnBlock:
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %11)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %11)
 ; IR: ret void
 define amdgpu_kernel void @multi_exit_region_divergent_ret_uniform_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) #0 {
 entry:
@@ -286,7 +286,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 
 define amdgpu_kernel void @multi_exit_region_uniform_ret_divergent_ret(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2, i32 %arg3) #0 {
@@ -329,11 +329,11 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: Flow2:
 ; IR: %8 = phi float [ 2.000000e+00, %exit1 ], [ undef, %Flow1 ]
 ; IR: %9 = phi i1 [ false, %exit1 ], [ %13, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %17)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %17)
 
 ; IR: UnifiedReturnBlock:
 ; IR: %UnifiedRetVal = phi float [ %8, %Flow2 ], [ 1.000000e+00, %exit0 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %12)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %12)
 ; IR: ret float %UnifiedRetVal
 define amdgpu_ps float @multi_divergent_region_exit_ret_ret_return_value(i32 %vgpr) #0 {
 entry:
@@ -409,7 +409,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; IR: Flow2:
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %16)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %16)
 ; IR: %9 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %8)
 ; IR: br i1 %10, label %exit0, label %UnifiedReturnBlock
 
@@ -420,7 +420,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: Flow1:
 ; IR: %12 = phi i1 [ %SwitchLeaf, %LeafBlock ], [ %3, %Flow ]
 ; IR: %13 = phi i1 [ %SwitchLeaf.inv, %LeafBlock ], [ %4, %Flow ]
-; IR: call void @llvm.amdgcn.end.cf.i64(i64 %7)
+; IR: call void @llvm.amdgcn.wave.reconverge.i64(i64 %7)
 ; IR: %14 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %13)
 ; IR: %15 = extractvalue { i1, i64 } %14, 0
 ; IR: %16 = extractvalue { i1, i64 } %14, 1
@@ -432,7 +432,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR-NEXT: br label %Flow2
 
 ; IR: UnifiedReturnBlock:
-; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %11)
+; IR-NEXT: call void @llvm.amdgcn.wave.reconverge.i64(i64 %11)
 ; IR-NEXT: ret void
 define amdgpu_kernel void @multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
 entry:
@@ -488,7 +488,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR-NEXT: br label %Flow2
 
 ; IR: UnifiedReturnBlock:                               ; preds = %exit0, %Flow2
-; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %11)
+; IR-NEXT: call void @llvm.amdgcn.wave.reconverge.i64(i64 %11)
 ; IR-NEXT: ret void
 define amdgpu_kernel void @indirect_multi_divergent_region_exit_ret_unreachable(ptr addrspace(1) nocapture %arg0, ptr addrspace(1) nocapture %arg1, ptr addrspace(1) nocapture %arg2) #0 {
 entry:
@@ -643,7 +643,7 @@ uniform.ret:
 ; IR: br i1 %7, label %uniform.endif, label %uniform.ret0
 
 ; IR: UnifiedReturnBlock:                               ; preds = %Flow3, %Flow2
-; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %5)
+; IR-NEXT: call void @llvm.amdgcn.wave.reconverge.i64(i64 %5)
 ; IR-NEXT: ret void
 define amdgpu_kernel void @uniform_complex_multi_ret_nest_in_divergent_triangle(i32 %arg0) #0 {
 entry:
@@ -689,7 +689,7 @@ divergent.ret:
 ; IR-NEXT: br label %UnifiedReturnBlock
 
 ; IR: UnifiedReturnBlock:
-; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
+; IR-NEXT: call void @llvm.amdgcn.wave.reconverge.i64(i64
 ; IR-NEXT: ret void
 define amdgpu_kernel void @multi_divergent_unreachable_exit() #0 {
 bb:

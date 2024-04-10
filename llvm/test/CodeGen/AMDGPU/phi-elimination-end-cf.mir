@@ -9,7 +9,7 @@
 
 # CHECK: bb.1:
 # CHECK:     [[END_CF_ARG:%[0-9]+]]:sreg_64 = COPY killed [[IF_INPUT_REG]]
-# CHECK:     SI_END_CF killed [[END_CF_ARG]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+# CHECK:     SI_WAVE_RECONVERGE killed [[END_CF_ARG]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
 # CHECK: bb.2:
 # CHECK:     [[IF_SOURCE1:%[0-9]+]]:sreg_64 = SI_IF [[COND]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec

@@ -29,7 +29,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP2]])
 ; OPT-NEXT:    br i1 [[TMP3]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP2]])
 ; OPT-NEXT:    ret void
 ;
 ; GCN-LABEL: break_loop:
@@ -113,7 +113,7 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) undef, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -207,7 +207,7 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) undef, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -298,7 +298,7 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) undef, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -389,7 +389,7 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) undef, align 4
 ; OPT-NEXT:    ret void
 ;
@@ -484,7 +484,7 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; OPT-NEXT:    br i1 [[TMP1]], label [[BB9:%.*]], label [[BB1]]
 ; OPT:       bb9:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; OPT-NEXT:    store volatile i32 7, ptr addrspace(3) undef, align 4
 ; OPT-NEXT:    ret void
 ;

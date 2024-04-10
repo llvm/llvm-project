@@ -47,7 +47,7 @@
   declare i1 @llvm.amdgcn.loop(i64) #1
 
   ; Function Attrs: convergent nounwind
-  declare void @llvm.amdgcn.end.cf(i64) #1
+  declare void @llvm.amdgcn.wave.reconverge(i64) #1
 
   attributes #0 = { "target-cpu"="gfx803" }
   attributes #1 = { convergent nounwind }

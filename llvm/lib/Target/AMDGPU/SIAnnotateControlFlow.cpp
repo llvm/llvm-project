@@ -53,7 +53,7 @@ class SIAnnotateControlFlow : public FunctionPass {
   Function *Else;
   Function *IfBreak;
   Function *Loop;
-  Function *EndCf;
+  Function *WaveReconverge;
 
   DominatorTree *DT;
   StackVector Stack;
@@ -86,7 +86,7 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   bool handleLoop(BranchInst *Term);
 
-  bool closeControlFlow(BasicBlock *BB);
+  bool insertWaveReconverge(BasicBlock *BB);
 
 public:
   static char ID;
@@ -141,7 +141,7 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
   IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break,
                                       { IntMask });
   Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop, { IntMask });
-  EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf, { IntMask });
+  WaveReconverge = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_wave_reconverge, { IntMask });
 }
 
 /// Is the branch condition uniform or did the StructurizeCFG pass
@@ -305,28 +305,20 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 }
 
 /// Close the last opened control flow
-bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
+bool SIAnnotateControlFlow::insertWaveReconverge(BasicBlock *BB) {
+      assert(succ_empty(BB) || succ_size(BB) == 1);
+      
+      if (succ_empty(BB))
+        return false;
 
-  assert(Stack.back().first == BB);
+      BasicBlock *SingleSucc = *succ_begin(BB);
+      BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
+      BasicBlock::iterator InsPt = Term ? BasicBlock::iterator(Term) : BB->end();
 
-  Value *Exec = popSaved();
-  Instruction *ExecDef = dyn_cast<Instruction>(Exec);
-  BasicBlock *DefBB = ExecDef->getParent();
-  for (auto Pred : predecessors(BB)) {
-    llvm::Loop *L = LI->getLoopFor(Pred);
-    bool IsLoopLatch = false;
-    if (L) {
-      SmallVector<BasicBlock *, 4> LL;
-      L->getLoopLatches(LL);
-      IsLoopLatch = std::find_if(LL.begin(), LL.end(), [Pred](BasicBlock *B) {
-                      return B == Pred;
-                    }) != LL.end();
-    }
-    if (Pred != DefBB && DT->dominates(DefBB, Pred) && !IsLoopLatch) {
-      BasicBlock::iterator InsPt(Pred->getTerminator());
-      IRBuilder<>(Pred, InsPt).CreateCall(EndCf, {Exec});
-    }
-  }
+      if (isTopOfStack(SingleSucc)) {
+        Value *Exec = Stack.back().second;
+        IRBuilder<>(BB, InsPt).CreateCall(WaveReconverge, {Exec});
+      }
 
   return true;
 }
@@ -349,14 +341,16 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
 
     if (!Term || Term->isUnconditional()) {
       if (isTopOfStack(BB))
-        Changed |= closeControlFlow(BB);
+        Stack.pop_back();
+      
+      insertWaveReconverge(BB);
 
       continue;
     }
 
     if (I.nodeVisited(Term->getSuccessor(1))) {
       if (isTopOfStack(BB))
-        Changed |= closeControlFlow(BB);
+        Stack.pop_back();
 
       if (DT->dominates(Term->getSuccessor(1), BB))
         Changed |= handleLoop(Term);
@@ -371,7 +365,7 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
         continue;
       }
 
-      Changed |= closeControlFlow(BB);
+      Stack.pop_back();
     }
 
     Changed |= openIf(Term);

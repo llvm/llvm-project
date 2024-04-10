@@ -36,6 +36,7 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    s_mov_b32 s15, s0
 ; GFX900-NEXT:    image_sample v[0:1], v[0:1], s[8:15], s[0:3] dmask:0x3
 ; GFX900-NEXT:    s_mov_b32 s2, 1.0
+; GFX900-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX900-NEXT:  .LBB0_2: ; %Flow
 ; GFX900-NEXT:    s_and_b64 exec, exec, s[4:5]
 ; GFX900-NEXT:    s_xor_b64 s[0:1], s[6:7], exec

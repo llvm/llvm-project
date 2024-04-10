@@ -147,6 +147,7 @@ define i64 @v_urem_i64(i64 %num, i64 %den) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:  .LBB0_2: ; %Flow
 ; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
@@ -753,6 +754,7 @@ define <2 x i64> @v_urem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    ; implicit-def: $vgpr2
 ; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:    ; implicit-def: $vgpr10
+; CGP-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CGP-NEXT:  .LBB2_2: ; %Flow1
 ; CGP-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CGP-NEXT:    s_and_b64 s[8:9], s[6:7], -1
@@ -915,6 +917,7 @@ define <2 x i64> @v_urem_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:    ; implicit-def: $vgpr6
 ; CGP-NEXT:    ; implicit-def: $vgpr8
+; CGP-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CGP-NEXT:  .LBB2_6: ; %Flow
 ; CGP-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CGP-NEXT:    s_and_b64 s[8:9], s[6:7], -1
@@ -1643,6 +1646,7 @@ define i64 @v_urem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:  .LBB7_2: ; %Flow
 ; CHECK-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
@@ -2079,6 +2083,7 @@ define <2 x i64> @v_urem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; CGP-NEXT:    ; implicit-def: $vgpr8
+; CGP-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CGP-NEXT:  .LBB8_2: ; %Flow1
 ; CGP-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CGP-NEXT:    s_and_b64 s[8:9], s[6:7], -1
@@ -2242,6 +2247,7 @@ define <2 x i64> @v_urem_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:    ; implicit-def: $vgpr9_vgpr10
 ; CGP-NEXT:    ; implicit-def: $vgpr5
+; CGP-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CGP-NEXT:  .LBB8_6: ; %Flow
 ; CGP-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
 ; CGP-NEXT:    s_and_b64 s[8:9], s[6:7], -1

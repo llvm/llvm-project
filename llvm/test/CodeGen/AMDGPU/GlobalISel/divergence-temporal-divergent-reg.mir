@@ -33,8 +33,8 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ADD]](s32), %bb.1
-  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.1
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s32)
+  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[INTRINSIC_CONVERGENT]](s32), %bb.1
+  ; GFX10-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), [[PHI3]](s32)
   ; GFX10-NEXT:   G_STORE [[PHI2]](s32), [[MV]](p0) :: (store (s32))
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
@@ -64,7 +64,7 @@ body: |
   bb.2:
     %13:_(s32) = G_PHI %9(s32), %bb.1
     %14:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %14(s32)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %14(s32)
     G_STORE %13(s32), %3(p0) :: (store (s32))
     SI_RETURN
 ...

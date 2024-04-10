@@ -102,10 +102,11 @@ define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrs
 ; GCN-NEXT:    v_mov_b32_e32 v3, -1
 ; GCN-NEXT:    buffer_store_dword v3, v0, s[4:7], 0 offen
 ; GCN-NEXT:    ; implicit-def: $vgpr3
+; GCN-NEXT:    s_waitcnt_depctr 0xffe3
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:  .LBB1_4: ; %Flow
 ; GCN-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; GCN-NEXT:    s_and_b32 s1, s0, -1
-; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_cmov_b32 exec_lo, s0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GCN-NEXT:  ; %bb.5: ; %.then

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s -verify-machineinstrs | FileCheck -check-prefix=SI %s
 
 ; If this occurs it is likely due to reordering and the restore was
-; originally supposed to happen before SI_END_CF.
+; originally supposed to happen before SI_WAVE_RECONVERGE.
 
 ; SI: s_or_b64 exec, exec, [[SAVED:s\[[0-9]+:[0-9]+\]|[a-z]+]]
 ; SI-NOT: v_readlane_b32 [[SAVED]]

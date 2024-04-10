@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 < %s | FileCheck %s
 
 ; A VGPR loop variable was incorrectly sunk into a flow block, past
-; the si_end_cf reconvergence point.
+; the si_wave_reconverge reconvergence point.
 
 define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49280.not, i32 %arg1, i1 %cmp108) {
 ; CHECK-LABEL: machinesink_loop_variable_out_of_divergent_loop:

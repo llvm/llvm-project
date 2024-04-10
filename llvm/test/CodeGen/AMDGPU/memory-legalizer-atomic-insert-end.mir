@@ -25,13 +25,13 @@
     br label %exit
 
   exit:                                             ; preds = %atomic, %0
-    call void @llvm.amdgcn.end.cf(i64 %3)
+    call void @llvm.amdgcn.wave.reconverge(i64 %3)
     ret void
   }
 
   declare { i1, i64 } @llvm.amdgcn.if(i1)
 
-  declare void @llvm.amdgcn.end.cf(i64)
+  declare void @llvm.amdgcn.wave.reconverge(i64)
 
   attributes #0 = { nounwind readnone }
   attributes #1 = { nounwind "target-cpu"="gfx803" }

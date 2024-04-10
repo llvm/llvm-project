@@ -259,7 +259,7 @@ body:             |
     %11:sreg_64_xexec = COPY %13
     dead %6:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, implicit $exec :: (volatile load (s32), addrspace 1)
     %14:sreg_64_xexec = COPY %11
-    SI_END_CF killed %12, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %12, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     S_SLEEP 1

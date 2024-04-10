@@ -105,7 +105,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   G_STORE [[C1]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS1]](s64)
+  ; CHECK-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS1]](s64)
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:

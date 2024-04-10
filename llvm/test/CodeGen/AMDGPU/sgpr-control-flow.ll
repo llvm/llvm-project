@@ -120,6 +120,7 @@ define amdgpu_kernel void @sgpr_if_else_valu_br(ptr addrspace(1) %out, float %a,
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_i32 s8, s6, s7
+; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SI-NEXT:  .LBB2_2: ; %Flow
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_xor_b64 s[6:7], s[2:3], exec
@@ -181,6 +182,7 @@ define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(ptr addrspace(1) %out, p
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
 ; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SI-NEXT:  .LBB3_2: ; %Flow
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_xor_b64 s[0:1], s[10:11], exec

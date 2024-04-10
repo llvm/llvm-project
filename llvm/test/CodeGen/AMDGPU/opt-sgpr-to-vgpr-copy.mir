@@ -117,7 +117,7 @@ body:             |
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE4]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -160,7 +160,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -259,7 +259,7 @@ body:             |
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_2]], killed [[COPY3]], killed [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -310,7 +310,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -390,7 +390,7 @@ body:             |
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -433,7 +433,7 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

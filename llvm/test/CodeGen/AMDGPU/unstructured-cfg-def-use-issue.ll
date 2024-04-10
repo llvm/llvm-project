@@ -157,7 +157,7 @@ define hidden void @widget() {
 ; SI-OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP1]], label [[BB6:%.*]], label [[BB9_BB12_CRIT_EDGE:%.*]]
 ; SI-OPT:       bb9.bb12_crit_edge:
-; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; SI-OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP2]])
 ; SI-OPT-NEXT:    br label [[BB12]]
 ; SI-OPT:       bb12:
 ; SI-OPT-NEXT:    store float 0.000000e+00, ptr addrspace(1) null, align 8
@@ -215,7 +215,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB6:%.*]]
 ; SI-OPT:       bb6:
-; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; SI-OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP2]])
 ; SI-OPT-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP3]], 3
 ; SI-OPT-NEXT:    br i1 [[TMP7]], label [[BB11:%.*]], label [[BB1:%.*]]
 ; SI-OPT:       bb8:
@@ -225,7 +225,7 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    [[TMP5:%.*]] = extractvalue { i1, i64 } [[TMP3]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP4]], label [[BB10:%.*]], label [[BB8_BB1_CRIT_EDGE:%.*]]
 ; SI-OPT:       bb8.bb1_crit_edge:
-; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
+; SI-OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP5]])
 ; SI-OPT-NEXT:    br label [[BB1]]
 ; SI-OPT:       bb10:
 ; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
@@ -238,14 +238,14 @@ define hidden void @blam() {
 ; SI-OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP6]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP7]], label [[BB2]], label [[BB14:%.*]]
 ; SI-OPT:       bb14:
-; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
+; SI-OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP8]])
 ; SI-OPT-NEXT:    [[TMP15:%.*]] = fcmp nsz oeq float [[TMP]], 0.000000e+00
 ; SI-OPT-NEXT:    [[TMP9:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP15]])
 ; SI-OPT-NEXT:    [[TMP10:%.*]] = extractvalue { i1, i64 } [[TMP9]], 0
 ; SI-OPT-NEXT:    [[TMP11:%.*]] = extractvalue { i1, i64 } [[TMP9]], 1
 ; SI-OPT-NEXT:    br i1 [[TMP10]], label [[BB17:%.*]], label [[BB16:%.*]]
 ; SI-OPT:       bb16:
-; SI-OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP11]])
+; SI-OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP11]])
 ; SI-OPT-NEXT:    store float 0x7FF8000000000000, ptr addrspace(5) null, align 16
 ; SI-OPT-NEXT:    br label [[BB17]]
 ; SI-OPT:       bb17:

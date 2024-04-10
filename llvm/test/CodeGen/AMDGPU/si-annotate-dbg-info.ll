@@ -18,10 +18,11 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP6]], 1, !dbg [[DBG14]]
 ; OPT-NEXT:    br i1 [[TMP7]], label [[TRUE:%.*]], label [[EXIT:%.*]], !dbg [[DBG14]]
 ; OPT:       true:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]]), !dbg [[DBG15:![0-9]+]]
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP8]]), !dbg [[DBG15:![0-9]+]]
 ; OPT-NEXT:    br label [[EXIT]], !dbg [[DBG15]]
 ; OPT:       false:
-; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG16:![0-9]+]]
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP4]]), !dbg [[DBG16:![0-9]+]]
+; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG16]]
 ; OPT:       exit:
 ; OPT-NEXT:    [[RET:%.*]] = phi i32 [ [[TMP5]], [[FLOW]] ], [ 42, [[TRUE]] ], !dbg [[DBG17:![0-9]+]]
 ; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[RET]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
@@ -61,7 +62,7 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT:       loop_body:
 ; OPT-NEXT:    [[I_NEXT:%.*]] = sub i32 [[I]], 1, !dbg [[DBG28:![0-9]+]]
 ; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[I_NEXT]], metadata [[META23:![0-9]+]], metadata !DIExpression()), !dbg [[DBG28]]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]]), !dbg [[DBG29:![0-9]+]]
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP2]]), !dbg [[DBG29:![0-9]+]]
 ; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG29]]
 ; OPT:       Flow:
 ; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ undef, [[LOOP]] ]

@@ -15,7 +15,7 @@ define void @loop_on_argument(i1 %arg) {
 ; IR-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP0]])
 ; IR-NEXT:    br i1 [[TMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; IR:       exit:
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP0]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP0]])
 ; IR-NEXT:    ret void
 ;
 ; CHECK-LABEL: loop_on_argument:

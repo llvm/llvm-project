@@ -189,6 +189,7 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:  .LBB2_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GFX9-NEXT:    s_and_b64 s[8:9], s[4:5], -1
@@ -209,7 +210,6 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX9-NEXT:  .LBB2_4: ; %bb2
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br i1 %cond, label %bb0, label %bb1

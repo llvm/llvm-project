@@ -475,7 +475,7 @@ def SI_LOOP : CFPseudoInstSI <
   let IsNeverUniform = 1;
 }
 
-def SI_END_CF : CFPseudoInstSI <
+def SI_WAVE_RECONVERGE : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
   let Size = 4;
   let isAsCheapAsAMove = 1;

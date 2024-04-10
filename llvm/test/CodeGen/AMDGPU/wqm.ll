@@ -1420,6 +1420,7 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX9-W64-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[14:15]
+; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GFX9-W64-NEXT:  .LBB27_2: ; %Flow
 ; GFX9-W64-NEXT:    s_xor_b64 s[14:15], s[16:17], exec
 ; GFX9-W64-NEXT:    s_and_b64 s[18:19], s[16:17], -1
@@ -1451,6 +1452,7 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr0
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s13
+; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s14
 ; GFX10-W32-NEXT:  .LBB27_2: ; %Flow
 ; GFX10-W32-NEXT:    s_xor_b32 s13, s14, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s15, s14, -1
@@ -1504,6 +1506,7 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v2, v0, s[0:7], s[8:11] dmask:0x1
 ; GFX9-W64-NEXT:    ; implicit-def: $vgpr0
+; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GFX9-W64-NEXT:  .LBB28_2: ; %Flow
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX9-W64-NEXT:    s_xor_b64 s[0:1], s[14:15], exec
@@ -1534,6 +1537,7 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v2, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr0
+; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
 ; GFX10-W32-NEXT:  .LBB28_2: ; %Flow
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    s_xor_b32 s0, s13, exec_lo
@@ -1595,6 +1599,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX9-W64-NEXT:  ; %bb.1: ; %ELSE
 ; GFX9-W64-NEXT:    v_lshlrev_b32_e32 v0, 2, v5
 ; GFX9-W64-NEXT:    ; implicit-def: $vgpr5
+; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GFX9-W64-NEXT:  .LBB29_2: ; %Flow
 ; GFX9-W64-NEXT:    s_xor_b64 s[16:17], s[14:15], exec
 ; GFX9-W64-NEXT:    s_and_b64 s[18:19], s[14:15], -1
@@ -1633,6 +1638,7 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX10-W32-NEXT:  ; %bb.1: ; %ELSE
 ; GFX10-W32-NEXT:    v_lshlrev_b32_e32 v0, 2, v5
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr5
+; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s13
 ; GFX10-W32-NEXT:  .LBB29_2: ; %Flow
 ; GFX10-W32-NEXT:    s_xor_b32 s14, s13, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s15, s13, -1
@@ -1700,6 +1706,7 @@ define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX9-W64-NEXT:  ; %bb.1: ; %ELSE
 ; GFX9-W64-NEXT:    v_mul_f32_e32 v0, 4.0, v1
 ; GFX9-W64-NEXT:    ; implicit-def: $vgpr1
+; GFX9-W64-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-W64-NEXT:  .LBB30_2: ; %Flow
 ; GFX9-W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
 ; GFX9-W64-NEXT:    s_and_b64 s[4:5], s[0:1], -1
@@ -1732,6 +1739,7 @@ define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:  ; %bb.1: ; %ELSE
 ; GFX10-W32-NEXT:    v_mul_f32_e32 v0, 4.0, v1
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr1
+; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:  .LBB30_2: ; %Flow
 ; GFX10-W32-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; GFX10-W32-NEXT:    s_and_b32 s2, s0, -1

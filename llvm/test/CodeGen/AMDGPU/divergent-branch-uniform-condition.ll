@@ -98,7 +98,7 @@ Flow1:                                            ; preds = %endif2, %endif1
 ; UNIFORM: if1:
 
 ; CONTROLFLOW-LABEL: Flow2:
-; CONTROLFLOW-NEXT:  call void @llvm.amdgcn.end.cf.i64(i64 %{{.*}})
+; CONTROLFLOW-NEXT:  call void @llvm.amdgcn.wave.reconverge.i64(i64 %{{.*}})
 ; CONTROLFLOW-NEXT:  [[IF:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %{{.*}})
 ; CONTROLFLOW-NEXT:  [[COND:%.*]] = extractvalue { i1, i64 } [[IF]], 0
 ; CONTROLFLOW-NEXT:  %{{.*}} = extractvalue { i1, i64 } [[IF]], 1

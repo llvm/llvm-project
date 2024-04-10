@@ -67,7 +67,7 @@ body:             |
   bb.4:
     successors: %bb.1(0x80000000)
 
-    SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
 ...
@@ -187,12 +187,12 @@ body:             |
   bb.2:
     successors: %bb.3(0x80000000)
 
-    SI_END_CF killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     successors: %bb.4(0x80000000)
 
-    SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -307,7 +307,7 @@ body:             |
   bb.3:
     successors: %bb.5(0x80000000)
 
-    SI_END_CF killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
   bb.4:
@@ -316,7 +316,7 @@ body:             |
   bb.5:
     successors: %bb.4(0x80000000)
 
-    SI_END_CF killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.6:

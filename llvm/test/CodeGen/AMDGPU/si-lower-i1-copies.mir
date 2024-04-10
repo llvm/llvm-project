@@ -23,11 +23,11 @@ body:             |
 
   bb.2:
     %6:vreg_1 = PHI %5, %bb.1
-    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %7:vreg_1 = PHI %6, %bb.2, %8, %bb.0
-    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

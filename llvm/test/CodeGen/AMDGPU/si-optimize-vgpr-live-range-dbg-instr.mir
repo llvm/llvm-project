@@ -66,7 +66,7 @@ body:             |
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   DBG_VALUE_LIST
   ; GCN-NEXT-SAME: %9
   ; GCN-NEXT:   SI_RETURN
@@ -95,7 +95,7 @@ body:             |
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %8, %subreg.sub1
     FLAT_STORE_DWORDX2 %5, killed %9, 0, 0, implicit $exec, implicit $flat_scr
-    SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
   
   bb.3:

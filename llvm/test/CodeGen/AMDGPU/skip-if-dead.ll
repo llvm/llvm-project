@@ -1588,7 +1588,7 @@ bb9:                                              ; preds = %bb4
 define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; SI-LABEL: cbranch_kill:
 ; SI:       ; %bb.0: ; %.entry
-; SI-NEXT:    s_mov_b64 s[0:1], exec
+; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_mov_b32_e32 v4, 0
 ; SI-NEXT:    v_mov_b32_e32 v2, v1
 ; SI-NEXT:    v_mov_b32_e32 v3, v1
@@ -1596,26 +1596,27 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_and_b64 s[4:5], vcc, exec
-; SI-NEXT:    s_xor_b64 s[2:3], s[4:5], exec
+; SI-NEXT:    s_xor_b64 s[0:1], s[4:5], exec
 ; SI-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SI-NEXT:    s_cmov_b64 exec, s[4:5]
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_3
 ; SI-NEXT:  ; %bb.1: ; %kill
-; SI-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_6
 ; SI-NEXT:  ; %bb.2: ; %kill
 ; SI-NEXT:    s_mov_b64 exec, 0
+; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; SI-NEXT:  .LBB14_3: ; %Flow
-; SI-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
-; SI-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; SI-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; SI-NEXT:    s_and_b64 s[4:5], s[0:1], -1
 ; SI-NEXT:    ; implicit-def: $vgpr2
-; SI-NEXT:    s_cmov_b64 exec, s[2:3]
+; SI-NEXT:    s_cmov_b64 exec, s[0:1]
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_5
 ; SI-NEXT:  ; %bb.4: ; %live
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v1
-; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
+; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; SI-NEXT:  .LBB14_5: ; %export
 ; SI-NEXT:    exp mrt0 v2, v2, v2, v2 done vm
 ; SI-NEXT:    s_endpgm
@@ -1638,11 +1639,12 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB14_3
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %kill
 ; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; GFX10-WAVE64-NEXT:    ; implicit-def: $vgpr0
-; GFX10-WAVE64-NEXT:    ; implicit-def: $vgpr1
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB14_6
 ; GFX10-WAVE64-NEXT:  ; %bb.2: ; %kill
 ; GFX10-WAVE64-NEXT:    s_mov_b64 exec, 0
+; GFX10-WAVE64-NEXT:    ; implicit-def: $vgpr0
+; GFX10-WAVE64-NEXT:    ; implicit-def: $vgpr1
+; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX10-WAVE64-NEXT:  .LBB14_3: ; %Flow
 ; GFX10-WAVE64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
 ; GFX10-WAVE64-NEXT:    s_and_b64 s[4:5], s[0:1], -1
@@ -1674,11 +1676,12 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB14_3
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %kill
 ; GFX10-WAVE32-NEXT:    s_andn2_b32 s1, s1, exec_lo
-; GFX10-WAVE32-NEXT:    ; implicit-def: $vgpr0
-; GFX10-WAVE32-NEXT:    ; implicit-def: $vgpr1
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB14_6
 ; GFX10-WAVE32-NEXT:  ; %bb.2: ; %kill
 ; GFX10-WAVE32-NEXT:    s_mov_b32 exec_lo, 0
+; GFX10-WAVE32-NEXT:    ; implicit-def: $vgpr0
+; GFX10-WAVE32-NEXT:    ; implicit-def: $vgpr1
+; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-WAVE32-NEXT:  .LBB14_3: ; %Flow
 ; GFX10-WAVE32-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; GFX10-WAVE32-NEXT:    s_and_b32 s2, s0, -1
@@ -1711,11 +1714,13 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB14_3
 ; GFX11-NEXT:  ; %bb.1: ; %kill
 ; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], exec
-; GFX11-NEXT:    ; implicit-def: $vgpr0
-; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB14_6
 ; GFX11-NEXT:  ; %bb.2: ; %kill
 ; GFX11-NEXT:    s_mov_b64 exec, 0
+; GFX11-NEXT:    ; implicit-def: $vgpr0
+; GFX11-NEXT:    ; implicit-def: $vgpr1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX11-NEXT:  .LBB14_3: ; %Flow
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b64 s[2:3], s[0:1], exec

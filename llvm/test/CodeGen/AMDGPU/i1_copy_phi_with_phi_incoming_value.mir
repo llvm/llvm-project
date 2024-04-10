@@ -36,7 +36,7 @@ body:             |
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI %15, %bb.6
   ; GCN-NEXT:   [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
   ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $exec
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -52,7 +52,7 @@ body:             |
   ; GCN-NEXT: bb.4:
   ; GCN-NEXT:   successors: %bb.7(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.7
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
@@ -103,7 +103,7 @@ body:             |
     %20:sreg_64 = PHI %6:sreg_64, %bb.6
     %15:sreg_64 = S_MOV_B64 -1
     %21:vreg_1 = COPY %15:sreg_64, implicit $exec
-    SI_END_CF %16:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %16:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
   bb.3:
@@ -120,7 +120,7 @@ body:             |
   bb.4:
     successors: %bb.7
 
-    SI_END_CF %24:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %24:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.7
 
   bb.5:

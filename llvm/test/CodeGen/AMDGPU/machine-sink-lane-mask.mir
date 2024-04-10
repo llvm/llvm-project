@@ -52,7 +52,7 @@ body: |
   ; CHECK-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32 = S_ANDN2_B32 [[S_OR_B32_1]], $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[V_CMP_NE_U32_e64_]], $exec_lo, implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_ANDN2_B32_1]], [[S_AND_B32_]], implicit-def $scc
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.6(0x04000000), %bb.2(0x7c000000)
@@ -117,7 +117,7 @@ body: |
     %49:sreg_32 = S_ANDN2_B32 %45, $exec_lo, implicit-def $scc
     %50:sreg_32 = S_AND_B32 %30, $exec_lo, implicit-def $scc
     %46:sreg_32 = S_OR_B32 %49, %50, implicit-def $scc
-    SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.5:
     successors: %bb.6(0x04000000), %bb.2(0x7c000000)

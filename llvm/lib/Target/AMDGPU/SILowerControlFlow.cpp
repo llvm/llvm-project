@@ -25,7 +25,7 @@
 ///   %vgpr0 = V_ADD_F32 %vgpr0, %vgpr0
 /// %sgpr0 = SI_ELSE %sgpr0
 ///   %vgpr0 = V_SUB_F32 %vgpr0, %vgpr0
-/// SI_END_CF %sgpr0
+/// SI_WAVE_RECONVERGE %sgpr0
 ///
 /// becomes:
 ///
@@ -103,10 +103,7 @@ private:
   void emitWaveDiverge(MachineInstr &MI, Register EnabledLanesMask,
                        Register DisableLanesMask);
 
-  void emitWaveInvert(MachineInstr &MI, Register EnabledLanesMask,
-                       Register DisableLanesMask);
-
-  void emitEndCf(MachineInstr &MI);
+  void emitWaveReconverge(MachineInstr &MI);
 
   void lowerInitExec(MachineBasicBlock *MBB, MachineInstr &MI);
 
@@ -198,7 +195,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
   Register InvCondReg = MI.getOperand(0).getReg();
   Register CondReg = MI.getOperand(1).getReg();
-  emitWaveInvert(MI, CondReg, InvCondReg);
+  emitWaveDiverge(MI, CondReg, InvCondReg);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -375,89 +372,7 @@ void SILowerControlFlow::emitWaveDiverge(MachineInstr &MI,
   LIS->removeAllRegUnitsForPhysReg(Exec);
 }
 
-void SILowerControlFlow::emitWaveInvert(MachineInstr &MI,
-                                        Register EnabledLanesMask,
-                                        Register DisableLanesMask) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineBasicBlock::iterator I(MI);
-
-  MachineInstr *CondInverted =
-      BuildMI(MBB, I, DL, TII->get(XorOpc), DisableLanesMask)
-          .addReg(EnabledLanesMask)
-          .addReg(Exec);
-
-  if (LV) {
-    LV->replaceKillInstruction(DisableLanesMask, MI, *CondInverted);
-  }
-
-  Register TestResultReg = MRI->createVirtualRegister(BoolRC);
-  // If the EnableLanesMask is zero we have to restore the masked bits on the
-  // skip way
-  Register ExitMask = MRI->createVirtualRegister(BoolRC);
-  MachineInstr *ExitMaskSet = BuildMI(MBB, I, DL, TII->get(OrOpc), ExitMask)
-                                  .addReg(Exec)
-                                  .addReg(DisableLanesMask);
-
-  MachineInstr *IfZeroMask =
-      BuildMI(MBB, I, DL, TII->get(AndOpc), TestResultReg)
-          .addReg(EnabledLanesMask)
-          .addImm(TestMask);
-
-  MachineInstr *SetExecForSucc = BuildMI(MBB, I, DL, TII->get(Select), Exec)
-                                     .addReg(EnabledLanesMask)
-                                     .addReg(ExitMask);
-
-  MachineBasicBlock *FlowBB = MI.getOperand(2).getMBB();
-  MachineBasicBlock *TargetBB = nullptr;
-  // determine target BBs
-  I = skipToUncondBrOrEnd(MBB, I);
-  if (I != MBB.end()) {
-    // skipToUncondBrOrEnd returns either unconditional branch or end()
-    TargetBB = I->getOperand(0).getMBB();
-    I->getOperand(0).setMBB(FlowBB);
-  } else {
-    // assert(MBB.succ_size() == 2);
-    for (auto Succ : successors(&MBB)) {
-      if (Succ != FlowBB) {
-        TargetBB = Succ;
-        break;
-      }
-    }
-    I = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(FlowBB);
-    if (LIS)
-      LIS->InsertMachineInstrInMaps(*I);
-  }
-
-  if (TargetBB) {
-    MachineInstr *NewBr =
-        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1)).addMBB(TargetBB);
-    if (LIS)
-      LIS->InsertMachineInstrInMaps(*NewBr);
-  }
-
-  if (!LIS) {
-    MI.eraseFromParent();
-    return;
-  }
-
-  LIS->InsertMachineInstrInMaps(*CondInverted);
-  LIS->InsertMachineInstrInMaps(*ExitMaskSet);
-  LIS->InsertMachineInstrInMaps(*IfZeroMask);
-  LIS->ReplaceMachineInstrInMaps(MI, *SetExecForSucc);
-
-  RecomputeRegs.insert(MI.getOperand(0).getReg());
-  RecomputeRegs.insert(MI.getOperand(1).getReg());
-
-  MI.eraseFromParent();
-
-  LIS->createAndComputeVirtRegInterval(TestResultReg);
-  LIS->createAndComputeVirtRegInterval(ExitMask);
-
-  LIS->removeAllRegUnitsForPhysReg(Exec);
-}
-
-void SILowerControlFlow::emitEndCf(MachineInstr &MI) { 
+void SILowerControlFlow::emitWaveReconverge(MachineInstr &MI) { 
 
   MachineBasicBlock &BB = *MI.getParent();
   Register Mask = MI.getOperand(0).getReg();
@@ -558,8 +473,8 @@ MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
     MI.setDesc(TII->get(AMDGPU::S_CBRANCH_EXECNZ));
     break;
 
-  case AMDGPU::SI_END_CF:
-    emitEndCf(MI);
+  case AMDGPU::SI_WAVE_RECONVERGE:
+    emitWaveReconverge(MI);
     break;
 
   default:
@@ -762,7 +677,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       case AMDGPU::SI_IF_BREAK:
       case AMDGPU::SI_WATERFALL_LOOP:
       case AMDGPU::SI_LOOP:
-      case AMDGPU::SI_END_CF:
+      case AMDGPU::SI_WAVE_RECONVERGE:
         SplitMBB = process(MI);
         Changed = true;
         break;

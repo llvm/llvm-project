@@ -39,7 +39,7 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:    [[TMP47]] = add i32 [[TMP45]], 1
 ; OPT-NEXT:    [[TMP51]] = icmp eq i32 [[TMP47]], [[CONT:%.*]]
 ; OPT-NEXT:    [[TMP51_INV]] = xor i1 [[TMP51]], true
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; OPT-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP2]])
 ; OPT-NEXT:    br label [[FLOW]]
 ;
 ; GCN-LABEL: multi_else_break:

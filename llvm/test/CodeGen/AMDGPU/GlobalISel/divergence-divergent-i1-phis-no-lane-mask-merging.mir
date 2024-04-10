@@ -228,7 +228,7 @@ body: |
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.1
   ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI4]](s32)
+  ; GFX10-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), [[PHI4]](s32)
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY5]](s1), [[C5]], [[C4]]
@@ -264,7 +264,7 @@ body: |
   bb.2:
     %16:_(s1) = G_PHI %11(s1), %bb.1
     %17:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %17(s32)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %17(s32)
     %18:_(s32) = G_FCONSTANT float 0.000000e+00
     %19:_(s32) = G_FCONSTANT float 1.000000e+00
     %20:_(s32) = G_SELECT %16(s1), %19, %18
@@ -359,7 +359,7 @@ body: |
   ; GFX10-NEXT: bb.6:
   ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.5
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI5]](s32)
+  ; GFX10-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), [[PHI5]](s32)
   ; GFX10-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY13]](s1), [[C11]], [[C10]]
@@ -436,7 +436,7 @@ body: |
   bb.6:
     %33:_(s1) = G_PHI %19(s1), %bb.5
     %34:_(s32) = G_PHI %15(s32), %bb.5
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %34(s32)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %34(s32)
     %35:_(s32) = G_FCONSTANT float 0.000000e+00
     %36:_(s32) = G_FCONSTANT float 1.000000e+00
     %37:_(s32) = G_SELECT %33(s1), %36, %35

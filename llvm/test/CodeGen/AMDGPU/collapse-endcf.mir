@@ -53,7 +53,7 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     DBG_VALUE
@@ -116,12 +116,12 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
 
   bb.5:
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -183,13 +183,13 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
 
   bb.5:
     DBG_VALUE
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -251,13 +251,13 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %4:sgpr_32 = IMPLICIT_DEF
     %5:sgpr_32 = S_BREV_B32 %4
     KILL %4
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -320,14 +320,14 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %4:sgpr_32 = IMPLICIT_DEF
     %5:sgpr_32 = S_BREV_B32 %4
     KILL %4
     %6:sgpr_32 = COPY %5
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -386,11 +386,11 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %4:sreg_64 = S_BREV_B64 $exec
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -451,11 +451,11 @@ body:             |
     %3:sreg_64 = SI_IF undef %4:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %3:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %3:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %5:vgpr_32 = COPY %2.sub2
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     S_ENDPGM 0
@@ -518,7 +518,7 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     S_BRANCH %bb.5
@@ -527,7 +527,7 @@ body:             |
     S_ENDPGM 0
 
   bb.5:
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
 ...
@@ -565,12 +565,12 @@ body:             |
   bb.1:
     successors: %bb.1
 
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
 ...
 
-# Both s_or_b64 shall be preserved since the outer SI_END_CF belongs to SI_ELSE.
+# Both s_or_b64 shall be preserved since the outer SI_WAVE_RECONVERGE belongs to SI_ELSE.
 
 ---
 name: simple_outer_if_else
@@ -647,7 +647,7 @@ body:             |
   bb.5:
     successors: %bb.6
 
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.6:
     S_ENDPGM 0
@@ -714,10 +714,10 @@ body:             |
     S_BRANCH %bb.6
 
   bb.3:
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.5:
 
@@ -784,10 +784,10 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
 
   bb.4:
@@ -861,7 +861,7 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     S_BRANCH %bb.5
@@ -873,7 +873,7 @@ body:             |
   bb.5:
 
   bb.6:
-    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 ...
 
@@ -1040,19 +1040,19 @@ body: |
 
   bb.4:
     successors: %bb.5
-    SI_END_CF %11:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %11:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
     S_BRANCH %bb.5
 
   bb.5:
     successors: %bb.7
-    SI_END_CF %8:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %8:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
     S_BRANCH %bb.7
 
   bb.6:
     successors: %bb.14
-    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
     S_BRANCH %bb.14
 
@@ -1076,7 +1076,7 @@ body: |
 
   bb.10:
     successors: %bb.13
-    SI_END_CF %15:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %15:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
     S_BRANCH %bb.13
 
@@ -1093,7 +1093,7 @@ body: |
 
   bb.13:
     successors: %bb.6
-    SI_END_CF %5:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %5:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
     S_BRANCH %bb.6
 

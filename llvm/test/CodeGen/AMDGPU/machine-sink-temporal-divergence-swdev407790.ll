@@ -527,6 +527,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    global_store_dword v[6:7], v8, off offset:4
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[0:3], off offset:8
 ; CHECK-NEXT:    global_store_dwordx2 v[6:7], v[4:5], off offset:24
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:  .LBB0_33: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_30 Depth=1
 ; CHECK-NEXT:    s_xor_b32 s48, s4, exec_lo

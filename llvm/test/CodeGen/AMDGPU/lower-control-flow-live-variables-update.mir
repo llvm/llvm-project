@@ -5,7 +5,7 @@
 # name used for a copy, so some of the check variable names were
 # manually fixed.
 
-# Check for LiveVariables verifier error after lowering SI_END_CF
+# Check for LiveVariables verifier error after lowering SI_WAVE_RECONVERGE
 
 ---
 name:            live_variables_update_block_split
@@ -148,7 +148,7 @@ body:             |
 
     %4:sreg_64_xexec = PHI %5, %bb.3, %3, %bb.0
     %6:vgpr_32 = PHI %7, %bb.3, %1, %bb.0
-    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -168,12 +168,12 @@ body:             |
 ...
 
 # Check we don't get "Block should not be in AliveBlocks" for
-# registers defined before si_end_cf
+# registers defined before si_wave_reconverge
 ---
-name:            live_variables_update_block_split_split_killed_def_before_si_end_cf
+name:            live_variables_update_block_split_split_killed_def_before_si_wave_reconverge
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: live_variables_update_block_split_split_killed_def_before_si_end_cf
+  ; CHECK-LABEL: name: live_variables_update_block_split_split_killed_def_before_si_wave_reconverge
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0
@@ -232,7 +232,7 @@ body:             |
     %8:sreg_64 = S_MOV_B64 1
     S_NOP 0, implicit killed %8
     %9:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
-    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)

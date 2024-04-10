@@ -59,6 +59,7 @@ define amdgpu_ps void @divergent_i1_phi_if_else(ptr addrspace(1) %out, i32 %tid,
 ; GFX10-NEXT:    ; implicit-def: $vgpr2
 ; GFX10-NEXT:    s_and_b32 s2, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s0, s0, s2
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:  .LBB1_2: ; %Flow
 ; GFX10-NEXT:    s_xor_b32 s2, s1, exec_lo
 ; GFX10-NEXT:    s_and_b32 s3, s1, -1

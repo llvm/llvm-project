@@ -128,7 +128,7 @@ body:             |
     S_BRANCH %bb.5
 
   bb.7:
-    SI_END_CF %14, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %14, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

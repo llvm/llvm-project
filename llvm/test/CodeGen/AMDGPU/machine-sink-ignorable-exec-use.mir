@@ -44,7 +44,7 @@ body:             |
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.0, [[V_ADD_F32_e32_]], %bb.1
   ; GFX9-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_1]], %bb.0, [[V_ADD_F32_e32_1]], %bb.1
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
   ; GFX9-NEXT:   S_ENDPGM 0, implicit [[PHI]], implicit [[PHI1]]
@@ -78,7 +78,7 @@ body:             |
   bb.2:
     %22:vgpr_32 = PHI %3, %bb.0, %20, %bb.1
     %23:vgpr_32 = PHI %4, %bb.0, %21, %bb.1
-    SI_END_CF %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     S_ENDPGM 0, implicit %22, implicit %23
@@ -126,7 +126,7 @@ body:             |
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.0, [[V_ADD_F32_e32_]], %bb.1
   ; GFX9-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_1]], %bb.0, [[V_ADD_F32_e32_1]], %bb.1
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
   ; GFX9-NEXT:   [[V_ADD_F32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 [[V_FMAC_F32_e64_3]], [[V_FMAC_F32_e64_1]], implicit $mode, implicit $exec
@@ -161,7 +161,7 @@ body:             |
   bb.2:
     %22:vgpr_32 = PHI %3, %bb.0, %20, %bb.1
     %23:vgpr_32 = PHI %4, %bb.0, %21, %bb.1
-    SI_END_CF %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %24:vgpr_32 = V_ADD_F32_e32 %14, %11, implicit $mode, implicit $exec
@@ -211,7 +211,7 @@ body:             |
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_]], %bb.0, [[V_ADD_F32_e32_]], %bb.1
   ; GFX9-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[V_MOV_B32_e32_1]], %bb.0, [[V_ADD_F32_e32_1]], %bb.1
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
   ; GFX9-NEXT:   S_ENDPGM 0, implicit [[PHI]], implicit [[PHI1]]
@@ -246,7 +246,7 @@ body:             |
   bb.2:
     %22:vgpr_32 = PHI %3, %bb.0, %20, %bb.1
     %23:vgpr_32 = PHI %4, %bb.0, %21, %bb.1
-    SI_END_CF %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %19, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     S_ENDPGM 0, implicit %22, implicit %23
@@ -283,7 +283,7 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.3(0x80000000)
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]]
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.3:
   ; GFX9-NEXT:   S_ENDPGM 0, implicit %6
@@ -309,7 +309,7 @@ body:             |
 
   bb.2:
     S_NOP 0, implicit %6
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     S_ENDPGM 0, implicit %9
@@ -356,7 +356,7 @@ body:             |
   ; GFX9-NEXT:   [[V_FMAC_F32_e64_:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   [[V_FMAC_F32_e64_1:%[0-9]+]]:vgpr_32 = contract nofpexcept V_FMAC_F32_e64 0, [[GLOBAL_LOAD_DWORD1]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
   ; GFX9-NEXT:   S_NOP 0, implicit [[V_FMAC_F32_e64_]], implicit [[V_FMAC_F32_e64_1]]
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT:   S_CBRANCH_EXECZ %bb.6, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.4:
@@ -418,7 +418,7 @@ body:             |
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
 
     S_NOP 0, implicit %6, implicit %7
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_CBRANCH_EXECZ %bb.6, implicit $exec
 
   bb.4:
@@ -486,7 +486,7 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT:   S_CBRANCH_EXECZ %bb.6, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.4:
@@ -548,7 +548,7 @@ body:             |
     successors: %bb.4(0x40000000), %bb.6(0x40000000)
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
 
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_CBRANCH_EXECZ %bb.6, implicit $exec
 
   bb.4:
@@ -626,7 +626,7 @@ body:             |
   ; GFX9-NEXT:   successors: %bb.5(0x40000000), %bb.7(0x40000000)
   ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
   ; GFX9-NEXT: {{  $}}
-  ; GFX9-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX9-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GFX9-NEXT:   S_BRANCH %bb.5
   ; GFX9-NEXT: {{  $}}
@@ -701,7 +701,7 @@ body:             |
     successors: %bb.5(0x40000000), %bb.7(0x40000000)
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vcc
 
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_CBRANCH_EXECZ %bb.7, implicit $exec
     S_BRANCH %bb.5
 

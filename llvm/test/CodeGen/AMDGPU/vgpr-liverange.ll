@@ -15,6 +15,7 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x40400000, v1
 ; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; SI-NEXT:  .LBB0_2: ; %Flow
 ; SI-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; SI-NEXT:    s_and_b32 s2, s0, -1
@@ -56,6 +57,7 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
 ; SI-NEXT:    s_cbranch_scc0 .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x40400000, v1
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; SI-NEXT:  .LBB1_2: ; %Flow
 ; SI-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; SI-NEXT:    s_and_b32 s2, s0, -1
@@ -114,6 +116,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-NEXT:    v_mul_f32_e32 v0, v1, v2
 ; SI-NEXT:    v_lshl_add_u32 v3, v2, 1, v2
 ; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; SI-NEXT:  .LBB2_4: ; %Flow
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; SI-NEXT:    s_xor_b32 s3, s2, exec_lo
@@ -206,6 +209,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
 ; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; SI-NEXT:  .LBB3_4: ; %Flow
 ; SI-NEXT:    s_xor_b32 s7, s6, exec_lo
 ; SI-NEXT:    s_and_b32 s0, s6, -1
@@ -285,6 +289,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-NEXT:  ; %bb.3:
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
 ; SI-NEXT:    ; implicit-def: $vgpr2
+; SI-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; SI-NEXT:  .LBB4_4: ; %Flow
 ; SI-NEXT:    s_xor_b32 s7, s6, exec_lo
 ; SI-NEXT:    s_and_b32 s0, s6, -1

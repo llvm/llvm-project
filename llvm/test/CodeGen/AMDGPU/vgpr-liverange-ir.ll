@@ -26,13 +26,14 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
   ; SI-NEXT:   successors: %bb.4(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI1]], 0, [[PHI1]], 0, 0, implicit $mode, implicit $exec
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.4
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3.else:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 1077936128, 0, killed [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.end:
@@ -82,13 +83,14 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
   ; SI-NEXT:   successors: %bb.4(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.4
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3.else:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 1077936128, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.end:
@@ -152,7 +154,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[PHI]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, killed [[PHI4]], 0, implicit $exec
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.else:
@@ -160,6 +162,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[COPY2]], 0, [[PHI1]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 killed [[PHI1]], 1, [[PHI1]], implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.2
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5.if.end:
@@ -275,7 +278,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.6.else:
@@ -313,6 +316,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_1]]
   ; SI-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY10]]
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
@@ -396,7 +400,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[COPY7]]
-  ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.6.else:
@@ -433,6 +437,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_1]]
   ; SI-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY killed [[COPY10]]
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
@@ -480,7 +485,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE killed [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
   ; SI-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B]], killed [[GLOBAL_LOAD_UBYTE]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
-  ; SI-NEXT:   SI_END_CF killed %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   SI_WAVE_RECONVERGE killed %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.7
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2.if.then9:
@@ -513,6 +518,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI undef %35:vgpr_32, %bb.3, [[GLOBAL_LOAD_UBYTE1]], %bb.4
   ; SI-NEXT:   [[V_MOV_B2:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; SI-NEXT:   GLOBAL_STORE_BYTE killed [[V_MOV_B2]], killed [[PHI1]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
+  ; SI-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7.UnifiedReturnBlock:

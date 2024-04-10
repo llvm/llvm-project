@@ -59,7 +59,7 @@ define void @my_func(i32 %0) {
 ; IR:       LeafBlock3:
 ; IR-NEXT:    [[SWITCHLEAF4:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IR-NEXT:    [[SWITCHLEAF4_INV:%.*]] = xor i1 [[SWITCHLEAF4]], true
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP18]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP18]])
 ; IR-NEXT:    br label [[FLOW14]]
 ; IR:       Flow14:
 ; IR-NEXT:    [[TMP19:%.*]] = phi i1 [ [[SWITCHLEAF4_INV]], [[LEAFBLOCK3]] ], [ [[TMP14]], [[FLOW13]] ]
@@ -82,16 +82,16 @@ define void @my_func(i32 %0) {
 ; IR-NEXT:    br i1 [[TMP27]], label [[DO_BODY_I_I_I_I:%.*]], label [[FLOW16]]
 ; IR:       do.body.i.i.i.i:
 ; IR-NEXT:    tail call fastcc void null()
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP28]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP28]])
 ; IR-NEXT:    br label [[FLOW16]]
 ; IR:       Flow16:
 ; IR-NEXT:    [[TMP29]] = phi i1 [ true, [[DO_BODY_I_I_I_I]] ], [ false, [[LEAFBLOCK9]] ]
 ; IR-NEXT:    [[TMP30]] = phi i1 [ false, [[DO_BODY_I_I_I_I]] ], [ true, [[LEAFBLOCK9]] ]
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP23]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP23]])
 ; IR-NEXT:    br label [[FLOW15]]
 ; IR:       do.body:
 ; IR-NEXT:    tail call fastcc void null()
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP8]])
 ; IR-NEXT:    br label [[FLOW17]]
 ; IR:       Flow17:
 ; IR-NEXT:    [[TMP31:%.*]] = phi i1 [ true, [[DO_BODY]] ], [ [[TMP4]], [[FLOW11]] ]
@@ -101,7 +101,7 @@ define void @my_func(i32 %0) {
 ; IR-NEXT:    br i1 [[TMP33]], label [[UNIFIEDUNREACHABLEBLOCK:%.*]], label [[UNIFIEDRETURNBLOCK:%.*]]
 ; IR:       UnifiedUnreachableBlock:
 ; IR-NEXT:    call void @llvm.amdgcn.unreachable()
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP34]])
+; IR-NEXT:    call void @llvm.amdgcn.wave.reconverge.i64(i64 [[TMP34]])
 ; IR-NEXT:    br label [[UNIFIEDRETURNBLOCK]]
 ; IR:       UnifiedReturnBlock:
 ; IR-NEXT:    ret void

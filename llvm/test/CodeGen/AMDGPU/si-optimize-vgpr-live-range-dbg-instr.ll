@@ -27,6 +27,7 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    flat_store_dwordx2 v[1:2], v[3:4]
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
+; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:  .LBB0_2: ; %Flow
 ; GCN-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
 ; GCN-NEXT:    s_and_b64 s[8:9], s[4:5], -1

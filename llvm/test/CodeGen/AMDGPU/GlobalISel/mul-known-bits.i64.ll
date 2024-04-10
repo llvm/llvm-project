@@ -521,6 +521,7 @@ define amdgpu_kernel void @v_mul64_masked_before_and_in_branch(ptr addrspace(1) 
 ; GFX10-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-NEXT:  .LBB10_2: ; %Flow
 ; GFX10-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; GFX10-NEXT:    s_and_b32 s2, s0, -1
@@ -563,7 +564,9 @@ define amdgpu_kernel void @v_mul64_masked_before_and_in_branch(ptr addrspace(1) 
 ; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX11-NEXT:  .LBB10_2: ; %Flow
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s1, s0, exec_lo
 ; GFX11-NEXT:    s_and_b32 s2, s0, -1
 ; GFX11-NEXT:    s_cmov_b32 exec_lo, s0
