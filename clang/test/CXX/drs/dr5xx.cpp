@@ -681,8 +681,60 @@ namespace dr553 {
 
 // dr554: na
 
-// dr555: na
-// NB: name lookup cases that issue briefly touches are covered in our test for CWG466
+namespace dr555 { // dr555: 2.8
+typedef int I;
+typedef const int CI;
+typedef volatile int VI;
+void f(int *a, CI *b, VI *c) {
+  a->~I();
+  a->~CI();
+  a->~VI();
+  a->I::~I();
+  a->CI::~CI();
+  a->VI::~VI();
+
+  a->CI::~VI(); // allowed by changes to [expr.id.prim.qual]/2 introduced in P1131R2
+
+  b->~I();
+  b->~CI();
+  b->~VI();
+  b->I::~I();
+  b->CI::~CI();
+  b->VI::~VI();
+
+  c->~I();
+  c->~CI();
+  c->~VI();
+  c->I::~I();
+  c->CI::~CI();
+  c->VI::~VI();
+}
+
+void g(int &a, CI &b, VI &c) {
+  a.~I();
+  a.~CI();
+  a.~VI();
+  a.I::~I();
+  a.CI::~CI();
+  a.VI::~VI();
+
+  a.CI::~VI(); // allowed by changes to [expr.id.prim.qual]/2 introduced in P1131R2
+
+  b.~I();
+  b.~CI();
+  b.~VI();
+  b.I::~I();
+  b.CI::~CI();
+  b.VI::~VI();
+
+  c.~I();
+  c.~CI();
+  c.~VI();
+  c.I::~I();
+  c.CI::~CI();
+  c.VI::~VI();
+}
+} // namespace dr555
 
 // dr556: na
 
