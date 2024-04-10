@@ -513,8 +513,7 @@ public:
       if (!InitList->isSemanticForm())
         return;
       if (InitList->isTransparent()) {
-        for (Expr *Init : InitList->inits())
-          PropagateResultObject(Init, Loc);
+        PropagateResultObject(InitList->getInit(0), Loc);
         return;
       }
 
@@ -554,7 +553,7 @@ public:
 
     // All other expression nodes that propagate a record prvalue should have
     // exactly one child.
-    llvm::SmallVector<Stmt *> Children(E->child_begin(), E->child_end());
+    SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
     LLVM_DEBUG({
       if (Children.size() != 1)
         E->dump();
