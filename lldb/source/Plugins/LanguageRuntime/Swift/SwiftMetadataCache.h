@@ -67,7 +67,7 @@ public:
     offset_type key_len = key.size();
     // Write the key length so we don't have to traverse it later.
     llvm::support::endian::write<offset_type>(out, key_len,
-                                              llvm::support::little);
+                                              llvm::endianness::little);
     // Since the data type is always a constant size there's no need to write
     // it.
     offset_type data_len = sizeof(data_type);
@@ -80,7 +80,7 @@ public:
 
   void EmitData(llvm::raw_ostream &out, key_type_ref key, data_type_ref data,
                 unsigned len) {
-    llvm::support::endian::write<data_type>(out, data, llvm::support::little);
+    llvm::support::endian::write<data_type>(out, data, llvm::endianness::little);
   }
 
   // Decoder functions.
@@ -92,7 +92,7 @@ public:
   static std::pair<offset_type, offset_type>
   ReadKeyDataLength(const unsigned char *&data) {
     offset_type key_len =
-        llvm::support::endian::readNext<offset_type, llvm::support::little,
+        llvm::support::endian::readNext<offset_type, llvm::endianness::little,
                                         llvm::support::unaligned>(data);
     offset_type data_len = sizeof(data_type);
     return std::make_pair(key_len, data_len);
@@ -105,7 +105,7 @@ public:
   static data_type ReadData(internal_key_type key, const uint8_t *data,
                             unsigned length) {
     data_type result =
-        llvm::support::endian::readNext<uint32_t, llvm::support::little,
+        llvm::support::endian::readNext<uint32_t, llvm::endianness::little,
                                         llvm::support::unaligned>(data);
     return result;
   }
