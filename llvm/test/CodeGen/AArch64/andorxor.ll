@@ -1319,10 +1319,20 @@ entry:
 define <2 x i128> @and_v2i128(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: and_v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    and x2, x2, x6
-; CHECK-SD-NEXT:    and x0, x0, x4
-; CHECK-SD-NEXT:    and x1, x1, x5
-; CHECK-SD-NEXT:    and x3, x3, x7
+; CHECK-SD-NEXT:    fmov d0, x4
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    fmov d2, x6
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    mov v0.d[1], x5
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    mov v2.d[1], x7
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_v2i128:
@@ -1340,10 +1350,20 @@ entry:
 define <2 x i128> @or_v2i128(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: or_v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    orr x2, x2, x6
-; CHECK-SD-NEXT:    orr x0, x0, x4
-; CHECK-SD-NEXT:    orr x1, x1, x5
-; CHECK-SD-NEXT:    orr x3, x3, x7
+; CHECK-SD-NEXT:    fmov d0, x4
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    fmov d2, x6
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    mov v0.d[1], x5
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    mov v2.d[1], x7
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    orr v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_v2i128:
@@ -1361,10 +1381,20 @@ entry:
 define <2 x i128> @xor_v2i128(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: xor_v2i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    eor x2, x2, x6
-; CHECK-SD-NEXT:    eor x0, x0, x4
-; CHECK-SD-NEXT:    eor x1, x1, x5
-; CHECK-SD-NEXT:    eor x3, x3, x7
+; CHECK-SD-NEXT:    fmov d0, x4
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    fmov d2, x6
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    mov v0.d[1], x5
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    mov v2.d[1], x7
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    eor v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_v2i128:
@@ -1382,14 +1412,29 @@ entry:
 define <3 x i128> @and_v3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-SD-LABEL: and_v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x8, x9, [sp]
-; CHECK-SD-NEXT:    and x0, x0, x6
-; CHECK-SD-NEXT:    ldp x11, x10, [sp, #16]
-; CHECK-SD-NEXT:    and x1, x1, x7
-; CHECK-SD-NEXT:    and x2, x2, x8
-; CHECK-SD-NEXT:    and x3, x3, x9
-; CHECK-SD-NEXT:    and x4, x4, x11
-; CHECK-SD-NEXT:    and x5, x5, x10
+; CHECK-SD-NEXT:    fmov d0, x6
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    ldr d2, [sp]
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    ldr d4, [sp, #16]
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    add x9, sp, #24
+; CHECK-SD-NEXT:    mov v0.d[1], x7
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v2.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x9]
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    and v1.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    mov x5, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
+; CHECK-SD-NEXT:    fmov x4, d1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_v3i128:
@@ -1411,14 +1456,29 @@ entry:
 define <3 x i128> @or_v3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-SD-LABEL: or_v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x8, x9, [sp]
-; CHECK-SD-NEXT:    orr x0, x0, x6
-; CHECK-SD-NEXT:    ldp x11, x10, [sp, #16]
-; CHECK-SD-NEXT:    orr x1, x1, x7
-; CHECK-SD-NEXT:    orr x2, x2, x8
-; CHECK-SD-NEXT:    orr x3, x3, x9
-; CHECK-SD-NEXT:    orr x4, x4, x11
-; CHECK-SD-NEXT:    orr x5, x5, x10
+; CHECK-SD-NEXT:    fmov d0, x6
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    ldr d2, [sp]
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    ldr d4, [sp, #16]
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    add x9, sp, #24
+; CHECK-SD-NEXT:    mov v0.d[1], x7
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v2.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x9]
+; CHECK-SD-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    orr v1.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    orr v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    mov x5, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
+; CHECK-SD-NEXT:    fmov x4, d1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_v3i128:
@@ -1440,14 +1500,29 @@ entry:
 define <3 x i128> @xor_v3i128(<3 x i128> %d, <3 x i128> %e) {
 ; CHECK-SD-LABEL: xor_v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x8, x9, [sp]
-; CHECK-SD-NEXT:    eor x0, x0, x6
-; CHECK-SD-NEXT:    ldp x11, x10, [sp, #16]
-; CHECK-SD-NEXT:    eor x1, x1, x7
-; CHECK-SD-NEXT:    eor x2, x2, x8
-; CHECK-SD-NEXT:    eor x3, x3, x9
-; CHECK-SD-NEXT:    eor x4, x4, x11
-; CHECK-SD-NEXT:    eor x5, x5, x10
+; CHECK-SD-NEXT:    fmov d0, x6
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    ldr d2, [sp]
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    ldr d4, [sp, #16]
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    add x9, sp, #24
+; CHECK-SD-NEXT:    mov v0.d[1], x7
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v2.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x9]
+; CHECK-SD-NEXT:    eor v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    eor v1.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    eor v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v2.d[1]
+; CHECK-SD-NEXT:    mov x5, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d2
+; CHECK-SD-NEXT:    fmov x4, d1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_v3i128:
@@ -1469,18 +1544,38 @@ entry:
 define <4 x i128> @and_v4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-SD-LABEL: and_v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x9, x8, [sp, #32]
-; CHECK-SD-NEXT:    ldp x11, x10, [sp]
-; CHECK-SD-NEXT:    ldp x13, x12, [sp, #16]
-; CHECK-SD-NEXT:    ldp x15, x14, [sp, #48]
-; CHECK-SD-NEXT:    and x4, x4, x9
-; CHECK-SD-NEXT:    and x0, x0, x11
-; CHECK-SD-NEXT:    and x1, x1, x10
-; CHECK-SD-NEXT:    and x5, x5, x8
-; CHECK-SD-NEXT:    and x2, x2, x13
-; CHECK-SD-NEXT:    and x3, x3, x12
-; CHECK-SD-NEXT:    and x6, x6, x15
-; CHECK-SD-NEXT:    and x7, x7, x14
+; CHECK-SD-NEXT:    ldr d0, [sp]
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    fmov d7, x6
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    ldr d1, [sp, #16]
+; CHECK-SD-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-SD-NEXT:    add x8, sp, #24
+; CHECK-SD-NEXT:    ldr d4, [sp, #32]
+; CHECK-SD-NEXT:    ldr d6, [sp, #48]
+; CHECK-SD-NEXT:    mov v2.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v1.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    add x8, sp, #40
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    add x9, sp, #56
+; CHECK-SD-NEXT:    mov v7.d[1], x7
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x8]
+; CHECK-SD-NEXT:    ld1 { v6.d }[1], [x9]
+; CHECK-SD-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    and v2.16b, v7.16b, v6.16b
+; CHECK-SD-NEXT:    and v3.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d1
+; CHECK-SD-NEXT:    mov x5, v3.d[1]
+; CHECK-SD-NEXT:    mov x7, v2.d[1]
+; CHECK-SD-NEXT:    fmov x4, d3
+; CHECK-SD-NEXT:    fmov x6, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_v4i128:
@@ -1506,18 +1601,38 @@ entry:
 define <4 x i128> @or_v4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-SD-LABEL: or_v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x9, x8, [sp, #32]
-; CHECK-SD-NEXT:    ldp x11, x10, [sp]
-; CHECK-SD-NEXT:    ldp x13, x12, [sp, #16]
-; CHECK-SD-NEXT:    ldp x15, x14, [sp, #48]
-; CHECK-SD-NEXT:    orr x4, x4, x9
-; CHECK-SD-NEXT:    orr x0, x0, x11
-; CHECK-SD-NEXT:    orr x1, x1, x10
-; CHECK-SD-NEXT:    orr x5, x5, x8
-; CHECK-SD-NEXT:    orr x2, x2, x13
-; CHECK-SD-NEXT:    orr x3, x3, x12
-; CHECK-SD-NEXT:    orr x6, x6, x15
-; CHECK-SD-NEXT:    orr x7, x7, x14
+; CHECK-SD-NEXT:    ldr d0, [sp]
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    fmov d7, x6
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    ldr d1, [sp, #16]
+; CHECK-SD-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-SD-NEXT:    add x8, sp, #24
+; CHECK-SD-NEXT:    ldr d4, [sp, #32]
+; CHECK-SD-NEXT:    ldr d6, [sp, #48]
+; CHECK-SD-NEXT:    mov v2.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v1.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    add x8, sp, #40
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    add x9, sp, #56
+; CHECK-SD-NEXT:    mov v7.d[1], x7
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x8]
+; CHECK-SD-NEXT:    ld1 { v6.d }[1], [x9]
+; CHECK-SD-NEXT:    orr v0.16b, v2.16b, v0.16b
+; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    orr v2.16b, v7.16b, v6.16b
+; CHECK-SD-NEXT:    orr v3.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d1
+; CHECK-SD-NEXT:    mov x5, v3.d[1]
+; CHECK-SD-NEXT:    mov x7, v2.d[1]
+; CHECK-SD-NEXT:    fmov x4, d3
+; CHECK-SD-NEXT:    fmov x6, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_v4i128:
@@ -1543,18 +1658,38 @@ entry:
 define <4 x i128> @xor_v4i128(<4 x i128> %d, <4 x i128> %e) {
 ; CHECK-SD-LABEL: xor_v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp x9, x8, [sp, #32]
-; CHECK-SD-NEXT:    ldp x11, x10, [sp]
-; CHECK-SD-NEXT:    ldp x13, x12, [sp, #16]
-; CHECK-SD-NEXT:    ldp x15, x14, [sp, #48]
-; CHECK-SD-NEXT:    eor x4, x4, x9
-; CHECK-SD-NEXT:    eor x0, x0, x11
-; CHECK-SD-NEXT:    eor x1, x1, x10
-; CHECK-SD-NEXT:    eor x5, x5, x8
-; CHECK-SD-NEXT:    eor x2, x2, x13
-; CHECK-SD-NEXT:    eor x3, x3, x12
-; CHECK-SD-NEXT:    eor x6, x6, x15
-; CHECK-SD-NEXT:    eor x7, x7, x14
+; CHECK-SD-NEXT:    ldr d0, [sp]
+; CHECK-SD-NEXT:    fmov d2, x0
+; CHECK-SD-NEXT:    fmov d3, x2
+; CHECK-SD-NEXT:    fmov d5, x4
+; CHECK-SD-NEXT:    fmov d7, x6
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    ldr d1, [sp, #16]
+; CHECK-SD-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-SD-NEXT:    add x8, sp, #24
+; CHECK-SD-NEXT:    ldr d4, [sp, #32]
+; CHECK-SD-NEXT:    ldr d6, [sp, #48]
+; CHECK-SD-NEXT:    mov v2.d[1], x1
+; CHECK-SD-NEXT:    ld1 { v1.d }[1], [x8]
+; CHECK-SD-NEXT:    mov v3.d[1], x3
+; CHECK-SD-NEXT:    add x8, sp, #40
+; CHECK-SD-NEXT:    mov v5.d[1], x5
+; CHECK-SD-NEXT:    add x9, sp, #56
+; CHECK-SD-NEXT:    mov v7.d[1], x7
+; CHECK-SD-NEXT:    ld1 { v4.d }[1], [x8]
+; CHECK-SD-NEXT:    ld1 { v6.d }[1], [x9]
+; CHECK-SD-NEXT:    eor v0.16b, v2.16b, v0.16b
+; CHECK-SD-NEXT:    eor v1.16b, v3.16b, v1.16b
+; CHECK-SD-NEXT:    eor v2.16b, v7.16b, v6.16b
+; CHECK-SD-NEXT:    eor v3.16b, v5.16b, v4.16b
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    mov x3, v1.d[1]
+; CHECK-SD-NEXT:    fmov x2, d1
+; CHECK-SD-NEXT:    mov x5, v3.d[1]
+; CHECK-SD-NEXT:    mov x7, v2.d[1]
+; CHECK-SD-NEXT:    fmov x4, d3
+; CHECK-SD-NEXT:    fmov x6, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_v4i128:

@@ -29,17 +29,7 @@ entry:
 define <2 x double> @a2(<1 x i64> %x) nounwind {
 ; CHECK-LABEL: a2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $8, %esp
-; CHECK-NEXT:    movl 8(%ebp), %eax
-; CHECK-NEXT:    movl 12(%ebp), %ecx
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, (%esp)
-; CHECK-NEXT:    cvtpi2pd (%esp), %xmm0
-; CHECK-NEXT:    movl %ebp, %esp
-; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    cvtpi2pd {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    retl
 entry:
   %y = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64> %x)

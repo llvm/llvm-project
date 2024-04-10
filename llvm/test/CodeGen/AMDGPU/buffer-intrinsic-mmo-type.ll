@@ -11,15 +11,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_v8f16(ptr addrspace(8) inreg %rsrc, p
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY8]], %subreg.sub0, killed [[COPY7]], %subreg.sub1, killed [[COPY6]], %subreg.sub2, killed [[COPY5]], %subreg.sub3
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET killed [[REG_SEQUENCE2]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
+  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET killed [[REG_SEQUENCE]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
   ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[COPY]], killed [[BUFFER_LOAD_DWORDX4_OFFSET]], 0, 0, implicit $exec :: (store (s128) into %ir.ptr, addrspace 3)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call <8 x half> @llvm.amdgcn.raw.ptr.buffer.load.v8f16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
@@ -41,17 +35,11 @@ define amdgpu_ps void @buffer_store_v8f16(ptr addrspace(8) inreg %rsrc, <8 x hal
   ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY5]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
-  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
-  ; GCN-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY12]], %subreg.sub0, killed [[COPY11]], %subreg.sub1, killed [[COPY10]], %subreg.sub2, killed [[COPY9]], %subreg.sub3
-  ; GCN-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
+  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY1]], %subreg.sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GCN-NEXT:   [[COPY13:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE3]]
-  ; GCN-NEXT:   BUFFER_STORE_DWORDX4_OFFEN_exact killed [[COPY13]], [[COPY]], killed [[REG_SEQUENCE2]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.rsrc, align 1, addrspace 8)
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE1]]
+  ; GCN-NEXT:   BUFFER_STORE_DWORDX4_OFFEN_exact killed [[COPY9]], [[COPY]], killed [[REG_SEQUENCE]], killed [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.rsrc, align 1, addrspace 8)
   ; GCN-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.buffer.store.v8f16(<8 x half> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void

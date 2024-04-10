@@ -334,8 +334,11 @@ define void @store_v3i32(<3 x i32> %a, ptr %ptr){
 define void @store_v2i128(<2 x i128> %a, ptr %p) {
 ; CHECK-SD-LABEL: store_v2i128:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    stp x2, x3, [x4, #16]
-; CHECK-SD-NEXT:    stp x0, x1, [x4]
+; CHECK-SD-NEXT:    fmov d0, x2
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    mov v0.d[1], x3
+; CHECK-SD-NEXT:    mov v1.d[1], x1
+; CHECK-SD-NEXT:    stp q1, q0, [x4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_v2i128:
