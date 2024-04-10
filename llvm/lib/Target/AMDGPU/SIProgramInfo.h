@@ -29,8 +29,8 @@ class MachineFunction;
 /// Track resource usage for kernels / entry functions.
 struct SIProgramInfo {
     // Fields set in PGM_RSRC1 pm4 packet.
-    const MCExpr *VGPRBlocks = 0;
-    const MCExpr *SGPRBlocks = 0;
+    const MCExpr *VGPRBlocks = nullptr;
+    const MCExpr *SGPRBlocks = nullptr;
     uint32_t Priority = 0;
     uint32_t FloatMode = 0;
     uint32_t Priv = 0;
