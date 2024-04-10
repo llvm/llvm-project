@@ -1195,5 +1195,57 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
   ret i1 %r
 }
 
+define i8 @known_reduce_or(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_or_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 4
+  ret i8 %r
+}
+
+define i8 @known_reduce_and(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_and_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
 declare void @use(i1)
 declare void @sink(i8)
