@@ -108,29 +108,30 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __se
   }
 }
 
-template <class _Iter, class _Sent, class _DiffT, class _Type, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_n_impl(
-    _Iter __first,
-    _Sent __last,
-    _DiffT __count,
-    const _Type& __value,
-    _Pred& __pred,
-    _Proj& __proj,
-    __enable_if_t<__has_random_access_iterator_category<_Iter>::value>* = nullptr) {
+template <class _Iter,
+          class _Sent,
+          class _DiffT,
+          class _Type,
+          class _Pred,
+          class _Proj,
+          __enable_if_t<__has_random_access_iterator_category<_Iter>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+__search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(
       __first, __last, __count, __value, __pred, __proj, __last - __first);
 }
 
-template <class _Iter1, class _Sent1, class _DiffT, class _Type, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_n_impl(
-    _Iter1 __first,
-    _Sent1 __last,
-    _DiffT __count,
-    const _Type& __value,
-    _Pred& __pred,
-    _Proj& __proj,
-    __enable_if_t<__has_forward_iterator_category<_Iter1>::value &&
-                  !__has_random_access_iterator_category<_Iter1>::value>* = nullptr) {
+template <class _Iter1,
+          class _Sent1,
+          class _DiffT,
+          class _Type,
+          class _Pred,
+          class _Proj,
+          __enable_if_t<__has_forward_iterator_category<_Iter1>::value &&
+                            !__has_random_access_iterator_category<_Iter1>::value,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1>
+__search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
   return std::__search_n_forward_impl<_ClassicAlgPolicy>(__first, __last, __count, __value, __pred, __proj);
 }
 

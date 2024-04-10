@@ -27,7 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<Trait> traits>
-  : Op<fir_Dialect, mnemonic, traits>;
+  : Op<FIROpsDialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
 class fir_SimpleOp<string mnemonic, list<Trait> traits>
@@ -2436,6 +2436,66 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
   }];
 }
 
+def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
+    AttrSizedOperandSegments]> {
+  let summary = "call CUDA kernel";
+
+  let description = [{
+    Launch a CUDA kernel from the host.
+
+    ```
+      // launch simple kernel with no arguments. bytes and stream value are
+      // optional in the chevron notation.
+      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    I32:$grid_x,
+    I32:$grid_y,
+    I32:$grid_z,
+    I32:$block_x,
+    I32:$block_y,
+    I32:$block_z,
+    Optional<I32>:$bytes,
+    Optional<I32>:$stream,
+    Variadic<AnyType>:$args
+  );
+
+  let assemblyFormat = [{
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return getCalleeAttr();
+    }
+
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+    }
+    mlir::FunctionType getFunctionType();
+
+    unsigned getNbNoArgOperand() {
+      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
+      if (getBytes()) ++nbNoArgOperand;
+      if (getStream()) ++nbNoArgOperand;
+      return nbNoArgOperand;
+    }
+
+    operand_range getArgOperands() {
+      return {operand_begin() + getNbNoArgOperand(), operand_end()};
+    }
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return mlir::MutableOperandRange(
+          *this, getNbNoArgOperand(), getArgs().size() - 1);
+    }
+  }];
+}
+
 // Constant operations that support Fortran
 
 def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
@@ -3066,6 +3126,68 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   let builders = [
     OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
   ];
+}
+
+def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
+
+  let arguments = (ins
+    Variadic<I32>:$grid, // empty means `*`
+    Variadic<I32>:$block, // empty means `*`
+    Optional<I32>:$stream,
+    Variadic<Index>:$lowerbound,
+    Variadic<Index>:$upperbound,
+    Variadic<Index>:$step,
+    OptionalAttr<I64Attr>:$n
+  );
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
+                custom<CUFKernelValues>($block, type($block))
+        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
+            $upperbound, type($upperbound), $step, type($step))
+        attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
+  let summary = "Represent a data transfer between host and device memory";
+
+  let description = [{
+    CUDA Fortran allows data transfer to be done via intrinsic assignment
+    between a host and a device variable. This operation is used to materialized
+    the data transfer between the lhs and rhs memory references.
+    The kind of transfer is specified in the attribute. 
+
+    ```
+      adev = a ! transfer host to device
+      a = adev ! transfer device to host
+      bdev = adev ! transfer device to device
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
+                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+                       fir_CUDADataTransferKindAttr:$transfer_kind);
+
+  let assemblyFormat = [{
+    $src `to` $dst attr-dict `:` type(operands)
+  }];
 }
 
 #endif

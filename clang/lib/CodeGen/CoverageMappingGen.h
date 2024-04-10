@@ -91,6 +91,10 @@ namespace CodeGen {
 
 class CodeGenModule;
 
+namespace MCDC {
+struct State;
+}
+
 /// Organizes the cross-function state that is used while generating
 /// code coverage mapping data.
 class CoverageMappingModuleGen {
@@ -150,22 +154,20 @@ class CoverageMappingGen {
   SourceManager &SM;
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, unsigned> *CounterMap;
-  llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap;
-  llvm::DenseMap<const Stmt *, unsigned> *CondIDMap;
+  MCDC::State *MCDCState;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr),
-        MCDCBitmapMap(nullptr), CondIDMap(nullptr) {}
+        MCDCState(nullptr) {}
 
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts,
                      llvm::DenseMap<const Stmt *, unsigned> *CounterMap,
-                     llvm::DenseMap<const Stmt *, unsigned> *MCDCBitmapMap,
-                     llvm::DenseMap<const Stmt *, unsigned> *CondIDMap)
+                     MCDC::State *MCDCState)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
-        MCDCBitmapMap(MCDCBitmapMap), CondIDMap(CondIDMap) {}
+        MCDCState(MCDCState) {}
 
   /// Emit the coverage mapping data which maps the regions of
   /// code to counters that will be used to find the execution

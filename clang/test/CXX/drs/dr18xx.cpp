@@ -282,6 +282,7 @@ namespace dr1837 { // dr1837: 3.3
   struct A {
     int f();
     bool b = [] {
+      // since-cxx11-warning@-1 {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
       struct Local {
         static_assert(sizeof(this->f()) == sizeof(int), "");
       };
@@ -366,7 +367,7 @@ namespace dr1881 { // dr1881: 7
   static_assert(!__is_standard_layout(D), "");
 }
 
-namespace dr1890 { // dr1890: no drafting
+namespace dr1890 { // dr1890: no drafting 2018-06-04
 // FIXME: current consensus for CWG2335 is that the examples are well-formed.
 namespace ex1 {
 #if __cplusplus >= 201402L

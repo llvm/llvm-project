@@ -1,7 +1,11 @@
 // RUN: llvm-mc -triple aarch64-windows -filetype obj -o %t.obj %s
-// RUN: llvm-readobj -r %t.obj | FileCheck %s
+// RUN: llvm-mc -triple arm64ec-windows -filetype obj -o %t-ec.obj %s
+// RUN: llvm-readobj -r %t.obj | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64
+// RUN: llvm-readobj -r %t-ec.obj | FileCheck %s --check-prefixes=CHECK,CHECK-ARM64EC
 // RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d %t-ec.obj | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix=DATA
+// RUN: llvm-objdump -s %t-ec.obj | FileCheck %s --check-prefix=DATA
 
 // IMAGE_REL_ARM64_ADDR32
 .Linfo_foo:
@@ -71,8 +75,10 @@ tbz x0, #0, target
 // IMAGE_REL_ARM64_REL32 because IMAGE_REL_ARM64_REL64 does not exist.
 .xword .Linfo_foo - .Ltable
 
-// CHECK: Format: COFF-ARM64
-// CHECK: Arch: aarch64
+// CHECK-ARM64: Format: COFF-ARM64
+// CHECK-ARM64EC: Format: COFF-ARM64EC
+// CHECK-ARM64: Arch: aarch64
+// CHECK-ARM64EC: Arch: aarch64
 // CHECK: AddressSize: 64bit
 // CHECK: Relocations [
 // CHECK:   Section (1) .text {

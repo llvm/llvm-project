@@ -75,8 +75,7 @@ define <2 x i1> @p2_vec_nonsplat() {
 define <2 x i1> @p2_vec_nonsplat_edgecase0() {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @gen2x8()
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -4, i8 -1>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[X]], <i8 4, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %x = call <2 x i8> @gen2x8()

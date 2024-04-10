@@ -346,10 +346,7 @@ public:
     // FIXME: Attributes should be included here.
   };
 
-  enum FriendSpecified : bool {
-    No,
-    Yes,
-  };
+  enum FriendSpecified : bool { No, Yes };
 
 private:
   // storage-class-specifier
@@ -400,7 +397,7 @@ private:
 
   // friend-specifier
   LLVM_PREFERRED_TYPE(bool)
-  unsigned Friend_specified : 1;
+  unsigned FriendSpecifiedFirst : 1;
 
   // constexpr-specifier
   LLVM_PREFERRED_TYPE(ConstexprSpecKind)
@@ -491,7 +488,7 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
+        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -818,8 +815,10 @@ public:
                         const char *&PrevSpec, unsigned &DiagID);
 
   FriendSpecified isFriendSpecified() const {
-    return static_cast<FriendSpecified>(Friend_specified);
+    return static_cast<FriendSpecified>(FriendLoc.isValid());
   }
+
+  bool isFriendSpecifiedFirst() const { return FriendSpecifiedFirst; }
 
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
@@ -2361,9 +2360,25 @@ public:
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
+  /// EndLoc, which should be the last token of the chunk. This overload is for
+  /// copying a 'chunk' from another declarator, so it takes the pool that the
+  /// other Declarator owns so that it can 'take' the attributes from it.
+  void AddTypeInfo(const DeclaratorChunk &TI, AttributePool &OtherPool,
+                   SourceLocation EndLoc) {
+    DeclTypeInfo.push_back(TI);
+    getAttributePool().takeFrom(DeclTypeInfo.back().getAttrs(), OtherPool);
+
+    if (!EndLoc.isInvalid())
+      SetRangeEnd(EndLoc);
+  }
+
+  /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
   /// EndLoc, which should be the last token of the chunk.
   void AddTypeInfo(const DeclaratorChunk &TI, SourceLocation EndLoc) {
     DeclTypeInfo.push_back(TI);
+
+    assert(TI.AttrList.empty() &&
+           "Cannot add a declarator chunk with attributes with this overload");
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);

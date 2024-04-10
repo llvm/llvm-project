@@ -418,9 +418,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       OutputFile = std::move(NativeDef->OutputFile);
     }
 
-    return writeImportLibrary(OutputFile, OutputPath, Def->Exports,
-                              NativeExports, LibMachine,
-                              /*MinGW=*/false)
+    return writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
+                              /*MinGW=*/false, NativeExports)
                ? 1
                : 0;
   }

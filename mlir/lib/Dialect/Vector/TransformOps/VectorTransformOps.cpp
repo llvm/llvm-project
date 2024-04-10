@@ -13,8 +13,8 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -157,6 +157,11 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
     x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
         patterns, avx2LoweringOptions, /*benefit=*/10);
   }
+}
+
+void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveLoweringPatterns(patterns);
 }
 
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(

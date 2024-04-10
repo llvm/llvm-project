@@ -795,7 +795,10 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy || !outputTy)
     return {};
 
-  if (inputTy == outputTy)
+  // Fold when the input and output types are the same. This is only safe when
+  // there is at most 1 dynamic dimension. For 2 or more dynamic dimensions,
+  // there may still be a productive reshape.
+  if (inputTy == outputTy && inputTy.getNumDynamicDims() < 2)
     return getInput1();
 
   // reshape(reshape(x)) -> reshape(x)

@@ -1677,7 +1677,6 @@ class piecewise_linear_distribution
 } // std
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__random/bernoulli_distribution.h>
 #include <__random/binomial_distribution.h>

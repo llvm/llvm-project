@@ -18,7 +18,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -139,10 +138,7 @@ class BinarySection {
     Alignment = NewAlignment;
     ELFType = NewELFType;
     ELFFlags = NewELFFlags;
-    OutputSize = NewSize;
-    OutputContents = StringRef(reinterpret_cast<const char *>(NewData),
-                               NewData ? NewSize : 0);
-    IsFinalized = true;
+    updateContents(NewData, NewSize);
   }
 
 public:
@@ -484,9 +480,18 @@ public:
   void flushPendingRelocations(raw_pwrite_stream &OS,
                                SymbolResolverFuncTy Resolver);
 
-  /// Change contents of the section.
-  void updateContents(const uint8_t *Data, size_t NewSize) {
-    OutputContents = StringRef(reinterpret_cast<const char *>(Data), NewSize);
+  /// Change contents of the section. Unless the section has a valid SectionID,
+  /// the memory passed in \p NewData will be managed by the instance of
+  /// BinarySection.
+  void updateContents(const uint8_t *NewData, size_t NewSize) {
+    if (getOutputData() && !hasValidSectionID() &&
+        (!hasSectionRef() ||
+         OutputContents.data() != getContentsOrQuit(Section).data())) {
+      delete[] getOutputData();
+    }
+
+    OutputContents = StringRef(reinterpret_cast<const char *>(NewData),
+                               NewData ? NewSize : 0);
     OutputSize = NewSize;
     IsFinalized = true;
   }

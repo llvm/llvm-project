@@ -46,9 +46,9 @@ public:
 
   ~NSSetISyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -84,9 +84,9 @@ class NSCFSetSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   NSCFSetSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -117,9 +117,9 @@ public:
 
   ~GenericNSSetMSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -233,9 +233,9 @@ public:
 
   ~NSSetCodeRunningSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
 
@@ -414,12 +414,12 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
     return UINT32_MAX;
   return idx;
 }
 
-size_t
+llvm::Expected<uint32_t>
 lldb_private::formatters::NSSetISyntheticFrontEnd::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
     return 0;
@@ -466,8 +466,9 @@ bool lldb_private::formatters::NSSetISyntheticFrontEnd::MightHaveChildren() {
 }
 
 lldb::ValueObjectSP
-lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(size_t idx) {
-  uint32_t num_children = CalculateNumChildren();
+lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
+    uint32_t idx) {
+  uint32_t num_children = CalculateNumChildrenIgnoringErrors();
 
   if (idx >= num_children)
     return lldb::ValueObjectSP();
@@ -550,12 +551,12 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   const char *item_name = name.GetCString();
   const uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
     return UINT32_MAX;
   return idx;
 }
 
-size_t
+llvm::Expected<uint32_t>
 lldb_private::formatters::NSCFSetSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_hashtable.IsValid())
     return 0;
@@ -587,10 +588,10 @@ bool lldb_private::formatters::NSCFSetSyntheticFrontEnd::MightHaveChildren() {
 
 lldb::ValueObjectSP
 lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   lldb::addr_t m_values_ptr = m_hashtable.GetValuePointer();
 
-  const uint32_t num_children = CalculateNumChildren();
+  const uint32_t num_children = CalculateNumChildrenIgnoringErrors();
 
   if (idx >= num_children)
     return lldb::ValueObjectSP();
@@ -690,18 +691,18 @@ lldb_private::formatters::
     ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
     return UINT32_MAX;
   return idx;
 }
 
 template <typename D32, typename D64>
-size_t
-lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::CalculateNumChildren() {
+llvm::Expected<uint32_t>
+lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<
+    D32, D64>::CalculateNumChildren() {
   if (!m_data_32 && !m_data_64)
     return 0;
-  return (m_data_32 ? m_data_32->_used : m_data_64->_used);
+  return (m_data_32 ? (uint32_t)m_data_32->_used : (uint32_t)m_data_64->_used);
 }
 
 template <typename D32, typename D64>
@@ -748,11 +749,11 @@ lldb_private::formatters::
 template <typename D32, typename D64>
 lldb::ValueObjectSP
 lldb_private::formatters::
-  GenericNSSetMSyntheticFrontEnd<D32, D64>::GetChildAtIndex(size_t idx) {
+  GenericNSSetMSyntheticFrontEnd<D32, D64>::GetChildAtIndex(uint32_t idx) {
   lldb::addr_t m_objs_addr =
       (m_data_32 ? m_data_32->_objs_addr : m_data_64->_objs_addr);
 
-  uint32_t num_children = CalculateNumChildren();
+  uint32_t num_children = CalculateNumChildrenIgnoringErrors();
 
   if (idx >= num_children)
     return lldb::ValueObjectSP();

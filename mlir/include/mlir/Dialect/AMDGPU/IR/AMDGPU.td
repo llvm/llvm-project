@@ -441,6 +441,11 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     to complete before execution continues. Therefore, it should be used when
     operations on global memory can be issued far in advance of when their results
     are used (for example, by writing them to LDS).
+
+    WARNING: On architectures that do not support the BackOffBarrier feature,
+    (those which will implement this barrier by emitting inline assembly),
+    use of this operation will impede the usabiliity of memory watches (including
+    breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
 }

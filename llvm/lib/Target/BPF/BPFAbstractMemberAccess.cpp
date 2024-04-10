@@ -426,8 +426,9 @@ static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
     IdxList.push_back(Zero);
   IdxList.push_back(Call->getArgOperand(GEPIndex));
 
-  auto *GEP = GetElementPtrInst::CreateInBounds(
-      getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
+  auto *GEP = GetElementPtrInst::CreateInBounds(getBaseElementType(Call),
+                                                Call->getArgOperand(0), IdxList,
+                                                "", Call->getIterator());
   Call->replaceAllUsesWith(GEP);
   Call->eraseFromParent();
 }
@@ -1091,9 +1092,11 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
     // Load the global variable which represents the returned field info.
     LoadInst *LDInst;
     if (IsInt32Ret)
-      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
     else
-      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+      LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                            Call->getIterator());
 
     Instruction *PassThroughInst =
         BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
@@ -1113,7 +1116,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // The original Call inst is removed.
 
   // Load the global variable.
-  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+  auto *LDInst = new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "",
+                              Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst =

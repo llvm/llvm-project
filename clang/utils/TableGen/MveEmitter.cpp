@@ -575,7 +575,7 @@ public:
   // Emit code to generate this result as a Value *.
   std::string asValue() override {
     if (AddressType)
-      return "(" + varname() + ".getPointer())";
+      return "(" + varname() + ".emitRawPointer(*this))";
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }
@@ -927,7 +927,7 @@ public:
       llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
       llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
       if (ActualRange.ult(ArgTypeRange))
-        SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
+        SemaChecks.push_back("BuiltinConstantArgRange(TheCall, " + Index +
                              ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
@@ -942,9 +942,8 @@ public:
           }
           Suffix = (Twine(", ") + Arg).str();
         }
-        SemaChecks.push_back((Twine("SemaBuiltinConstantArg") +
-                              IA.ExtraCheckType + "(TheCall, " + Index +
-                              Suffix + ")")
+        SemaChecks.push_back((Twine("BuiltinConstantArg") + IA.ExtraCheckType +
+                              "(TheCall, " + Index + Suffix + ")")
                                  .str());
       }
 

@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyDisassemblerEmitter.h"
-#include "CodeGenInstruction.h"
+#include "Common/CodeGenInstruction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
@@ -80,7 +80,7 @@ void emitWebAssemblyDisassemblerTables(
       }
     }
     // Set this instruction as the one to use.
-    CGIP = std::make_pair(I, &CGI);
+    CGIP = std::pair(I, &CGI);
   }
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";

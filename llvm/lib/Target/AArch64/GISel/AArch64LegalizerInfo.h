@@ -60,7 +60,6 @@ private:
                                 LegalizerHelper &Helper) const;
   bool legalizeCTTZ(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeMemOps(MachineInstr &MI, LegalizerHelper &Helper) const;
-  bool legalizeFCopySign(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
   bool legalizeDynStackAlloc(MachineInstr &MI, LegalizerHelper &Helper) const;

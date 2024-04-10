@@ -177,6 +177,10 @@ void Pointer::initialize() const {
     if (isStatic() && Base == 0)
       return;
 
+    // Nothing to do for these.
+    if (Desc->getNumElems() == 0)
+      return;
+
     InitMapPtr &IM = getInitMap();
     if (!IM)
       IM =
@@ -320,10 +324,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     // Complex types.
     if (const auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElemTy = CT->getElementType();
-      std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
-      assert(ElemT);
 
       if (ElemTy->isIntegerType()) {
+        std::optional<PrimType> ElemT = Ctx.classify(ElemTy);
+        assert(ElemT);
         INT_TYPE_SWITCH(*ElemT, {
           auto V1 = Ptr.atIndex(0).deref<T>();
           auto V2 = Ptr.atIndex(1).deref<T>();
@@ -336,6 +340,25 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
         return true;
       }
       return false;
+    }
+
+    // Vector types.
+    if (const auto *VT = Ty->getAs<VectorType>()) {
+      assert(Ptr.getFieldDesc()->isPrimitiveArray());
+      QualType ElemTy = VT->getElementType();
+      PrimType ElemT = *Ctx.classify(ElemTy);
+
+      SmallVector<APValue> Values;
+      Values.reserve(VT->getNumElements());
+      for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+        TYPE_SWITCH(ElemT, {
+          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue());
+        });
+      }
+
+      assert(Values.size() == VT->getNumElements());
+      R = APValue(Values.data(), Values.size());
+      return true;
     }
 
     llvm_unreachable("invalid value to return");

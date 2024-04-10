@@ -845,10 +845,7 @@ public:
             auto padVal = rewriter.create<arith::ConstantIndexOp>(loc, pad);
             Value dpos = rewriter.create<arith::SubIOp>(loc, pos, padVal);
 
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, dpos, zero);
-            Value offset =
-                rewriter.create<arith::SelectOp>(loc, cmp, dpos, zero);
+            Value offset = rewriter.create<arith::MinSIOp>(loc, dpos, zero);
             return rewriter.create<arith::AddIOp>(loc, valid, offset)
                 ->getResult(0);
           };
@@ -868,9 +865,7 @@ public:
             // Determine how much padding was included.
             val = padFn(val, left, pad[i * 2]);
             val = padFn(val, right, pad[i * 2 + 1]);
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, val, one);
-            return rewriter.create<arith::SelectOp>(loc, cmp, one, val);
+            return rewriter.create<arith::MaxSIOp>(loc, one, val);
           };
 
           // Compute the indices from either end.

@@ -5,12 +5,12 @@ target triple = "aarch64-unknown-linux-gnu"
 
 @__profn_foo = private constant [3 x i8] c"foo"
 ; CHECK: @__profc_foo = private global [1 x i8] c"\FF", section "__llvm_prf_cnts", comdat, align 1
-; CHECK: @__profd_foo = private global { i64, i64, i64, i64, ptr, ptr, i32, [2 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 sub (i64 ptrtoint (ptr @__profc_foo to i64)
-; BINARY: @__profd_foo = private global { i64, i64, i64, i64, ptr, ptr, i32, [2 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_foo to i64),
+; CHECK: @__profd_foo = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 sub (i64 ptrtoint (ptr @__profc_foo to i64)
+; BINARY: @__profd_foo = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_foo to i64),
 @__profn_bar = private constant [3 x i8] c"bar"
 ; CHECK: @__profc_bar = private global [1 x i8] c"\FF", section "__llvm_prf_cnts", comdat, align 1
-; CHECK: @__profd_bar = private global { i64, i64, i64, i64, ptr, ptr, i32, [2 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 sub (i64 ptrtoint (ptr @__profc_bar to i64)
-; BINARY: @__profd_bar = private global { i64, i64, i64, i64, ptr, ptr, i32, [2 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_bar to i64),
+; CHECK: @__profd_bar = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 sub (i64 ptrtoint (ptr @__profc_bar to i64)
+; BINARY: @__profd_bar = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_bar to i64),
 
 ; CHECK: @__llvm_prf_nm = {{.*}} section "__llvm_prf_names"
 ; BINARY: @__llvm_prf_nm ={{.*}} section "__llvm_covnames"

@@ -1,10 +1,15 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++11 -Wno-c99-designator %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++20 -Wno-c99-designator %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++23 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++03 -Wno-c99-designator %s -Wno-c++11-extensions
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx14ext,cxx17ext,cxx20ext,cxx23ext -std=c++11 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx17ext,cxx20ext,cxx23ext          -std=c++14 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx20ext,cxx23ext                   -std=c++17 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected,cxx23ext                            -std=c++20 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify=expected                                     -std=c++23 -Wno-c99-designator %s
 
 enum E { e };
 
+#if __cplusplus >= 201103L
 constexpr int id(int n) { return n; }
+#endif
 
 class C {
 
@@ -19,28 +24,25 @@ class C {
     [&,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
     [=,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
     [] {};
-    [=] (int i) {}; 
-    [&] (int) mutable -> void {}; 
-    [foo,bar] () { return 3; }; 
-    [=,&foo] () {}; 
-    [&,foo] () {}; 
-    [this] () {}; 
+    [=] (int i) {};
+    [&] (int) mutable -> void {};
+    [foo,bar] () { return 3; };
+    [=,&foo] () {};
+    [&,foo] () {};
+    [this] () {};
     [] () -> class C { return C(); };
     [] () -> enum E { return e; };
 
-    [] -> int { return 0; };
-    [] mutable -> int { return 0; };
-#if __cplusplus <= 202002L
-    // expected-warning@-3 {{lambda without a parameter clause is a C++23 extension}}
-    // expected-warning@-3 {{is a C++23 extension}}
-#endif
+    [] -> int { return 0; }; // cxx23ext-warning {{lambda without a parameter clause is a C++23 extension}}
+    [] mutable -> int { return 0; }; // cxx23ext-warning {{is a C++23 extension}}
+
     [](int) -> {}; // PR13652 expected-error {{expected a type}}
     return 1;
   }
 
   void designator_or_lambda() {
-    typedef int T; 
-    const int b = 0; 
+    typedef int T;
+    const int b = 0;
     const int c = 1;
     int d;
     int a1[1] = {[b] (T()) {}}; // expected-error{{no viable conversion from '(lambda}}
@@ -49,19 +51,18 @@ class C {
     int a4[1] = {[&b] = 1 }; // expected-error{{integral constant expression must have integral or unscoped enumeration type, not 'const int *'}}
     int a5[3] = { []{return 0;}() };
     int a6[1] = {[this] = 1 }; // expected-error{{integral constant expression must have integral or unscoped enumeration type, not 'C *'}}
-    int a7[1] = {[d(0)] { return d; } ()};
-    int a8[1] = {[d = 0] { return d; } ()};
-    int a10[1] = {[id(0)] { return id; } ()};
-#if __cplusplus <= 201103L
-    // expected-warning@-4{{extension}}
-    // expected-warning@-4{{extension}}
-    // expected-warning@-4{{extension}}
+    int a7[1] = {[d(0)] { return d; } ()}; // cxx14ext-warning {{initialized lambda captures are a C++14 extension}}
+    int a8[1] = {[d = 0] { return d; } ()}; // cxx14ext-warning {{initialized lambda captures are a C++14 extension}}
+#if __cplusplus >= 201103L
+    int a10[1] = {[id(0)] { return id; } ()}; // cxx14ext-warning {{initialized lambda captures are a C++14 extension}}
 #endif
     int a9[1] = {[d = 0] = 1}; // expected-error{{is not an integral constant expression}}
 #if __cplusplus >= 201402L
     // expected-note@-2{{constant expression cannot modify an object that is visible outside that expression}}
 #endif
+#if __cplusplus >= 201103L
     int a11[1] = {[id(0)] = 1};
+#endif
   }
 
   void delete_lambda(int *p) {
@@ -80,43 +81,33 @@ class C {
   // We support init-captures in C++11 as an extension.
   int z;
   void init_capture() {
-    [n(0)] () mutable -> int { return ++n; };
-    [n{0}] { return; };
-    [a([&b = z]{})](){};
-    [n = 0] { return ++n; }; // expected-error {{captured by copy in a non-mutable}}
-    [n = {0}] { return; }; // expected-error {{<initializer_list>}}
-#if __cplusplus <= 201103L
-    // expected-warning@-6{{extension}}
-    // expected-warning@-6{{extension}}
-    // expected-warning@-6{{extension}}
-    // expected-warning@-7{{extension}}
-    // expected-warning@-7{{extension}}
-    // expected-warning@-7{{extension}}
-#endif
+    [n(0)] () mutable -> int { return ++n; }; // cxx14ext-warning    {{initialized lambda captures are a C++14 extension}}
+    [n{0}] { return; };                       // cxx14ext-warning    {{initialized lambda captures are a C++14 extension}}
+    [a([&b = z]{})](){};                      // cxx14ext-warning 2  {{initialized lambda captures are a C++14 extension}}
+    [n = 0] { return ++n; };                  // expected-error      {{captured by copy in a non-mutable}}
+                                              // cxx14ext-warning@-1 {{initialized lambda captures are a C++14 extension}}
+    [n = {0}] { return; };                    // expected-error      {{<initializer_list>}}
+                                              // cxx14ext-warning@-1 {{initialized lambda captures are a C++14 extension}}
 
     int x = 4;
-    auto y = [&r = x, x = x + 1]() -> int {
-#if __cplusplus <= 201103L
-      // expected-warning@-2{{extension}}
-      // expected-warning@-3{{extension}}
-#endif
+    auto y = [&r = x, x = x + 1]() -> int { // cxx14ext-warning 2 {{initialized lambda captures are a C++14 extension}}
       r += 2;
       return x + 2;
     } ();
   }
 
   void attributes() {
-    [] __attribute__((noreturn)){};
-#if __cplusplus <= 202002L
-    // expected-warning@-2 {{is a C++23 extension}}
-#endif
+    [] __attribute__((noreturn)){}; // cxx23ext-warning {{lambda without a parameter clause is a C++23 extension}}
+
     []() [[]]
       mutable {}; // expected-error {{expected body of lambda expression}}
 
     []() [[]] {};
     []() [[]] -> void {};
     []() mutable [[]] -> void {};
+#if __cplusplus >= 201103L
     []() mutable noexcept [[]] -> void {};
+#endif
 
     // Testing GNU-style attributes on lambdas -- the attribute is specified
     // before the mutable specifier instead of after (unlike C++11).
@@ -126,28 +117,18 @@ class C {
 
     // Testing support for P2173 on adding attributes to the declaration
     // rather than the type.
-    [][[]](){};
-#if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
-#endif
-#if __cplusplus > 201703L
-    []<typename>[[]](){};
-#if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
-#endif
-#endif
-    [][[]]{};
-#if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
-#endif
+    [][[]](){}; // cxx23ext-warning {{an attribute specifier sequence in this position is a C++23 extension}}
+
+    []<typename>[[]](){}; // cxx20ext-warning    {{explicit template parameter list for lambdas is a C++20 extension}}
+                          // cxx23ext-warning@-1 {{an attribute specifier sequence in this position is a C++23 extension}}
+
+    [][[]]{}; // cxx23ext-warning {{an attribute specifier sequence in this position is a C++23 extension}}
   }
 
   void missing_parens() {
-    [] mutable {};
-    [] noexcept {};
-#if __cplusplus <= 202002L
-    // expected-warning@-3 {{is a C++23 extension}}
-    // expected-warning@-3 {{is a C++23 extension}}
+    [] mutable {}; // cxx23ext-warning {{is a C++23 extension}}
+#if __cplusplus >= 201103L
+    [] noexcept {}; // cxx23ext-warning {{is a C++23 extension}}
 #endif
   }
 };
@@ -165,10 +146,7 @@ struct A {
 };
 
 struct S {
-  void mf() { A{[*this]{}}; }
-#if __cplusplus < 201703L
-  // expected-warning@-2 {{C++17 extension}}
-#endif
+  void mf() { A(([*this]{})); } // cxx17ext-warning {{'*this' by copy is a C++17 extension}}
 };
 }
 

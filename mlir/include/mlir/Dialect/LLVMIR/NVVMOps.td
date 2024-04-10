@@ -390,6 +390,52 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
+    Optional<I32>:$barrierId,
+    Optional<I32>:$numberOfThreads);
+  string llvmBuilder = [{
+    if ($numberOfThreads && $barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier,
+                {$barrierId, $numberOfThreads});
+    } else if($barrierId) {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_n,
+                {$barrierId});   
+    } else {
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
+    }
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
+}
+
+def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+{
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+
+  let description = [{
+    Thread that executes this op announces their arrival at the barrier with 
+    given id and continue their execution.
+
+    The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
+    `barrierId` is not present, the default barrier id is used. 
+
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+  
+  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "bar.arrive ";
+      if (getBarrierId()) { ptx += "%0, %1'"; } 
+      else { ptx += "0, %0;"; }
+      return ptx;
+    }
+  }];
+}
+
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 

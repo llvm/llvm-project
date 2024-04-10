@@ -2104,6 +2104,19 @@ Simplex::computeIntegerBounds(ArrayRef<MPInt> coeffs) {
   return {minRoundedUp, maxRoundedDown};
 }
 
+bool Simplex::isFlatAlong(ArrayRef<MPInt> coeffs) {
+  assert(!isEmpty() && "cannot check for flatness of empty simplex!");
+  auto upOpt = computeOptimum(Simplex::Direction::Up, coeffs);
+  auto downOpt = computeOptimum(Simplex::Direction::Down, coeffs);
+
+  if (!upOpt.isBounded())
+    return false;
+  if (!downOpt.isBounded())
+    return false;
+
+  return *upOpt == *downOpt;
+}
+
 void SimplexBase::print(raw_ostream &os) const {
   os << "rows = " << getNumRows() << ", columns = " << getNumColumns() << "\n";
   if (empty)

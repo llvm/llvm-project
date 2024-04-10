@@ -257,7 +257,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -286,7 +286,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK1-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -299,7 +299,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK1-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK1-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 2
@@ -328,7 +328,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK1-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED8:%.*]], label [[OMP_OFFLOAD_CONT9:%.*]]
 // CHECK1:       omp_offload.failed8:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT9]]
 // CHECK1:       omp_offload.cont9:
 // CHECK1-NEXT:    [[A10:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -341,7 +341,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS11]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS12]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP45]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP45]], align 4
 // CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP46]], align 4
 // CHECK1-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -370,7 +370,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP59:%.*]] = icmp ne i32 [[TMP58]], 0
 // CHECK1-NEXT:    br i1 [[TMP59]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK1:       omp_offload.failed16:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK1:       omp_offload.cont17:
 // CHECK1-NEXT:    [[A18:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -383,7 +383,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS19]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS20]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP65]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK1-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP66]], align 4
 // CHECK1-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -412,7 +412,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP79:%.*]] = icmp ne i32 [[TMP78]], 0
 // CHECK1-NEXT:    br i1 [[TMP79]], label [[OMP_OFFLOAD_FAILED24:%.*]], label [[OMP_OFFLOAD_CONT25:%.*]]
 // CHECK1:       omp_offload.failed24:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK1:       omp_offload.cont25:
 // CHECK1-NEXT:    [[A26:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -425,7 +425,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 0
-// CHECK1-NEXT:    store i32 2, ptr [[TMP85]], align 4
+// CHECK1-NEXT:    store i32 3, ptr [[TMP85]], align 4
 // CHECK1-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 1, ptr [[TMP86]], align 4
 // CHECK1-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 2
@@ -454,7 +454,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP99:%.*]] = icmp ne i32 [[TMP98]], 0
 // CHECK1-NEXT:    br i1 [[TMP99]], label [[OMP_OFFLOAD_FAILED32:%.*]], label [[OMP_OFFLOAD_CONT33:%.*]]
 // CHECK1:       omp_offload.failed32:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT33]]
 // CHECK1:       omp_offload.cont33:
 // CHECK1-NEXT:    [[A34:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -474,7 +474,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -537,7 +537,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -610,7 +610,7 @@ int main (int argc, char **argv) {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -625,7 +625,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -688,7 +688,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -761,7 +761,7 @@ int main (int argc, char **argv) {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -776,7 +776,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -839,7 +839,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -933,7 +933,7 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_UB]], align 4
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -948,7 +948,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1011,7 +1011,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1097,7 +1097,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1160,7 +1160,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1235,13 +1235,6 @@ int main (int argc, char **argv) {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK1-NEXT:    ret void
-//
-//
 // CHECK3-LABEL: define {{[^@]+}}@_Z21teams_template_structv
 // CHECK3-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
@@ -1291,7 +1284,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1320,7 +1313,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK3-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK3:       omp_offload.failed:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK3:       omp_offload.cont:
 // CHECK3-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -1333,7 +1326,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK3-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK3-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 2
@@ -1362,7 +1355,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK3-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED8:%.*]], label [[OMP_OFFLOAD_CONT9:%.*]]
 // CHECK3:       omp_offload.failed8:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT9]]
 // CHECK3:       omp_offload.cont9:
 // CHECK3-NEXT:    [[A10:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -1375,7 +1368,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS11]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS12]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP45]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP45]], align 4
 // CHECK3-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP46]], align 4
 // CHECK3-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -1404,7 +1397,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP59:%.*]] = icmp ne i32 [[TMP58]], 0
 // CHECK3-NEXT:    br i1 [[TMP59]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK3:       omp_offload.failed16:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK3:       omp_offload.cont17:
 // CHECK3-NEXT:    [[A18:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -1417,7 +1410,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS19]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS20]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP65]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK3-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP66]], align 4
 // CHECK3-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -1446,7 +1439,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP79:%.*]] = icmp ne i32 [[TMP78]], 0
 // CHECK3-NEXT:    br i1 [[TMP79]], label [[OMP_OFFLOAD_FAILED24:%.*]], label [[OMP_OFFLOAD_CONT25:%.*]]
 // CHECK3:       omp_offload.failed24:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK3:       omp_offload.cont25:
 // CHECK3-NEXT:    [[A26:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -1459,7 +1452,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 0
-// CHECK3-NEXT:    store i32 2, ptr [[TMP85]], align 4
+// CHECK3-NEXT:    store i32 3, ptr [[TMP85]], align 4
 // CHECK3-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 1
 // CHECK3-NEXT:    store i32 1, ptr [[TMP86]], align 4
 // CHECK3-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 2
@@ -1488,7 +1481,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP99:%.*]] = icmp ne i32 [[TMP98]], 0
 // CHECK3-NEXT:    br i1 [[TMP99]], label [[OMP_OFFLOAD_FAILED32:%.*]], label [[OMP_OFFLOAD_CONT33:%.*]]
 // CHECK3:       omp_offload.failed32:
-// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK3-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK3-NEXT:    br label [[OMP_OFFLOAD_CONT33]]
 // CHECK3:       omp_offload.cont33:
 // CHECK3-NEXT:    [[A34:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -1508,7 +1501,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1569,7 +1562,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1639,7 +1632,7 @@ int main (int argc, char **argv) {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1654,7 +1647,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1715,7 +1708,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1785,7 +1778,7 @@ int main (int argc, char **argv) {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1800,7 +1793,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1861,7 +1854,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -1950,7 +1943,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB]], align 4
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1965,7 +1958,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2026,7 +2019,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2109,7 +2102,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2170,7 +2163,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined.omp_outlined
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -2242,13 +2235,6 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK3-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK3-NEXT:    ret void
-//
-//
 // CHECK5-LABEL: define {{[^@]+}}@_Z21teams_template_structv
 // CHECK5-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK5-NEXT:  entry:
@@ -2298,7 +2284,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK5-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK5-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK5-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK5-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2327,7 +2313,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK5-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK5:       omp_offload.failed:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK5:       omp_offload.cont:
 // CHECK5-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -2340,7 +2326,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 0
-// CHECK5-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK5-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK5-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK5-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 2
@@ -2369,7 +2355,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK5-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED8:%.*]], label [[OMP_OFFLOAD_CONT9:%.*]]
 // CHECK5:       omp_offload.failed8:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT9]]
 // CHECK5:       omp_offload.cont9:
 // CHECK5-NEXT:    [[A10:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -2382,7 +2368,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS11]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS12]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK5-NEXT:    store i32 2, ptr [[TMP45]], align 4
+// CHECK5-NEXT:    store i32 3, ptr [[TMP45]], align 4
 // CHECK5-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 1, ptr [[TMP46]], align 4
 // CHECK5-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -2411,7 +2397,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP59:%.*]] = icmp ne i32 [[TMP58]], 0
 // CHECK5-NEXT:    br i1 [[TMP59]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK5:       omp_offload.failed16:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK5:       omp_offload.cont17:
 // CHECK5-NEXT:    [[A18:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -2424,7 +2410,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS19]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS20]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CHECK5-NEXT:    store i32 2, ptr [[TMP65]], align 4
+// CHECK5-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK5-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 1, ptr [[TMP66]], align 4
 // CHECK5-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -2453,7 +2439,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP79:%.*]] = icmp ne i32 [[TMP78]], 0
 // CHECK5-NEXT:    br i1 [[TMP79]], label [[OMP_OFFLOAD_FAILED24:%.*]], label [[OMP_OFFLOAD_CONT25:%.*]]
 // CHECK5:       omp_offload.failed24:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK5:       omp_offload.cont25:
 // CHECK5-NEXT:    [[A26:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -2466,7 +2452,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 0
-// CHECK5-NEXT:    store i32 2, ptr [[TMP85]], align 4
+// CHECK5-NEXT:    store i32 3, ptr [[TMP85]], align 4
 // CHECK5-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 1
 // CHECK5-NEXT:    store i32 1, ptr [[TMP86]], align 4
 // CHECK5-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 2
@@ -2495,7 +2481,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP99:%.*]] = icmp ne i32 [[TMP98]], 0
 // CHECK5-NEXT:    br i1 [[TMP99]], label [[OMP_OFFLOAD_FAILED32:%.*]], label [[OMP_OFFLOAD_CONT33:%.*]]
 // CHECK5:       omp_offload.failed32:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT33]]
 // CHECK5:       omp_offload.cont33:
 // CHECK5-NEXT:    [[A34:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -2515,7 +2501,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2578,7 +2564,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2651,7 +2637,7 @@ int main (int argc, char **argv) {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2666,7 +2652,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2729,7 +2715,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2802,7 +2788,7 @@ int main (int argc, char **argv) {
 // CHECK5:       omp.inner.for.end:
 // CHECK5-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK5:       omp.loop.exit:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2817,7 +2803,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2880,7 +2866,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2974,7 +2960,7 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_UB]], align 4
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK5:       omp.dispatch.end:
-// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK5-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK5-NEXT:    ret void
 //
 //
@@ -2989,7 +2975,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3052,7 +3038,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3138,7 +3124,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3201,7 +3187,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3276,13 +3262,6 @@ int main (int argc, char **argv) {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK5-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK5-NEXT:  entry:
-// CHECK5-NEXT:    call void @__tgt_register_requires(i64 1)
-// CHECK5-NEXT:    ret void
-//
-//
 // CHECK7-LABEL: define {{[^@]+}}@_Z21teams_template_structv
 // CHECK7-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK7-NEXT:  entry:
@@ -3332,7 +3311,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK7-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK7-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK7-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK7-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK7-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -3361,7 +3340,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK7-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK7:       omp_offload.failed:
-// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CHECK7-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK7:       omp_offload.cont:
 // CHECK7-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -3374,7 +3353,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS3]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS4]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 0
-// CHECK7-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK7-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK7-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 1
 // CHECK7-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK7-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS7]], i32 0, i32 2
@@ -3403,7 +3382,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK7-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED8:%.*]], label [[OMP_OFFLOAD_CONT9:%.*]]
 // CHECK7:       omp_offload.failed8:
-// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK7-NEXT:    br label [[OMP_OFFLOAD_CONT9]]
 // CHECK7:       omp_offload.cont9:
 // CHECK7-NEXT:    [[A10:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -3416,7 +3395,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS11]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS12]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK7-NEXT:    store i32 2, ptr [[TMP45]], align 4
+// CHECK7-NEXT:    store i32 3, ptr [[TMP45]], align 4
 // CHECK7-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK7-NEXT:    store i32 1, ptr [[TMP46]], align 4
 // CHECK7-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -3445,7 +3424,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP59:%.*]] = icmp ne i32 [[TMP58]], 0
 // CHECK7-NEXT:    br i1 [[TMP59]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK7:       omp_offload.failed16:
-// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK7-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK7:       omp_offload.cont17:
 // CHECK7-NEXT:    [[A18:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -3458,7 +3437,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP63:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS19]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS20]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CHECK7-NEXT:    store i32 2, ptr [[TMP65]], align 4
+// CHECK7-NEXT:    store i32 3, ptr [[TMP65]], align 4
 // CHECK7-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CHECK7-NEXT:    store i32 1, ptr [[TMP66]], align 4
 // CHECK7-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -3487,7 +3466,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP79:%.*]] = icmp ne i32 [[TMP78]], 0
 // CHECK7-NEXT:    br i1 [[TMP79]], label [[OMP_OFFLOAD_FAILED24:%.*]], label [[OMP_OFFLOAD_CONT25:%.*]]
 // CHECK7:       omp_offload.failed24:
-// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK7-NEXT:    br label [[OMP_OFFLOAD_CONT25]]
 // CHECK7:       omp_offload.cont25:
 // CHECK7-NEXT:    [[A26:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -3500,7 +3479,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP83:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP84:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 0
-// CHECK7-NEXT:    store i32 2, ptr [[TMP85]], align 4
+// CHECK7-NEXT:    store i32 3, ptr [[TMP85]], align 4
 // CHECK7-NEXT:    [[TMP86:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 1
 // CHECK7-NEXT:    store i32 1, ptr [[TMP86]], align 4
 // CHECK7-NEXT:    [[TMP87:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS31]], i32 0, i32 2
@@ -3529,7 +3508,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    [[TMP99:%.*]] = icmp ne i32 [[TMP98]], 0
 // CHECK7-NEXT:    br i1 [[TMP99]], label [[OMP_OFFLOAD_FAILED32:%.*]], label [[OMP_OFFLOAD_CONT33:%.*]]
 // CHECK7:       omp_offload.failed32:
-// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR3]]
+// CHECK7-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57(ptr [[THIS1]]) #[[ATTR2]]
 // CHECK7-NEXT:    br label [[OMP_OFFLOAD_CONT33]]
 // CHECK7:       omp_offload.cont33:
 // CHECK7-NEXT:    [[A34:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
@@ -3549,7 +3528,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3610,7 +3589,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l35.omp_outlined.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3680,7 +3659,7 @@ int main (int argc, char **argv) {
 // CHECK7:       omp.inner.for.end:
 // CHECK7-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK7:       omp.loop.exit:
-// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3695,7 +3674,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3756,7 +3735,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l40.omp_outlined.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3826,7 +3805,7 @@ int main (int argc, char **argv) {
 // CHECK7:       omp.inner.for.end:
 // CHECK7-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK7:       omp.loop.exit:
-// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -3841,7 +3820,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3902,7 +3881,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l45.omp_outlined.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -3991,7 +3970,7 @@ int main (int argc, char **argv) {
 // CHECK7-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB]], align 4
 // CHECK7-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK7:       omp.dispatch.end:
-// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK7-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK7-NEXT:    ret void
 //
 //
@@ -4006,7 +3985,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4067,7 +4046,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l51.omp_outlined.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4150,7 +4129,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4211,7 +4190,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK7-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SSIiLi123ELx456EE3fooEv_l57.omp_outlined.omp_outlined
-// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CHECK7-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CHECK7-NEXT:  entry:
 // CHECK7-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK7-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4280,13 +4259,6 @@ int main (int argc, char **argv) {
 // CHECK7:       omp.dispatch.inc:
 // CHECK7-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK7:       omp.dispatch.end:
-// CHECK7-NEXT:    ret void
-//
-//
-// CHECK7-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK7-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK7-NEXT:  entry:
-// CHECK7-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK7-NEXT:    ret void
 //
 //
@@ -4397,7 +4369,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP21]], 1
 // CHECK13-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD]] to i64
 // CHECK13-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP23]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP23]], align 4
 // CHECK13-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 3, ptr [[TMP24]], align 4
 // CHECK13-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4426,7 +4398,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP37:%.*]] = icmp ne i32 [[TMP36]], 0
 // CHECK13-NEXT:    br i1 [[TMP37]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK13:       omp_offload.failed:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i64 [[TMP4]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4:[0-9]+]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i64 [[TMP4]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3:[0-9]+]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK13:       omp_offload.cont:
 // CHECK13-NEXT:    [[TMP38:%.*]] = load i32, ptr [[N]], align 4
@@ -4468,7 +4440,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP56]], 1
 // CHECK13-NEXT:    [[TMP57:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK13-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP58]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP58]], align 4
 // CHECK13-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 3, ptr [[TMP59]], align 4
 // CHECK13-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -4497,7 +4469,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP72:%.*]] = icmp ne i32 [[TMP71]], 0
 // CHECK13-NEXT:    br i1 [[TMP72]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK13:       omp_offload.failed16:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i64 [[TMP39]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i64 [[TMP39]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK13:       omp_offload.cont17:
 // CHECK13-NEXT:    [[TMP73:%.*]] = load i32, ptr [[M]], align 4
@@ -4548,7 +4520,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP96]], 1
 // CHECK13-NEXT:    [[TMP97:%.*]] = zext i32 [[ADD29]] to i64
 // CHECK13-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP98]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP98]], align 4
 // CHECK13-NEXT:    [[TMP99:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 4, ptr [[TMP99]], align 4
 // CHECK13-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -4577,7 +4549,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP112:%.*]] = icmp ne i32 [[TMP111]], 0
 // CHECK13-NEXT:    br i1 [[TMP112]], label [[OMP_OFFLOAD_FAILED31:%.*]], label [[OMP_OFFLOAD_CONT32:%.*]]
 // CHECK13:       omp_offload.failed31:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i64 [[TMP74]], i64 [[TMP76]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i64 [[TMP74]], i64 [[TMP76]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT32]]
 // CHECK13:       omp_offload.cont32:
 // CHECK13-NEXT:    [[TMP113:%.*]] = load i32, ptr [[N]], align 4
@@ -4619,7 +4591,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[ADD44:%.*]] = add nsw i32 [[TMP131]], 1
 // CHECK13-NEXT:    [[TMP132:%.*]] = zext i32 [[ADD44]] to i64
 // CHECK13-NEXT:    [[TMP133:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP133]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP133]], align 4
 // CHECK13-NEXT:    [[TMP134:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 3, ptr [[TMP134]], align 4
 // CHECK13-NEXT:    [[TMP135:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 2
@@ -4648,7 +4620,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP147:%.*]] = icmp ne i32 [[TMP146]], 0
 // CHECK13-NEXT:    br i1 [[TMP147]], label [[OMP_OFFLOAD_FAILED46:%.*]], label [[OMP_OFFLOAD_CONT47:%.*]]
 // CHECK13:       omp_offload.failed46:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i64 [[TMP114]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i64 [[TMP114]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT47]]
 // CHECK13:       omp_offload.cont47:
 // CHECK13-NEXT:    [[TMP148:%.*]] = load i32, ptr [[M]], align 4
@@ -4699,7 +4671,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[ADD60:%.*]] = add nsw i32 [[TMP171]], 1
 // CHECK13-NEXT:    [[TMP172:%.*]] = zext i32 [[ADD60]] to i64
 // CHECK13-NEXT:    [[TMP173:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP173]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP173]], align 4
 // CHECK13-NEXT:    [[TMP174:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 4, ptr [[TMP174]], align 4
 // CHECK13-NEXT:    [[TMP175:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 2
@@ -4728,7 +4700,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP187:%.*]] = icmp ne i32 [[TMP186]], 0
 // CHECK13-NEXT:    br i1 [[TMP187]], label [[OMP_OFFLOAD_FAILED62:%.*]], label [[OMP_OFFLOAD_CONT63:%.*]]
 // CHECK13:       omp_offload.failed62:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i64 [[TMP149]], i64 [[TMP151]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i64 [[TMP149]], i64 [[TMP151]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT63]]
 // CHECK13:       omp_offload.cont63:
 // CHECK13-NEXT:    [[TMP188:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
@@ -4756,7 +4728,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4847,7 +4819,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4945,7 +4917,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.loop.exit:
 // CHECK13-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK13-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK13:       omp.precond.end:
 // CHECK13-NEXT:    ret void
@@ -4967,7 +4939,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5058,7 +5030,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5156,7 +5128,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.loop.exit:
 // CHECK13-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK13-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK13:       omp.precond.end:
 // CHECK13-NEXT:    ret void
@@ -5187,7 +5159,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5309,7 +5281,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5409,7 +5381,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.loop.exit:
 // CHECK13-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK13-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK13:       omp.precond.end:
 // CHECK13-NEXT:    ret void
@@ -5431,7 +5403,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5522,7 +5494,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5647,7 +5619,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5744,7 +5716,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5848,7 +5820,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z5tmainIiLi10EEiT_
-// CHECK13-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK13-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
@@ -5891,7 +5863,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK13-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK13-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5920,7 +5892,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK13-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK13:       omp_offload.failed:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK13:       omp_offload.cont:
 // CHECK13-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -5932,7 +5904,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK13-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK13-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -5961,7 +5933,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK13-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK13:       omp_offload.failed6:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK13:       omp_offload.cont7:
 // CHECK13-NEXT:    [[TMP40:%.*]] = load i32, ptr [[M]], align 4
@@ -5982,7 +5954,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP50]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP50]], align 4
 // CHECK13-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK13-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 2
@@ -6011,7 +5983,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP64:%.*]] = icmp ne i32 [[TMP63]], 0
 // CHECK13-NEXT:    br i1 [[TMP64]], label [[OMP_OFFLOAD_FAILED13:%.*]], label [[OMP_OFFLOAD_CONT14:%.*]]
 // CHECK13:       omp_offload.failed13:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i64 [[TMP41]], ptr [[A]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i64 [[TMP41]], ptr [[A]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT14]]
 // CHECK13:       omp_offload.cont14:
 // CHECK13-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
@@ -6023,7 +5995,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK13-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 1, ptr [[TMP71]], align 4
 // CHECK13-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 2
@@ -6052,7 +6024,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CHECK13-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED20:%.*]], label [[OMP_OFFLOAD_CONT21:%.*]]
 // CHECK13:       omp_offload.failed20:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT21]]
 // CHECK13:       omp_offload.cont21:
 // CHECK13-NEXT:    [[TMP85:%.*]] = load i32, ptr [[M]], align 4
@@ -6073,7 +6045,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS23]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS24]], i32 0, i32 0
 // CHECK13-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 0
-// CHECK13-NEXT:    store i32 2, ptr [[TMP95]], align 4
+// CHECK13-NEXT:    store i32 3, ptr [[TMP95]], align 4
 // CHECK13-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 1
 // CHECK13-NEXT:    store i32 2, ptr [[TMP96]], align 4
 // CHECK13-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 2
@@ -6102,7 +6074,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    [[TMP109:%.*]] = icmp ne i32 [[TMP108]], 0
 // CHECK13-NEXT:    br i1 [[TMP109]], label [[OMP_OFFLOAD_FAILED28:%.*]], label [[OMP_OFFLOAD_CONT29:%.*]]
 // CHECK13:       omp_offload.failed28:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i64 [[TMP86]], ptr [[A]]) #[[ATTR4]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i64 [[TMP86]], ptr [[A]]) #[[ATTR3]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT29]]
 // CHECK13:       omp_offload.cont29:
 // CHECK13-NEXT:    ret i32 0
@@ -6119,7 +6091,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6182,7 +6154,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6254,7 +6226,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK13-NEXT:    ret void
 //
 //
@@ -6269,7 +6241,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6332,7 +6304,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6404,7 +6376,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.inner.for.end:
 // CHECK13-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK13:       omp.loop.exit:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK13-NEXT:    ret void
 //
 //
@@ -6428,7 +6400,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6497,7 +6469,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6593,7 +6565,7 @@ int main (int argc, char **argv) {
 // CHECK13-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_UB]], align 4
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
-// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP5]])
+// CHECK13-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK13-NEXT:    ret void
 //
 //
@@ -6608,7 +6580,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6671,7 +6643,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6765,7 +6737,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6834,7 +6806,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6908,13 +6880,6 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.dispatch.inc:
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
-// CHECK13-NEXT:    ret void
-//
-//
-// CHECK13-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK13-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK13-NEXT:  entry:
-// CHECK13-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK13-NEXT:    ret void
 //
 //
@@ -7025,7 +6990,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP21]], 1
 // CHECK15-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD]] to i64
 // CHECK15-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP23]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP23]], align 4
 // CHECK15-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 3, ptr [[TMP24]], align 4
 // CHECK15-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -7054,7 +7019,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP37:%.*]] = icmp ne i32 [[TMP36]], 0
 // CHECK15-NEXT:    br i1 [[TMP37]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK15:       omp_offload.failed:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i32 [[TMP3]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4:[0-9]+]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i32 [[TMP3]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3:[0-9]+]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK15:       omp_offload.cont:
 // CHECK15-NEXT:    [[TMP38:%.*]] = load i32, ptr [[N]], align 4
@@ -7097,7 +7062,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP57]], 1
 // CHECK15-NEXT:    [[TMP58:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK15-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP59]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP59]], align 4
 // CHECK15-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 3, ptr [[TMP60]], align 4
 // CHECK15-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -7126,7 +7091,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP73:%.*]] = icmp ne i32 [[TMP72]], 0
 // CHECK15-NEXT:    br i1 [[TMP73]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK15:       omp_offload.failed16:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i32 [[TMP39]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i32 [[TMP39]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK15:       omp_offload.cont17:
 // CHECK15-NEXT:    [[TMP74:%.*]] = load i32, ptr [[M]], align 4
@@ -7178,7 +7143,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP98]], 1
 // CHECK15-NEXT:    [[TMP99:%.*]] = zext i32 [[ADD29]] to i64
 // CHECK15-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP100]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP100]], align 4
 // CHECK15-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 4, ptr [[TMP101]], align 4
 // CHECK15-NEXT:    [[TMP102:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -7207,7 +7172,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP114:%.*]] = icmp ne i32 [[TMP113]], 0
 // CHECK15-NEXT:    br i1 [[TMP114]], label [[OMP_OFFLOAD_FAILED31:%.*]], label [[OMP_OFFLOAD_CONT32:%.*]]
 // CHECK15:       omp_offload.failed31:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i32 [[TMP75]], i32 [[TMP77]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i32 [[TMP75]], i32 [[TMP77]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT32]]
 // CHECK15:       omp_offload.cont32:
 // CHECK15-NEXT:    [[TMP115:%.*]] = load i32, ptr [[N]], align 4
@@ -7250,7 +7215,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[ADD44:%.*]] = add nsw i32 [[TMP134]], 1
 // CHECK15-NEXT:    [[TMP135:%.*]] = zext i32 [[ADD44]] to i64
 // CHECK15-NEXT:    [[TMP136:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP136]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP136]], align 4
 // CHECK15-NEXT:    [[TMP137:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 3, ptr [[TMP137]], align 4
 // CHECK15-NEXT:    [[TMP138:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 2
@@ -7279,7 +7244,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP150:%.*]] = icmp ne i32 [[TMP149]], 0
 // CHECK15-NEXT:    br i1 [[TMP150]], label [[OMP_OFFLOAD_FAILED46:%.*]], label [[OMP_OFFLOAD_CONT47:%.*]]
 // CHECK15:       omp_offload.failed46:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i32 [[TMP116]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i32 [[TMP116]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT47]]
 // CHECK15:       omp_offload.cont47:
 // CHECK15-NEXT:    [[TMP151:%.*]] = load i32, ptr [[M]], align 4
@@ -7331,7 +7296,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[ADD60:%.*]] = add nsw i32 [[TMP175]], 1
 // CHECK15-NEXT:    [[TMP176:%.*]] = zext i32 [[ADD60]] to i64
 // CHECK15-NEXT:    [[TMP177:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP177]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP177]], align 4
 // CHECK15-NEXT:    [[TMP178:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 4, ptr [[TMP178]], align 4
 // CHECK15-NEXT:    [[TMP179:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 2
@@ -7360,7 +7325,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP191:%.*]] = icmp ne i32 [[TMP190]], 0
 // CHECK15-NEXT:    br i1 [[TMP191]], label [[OMP_OFFLOAD_FAILED62:%.*]], label [[OMP_OFFLOAD_CONT63:%.*]]
 // CHECK15:       omp_offload.failed62:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i32 [[TMP152]], i32 [[TMP154]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i32 [[TMP152]], i32 [[TMP154]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT63]]
 // CHECK15:       omp_offload.cont63:
 // CHECK15-NEXT:    [[TMP192:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
@@ -7388,7 +7353,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -7477,7 +7442,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -7572,7 +7537,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.loop.exit:
 // CHECK15-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK15-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK15-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK15:       omp.precond.end:
 // CHECK15-NEXT:    ret void
@@ -7594,7 +7559,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -7683,7 +7648,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -7778,7 +7743,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.loop.exit:
 // CHECK15-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK15-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK15-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK15:       omp.precond.end:
 // CHECK15-NEXT:    ret void
@@ -7809,7 +7774,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -7929,7 +7894,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8026,7 +7991,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.loop.exit:
 // CHECK15-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK15-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK15-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK15:       omp.precond.end:
 // CHECK15-NEXT:    ret void
@@ -8048,7 +8013,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8137,7 +8102,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8259,7 +8224,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8354,7 +8319,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8455,7 +8420,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z5tmainIiLi10EEiT_
-// CHECK15-SAME: (i32 noundef [[ARGC:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK15-SAME: (i32 noundef [[ARGC:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK15-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
@@ -8498,7 +8463,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK15-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK15-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -8527,7 +8492,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK15-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK15:       omp_offload.failed:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK15:       omp_offload.cont:
 // CHECK15-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -8539,7 +8504,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK15-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK15-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -8568,7 +8533,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK15-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK15:       omp_offload.failed6:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK15:       omp_offload.cont7:
 // CHECK15-NEXT:    [[TMP40:%.*]] = load i32, ptr [[M]], align 4
@@ -8589,7 +8554,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP50]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP50]], align 4
 // CHECK15-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK15-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 2
@@ -8618,7 +8583,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP64:%.*]] = icmp ne i32 [[TMP63]], 0
 // CHECK15-NEXT:    br i1 [[TMP64]], label [[OMP_OFFLOAD_FAILED13:%.*]], label [[OMP_OFFLOAD_CONT14:%.*]]
 // CHECK15:       omp_offload.failed13:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i32 [[TMP41]], ptr [[A]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i32 [[TMP41]], ptr [[A]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT14]]
 // CHECK15:       omp_offload.cont14:
 // CHECK15-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
@@ -8630,7 +8595,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK15-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 1, ptr [[TMP71]], align 4
 // CHECK15-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 2
@@ -8659,7 +8624,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CHECK15-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED20:%.*]], label [[OMP_OFFLOAD_CONT21:%.*]]
 // CHECK15:       omp_offload.failed20:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT21]]
 // CHECK15:       omp_offload.cont21:
 // CHECK15-NEXT:    [[TMP85:%.*]] = load i32, ptr [[M]], align 4
@@ -8680,7 +8645,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS23]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS24]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 0
-// CHECK15-NEXT:    store i32 2, ptr [[TMP95]], align 4
+// CHECK15-NEXT:    store i32 3, ptr [[TMP95]], align 4
 // CHECK15-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 1
 // CHECK15-NEXT:    store i32 2, ptr [[TMP96]], align 4
 // CHECK15-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 2
@@ -8709,7 +8674,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    [[TMP109:%.*]] = icmp ne i32 [[TMP108]], 0
 // CHECK15-NEXT:    br i1 [[TMP109]], label [[OMP_OFFLOAD_FAILED28:%.*]], label [[OMP_OFFLOAD_CONT29:%.*]]
 // CHECK15:       omp_offload.failed28:
-// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i32 [[TMP86]], ptr [[A]]) #[[ATTR4]]
+// CHECK15-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i32 [[TMP86]], ptr [[A]]) #[[ATTR3]]
 // CHECK15-NEXT:    br label [[OMP_OFFLOAD_CONT29]]
 // CHECK15:       omp_offload.cont29:
 // CHECK15-NEXT:    ret i32 0
@@ -8726,7 +8691,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8787,7 +8752,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8856,7 +8821,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.inner.for.end:
 // CHECK15-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK15:       omp.loop.exit:
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK15-NEXT:    ret void
 //
 //
@@ -8871,7 +8836,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -8932,7 +8897,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9001,7 +8966,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.inner.for.end:
 // CHECK15-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK15:       omp.loop.exit:
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK15-NEXT:    ret void
 //
 //
@@ -9025,7 +8990,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9092,7 +9057,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9183,7 +9148,7 @@ int main (int argc, char **argv) {
 // CHECK15-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB]], align 4
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
-// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP5]])
+// CHECK15-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK15-NEXT:    ret void
 //
 //
@@ -9198,7 +9163,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9259,7 +9224,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9350,7 +9315,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9417,7 +9382,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9488,13 +9453,6 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.dispatch.inc:
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
-// CHECK15-NEXT:    ret void
-//
-//
-// CHECK15-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK15-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK15-NEXT:  entry:
-// CHECK15-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK15-NEXT:    ret void
 //
 //
@@ -9605,7 +9563,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP21]], 1
 // CHECK17-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD]] to i64
 // CHECK17-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP23]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP23]], align 4
 // CHECK17-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 3, ptr [[TMP24]], align 4
 // CHECK17-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -9634,7 +9592,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP37:%.*]] = icmp ne i32 [[TMP36]], 0
 // CHECK17-NEXT:    br i1 [[TMP37]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK17:       omp_offload.failed:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i64 [[TMP4]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4:[0-9]+]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i64 [[TMP4]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3:[0-9]+]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK17:       omp_offload.cont:
 // CHECK17-NEXT:    [[TMP38:%.*]] = load i32, ptr [[N]], align 4
@@ -9676,7 +9634,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP56]], 1
 // CHECK17-NEXT:    [[TMP57:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK17-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP58]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP58]], align 4
 // CHECK17-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 3, ptr [[TMP59]], align 4
 // CHECK17-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -9705,7 +9663,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP72:%.*]] = icmp ne i32 [[TMP71]], 0
 // CHECK17-NEXT:    br i1 [[TMP72]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK17:       omp_offload.failed16:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i64 [[TMP39]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i64 [[TMP39]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK17:       omp_offload.cont17:
 // CHECK17-NEXT:    [[TMP73:%.*]] = load i32, ptr [[M]], align 4
@@ -9756,7 +9714,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP96]], 1
 // CHECK17-NEXT:    [[TMP97:%.*]] = zext i32 [[ADD29]] to i64
 // CHECK17-NEXT:    [[TMP98:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP98]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP98]], align 4
 // CHECK17-NEXT:    [[TMP99:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 4, ptr [[TMP99]], align 4
 // CHECK17-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -9785,7 +9743,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP112:%.*]] = icmp ne i32 [[TMP111]], 0
 // CHECK17-NEXT:    br i1 [[TMP112]], label [[OMP_OFFLOAD_FAILED31:%.*]], label [[OMP_OFFLOAD_CONT32:%.*]]
 // CHECK17:       omp_offload.failed31:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i64 [[TMP74]], i64 [[TMP76]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i64 [[TMP74]], i64 [[TMP76]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT32]]
 // CHECK17:       omp_offload.cont32:
 // CHECK17-NEXT:    [[TMP113:%.*]] = load i32, ptr [[N]], align 4
@@ -9827,7 +9785,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[ADD44:%.*]] = add nsw i32 [[TMP131]], 1
 // CHECK17-NEXT:    [[TMP132:%.*]] = zext i32 [[ADD44]] to i64
 // CHECK17-NEXT:    [[TMP133:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP133]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP133]], align 4
 // CHECK17-NEXT:    [[TMP134:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 3, ptr [[TMP134]], align 4
 // CHECK17-NEXT:    [[TMP135:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 2
@@ -9856,7 +9814,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP147:%.*]] = icmp ne i32 [[TMP146]], 0
 // CHECK17-NEXT:    br i1 [[TMP147]], label [[OMP_OFFLOAD_FAILED46:%.*]], label [[OMP_OFFLOAD_CONT47:%.*]]
 // CHECK17:       omp_offload.failed46:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i64 [[TMP114]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i64 [[TMP114]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT47]]
 // CHECK17:       omp_offload.cont47:
 // CHECK17-NEXT:    [[TMP148:%.*]] = load i32, ptr [[M]], align 4
@@ -9907,7 +9865,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[ADD60:%.*]] = add nsw i32 [[TMP171]], 1
 // CHECK17-NEXT:    [[TMP172:%.*]] = zext i32 [[ADD60]] to i64
 // CHECK17-NEXT:    [[TMP173:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP173]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP173]], align 4
 // CHECK17-NEXT:    [[TMP174:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 4, ptr [[TMP174]], align 4
 // CHECK17-NEXT:    [[TMP175:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 2
@@ -9936,7 +9894,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP187:%.*]] = icmp ne i32 [[TMP186]], 0
 // CHECK17-NEXT:    br i1 [[TMP187]], label [[OMP_OFFLOAD_FAILED62:%.*]], label [[OMP_OFFLOAD_CONT63:%.*]]
 // CHECK17:       omp_offload.failed62:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i64 [[TMP149]], i64 [[TMP151]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i64 [[TMP149]], i64 [[TMP151]], i64 [[TMP1]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT63]]
 // CHECK17:       omp_offload.cont63:
 // CHECK17-NEXT:    [[TMP188:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
@@ -9964,7 +9922,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10055,7 +10013,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10153,7 +10111,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.loop.exit:
 // CHECK17-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK17-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK17:       omp.precond.end:
 // CHECK17-NEXT:    ret void
@@ -10175,7 +10133,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10266,7 +10224,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10364,7 +10322,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.loop.exit:
 // CHECK17-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK17-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK17:       omp.precond.end:
 // CHECK17-NEXT:    ret void
@@ -10395,7 +10353,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10517,7 +10475,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10617,7 +10575,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.loop.exit:
 // CHECK17-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK17-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK17-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK17:       omp.precond.end:
 // CHECK17-NEXT:    ret void
@@ -10639,7 +10597,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10730,7 +10688,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10855,7 +10813,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -10952,7 +10910,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11056,7 +11014,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_Z5tmainIiLi10EEiT_
-// CHECK17-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK17-SAME: (i32 noundef signext [[ARGC:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK17-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
@@ -11099,7 +11057,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK17-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK17-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -11128,7 +11086,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK17-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK17:       omp_offload.failed:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK17:       omp_offload.cont:
 // CHECK17-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -11140,7 +11098,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK17-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK17-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -11169,7 +11127,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK17-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK17:       omp_offload.failed6:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK17:       omp_offload.cont7:
 // CHECK17-NEXT:    [[TMP40:%.*]] = load i32, ptr [[M]], align 4
@@ -11190,7 +11148,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP50]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP50]], align 4
 // CHECK17-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK17-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 2
@@ -11219,7 +11177,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP64:%.*]] = icmp ne i32 [[TMP63]], 0
 // CHECK17-NEXT:    br i1 [[TMP64]], label [[OMP_OFFLOAD_FAILED13:%.*]], label [[OMP_OFFLOAD_CONT14:%.*]]
 // CHECK17:       omp_offload.failed13:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i64 [[TMP41]], ptr [[A]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i64 [[TMP41]], ptr [[A]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT14]]
 // CHECK17:       omp_offload.cont14:
 // CHECK17-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
@@ -11231,7 +11189,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK17-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 1, ptr [[TMP71]], align 4
 // CHECK17-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 2
@@ -11260,7 +11218,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CHECK17-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED20:%.*]], label [[OMP_OFFLOAD_CONT21:%.*]]
 // CHECK17:       omp_offload.failed20:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT21]]
 // CHECK17:       omp_offload.cont21:
 // CHECK17-NEXT:    [[TMP85:%.*]] = load i32, ptr [[M]], align 4
@@ -11281,7 +11239,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS23]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS24]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 2, ptr [[TMP95]], align 4
+// CHECK17-NEXT:    store i32 3, ptr [[TMP95]], align 4
 // CHECK17-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 2, ptr [[TMP96]], align 4
 // CHECK17-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 2
@@ -11310,7 +11268,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    [[TMP109:%.*]] = icmp ne i32 [[TMP108]], 0
 // CHECK17-NEXT:    br i1 [[TMP109]], label [[OMP_OFFLOAD_FAILED28:%.*]], label [[OMP_OFFLOAD_CONT29:%.*]]
 // CHECK17:       omp_offload.failed28:
-// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i64 [[TMP86]], ptr [[A]]) #[[ATTR4]]
+// CHECK17-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i64 [[TMP86]], ptr [[A]]) #[[ATTR3]]
 // CHECK17-NEXT:    br label [[OMP_OFFLOAD_CONT29]]
 // CHECK17:       omp_offload.cont29:
 // CHECK17-NEXT:    ret i32 0
@@ -11327,7 +11285,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11390,7 +11348,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11462,7 +11420,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.inner.for.end:
 // CHECK17-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK17:       omp.loop.exit:
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK17-NEXT:    ret void
 //
 //
@@ -11477,7 +11435,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11540,7 +11498,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11612,7 +11570,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.inner.for.end:
 // CHECK17-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK17:       omp.loop.exit:
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK17-NEXT:    ret void
 //
 //
@@ -11636,7 +11594,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11705,7 +11663,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11801,7 +11759,7 @@ int main (int argc, char **argv) {
 // CHECK17-NEXT:    store i32 [[ADD8]], ptr [[DOTOMP_UB]], align 4
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
-// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP5]])
+// CHECK17-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK17-NEXT:    ret void
 //
 //
@@ -11816,7 +11774,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11879,7 +11837,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -11973,7 +11931,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -12042,7 +12000,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined.omp_outlined
-// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK17-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -12116,13 +12074,6 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
-// CHECK17-NEXT:    ret void
-//
-//
-// CHECK17-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK17-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK17-NEXT:  entry:
-// CHECK17-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK17-NEXT:    ret void
 //
 //
@@ -12233,7 +12184,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP21]], 1
 // CHECK19-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD]] to i64
 // CHECK19-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP23]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP23]], align 4
 // CHECK19-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 3, ptr [[TMP24]], align 4
 // CHECK19-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -12262,7 +12213,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP37:%.*]] = icmp ne i32 [[TMP36]], 0
 // CHECK19-NEXT:    br i1 [[TMP37]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK19:       omp_offload.failed:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i32 [[TMP3]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4:[0-9]+]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148(i32 [[TMP3]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3:[0-9]+]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK19:       omp_offload.cont:
 // CHECK19-NEXT:    [[TMP38:%.*]] = load i32, ptr [[N]], align 4
@@ -12305,7 +12256,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP57]], 1
 // CHECK19-NEXT:    [[TMP58:%.*]] = zext i32 [[ADD14]] to i64
 // CHECK19-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP59]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP59]], align 4
 // CHECK19-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 3, ptr [[TMP60]], align 4
 // CHECK19-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS15]], i32 0, i32 2
@@ -12334,7 +12285,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP73:%.*]] = icmp ne i32 [[TMP72]], 0
 // CHECK19-NEXT:    br i1 [[TMP73]], label [[OMP_OFFLOAD_FAILED16:%.*]], label [[OMP_OFFLOAD_CONT17:%.*]]
 // CHECK19:       omp_offload.failed16:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i32 [[TMP39]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153(i32 [[TMP39]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT17]]
 // CHECK19:       omp_offload.cont17:
 // CHECK19-NEXT:    [[TMP74:%.*]] = load i32, ptr [[M]], align 4
@@ -12386,7 +12337,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[ADD29:%.*]] = add nsw i32 [[TMP98]], 1
 // CHECK19-NEXT:    [[TMP99:%.*]] = zext i32 [[ADD29]] to i64
 // CHECK19-NEXT:    [[TMP100:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP100]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP100]], align 4
 // CHECK19-NEXT:    [[TMP101:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 4, ptr [[TMP101]], align 4
 // CHECK19-NEXT:    [[TMP102:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -12415,7 +12366,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP114:%.*]] = icmp ne i32 [[TMP113]], 0
 // CHECK19-NEXT:    br i1 [[TMP114]], label [[OMP_OFFLOAD_FAILED31:%.*]], label [[OMP_OFFLOAD_CONT32:%.*]]
 // CHECK19:       omp_offload.failed31:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i32 [[TMP75]], i32 [[TMP77]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158(i32 [[TMP75]], i32 [[TMP77]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT32]]
 // CHECK19:       omp_offload.cont32:
 // CHECK19-NEXT:    [[TMP115:%.*]] = load i32, ptr [[N]], align 4
@@ -12458,7 +12409,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[ADD44:%.*]] = add nsw i32 [[TMP134]], 1
 // CHECK19-NEXT:    [[TMP135:%.*]] = zext i32 [[ADD44]] to i64
 // CHECK19-NEXT:    [[TMP136:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP136]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP136]], align 4
 // CHECK19-NEXT:    [[TMP137:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 3, ptr [[TMP137]], align 4
 // CHECK19-NEXT:    [[TMP138:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS45]], i32 0, i32 2
@@ -12487,7 +12438,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP150:%.*]] = icmp ne i32 [[TMP149]], 0
 // CHECK19-NEXT:    br i1 [[TMP150]], label [[OMP_OFFLOAD_FAILED46:%.*]], label [[OMP_OFFLOAD_CONT47:%.*]]
 // CHECK19:       omp_offload.failed46:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i32 [[TMP116]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163(i32 [[TMP116]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT47]]
 // CHECK19:       omp_offload.cont47:
 // CHECK19-NEXT:    [[TMP151:%.*]] = load i32, ptr [[M]], align 4
@@ -12539,7 +12490,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[ADD60:%.*]] = add nsw i32 [[TMP175]], 1
 // CHECK19-NEXT:    [[TMP176:%.*]] = zext i32 [[ADD60]] to i64
 // CHECK19-NEXT:    [[TMP177:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP177]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP177]], align 4
 // CHECK19-NEXT:    [[TMP178:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 4, ptr [[TMP178]], align 4
 // CHECK19-NEXT:    [[TMP179:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS61]], i32 0, i32 2
@@ -12568,7 +12519,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP191:%.*]] = icmp ne i32 [[TMP190]], 0
 // CHECK19-NEXT:    br i1 [[TMP191]], label [[OMP_OFFLOAD_FAILED62:%.*]], label [[OMP_OFFLOAD_CONT63:%.*]]
 // CHECK19:       omp_offload.failed62:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i32 [[TMP152]], i32 [[TMP154]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168(i32 [[TMP152]], i32 [[TMP154]], i32 [[TMP0]], ptr [[VLA]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT63]]
 // CHECK19:       omp_offload.cont63:
 // CHECK19-NEXT:    [[TMP192:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
@@ -12596,7 +12547,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12685,7 +12636,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l148.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12780,7 +12731,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.loop.exit:
 // CHECK19-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK19-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK19-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK19:       omp.precond.end:
 // CHECK19-NEXT:    ret void
@@ -12802,7 +12753,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12891,7 +12842,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l153.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12986,7 +12937,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.loop.exit:
 // CHECK19-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK19-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK19-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK19:       omp.precond.end:
 // CHECK19-NEXT:    ret void
@@ -13017,7 +12968,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13137,7 +13088,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l158.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13234,7 +13185,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.loop.exit:
 // CHECK19-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK19-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP22]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP22]])
 // CHECK19-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK19:       omp.precond.end:
 // CHECK19-NEXT:    ret void
@@ -13256,7 +13207,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13345,7 +13296,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l163.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13467,7 +13418,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13562,7 +13513,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l168.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i32 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13663,7 +13614,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@_Z5tmainIiLi10EEiT_
-// CHECK19-SAME: (i32 noundef [[ARGC:%.*]]) #[[ATTR6:[0-9]+]] comdat {
+// CHECK19-SAME: (i32 noundef [[ARGC:%.*]]) #[[ATTR5:[0-9]+]] comdat {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK19-NEXT:    [[A:%.*]] = alloca [10 x i32], align 4
@@ -13706,7 +13657,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CHECK19-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CHECK19-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -13735,7 +13686,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CHECK19-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK19:       omp_offload.failed:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116(ptr [[A]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK19:       omp_offload.cont:
 // CHECK19-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
@@ -13747,7 +13698,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP25]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP25]], align 4
 // CHECK19-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 1, ptr [[TMP26]], align 4
 // CHECK19-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -13776,7 +13727,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK19-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CHECK19:       omp_offload.failed6:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121(ptr [[A]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CHECK19:       omp_offload.cont7:
 // CHECK19-NEXT:    [[TMP40:%.*]] = load i32, ptr [[M]], align 4
@@ -13797,7 +13748,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS8]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS9]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP50]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP50]], align 4
 // CHECK19-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 2, ptr [[TMP51]], align 4
 // CHECK19-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS12]], i32 0, i32 2
@@ -13826,7 +13777,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP64:%.*]] = icmp ne i32 [[TMP63]], 0
 // CHECK19-NEXT:    br i1 [[TMP64]], label [[OMP_OFFLOAD_FAILED13:%.*]], label [[OMP_OFFLOAD_CONT14:%.*]]
 // CHECK19:       omp_offload.failed13:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i32 [[TMP41]], ptr [[A]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126(i32 [[TMP41]], ptr [[A]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT14]]
 // CHECK19:       omp_offload.cont14:
 // CHECK19-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
@@ -13838,7 +13789,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS15]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS16]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CHECK19-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 1, ptr [[TMP71]], align 4
 // CHECK19-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS19]], i32 0, i32 2
@@ -13867,7 +13818,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CHECK19-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED20:%.*]], label [[OMP_OFFLOAD_CONT21:%.*]]
 // CHECK19:       omp_offload.failed20:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131(ptr [[A]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT21]]
 // CHECK19:       omp_offload.cont21:
 // CHECK19-NEXT:    [[TMP85:%.*]] = load i32, ptr [[M]], align 4
@@ -13888,7 +13839,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS23]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS24]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 2, ptr [[TMP95]], align 4
+// CHECK19-NEXT:    store i32 3, ptr [[TMP95]], align 4
 // CHECK19-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 2, ptr [[TMP96]], align 4
 // CHECK19-NEXT:    [[TMP97:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS27]], i32 0, i32 2
@@ -13917,7 +13868,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    [[TMP109:%.*]] = icmp ne i32 [[TMP108]], 0
 // CHECK19-NEXT:    br i1 [[TMP109]], label [[OMP_OFFLOAD_FAILED28:%.*]], label [[OMP_OFFLOAD_CONT29:%.*]]
 // CHECK19:       omp_offload.failed28:
-// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i32 [[TMP86]], ptr [[A]]) #[[ATTR4]]
+// CHECK19-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136(i32 [[TMP86]], ptr [[A]]) #[[ATTR3]]
 // CHECK19-NEXT:    br label [[OMP_OFFLOAD_CONT29]]
 // CHECK19:       omp_offload.cont29:
 // CHECK19-NEXT:    ret i32 0
@@ -13934,7 +13885,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13995,7 +13946,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l116.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14064,7 +14015,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.inner.for.end:
 // CHECK19-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK19:       omp.loop.exit:
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK19-NEXT:    ret void
 //
 //
@@ -14079,7 +14030,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14140,7 +14091,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l121.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14209,7 +14160,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.inner.for.end:
 // CHECK19-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK19:       omp.loop.exit:
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP4]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
 // CHECK19-NEXT:    ret void
 //
 //
@@ -14233,7 +14184,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14300,7 +14251,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l126.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14391,7 +14342,7 @@ int main (int argc, char **argv) {
 // CHECK19-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB]], align 4
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
-// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP5]])
+// CHECK19-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP5]])
 // CHECK19-NEXT:    ret void
 //
 //
@@ -14406,7 +14357,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14467,7 +14418,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l131.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14558,7 +14509,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14625,7 +14576,7 @@ int main (int argc, char **argv) {
 //
 //
 // CHECK19-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIiLi10EEiT__l136.omp_outlined.omp_outlined
-// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
+// CHECK19-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(40) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR2]] {
 // CHECK19-NEXT:  entry:
 // CHECK19-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK19-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14696,12 +14647,5 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
-// CHECK19-NEXT:    ret void
-//
-//
-// CHECK19-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK19-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK19-NEXT:  entry:
-// CHECK19-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK19-NEXT:    ret void
 //

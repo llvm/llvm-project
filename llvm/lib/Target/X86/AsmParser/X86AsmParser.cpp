@@ -1122,6 +1122,7 @@ private:
   unsigned IdentifyMasmOperator(StringRef Name);
   bool ParseMasmOperator(unsigned OpKind, int64_t &Val);
   bool ParseRoundingModeOp(SMLoc Start, OperandVector &Operands);
+  bool parseCFlagsOp(OperandVector &Operands);
   bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM,
                                bool &ParseError, SMLoc &End);
   bool ParseMasmNamedOperator(StringRef Name, IntelExprStateMachine &SM,
@@ -2306,6 +2307,67 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
   return Error(Tok.getLoc(), "unknown token in expression");
 }
 
+/// Parse condtional flags for CCMP/CTEST, e.g {dfv=of,sf,zf,cf} right after
+/// mnemonic.
+bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  AsmToken Tok = Parser.getTok();
+  const SMLoc Start = Tok.getLoc();
+  if (!Tok.is(AsmToken::LCurly))
+    return Error(Tok.getLoc(), "Expected { at this point");
+  Parser.Lex(); // Eat "{"
+  Tok = Parser.getTok();
+  if (Tok.getIdentifier() != "dfv")
+    return Error(Tok.getLoc(), "Expected dfv at this point");
+  Parser.Lex(); // Eat "dfv"
+  Tok = Parser.getTok();
+  if (!Tok.is(AsmToken::Equal))
+    return Error(Tok.getLoc(), "Expected = at this point");
+  Parser.Lex(); // Eat "="
+
+  Tok = Parser.getTok();
+  SMLoc End;
+  if (Tok.is(AsmToken::RCurly)) {
+    End = Tok.getEndLoc();
+    Operands.push_back(X86Operand::CreateImm(
+        MCConstantExpr::create(0, Parser.getContext()), Start, End));
+    Parser.Lex(); // Eat "}"
+    return false;
+  }
+  unsigned CFlags = 0;
+  for (unsigned I = 0; I < 4; ++I) {
+    Tok = Parser.getTok();
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+                         .Case("of", 0x8)
+                         .Case("sf", 0x4)
+                         .Case("zf", 0x2)
+                         .Case("cf", 0x1)
+                         .Default(~0U);
+    if (CFlag == ~0U)
+      return Error(Tok.getLoc(), "Invalid conditional flags");
+
+    if (CFlags & CFlag)
+      return Error(Tok.getLoc(), "Duplicated conditional flag");
+    CFlags |= CFlag;
+
+    Parser.Lex(); // Eat one conditional flag
+    Tok = Parser.getTok();
+    if (Tok.is(AsmToken::RCurly)) {
+      End = Tok.getEndLoc();
+      Operands.push_back(X86Operand::CreateImm(
+          MCConstantExpr::create(CFlags, Parser.getContext()), Start, End));
+      Parser.Lex(); // Eat "}"
+      return false;
+    } else if (I == 3) {
+      return Error(Tok.getLoc(), "Expected } at this point");
+    } else if (Tok.isNot(AsmToken::Comma)) {
+      return Error(Tok.getLoc(), "Expected } or , at this point");
+    }
+    Parser.Lex(); // Eat ","
+  }
+  llvm_unreachable("Unexpected control flow");
+}
+
 /// Parse the '.' operator.
 bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
                                          SMLoc &End) {
@@ -3461,6 +3523,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
 
+  // Parse condtional flags after mnemonic.
+  if ((Name.starts_with("ccmp") || Name.starts_with("ctest")) &&
+      parseCFlagsOp(Operands))
+    return true;
+
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
   // just want to parse the "lock" as the first instruction and the "incl" as
@@ -4001,7 +4068,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
     return Match_Unsupported;
-  if (ForcedNoFlag != !!(MCID.TSFlags & X86II::EVEX_NF))
+  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&

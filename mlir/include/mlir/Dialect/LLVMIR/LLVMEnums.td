@@ -394,6 +394,26 @@ def DIFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// DINameTableKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINameTableDefault : I64EnumAttrCase<"Default", 0>;
+def LLVM_DINameTableGNU     : I64EnumAttrCase<"GNU", 1>;
+def LLVM_DINameTableNone    : I64EnumAttrCase<"None", 2>;
+def LLVM_DINameTableApple   : I64EnumAttrCase<"Apple", 3>;
+
+def LLVM_DINameTableKind : I64EnumAttr<
+    "DINameTableKind",
+    "LLVM debug name table kind", [
+      LLVM_DINameTableDefault,
+      LLVM_DINameTableGNU,
+      LLVM_DINameTableNone,
+      LLVM_DINameTableApple,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubprogramFlags
 //===----------------------------------------------------------------------===//
 
@@ -703,6 +723,63 @@ def FramePointerKindEnum : LLVM_EnumAttr<
     "LLVM FramePointerKind",
     [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
+}
+
+//===----------------------------------------------------------------------===//
+// RoundingMode
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::RoundingMode ones.
+// See llvm/include/llvm/ADT/FloatingPointMode.h.
+def RoundTowardZero
+    : LLVM_EnumAttrCase<"TowardZero", "towardzero", "TowardZero", 0>;
+def RoundNearestTiesToEven
+    : LLVM_EnumAttrCase<"NearestTiesToEven", "tonearest", "NearestTiesToEven", 1>;
+def RoundTowardPositive
+    : LLVM_EnumAttrCase<"TowardPositive", "upward", "TowardPositive", 2>;
+def RoundTowardNegative
+    : LLVM_EnumAttrCase<"TowardNegative", "downward", "TowardNegative", 3>;
+def RoundNearestTiesToAway
+    : LLVM_EnumAttrCase<"NearestTiesToAway", "tonearestaway", "NearestTiesToAway", 4>;
+def RoundDynamic
+    : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 7>;
+// Needed as llvm::RoundingMode defines this.
+def RoundInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+// RoundingModeAttr should not be used in operations definitions.
+// Use ValidRoundingModeAttr instead.
+def RoundingModeAttr : LLVM_EnumAttr<
+    "RoundingMode",
+    "::llvm::RoundingMode",
+    "LLVM Rounding Mode",
+    [RoundTowardZero, RoundNearestTiesToEven, RoundTowardPositive,
+     RoundTowardNegative, RoundNearestTiesToAway, RoundDynamic, RoundInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
+
+//===----------------------------------------------------------------------===//
+// FPExceptionBehavior
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::fp::ExceptionBehavior ones.
+// See llvm/include/llvm/IR/FPEnv.h.
+def FPExceptionBehaviorIgnore
+    : LLVM_EnumAttrCase<"Ignore", "ignore", "ebIgnore", 0>;
+def FPExceptionBehaviorMayTrap
+    : LLVM_EnumAttrCase<"MayTrap", "maytrap", "ebMayTrap", 1>;
+def FPExceptionBehaviorStrict
+    : LLVM_EnumAttrCase<"Strict", "strict", "ebStrict", 2>;
+
+def FPExceptionBehaviorAttr : LLVM_EnumAttr<
+    "FPExceptionBehavior",
+    "::llvm::fp::ExceptionBehavior",
+    "LLVM Exception Behavior",
+    [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
+     FPExceptionBehaviorStrict]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 #endif // LLVMIR_ENUMS

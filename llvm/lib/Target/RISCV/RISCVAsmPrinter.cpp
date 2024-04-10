@@ -80,7 +80,8 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
-  void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+  // Returns whether Inst is compressed.
+  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
@@ -100,7 +101,7 @@ public:
   bool emitDirectiveOptionArch();
 
 private:
-  void emitAttributes();
+  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
 
   void emitNTLHint(const MachineInstr *MI);
 
@@ -180,12 +181,13 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   SM.recordStatepoint(*MILabel, MI);
 }
 
-void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = RISCVRVC::compress(CInst, Inst, *STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
+  return Res;
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real
@@ -385,8 +387,32 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+
+  MCSubtargetInfo SubtargetInfo = *TM.getMCSubtargetInfo();
+
+  // Use module flag to update feature bits.
+  if (auto *MD = dyn_cast_or_null<MDNode>(M.getModuleFlag("riscv-isa"))) {
+    for (auto &ISA : MD->operands()) {
+      if (auto *ISAString = dyn_cast_or_null<MDString>(ISA)) {
+        auto ParseResult = llvm::RISCVISAInfo::parseArchString(
+            ISAString->getString(), /*EnableExperimentalExtension=*/true,
+            /*ExperimentalExtensionVersionCheck=*/true);
+        if (!errorToBool(ParseResult.takeError())) {
+          auto &ISAInfo = *ParseResult;
+          for (const auto &Feature : RISCVFeatureKV) {
+            if (ISAInfo->hasExtension(Feature.Key) &&
+                !SubtargetInfo.hasFeature(Feature.Value))
+              SubtargetInfo.ToggleFeature(Feature.Key);
+          }
+        }
+      }
+    }
+
+    RTS.setFlagsFromFeatures(SubtargetInfo);
+  }
+
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
+    emitAttributes(SubtargetInfo);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -398,13 +424,13 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   EmitHwasanMemaccessSymbols(M);
 }
 
-void RISCVAsmPrinter::emitAttributes() {
+void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
-  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo(), /*EmitStackAlign*/ true);
+  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {

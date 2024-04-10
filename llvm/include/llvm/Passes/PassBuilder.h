@@ -133,7 +133,8 @@ public:
   void crossRegisterProxies(LoopAnalysisManager &LAM,
                             FunctionAnalysisManager &FAM,
                             CGSCCAnalysisManager &CGAM,
-                            ModuleAnalysisManager &MAM);
+                            ModuleAnalysisManager &MAM,
+                            MachineFunctionAnalysisManager *MFAM = nullptr);
 
   /// Registers all available module analysis passes.
   ///
@@ -569,9 +570,9 @@ public:
     ModulePipelineParsingCallbacks.push_back(C);
   }
   void registerPipelineParsingCallback(
-      const std::function<bool(StringRef Name, MachineFunctionPassManager &)>
-          &C) {
-    MachinePipelineParsingCallbacks.push_back(C);
+      const std::function<bool(StringRef Name, MachineFunctionPassManager &,
+                               ArrayRef<PipelineElement>)> &C) {
+    MachineFunctionPipelineParsingCallbacks.push_back(C);
   }
   /// @}}
 
@@ -624,6 +625,59 @@ public:
                                       OptimizationLevel Level);
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
                                                     OptimizationLevel Level);
+
+  static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
+    if (!Name.consume_front(PassName))
+      return false;
+    // normal pass name w/o parameters == default parameters
+    if (Name.empty())
+      return true;
+    return Name.starts_with("<") && Name.ends_with(">");
+  }
+
+  /// This performs customized parsing of pass name with parameters.
+  ///
+  /// We do not need parametrization of passes in textual pipeline very often,
+  /// yet on a rare occasion ability to specify parameters right there can be
+  /// useful.
+  ///
+  /// \p Name - parameterized specification of a pass from a textual pipeline
+  /// is a string in a form of :
+  ///      PassName '<' parameter-list '>'
+  ///
+  /// Parameter list is being parsed by the parser callable argument, \p Parser,
+  /// It takes a string-ref of parameters and returns either StringError or a
+  /// parameter list in a form of a custom parameters type, all wrapped into
+  /// Expected<> template class.
+  ///
+  template <typename ParametersParseCallableT>
+  static auto parsePassParameters(ParametersParseCallableT &&Parser,
+                                  StringRef Name, StringRef PassName)
+      -> decltype(Parser(StringRef{})) {
+    using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
+
+    StringRef Params = Name;
+    if (!Params.consume_front(PassName)) {
+      llvm_unreachable(
+          "unable to strip pass name from parametrized pass specification");
+    }
+    if (!Params.empty() &&
+        (!Params.consume_front("<") || !Params.consume_back(">"))) {
+      llvm_unreachable("invalid format for parametrized pass name");
+    }
+
+    Expected<ParametersT> Result = Parser(Params);
+    assert((Result || Result.template errorIsA<StringError>()) &&
+           "Pass parameter parser can only return StringErrors.");
+    return Result;
+  }
+
+  /// Handle passes only accept one bool-valued parameter.
+  ///
+  /// \return false when Params is empty.
+  static Expected<bool> parseSinglePassOption(StringRef Params,
+                                              StringRef OptionName,
+                                              StringRef PassName);
 
 private:
   // O1 pass pipeline
@@ -733,8 +787,10 @@ private:
   // Machine pass callbackcs
   SmallVector<std::function<void(MachineFunctionAnalysisManager &)>, 2>
       MachineFunctionAnalysisRegistrationCallbacks;
-  SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &)>, 2>
-      MachinePipelineParsingCallbacks;
+  SmallVector<std::function<bool(StringRef, MachineFunctionPassManager &,
+                                 ArrayRef<PipelineElement>)>,
+              2>
+      MachineFunctionPipelineParsingCallbacks;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

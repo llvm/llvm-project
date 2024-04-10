@@ -92,7 +92,7 @@ private:
     nextIt = it;
     while (++nextIt != block.end()) {
       // Ignore compiler directives.
-      if (auto *directive{GetConstructIf<parser::CompilerDirective>(*nextIt)})
+      if (GetConstructIf<parser::CompilerDirective>(*nextIt))
         continue;
 
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {

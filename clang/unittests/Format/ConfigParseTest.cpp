@@ -677,38 +677,36 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
-  CHECK_PARSE("BreakAfterReturnType: None", AlwaysBreakAfterReturnType,
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
+  CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
               FormatStyle::RTBS_None);
-  CHECK_PARSE("BreakAfterReturnType: Automatic", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: Automatic", BreakAfterReturnType,
               FormatStyle::RTBS_Automatic);
-  CHECK_PARSE("BreakAfterReturnType: ExceptShortType",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
-  CHECK_PARSE("BreakAfterReturnType: All", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: ExceptShortType", BreakAfterReturnType,
+              FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("BreakAfterReturnType: All", BreakAfterReturnType,
               FormatStyle::RTBS_All);
-  CHECK_PARSE("BreakAfterReturnType: TopLevel", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: TopLevel", BreakAfterReturnType,
               FormatStyle::RTBS_TopLevel);
-  CHECK_PARSE("BreakAfterReturnType: AllDefinitions",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
-  CHECK_PARSE("BreakAfterReturnType: TopLevelDefinitions",
-              AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: AllDefinitions", BreakAfterReturnType,
+              FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("BreakAfterReturnType: TopLevelDefinitions", BreakAfterReturnType,
               FormatStyle::RTBS_TopLevelDefinitions);
   // For backward compatibility:
-  CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("AlwaysBreakAfterReturnType: None", BreakAfterReturnType,
               FormatStyle::RTBS_None);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic", BreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
   CHECK_PARSE("AlwaysBreakAfterReturnType: ExceptShortType",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: All", AlwaysBreakAfterReturnType,
+              BreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: All", BreakAfterReturnType,
               FormatStyle::RTBS_All);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel", BreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
   CHECK_PARSE("AlwaysBreakAfterReturnType: AllDefinitions",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
+              BreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
   CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
-              AlwaysBreakAfterReturnType,
-              FormatStyle::RTBS_TopLevelDefinitions);
+              BreakAfterReturnType, FormatStyle::RTBS_TopLevelDefinitions);
 
   Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   CHECK_PARSE("BreakTemplateDeclarations: Leave", BreakTemplateDeclarations,

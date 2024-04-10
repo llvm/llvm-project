@@ -15,10 +15,10 @@
 #include "terminator.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/bit-population-count.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 #include <memory>
-#include <optional>
 
 namespace Fortran::runtime::typeInfo {
 
@@ -39,7 +39,7 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS std::optional<TypeParameterValue> GetValue(
+  RT_API_ATTRS Fortran::common::optional<TypeParameterValue> GetValue(
       const Descriptor *) const;
 
 private:
@@ -58,7 +58,7 @@ public:
     Automatic = 4
   };
 
-  const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
+  RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS Genre genre() const { return genre_; }
   RT_API_ATTRS TypeCategory category() const {
     return static_cast<TypeCategory>(category_);
@@ -66,17 +66,17 @@ public:
   RT_API_ATTRS int kind() const { return kind_; }
   RT_API_ATTRS int rank() const { return rank_; }
   RT_API_ATTRS std::uint64_t offset() const { return offset_; }
-  const RT_API_ATTRS Value &characterLen() const { return characterLen_; }
-  const RT_API_ATTRS DerivedType *derivedType() const {
+  RT_API_ATTRS const Value &characterLen() const { return characterLen_; }
+  RT_API_ATTRS const DerivedType *derivedType() const {
     return derivedType_.descriptor().OffsetElement<const DerivedType>();
   }
-  const RT_API_ATTRS Value *lenValue() const {
+  RT_API_ATTRS const Value *lenValue() const {
     return lenValue_.descriptor().OffsetElement<const Value>();
   }
-  const RT_API_ATTRS Value *bounds() const {
+  RT_API_ATTRS const Value *bounds() const {
     return bounds_.descriptor().OffsetElement<const Value>();
   }
-  const RT_API_ATTRS char *initialization() const { return initialization_; }
+  RT_API_ATTRS const char *initialization() const { return initialization_; }
 
   RT_API_ATTRS std::size_t GetElementByteSize(const Descriptor &) const;
   RT_API_ATTRS std::size_t GetElements(const Descriptor &) const;
@@ -205,27 +205,27 @@ class DerivedType {
 public:
   ~DerivedType(); // never defined
 
-  const RT_API_ATTRS Descriptor &binding() const {
+  RT_API_ATTRS const Descriptor &binding() const {
     return binding_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &name() const { return name_.descriptor(); }
+  RT_API_ATTRS const Descriptor &name() const { return name_.descriptor(); }
   RT_API_ATTRS std::uint64_t sizeInBytes() const { return sizeInBytes_; }
-  const RT_API_ATTRS Descriptor &uninstatiated() const {
+  RT_API_ATTRS const Descriptor &uninstatiated() const {
     return uninstantiated_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &kindParameter() const {
+  RT_API_ATTRS const Descriptor &kindParameter() const {
     return kindParameter_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &lenParameterKind() const {
+  RT_API_ATTRS const Descriptor &lenParameterKind() const {
     return lenParameterKind_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &component() const {
+  RT_API_ATTRS const Descriptor &component() const {
     return component_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &procPtr() const {
+  RT_API_ATTRS const Descriptor &procPtr() const {
     return procPtr_.descriptor();
   }
-  const RT_API_ATTRS Descriptor &special() const {
+  RT_API_ATTRS const Descriptor &special() const {
     return special_.descriptor();
   }
   RT_API_ATTRS bool hasParent() const { return hasParent_; }
@@ -241,14 +241,14 @@ public:
     return lenParameterKind().Elements();
   }
 
-  const RT_API_ATTRS DerivedType *GetParentType() const;
+  RT_API_ATTRS const DerivedType *GetParentType() const;
 
   // Finds a data component by name in this derived type or its ancestors.
-  const RT_API_ATTRS Component *FindDataComponent(
+  RT_API_ATTRS const Component *FindDataComponent(
       const char *name, std::size_t nameLen) const;
 
   // O(1) look-up of special procedure bindings
-  const RT_API_ATTRS SpecialBinding *FindSpecialBinding(
+  RT_API_ATTRS const SpecialBinding *FindSpecialBinding(
       SpecialBinding::Which which) const {
     auto bitIndex{static_cast<std::uint32_t>(which)};
     auto bit{std::uint32_t{1} << bitIndex};

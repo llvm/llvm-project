@@ -1,6 +1,6 @@
 ! Check that InputDerivedType/OutputDeriverType APIs are used
 ! for io of derived types.
-! RUN: bbc -polymorphic-type -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
 module p
   type :: person

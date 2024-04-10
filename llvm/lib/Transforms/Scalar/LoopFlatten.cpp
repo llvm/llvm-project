@@ -762,7 +762,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   if (!FI.NewTripCount) {
     FI.NewTripCount = BinaryOperator::CreateMul(
         FI.InnerTripCount, FI.OuterTripCount, "flatten.tripcount",
-        FI.OuterLoop->getLoopPreheader()->getTerminator());
+        FI.OuterLoop->getLoopPreheader()->getTerminator()->getIterator());
     LLVM_DEBUG(dbgs() << "Created new trip count in preheader: ";
                FI.NewTripCount->dump());
   }

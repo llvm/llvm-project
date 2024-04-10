@@ -35,27 +35,18 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
-                            options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenmp,
-                            options::OPT_fopenmp_version_EQ,
-                            options::OPT_fopenacc,
-                            options::OPT_finput_charset_EQ,
-                            options::OPT_fimplicit_none,
-                            options::OPT_fno_implicit_none,
-                            options::OPT_fbackslash,
-                            options::OPT_fno_backslash,
-                            options::OPT_flogical_abbreviations,
-                            options::OPT_fno_logical_abbreviations,
-                            options::OPT_fxor_operator,
-                            options::OPT_fno_xor_operator,
-                            options::OPT_falternative_parameter_statement,
-                            options::OPT_fdefault_real_8,
-                            options::OPT_fdefault_integer_8,
-                            options::OPT_fdefault_double_8,
-                            options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic});
+  Args.addAllArgs(
+      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
+                options::OPT_ffixed_line_length_EQ, options::OPT_fopenacc,
+                options::OPT_finput_charset_EQ, options::OPT_fimplicit_none,
+                options::OPT_fno_implicit_none, options::OPT_fbackslash,
+                options::OPT_fno_backslash, options::OPT_flogical_abbreviations,
+                options::OPT_fno_logical_abbreviations,
+                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
+                options::OPT_falternative_parameter_statement,
+                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
+                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
+                options::OPT_fno_automatic});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -148,7 +139,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -763,6 +753,35 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
+
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action other than OpenMP.
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false) &&
+      (JA.isDeviceOffloading(Action::OFK_None) ||
+       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+    switch (D.getOpenMPRuntime(Args)) {
+    case Driver::OMPRT_OMP:
+    case Driver::OMPRT_IOMP5:
+      // Clang can generate useful OpenMP code for these two runtime libraries.
+      CmdArgs.push_back("-fopenmp");
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      // FIXME: Clang supports a whole bunch more flags here.
+      break;
+    default:
+      // By default, if Clang doesn't know how to generate useful OpenMP code
+      // for a specific runtime library, we just don't pass the '-fopenmp' flag
+      // down to the actual compilation.
+      // FIXME: It would be better to have a mode which *only* omits IR
+      // generation based on the OpenMP support so that we get consistent
+      // semantic analysis, etc.
+      const Arg *A = Args.getLastArg(options::OPT_fopenmp_EQ);
+      D.Diag(diag::warn_drv_unsupported_openmp_library)
+          << A->getSpelling() << A->getValue();
+      break;
+    }
+  }
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

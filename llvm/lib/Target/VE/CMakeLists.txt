@@ -38,6 +38,7 @@ add_llvm_target(VECodeGen
   SelectionDAG
   Support
   Target
+  TransformUtils
   VEDesc
   VEInfo
 

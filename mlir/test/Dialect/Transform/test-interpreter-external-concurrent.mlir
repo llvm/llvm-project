@@ -1,4 +1,6 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(test-transform-dialect-interpreter{transform-file-name=%p%{fs-sep}include%{fs-sep}test-interpreter-external-concurrent-source.mlir}))" \
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(\
+// RUN:     transform-preload-library{transform-library-paths=%p%{fs-sep}include%{fs-sep}test-interpreter-external-concurrent-source.mlir},\
+// RUN:     func.func(transform-interpreter))" \
 // RUN:             --verify-diagnostics
 
 // Exercising the pass on multiple functions of different lengths that may be

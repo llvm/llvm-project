@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "DAGISelMatcher.h"
-#include "SDNodeProperties.h"
+#include "Basic/SDNodeProperties.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/DAGISelMatcher.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -73,7 +73,7 @@ class MatcherTableEmitter {
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
     const auto It = VecPatterns.find(P);
     if (It == VecPatterns.end()) {
-      VecPatterns.insert(make_pair(std::move(P), VecPatterns.size()));
+      VecPatterns.insert(std::pair(std::move(P), VecPatterns.size()));
       VecIncludeStrings.push_back(std::move(include_loc));
       return VecIncludeStrings.size() - 1;
     }
