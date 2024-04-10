@@ -2354,7 +2354,8 @@ private:
     // Line.MightBeFunctionDecl can only be true after the parentheses of a
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
-    if (Current.is(Keywords.kw_instanceof)) {
+    if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
+        Current.is(Keywords.kw_instanceof)) {
       Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
