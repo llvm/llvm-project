@@ -1759,6 +1759,7 @@ void is_layout_compatible(int n)
   // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
   static_assert(!__is_layout_compatible(int[n], int[n]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_layout_compatible'}}
   static_assert(__is_layout_compatible(int&, int&));
   static_assert(!__is_layout_compatible(int&, char&));
   static_assert(__is_layout_compatible(void(int), void(int)));
