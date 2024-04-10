@@ -182,7 +182,9 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaHLSL;
 class SemaOpenACC;
+class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -465,9 +467,7 @@ class Sema final : public SemaBase {
   // 36. FixIt Helpers (SemaFixItUtils.cpp)
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
-  // 39. HLSL Constructs (SemaHLSL.cpp)
-  // 40. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 41. SYCL Constructs (SemaSYCL.cpp)
+  // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -964,9 +964,19 @@ public:
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
 
+  SemaHLSL &HLSL() {
+    assert(HLSLPtr);
+    return *HLSLPtr;
+  }
+
   SemaOpenACC &OpenACC() {
     assert(OpenACCPtr);
     return *OpenACCPtr;
+  }
+
+  SemaSYCL &SYCL() {
+    assert(SYCLPtr);
+    return *SYCLPtr;
   }
 
 protected:
@@ -999,7 +1009,9 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
 
@@ -1966,6 +1978,11 @@ public:
 
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
+
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  bool BuiltinVectorToScalarMath(CallExpr *TheCall);
+
+  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -5443,15 +5460,6 @@ public:
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
-
-  ExprResult BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           TypeSourceInfo *TSI);
-  ExprResult ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           ParsedType ParsedTy);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
@@ -10066,7 +10074,7 @@ public:
 
     /// Note that we are instantiating a type alias template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          TypeAliasTemplateDecl *Template,
+                          TypeAliasTemplateDecl *Entity,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
@@ -13145,29 +13153,6 @@ private:
   //
   //
 
-  /// \name HLSL Constructs
-  /// Implementations are in SemaHLSL.cpp
-  ///@{
-
-public:
-  Decl *ActOnStartHLSLBuffer(Scope *BufferScope, bool CBuffer,
-                             SourceLocation KwLoc, IdentifierInfo *Ident,
-                             SourceLocation IdentLoc, SourceLocation LBrace);
-  void ActOnFinishHLSLBuffer(Decl *Dcl, SourceLocation RBrace);
-
-  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
-  bool BuiltinVectorToScalarMath(CallExpr *TheCall);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
   /// \name OpenMP Directives and Clauses
   /// Implementations are in SemaOpenMP.cpp
   ///@{
@@ -14526,44 +14511,6 @@ private:
                         SourceLocation StartLoc, SourceLocation EndLoc,
                         const DeclarationNameInfo &DirName,
                         OpenMPDirectiveKind CancelRegion);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name SYCL Constructs
-  /// Implementations are in SemaSYCL.cpp
-  ///@{
-
-public:
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as device code".
-  ///
-  /// - If CurLexicalContext is a kernel function or it is known that the
-  ///   function will be emitted for the device, emits the diagnostics
-  ///   immediately.
-  /// - If CurLexicalContext is a function and we are compiling
-  ///   for the device, but we don't know that this function will be codegen'ed
-  ///   for devive yet, creates a diagnostic which is emitted if and when we
-  ///   realize that the function will be codegen'ed.
-  ///
-  /// Example usage:
-  ///
-  /// Diagnose __float128 type usage only from SYCL device code if the current
-  /// target doesn't support it
-  /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
-  ///     S.getLangOpts().SYCLIsDevice)
-  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
-  SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
-
-  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                  llvm::DenseSet<QualType> Visited,
-                                  ValueDecl *DeclToCheck);
 
   ///@}
 };

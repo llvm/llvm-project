@@ -2011,6 +2011,7 @@ void StmtProfiler::VisitMSPropertySubscriptExpr(
 void StmtProfiler::VisitCXXThisExpr(const CXXThisExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->isImplicit());
+  ID.AddBoolean(S->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 }
 
 void StmtProfiler::VisitCXXThrowExpr(const CXXThrowExpr *S) {
@@ -2455,7 +2456,12 @@ public:
       Visit(Clause);
     }
   }
+  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause);
 };
+
+/// Nothing to do here, there are no sub-statements.
+void OpenACCClauseProfiler::VisitOpenACCDefaultClause(
+    const OpenACCDefaultClause &Clause) {}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

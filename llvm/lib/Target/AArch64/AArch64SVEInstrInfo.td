@@ -487,6 +487,27 @@ def AArch64fmaxnm_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmaxnm,
 def AArch64fmin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmin, AArch64fmin_p>;
 def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AArch64fmax_p>;
 
+def AArch64fadd : PatFrags<(ops node:$op1, node:$op2),
+                            [(fadd node:$op1, node:$op2),
+                             (AArch64fadd_p (SVEAllActive), node:$op1, node:$op2)]>;
+
+def AArch64fmul : PatFrags<(ops node:$op1, node:$op2),
+                            [(fmul node:$op1, node:$op2),
+                             (AArch64fmul_p (SVEAllActive), node:$op1, node:$op2)]>;
+
+def AArch64fsub : PatFrags<(ops node:$op1, node:$op2),
+                            [(fsub node:$op1, node:$op2),
+                             (AArch64fsub_p (SVEAllActive), node:$op1, node:$op2)]>;
+
+def AArch64mul : PatFrag<(ops node:$op1, node:$op2),
+                         (AArch64mul_p (SVEAnyPredicate), node:$op1, node:$op2)>;
+
+def AArch64smulh : PatFrag<(ops node:$op1, node:$op2),
+                           (AArch64smulh_p (SVEAnyPredicate), node:$op1, node:$op2)>;
+
+def AArch64umulh : PatFrag<(ops node:$op1, node:$op2),
+                           (AArch64umulh_p (SVEAnyPredicate), node:$op1, node:$op2)>;
+
 let Predicates = [HasSVE] in {
   def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
   def RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
@@ -705,9 +726,9 @@ let Predicates = [HasSVEorSME, UseExperimentalZeroingPseudos] in {
 } // End HasSVEorSME, UseExperimentalZeroingPseudos
 
 let Predicates = [HasSVEorSME] in {
-  defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd", fadd, AArch64fadd_p>;
-  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub", fsub, AArch64fsub_p>;
-  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul", fmul, AArch64fmul_p>;
+  defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd", AArch64fadd>;
+  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub", AArch64fsub>;
+  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul", AArch64fmul>;
 } // End HasSVEorSME
 
 let Predicates = [HasSVE] in {
@@ -3402,9 +3423,9 @@ let Predicates = [HasSVE2orSME] in {
   defm SQRDMULH_ZZZ : sve2_int_mul<0b101, "sqrdmulh", int_aarch64_sve_sqrdmulh>;
 
   // SVE2 integer multiply vectors (unpredicated)
-  defm MUL_ZZZ    : sve2_int_mul<0b000,  "mul",   null_frag, AArch64mul_p>;
-  defm SMULH_ZZZ  : sve2_int_mul<0b010,  "smulh", null_frag, AArch64smulh_p>;
-  defm UMULH_ZZZ  : sve2_int_mul<0b011,  "umulh", null_frag, AArch64umulh_p>;
+  defm MUL_ZZZ    : sve2_int_mul<0b000,  "mul",   AArch64mul>;
+  defm SMULH_ZZZ  : sve2_int_mul<0b010,  "smulh", AArch64smulh>;
+  defm UMULH_ZZZ  : sve2_int_mul<0b011,  "umulh", AArch64umulh>;
   defm PMUL_ZZZ   : sve2_int_mul_single<0b001, "pmul", int_aarch64_sve_pmul>;
 
   // SVE2 complex integer dot product (indexed)
@@ -4013,20 +4034,10 @@ let Predicates = [HasSVEorSME] in {
 
 // Aliases for existing SVE instructions for which predicate-as-counter are
 // accepted as an operand to the instruction
-def : InstAlias<"ldr $Pt, [$Rn, $imm9, mul vl]",
-               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
-def : InstAlias<"ldr $Pt, [$Rn]",
-               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
-
-def : InstAlias<"str $Pt, [$Rn, $imm9, mul vl]",
-               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
-def : InstAlias<"str $Pt, [$Rn]",
-               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
-
 def : InstAlias<"mov $Pd, $Pn",
-               (ORR_PPzPP PNRasPPR8:$Pd, PNRasPPR8:$Pn, PNRasPPR8:$Pn, PNRasPPR8:$Pn), 0>;
+               (ORR_PPzPP PPRorPNR8:$Pd, PPRorPNR8:$Pn, PPRorPNR8:$Pn, PPRorPNR8:$Pn), 0>;
 
-def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
+def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 
 }
 
@@ -4059,9 +4070,9 @@ defm BFADD_ZPmZZ : sve2p1_bf_2op_p_zds<0b0000, "bfadd", "BFADD_ZPZZ", AArch64fad
 defm BFSUB_ZPmZZ : sve2p1_bf_2op_p_zds<0b0001, "bfsub", "BFSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryComm>;
 defm BFMUL_ZPmZZ : sve2p1_bf_2op_p_zds<0b0010, "bfmul", "BFMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
 
-defm BFADD_ZZZ : sve2p1_bf_3op_u_zd<0b000, "bfadd", fadd, AArch64fadd_p>;
-defm BFSUB_ZZZ : sve2p1_bf_3op_u_zd<0b001, "bfsub", fsub, AArch64fsub_p>;
-defm BFMUL_ZZZ : sve2p1_bf_3op_u_zd<0b010, "bfmul", fmul, AArch64fmul_p>;
+defm BFADD_ZZZ : sve2p1_bf_3op_u_zd<0b000, "bfadd", AArch64fadd>;
+defm BFSUB_ZZZ : sve2p1_bf_3op_u_zd<0b001, "bfsub", AArch64fsub>;
+defm BFMUL_ZZZ : sve2p1_bf_3op_u_zd<0b010, "bfmul", AArch64fmul>;
 
 defm BFADD_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fadd_p>;
 defm BFSUB_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fsub_p>;

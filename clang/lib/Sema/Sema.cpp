@@ -42,8 +42,10 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -198,7 +200,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
+      SYCLPtr(std::make_unique<SemaSYCL>(*this)),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
       MSStructPragmaOn(false), VtorDispStack(LangOpts.getVtorDispMode()),
@@ -1901,7 +1905,7 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
                                       : CUDADiagIfHostCode(Loc, DiagID);
 
   if (getLangOpts().SYCLIsDevice)
-    return SYCLDiagIfDeviceCode(Loc, DiagID);
+    return SYCL().DiagIfDeviceCode(Loc, DiagID);
 
   return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc, DiagID,
                                FD, *this);
@@ -1917,7 +1921,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   // constant byte size like zero length arrays. So, do a deep check for SYCL.
   if (D && LangOpts.SYCLIsDevice) {
     llvm::DenseSet<QualType> Visited;
-    deepTypeCheckForSYCLDevice(Loc, Visited, D);
+    SYCL().deepTypeCheckForDevice(Loc, Visited, D);
   }
 
   Decl *C = cast<Decl>(getCurLexicalContext());
