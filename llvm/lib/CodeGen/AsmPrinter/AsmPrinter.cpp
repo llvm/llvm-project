@@ -500,13 +500,13 @@ bool AsmPrinter::doInitialization(Module &M) {
     if (MAI->hasFourStringsDotFile()) {
       const char VerStr[] =
 #ifdef PACKAGE_VENDOR
-      PACKAGE_VENDOR " "
+          PACKAGE_VENDOR " "
 #endif
-      PACKAGE_NAME " version " PACKAGE_VERSION
+          PACKAGE_NAME " version " PACKAGE_VERSION
 #ifdef LLVM_REVISION
-      " (" LLVM_REVISION ")"
+                         " (" LLVM_REVISION ")"
 #endif
-      ;
+          ;
       // TODO: Add timestamp and description.
       OutStreamer->emitFileDirective(FileName, VerStr, "", "");
     } else {
