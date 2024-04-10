@@ -4646,9 +4646,7 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
         DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, OddV, Mask, VL);
 
     SDValue OffsetVec =
-        DAG.getSplatVector(WideContainerVT, DL,
-                           DAG.getConstant(VecVT.getScalarSizeInBits(), DL,
-                                           Subtarget.getXLenVT()));
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, WideContainerVT);
     Interleaved = DAG.getNode(RISCVISD::SHL_VL, DL, WideContainerVT,
                               Interleaved, OffsetVec, Passthru, Mask, VL);
   } else {
