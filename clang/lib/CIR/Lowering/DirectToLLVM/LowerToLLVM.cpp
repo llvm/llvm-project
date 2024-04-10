@@ -1000,6 +1000,26 @@ public:
   }
 };
 
+static mlir::LLVM::AtomicOrdering
+getLLVMMemOrder(std::optional<mlir::cir::MemOrder> &memorder) {
+  if (!memorder)
+    return mlir::LLVM::AtomicOrdering::not_atomic;
+  switch (*memorder) {
+  case mlir::cir::MemOrder::Relaxed:
+    return mlir::LLVM::AtomicOrdering::monotonic;
+  case mlir::cir::MemOrder::Consume:
+  case mlir::cir::MemOrder::Acquire:
+    return mlir::LLVM::AtomicOrdering::acquire;
+  case mlir::cir::MemOrder::Release:
+    return mlir::LLVM::AtomicOrdering::release;
+  case mlir::cir::MemOrder::AcquireRelease:
+    return mlir::LLVM::AtomicOrdering::acq_rel;
+  case mlir::cir::MemOrder::SequentiallyConsistent:
+    return mlir::LLVM::AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("unknown memory order");
+}
+
 class CIRLoadLowering : public mlir::OpConversionPattern<mlir::cir::LoadOp> {
 public:
   using OpConversionPattern<mlir::cir::LoadOp>::OpConversionPattern;
@@ -1009,30 +1029,13 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     const auto llvmTy =
         getTypeConverter()->convertType(op.getResult().getType());
-    // FIXME: right now we only pass in the alignment when the memory access is
-    // atomic, we should always pass it instead.
     unsigned alignment = 0;
-    auto ordering = mlir::LLVM::AtomicOrdering::not_atomic;
-    if (op.getMemOrder()) {
-      switch (*op.getMemOrder()) {
-      case mlir::cir::MemOrder::Relaxed:
-        ordering = mlir::LLVM::AtomicOrdering::monotonic;
-        break;
-      case mlir::cir::MemOrder::Consume:
-      case mlir::cir::MemOrder::Acquire:
-        ordering = mlir::LLVM::AtomicOrdering::acquire;
-        break;
-      case mlir::cir::MemOrder::Release:
-        ordering = mlir::LLVM::AtomicOrdering::release;
-        break;
-      case mlir::cir::MemOrder::AcquireRelease:
-        ordering = mlir::LLVM::AtomicOrdering::acq_rel;
-        break;
-      case mlir::cir::MemOrder::SequentiallyConsistent:
-        ordering = mlir::LLVM::AtomicOrdering::seq_cst;
-        break;
-      }
+    auto memorder = op.getMemOrder();
+    auto ordering = getLLVMMemOrder(memorder);
 
+    // FIXME: right now we only pass in the alignment when the memory access
+    // is atomic, we should always pass it instead.
+    if (ordering != mlir::LLVM::AtomicOrdering::not_atomic) {
       mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
       alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
     }
@@ -1040,8 +1043,7 @@ public:
     // TODO: nontemporal, invariant, syncscope.
     rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
         op, llvmTy, adaptor.getAddr(), /* alignment */ alignment,
-        /* volatile */ op.getIsVolatile(),
-        /* nontemporal */ false,
+        op.getIsVolatile(), /* nontemporal */ false,
         /* invariant */ false, ordering);
     return mlir::LogicalResult::success();
   }
@@ -1054,9 +1056,23 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::StoreOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    unsigned alignment = 0;
+    auto memorder = op.getMemOrder();
+    auto ordering = getLLVMMemOrder(memorder);
+
+    // FIXME: right now we only pass in the alignment when the memory access
+    // is atomic, we should always pass it instead.
+    if (ordering != mlir::LLVM::AtomicOrdering::not_atomic) {
+      const auto llvmTy =
+          getTypeConverter()->convertType(op.getValue().getType());
+      mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+      alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
+    }
+
+    // TODO: nontemporal, syncscope.
     rewriter.replaceOpWithNewOp<mlir::LLVM::StoreOp>(
-        op, adaptor.getValue(), adaptor.getAddr(),
-        /* alignment */ 0, /* volatile */ op.getIsVolatile());
+        op, adaptor.getValue(), adaptor.getAddr(), alignment,
+        op.getIsVolatile(), /* nontemporal */ false, ordering);
     return mlir::LogicalResult::success();
   }
 };

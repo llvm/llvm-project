@@ -297,7 +297,7 @@ void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
   // struct), which can later be broken down in other CIR levels (or prior
   // to dialect codegen).
   (void)DestIsVolatile;
-  builder.create<mlir::cir::StoreOp>(*currSrcLoc, Val, Dest.getPointer());
+  builder.createStore(*currSrcLoc, Val, Dest);
 }
 
 static Address emitAddressAtOffset(CIRGenFunction &CGF, Address addr,

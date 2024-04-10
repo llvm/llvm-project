@@ -134,6 +134,12 @@ public:
     return createBinop(lhs, mlir::cir::BinOpKind::Mul, val);
   }
 
+  mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
+                                 mlir::Value dst, bool _volatile = false,
+                                 ::mlir::cir::MemOrderAttr order = {}) {
+    return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, order);
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

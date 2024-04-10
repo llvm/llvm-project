@@ -272,12 +272,12 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
                        /*ArraySize=*/nullptr);
 
   auto storeAddr = coroFrame.getPointer();
-  builder.create<mlir::cir::StoreOp>(openCurlyLoc, nullPtrCst, storeAddr);
+  builder.CIRBaseBuilderTy::createStore(openCurlyLoc, nullPtrCst, storeAddr);
   builder.create<mlir::cir::IfOp>(openCurlyLoc, coroAlloc.getResult(0),
                                   /*withElseRegion=*/false,
                                   /*thenBuilder=*/
                                   [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                    builder.create<mlir::cir::StoreOp>(
+                                    builder.CIRBaseBuilderTy::createStore(
                                         loc, buildScalarExpr(S.getAllocate()),
                                         storeAddr);
                                     builder.create<mlir::cir::YieldOp>(loc);
@@ -476,8 +476,8 @@ buildSuspendExpression(CIRGenFunction &CGF, CGCoroData &Coro,
                 loc, CharUnits::One(),
                 builder.getBestAllocaInsertPoint(scopeParentBlock));
             // Store the rvalue so we can reload it before the promise call.
-            builder.create<mlir::cir::StoreOp>(loc, awaitRes.RV.getScalarVal(),
-                                               tmpResumeRValAddr);
+            builder.CIRBaseBuilderTy::createStore(
+                loc, awaitRes.RV.getScalarVal(), tmpResumeRValAddr);
           }
         }
 
