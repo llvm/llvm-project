@@ -12,6 +12,15 @@ cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 message(${LLVM_COMMON_CMAKE_UTILS})
 
+# message的信息种类：
+# (无) = 重要消息；
+#  STATUS = 非重要消息；
+#  WARNING = CMake 警告, 会继续执行；
+#  AUTHOR_WARNING = CMake 警告 (dev), 会继续执行；
+#  SEND_ERROR = CMake 错误, 继续执行，但是会跳过生成的步骤；
+#  FATAL_ERROR = CMake 错误, 终止所有处理过程；
+
+
 message("将 policy 文件引入当前 cmake 文件")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
@@ -50,6 +59,7 @@ if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
+# 如果在 windows 平台下使用生成器Visual Studio，输出 warning 信息
 if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
   message(WARNING "Visual Studio generators use the x86 host compiler by "
                   "default, even for 64-bit targets. This can result in linker "
@@ -57,16 +67,19 @@ if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142
                   "host compiler, pass -Thost=x64 on the CMake command line.")
 endif()
 
+# 如果在 MacOS 平台下使用生成器XCode，且不是苹果的芯片架构，设置架构信息为x86_64
 if (CMAKE_GENERATOR STREQUAL "Xcode" AND NOT CMAKE_OSX_ARCHITECTURES)
   # Some CMake features like object libraries get confused if you don't
   # explicitly specify an architecture setting with the Xcode generator.
   set(CMAKE_OSX_ARCHITECTURES "x86_64")
 endif()
 
+# 设置 project 项目名称，项目版本以及实现语言
 project(LLVM
   VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
   LANGUAGES C CXX ASM)
 
+# 设置 install 的路径
 if (NOT DEFINED CMAKE_INSTALL_LIBDIR AND DEFINED LLVM_LIBDIR_SUFFIX)
   # Must go before `include(GNUInstallDirs)`.
   set(CMAKE_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
@@ -78,6 +91,7 @@ set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name 
 # Must go after `project(..)`.
 include(GNUInstallDirs)
 
+# 设置LLVM 使用 C++的标准版本
 # This C++ standard is required to build LLVM.
 set(LLVM_REQUIRED_CXX_STANDARD 17)
 
@@ -105,6 +119,7 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# 如果未设置 cmake 的 build 类型且未设置 configuration 类型
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(FATAL_ERROR "
 No build type selected. You need to pass -DCMAKE_BUILD_TYPE=<type> in order to configure LLVM.
@@ -135,6 +150,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
+# 设置 LLVM 工程中的所有的子工程名称，其实是 target
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
