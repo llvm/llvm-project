@@ -1,6 +1,5 @@
 // Note: %s must be preceded by --, otherwise it may be interpreted as a
 // command-line option, e.g. on Mac where %s is commonly under /Users.
-// REQUIRES: aarch64-registered-target,arm-registered-target,x86-registered-target
 
 // ON-NOT: "-gno-codview-commandline"
 // OFF: "-gno-codeview-command-line"
