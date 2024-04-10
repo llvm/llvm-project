@@ -1496,6 +1496,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,          MVT::v32i32, Custom);
     setOperationAction(ISD::TRUNCATE,          MVT::v32i64, Custom);
 
+    if (Subtarget.hasGFNI()) {
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+    }
+
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::SETCC,           VT, Custom);
       setOperationAction(ISD::CTPOP,           VT, Custom);
@@ -31331,6 +31336,23 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   // Decompose 256-bit ops into smaller 128-bit ops on pre-AVX2.
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG, DL);
+
+  // Lower i32/i64 to GFNI as vXi8 BITREVERSE + BSWAP
+  if (!VT.isVector()) {
+
+    assert((VT.getScalarType() == MVT::i32) ||
+           (VT.getScalarType() == MVT::i64));
+
+    MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
+    SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
+    Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
+                      DAG.getBitcast(MVT::v16i8, Res));
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                      DAG.getBitcast(VecVT, Res), DAG.getIntPtrConstant(0, DL));
+    return DAG.getNode(ISD::BSWAP, DL, VT, Res);
+  }
+
+  assert(VT.isVector() && VT.getSizeInBits() >= 128);
 
   // Lower vXi16/vXi32/vXi64 as BSWAP + vXi8 BITREVERSE.
   if (VT.getScalarType() != MVT::i8) {
