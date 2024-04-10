@@ -15,7 +15,7 @@ class TestDiagnosticReporting(TestBase):
         self.broadcaster = self.dbg.GetBroadcaster()
         self.listener = lldbutil.start_listening_from(
             self.broadcaster,
-            lldb.SBDebugger.eBroadcastBitWarning | lldb.SBDebugger.eBroadcastBitError,
+            lldb.eBroadcastBitWarning | lldb.eBroadcastBitError,
         )
 
     def test_dwarf_symbol_loading_diagnostic_report(self):
