@@ -2087,6 +2087,14 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
   llvm::AttributeList PAL;
   ConstructAttributeList(F->getName(), Info, GD, PAL, CallingConv,
                          /*AttrOnCallSite=*/false, IsThunk);
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    SourceLocation Loc;
+    if (const Decl *D = GD.getDecl())
+      Loc = D->getLocation();
+
+    Error(Loc, "__vectorcall calling convention is not currently supported");
+  }
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
