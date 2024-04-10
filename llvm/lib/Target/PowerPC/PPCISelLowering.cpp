@@ -14579,9 +14579,9 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const {
             (OpVT == MVT::i64 || OpVT == MVT::i32 || OpVT == MVT::i16))
           return GetTruncExtCmp(LHS.getOperand(0), MVT::i8);
       }
-    // ult (srl (add x -0x8000) 16) 0xffff -> ne x (sext:i32 (trunc:i16 x))
     } else if (LHS.getOpcode() == ISD::SRL &&
                LHS.getOperand(0).getOpcode() == ISD::ADD) {
+      // ult (srl (add x -0x8000) 16) 0xffff -> ne x (sext:i32 (trunc:i16 x))
       const auto *SrlAmt = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
       const auto *Addend =
           dyn_cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1));
