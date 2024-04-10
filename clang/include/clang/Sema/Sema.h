@@ -5443,7 +5443,8 @@ public:
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
-                                      bool AcceptInvalidDecl = false);
+                                      bool AcceptInvalidDecl = false,
+                                      bool NeedUnresolved = false);
   ExprResult BuildDeclarationNameExpr(
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
@@ -6595,7 +6596,10 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation loc);
+  ExprResult ActOnCXXThis(SourceLocation Loc);
+
+  /// Check whether the type of 'this' is valid in the current context.
+  bool CheckCXXThisType(SourceLocation Loc, QualType Type);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
   Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
@@ -10081,7 +10085,7 @@ public:
 
     /// Note that we are instantiating a type alias template declaration.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          TypeAliasTemplateDecl *Template,
+                          TypeAliasTemplateDecl *Entity,
                           ArrayRef<TemplateArgument> TemplateArgs,
                           SourceRange InstantiationRange = SourceRange());
 
