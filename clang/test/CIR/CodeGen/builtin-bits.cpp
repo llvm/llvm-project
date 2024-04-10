@@ -57,6 +57,14 @@ int test_builtin_ctzll(unsigned long long x) {
 // CHECK:   %{{.+}} = cir.bit.ctz(%{{.+}} : !u64i) : !s32i
 // CHECK: }
 
+int test_builtin_ctzg(unsigned x) {
+  return __builtin_ctzg(x);
+}
+
+// CHECK: cir.func @_Z17test_builtin_ctzgj
+// CHECK:   %{{.+}} = cir.bit.ctz(%{{.+}} : !u32i) : !s32i
+// CHECK: }
+
 int test_builtin_clzs(unsigned short x) {
   return __builtin_clzs(x);
 }
@@ -87,6 +95,14 @@ int test_builtin_clzll(unsigned long long x) {
 
 // CHECK: cir.func @_Z18test_builtin_clzlly
 // CHECK:   %{{.+}} = cir.bit.clz(%{{.+}} : !u64i) : !s32i
+// CHECK: }
+
+int test_builtin_clzg(unsigned x) {
+  return __builtin_clzg(x);
+}
+
+// CHECK: cir.func @_Z17test_builtin_clzgj
+// CHECK:   %{{.+}} = cir.bit.clz(%{{.+}} : !u32i) : !s32i
 // CHECK: }
 
 int test_builtin_ffs(int x) {
@@ -159,4 +175,12 @@ int test_builtin_popcountll(unsigned long long x) {
 
 // CHECK: cir.func @_Z23test_builtin_popcountlly
 // CHECK:   %{{.+}} = cir.bit.popcount(%{{.+}} : !u64i) : !s32i
+// CHECK: }
+
+int test_builtin_popcountg(unsigned x) {
+  return __builtin_popcountg(x);
+}
+
+// CHECK: cir.func @_Z22test_builtin_popcountgj
+// CHECK:   %{{.+}} = cir.bit.popcount(%{{.+}} : !u32i) : !s32i
 // CHECK: }
