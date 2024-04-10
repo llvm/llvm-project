@@ -1,23 +1,44 @@
+# -S 指定目录为 llvm 时，cmake 就会从当前路径中查找 CMakeLists.txt 并执行
+#
+# 项目入口处
+#
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
+# 指定当前工程支持的 cmake 语法的最小版本。该之前的语法旧语法就不再支持了。
 cmake_minimum_required(VERSION 3.20.0)
 
+# 设置变量LLVM_COMMON_CMAKE_UTILS执行外层 cmake 文件夹的路径。
+# 该路径下面的 Modules 文件夹下有很多 .cmake 文件后续可能会用。
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+message(${LLVM_COMMON_CMAKE_UTILS})
+
+message("将 policy 文件引入当前 cmake 文件")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 # Builds with custom install names and installation rpath setups may not work
 # in the build tree. Allow these cases to use CMake's default build tree
 # behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.
+# 定义 option：LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE，允许开发者在 build 的时候通过-DOPTION 设置不同的值来影响编译过程。
 option(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE "If set, use CMake's default build tree install name directory logic (Darwin only)" OFF)
+
+# 将缓存的变量标记为高级变量。其中，高级变量指的是那些在CMake GUI中，只有当“显示高级选项”被打开时才会被显示的变量。如果CLEAR是第一个选项，参数中的高级变量将变回
+# 非高级变量。如果FORCE是第一个选项，参数中的变量会被提升为高级变量。如果两者都未出现，新的变量会被标记为高级变量；如果这个变量已经是高级/非高级状态的话，它将会维
+# 持原状。该命令在脚本中无效
+# 高级选项通常是那些不经常使用的选项，或者对大多数用户来说可能不重要的选项。
 mark_as_advanced(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
 if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 endif()
 
+message("将 LLVM 的版本信息引入")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
 
+# 设置当前目录和子目录的属性
+# 该属性只在当前目录以及其子目录起作用
+# set_property：设置私属性值，在当前作用于起作用
 set_directory_properties(PROPERTIES LLVM_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
+
 
 if (NOT PACKAGE_VERSION)
   set(PACKAGE_VERSION
