@@ -11,7 +11,7 @@
 include(ExtendPath)
 
 # The generated headers will be placed in clang's resource directory if present.
-if(${OPENMP_STANDALONE_BUILD})
+if(OPENMP_STANDALONE_BUILD OR NOT LLVM_RUNTIMES_BUILD)
   set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 else()
   set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
@@ -55,6 +55,7 @@ include_directories(
   ${LIBOMP_SRC_DIR}/i18n
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
+  ${LIBOMP_HEADERS_INTDIR}
 )
 
 # Building with time profiling support requires LLVM directory includes.

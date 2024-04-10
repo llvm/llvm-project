@@ -1917,15 +1917,31 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-// Get the dependence distance, stride, type size in whether i is a write for
+namespace {
+struct DepDistanceStrideAndSizeInfo {
+  const SCEV *Dist;
+  uint64_t StrideA;
+  uint64_t StrideB;
+  uint64_t TypeByteSize;
+  bool AIsWrite;
+  bool BIsWrite;
+
+  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA, uint64_t StrideB,
+                               uint64_t TypeByteSize, bool AIsWrite,
+                               bool BIsWrite)
+      : Dist(Dist), StrideA(StrideA), StrideB(StrideB), TypeByteSize(TypeByteSize),
+        AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+};
+} // namespace
+
+// Get the dependence distance, stride, type size and whether it is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
 // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
 // Returns either the dependence result, if it could already be determined, or a
-// tuple with (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
-static std::variant<
-    MemoryDepChecker::Dependence::DepType,
-    std::tuple<const SCEV *, uint64_t, uint64_t, uint64_t, bool, bool>>
+// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
+static std::variant<MemoryDepChecker::Dependence::DepType,
+                    DepDistanceStrideAndSizeInfo>
 getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
@@ -1993,8 +2009,9 @@ getDependenceDistanceStrideAndSize(
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
     TypeByteSize = 0;
-  return std::make_tuple(Dist, std::abs(StrideAPtr), std::abs(StrideBPtr),
-                         TypeByteSize, AIsWrite, BIsWrite);
+  uint64_t Stride = std::abs(StrideAPtr);
+  return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr), std::abs(StrideBPtr), TypeByteSize, AIsWrite,
+                                      BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
@@ -2013,9 +2030,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return std::get<Dependence::DepType>(Res);
 
   const auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<
-          std::tuple<const SCEV *, uint64_t, uint64_t, uint64_t, bool, bool>>(
-          Res);
+      std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
   uint64_t CommonStride = StrideA == StrideB ? StrideA : 0;
