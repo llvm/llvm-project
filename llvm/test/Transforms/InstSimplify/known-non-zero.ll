@@ -166,3 +166,14 @@ A:
 B:
   ret i1 0
 }
+
+define i1 @smax_non_zero(i8 %xx, i8 %y) {
+; CHECK-LABEL: @smax_non_zero(
+; CHECK-NEXT:    ret i1 false
+;
+  %x0 = and i8 %xx, 63
+  %x = add i8 %x0, 1
+  %v = call i8 @llvm.smax.i8(i8 %x, i8 %y)
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}

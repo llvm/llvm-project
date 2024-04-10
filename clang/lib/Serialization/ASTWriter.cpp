@@ -163,8 +163,13 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
-                                                   Module *RootModule) {
+std::optional<std::set<const FileEntry *>>
+GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
+  // Without implicit module map search, there's no good reason to know about
+  // any module maps that are not affecting.
+  if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ImplicitModuleMaps)
+    return std::nullopt;
+
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
@@ -4735,8 +4740,16 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (!Cache->OrigEntry)
       continue;
 
-    if (!isModuleMap(File.getFileCharacteristic()) ||
-        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
+    // Don't prune anything other than module maps.
+    if (!isModuleMap(File.getFileCharacteristic()))
+      continue;
+
+    // Don't prune module maps if all are guaranteed to be affecting.
+    if (!AffectingModuleMaps)
+      continue;
+
+    // Don't prune module maps that are affecting.
+    if (llvm::is_contained(*AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
