@@ -41,19 +41,18 @@ function(check_hwcap hwcap_spec output)
     string(REPLACE "<HWCAP_VEC>" ${hwcap_vec} hwcap_test_src "${hwcap_test_src}")
     string(REPLACE "<HWCAP_SPEC>" ${hwcap_spec} hwcap_test_src "${hwcap_test_src}")
 
-    set(hwcap_test_file ${CMAKE_BINARY_DIR}/${CMAKE_FILES_DIRECTORY}/hwcap_check.c)
+    set(hwcap_test_file ${CMAKE_BINARY_DIR}/temp/hwcap_check.c)
     file(WRITE ${hwcap_test_file} "${hwcap_test_src}")
 
     # Compile _and_ run
     try_run(
         test_run_result test_compile_result
-        ${CMAKE_BINARY_DIR}
-        ${hwcap_test_file}
+        "${CMAKE_BINARY_DIR}"
+        "${hwcap_test_file}"
     )
     # Compilation will fail if hwcap_spec is not defined - this usually means
     # that your Linux kernel is too old.
     if(${test_compile_result} AND (DEFINED test_run_result))
-      message(${test_run_result})
       message(STATUS "Checking whether ${hwcap_spec} is supported by the host system: ${test_run_result}")
       set(${output} ${test_run_result} PARENT_SCOPE)
     else()

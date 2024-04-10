@@ -1033,6 +1033,34 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    assert(NumVecElements >= E->getNumInits());
+
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    // All initializer elements.
+    unsigned InitIndex = 0;
+    for (const Expr *Init : E->inits()) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+      ++InitIndex;
+    }
+
+    // Fill the rest with zeroes.
+    for (; InitIndex != NumVecElements; ++InitIndex) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -1083,6 +1111,9 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   //     alignment of the referenced type.
   if (const auto *Ref = T->getAs<ReferenceType>())
     T = Ref->getPointeeType();
+
+  if (T.getQualifiers().hasUnaligned())
+    return CharUnits::One();
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
@@ -2511,6 +2542,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
     assert(!Locals.contains(VD));
+    (void)VD;
   }
 
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.

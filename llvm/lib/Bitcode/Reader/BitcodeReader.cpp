@@ -108,6 +108,9 @@ cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 namespace {
 
@@ -681,6 +684,11 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   /// True if all functions will be materialized, negating the need to process
   /// (e.g.) blockaddress forward references.
   bool WillMaterializeAllForwardRefs = false;
+
+  /// Tracks whether we have seen debug intrinsics or records in this bitcode;
+  /// seeing both in a single module is currently a fatal error.
+  bool SeenDebugIntrinsic = false;
+  bool SeenDebugRecord = false;
 
   bool StripDebugInfo = false;
   TBAAVerifier TBAAVerifyHelper;
@@ -3774,7 +3782,11 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    // If PreserveInputDbgFormat=true, then we don't know whether we want
+    // intrinsics or records, and we won't perform any conversions in either
+    // case, so don't upgrade intrinsics to records.
+    if (UpgradeIntrinsicFunction(
+            &F, NewFn, PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4301,10 +4313,13 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
   // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
-  // has been set to true (default action: load into the old debug format).
-  TheModule->IsNewDbgInfoFormat =
-      UseNewDbgInfoFormat &&
-      LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+  // has been set to true and we aren't attempting to preserve the existing
+  // format in the bitcode (default action: load into the old debug format).
+  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
+    TheModule->IsNewDbgInfoFormat =
+        UseNewDbgInfoFormat &&
+        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+  }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -5024,7 +5039,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       }
 
       if (OpNum < Record.size()) {
-        if (Opc == Instruction::ZExt) {
+        if (Opc == Instruction::ZExt || Opc == Instruction::UIToFP) {
           if (Record[OpNum] & (1 << bitc::PNNI_NON_NEG))
             cast<PossiblyNonNegInst>(I)->setNonNeg(true);
         } else if (Opc == Instruction::Trunc) {
@@ -6453,6 +6468,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
       // DbgVariableRecords are placed after the Instructions that they are
       // attached to.
+      SeenDebugRecord = true;
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -6613,6 +6629,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         TCK = CallInst::TCK_NoTail;
       cast<CallInst>(I)->setTailCallKind(TCK);
       cast<CallInst>(I)->setAttributes(PAL);
+      if (isa<DbgInfoIntrinsic>(I))
+        SeenDebugIntrinsic = true;
       if (Error Err = propagateAttributeTypes(cast<CallBase>(I), ArgTyIDs)) {
         I->deleteValue();
         return Err;
@@ -6801,20 +6819,48 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (Error JumpFailed = Stream.JumpToBit(DFII->second))
     return JumpFailed;
 
-  // Set the debug info mode to "new", possibly creating a mismatch between
-  // module and function debug modes. This is okay because we'll convert
-  // everything back to the old mode after parsing if needed.
-  // FIXME: Remove this once all tools support RemoveDIs.
+  // Regardless of the debug info format we want to end up in, we need
+  // IsNewDbgInfoFormat=true to construct any debug records seen in the bitcode.
   F->IsNewDbgInfoFormat = true;
 
   if (Error Err = parseFunctionBody(F))
     return Err;
   F->setIsMaterializable(false);
 
-  // Convert new debug info records into intrinsics.
-  // FIXME: Remove this once all tools support RemoveDIs.
-  if (!F->getParent()->IsNewDbgInfoFormat)
-    F->convertFromNewDbgValues();
+  // All parsed Functions should load into the debug info format dictated by the
+  // Module, unless we're attempting to preserve the input debug info format.
+  if (SeenDebugIntrinsic && SeenDebugRecord)
+    return error("Mixed debug intrinsics and debug records in bitcode module!");
+  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
+    bool SeenAnyDebugInfo = SeenDebugIntrinsic || SeenDebugRecord;
+    bool NewDbgInfoFormatDesired =
+        SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
+    if (SeenAnyDebugInfo) {
+      UseNewDbgInfoFormat = SeenDebugRecord;
+      WriteNewDbgInfoFormatToBitcode = SeenDebugRecord;
+      WriteNewDbgInfoFormat = SeenDebugRecord;
+    }
+    // If the module's debug info format doesn't match the observed input
+    // format, then set its format now; we don't need to call the conversion
+    // function because there must be no existing intrinsics to convert.
+    // Otherwise, just set the format on this function now.
+    if (NewDbgInfoFormatDesired != F->getParent()->IsNewDbgInfoFormat)
+      F->getParent()->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
+    else
+      F->setNewDbgInfoFormatFlag(NewDbgInfoFormatDesired);
+  } else {
+    // If we aren't preserving formats, we use the Module flag to get our
+    // desired format instead of reading flags, in case we are lazy-loading and
+    // the format of the module has been changed since it was set by the flags.
+    // We only need to convert debug info here if we have debug records but
+    // desire the intrinsic format; everything else is a no-op or handled by the
+    // autoupgrader.
+    bool ModuleIsNewDbgInfoFormat = F->getParent()->IsNewDbgInfoFormat;
+    if (ModuleIsNewDbgInfoFormat || !SeenDebugRecord)
+      F->setNewDbgInfoFormatFlag(ModuleIsNewDbgInfoFormat);
+    else
+      F->setIsNewDbgInfoFormat(ModuleIsNewDbgInfoFormat);
+  }
 
   if (StripDebugInfo)
     stripDebugInfo(*F);

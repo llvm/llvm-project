@@ -379,6 +379,9 @@ private:
   }
 
   void lowerAllocation(const Allocation &alloc) {
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+      TODO(loc, "Allocation of variable with CUDA attributes");
+
     fir::MutableBoxValue boxAddr =
         genMutableBoxValue(converter, loc, alloc.getAllocObj());
 
@@ -588,13 +591,15 @@ private:
       TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
-    if (lenParams.empty() && box.isCharacter() &&
-        !box.hasNonDeferredLenParams())
+    const bool isDeferredLengthCharacter =
+        box.isCharacter() && !box.hasNonDeferredLenParams();
+    if (lenParams.empty() && isDeferredLengthCharacter)
       lenParams.push_back(fir::factory::readCharLen(builder, loc, exv));
     if (!isSource || alloc.type.IsPolymorphic())
       genRuntimeAllocateApplyMold(builder, loc, box, exv,
                                   alloc.getSymbol().Rank());
-    genSetDeferredLengthParameters(alloc, box);
+    if (isDeferredLengthCharacter)
+      genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
     if (isSource)

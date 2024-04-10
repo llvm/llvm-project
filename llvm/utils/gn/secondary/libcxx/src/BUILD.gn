@@ -315,6 +315,7 @@ if (libcxx_enable_experimental) {
     sources = [ "experimental/keep.cpp" ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [
+        "include/tzdb/leap_second_private.h",
         "include/tzdb/time_zone_link_private.h",
         "include/tzdb/time_zone_private.h",
         "include/tzdb/types_private.h",
