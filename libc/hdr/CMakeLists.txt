@@ -38,5 +38,5 @@ add_proxy_header_library(
     fenv_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fenv_macros
-    libc.incude.fenv
+    libc.include.fenv
 )
