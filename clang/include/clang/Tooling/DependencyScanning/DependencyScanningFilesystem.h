@@ -337,7 +337,7 @@ public:
   openFileForRead(const Twine &Path) override;
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
@@ -438,7 +438,7 @@ private:
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
-  mutable DependencyScanningFilesystemLocalCache LocalCache;
+  DependencyScanningFilesystemLocalCache LocalCache;
 
   /// The working directory to use for making relative paths absolute before
   /// using them for cache lookups.

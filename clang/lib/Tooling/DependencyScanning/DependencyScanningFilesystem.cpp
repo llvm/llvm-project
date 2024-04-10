@@ -351,8 +351,9 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   return DepScanFile::create(Result.get());
 }
 
-std::error_code DependencyScanningWorkerFilesystem::getRealPath(
-    const Twine &Path, SmallVectorImpl<char> &Output) const {
+std::error_code
+DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
+                                                SmallVectorImpl<char> &Output) {
   SmallString<256> OwnedFilename;
   StringRef OriginalFilename = Path.toStringRef(OwnedFilename);
 
