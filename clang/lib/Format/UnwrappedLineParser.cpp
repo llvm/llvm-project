@@ -538,16 +538,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
         if (Style.Language == FormatStyle::LK_Proto) {
           ProbablyBracedList = NextTok->isOneOf(tok::comma, tok::r_square);
         } else {
-          // Skip NextTok over preprocessor lines, otherwise we may not
-          // properly diagnose the block as a braced intializer
-          // if the comma separator appears after the pp directive.
-          while (NextTok->is(tok::hash)) {
-            ScopedMacroState MacroState(*Line, Tokens, NextTok);
-            do {
-              NextTok = Tokens->getNextToken();
-            } while (NextTok->isNot(tok::eof));
-          }
-
           // Using OriginalColumn to distinguish between ObjC methods and
           // binary operators is a bit hacky.
           bool NextIsObjCMethod = NextTok->isOneOf(tok::plus, tok::minus) &&
@@ -605,6 +595,16 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             // list, but C++11 attributes are expected after blocks.
             NextTok = Tokens->getNextToken();
             ProbablyBracedList = NextTok->isNot(tok::l_square);
+          }
+
+          // Cpp macro definition body that is a nonempty braced list or block:
+          if (IsCpp && Line->InMacroBody && PrevTok != FormatTok &&
+              !FormatTok->Previous && NextTok->is(tok::eof) &&
+              // A statement can end with only `;` (simple statement), a block
+              // closing brace (compound statement), or `:` (label statement).
+              // If PrevTok is a block opening brace, Tok ends an empty block.
+              !PrevTok->isOneOf(tok::semi, BK_Block, tok::colon)) {
+            ProbablyBracedList = true;
           }
         }
         if (ProbablyBracedList) {
