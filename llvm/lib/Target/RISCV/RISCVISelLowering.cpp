@@ -4638,8 +4638,17 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
                                            Subtarget.getXLenVT()));
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
-    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
-                              Interleaved, EvenV, Passthru, Mask, VL);
+    if (!EvenV.isUndef())
+      Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
+                                Interleaved, EvenV, Passthru, Mask, VL);
+  } else if (EvenV.isUndef()) {
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, OddV, Mask, VL);
+
+    SDValue OffsetVec =
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, WideContainerVT);
+    Interleaved = DAG.getNode(RISCVISD::SHL_VL, DL, WideContainerVT,
+                              Interleaved, OffsetVec, Passthru, Mask, VL);
   } else {
     // FIXME: We should freeze the odd vector here. We already handled the case
     // of provably undef/poison above.
